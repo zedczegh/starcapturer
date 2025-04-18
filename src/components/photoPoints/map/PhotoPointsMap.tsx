@@ -37,11 +37,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     optimizedLocations,
     mapCenter,
     initialZoom,
-    hoveredLocationId,
-    handleHover,
-    handleTouchStart,
-    handleTouchEnd,
-    handleTouchMove,
     handleMapClick,
     handleLocationClicked,
     handleGetLocation,
@@ -158,11 +153,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       initialZoom={initialZoom}
       mapContainerHeight={mapContainerHeight}
       isMobile={isMobile}
-      hoveredLocationId={hoveredLocationId}
-      handleHover={handleHover}
-      handleTouchStart={handleTouchStart}
-      handleTouchEnd={handleTouchEnd}
-      handleTouchMove={handleTouchMove}
       handleGetLocation={handleGetLocation}
       onLegendToggle={handleLegendToggle}
     />

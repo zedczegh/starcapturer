@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useIsMobile } from '@/hooks/use-mobile';
-import useMapMarkers from '@/hooks/map/useMapMarkers';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
 
 interface UsePhotoPointsMapContainerProps {
@@ -29,14 +28,6 @@ export const usePhotoPointsMapContainer = ({
   const [mapContainerHeight, setMapContainerHeight] = useState('450px');
   const [legendOpen, setLegendOpen] = useState(false);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
-  
-  const { 
-    hoveredLocationId, 
-    handleHover,
-    handleTouchStart,
-    handleTouchEnd,
-    handleTouchMove
-  } = useMapMarkers();
   
   // Determine which locations to display based on active view
   const locationsToShow = useMemo(() => {
@@ -173,11 +164,6 @@ export const usePhotoPointsMapContainer = ({
     optimizedLocations,
     mapCenter,
     initialZoom,
-    hoveredLocationId,
-    handleHover,
-    handleTouchStart,
-    handleTouchEnd,
-    handleTouchMove,
     handleMapClick,
     handleLocationClicked,
     handleGetLocation,

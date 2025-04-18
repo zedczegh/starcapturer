@@ -1,5 +1,5 @@
 
-import React, { useEffect, useCallback, useRef, memo, useMemo, useState } from 'react';
+import React, { useCallback, useRef, memo, useMemo, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -8,7 +8,6 @@ import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { Star, Award, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import MarkerEventHandler from './MarkerEventHandler';
 import { formatDistance } from '@/utils/geoUtils';
 import { 
   getSiqsClass, 
@@ -28,9 +27,6 @@ interface LocationMarkerProps {
   locationId: string;
   isCertified: boolean;
   activeView: 'certified' | 'calculated';
-  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
-  handleTouchMove?: (e: React.TouchEvent) => void;
 }
 
 const LocationMarker = memo(({ 
@@ -41,9 +37,6 @@ const LocationMarker = memo(({
   locationId,
   isCertified,
   activeView,
-  handleTouchStart,
-  handleTouchEnd,
-  handleTouchMove
 }: LocationMarkerProps) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
@@ -163,16 +156,14 @@ const LocationMarker = memo(({
         position={[location.latitude, location.longitude]}
         icon={icon}
         ref={markerRef}
-        eventHandlers={{
-          click: handleClick
-        }}
+        // Fix: Replace eventHandlers with onClick
+        onClick={handleClick}
       >
         {isOpen && (
           <Popup 
-            closeButton={true}
-            autoPan={true}
-            closeOnClick={false}
-            autoPanPaddingTopLeft={[50, 50]}
+            // Fix: Remove incompatible props
+            offset={[0, -5]}
+            autoPan
             onClose={handlePopupClose}
           >
             <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
@@ -244,7 +235,6 @@ const UserLocationMarker = memo(({
     <Marker position={position} icon={userMarkerIcon}>
       <Popup
         offset={[0, 10]}
-        direction="bottom"
       >
         <div className="p-2 leaflet-popup-custom marker-popup-gradient">
           <strong>{t("Your Location", "您的位置")}</strong>
