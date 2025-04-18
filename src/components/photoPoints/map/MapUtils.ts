@@ -29,12 +29,13 @@ export const filterLocations = (
     loc => !loc.isDarkSkyReserve && !loc.certification
   );
 
-  // For the calculated view, filter non-certified locations by distance
+  // For the calculated view, generate and filter non-certified locations by distance
   if (activeView === 'calculated' && userLocation) {
     // Generate more calculated locations around the user if we don't have enough
     if (nonCertifiedLocations.length < 20) {
       console.log(`Generating more calculated points around user location with radius ${searchRadius}km`);
-      const generatedPoints = generateCalculatedPoints(
+      // Make this synchronous by directly generating points
+      const generatedPoints = generateCalculatedPointsSync(
         userLocation.latitude,
         userLocation.longitude,
         searchRadius,
@@ -73,6 +74,75 @@ export const filterLocations = (
 };
 
 /**
+ * Generate calculated points around a center location synchronously
+ * Calculate SIQS score for each point based on cloud cover
+ */
+function generateCalculatedPointsSync(
+  centerLat: number,
+  centerLng: number,
+  radiusKm: number,
+  count: number
+): SharedAstroSpot[] {
+  const points: SharedAstroSpot[] = [];
+  
+  // Use a fixed cloud cover value initially, will be updated later via RealTimeSiqsFetcher
+  // This avoids the Promise issue and provides immediate results
+  const defaultCloudCover = 50; // This is just a starting point, will be replaced with real data
+  
+  for (let i = 0; i < count; i++) {
+    // Generate a random point within the radius
+    const angle = Math.random() * 2 * Math.PI;
+    const distance = Math.random() * radiusKm;
+    
+    // Convert distance in km to degrees (approximate)
+    const latOffset = distance * 0.009 * Math.cos(angle);
+    const lngOffset = distance * 0.009 * Math.sin(angle);
+    
+    const lat = centerLat + latOffset;
+    const lng = centerLng + lngOffset;
+    
+    // Skip water locations
+    if (isWaterLocation(lat, lng, false)) {
+      continue;
+    }
+    
+    // Calculate actual distance
+    const actualDistance = calculateDistance(centerLat, centerLng, lat, lng);
+    
+    // Calculate initial SIQS score based on default cloud cover
+    // The real score will be calculated later via RealTimeSiqsFetcher
+    const cloudCover = defaultCloudCover + (Math.random() * 20 - 10); // Add some variation
+    const siqsScore = Math.max(0, 10 - (cloudCover / 10));
+    const isViable = cloudCover <= 40;
+    
+    // Create the point with the initial SIQS score
+    points.push({
+      id: `calc-${i}-${lat.toFixed(4)}-${lng.toFixed(4)}`,
+      name: `Calculated Point ${i+1}`,
+      latitude: lat,
+      longitude: lng,
+      bortleScale: 4,
+      siqs: siqsScore,
+      siqsResult: {
+        score: siqsScore,
+        isViable: isViable,
+        factors: [{
+          name: "Cloud Cover",
+          score: (100 - cloudCover) / 10,
+          description: `Tonight's cloud cover: ${Math.round(cloudCover)}%`
+        }]
+      },
+      distance: actualDistance,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  console.log(`Generated ${points.length} calculated points with cloud cover-based SIQS`);
+  return points;
+}
+
+/**
+ * Async version for future use if needed - kept for reference
  * Generate calculated points around a center location
  * Calculate SIQS score for each point based on cloud cover
  */
@@ -117,7 +187,7 @@ async function generateCalculatedPoints(
     
     // Calculate cloud cover-based SIQS score for this point
     let siqsScore = 0;
-    let cloudCover = 0;
+    let cloudCover = 50; // Default if no forecast data
     let isViable = false;
     
     if (forecastData && forecastData.hourly) {
@@ -155,7 +225,6 @@ async function generateCalculatedPoints(
     });
   }
   
-  console.log(`Generated ${points.length} calculated points with cloud cover-based SIQS`);
   return points;
 }
 

@@ -5,7 +5,4 @@ export { clearSiqsCache } from '../realTimeSiqs/siqsCache';
 export { 
   updateLocationsWithRealTimeSiqs,
   clearLocationCache 
-} from './locationUpdateService';
-export {
-  updateCertifiedLocationsWithSiqs
-} from './locationUpdateService';
+} from '../realTimeSiqs/locationUpdateService';
