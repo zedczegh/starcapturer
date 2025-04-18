@@ -135,26 +135,23 @@ export async function calculateRealTimeSiqs(
     adjustedScore = Math.min(9.5, Math.max(0, adjustedScore));
     const finalScore = Math.round(adjustedScore * 10) / 10;
     
-    const result = {
+    const result: SiqsResult = {
       siqs: finalScore,
       isViable: finalScore >= 3.0,
-      factors: siqsResult.factors
-    };
-    
-    // Store in cache with metadata
-    setSiqsCache(latitude, longitude, {
-      ...result,
+      factors: siqsResult.factors,
       metadata: {
         calculatedAt: new Date().toISOString(),
         sources: {
           weather: true,
           forecast: !!forecastData,
           clearSky: !!clearSkyData,
-          climate: !!climateRegion,
-          terrainCorrected: !!terrainCorrectedScale
+          lightPollution: !!pollutionData
         }
       }
-    });
+    };
+    
+    // Store in cache with metadata
+    setSiqsCache(latitude, longitude, result);
     
     return result;
     

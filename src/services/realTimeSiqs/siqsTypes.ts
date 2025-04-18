@@ -15,6 +15,8 @@ export interface SiqsResult {
       forecast: boolean;
       clearSky: boolean;
       lightPollution: boolean;
+      terrainCorrected?: boolean;
+      climate?: boolean;
     };
     reliability?: {
       score: number;
