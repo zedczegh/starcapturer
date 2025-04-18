@@ -1,5 +1,5 @@
 
-import { format, formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone } from 'date-fns-tz';
 
 /**
  * Get current date and time for a specific location using its coordinates

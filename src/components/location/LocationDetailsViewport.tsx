@@ -10,8 +10,7 @@ import LocationDetailsHeader from "./LocationDetailsHeader";
 import BackButton from "@/components/navigation/BackButton";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import LocationSearch from "./LocationSearch";
+import LocationSearchDialog from "./LocationSearchDialog";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -77,11 +76,11 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       </div>
       
       {/* Search Dialog */}
-      <Dialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <LocationSearch onSelectLocation={onLocationUpdate} />
-        </DialogContent>
-      </Dialog>
+      <LocationSearchDialog
+        open={searchDialogOpen}
+        onOpenChange={setSearchDialogOpen}
+        onSelectLocation={onLocationUpdate}
+      />
       
       <LocationStatusMessage 
         message={statusMessage}
