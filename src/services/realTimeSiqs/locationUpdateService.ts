@@ -5,37 +5,53 @@ import { clearSiqsCache } from "./siqsCache";
 
 /**
  * Update locations with simplified real-time SIQS data
+ * Uses the night cloud cover calculation for all locations
  */
 export async function updateLocationsWithRealTimeSiqs(
   locations: SharedAstroSpot[]
 ): Promise<SharedAstroSpot[]> {
   if (!locations || locations.length === 0) return locations;
   
-  console.log(`Updating ${locations.length} locations with simplified real-time SIQS data`);
+  console.log(`Updating ${locations.length} locations with simplified real-time SIQS data based on night cloud cover`);
   
   try {
-    const updatedLocations = await Promise.all(
-      locations.map(async (location) => {
+    // Process in batches to prevent overwhelming the API
+    const batchSize = 5;
+    const updatedLocations: SharedAstroSpot[] = [];
+    
+    for (let i = 0; i < locations.length; i += batchSize) {
+      const batch = locations.slice(i, i + batchSize);
+      
+      // Process batch in parallel
+      const batchPromises = batch.map(async (location) => {
         try {
+          // Calculate SIQS for this location
           const siqsResult = await calculateRealTimeSiqs(
             location.latitude,
-            location.longitude
+            location.longitude,
+            location.bortleScale || 4
           );
           
-          const updatedLocation = {
+          // Return updated location with new SIQS data
+          return {
             ...location,
             siqs: siqsResult.score,
             siqsResult: siqsResult
           };
-          
-          console.log(`Updated location ${location.id || 'unnamed'} with SIQS ${siqsResult.score}`);
-          return updatedLocation;
         } catch (error) {
-          console.error(`Error calculating SIQS for location ${location.id}:`, error);
+          console.error(`Error calculating SIQS for location ${location.id || location.name}:`, error);
           return location;
         }
-      })
-    );
+      });
+      
+      const batchResults = await Promise.all(batchPromises);
+      updatedLocations.push(...batchResults);
+      
+      // Add small delay between batches to avoid rate limiting
+      if (i + batchSize < locations.length) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
     
     console.log(`Successfully updated ${updatedLocations.length} locations with SIQS data`);
     return updatedLocations;
@@ -84,15 +100,4 @@ export function clearLocationCache(
   }
   
   clearSiqsCache();
-}
-
-/**
- * Update certified locations with specialized handling
- */
-export async function updateCertifiedLocationsWithSiqs(
-  locations: SharedAstroSpot[]
-): Promise<SharedAstroSpot[]> {
-  // This is just a wrapper around the main function for now
-  // With the simplified SIQS, we don't need special handling for certified locations
-  return updateLocationsWithRealTimeSiqs(locations);
 }

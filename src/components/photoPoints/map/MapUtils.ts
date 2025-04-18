@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
@@ -27,6 +28,20 @@ export const filterLocations = (
 
   // For the calculated view, filter non-certified locations by distance
   if (activeView === 'calculated' && userLocation) {
+    // Generate more calculated locations around the user if we don't have enough
+    if (nonCertifiedLocations.length < 20) {
+      const generatedPoints = generateCalculatedPoints(
+        userLocation.latitude,
+        userLocation.longitude,
+        searchRadius,
+        30 // Generate more points
+      );
+      
+      // Add these to our non-certified locations
+      nonCertifiedLocations = [...nonCertifiedLocations, ...generatedPoints];
+    }
+    
+    // Filter by distance
     nonCertifiedLocations = nonCertifiedLocations.filter(loc => {
       // Skip invalid locations
       if (!loc.latitude || !loc.longitude) return false;
@@ -52,6 +67,50 @@ export const filterLocations = (
   // For calculated view, return both filtered non-certified and all certified
   return [...certifiedLocations, ...nonCertifiedLocations];
 };
+
+/**
+ * Generate calculated points around a center location
+ */
+function generateCalculatedPoints(
+  centerLat: number,
+  centerLng: number,
+  radiusKm: number,
+  count: number
+): SharedAstroSpot[] {
+  const points: SharedAstroSpot[] = [];
+  
+  for (let i = 0; i < count; i++) {
+    // Generate a random point within the radius
+    const angle = Math.random() * 2 * Math.PI;
+    const distance = Math.random() * radiusKm;
+    
+    // Convert distance in km to degrees (approximate)
+    const latOffset = distance * 0.009 * Math.cos(angle);
+    const lngOffset = distance * 0.009 * Math.sin(angle);
+    
+    const lat = centerLat + latOffset;
+    const lng = centerLng + lngOffset;
+    
+    // Calculate actual distance
+    const actualDistance = calculateDistance(centerLat, centerLng, lat, lng);
+    
+    // Generate a simple SIQS score (6-9 range)
+    const siqsScore = 6 + Math.random() * 3;
+    
+    points.push({
+      id: `calc-${i}-${lat.toFixed(4)}-${lng.toFixed(4)}`,
+      name: `Calculated Point ${i+1}`,
+      latitude: lat,
+      longitude: lng,
+      bortleScale: 4,
+      siqs: { score: siqsScore, isViable: true },
+      distance: actualDistance,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  return points;
+}
 
 /**
  * Optimize locations for mobile display

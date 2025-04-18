@@ -12,6 +12,8 @@ export async function calculateRealTimeSiqs(
   bortleScale: number = 4 // Default value, not used in simplified calculation
 ): Promise<SiqsResult> {
   try {
+    console.log(`Calculating simplified SIQS for [${latitude}, ${longitude}]`);
+    
     // Fetch forecast data for nighttime cloud cover calculation
     const forecastData = await fetchForecastData({
       latitude,

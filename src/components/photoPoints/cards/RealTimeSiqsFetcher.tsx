@@ -22,7 +22,7 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
-  const CACHE_DURATION = 5 * 60 * 1000; // Reduced to 5 minutes for fresher data
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
   
   useEffect(() => {
     if (showRealTimeSiqs && isVisible && latitude && longitude) {
@@ -36,8 +36,7 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
           onSiqsCalculated(null, true);
           
           try {
-            const effectiveBortleScale = bortleScale || 
-              (showRealTimeSiqs ? 3 : 5);
+            const effectiveBortleScale = bortleScale || 4;
             
             // Try to get cached data from sessionStorage first
             const cacheKey = `siqs_${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
@@ -47,63 +46,49 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
               const { data, timestamp } = JSON.parse(cachedData);
               const age = now - timestamp;
               
+              // Use cached data if it's fresh enough
               if (age < CACHE_DURATION) {
-                console.log("Using cached SIQS from session storage");
-                // Extract the score from either format
-                const siqsScore = data.score || data.siqs || 0;
-                onSiqsCalculated(siqsScore, false);
-                setLastFetchTimestamp(timestamp);
+                console.log(`Using cached SIQS data (${(age/1000).toFixed(0)}s old) for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                onSiqsCalculated(data.score, false);
                 setLoading(false);
                 return;
               }
             }
             
-            // If we have coordinates, calculate astronomical night for logging purposes
-            if (latitude && longitude) {
-              const { start, end } = calculateAstronomicalNight(latitude, longitude);
-              console.log(`Astronomical night for this location: ${formatTime(start)}-${formatTime(end)}`);
-            }
+            // Calculate fresh data
+            const result = await calculateRealTimeSiqs(latitude, longitude, effectiveBortleScale);
             
-            const result = await calculateRealTimeSiqs(
-              latitude,
-              longitude,
-              effectiveBortleScale
-            );
-            
-            if (result) {
-              // Extract score from the new format
-              const score = result.score || 0;
-              console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${score}`);
-              
-              // Store in session storage
+            if (result && typeof result.score === 'number') {
+              // Cache the result
               try {
                 sessionStorage.setItem(cacheKey, JSON.stringify({
                   data: result,
                   timestamp: now
                 }));
               } catch (e) {
-                console.error("Failed to cache SIQS data:", e);
+                console.warn("Failed to cache SIQS data:", e);
               }
               
-              onSiqsCalculated(score, false);
+              console.log(`Real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.score.toFixed(1)}`);
+              onSiqsCalculated(result.score, false);
             } else {
-              onSiqsCalculated(0, false);
+              onSiqsCalculated(null, false);
             }
-            setLastFetchTimestamp(now);
           } catch (error) {
-            console.error("Error fetching real-time SIQS:", error);
+            console.error("Error fetching SIQS data:", error);
             onSiqsCalculated(null, false);
-          } finally {
-            setLoading(false);
           }
+          
+          setLoading(false);
+          setLastFetchTimestamp(now);
         };
         
         fetchSiqs();
       }
     }
-  }, [latitude, longitude, showRealTimeSiqs, isVisible, bortleScale, onSiqsCalculated, lastFetchTimestamp]);
+  }, [isVisible, showRealTimeSiqs, latitude, longitude, bortleScale, lastFetchTimestamp, onSiqsCalculated]);
   
-  return null;
+  return null; // This component doesn't render anything
 };
 
 export default RealTimeSiqsFetcher;

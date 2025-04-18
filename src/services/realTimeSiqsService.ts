@@ -1,6 +1,6 @@
 
 // Re-export the simplified SIQS calculator
-export { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
+export { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 export { clearSiqsCache } from './realTimeSiqs/siqsCache';
 export { 
   updateLocationsWithRealTimeSiqs,

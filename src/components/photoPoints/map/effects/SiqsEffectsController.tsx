@@ -41,25 +41,24 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
   useEffect(() => {
     if (disabled || !userLocation || !map) return;
     
-    // Apply effects based on the current view and map state
+    // Always calculate SIQS for user location
     const applyMapEffects = async () => {
       try {
-        // For user location, always calculate SIQS
         if (userLocation) {
           await calculateSiqsForLocation(userLocation.latitude, userLocation.longitude);
         }
         
-        console.log(`Map effects applied for ${activeView} view with radius ${searchRadius}km`);
+        // Generate points around user for calculated view
+        if (activeView === 'calculated' && searchRadius > 0) {
+          // Log that we're using the simplified SIQS calculation
+          console.log(`Using simplified nighttime cloud cover SIQS calculation for radius ${searchRadius}km`);
+        }
       } catch (error) {
         console.error("Error applying map effects:", error);
       }
     };
     
     applyMapEffects();
-    
-    // We don't need event listeners since this component will re-render
-    // when the props change
-    
   }, [map, userLocation, activeView, searchRadius, calculateSiqsForLocation]);
   
   return null;
