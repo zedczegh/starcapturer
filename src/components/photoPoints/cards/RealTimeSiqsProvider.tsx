@@ -79,7 +79,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     if (isVisible && latitude && longitude) {
       const shouldFetch = forceUpdate || 
                           (Date.now() - lastFetchTimestamp > REFRESH_INTERVAL) ||
-                          (isCertified); // Always fetch for certified locations
+                          (isCertified && lastFetchTimestamp === 0); // Always fetch for certified locations on first visibility
       
       if (shouldFetch) {
         console.log(`Fetching real-time SIQS for ${isCertified ? 'certified' : 'regular'} location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);

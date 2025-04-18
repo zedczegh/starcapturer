@@ -12,7 +12,7 @@ import SiqsScoreBadge from './cards/SiqsScoreBadge';
 import LightPollutionIndicator from '@/components/location/LightPollutionIndicator';
 import LocationMetadata from './cards/LocationMetadata';
 import VisibilityObserver from './cards/VisibilityObserver';
-import RealTimeSiqsFetcher from './cards/RealTimeSiqsFetcher';
+import RealTimeSiqsProvider from './cards/RealTimeSiqsProvider';
 import LocationHeader from './cards/LocationHeader';
 import { getCertificationInfo, getLocalizedCertText } from './utils/certificationUtils';
 import { getSiqsScore } from '@/utils/siqsHelpers';
@@ -119,7 +119,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     setLoadingSiqs(loading);
   };
   
-  // Skip rendering locations with no valid SIQS data
+  // Only skip non-certified locations with no SIQS data
   if (realTimeSiqs === 0 && !loadingSiqs && !isCertified) {
     return null;
   }
@@ -149,10 +149,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           />
           
           <SiqsScoreBadge 
-            score={location.siqs} 
+            score={realTimeSiqs !== null ? realTimeSiqs : location.siqs}
             compact={true}
             isCertified={isCertified}
-            loading={loadingSiqs && isCertified}
+            loading={loadingSiqs}
+            forceCertified={isCertified && !loadingSiqs && realTimeSiqs === null}
           />
         </div>
         
@@ -193,13 +194,16 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           </Button>
         </div>
         
-        <RealTimeSiqsFetcher
+        <RealTimeSiqsProvider
           isVisible={isVisible}
-          showRealTimeSiqs={showRealTimeSiqs}
           latitude={location.latitude}
           longitude={location.longitude}
           bortleScale={location.bortleScale}
+          isCertified={isCertified}
+          isDarkSkyReserve={location.isDarkSkyReserve}
+          existingSiqs={location.siqs}
           onSiqsCalculated={handleSiqsCalculated}
+          forceUpdate={showRealTimeSiqs || isCertified}
         />
       </div>
     </VisibilityObserver>

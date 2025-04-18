@@ -26,7 +26,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   const numericScore = getSiqsScore(score);
   
   // For certified locations with no valid score, always show loading state
-  if (isCertified && numericScore <= 0 && !loading) {
+  if ((isCertified && numericScore <= 0) || forceCertified) {
     loading = true;
   }
   
