@@ -2,18 +2,33 @@
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
-const VALIDATION_CACHE = new Map<string, boolean>();
+// Cache for validation results to prevent repeated API calls
+const VALIDATION_CACHE = new Map<string, { result: boolean, timestamp: number }>();
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
+/**
+ * Validates if a location is on land (not water) using reverse geocoding
+ * @param location The location to validate
+ * @param language Language preference for results
+ * @returns Promise<boolean> - true if location is valid (on land), false if it's water
+ */
 export async function validateLocationWithReverseGeocoding(
   location: SharedAstroSpot,
   language: 'en' | 'zh' = 'en'
 ): Promise<boolean> {
   const cacheKey = `${location.latitude.toFixed(4)},${location.longitude.toFixed(4)}`;
   
-  // Check cache first
+  // Check cache first for faster response
   if (VALIDATION_CACHE.has(cacheKey)) {
-    return VALIDATION_CACHE.get(cacheKey)!;
+    const cached = VALIDATION_CACHE.get(cacheKey)!;
+    const now = Date.now();
+    
+    // Only use cache if it hasn't expired
+    if (now - cached.timestamp < CACHE_EXPIRY) {
+      return cached.result;
+    }
+    // If expired, remove from cache and continue to validation
+    VALIDATION_CACHE.delete(cacheKey);
   }
   
   try {
@@ -22,10 +37,13 @@ export async function validateLocationWithReverseGeocoding(
     // Location is invalid if it's water
     const isValid = !details.isWater;
     
-    // Cache the result
-    VALIDATION_CACHE.set(cacheKey, isValid);
+    // Cache the result with timestamp
+    VALIDATION_CACHE.set(cacheKey, { 
+      result: isValid, 
+      timestamp: Date.now() 
+    });
     
-    // Clear old cache entries periodically
+    // Clean cache if it's getting too large
     if (VALIDATION_CACHE.size > 1000) {
       clearOldCacheEntries();
     }
@@ -37,11 +55,15 @@ export async function validateLocationWithReverseGeocoding(
   }
 }
 
-function clearOldCacheEntries() {
+/**
+ * Removes expired entries from the validation cache
+ */
+function clearOldCacheEntries(): void {
   const now = Date.now();
-  for (const [key, timestamp] of VALIDATION_CACHE.entries()) {
-    if (now - timestamp > CACHE_EXPIRY) {
+  
+  VALIDATION_CACHE.forEach((value, key) => {
+    if (now - value.timestamp > CACHE_EXPIRY) {
       VALIDATION_CACHE.delete(key);
     }
-  }
+  });
 }
