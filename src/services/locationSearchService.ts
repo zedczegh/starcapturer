@@ -119,3 +119,49 @@ async function generateCalculatedPoint(
   }
 }
 
+/**
+ * Find certified locations within radius
+ * This function is used by the certifiedLocationsService
+ */
+export async function findCertifiedLocations(
+  latitude: number,
+  longitude: number,
+  radius: number,
+  limit: number = 100
+): Promise<SharedAstroSpot[]> {
+  return findLocationsWithinRadius(latitude, longitude, radius, true, limit);
+}
+
+/**
+ * Sort locations by quality and distance
+ */
+export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstroSpot[] {
+  if (!locations || !Array.isArray(locations)) return [];
+  
+  return [...locations].sort((a, b) => {
+    // First prioritize certified locations
+    const aCertified = a.isDarkSkyReserve || a.certification ? 1 : 0;
+    const bCertified = b.isDarkSkyReserve || b.certification ? 1 : 0;
+    
+    if (aCertified !== bCertified) {
+      return bCertified - aCertified;
+    }
+    
+    // Then sort by SIQS score if available
+    if (a.siqs && b.siqs) {
+      return b.siqs - a.siqs;
+    }
+    
+    // Then by Bortle scale (lower is better)
+    if (a.bortleScale !== undefined && b.bortleScale !== undefined) {
+      return a.bortleScale - b.bortleScale;
+    }
+    
+    // Finally by distance if available
+    if (a.distance !== undefined && b.distance !== undefined) {
+      return a.distance - b.distance;
+    }
+    
+    return 0;
+  });
+}
