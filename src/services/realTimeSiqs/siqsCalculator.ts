@@ -168,11 +168,11 @@ export async function calculateRealTimeSiqs(
           climate: !!climateRegion
         }
       },
-      factors: {
-        cloudCover: finalCloudCover,
-        moonPhase,
-        seeingConditions
-      }
+      factors: [
+        { name: "Cloud Cover", score: finalCloudCover / 100, description: `Cloud cover of ${finalCloudCover.toFixed(1)}%` },
+        { name: "Light Pollution", score: (10 - finalBortleScale) / 10, description: `Bortle Scale ${finalBortleScale}` },
+        { name: "Seeing", score: (5 - seeingConditions) / 5, description: `Seeing conditions: ${seeingConditions}` }
+      ]
     };
     
     // Cache the result for future use

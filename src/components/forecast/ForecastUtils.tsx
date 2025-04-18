@@ -1,20 +1,23 @@
+
 import React from "react";
 
 /**
  * Utility functions for processing and displaying forecast data
  */
 
-// Extract future forecast data, filtering out past times
+// Extract future forecast data, filtering out past times and limiting to the next 24 hours
 export const extractFutureForecasts = (hourlyData: any, limit?: number) => {
   if (!hourlyData || !hourlyData.time) return [];
   
   const now = new Date();
   const futureForecasts = [];
+  const twentyFourHoursLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   
   for (let i = 0; i < hourlyData.time.length; i++) {
     const forecastTime = new Date(hourlyData.time[i]);
     
-    if (forecastTime > now) {
+    // Only include times in the future and within the next 24 hours by default
+    if (forecastTime > now && (!limit || forecastTime <= twentyFourHoursLater)) {
       futureForecasts.push({
         time: hourlyData.time[i],
         temperature: hourlyData.temperature_2m?.[i],
@@ -41,25 +44,32 @@ export const extractNightForecasts = (hourlyData: any) => {
     return [];
   }
   
+  const now = new Date();
+  const twentyFourHoursLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  
   for (let i = 0; i < hourlyData.time.length; i++) {
     const date = new Date(hourlyData.time[i]);
-    const hour = date.getHours();
     
-    // Include hours between 6 PM (18) and 8 AM (8)
-    if (hour >= 18 || hour < 8) {
-      // Skip entries with missing data
-      if (hourlyData.cloud_cover === undefined || hourlyData.wind_speed_10m === undefined) {
-        continue;
-      }
+    // Only include forecasts within the next 24 hours
+    if (date > now && date <= twentyFourHoursLater) {
+      const hour = date.getHours();
       
-      nightForecast.push({
-        time: hourlyData.time[i],
-        cloudCover: hourlyData.cloud_cover?.[i] ?? 0,
-        windSpeed: hourlyData.wind_speed_10m?.[i] ?? 0,
-        humidity: hourlyData.relative_humidity_2m?.[i] ?? 0,
-        precipitation: hourlyData.precipitation?.[i] ?? 0,
-        weatherCondition: hourlyData.weather_code?.[i] ?? 0
-      });
+      // Include hours between 6 PM (18) and 8 AM (8)
+      if (hour >= 18 || hour < 8) {
+        // Skip entries with missing data
+        if (hourlyData.cloud_cover === undefined || hourlyData.wind_speed_10m === undefined) {
+          continue;
+        }
+        
+        nightForecast.push({
+          time: hourlyData.time[i],
+          cloudCover: hourlyData.cloud_cover?.[i] ?? 0,
+          windSpeed: hourlyData.wind_speed_10m?.[i] ?? 0,
+          humidity: hourlyData.relative_humidity_2m?.[i] ?? 0,
+          precipitation: hourlyData.precipitation?.[i] ?? 0,
+          weatherCondition: hourlyData.weather_code?.[i] ?? 0
+        });
+      }
     }
   }
   

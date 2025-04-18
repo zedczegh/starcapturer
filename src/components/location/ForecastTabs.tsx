@@ -1,7 +1,7 @@
 
 import React, { useCallback, useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarRange, Calendar } from "lucide-react";
+import { Clock, CalendarRange } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ForecastTable from "@/components/ForecastTable";
 import LongRangeForecast from "@/components/LongRangeForecast";
@@ -30,7 +30,7 @@ const ForecastTabs: React.FC<ForecastTabsProps> = ({
   
   // Memoize tab labels to prevent unnecessary re-renders
   const tabLabels = useMemo(() => ({
-    hourly: isMobile ? t("Hourly", "小时") : t("Hourly Forecast", "小时预报"),
+    hourly: isMobile ? t("24h", "24小时") : t("24-Hour Forecast", "24小时预报"),
     extended: isMobile ? t("15-Day", "15天") : t("15-Day Forecast", "15天预报")
   }), [isMobile, t]);
   
@@ -63,7 +63,7 @@ const ForecastTabs: React.FC<ForecastTabsProps> = ({
           value="hourly" 
           className="flex items-center gap-2 data-[state=active]:bg-primary/20"
         >
-          <Calendar className="h-4 w-4" />
+          <Clock className="h-4 w-4" />
           {tabLabels.hourly}
         </TabsTrigger>
         <TabsTrigger 
