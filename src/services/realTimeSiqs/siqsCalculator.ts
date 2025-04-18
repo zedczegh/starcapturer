@@ -101,11 +101,18 @@ export async function calculateRealTimeSiqs(
       _forecast: forecastData
     };
     
+    // Type-safe handling of nighttimeCloudData
     if (weatherData && 'nighttimeCloudData' in weatherData) {
+      const nighttimeData = weatherData.nighttimeCloudData as { 
+        average?: number; 
+        timeRange?: string; 
+        sourceType?: string; 
+      } | undefined;
+      
       weatherDataWithClearSky.nighttimeCloudData = {
-        average: weatherData.nighttimeCloudData?.average || 0,
-        timeRange: weatherData.nighttimeCloudData?.timeRange || "18:00-06:00",
-        sourceType: weatherData.nighttimeCloudData?.sourceType || 'calculated'
+        average: nighttimeData?.average || 0,
+        timeRange: nighttimeData?.timeRange || "18:00-06:00",
+        sourceType: (nighttimeData?.sourceType as "forecast" | "calculated" | "historical") || 'calculated'
       };
     }
     
