@@ -42,7 +42,11 @@ const LocationDetailsHeader: React.FC<LocationDetailsHeaderProps> = ({
             )}
           </div>
           
-          <LocationTimeDisplay latitude={latitude} longitude={longitude} className="mt-2 md:mt-0" />
+          <LocationTimeDisplay 
+            latitude={latitude} 
+            longitude={longitude} 
+            className="mt-2 md:mt-0" 
+          />
         </div>
       </CardContent>
     </Card>

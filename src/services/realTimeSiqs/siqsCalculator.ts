@@ -156,37 +156,30 @@ export async function calculateRealTimeSiqs(
     
     const result: SiqsResult = {
       siqs: finalScore,
-      isViable: finalScore >= 3.0,
-      weatherData: weatherDataWithClearSky,
-      forecastData,
-      factors: siqsResult.factors,
+      isViable: true,
       metadata: {
         calculatedAt: new Date().toISOString(),
-        sources: {
-          weather: true,
-          forecast: !!forecastData,
-          clearSky: !!clearSkyData,
-          lightPollution: !!pollutionData,
-          terrainCorrected: !!terrainCorrectedScale,
-          climate: !!climateRegion
+        location: {
+          latitude,
+          longitude,
+          bortle: finalBortleScale
+        },
+        factors: {
+          cloudCover: finalCloudCover,
+          moonPhase,
+          seeingConditions
         }
       }
     };
     
+    // Cache the result for future use
     setSiqsCache(latitude, longitude, result);
     
     return result;
-    
   } catch (error) {
     console.error("Error calculating real-time SIQS:", error);
-    return { 
-      siqs: 0,
-      isViable: false,
-      factors: [{
-        name: 'Error',
-        score: 0,
-        description: 'Failed to calculate SIQS'
-      }]
-    };
+    return { siqs: 0, isViable: false };
   }
 }
+
+export default calculateRealTimeSiqs;

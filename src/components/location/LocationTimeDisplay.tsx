@@ -43,6 +43,9 @@ const LocationTimeDisplay: React.FC<LocationTimeDisplayProps> = ({
       setTimeZoneInfo(`${dateString} (UTC${offset})`);
     } catch (error) {
       console.error("Error updating location time:", error);
+      // Provide fallback values
+      setCurrentTime('--:--:--');
+      setTimeZoneInfo('----/--/-- (UTC)');
     }
   };
   
