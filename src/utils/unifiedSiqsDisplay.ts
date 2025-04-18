@@ -43,14 +43,25 @@ export function getDisplaySiqs(options: {
 }): number {
   const { realTimeSiqs, staticSiqs } = options;
   
+  // Normalize to 1-10 scale if needed
+  let normalizedRealTimeSiqs = realTimeSiqs;
+  if (normalizedRealTimeSiqs && normalizedRealTimeSiqs > 10) {
+    normalizedRealTimeSiqs = normalizedRealTimeSiqs / 10;
+  }
+  
+  let normalizedStaticSiqs = staticSiqs;
+  if (normalizedStaticSiqs > 10) {
+    normalizedStaticSiqs = normalizedStaticSiqs / 10;
+  }
+  
   // Use realtime SIQS if available
-  if (realTimeSiqs !== null && realTimeSiqs > 0) {
-    return realTimeSiqs;
+  if (normalizedRealTimeSiqs !== null && normalizedRealTimeSiqs > 0) {
+    return normalizedRealTimeSiqs;
   }
   
   // Use static SIQS if available
-  if (staticSiqs > 0) {
-    return staticSiqs;
+  if (normalizedStaticSiqs > 0) {
+    return normalizedStaticSiqs;
   }
   
   // No default scores for certified locations anymore
@@ -72,7 +83,12 @@ export function getLocationSiqs(location: any, realTimeSiqs: number | null = nul
   const isDarkSkyReserve = Boolean(location?.isDarkSkyReserve);
   
   // Get static SIQS from location
-  const staticSiqs = getSiqsScore(location);
+  let staticSiqs = getSiqsScore(location);
+  
+  // Normalize to 1-10 scale if needed
+  if (staticSiqs > 10) {
+    staticSiqs = staticSiqs / 10;
+  }
   
   // Get appropriate display SIQS
   return getDisplaySiqs({
@@ -91,7 +107,9 @@ export function formatSiqsForDisplay(siqs: number | null): string {
     return "N/A";
   }
   
-  return siqs.toFixed(1);
+  // Ensure SIQS is in 1-10 scale
+  const normalizedSiqs = siqs > 10 ? siqs / 10 : siqs;
+  return normalizedSiqs.toFixed(1);
 }
 
 /**
@@ -101,7 +119,9 @@ export function getCachedRealTimeSiqs(latitude: number, longitude: number): numb
   if (hasCachedSiqs(latitude, longitude)) {
     const cached = getCachedSiqs(latitude, longitude);
     if (cached && cached.siqs > 0) {
-      return cached.siqs;
+      // Normalize to 1-10 scale if needed
+      const normalizedSiqs = cached.siqs > 10 ? cached.siqs / 10 : cached.siqs;
+      return normalizedSiqs;
     }
   }
   return null;
@@ -121,7 +141,12 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
   } = options;
   
   // Default result - no special treatment for certified locations
-  const defaultSiqs = existingSiqs !== null ? getSiqsScore(existingSiqs) : DEFAULT_SIQS;
+  let defaultSiqs = existingSiqs !== null ? getSiqsScore(existingSiqs) : DEFAULT_SIQS;
+  
+  // Normalize to 1-10 scale if needed
+  if (defaultSiqs > 10) {
+    defaultSiqs = defaultSiqs / 10;
+  }
                       
   const defaultResult: SiqsResult = {
     siqs: defaultSiqs,
@@ -158,7 +183,8 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     
     if (result && result.siqs > 0) {
       // No special treatment for certified locations
-      const finalScore = result.siqs;
+      // Normalize to 1-10 scale if needed
+      const finalScore = result.siqs > 10 ? result.siqs / 10 : result.siqs;
       
       return {
         siqs: finalScore,

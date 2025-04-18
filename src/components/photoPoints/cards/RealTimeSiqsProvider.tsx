@@ -35,6 +35,9 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   const existingSiqsNumber = typeof existingSiqs === 'number' ? existingSiqs : 
     (typeof existingSiqs === 'object' && existingSiqs && 'score' in existingSiqs) ? existingSiqs.score : 0;
   
+  // Normalize SIQS to 1-10 scale if needed
+  const normalizedSiqs = existingSiqsNumber > 10 ? existingSiqsNumber / 10 : existingSiqsNumber;
+  
   // Memoize the fetch function to prevent unnecessary re-renders
   const fetchSiqs = useCallback(async () => {
     if (!latitude || !longitude) return;
@@ -50,36 +53,39 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         bortleScale,
         isCertified,
         isDarkSkyReserve,
-        existingSiqs: existingSiqsNumber
+        existingSiqs: normalizedSiqs
       });
       
-      onSiqsCalculated(result.siqs, false, result.source === 'realtime' ? 9 : 7);
+      // Ensure result is normalized to 1-10 scale
+      const normalizedResult = result.siqs > 10 ? result.siqs / 10 : result.siqs;
+      
+      onSiqsCalculated(normalizedResult, false, result.source === 'realtime' ? 9 : 7);
       setLastFetchTimestamp(Date.now());
       
     } catch (error) {
       console.error("Error in RealTimeSiqsProvider:", error);
       
-      if (existingSiqsNumber > 0) {
-        onSiqsCalculated(existingSiqsNumber, false, 6);
+      if (normalizedSiqs > 0) {
+        onSiqsCalculated(normalizedSiqs, false, 6);
       } else {
         onSiqsCalculated(null, false);
       }
     } finally {
       setLoading(false);
     }
-  }, [latitude, longitude, bortleScale, isCertified, isDarkSkyReserve, existingSiqsNumber, onSiqsCalculated]);
+  }, [latitude, longitude, bortleScale, isCertified, isDarkSkyReserve, normalizedSiqs, onSiqsCalculated]);
   
   useEffect(() => {
     if (isVisible && latitude && longitude) {
       const shouldFetch = forceUpdate || 
-                           (Date.now() - lastFetchTimestamp > REFRESH_INTERVAL);
+                          (Date.now() - lastFetchTimestamp > REFRESH_INTERVAL);
       
       if (shouldFetch) {
-        console.log(`Fetching real-time SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        console.log(`Fetching real-time SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, isCertified: ${isCertified}`);
         fetchSiqs();
       }
     }
-  }, [isVisible, latitude, longitude, lastFetchTimestamp, fetchSiqs, forceUpdate]);
+  }, [isVisible, latitude, longitude, lastFetchTimestamp, fetchSiqs, forceUpdate, isCertified]);
   
   return null; // This is a headless component
 };

@@ -29,8 +29,11 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
+  // Normalize SIQS score if needed
+  const normalizedScore = siqsScore !== null && siqsScore > 10 ? siqsScore / 10 : siqsScore;
+  
   // Determine the CSS class for styling based on SIQS
-  const siqsClass = getSiqsClass(siqsScore);
+  const siqsClass = getSiqsClass(normalizedScore);
   
   return (
     <Popup 
@@ -57,7 +60,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
         <div className="mt-2 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <SiqsScoreBadge 
-              score={siqsScore} 
+              score={normalizedScore} 
               compact={true} 
               loading={siqsLoading}
               isCertified={isCertified}
