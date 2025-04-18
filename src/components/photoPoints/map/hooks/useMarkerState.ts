@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -26,20 +27,23 @@ export function useMarkerState({
     if (language === 'zh' && location.chineseName) {
       return location.chineseName;
     }
-    
     return location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
 
-  // Calculate the SIQS score to display, WITHOUT giving default scores to certified locations
+  // Calculate SIQS score - use real-time or location SIQS without defaults
   const siqsScore = useMemo(() => {
-    // Use real-time SIQS if available
-    if (realTimeSiqs !== null) return realTimeSiqs;
+    // Always prefer real-time SIQS if available
+    if (realTimeSiqs !== null) {
+      return realTimeSiqs;
+    }
     
-    // Otherwise use location's SIQS if available
+    // Use location's calculated SIQS if available
     const locationSiqs = getSiqsScore(location);
-    if (locationSiqs > 0) return locationSiqs;
+    if (locationSiqs > 0) {
+      return locationSiqs;
+    }
     
-    // No default scores for certified locations - treat them like calculated spots
+    // Return null if no valid SIQS available
     return null;
   }, [location, realTimeSiqs]);
   

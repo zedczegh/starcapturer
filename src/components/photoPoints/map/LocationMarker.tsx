@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState } from 'react';
 import { Marker } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -36,7 +35,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
 }) => {
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [siqsLoading, setSiqsLoading] = useState(false);
-  const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
+  const [siqsConfidence, setSiqsConfidence] = useState(7);
   
   const { siqsScore, displayName, icon } = useMarkerState({
     location,
@@ -48,9 +47,17 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   // Check if coordinates are valid
   if (!location.latitude || !location.longitude || 
       !isFinite(location.latitude) || !isFinite(location.longitude)) {
-    console.error("Invalid location coordinates:", location);
     return null;
   }
+  
+  // Handle SIQS calculation results
+  const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
+    setRealTimeSiqs(siqs);
+    setSiqsLoading(loading);
+    if (confidence) {
+      setSiqsConfidence(confidence);
+    }
+  }, []);
   
   // Handle marker events
   const handleClick = useCallback(() => {
@@ -84,17 +91,10 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
     }
   }, [handleTouchMove]);
   
-  // Real-time SIQS handling
-  const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
-    setRealTimeSiqs(siqs);
-    setSiqsLoading(loading);
-    if (confidence) setSiqsConfidence(confidence);
-  }, []);
-  
   return (
     <>
       <RealTimeSiqsProvider
-        isVisible={isHovered}
+        isVisible={isHovered || isCertified}
         latitude={location.latitude}
         longitude={location.longitude}
         bortleScale={location.bortleScale}
@@ -123,7 +123,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
         <LocationPopupContent
           location={location}
           siqsScore={siqsScore}
-          siqsLoading={siqsLoading && isHovered}
+          siqsLoading={siqsLoading}
           displayName={displayName}
           isCertified={isCertified}
           onClick={handleClick}

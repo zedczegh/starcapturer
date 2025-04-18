@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -29,7 +28,6 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
-  // Determine the CSS class for styling based on SIQS
   const siqsClass = getSiqsClass(siqsScore);
   
   return (
@@ -44,7 +42,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
           {isCertified && (
             <Star className="h-3.5 w-3.5 mr-1 text-primary fill-primary" />
           )}
-          <span className="text-gray-100">{displayName || t("Unnamed Location", "未命名位置")}</span>
+          <span className="text-gray-100">{displayName}</span>
         </div>
         
         {isCertified && location.certification && (
@@ -61,7 +59,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
               compact={true} 
               loading={siqsLoading}
               isCertified={isCertified}
-              forceCertified={false} // Never force certified default scores
+              forceCertified={false}
             />
           </div>
           
