@@ -68,7 +68,8 @@ export const usePhotoPointsMapContainer = ({
             calcLoc.latitude === certLoc.latitude && 
             calcLoc.longitude === certLoc.longitude
           )
-        );
+        )
+      );
     }
   }, [activeView, certifiedLocations, calculatedLocations]);
   
