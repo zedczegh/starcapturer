@@ -65,6 +65,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
   const [panelVisible, setPanelVisible] = useState(false);
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
   
   const {
     hideMarkerPopups,
@@ -81,6 +82,21 @@ const MapContainer: React.FC<MapContainerProps> = ({
     setRealTimeSiqs(siqs);
     if (onSiqsCalculated) onSiqsCalculated(siqs);
   }, [onSiqsCalculated]);
+
+  // Handle map ready event from LazyMapContainer
+  const handleMapLoaded = useCallback((mapInstance: any) => {
+    if (mapInstance) {
+      mapInstanceRef.current = mapInstance;
+      // Store map globally for other components to access
+      try {
+        (window as any).leafletMap = mapInstance;
+        console.log("Map reference stored globally");
+      } catch (e) {
+        console.error("Failed to store map reference:", e);
+      }
+    }
+    handleMapReady();
+  }, [handleMapReady]);
 
   return (
     <div className="relative w-full" 
@@ -111,7 +127,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
           locations={locations}
           searchRadius={searchRadius}
           activeView={activeView}
-          onMapReady={handleMapReady}
+          onMapReady={handleMapLoaded}
           onLocationClick={handleLocationClicked}
           onMapClick={handleMapClick}
           zoom={initialZoom}
@@ -126,7 +142,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
         />
       </Suspense>
       
-      {/* SIQS Effects controller */}
+      {/* SIQS Effects controller - Now moved outside the map component */}
       {mapReady && userLocation && (
         <SiqsEffectsController
           userLocation={userLocation}
@@ -135,6 +151,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
           onSiqsCalculated={handleSiqsCalculated}
           onSpotsGenerated={onSpotsGenerated}
           disabled={!mapReady}
+          mapInstance={mapInstanceRef.current}
         />
       )}
     </div>

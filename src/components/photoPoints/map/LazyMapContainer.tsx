@@ -1,5 +1,6 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
@@ -18,13 +19,27 @@ import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 configureLeaflet();
 
+// Internal component to access the map context and share it with parent components
+const MapRefForwarder = ({ onMapReady }: { onMapReady: (map: L.Map) => void }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (map) {
+      onMapReady(map);
+      console.log("Map reference forwarded to parent component");
+    }
+  }, [map, onMapReady]);
+  
+  return null;
+};
+
 interface LazyMapContainerProps {
   center: [number, number];
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   searchRadius: number;
   activeView: 'certified' | 'calculated';
-  onMapReady?: () => void;
+  onMapReady?: (map?: L.Map) => void;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onMapClick?: (lat: number, lng: number) => void;
   zoom?: number;
@@ -138,14 +153,28 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [userLocation?.latitude, userLocation?.longitude, locations, getCurrentSiqs]); 
   
-  const handleMapReady = useCallback(() => {
+  // Handler for when the map instance is ready
+  const handleMapInstance = useCallback((map: L.Map) => {
     if (isMountedRef.current) {
+      mapRef.current = map;
       setMapReady(true);
+      
+      // Store map globally for other components to access
+      try {
+        (window as any).leafletMap = map;
+      } catch (e) {
+        console.error("Failed to store map reference:", e);
+      }
+      
       if (onMapReady) {
-        onMapReady();
+        onMapReady(map);
       }
     }
   }, [onMapReady]);
+  
+  const handleMapReadyEvent = useCallback(() => {
+    console.log("Map container is ready");
+  }, []);
   
   useEffect(() => {
     if (!mapRef.current) return;
@@ -196,10 +225,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         scrollWheelZoom={!isMobile}
         ref={mapRef}
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
-        whenReady={handleMapReady}
+        whenReady={handleMapReadyEvent}
         attributionControl={!isMobile}
         worldCopyJump={true}
       >
+        {/* Map reference forwarder */}
+        <MapRefForwarder onMapReady={handleMapInstance} />
+        
         <TileLayer
           attribution={tileOptions.attribution}
           url={tileOptions.url}
@@ -240,6 +272,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           if (!location || !location.latitude || !location.longitude) return null;
           
           const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+          // Generate a consistent unique ID for each location
           const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
           const isHovered = hoveredLocationId === locationId;
           

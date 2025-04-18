@@ -1,6 +1,5 @@
 
 import React, { useEffect, useCallback, useRef, useState } from 'react';
-import { useMap } from 'react-leaflet';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 import { fetchForecastData } from '@/lib/api';
 import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
@@ -13,6 +12,7 @@ interface SiqsEffectsControllerProps {
   onSiqsCalculated?: (siqs: number) => void;
   onSpotsGenerated?: (spots: SharedAstroSpot[]) => void;
   disabled?: boolean;
+  mapInstance?: L.Map | null; // Accept map instance as prop rather than using useMap()
 }
 
 // Store generated spots globally to persist between renders
@@ -24,9 +24,9 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
   searchRadius,
   onSiqsCalculated,
   onSpotsGenerated,
-  disabled = false
+  disabled = false,
+  mapInstance
 }) => {
-  const map = useMap();
   const lastLocationRef = useRef<string | null>(null);
   const [isGeneratingSpots, setIsGeneratingSpots] = useState(false);
   
@@ -100,9 +100,11 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
             name: `Spot near ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
             latitude: spotLat,
             longitude: spotLng,
+            bortleScale: 4, // Default bortle scale
             siqs: siqs.score,
             siqsResult: siqs,
-            distance: distance
+            distance: distance,
+            timestamp: new Date().toISOString() // Add required timestamp
           };
           spots.push(newSpot);
         }
@@ -123,10 +125,10 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
     } finally {
       setIsGeneratingSpots(false);
     }
-  }, [isGeneratingSpots]);
+  }, [isGeneratingSpots, calculateSiqsForLocation]);
   
   useEffect(() => {
-    if (disabled || !userLocation || !map) return;
+    if (disabled || !userLocation) return;
     
     // Generate a unique identifier for this location
     const locationId = `${userLocation.latitude.toFixed(4)},${userLocation.longitude.toFixed(4)}`;
@@ -165,7 +167,7 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
     };
     
     applyMapEffects();
-  }, [map, userLocation, activeView, searchRadius, calculateSiqsForLocation, generateCalculatedSpots, onSpotsGenerated, disabled]);
+  }, [userLocation, activeView, searchRadius, calculateSiqsForLocation, generateCalculatedSpots, onSpotsGenerated, disabled]);
   
   return null;
 };
