@@ -128,6 +128,62 @@ export function clearSiqsCache(latitude?: number, longitude?: number): void {
 }
 
 /**
+ * Clear location-specific SIQS cache
+ */
+export function clearLocationSiqsCache(locationId: string): void {
+  try {
+    // Clear from in-memory cache
+    for (const key of siqsCache.keys()) {
+      if (key.includes(locationId)) {
+        siqsCache.delete(key);
+      }
+    }
+    
+    // Clear from localStorage
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(`siqs_`) && key.includes(locationId)) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (error) {
+    console.error("Error clearing location SIQS from cache:", error);
+  }
+}
+
+/**
+ * Clean up expired cache entries
+ */
+export function cleanupExpiredCache(): number {
+  const now = Date.now();
+  let expiredCount = 0;
+  
+  // Find and remove expired entries
+  for (const [key, value] of siqsCache.entries()) {
+    const age = now - value.timestamp;
+    if (age > getCacheDuration()) {
+      siqsCache.delete(key);
+      expiredCount++;
+      
+      try {
+        const storageKey = `siqs_${key}`;
+        localStorage.removeItem(storageKey);
+      } catch (error) {
+        // Ignore storage errors during cleanup
+      }
+    }
+  }
+  
+  return expiredCount;
+}
+
+/**
+ * Get current size of SIQS cache
+ */
+export function getSiqsCacheSize(): number {
+  return siqsCache.size;
+}
+
+/**
  * Initialize cache from local storage on app start
  */
 export function initSiqsCache(): void {
@@ -217,4 +273,3 @@ if (typeof window !== 'undefined') {
 
 // Export cache for debugging
 export const _debugCache = siqsCache;
-

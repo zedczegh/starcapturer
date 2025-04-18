@@ -7,7 +7,7 @@ import './MapStyles.css';
 import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { configureLeaflet, getFastTileLayer, getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
-import MapController from './MapController';
+import MapController, { MapControllerProps } from './MapController';
 import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
 import { MapEvents } from './MapEffectsController';
@@ -256,7 +256,11 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         {useMobileMapFixer && isMobile && <MobileMapFixer />}
         
         <MapLegend activeView={activeView} />
-        <MapController />
+        <MapController 
+          userLocation={userLocation} 
+          searchRadius={searchRadius} 
+          onMapClick={stableOnMapClick}
+        />
       </MapContainer>
     </div>
   );

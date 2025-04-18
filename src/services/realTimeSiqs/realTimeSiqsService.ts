@@ -6,7 +6,7 @@ import { SiqsResult, SiqsCalculationOptions, WeatherDataWithClearSky } from './s
 import { fetchWeatherData } from '@/lib/api';
 
 // Export functions from siqsCache for external use
-export { clearSiqsCache, clearLocationSiqsCache };
+export { clearSiqsCache, clearLocationSiqsCache, cleanupExpiredCache };
 
 /**
  * Enhanced real-time SIQS calculation with built-in anomaly detection
