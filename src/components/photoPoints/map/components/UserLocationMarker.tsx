@@ -53,7 +53,7 @@ export const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
       <Marker 
         position={position} 
         icon={userIcon}
-        zIndexOffset={1000}
+        // Remove the unsupported zIndexOffset property
       >
         {normalizedSiqs !== null && (
           <div className="siqs-badge">
