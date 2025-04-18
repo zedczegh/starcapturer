@@ -159,10 +159,13 @@ export async function calculateRealTimeSiqs(
       isViable: true,
       metadata: {
         calculatedAt: new Date().toISOString(),
-        location: {
-          latitude,
-          longitude,
-          bortle: finalBortleScale
+        sources: {
+          weather: true,
+          forecast: !!forecastData,
+          clearSky: !!clearSkyData,
+          lightPollution: !!pollutionData,
+          terrainCorrected: !!terrainCorrectedScale,
+          climate: !!climateRegion
         },
         factors: {
           cloudCover: finalCloudCover,
