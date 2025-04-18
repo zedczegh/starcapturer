@@ -1,3 +1,4 @@
+
 // Cache management system for SIQS calculations
 
 // Create a cache to avoid redundant API calls with improved invalidation strategy
@@ -6,6 +7,21 @@ const siqsCache = new Map<string, {
   timestamp: number;
   isViable: boolean;
   factors?: any[];
+  metadata?: {
+    calculatedAt: string;
+    sources: {
+      weather: boolean;
+      forecast: boolean;
+      clearSky: boolean;
+      lightPollution: boolean;
+      terrainCorrected?: boolean;
+      climate?: boolean;
+    };
+    reliability?: {
+      score: number;
+      issues: string[];
+    };
+  };
 }>();
 
 // Invalidate cache entries older than 30 minutes for nighttime, 15 minutes for daytime
@@ -56,7 +72,8 @@ export const getCachedSiqs = (latitude: number, longitude: number) => {
     return {
       siqs: cachedData.siqs,
       isViable: cachedData.isViable,
-      factors: cachedData.factors
+      factors: cachedData.factors,
+      metadata: cachedData.metadata
     };
   }
   
@@ -83,6 +100,8 @@ export const setSiqsCache = (
         forecast: boolean;
         clearSky: boolean;
         lightPollution: boolean;
+        terrainCorrected?: boolean;
+        climate?: boolean;
       };
     };
   }
