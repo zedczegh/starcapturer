@@ -5,7 +5,6 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
 import { MapEffectsComposer } from '../MapComponents';
 import MapController from '../MapController';
-import MapLegend from '../MapLegend';
 import MobileMapFixer from '../MobileMapFixer';
 import { getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
 
@@ -152,8 +151,6 @@ const MapContent: React.FC<MapContentProps> = ({
       })}
       
       {useMobileMapFixer && isMobile && <MobileMapFixer />}
-      
-      <MapLegend activeView={activeView} />
     </MapContainer>
   );
 };
