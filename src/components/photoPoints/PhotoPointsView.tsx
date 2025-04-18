@@ -2,8 +2,8 @@
 import React, { useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
-import CertifiedLocations from './CertifiedLocations';
 import CalculatedLocations from './CalculatedLocations';
+import CertifiedLocations from '../certifiedLocations/CertifiedLocations';
 
 // Note: Changed from lazy loading to regular import to fix "Failed to fetch" error
 
@@ -62,6 +62,9 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
             onLocationClick={onLocationClick}
             onLocationUpdate={handleMapLocationUpdate}
             searchRadius={activeView === 'calculated' ? calculatedSearchRadius : searchRadius}
+            certifiedLocations={certifiedLocations}
+            calculatedLocations={calculatedLocations}
+            activeView={activeView}
           />
         </div>
       )}

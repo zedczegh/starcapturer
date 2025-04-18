@@ -13,6 +13,7 @@ import { getCertificationInfo } from './utils/certificationUtils';
 import CardContainer from './cards/components/CardContainer';
 import LocationInfo from './cards/components/LocationInfo';
 import CardActions from './cards/components/CardActions';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -59,7 +60,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         longitude: location.longitude,
         bortleScale: location.bortleScale || 4,
         siqsResult: {
-          score: location.siqs || 0
+          score: getSiqsScore(location.siqs) || 0
         },
         certification: location.certification || '',
         isDarkSkyReserve: !!location.isDarkSkyReserve,
@@ -114,8 +115,9 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     if (realTimeSiqs !== null && realTimeSiqs > 0) {
       return realTimeSiqs;
     }
-    if (location.siqs && location.siqs > 0) {
-      return location.siqs;
+    const siqsScore = getSiqsScore(location.siqs);
+    if (siqsScore > 0) {
+      return siqsScore;
     }
     // Return null if no valid score to display
     return null;

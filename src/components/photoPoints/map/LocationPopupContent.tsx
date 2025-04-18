@@ -8,6 +8,7 @@ import { Star, ExternalLink } from 'lucide-react';
 import { formatDistance } from '@/utils/geoUtils';
 import { getSiqsClass } from './MarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface LocationPopupContentProps {
   location: SharedAstroSpot;
