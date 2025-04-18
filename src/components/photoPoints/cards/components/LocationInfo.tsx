@@ -4,12 +4,13 @@ import LightPollutionIndicator from '@/components/location/LightPollutionIndicat
 import LocationMetadata from '../LocationMetadata';
 import { getCertificationInfo, getLocalizedCertText } from '@/components/photoPoints/utils/certificationUtils';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { Language } from '@/contexts/LanguageContext';
 
 interface LocationInfoProps {
   location: SharedAstroSpot;
   certInfo: ReturnType<typeof getCertificationInfo>;
   displayName: string;
-  language: string;
+  language: Language;
 }
 
 const LocationInfo: React.FC<LocationInfoProps> = ({
@@ -49,4 +50,4 @@ const LocationInfo: React.FC<LocationInfoProps> = ({
   );
 };
 
-export default LocationInfo;
+export default React.memo(LocationInfo);

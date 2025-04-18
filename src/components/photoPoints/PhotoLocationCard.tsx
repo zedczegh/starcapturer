@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
@@ -31,7 +31,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const { language } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const certInfo = React.useMemo(() => getCertificationInfo(location), [location]);
+  const certInfo = useMemo(() => getCertificationInfo(location), [location]);
   
   const { displayName, showOriginalName } = useDisplayName({
     location,
@@ -74,24 +74,29 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const [loadingSiqs, setLoadingSiqs] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
+  const [siqsConfidence, setSiqsConfidence] = useState<number>(8);
   
-  const isCertified = React.useMemo(() => 
+  const isCertified = useMemo(() => 
     Boolean(location.certification || location.isDarkSkyReserve || location.type === 'dark-site'),
     [location]
   );
   
-  const handleSiqsCalculated = React.useCallback((siqs: number | null, loading: boolean) => {
+  const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
     setLoadingSiqs(loading);
     setHasAttemptedLoad(true);
     
     // Only update state if we have a real score or are in loading state
     if (siqs !== null || loading) {
       setRealTimeSiqs(siqs);
+      
+      if (confidence) {
+        setSiqsConfidence(confidence);
+      }
     }
   }, []);
   
   // Determine loading state with priority on certified locations
-  const showLoadingState = React.useMemo(() => {
+  const showLoadingState = useMemo(() => {
     if (!hasAttemptedLoad && isCertified) {
       return true; // Show loading immediately for certified locations
     }
@@ -115,6 +120,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             isCertified={isCertified}
             loading={showLoadingState}
             forceCertified={isCertified && realTimeSiqs === null && !loadingSiqs}
+            confidenceScore={siqsConfidence}
           />
         </div>
         

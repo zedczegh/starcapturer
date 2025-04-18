@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { formatSiqsForDisplay } from '@/utils/unifiedSiqsDisplay';
 
 interface SiqsScoreBadgeProps {
@@ -25,6 +25,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   // State for managing smooth transitions
   const [displayedScore, setDisplayedScore] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const previousScore = useRef<number | null>(null);
   
   // Convert score to number using our helper function
   const numericScore = getSiqsScore(score);
@@ -44,21 +45,34 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       return;
     }
     
-    // Avoid unnecessary transitions for small changes
-    if (displayedScore !== null && Math.abs(displayedScore - numericScore) < 0.2) {
+    // First time setting a score
+    if (displayedScore === null) {
       setDisplayedScore(numericScore);
+      previousScore.current = numericScore;
       return;
     }
     
-    // Smooth transition for larger changes
-    if (displayedScore !== null && Math.abs(displayedScore - numericScore) >= 0.2) {
+    // Avoid unnecessary transitions for small changes
+    if (Math.abs(displayedScore - numericScore) < 0.2) {
+      setDisplayedScore(numericScore);
+      previousScore.current = numericScore;
+      return;
+    }
+    
+    // Only animate significant changes
+    if (Math.abs(displayedScore - numericScore) >= 0.2) {
       setIsTransitioning(true);
-      setTimeout(() => {
+      
+      // Store previous score for reference
+      previousScore.current = displayedScore;
+      
+      // Quick delay for animation
+      const timer = setTimeout(() => {
         setDisplayedScore(numericScore);
         setIsTransitioning(false);
-      }, 300);
-    } else {
-      setDisplayedScore(numericScore);
+      }, 200);
+      
+      return () => clearTimeout(timer);
     }
   }, [numericScore, showLoading, displayedScore]);
   
@@ -102,21 +116,23 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   }
 
   return (
-    <motion.div 
-      className={`flex items-center ${getColor()} ${compact ? 'px-1.5 py-0.5' : 'px-2 py-0.5'} rounded-full border`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: isTransitioning ? 0.5 : 1 }}
-      transition={{ duration: 0.2 }}
-      layout
-    >
-      <Star 
-        className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-yellow-400 mr-1`} 
-        fill="#facc15" 
-      />
-      <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
-        {formattedScore}
-      </span>
-    </motion.div>
+    <AnimatePresence>
+      <motion.div 
+        className={`flex items-center ${getColor()} ${compact ? 'px-1.5 py-0.5' : 'px-2 py-0.5'} rounded-full border`}
+        initial={{ opacity: 0.6 }}
+        animate={{ opacity: isTransitioning ? 0.5 : 1 }}
+        transition={{ duration: 0.2 }}
+        layout
+      >
+        <Star 
+          className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-yellow-400 mr-1`} 
+          fill="#facc15" 
+        />
+        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
+          {formattedScore}
+        </span>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 
