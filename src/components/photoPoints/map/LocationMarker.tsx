@@ -46,7 +46,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
     isHovered
   });
   
-  // Force SIQS update for certified locations on mount
+  // Force immediate SIQS update for certified locations on mount and when clicked
   useEffect(() => {
     if (isCertified) {
       setForceUpdate(true);
@@ -73,8 +73,14 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   
   // Handle marker events
   const handleClick = useCallback(() => {
+    // Force refresh SIQS on click for certified locations
+    if (isCertified) {
+      setForceUpdate(true);
+      setTimeout(() => setForceUpdate(false), 100);
+      setSiqsLoading(true);
+    }
     onClick(location);
-  }, [location, onClick]);
+  }, [location, onClick, isCertified]);
   
   const handleMouseOver = useCallback(() => {
     onHover(locationId);
@@ -86,10 +92,16 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   
   // Handle touch events for mobile
   const handleMarkerTouchStart = useCallback((e: React.TouchEvent) => {
+    // Force refresh SIQS on touch for certified locations
+    if (isCertified) {
+      setForceUpdate(true);
+      setTimeout(() => setForceUpdate(false), 100);
+      setSiqsLoading(true);
+    }
     if (handleTouchStart) {
       handleTouchStart(e, locationId);
     }
-  }, [handleTouchStart, locationId]);
+  }, [handleTouchStart, locationId, isCertified]);
   
   const handleMarkerTouchEnd = useCallback((e: React.TouchEvent) => {
     if (handleTouchEnd) {
@@ -106,7 +118,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   return (
     <>
       <RealTimeSiqsProvider
-        isVisible={true} // Always calculate for certified locations
+        isVisible={true} // Always keep visible for certified locations
         latitude={location.latitude}
         longitude={location.longitude}
         bortleScale={location.bortleScale}

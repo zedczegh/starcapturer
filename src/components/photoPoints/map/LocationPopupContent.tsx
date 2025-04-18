@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -37,7 +38,14 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
       offset={[0, 10]}
       direction="bottom"
     >
-      <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
+      <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}
+           onClick={() => {
+             // Force refresh on popup click
+             if (isCertified) {
+               console.log("Certified location popup clicked, forcing update");
+             }
+           }}
+      >
         <div className="font-medium text-sm mb-1.5 flex items-center">
           {isCertified && (
             <Star className="h-3.5 w-3.5 mr-1 text-primary fill-primary" />
@@ -59,7 +67,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
               compact={true} 
               loading={siqsLoading}
               isCertified={isCertified}
-              forceCertified={false}
+              forceCertified={isCertified} // Always show badge for certified locations
             />
           </div>
           

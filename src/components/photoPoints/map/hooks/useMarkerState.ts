@@ -38,18 +38,22 @@ export function useMarkerState({
       return realTimeSiqs;
     }
     
-    // Use location's calculated SIQS if available, with no defaults
-    const locationSiqs = getSiqsScore(location);
-    if (locationSiqs > 0) {
-      return locationSiqs;
+    // Use location's calculated SIQS if available and not certified
+    // For certified locations, we only want real-time data
+    if (!isCertified) {
+      const locationSiqs = getSiqsScore(location);
+      if (locationSiqs > 0) {
+        return locationSiqs;
+      }
     }
     
     // Return null if no valid SIQS available
     return null;
-  }, [location, realTimeSiqs]);
+  }, [location, realTimeSiqs, isCertified]);
   
   // Get marker icon
   const icon = useMemo(() => {
+    // For certified locations, we want a special marker even if SIQS is unknown
     return getLocationMarker(location, isCertified, isHovered, isMobile);
   }, [location, isCertified, isHovered, isMobile]);
 

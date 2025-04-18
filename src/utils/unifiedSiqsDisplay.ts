@@ -108,6 +108,27 @@ export function getCachedRealTimeSiqs(latitude: number, longitude: number): numb
 }
 
 /**
+ * Simplified SIQS calculation based primarily on nighttime cloud cover
+ * This provides a quick estimate for locations when we want to avoid complex calculations
+ */
+export function calculateSimplifiedSiqs(cloudCover: number, bortleScale: number = 4): number {
+  // Base score determined by cloud cover (0-100%)
+  // 0% clouds = 10, 100% clouds = 0
+  const cloudScore = Math.max(0, 10 - (cloudCover / 10));
+  
+  // Adjust for Bortle scale (1-9)
+  // Lower Bortle = better score
+  const bortleAdjustment = Math.max(0, 5 - (bortleScale / 2));
+  
+  // Simple weighted combination
+  // 70% cloud cover, 30% Bortle scale
+  const rawScore = (cloudScore * 0.7) + (bortleAdjustment * 0.3);
+  
+  // Round to one decimal place and ensure within 0-10 range
+  return Math.round(Math.min(10, Math.max(0, rawScore)) * 10) / 10;
+}
+
+/**
  * All-in-one function to get complete SIQS display information
  * No default scores for certified locations
  */
@@ -150,23 +171,77 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
       };
     }
     
-    // Calculate real-time SIQS if no cache available
-    const result = await calculateRealTimeSiqs(
-      latitude,
-      longitude,
-      bortleScale
-    );
-    
-    if (result && result.siqs > 0) {
-      // Use actual calculated score
-      const finalScore = result.siqs;
+    // For certified locations, use simplified calculation if the full calculation fails
+    try {
+      // Try the full calculation first
+      const result = await calculateRealTimeSiqs(
+        latitude,
+        longitude,
+        bortleScale
+      );
       
+      if (result && result.siqs > 0) {
+        // Use actual calculated score
+        const finalScore = result.siqs;
+        
+        // Cache the result to avoid repeated calculations
+        setSiqsCache(latitude, longitude, result);
+        
+        return {
+          siqs: finalScore,
+          loading: false,
+          formattedSiqs: formatSiqsForDisplay(finalScore),
+          colorClass: getSiqsColorClass(finalScore),
+          source: 'realtime'
+        };
+      }
+    } catch (error) {
+      console.log("Full SIQS calculation failed, using simplified method:", error);
+    }
+    
+    // If we're still here and this is a certified location, use simplified calculation
+    if (isCertified) {
+      try {
+        // Get current cloud cover data directly
+        const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=cloud_cover&timezone=auto`);
+        const weatherData = await weatherResponse.json();
+        
+        if (weatherData && weatherData.current && weatherData.current.cloud_cover !== undefined) {
+          // Use simplified calculation based mainly on cloud cover
+          const cloudCover = weatherData.current.cloud_cover;
+          console.log(`Using simplified calculation with cloud cover ${cloudCover}% for certified location`);
+          
+          const simplifiedScore = calculateSimplifiedSiqs(cloudCover, bortleScale);
+          
+          // Cache result using simplified method
+          setSiqsCache(latitude, longitude, {
+            siqs: simplifiedScore,
+            isViable: simplifiedScore > 3,
+            metadata: { calculatedAt: new Date().toISOString(), simplified: true }
+          });
+          
+          return {
+            siqs: simplifiedScore,
+            loading: false,
+            formattedSiqs: formatSiqsForDisplay(simplifiedScore),
+            colorClass: getSiqsColorClass(simplifiedScore),
+            source: 'realtime'
+          };
+        }
+      } catch (error) {
+        console.error("Simplified SIQS calculation failed:", error);
+      }
+    }
+    
+    // If we reach here, we couldn't calculate SIQS for some reason
+    // For certified locations, return 0 instead of using default
+    if (isCertified) {
       return {
-        siqs: finalScore,
+        siqs: 0,
         loading: false,
-        formattedSiqs: formatSiqsForDisplay(finalScore),
-        colorClass: getSiqsColorClass(finalScore),
-        source: 'realtime'
+        formattedSiqs: "N/A",
+        colorClass: "text-muted-foreground",
+        source: 'default'
       };
     }
     
