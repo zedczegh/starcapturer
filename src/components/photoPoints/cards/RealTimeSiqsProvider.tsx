@@ -30,6 +30,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   const [isInitialFetch, setIsInitialFetch] = useState(true);
   const [fetchAttempted, setFetchAttempted] = useState(false);
   const isMounted = useRef(true);
+  const fetchTimeoutRef = useRef<number | null>(null);
   
   // Use shorter cache duration for certified locations and force refresh more aggressively
   const REFRESH_INTERVAL = isCertified ? 30 * 1000 : 5 * 60 * 1000; // 30 seconds for certified, 5 min for others
@@ -43,6 +44,10 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     // Cleanup function to prevent setState on unmounted component
     return () => {
       isMounted.current = false;
+      if (fetchTimeoutRef.current) {
+        window.clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = null;
+      }
     };
   }, []);
   
@@ -64,8 +69,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       setFetchAttempted(true);
       onSiqsCalculated(null, true);
       
-      console.log(`Fetching SIQS for ${isCertified ? 'certified' : 'regular'} location at ${latitude}, ${longitude}`);
-      
       // Use our unified SIQS display function
       const result = await getCompleteSiqsDisplay({
         latitude,
@@ -78,7 +81,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       
       if (!isMounted.current) return;
       
-      console.log(`SIQS result for ${latitude}, ${longitude}: ${result.siqs} (${result.source})`);
       onSiqsCalculated(result.siqs, false, result.source === 'realtime' ? 9 : 7);
       setLastFetchTimestamp(Date.now());
       
@@ -104,7 +106,10 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   }, [latitude, longitude, bortleScale, isCertified, isDarkSkyReserve, existingSiqsNumber, onSiqsCalculated]);
   
   useEffect(() => {
-    let timerId: number | null = null;
+    if (fetchTimeoutRef.current) {
+      window.clearTimeout(fetchTimeoutRef.current);
+      fetchTimeoutRef.current = null;
+    }
     
     if (isVisible && latitude && longitude) {
       const shouldFetch = 
@@ -114,24 +119,21 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
           (isCertified && !fetchAttempted); // Always fetch for certified locations on first visibility
       
       if (shouldFetch) {
-        console.log(`Fetching real-time SIQS for ${isCertified ? 'certified' : 'regular'} location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-        
         // Use a small delay for certified locations to avoid all fetches happening simultaneously
-        if (isCertified && !forceUpdate) {
-          const delay = Math.random() * 300; // Random delay up to 300ms
-          timerId = window.setTimeout(() => {
-            fetchSiqs();
-          }, delay);
-        } else {
+        const delay = isCertified ? Math.random() * 500 + 100 : 0; // Random delay up to 600ms for certified locations
+        
+        fetchTimeoutRef.current = window.setTimeout(() => {
           fetchSiqs();
-        }
+          fetchTimeoutRef.current = null;
+        }, delay);
       }
     }
     
     // Clear any pending timers on cleanup
     return () => {
-      if (timerId !== null) {
-        window.clearTimeout(timerId);
+      if (fetchTimeoutRef.current) {
+        window.clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = null;
       }
     };
   }, [isVisible, latitude, longitude, lastFetchTimestamp, fetchSiqs, forceUpdate, isCertified, REFRESH_INTERVAL, fetchAttempted]);

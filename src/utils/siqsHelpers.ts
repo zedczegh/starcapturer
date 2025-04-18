@@ -85,3 +85,20 @@ export function getLocationSiqs(location: SharedAstroSpot | any): number {
   
   return 0;
 }
+
+/**
+ * Format SIQS score for display
+ */
+export function formatSiqsScore(siqs: number | any): string {
+  const score = typeof siqs === 'number' ? siqs : getSiqsScore(siqs);
+  if (score <= 0) return 'N/A';
+  return score.toFixed(1);
+}
+
+/**
+ * Get appropriate SIQS display format
+ */
+export function formatSiqsForDisplay(score: number | null): string {
+  if (score === null || score <= 0) return 'N/A';
+  return score.toFixed(1);
+}

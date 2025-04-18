@@ -82,11 +82,16 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   );
   
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
-    setLoadingSiqs(loading);
+    if (loading) {
+      setLoadingSiqs(true);
+      return;
+    }
+    
+    setLoadingSiqs(false);
     setHasAttemptedLoad(true);
     
-    // Only update state if we have a real score or are in loading state
-    if (siqs !== null || loading) {
+    // Only update state if we have a real score
+    if (siqs !== null && siqs > 0) {
       setRealTimeSiqs(siqs);
       
       if (confidence) {
@@ -97,11 +102,19 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   
   // Determine loading state with priority on certified locations
   const showLoadingState = useMemo(() => {
-    if (!hasAttemptedLoad && isCertified) {
+    if (!hasAttemptedLoad && isCertified && isVisible) {
       return true; // Show loading immediately for certified locations
     }
     return loadingSiqs;
-  }, [isCertified, loadingSiqs, hasAttemptedLoad]);
+  }, [isCertified, loadingSiqs, hasAttemptedLoad, isVisible]);
+  
+  // Prioritize real-time scores for display
+  const displayScore = useMemo(() => {
+    if (realTimeSiqs !== null && realTimeSiqs > 0) {
+      return realTimeSiqs;
+    }
+    return location.siqs;
+  }, [realTimeSiqs, location.siqs]);
   
   return (
     <VisibilityObserver onVisibilityChange={setIsVisible}>
@@ -115,11 +128,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           />
           
           <SiqsScoreBadge 
-            score={realTimeSiqs !== null ? realTimeSiqs : location.siqs}
+            score={displayScore}
             compact={true}
             isCertified={isCertified}
             loading={showLoadingState}
-            forceCertified={isCertified && realTimeSiqs === null && !loadingSiqs}
+            forceCertified={false}
             confidenceScore={siqsConfidence}
           />
         </div>
@@ -142,7 +155,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           isDarkSkyReserve={location.isDarkSkyReserve}
           existingSiqs={location.siqs}
           onSiqsCalculated={handleSiqsCalculated}
-          forceUpdate={isVisible && isCertified}
         />
       </CardContainer>
     </VisibilityObserver>

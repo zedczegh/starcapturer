@@ -6,9 +6,7 @@ import PageLoader from '@/components/loaders/PageLoader';
 import { calculateDistance } from '@/utils/geoUtils';
 import DarkSkyLocations from '@/components/photoPoints/DarkSkyLocations';
 import CalculatedLocations from '@/components/photoPoints/CalculatedLocations';
-
-// Only lazy load the map component which is larger
-const PhotoPointsMap = React.lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
+import PhotoPointsMap from '@/components/photoPoints/map/PhotoPointsMap';
 
 interface PhotoPointsViewProps {
   showMap: boolean;
@@ -54,6 +52,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
   } = props;
   
   const [loaderVisible, setLoaderVisible] = useState(initialLoad || loading);
+  const [contentReady, setContentReady] = useState(false);
   
   // For calculated view - filter by distance, certified view - show all
   const filteredCalculatedLocations = React.useMemo(() => {
@@ -97,27 +96,25 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
     }
   }, [onLocationClick]);
   
-  // Effect to handle loader visibility
+  // Effect to handle loader visibility with better transition
   useEffect(() => {
     setLoaderVisible(initialLoad || loading);
+    
+    // Set a minimum loading time to prevent flickering
     const timer = setTimeout(() => {
       setLoaderVisible(false);
-    }, 300);
+      
+      // Add a short delay before showing content for smoother transition
+      setTimeout(() => {
+        setContentReady(true);
+      }, 100);
+    }, 500);
+    
     return () => clearTimeout(timer);
   }, [initialLoad, loading, activeView]);
   
-  // Debugging outputs
-  useEffect(() => {
-    console.log(`PhotoPointsView rendering`);
-    console.log(`- Active view: ${activeView}`);
-    console.log(`- Certified locations: ${certifiedLocations?.length || 0}`);
-    console.log(`- Calculated locations: ${calculatedLocations?.length || 0}`);
-    console.log(`- Show map: ${showMap}`);
-    console.log(`- Search radius: ${searchRadius}`);
-  }, [activeView, certifiedLocations, calculatedLocations, showMap, searchRadius]);
-  
   // If loader should be shown, always render the same loading UI
-  if (loaderVisible) {
+  if (loaderVisible || !contentReady) {
     return (
       <div className="flex justify-center items-center py-12">
         <PageLoader />
@@ -125,23 +122,21 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
     );
   }
   
-  // For map view
+  // For map view - direct import to avoid dynamic import failures
   if (showMap) {
     return (
-      <React.Suspense fallback={<PageLoader />}>
-        <div className="h-auto w-full max-w-xl mx-auto rounded-lg overflow-hidden border border-border shadow-lg">
-          <PhotoPointsMap 
-            userLocation={effectiveLocation}
-            locations={activeView === 'certified' ? displayedCertifiedLocations : filteredCalculatedLocations}
-            certifiedLocations={certifiedLocations}
-            calculatedLocations={calculatedLocations}
-            activeView={activeView}
-            searchRadius={activeView === 'certified' ? searchRadius : calculatedSearchRadius}
-            onLocationClick={handleLocationClick}
-            onLocationUpdate={onLocationUpdate}
-          />
-        </div>
-      </React.Suspense>
+      <div className="h-auto w-full max-w-xl mx-auto rounded-lg overflow-hidden border border-border shadow-lg">
+        <PhotoPointsMap 
+          userLocation={effectiveLocation}
+          locations={activeView === 'certified' ? displayedCertifiedLocations : filteredCalculatedLocations}
+          certifiedLocations={certifiedLocations}
+          calculatedLocations={calculatedLocations}
+          activeView={activeView}
+          searchRadius={activeView === 'certified' ? searchRadius : calculatedSearchRadius}
+          onLocationClick={handleLocationClick}
+          onLocationUpdate={onLocationUpdate}
+        />
+      </div>
     );
   }
   

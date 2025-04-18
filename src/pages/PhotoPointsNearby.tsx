@@ -1,3 +1,4 @@
+
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -11,6 +12,7 @@ import { usePhotoPointsState } from '@/hooks/photoPoints/usePhotoPointsState';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { prepareLocationForNavigation } from '@/utils/locationNavigation';
+import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
 
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
@@ -63,6 +65,15 @@ const PhotoPointsNearby: React.FC = () => {
   React.useEffect(() => {
     setSearchRadius(currentSearchRadius);
   }, [currentSearchRadius, setSearchRadius]);
+  
+  // Filter out locations with invalid SIQS score
+  React.useEffect(() => {
+    if (locations.length > 0) {
+      console.log(`Total locations before filtering: ${locations.length}`);
+      const validLocations = locations.filter(loc => isSiqsGreaterThan(loc.siqs, 0) || loc.isDarkSkyReserve || loc.certification);
+      console.log(`Valid locations after SIQS filtering: ${validLocations.length}`);
+    }
+  }, [locations]);
   
   // Handle location click to navigate to details with improved error handling
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {

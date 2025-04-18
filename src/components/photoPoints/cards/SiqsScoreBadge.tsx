@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
-import { formatSiqsForDisplay } from '@/utils/unifiedSiqsDisplay';
+import { formatSiqsForDisplay } from '@/utils/siqsHelpers';
 
 interface SiqsScoreBadgeProps {
   score: number | string | { score: number; isViable: boolean } | any;
@@ -25,7 +24,10 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   // State for managing smooth transitions
   const [displayedScore, setDisplayedScore] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [loadingState, setLoadingState] = useState(loading);
   const previousScore = useRef<number | null>(null);
+  const loadingTimeoutRef = useRef<number | null>(null);
+  const stableScoreRef = useRef<number | null>(null);
   
   // Convert score to number using our helper function
   const numericScore = getSiqsScore(score);
@@ -35,13 +37,45 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   
   // Update displayed score with smooth transition when real score changes
   useEffect(() => {
-    if (showLoading) {
-      setDisplayedScore(null);
-      return;
+    // Keep track of the most recent stable score
+    if (numericScore > 0) {
+      stableScoreRef.current = numericScore;
     }
     
+    if (showLoading) {
+      // For loading state, don't change displayed score but show loading indicator
+      setLoadingState(true);
+      
+      // Clear any existing timeout
+      if (loadingTimeoutRef.current) {
+        window.clearTimeout(loadingTimeoutRef.current);
+      }
+      
+      // Set a minimum loading time to prevent flash
+      loadingTimeoutRef.current = window.setTimeout(() => {
+        if (numericScore > 0) {
+          setDisplayedScore(numericScore);
+          setLoadingState(false);
+        }
+        loadingTimeoutRef.current = null;
+      }, 600);
+      
+      return () => {
+        if (loadingTimeoutRef.current) {
+          window.clearTimeout(loadingTimeoutRef.current);
+        }
+      };
+    }
+    
+    // If score is 0 or negative and we're not in loading state
     if (numericScore <= 0) {
-      setDisplayedScore(null);
+      // If we have a previous stable score, keep showing it
+      if (stableScoreRef.current && stableScoreRef.current > 0 && isCertified) {
+        setDisplayedScore(stableScoreRef.current);
+      } else {
+        setDisplayedScore(null);
+      }
+      setLoadingState(false);
       return;
     }
     
@@ -49,6 +83,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     if (displayedScore === null) {
       setDisplayedScore(numericScore);
       previousScore.current = numericScore;
+      setLoadingState(false);
       return;
     }
     
@@ -56,6 +91,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     if (Math.abs((displayedScore || 0) - numericScore) < 0.2) {
       setDisplayedScore(numericScore);
       previousScore.current = numericScore;
+      setLoadingState(false);
       return;
     }
     
@@ -70,15 +106,27 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       const timer = setTimeout(() => {
         setDisplayedScore(numericScore);
         setIsTransitioning(false);
-      }, 200);
+        setLoadingState(false);
+      }, 300);
       
       return () => clearTimeout(timer);
     }
-  }, [numericScore, showLoading, displayedScore]);
+    
+    setLoadingState(false);
+  }, [numericScore, showLoading, displayedScore, isCertified]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (loadingTimeoutRef.current) {
+        window.clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // Skip rendering if score is 0 (invalid) or negative and not showing loading state
   // No default scores for non-certified locations either
-  if (numericScore <= 0 && !showLoading && !forceCertified && !isCertified) {
+  if (numericScore <= 0 && !loadingState && !forceCertified && !isCertified) {
     return null;
   }
   
@@ -96,7 +144,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   };
 
   // Enhanced loading animation with smoother transition
-  if (showLoading) {
+  if (loadingState) {
     return (
       <motion.div 
         className="flex items-center bg-cosmic-700/50 text-muted-foreground px-2 py-0.5 rounded-full border border-cosmic-600/30"

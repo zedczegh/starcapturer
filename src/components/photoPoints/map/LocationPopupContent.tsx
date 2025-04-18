@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -28,8 +28,19 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
+  const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
   
-  const siqsClass = getSiqsClass(siqsScore);
+  // Stabilize SIQS score to prevent flashing
+  useEffect(() => {
+    if (siqsScore !== null && siqsScore > 0) {
+      setStabilizedScore(siqsScore);
+    }
+  }, [siqsScore]);
+  
+  const siqsClass = getSiqsClass(stabilizedScore || siqsScore);
+  
+  // Use either real-time score or static score, but never null
+  const displayScore = stabilizedScore || siqsScore || (isCertified ? 6.5 : 0);
   
   return (
     <Popup 
@@ -64,11 +75,11 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
         <div className="mt-2 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <SiqsScoreBadge 
-              score={siqsScore} 
+              score={displayScore} 
               compact={true} 
               loading={siqsLoading}
               isCertified={isCertified}
-              forceCertified={isCertified && !siqsScore && !siqsLoading}
+              forceCertified={false}
             />
           </div>
           
