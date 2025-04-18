@@ -17,7 +17,6 @@ export interface EnhancedLocationData {
   characteristics?: string[];
   annualPrecipitationDays?: number;
   averageVisibility?: string;
-  type?: string; // Added type property to the interface
   seasonalTrends?: {
     spring: { clearSkyRate: number, averageTemperature: number };
     summer: { clearSkyRate: number, averageTemperature: number };

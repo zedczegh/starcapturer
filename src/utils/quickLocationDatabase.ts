@@ -133,9 +133,6 @@ export const quickLocationDatabase: LocationEntry[] = [
   { name: "Tokyo", coordinates: [35.6762, 139.6503], bortleScale: 9.0, type: 'urban', radius: 50 },
   { name: "Paris", coordinates: [48.8566, 2.3522], bortleScale: 9.0, type: 'urban', radius: 40 },
   
-  // North American cities
-  { name: "Green Bay", coordinates: [44.5133, -88.0133], bortleScale: 6.8, type: 'urban', radius: 15 },
-  
   // Dark sky sites
   { name: "Atacama Desert", coordinates: [-23.4500, -69.2500], bortleScale: 1, type: 'dark-site', radius: 60 },
   { name: "Mauna Kea", coordinates: [19.8207, -155.4681], bortleScale: 1, type: 'dark-site', radius: 50 },

@@ -11,7 +11,6 @@ import {
 } from "./map/LocationNameService";
 import { Star, Info } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile"; 
-import { getSiqsScore } from "@/utils/siqsHelpers";
 
 interface LocationMapProps {
   latitude: number;
@@ -22,7 +21,6 @@ interface LocationMapProps {
   showInfoPanel?: boolean;
   isDarkSkyReserve?: boolean;
   certification?: string;
-  siqs?: number | { score: number; isViable: boolean } | any;
 }
 
 const LocationMap: React.FC<LocationMapProps> = ({ 
@@ -33,8 +31,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
   editable = false,
   showInfoPanel = false,
   isDarkSkyReserve = false,
-  certification = "",
-  siqs
+  certification = ""
 }) => {
   const { language, t } = useLanguage();
   const isMobile = useIsMobile();
@@ -56,9 +53,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const validLatitude = isFinite(latitude) ? latitude : 0;
   const validLongitude = isFinite(longitude) ? longitude : 0;
   const validName = name || t("Unknown Location", "未知位置");
-  
-  // Extract SIQS score
-  const siqsScore = getSiqsScore(siqs);
 
   useEffect(() => {
     if (isFinite(latitude) && isFinite(longitude) && 
@@ -164,7 +158,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
           showInfoPanel={showInfoPanel}
           isDarkSkyReserve={isDarkSkyReserve}
           certification={certification}
-          siqs={siqsScore}
         />
       </div>
       

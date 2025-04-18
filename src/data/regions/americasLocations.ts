@@ -14,7 +14,6 @@ export const americasLocations: LocationEntry[] = [
   { name: "Montreal", coordinates: [45.5017, -73.5673], bortleScale: 7.2, radius: 30, type: 'urban' },
   { name: "Seattle", coordinates: [47.6062, -122.3321], bortleScale: 7.5, radius: 25, type: 'urban' },
   { name: "Austin", coordinates: [30.2672, -97.7431], bortleScale: 7.0, radius: 20, type: 'urban' },
-  { name: "Green Bay", coordinates: [44.5133, -88.0133], bortleScale: 6.8, radius: 15, type: 'urban' },
   
   // South American cities
   { name: "São Paulo", coordinates: [-23.5505, -46.6333], bortleScale: 8.3, radius: 45, type: 'urban' },

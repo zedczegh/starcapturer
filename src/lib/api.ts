@@ -28,3 +28,6 @@ export {
   getSharedAstroSpot,
   shareAstroSpot
 } from './api/astroSpots';
+
+// Add an alias for backwards compatibility
+export { getRecommendedPhotoPoints as fetchRecommendedAstroSpots } from './api/astroSpots';

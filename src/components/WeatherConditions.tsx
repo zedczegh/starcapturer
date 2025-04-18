@@ -11,7 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import { calculateTonightCloudCover } from "@/utils/nighttimeSIQS";
 import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
-import { Cloud, Loader2 } from "lucide-react";
+import { Cloud } from "lucide-react";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -43,33 +43,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
 }) => {
   const { language, t } = useLanguage();
   const [stableWeatherData, setStableWeatherData] = useState(weatherData);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  
-  // Set loading state based on weather data completeness
-  useEffect(() => {
-    // Check if we have valid weather data
-    const hasValidWeatherData = 
-      weatherData && 
-      weatherData.temperature !== undefined && 
-      weatherData.humidity !== undefined && 
-      weatherData.cloudCover !== undefined &&
-      weatherData.windSpeed !== undefined;
-      
-    setIsLoading(!hasValidWeatherData);
-    
-    // If we have data, update the stable state
-    if (hasValidWeatherData) {
-      setStableWeatherData(weatherData);
-    }
-    
-    // Auto-hide loading state after 3 seconds even if data is missing
-    const timer = setTimeout(() => {
-      if (isLoading) setIsLoading(false);
-    }, 3000);
-    
-    return () => clearTimeout(timer);
-  }, [weatherData]);
   
   const nighttimeCloudData = useMemo(() => {
     if (!forecastData || !forecastData.hourly) return null;
@@ -172,39 +146,32 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
-          {isLoading ? (
-            <div className="min-h-[200px] flex items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-cosmic-400" />
-              <span className="ml-2 text-cosmic-300">{t("Loading weather data...", "加载天气数据中...")}</span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <motion.div variants={itemVariants}>
-                <h3 className="text-lg font-semibold mb-4 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
-                  {t("Observing Conditions", "观测条件")}
-                </h3>
-                <PrimaryConditions
-                  temperature={stableWeatherData.temperature}
-                  humidity={stableWeatherData.humidity}
-                  windSpeed={stableWeatherData.windSpeed}
-                  seeingConditions={translatedData.seeingConditions}
-                />
-              </motion.div>
-              
-              <motion.div variants={itemVariants}>
-                <h3 className="text-lg font-semibold mb-4 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
-                  {t("Sky Conditions", "天空状况")}
-                </h3>
-                <SecondaryConditions
-                  cloudCover={stableWeatherData.cloudCover}
-                  moonPhase={translatedData.moonPhase}
-                  bortleScale={bortleScale}
-                  aqi={stableWeatherData.aqi}
-                  nighttimeCloudData={nighttimeCloudData}
-                />
-              </motion.div>
-            </div>
-          )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <motion.div variants={itemVariants}>
+              <h3 className="text-lg font-semibold mb-4 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
+                {t("Observing Conditions", "观测条件")}
+              </h3>
+              <PrimaryConditions
+                temperature={stableWeatherData.temperature}
+                humidity={stableWeatherData.humidity}
+                windSpeed={stableWeatherData.windSpeed}
+                seeingConditions={translatedData.seeingConditions}
+              />
+            </motion.div>
+            
+            <motion.div variants={itemVariants}>
+              <h3 className="text-lg font-semibold mb-4 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
+                {t("Sky Conditions", "天空状况")}
+              </h3>
+              <SecondaryConditions
+                cloudCover={stableWeatherData.cloudCover}
+                moonPhase={translatedData.moonPhase}
+                bortleScale={bortleScale}
+                aqi={stableWeatherData.aqi}
+                nighttimeCloudData={nighttimeCloudData}
+              />
+            </motion.div>
+          </div>
         </CardContent>
       </Card>
     </motion.div>

@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, Check, MapPin } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { toast } from "sonner";
 
 interface CopyLocationButtonProps {
   latitude: number;
@@ -37,14 +38,20 @@ const CopyLocationButton: React.FC<CopyLocationButtonProps> = ({
     navigator.clipboard.writeText(fullText)
       .then(() => {
         setCopied(true);
-        // No toast notification
+        toast.success(
+          t("Coordinates copied", "坐标已复制"), 
+          { description: fullText }
+        );
         
         // Reset state after 2 seconds
         setTimeout(() => setCopied(false), 2000);
       })
       .catch(err => {
         console.error("Failed to copy coordinates:", err);
-        // No toast for errors
+        toast.error(
+          t("Failed to copy coordinates", "复制坐标失败"), 
+          { description: t("Please try again", "请重试") }
+        );
       });
   };
 

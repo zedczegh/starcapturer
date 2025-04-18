@@ -1,5 +1,4 @@
-
-import React, { Suspense, lazy, useEffect, useRef, useState } from "react";
+import React, { Suspense, lazy, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
 import { useLocationDataCache } from "@/hooks/useLocationData";
@@ -12,8 +11,6 @@ import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 import { useLanguage } from "@/contexts/LanguageContext";
 import PageLoader from "@/components/loaders/PageLoader";
 import NavBar from "@/components/NavBar";
-import { getCurrentPosition } from "@/utils/geolocationUtils";
-import { toast } from "sonner";
 
 // Lazy-loaded components for better performance
 const LocationError = lazy(() => import("@/components/location/LocationError"));
@@ -29,8 +26,6 @@ const LocationDetails = () => {
   const { t } = useLanguage();
   const siqsUpdateRequiredRef = useRef(true);
   const initialRenderRef = useRef(true);
-  const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
-  const locationInitializedRef = useRef(false); // Track if we've already initialized location
   
   const {
     locationData, 
@@ -43,8 +38,7 @@ const LocationDetails = () => {
   } = useLocationDataManager({ 
     id, 
     initialState: location.state, 
-    navigate,
-    noRedirect: true // Prevent automatic redirection
+    navigate 
   });
 
   // Use the SIQS updater to keep scores in sync with forecast data
@@ -54,58 +48,6 @@ const LocationDetails = () => {
     setLocationData,
     t
   );
-
-  // Handle using current location when no location data is available
-  useEffect(() => {
-    // Only proceed if we're not loading, don't have location data, not already getting location,
-    // and haven't already initialized location
-    if (!isLoading && !locationData && !loadingCurrentLocation && !locationInitializedRef.current) {
-      locationInitializedRef.current = true; // Mark as initialized to prevent multiple calls
-      handleUseCurrentLocation();
-    }
-  }, [isLoading, locationData]);
-
-  const handleUseCurrentLocation = () => {
-    if (loadingCurrentLocation) return; // Prevent multiple simultaneous calls
-    
-    setLoadingCurrentLocation(true);
-    toast.success(t("Getting your current location...", "正在获取您的位置..."), {
-      id: "getting-location" // Use a consistent ID to prevent duplicates
-    });
-    
-    getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        
-        // Create a minimal location object
-        const locationId = `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
-        
-        // Generate location data with basic information
-        const locationData = {
-          id: locationId,
-          name: t("Current Location", "当前位置"),
-          latitude,
-          longitude,
-          timestamp: new Date().toISOString()
-        };
-        
-        // Navigate to the generated location
-        navigate(`/location/${locationId}`, { 
-          state: locationData,
-          replace: true 
-        });
-        
-        setLoadingCurrentLocation(false);
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-        toast.error(t("Could not get your location. Please check browser permissions.", 
-                     "无法获取您的位置。请检查浏览器权限。"));
-        setLoadingCurrentLocation(false);
-      },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-    );
-  };
 
   // Run once on initial render to trigger page refresh
   useEffect(() => {
@@ -134,6 +76,19 @@ const LocationDetails = () => {
       return () => clearTimeout(timer);
     }
   }, [locationData, resetUpdateState]);
+
+  // Handle back navigation to ensure clean return to home page
+  useEffect(() => {
+    const handleBackNavigation = () => {
+      navigate("/", { replace: true });
+    };
+
+    window.addEventListener('popstate', handleBackNavigation);
+    
+    return () => {
+      window.removeEventListener('popstate', handleBackNavigation);
+    };
+  }, [navigate]);
 
   // Use the extracted hook for location name translation
   useLocationNameTranslation({
@@ -228,11 +183,7 @@ const LocationDetails = () => {
       <>
         <NavBar />
         <Suspense fallback={<PageLoader />}>
-          <LocationError 
-            onUseCurrentLocation={handleUseCurrentLocation} 
-            isLoading={loadingCurrentLocation}
-            autoLocate={true}
-          />
+          <LocationError />
         </Suspense>
       </>
     );

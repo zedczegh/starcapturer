@@ -13,7 +13,6 @@ interface InitializeLocationDataParams {
   language: string;
   setLocationData: (data: any) => void;
   setIsLoading: (loading: boolean) => void;
-  noRedirect?: boolean;
 }
 
 /**
@@ -27,8 +26,7 @@ export async function initializeLocationData({
   t,
   language,
   setLocationData,
-  setIsLoading,
-  noRedirect = false
+  setIsLoading
 }: InitializeLocationDataParams) {
   try {
     // First priority: use initialState passed from the router
@@ -94,13 +92,16 @@ export async function initializeLocationData({
         }
       }
       
-      // We've completely removed the redirection to homepage even if coordinates are invalid
+      if (!initialState?.latitude || !initialState?.longitude) {
+        showErrorAndRedirect(toast, t, navigate, "Incomplete location data", "位置数据不完整");
+        return;
+      }
     } else if (id) {
       // Second priority: try to load data from localStorage if available
-      await loadFromLocalStorage(id, setLocationData, toast, t, navigate, language, true); // always pass noRedirect=true
+      await loadFromLocalStorage(id, setLocationData, toast, t, navigate, language);
     } else {
-      console.log("No way to initialize location data", { params: id, locationState: initialState });
-      // No action to take - let the parent component handle it
+      console.error("No way to initialize location data", { params: id, locationState: initialState });
+      showErrorAndRedirect(toast, t, navigate, "Cannot load location details", "无法加载位置详情");
     }
   } finally {
     setIsLoading(false);
@@ -116,8 +117,7 @@ async function loadFromLocalStorage(
   toast: any,
   t: (en: string, zh: string) => string,
   navigate: NavigateFunction,
-  language: string,
-  noRedirect: boolean = false
+  language: string
 ) {
   console.log("Trying to load location data from localStorage for ID:", id);
   const savedLocationData = localStorage.getItem(`location_${id}`);
@@ -168,14 +168,13 @@ async function loadFromLocalStorage(
       }
     }
   } else {
-    console.log("Location data not found in localStorage", { id });
-    // We no longer redirect to homepage, just return and let parent component handle it
+    console.error("Location data not found in localStorage", { id });
+    showErrorAndRedirect(toast, t, navigate, "Location data not found", "找不到位置数据");
   }
 }
 
 /**
- * Show error toast but don't redirect
- * This function has been modified to only show errors without redirecting
+ * Show error toast and redirect to home page
  */
 function showErrorAndRedirect(
   toast: any, 
@@ -184,13 +183,14 @@ function showErrorAndRedirect(
   errorEn: string,
   errorZh: string
 ) {
-  // Only show the toast, no redirection
   toast({
     title: t("Error", "错误"),
     description: t(errorEn, errorZh),
     variant: "destructive"
   });
   
-  // No more redirection
-  console.log("Error shown without redirection:", errorEn);
+  // Redirect after showing the error
+  setTimeout(() => {
+    navigate("/");
+  }, 2000);
 }

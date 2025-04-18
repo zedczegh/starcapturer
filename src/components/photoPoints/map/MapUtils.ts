@@ -1,9 +1,9 @@
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
 
 /**
- * Filter locations based on various criteria
+ * Filter locations by search radius and exclude water locations
  */
 export const filterLocations = (
   locations: SharedAstroSpot[],
@@ -11,46 +11,46 @@ export const filterLocations = (
   searchRadius: number,
   activeView: 'certified' | 'calculated'
 ): SharedAstroSpot[] => {
-  // Basic validation
   if (!locations || locations.length === 0) {
     return [];
   }
 
-  // First separate certified and non-certified locations
-  const certifiedLocations = locations.filter(
-    loc => loc.isDarkSkyReserve || loc.certification
-  );
-  
-  let nonCertifiedLocations = locations.filter(
-    loc => !loc.isDarkSkyReserve && !loc.certification
-  );
+  return locations.filter(location => {
+    // Skip invalid locations
+    if (!location || !location.latitude || !location.longitude) {
+      return false;
+    }
+    
+    // Always include certified locations
+    const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+    if (isCertified) {
+      return true;
+    }
+    
+    // For certified view, only include certified locations
+    if (activeView === 'certified') {
+      return false;
+    }
 
-  // For the calculated view, filter non-certified locations by distance
-  if (activeView === 'calculated' && userLocation) {
-    nonCertifiedLocations = nonCertifiedLocations.filter(loc => {
-      // Skip invalid locations
-      if (!loc.latitude || !loc.longitude) return false;
-      
-      // Calculate distance from user
-      const distance = calculateDistance(
+    // Skip water locations for calculated view
+    if (isWaterLocation(location.latitude, location.longitude)) {
+      return false;
+    }
+    
+    // Apply radius filtering if we have a user location
+    if (userLocation) {
+      const distance = location.distance || calculateDistance(
         userLocation.latitude,
         userLocation.longitude,
-        loc.latitude,
-        loc.longitude
+        location.latitude,
+        location.longitude
       );
       
-      // Keep locations within search radius that aren't in water
-      return distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false);
-    });
-  }
-
-  // For certified view, only return certified locations
-  if (activeView === 'certified') {
-    return certifiedLocations;
-  }
-  
-  // For calculated view, return both filtered non-certified and all certified
-  return [...certifiedLocations, ...nonCertifiedLocations];
+      return distance <= searchRadius;
+    }
+    
+    return true;
+  });
 };
 
 /**
@@ -64,17 +64,17 @@ export const optimizeLocationsForMobile = (
   if (!isMobile || locations.length <= 30) {
     return locations;
   }
-
+  
   // Always keep certified locations
   const certified = locations.filter(loc => 
     loc.isDarkSkyReserve || loc.certification
   );
   
-  // Reduce the number of non-certified locations on mobile
+  // For non-certified locations, if we have too many, sample them
   const nonCertified = locations
     .filter(loc => !loc.isDarkSkyReserve && !loc.certification)
     .filter((_, index) => index % (activeView === 'certified' ? 4 : 2) === 0)
-    .slice(0, 50); // Hard limit for better performance
+    .slice(0, 50); // Hard limit for performance
   
   return [...certified, ...nonCertified];
 };

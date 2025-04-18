@@ -6,8 +6,6 @@ export interface Location {
   latitude: number;
   longitude: number;
   placeDetails?: string;
-  bortleScale?: number;
-  formattedName?: string;
 }
 
 export interface CityAlternative {

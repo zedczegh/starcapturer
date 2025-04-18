@@ -10,7 +10,6 @@ import LinksHeader from "@/components/links/LinksHeader";
 import LinksGrid from "@/components/links/LinksGrid";
 import LinksFooter from "@/components/links/LinksFooter";
 import LinksFilters from "@/components/links/LinksFilters";
-import NavBar from "@/components/NavBar";
 
 const UsefulLinks = () => {
   const { t } = useLanguage();
@@ -40,7 +39,6 @@ const UsefulLinks = () => {
 
   return (
     <div className="min-h-screen bg-cosmic-950 text-cosmic-50 pb-20 relative overflow-hidden">
-      <NavBar />
       {/* Background stars */}
       <div className="absolute inset-0 pointer-events-none">
         {[...Array(30)].map((_, i) => (
@@ -99,7 +97,7 @@ const UsefulLinks = () => {
         />
       </div>
 
-      <div className="container max-w-7xl mx-auto px-4 py-8 md:py-12 relative z-10 pt-20">
+      <div className="container max-w-7xl mx-auto px-4 py-8 md:py-12 relative z-10">
         <div className="flex items-center mb-6">
           <Link to="/">
             <Button variant="ghost" size="sm" className="mr-2 text-cosmic-200 hover:text-cosmic-50 hover:bg-cosmic-800/50">

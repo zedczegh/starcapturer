@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import PinpointButton from './PinpointButton';
 
@@ -21,7 +21,6 @@ const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({
       <PinpointButton 
         onGetLocation={onGetLocation}
         shouldCenter={false}
-        hasLocation={Boolean(userLocation)}
       />
     </div>
   );

@@ -1,11 +1,13 @@
 
-import React, { memo, useEffect, useRef, useState } from "react";
+import React, { memo, lazy, Suspense, useEffect, useCallback, useRef, useState } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 import { Loader } from "lucide-react";
-import LocationContentGrid from "@/components/location/LocationContentGrid";
+
+// Lazy load the content grid for better performance
+const LocationContentGrid = lazy(() => import("@/components/location/LocationContentGrid"));
 
 interface LocationDetailsContentProps {
   locationData: any;
@@ -170,14 +172,14 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         onClear={() => setStatusMessage(null)} 
       />
       
-      {loading || !contentLoaded ? (
+      <Suspense fallback={
         <div className="animate-pulse h-96 rounded-lg bg-gradient-to-b from-cosmic-800/20 to-cosmic-900/20 flex items-center justify-center">
           <div className="text-center">
             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
             <p className="text-sm text-muted-foreground">{t("Loading content...", "正在加载内容...")}</p>
           </div>
         </div>
-      ) : (
+      }>
         <LocationContentGrid 
           locationData={locationData}
           forecastData={forecastData}
@@ -191,7 +193,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
           onRefreshForecast={handleRefreshForecast}
           onRefreshLongRange={handleRefreshLongRangeForecast}
         />
-      )}
+      </Suspense>
     </div>
   );
 });

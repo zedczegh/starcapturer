@@ -1,22 +1,20 @@
 
-import React, { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-import { createCustomMarker } from './map/MapMarkerUtils';
-import MapTooltip from './map/MapTooltip';
-import MapClickHandler from '../location/map/MapClickHandler';
+import React, { useCallback, memo, Suspense, lazy, useMemo } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Loader } from "lucide-react";
+
+// Lazy load the Leaflet map component to improve initial page load
+const LazyMapComponent = lazy(() => import('./map/LazyMapComponent'));
 
 interface MapDisplayProps {
   position: [number, number];
   locationName: string;
   editable?: boolean;
-  onMapReady?: () => void;
-  onMapClick?: (lat: number, lng: number) => void;
+  onMapReady: () => void;
+  onMapClick: (lat: number, lng: number) => void;
   showInfoPanel?: boolean;
   isDarkSkyReserve?: boolean;
   certification?: string;
-  siqs?: number;
 }
 
 const MapDisplay: React.FC<MapDisplayProps> = ({
@@ -27,65 +25,45 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   onMapClick,
   showInfoPanel = false,
   isDarkSkyReserve = false,
-  certification = '',
-  siqs
+  certification = ''
 }) => {
-  const mapRef = useRef<L.Map | null>(null);
+  const { t } = useLanguage();
 
-  // Custom marker icon
-  const markerColor = isDarkSkyReserve || certification ? '#8b5cf6' : '#3b82f6';
-  const markerIcon = createCustomMarker(markerColor);
+  // Memoize position to prevent unnecessary rerenders
+  const memoizedPosition = useMemo(() => position, [position[0], position[1]]);
   
-  // MapReady component to handle initialization
-  const MapReady = () => {
-    const map = useMap();
-    
-    useEffect(() => {
-      // Store map reference
-      mapRef.current = map;
-      
-      // Call onMapReady callback
-      if (onMapReady) {
-        onMapReady();
-      }
-    }, [map]);
-    
-    return null;
-  };
-  
+  // Format location name for display
+  const displayName = useMemo(() => {
+    // If the name is too long, truncate it for the map display
+    if (locationName && locationName.length > 50) {
+      return locationName.substring(0, 47) + '...';
+    }
+    return locationName;
+  }, [locationName]);
+
   return (
-    <MapContainer
-      center={position}
-      zoom={10}
-      scrollWheelZoom={false}
-      style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
-      className="z-0"
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      
-      <Marker position={position} icon={markerIcon}>
-        <MapTooltip 
-          name={locationName} 
-          latitude={position[0]} 
-          longitude={position[1]}
+    <div className="z-0 h-full w-full">
+      <Suspense fallback={
+        <div className="h-full w-full flex items-center justify-center bg-cosmic-800/20">
+          <div className="flex flex-col items-center gap-3">
+            <Loader className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-primary-foreground/90">{t("Loading map...", "正在加载地图...")}</p>
+          </div>
+        </div>
+      }>
+        <LazyMapComponent
+          position={memoizedPosition}
+          locationName={displayName}
+          editable={editable}
+          onMapReady={onMapReady}
+          onMapClick={onMapClick}
+          showInfoPanel={showInfoPanel}
           isDarkSkyReserve={isDarkSkyReserve}
           certification={certification}
-          siqs={siqs}
         />
-      </Marker>
-      
-      {/* Map initialization event */}
-      <MapReady />
-      
-      {/* Map click handler */}
-      {editable && onMapClick && (
-        <MapClickHandler onClick={onMapClick} />
-      )}
-    </MapContainer>
+      </Suspense>
+    </div>
   );
 };
 
-export default MapDisplay;
+export default memo(MapDisplay);

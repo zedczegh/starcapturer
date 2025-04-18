@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Locate, Trash, Check } from 'lucide-react';
+import { Loader2, Locate, Trash } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface LocationControllersProps {
@@ -9,15 +9,13 @@ interface LocationControllersProps {
   onClearCache: () => void;
   loading: boolean;
   cacheCleared: boolean;
-  userLocation: { latitude: number; longitude: number } | null;
 }
 
 const LocationControllers: React.FC<LocationControllersProps> = ({
   onGetLocation,
   onClearCache,
   loading,
-  cacheCleared,
-  userLocation
+  cacheCleared
 }) => {
   const { t } = useLanguage();
 
@@ -28,7 +26,7 @@ const LocationControllers: React.FC<LocationControllersProps> = ({
         size="sm"
         onClick={onGetLocation}
         disabled={loading}
-        className="bg-background/90 shadow-md relative"
+        className="bg-background/90 shadow-md"
       >
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -36,13 +34,6 @@ const LocationControllers: React.FC<LocationControllersProps> = ({
           <Locate className="h-4 w-4 mr-1" />
         )}
         {t("Current", "当前")}
-        
-        {/* Show checkmark if location found */}
-        {userLocation && (
-          <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5 border border-background shadow-sm">
-            <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
-          </div>
-        )}
       </Button>
       
       <Button
