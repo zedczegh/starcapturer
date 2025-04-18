@@ -1,9 +1,11 @@
+
 import { useMemo } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import { getLocationMarker } from '../MarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { formatSiqsForDisplay } from '@/utils/unifiedSiqsDisplay';
 
 interface UseMarkerStateProps {
   location: SharedAstroSpot;
@@ -21,26 +23,22 @@ export function useMarkerState({
   const { language, t } = useLanguage();
   const isMobile = useIsMobile();
   
-  // Calculate the display name based on language preference
+  // Calculate the display name
   const displayName = useMemo(() => {
     if (language === 'zh' && location.chineseName) {
       return location.chineseName;
     }
-    
     return location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
 
-  // Calculate the SIQS score to display, WITHOUT giving default scores to certified locations
+  // Calculate normalized SIQS score
   const siqsScore = useMemo(() => {
-    // Use real-time SIQS if available
-    if (realTimeSiqs !== null) return realTimeSiqs;
+    if (realTimeSiqs !== null) {
+      return formatSiqsForDisplay(realTimeSiqs);
+    }
     
-    // Otherwise use location's SIQS if available
     const locationSiqs = getSiqsScore(location);
-    if (locationSiqs > 0) return locationSiqs;
-    
-    // No default scores for certified locations - treat them like calculated spots
-    return null;
+    return locationSiqs > 0 ? formatSiqsForDisplay(locationSiqs) : null;
   }, [location, realTimeSiqs]);
   
   // Get marker icon
