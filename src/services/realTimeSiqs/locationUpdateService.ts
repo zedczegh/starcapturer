@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateRealTimeSiqs } from "./siqsCalculator";
 import { clearSiqsCache } from "./siqsCache";
@@ -7,6 +6,7 @@ import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 
 /**
  * Update locations with simplified real-time SIQS data based only on nighttime cloud cover
+ * Filter to only include locations with high-quality SIQS scores (>= 5.0)
  */
 export async function updateLocationsWithRealTimeSiqs(
   locations: SharedAstroSpot[]
@@ -17,11 +17,43 @@ export async function updateLocationsWithRealTimeSiqs(
   
   try {
     // Process in batches to prevent overwhelming the API
-    const batchSize = 5;
+    const batchSize = 3; // Reduced from 5 to 3 to limit API calls
     const updatedLocations: SharedAstroSpot[] = [];
     
-    for (let i = 0; i < locations.length; i += batchSize) {
-      const batch = locations.slice(i, i + batchSize);
+    // Filter out certified locations - process those first and always keep them
+    const certifiedLocations = locations.filter(loc => 
+      loc.isDarkSkyReserve || loc.certification
+    );
+    
+    // Process remaining locations - these will be filtered by quality
+    const calculatedLocations = locations.filter(loc => 
+      !loc.isDarkSkyReserve && !loc.certification
+    );
+    
+    // Process certified locations first - we keep all of these regardless of SIQS
+    for (const location of certifiedLocations) {
+      try {
+        // Calculate SIQS for certified locations
+        const siqsResult = await calculateRealTimeSiqs(
+          location.latitude,
+          location.longitude,
+          location.bortleScale || 3 // Assume better Bortle scale for certified locations
+        );
+        
+        updatedLocations.push({
+          ...location,
+          siqs: siqsResult.score,
+          siqsResult: siqsResult
+        });
+      } catch (error) {
+        console.error(`Error calculating SIQS for certified location ${location.id || location.name}:`, error);
+        updatedLocations.push(location);
+      }
+    }
+    
+    // Now process calculated locations in batches - only keep high quality ones
+    for (let i = 0; i < calculatedLocations.length; i += batchSize) {
+      const batch = calculatedLocations.slice(i, i + batchSize);
       
       // Process batch in parallel
       const batchPromises = batch.map(async (location) => {
@@ -33,24 +65,30 @@ export async function updateLocationsWithRealTimeSiqs(
             location.bortleScale || 4
           );
           
-          // Return updated location with new SIQS data
-          return {
-            ...location,
-            siqs: siqsResult.score,
-            siqsResult: siqsResult
-          };
+          // Only include locations with high-quality SIQS score (>= 5.0)
+          if (siqsResult.score >= 5.0) {
+            return {
+              ...location,
+              siqs: siqsResult.score,
+              siqsResult: siqsResult
+            };
+          } else {
+            // Skip low quality locations
+            console.log(`Filtering out low quality location (SIQS: ${siqsResult.score.toFixed(1)})`);
+            return null;
+          }
         } catch (error) {
           console.error(`Error calculating SIQS for location ${location.id || location.name}:`, error);
-          return location;
+          return null; // Skip on error
         }
       });
       
       const batchResults = await Promise.all(batchPromises);
-      updatedLocations.push(...batchResults);
+      updatedLocations.push(...batchResults.filter(loc => loc !== null) as SharedAstroSpot[]);
       
-      // Add small delay between batches to avoid rate limiting
-      if (i + batchSize < locations.length) {
-        await new Promise(resolve => setTimeout(resolve, 300));
+      // Add larger delay between batches to reduce API load
+      if (i + batchSize < calculatedLocations.length) {
+        await new Promise(resolve => setTimeout(resolve, 500)); // Increased from 300ms to 500ms
       }
     }
     

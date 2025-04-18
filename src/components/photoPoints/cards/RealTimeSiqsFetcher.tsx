@@ -1,7 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
-import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
 
 interface RealTimeSiqsFetcherProps {
   isVisible: boolean;
@@ -22,18 +21,20 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+  const CACHE_DURATION = 10 * 60 * 1000; // Increased to 10 minutes cache to reduce API calls
+  const fetchingRef = useRef(false); // Use ref to prevent concurrent fetches
   
   useEffect(() => {
     if (showRealTimeSiqs && isVisible && latitude && longitude) {
       const now = Date.now();
-      const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION;
+      const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION && !fetchingRef.current;
       
       if (shouldFetch) {
         console.log(`Fetching cloud cover-based SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         const fetchSiqs = async () => {
           setLoading(true);
           onSiqsCalculated(null, true);
+          fetchingRef.current = true;
           
           try {
             const effectiveBortleScale = bortleScale || 4;
@@ -49,8 +50,17 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
               // Use cached data if it's fresh enough
               if (age < CACHE_DURATION) {
                 console.log(`Using cached SIQS data (${(age/1000).toFixed(0)}s old) for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-                onSiqsCalculated(data.score, false);
+                
+                // Only update if SIQS score is high quality (>= 5.0)
+                if (data.score >= 5.0) {
+                  onSiqsCalculated(data.score, false);
+                } else {
+                  console.log(`Skipping low quality location (SIQS: ${data.score.toFixed(1)})`);
+                  onSiqsCalculated(null, false);
+                }
+                
                 setLoading(false);
+                fetchingRef.current = false;
                 return;
               }
             }
@@ -71,7 +81,14 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
               
               const cloudCover = result.factors?.[0]?.description?.match(/\d+/)?.[0] || 'unknown';
               console.log(`Cloud cover-based SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.score.toFixed(1)} (cloud cover: ${cloudCover}%)`);
-              onSiqsCalculated(result.score, false);
+              
+              // Only update if SIQS score is high quality (>= 5.0)
+              if (result.score >= 5.0) {
+                onSiqsCalculated(result.score, false);
+              } else {
+                console.log(`Skipping low quality location (SIQS: ${result.score.toFixed(1)})`);
+                onSiqsCalculated(null, false);
+              }
             } else {
               onSiqsCalculated(null, false);
             }
@@ -82,6 +99,7 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
           
           setLoading(false);
           setLastFetchTimestamp(now);
+          fetchingRef.current = false;
         };
         
         fetchSiqs();

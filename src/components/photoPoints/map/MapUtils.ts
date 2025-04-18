@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
@@ -32,21 +31,21 @@ export const filterLocations = (
   // For the calculated view, generate and filter non-certified locations by distance
   if (activeView === 'calculated' && userLocation) {
     // Generate more calculated locations around the user if we don't have enough
-    if (nonCertifiedLocations.length < 20) {
+    if (nonCertifiedLocations.length < 15) {
       console.log(`Generating more calculated points around user location with radius ${searchRadius}km`);
       // Make this synchronous by directly generating points
       const generatedPoints = generateCalculatedPointsSync(
         userLocation.latitude,
         userLocation.longitude,
         searchRadius,
-        50 // Generate more points
+        25
       );
       
       // Add these to our non-certified locations
       nonCertifiedLocations = [...nonCertifiedLocations, ...generatedPoints];
     }
     
-    // Filter by distance
+    // Filter by distance and minimum quality (SIQS >= 5.0)
     nonCertifiedLocations = nonCertifiedLocations.filter(loc => {
       // Skip invalid locations
       if (!loc.latitude || !loc.longitude) return false;
@@ -59,8 +58,18 @@ export const filterLocations = (
         loc.longitude
       );
       
-      // Keep locations within search radius that aren't in water
-      return distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false);
+      // Get the SIQS score - filter out low quality spots
+      const siqsScore = typeof loc.siqs === 'number' ? loc.siqs : 
+                       (loc.siqsResult && typeof loc.siqsResult.score === 'number' ? 
+                        loc.siqsResult.score : 0);
+      
+      // Keep locations that:
+      // 1. Are within search radius
+      // 2. Not in water
+      // 3. Have SIQS score >= 5.0
+      return distance <= searchRadius && 
+             !isWaterLocation(loc.latitude, loc.longitude, false) &&
+             siqsScore >= 5.0;
     });
   }
 
@@ -85,9 +94,10 @@ function generateCalculatedPointsSync(
 ): SharedAstroSpot[] {
   const points: SharedAstroSpot[] = [];
   
-  // Use a fixed cloud cover value initially, will be updated later via RealTimeSiqsFetcher
-  // This avoids the Promise issue and provides immediate results
-  const defaultCloudCover = 50; // This is just a starting point, will be replaced with real data
+  // Use higher quality cloud cover estimates initially, later updated by real-time fetcher
+  // This provides better initial estimates and filters out low-quality spots from the start
+  // All spots start with SIQS >= 5.0 (cloud cover <= 50%)
+  const maxInitialCloudCover = 50; // Max 50% cloud cover to ensure SIQS >= 5.0
   
   for (let i = 0; i < count; i++) {
     // Generate a random point within the radius
@@ -109,13 +119,12 @@ function generateCalculatedPointsSync(
     // Calculate actual distance
     const actualDistance = calculateDistance(centerLat, centerLng, lat, lng);
     
-    // Calculate initial SIQS score based on default cloud cover
-    // The real score will be calculated later via RealTimeSiqsFetcher
-    const cloudCover = defaultCloudCover + (Math.random() * 20 - 10); // Add some variation
-    const siqsScore = Math.max(0, 10 - (cloudCover / 10));
-    const isViable = cloudCover <= 40;
+    // Calculate initial SIQS score based on good cloud cover conditions
+    // These will be updated later with real data via RealTimeSiqsFetcher
+    const cloudCover = Math.random() * maxInitialCloudCover; // 0-50% cloud cover
+    const siqsScore = Math.max(5.0, 10 - (cloudCover / 10)); // Ensure minimum 5.0 score
     
-    // Create the point with the initial SIQS score
+    // Create the point with the initial high-quality SIQS score
     points.push({
       id: `calc-${i}-${lat.toFixed(4)}-${lng.toFixed(4)}`,
       name: `Calculated Point ${i+1}`,
@@ -125,7 +134,7 @@ function generateCalculatedPointsSync(
       siqs: siqsScore,
       siqsResult: {
         score: siqsScore,
-        isViable: isViable,
+        isViable: true, // Always viable since SIQS >= 5.0
         factors: [{
           name: "Cloud Cover",
           score: (100 - cloudCover) / 10,
@@ -137,7 +146,7 @@ function generateCalculatedPointsSync(
     });
   }
   
-  console.log(`Generated ${points.length} calculated points with cloud cover-based SIQS`);
+  console.log(`Generated ${points.length} high-quality calculated points (SIQS >= 5.0)`);
   return points;
 }
 
