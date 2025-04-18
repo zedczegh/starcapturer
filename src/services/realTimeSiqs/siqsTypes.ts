@@ -1,77 +1,62 @@
 
-// Define types for SIQS calculation
+/**
+ * Type definitions for SIQS calculation and results
+ */
+
+export interface SiqsFactor {
+  name: string;
+  score: number;
+  description?: string;
+  nighttimeData?: {
+    average: number;
+    timeRange: string;
+    sourceType?: 'forecast' | 'calculated' | 'historical';
+  };
+}
+
 export interface SiqsResult {
   siqs: number;
   isViable: boolean;
-  weatherData?: WeatherDataWithClearSky;
-  forecastData?: any;
-  factors?: {
-    name: string;
-    score: number;
-    description: string;
-  }[];
+  factors?: SiqsFactor[];
   metadata?: {
-    calculatedAt: string;
-    sources: {
-      weather: boolean;
-      forecast: boolean;
-      clearSky: boolean;
-      lightPollution: boolean;
+    calculatedAt?: string;
+    sources?: {
+      weather?: boolean;
+      forecast?: boolean;
+      clearSky?: boolean;
+      lightPollution?: boolean;
       terrainCorrected?: boolean;
       climate?: boolean;
     };
-    reliability?: {
-      score: number;
-      issues: string[];
-    };
   };
+  forecastData?: any;
+  weatherData?: WeatherDataWithClearSky;
 }
 
 export interface WeatherDataWithClearSky {
-  temperature: number;
-  humidity: number;
+  temperature?: number;
+  humidity?: number;
+  windSpeed?: number;
   cloudCover: number;
-  windSpeed: number;
-  precipitation: number;
+  precipitation?: number;
+  visibility?: number;
   clearSkyRate?: number;
   latitude: number;
   longitude: number;
-  time?: string;
-  condition?: string;
   aqi?: number;
-  _forecast?: any;
   nighttimeCloudData?: {
     average: number;
     timeRange: string;
-    sourceType: 'forecast' | 'calculated' | 'historical';
+    sourceType?: 'forecast' | 'calculated' | 'historical';
   };
+  _forecast?: any;
 }
 
-export interface MoonlessNightInfo {
-  duration: number; // in hours
-  startTime: string;
-  endTime: string;
-  moonrise: Date | string;
-  moonset: Date | string;
-  nextNewMoon: string;
-  daysUntilNewMoon: number;
-  astronomicalNightStart: string;
-  astronomicalNightEnd: string;
-  astronomicalNightDuration: number;
+export interface SiqsLocationInfo {
+  latitude: number;
+  longitude: number;
+  bortleScale?: number;
+  seeingConditions?: number;
+  moonPhase?: number;
 }
 
-export interface MoonPhaseInfo {
-  phase: number; // 0-1 normalized value
-  name: string;
-  illumination: number; // percentage 0-100
-  isGoodForAstronomy: boolean;
-}
-
-// Add SiqsCalculationOptions interface
-export interface SiqsCalculationOptions {
-  anomalyDetection?: boolean;
-  includeMetadata?: boolean;
-  includeForecast?: boolean;
-  reliability?: boolean;
-  adjustForLatitude?: boolean;
-}
