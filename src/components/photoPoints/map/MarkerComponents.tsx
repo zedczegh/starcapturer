@@ -161,9 +161,7 @@ const LocationMarker = memo(({
         {isOpen && (
           <Popup 
             offset={[0, -5]}
-            eventHandlers={{ 
-              close: handlePopupClose 
-            }}
+            onClose={handlePopupClose}
           >
             <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
               <div className="font-medium text-sm mb-1.5 flex items-center">
