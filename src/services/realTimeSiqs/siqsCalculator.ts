@@ -166,12 +166,12 @@ export async function calculateRealTimeSiqs(
           lightPollution: !!pollutionData,
           terrainCorrected: !!terrainCorrectedScale,
           climate: !!climateRegion
-        },
-        factors: {
-          cloudCover: finalCloudCover,
-          moonPhase,
-          seeingConditions
         }
+      },
+      factors: {
+        cloudCover: finalCloudCover,
+        moonPhase,
+        seeingConditions
       }
     };
     
