@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
@@ -32,11 +33,22 @@ export const useMapLocations = ({
   const previousActiveViewRef = useRef<string>(activeView);
   const processingRef = useRef<boolean>(false);
   const locationCacheRef = useRef<Map<string, SharedAstroSpot>>(new Map());
+  const previousUserLocationRef = useRef<{latitude: number, longitude: number} | null>(null);
   
   // Process locations with throttling to prevent UI flashing
   useEffect(() => {
     // Skip if already processing
     if (processingRef.current) return;
+    
+    // Track whether location has changed
+    const locationChanged = userLocation && previousUserLocationRef.current && 
+      (userLocation.latitude !== previousUserLocationRef.current.latitude ||
+       userLocation.longitude !== previousUserLocationRef.current.longitude);
+    
+    // Update reference
+    if (userLocation) {
+      previousUserLocationRef.current = {...userLocation};
+    }
     
     // Create a unique signature for this location set
     const locationSignature = locations.length + '-' + (userLocation ? 
@@ -58,8 +70,7 @@ export const useMapLocations = ({
       }
     });
     
-    // Important: Always preserve existing locations regardless of new batch
-    // This fixes the issue with calculated spots disappearing
+    // Important: Always preserve existing locations regardless of new batch or location change
     previousLocationsRef.current.forEach((loc, key) => {
       if (!newLocationsMap.has(key)) {
         // When in calculated view, keep all previously visible locations
@@ -74,7 +85,9 @@ export const useMapLocations = ({
             );
             
             // Only filter by water for non-certified locations
-            if (distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false)) {
+            // But DON'T filter by distance when locations have just changed, to preserve spots
+            if ((!locationChanged || distance <= searchRadius) && 
+                !isWaterLocation(loc.latitude, loc.longitude, false)) {
               newLocationsMap.set(key, loc);
             }
           } else if (loc.isDarkSkyReserve || loc.certification) {
@@ -146,6 +159,25 @@ export const useMapLocations = ({
           
           // Convert back to array
           locationsToShow = Array.from(tempMap.values());
+        }
+        
+        // Save all locations to session storage for persistence across sessions
+        try {
+          const storageKey = activeView === 'calculated' ? 'persistent_calculated_locations' : 'persistent_certified_locations';
+          const simplifiedLocations = allLocations.map(loc => ({
+            id: loc.id || `loc-${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`,
+            name: loc.name || 'Unknown Location',
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            siqs: loc.siqs,
+            isDarkSkyReserve: loc.isDarkSkyReserve,
+            certification: loc.certification,
+            distance: loc.distance
+          }));
+          sessionStorage.setItem(storageKey, JSON.stringify(simplifiedLocations));
+          console.log(`Stored ${simplifiedLocations.length} locations in session storage under ${storageKey}`);
+        } catch (err) {
+          console.error('Error storing locations in session storage:', err);
         }
         
         // Update the location cache with all locations for future use

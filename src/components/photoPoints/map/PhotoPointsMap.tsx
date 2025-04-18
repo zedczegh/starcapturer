@@ -62,15 +62,15 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   useEffect(() => {
     if (locations.length > 0) {
       try {
-        // Store locations in session storage for persistence
+        // Store ALL locations in session storage for persistence
         const storageKey = activeView === 'certified' ? 
           'persistent_certified_locations' : 
           'persistent_calculated_locations';
         
         // Only store the most important fields to reduce storage size
         const simplifiedLocations = locations.map(loc => ({
-          id: loc.id,
-          name: loc.name,
+          id: loc.id || `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`,
+          name: loc.name || 'Unknown Location',
           latitude: loc.latitude,
           longitude: loc.longitude,
           siqs: loc.siqs,
@@ -79,13 +79,64 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
           distance: loc.distance
         }));
         
-        sessionStorage.setItem(storageKey, JSON.stringify(simplifiedLocations));
-        console.log(`Stored ${locations.length} ${activeView} locations to session storage`);
+        // Load existing locations first to avoid overwriting 
+        const existingData = sessionStorage.getItem(storageKey);
+        let combinedLocations = simplifiedLocations;
+        
+        if (existingData) {
+          try {
+            const existingLocations = JSON.parse(existingData);
+            
+            // Create a map to deduplicate by coordinates
+            const locationMap = new Map();
+            
+            // Add existing locations first
+            existingLocations.forEach(loc => {
+              if (loc && loc.latitude && loc.longitude) {
+                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+                locationMap.set(key, loc);
+              }
+            });
+            
+            // Add new locations, overwriting existing ones if they have the same coordinates
+            simplifiedLocations.forEach(loc => {
+              if (loc && loc.latitude && loc.longitude) {
+                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+                locationMap.set(key, loc);
+              }
+            });
+            
+            // Convert back to array
+            combinedLocations = Array.from(locationMap.values());
+          } catch (err) {
+            console.error('Error parsing existing locations:', err);
+          }
+        }
+        
+        sessionStorage.setItem(storageKey, JSON.stringify(combinedLocations));
+        console.log(`Stored ${combinedLocations.length} ${activeView} locations to session storage`);
       } catch (err) {
         console.error('Error storing locations in session storage:', err);
       }
     }
   }, [locations, activeView]);
+  
+  // Load persisted locations on component mount
+  useEffect(() => {
+    try {
+      const storageKey = activeView === 'certified' ? 
+        'persistent_certified_locations' : 
+        'persistent_calculated_locations';
+        
+      const storedData = sessionStorage.getItem(storageKey);
+      
+      if (storedData) {
+        console.log(`Found ${storageKey} in session storage, available for fallback`);
+      }
+    } catch (err) {
+      console.error('Error checking session storage:', err);
+    }
+  }, [activeView]);
   
   console.log(`PhotoPointsMap: optimizedLocations=${optimizedLocations?.length || 0}, mapReady=${mapReady}`);
   
