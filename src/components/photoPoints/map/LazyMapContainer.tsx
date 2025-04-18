@@ -28,11 +28,6 @@ interface LazyMapContainerProps {
   onLocationClick?: (location: SharedAstroSpot) => void;
   onMapClick?: (lat: number, lng: number) => void;
   zoom?: number;
-  hoveredLocationId?: string | null;
-  onMarkerHover?: (id: string | null) => void;
-  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
-  handleTouchMove?: (e: React.TouchEvent) => void;
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
@@ -48,11 +43,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   onLocationClick,
   onMapClick,
   zoom = 10,
-  hoveredLocationId,
-  onMarkerHover,
-  handleTouchStart,
-  handleTouchEnd,
-  handleTouchMove,
   isMobile,
   useMobileMapFixer = false,
   showRadiusCircles = false
@@ -241,21 +231,17 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           
           const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
           const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
-          const isHovered = hoveredLocationId === locationId;
           
           return (
             <LocationMarker
               key={locationId}
               location={location}
               onClick={stableOnLocationClick}
-              isHovered={isHovered}
-              onHover={onMarkerHover || (() => {})}
+              isHovered={false}
+              onHover={() => {}}
               locationId={locationId}
               isCertified={isCertified}
               activeView={activeView}
-              handleTouchStart={handleTouchStart}
-              handleTouchEnd={handleTouchEnd}
-              handleTouchMove={handleTouchMove}
             />
           );
         })}
