@@ -60,11 +60,14 @@ const LocationMarker = memo(({
   }, [language, location.chineseName, location.name, t]);
     
   const siqsScore = useMemo(() => {
+    // First priority: use real-time calculated SIQS if available
     if (realTimeSiqs !== null) return realTimeSiqs;
     
+    // Second priority: use the location's existing SIQS score
     const locationSiqs = getSiqsScore(location);
     if (locationSiqs > 0) return locationSiqs;
     
+    // Default fallback for certified locations
     if (isCertified) {
       return location.isDarkSkyReserve ? 7.5 : 6.5;
     }
@@ -75,9 +78,12 @@ const LocationMarker = memo(({
   const siqsClass = getSiqsClass(siqsScore);
 
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean) => {
+    if (siqs !== null) {
+      console.log(`New SIQS score received for location ${locationId}: ${siqs}`);
+    }
     setRealTimeSiqs(siqs);
     setSiqsLoading(loading);
-  }, []);
+  }, [locationId]);
   
   const shouldRender = useMemo(() => {
     if (activeView === 'certified') {
@@ -195,13 +201,22 @@ const LocationMarker = memo(({
     return null;
   }
   
-  const shouldShowRealTimeSiqs = Boolean(
-    isCertified || 
-    location.isDarkSkyReserve || 
-    location.certification || 
-    (location.type === 'lodging') ||
-    (location.type === 'dark-site')
-  );
+  const shouldShowRealTimeSiqs = useMemo(() => {
+    // Show real-time SIQS for:
+    // 1. Certified locations
+    // 2. Dark sky reserves
+    // 3. Locations with certification
+    // 4. Lodging and dark-site types
+    // 5. When hovering on any marker that doesn't have a SIQS score
+    return Boolean(
+      isCertified || 
+      location.isDarkSkyReserve || 
+      location.certification || 
+      (location.type === 'lodging') ||
+      (location.type === 'dark-site') ||
+      (isHovered && !realTimeSiqs && !location.siqs)
+    );
+  }, [isCertified, location, isHovered, realTimeSiqs]);
   
   return (
     <>
@@ -285,8 +300,6 @@ const LocationMarker = memo(({
     </>
   );
 });
-
-LocationMarker.displayName = 'LocationMarker';
 
 const UserLocationMarker = memo(({ 
   position, 

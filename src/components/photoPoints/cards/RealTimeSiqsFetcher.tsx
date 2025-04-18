@@ -49,7 +49,9 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
               
               if (age < CACHE_DURATION) {
                 console.log("Using cached SIQS from session storage");
-                onSiqsCalculated(data.siqs, false);
+                // Extract the score from either format
+                const siqsScore = data.score || data.siqs || 0;
+                onSiqsCalculated(siqsScore, false);
                 setLastFetchTimestamp(timestamp);
                 setLoading(false);
                 return;
@@ -68,9 +70,22 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
               effectiveBortleScale
             );
             
-            if (result && result.siqs > 0) {
-              console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.siqs}`);
-              onSiqsCalculated(result.siqs, false);
+            if (result) {
+              // Extract score from the new format
+              const score = result.score || 0;
+              console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${score}`);
+              
+              // Store in session storage
+              try {
+                sessionStorage.setItem(cacheKey, JSON.stringify({
+                  data: result,
+                  timestamp: now
+                }));
+              } catch (e) {
+                console.error("Failed to cache SIQS data:", e);
+              }
+              
+              onSiqsCalculated(score, false);
             } else {
               onSiqsCalculated(0, false);
             }

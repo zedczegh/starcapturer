@@ -22,7 +22,8 @@ export async function calculateRealTimeSiqs(
       console.log("No forecast data available for SIQS calculation");
       return {
         score: 0,
-        isViable: false
+        isViable: false,
+        siqs: 0 // Add for backward compatibility
       };
     }
 
@@ -32,11 +33,14 @@ export async function calculateRealTimeSiqs(
 
     // If cloud cover is over 40%, location is not viable
     if (tonightCloudCover > 40) {
+      const score = Math.max(1, 5 - (tonightCloudCover / 20));
+      
       return {
-        score: Math.max(1, 5 - (tonightCloudCover / 20)),
+        score: score,
         isViable: false,
+        siqs: score, // Add for backward compatibility
         siqsResult: {
-          score: Math.max(1, 5 - (tonightCloudCover / 20)),
+          score: score,
           isViable: false,
           factors: [{
             name: "Cloud Cover",
@@ -51,16 +55,25 @@ export async function calculateRealTimeSiqs(
     // 0% cloud cover = 10 points, 40% cloud cover = 6 points
     const siqsScore = 10 - ((tonightCloudCover / 40) * 4);
     const finalScore = Math.min(10, Math.max(1, siqsScore));
+    
+    // Calculate the cloud cover factor score (0-10 scale)
+    const cloudFactor = Math.min(10, Math.max(0, (100 - tonightCloudCover * 2.5) / 10));
 
     return {
       score: finalScore,
       isViable: true,
+      siqs: finalScore, // Add for backward compatibility
+      factors: [{
+        name: "Cloud Cover",
+        score: cloudFactor,
+        description: `Tonight's cloud cover: ${Math.round(tonightCloudCover)}%`
+      }],
       siqsResult: {
         score: finalScore,
         isViable: true,
         factors: [{
           name: "Cloud Cover",
-          score: (100 - tonightCloudCover * 2.5) / 10,
+          score: cloudFactor,
           description: `Tonight's cloud cover: ${Math.round(tonightCloudCover)}%`
         }]
       }
@@ -70,7 +83,8 @@ export async function calculateRealTimeSiqs(
     console.error("Error calculating real-time SIQS:", error);
     return {
       score: 0,
-      isViable: false
+      isViable: false,
+      siqs: 0 // Add for backward compatibility
     };
   }
 }

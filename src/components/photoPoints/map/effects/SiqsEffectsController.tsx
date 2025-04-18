@@ -1,6 +1,7 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 
 interface SiqsEffectsControllerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -17,34 +18,51 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
   onSiqsCalculated,
   disabled = false
 }) => {
-  // Always call useMap hook regardless of disabled state
   const map = useMap();
   
-  // Only apply effects if not disabled and userLocation is available
+  const calculateSiqsForLocation = useCallback(async (latitude: number, longitude: number) => {
+    try {
+      // Use our simplified cloud cover based SIQS calculation
+      const result = await calculateRealTimeSiqs(latitude, longitude, 4);
+      
+      if (result && typeof result.score === 'number') {
+        console.log(`Map effects: calculated SIQS ${result.score} for [${latitude.toFixed(4)}, ${longitude.toFixed(4)}]`);
+        if (onSiqsCalculated) {
+          onSiqsCalculated(result.score);
+        }
+        return result.score;
+      }
+    } catch (error) {
+      console.error("Error calculating SIQS in map effects:", error);
+    }
+    return null;
+  }, [onSiqsCalculated]);
+  
   useEffect(() => {
     if (disabled || !userLocation || !map) return;
     
-    // Calculate and update SIQS data based on user location and map position
-    const calculateSiqs = async () => {
+    // Apply effects based on the current view and map state
+    const applyMapEffects = async () => {
       try {
-        // Simulate SIQS calculation result
-        const simulatedSiqs = Math.round((Math.random() * 3 + 5) * 10) / 10;
-        
-        // Call the callback if provided
-        if (onSiqsCalculated) {
-          onSiqsCalculated(simulatedSiqs);
+        // For user location, always calculate SIQS
+        if (userLocation) {
+          await calculateSiqsForLocation(userLocation.latitude, userLocation.longitude);
         }
+        
+        console.log(`Map effects applied for ${activeView} view with radius ${searchRadius}km`);
       } catch (error) {
-        console.error("Error calculating SIQS:", error);
+        console.error("Error applying map effects:", error);
       }
     };
     
-    calculateSiqs();
+    applyMapEffects();
     
-    // No need for cleanup as we're not setting up listeners
-  }, [map, userLocation, activeView, searchRadius, onSiqsCalculated, disabled]);
+    // We don't need event listeners since this component will re-render
+    // when the props change
+    
+  }, [map, userLocation, activeView, searchRadius, calculateSiqsForLocation]);
   
-  return null; // This component doesn't render anything
+  return null;
 };
 
 export default SiqsEffectsController;
