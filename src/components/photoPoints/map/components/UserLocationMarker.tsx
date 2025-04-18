@@ -1,66 +1,48 @@
 
-import React, { useState, useEffect } from 'react';
-import { Marker, Circle } from 'react-leaflet';
-import { divIcon } from 'leaflet';
+import React, { memo } from 'react';
+import { Marker, Popup } from 'react-leaflet';
+import { useLanguage } from "@/contexts/LanguageContext";
 import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
+import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface UserLocationMarkerProps {
   position: [number, number];
-  currentSiqs?: number | null;
+  currentSiqs: number | null;
 }
 
-export const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ 
-  position,
-  currentSiqs = null
-}) => {
-  const [animationStep, setAnimationStep] = useState(0);
+const UserLocationMarker = memo(({ 
+  position, 
+  currentSiqs 
+}: UserLocationMarkerProps) => {
+  const { t } = useLanguage();
+  const isMobile = useIsMobile();
   
-  // Normalize SIQS if needed
-  const normalizedSiqs = currentSiqs !== null && currentSiqs > 10 ? currentSiqs / 10 : currentSiqs;
-  
-  // Pulse animation effect
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAnimationStep(prev => (prev + 1) % 3);
-    }, 800);
-    
-    return () => clearInterval(interval);
-  }, []);
-  
-  // Create user location marker icon
-  const userIcon = divIcon({
-    className: 'user-location-marker',
-    html: `<div class="user-marker-pulse pulse-step-${animationStep}">
-             <div class="user-marker-center"></div>
-           </div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14]
-  });
+  const userMarkerIcon = createCustomMarker('#e11d48', 'circle', isMobile ? 1.2 : 1.0);
   
   return (
-    <>
-      <Circle
-        center={position}
-        pathOptions={{
-          color: 'rgb(59, 130, 246)',
-          fillColor: 'rgb(59, 130, 246)',
-          fillOpacity: 0.2,
-          weight: 1
-        }}
-        radius={100}
-      />
-      
-      <Marker 
-        position={position} 
-        icon={userIcon}
-        // Remove the unsupported zIndexOffset property
+    <Marker position={position} icon={userMarkerIcon}>
+      <Popup
+        offset={[0, 10]}
+        direction="bottom"
       >
-        {normalizedSiqs !== null && (
-          <div className="siqs-badge">
-            <SiqsScoreBadge score={normalizedSiqs} compact={true} />
+        <div className="p-2 leaflet-popup-custom marker-popup-gradient">
+          <strong>{t("Your Location", "您的位置")}</strong>
+          <div className="text-xs mt-1">
+            {position[0].toFixed(5)}, {position[1].toFixed(5)}
           </div>
-        )}
-      </Marker>
-    </>
+          {currentSiqs !== null && (
+            <div className="text-xs mt-1.5 flex items-center">
+              <span className="mr-1">SIQS:</span>
+              <SiqsScoreBadge score={currentSiqs} compact={true} />
+            </div>
+          )}
+        </div>
+      </Popup>
+    </Marker>
   );
-};
+});
+
+UserLocationMarker.displayName = 'UserLocationMarker';
+
+export { UserLocationMarker };

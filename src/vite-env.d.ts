@@ -36,7 +36,6 @@ declare module 'react-leaflet' {
     icon?: L.Icon | L.DivIcon;
     onClick?: () => void;
     children?: React.ReactNode;
-    // Note: zIndexOffset is not supported in this version of react-leaflet
   }
 
   export interface PopupProps extends L.PopupOptions {

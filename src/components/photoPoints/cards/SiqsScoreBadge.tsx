@@ -23,12 +23,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   confidenceScore = 10
 }) => {
   // Convert score to number using our helper function
-  let numericScore = getSiqsScore(score);
-  
-  // Normalize to 1-10 scale if needed
-  if (numericScore > 10) {
-    numericScore = numericScore / 10;
-  }
+  const numericScore = getSiqsScore(score);
   
   // Skip rendering if score is 0 (invalid) and not showing loading state
   if (numericScore <= 0 && !loading && !forceCertified) {

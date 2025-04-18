@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -38,12 +37,9 @@ export function useMarkerState({
     
     // Otherwise use location's SIQS if available
     const locationSiqs = getSiqsScore(location);
-    if (locationSiqs > 0) {
-      // Ensure score is normalized to 1-10 scale
-      return locationSiqs > 10 ? locationSiqs / 10 : locationSiqs;
-    }
+    if (locationSiqs > 0) return locationSiqs;
     
-    // No default scores for certified locations
+    // No default scores for certified locations - treat them like calculated spots
     return null;
   }, [location, realTimeSiqs]);
   
