@@ -3,6 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Check } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { toast } from "sonner";
 
 interface PinpointButtonProps {
   onGetLocation: () => void;
@@ -32,8 +33,30 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
     // Call the location handler
     onGetLocation();
     
+    // Try to center the map on user location
+    if (shouldCenter) {
+      try {
+        const leafletMap = (window as any).leafletMap;
+        if (leafletMap) {
+          setTimeout(() => {
+            leafletMap.setView(
+              [leafletMap.getCenter().lat, leafletMap.getCenter().lng],
+              12,
+              { 
+                animate: true,
+                duration: 1 
+              }
+            );
+          }, 300); // Small delay to allow location update
+        }
+      } catch (error) {
+        console.error("Error centering map:", error);
+        toast.error(t("Could not center map", "无法将地图居中"));
+      }
+    }
+    
     setTimeout(() => setIsClicking(false), 1000);
-  }, [onGetLocation]);
+  }, [onGetLocation, shouldCenter, t]);
 
   return (
     <div 

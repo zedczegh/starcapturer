@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
@@ -130,6 +129,16 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       clearTimeout(timeoutId);
     };
   }, []);
+
+  useEffect(() => {
+    if (mapRef.current) {
+      (window as any).leafletMap = mapRef.current;
+      
+      return () => {
+        delete (window as any).leafletMap;
+      };
+    }
+  }, [mapRef.current]);
 
   const displayLocations = filteredLocations();
   
