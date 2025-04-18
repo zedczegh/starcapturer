@@ -29,8 +29,8 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
     stopPropagation(e);
     setIsClicking(true);
     
+    // Call the location handler
     onGetLocation();
-    // No toast here
     
     setTimeout(() => setIsClicking(false), 1000);
   }, [onGetLocation]);

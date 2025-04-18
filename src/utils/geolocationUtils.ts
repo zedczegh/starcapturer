@@ -1,3 +1,4 @@
+
 /**
  * Extended GeolocationOptions with language support
  * Note: The language property is not part of the standard GeolocationOptions
@@ -62,7 +63,7 @@ export function getCurrentPosition(
   const opts = {
     enableHighAccuracy: true,
     timeout: defaultTimeout,
-    maximumAge: 60000, // Cache for 1 minute
+    maximumAge: 0, // Reduced from 60000 to 0 to always get fresh position
     ...options
   };
   
@@ -87,36 +88,39 @@ export function getCurrentPosition(
       }
     }
     
-    // Use cached position if available and not expired
-    const cachedPosition = localStorage.getItem('last_position');
-    const cachedTimestamp = parseInt(localStorage.getItem('last_position_timestamp') || '0', 10);
-    
-    if (cachedPosition && Date.now() - cachedTimestamp < opts.maximumAge) {
-      try {
-        const position = JSON.parse(cachedPosition);
-        // Return cached position immediately for faster response
-        successCallback(position);
-        pendingRequests[requestKey] = false; // Clear pending flag
-        
-        // Still try to get fresh position in the background
-        navigator.geolocation.getCurrentPosition(
-          (freshPosition) => {
-            // Update cache with fresh position
-            try {
-              localStorage.setItem('last_position', JSON.stringify(freshPosition));
-              localStorage.setItem('last_position_timestamp', Date.now().toString());
-            } catch (e) {
-              console.warn('Could not cache position:', e);
-            }
-          },
-          () => {}, // Ignore errors since we already have cached position
-          { enableHighAccuracy: opts.enableHighAccuracy, timeout: 10000 }
-        );
-        
-        return;
-      } catch (e) {
-        console.warn('Could not parse cached position:', e);
-        // Continue to get fresh position
+    // Check if we need the most recent position or can use cached
+    if (opts.maximumAge > 0) {
+      // Use cached position if available and not expired
+      const cachedPosition = localStorage.getItem('last_position');
+      const cachedTimestamp = parseInt(localStorage.getItem('last_position_timestamp') || '0', 10);
+      
+      if (cachedPosition && Date.now() - cachedTimestamp < opts.maximumAge) {
+        try {
+          const position = JSON.parse(cachedPosition);
+          // Return cached position immediately for faster response
+          successCallback(position);
+          pendingRequests[requestKey] = false; // Clear pending flag
+          
+          // Still try to get fresh position in the background
+          navigator.geolocation.getCurrentPosition(
+            (freshPosition) => {
+              // Update cache with fresh position
+              try {
+                localStorage.setItem('last_position', JSON.stringify(freshPosition));
+                localStorage.setItem('last_position_timestamp', Date.now().toString());
+              } catch (e) {
+                console.warn('Could not cache position:', e);
+              }
+            },
+            () => {}, // Ignore errors since we already have cached position
+            { enableHighAccuracy: opts.enableHighAccuracy, timeout: 10000 }
+          );
+          
+          return;
+        } catch (e) {
+          console.warn('Could not parse cached position:', e);
+          // Continue to get fresh position
+        }
       }
     }
   } catch (err) {

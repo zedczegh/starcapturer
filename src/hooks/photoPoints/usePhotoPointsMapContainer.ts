@@ -3,6 +3,9 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useIsMobile } from '@/hooks/use-mobile';
 import useMapMarkers from '@/hooks/map/useMapMarkers';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
+import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { getCurrentPosition } from '@/utils/geolocationUtils';
 
 interface UsePhotoPointsMapContainerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -25,6 +28,7 @@ export const usePhotoPointsMapContainer = ({
   onLocationClick,
   onLocationUpdate
 }: UsePhotoPointsMapContainerProps) => {
+  const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [mapContainerHeight, setMapContainerHeight] = useState('450px');
   const [legendOpen, setLegendOpen] = useState(false);
@@ -137,29 +141,53 @@ export const usePhotoPointsMapContainer = ({
     }
   }, [onLocationClick, handleLocationClick]);
   
+  // Updated get location handler to use enhanced geolocation function
   const handleGetLocation = useCallback(() => {
-    if (onLocationUpdate && navigator.geolocation && !isUpdatingLocation) {
-      setIsUpdatingLocation(true);
-      
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          onLocationUpdate(latitude, longitude);
-          console.log("Got user position:", latitude, longitude);
-          
-          // Reset updating state after delay
-          setTimeout(() => {
-            setIsUpdatingLocation(false);
-          }, 1000);
-        },
-        (error) => {
-          console.error("Error getting location:", error.message);
+    if (!onLocationUpdate || isUpdatingLocation) return;
+    
+    setIsUpdatingLocation(true);
+    
+    // Use the enhanced getCurrentPosition utility for better support across browsers
+    getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        // Update the location through the provided callback
+        onLocationUpdate(latitude, longitude);
+        console.log("Got user position:", latitude, longitude);
+        
+        // Also try to center the map if possible
+        try {
+          const leafletMap = (window as any).leafletMap;
+          if (leafletMap) {
+            leafletMap.setView([latitude, longitude], 12, { 
+              animate: true,
+              duration: 1.5 
+            });
+            console.log("Map centered on current location");
+          }
+        } catch (e) {
+          console.error("Could not center map:", e);
+        }
+        
+        // Reset updating state after delay
+        setTimeout(() => {
           setIsUpdatingLocation(false);
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
-    }
-  }, [onLocationUpdate, isUpdatingLocation]);
+        }, 1000);
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        toast.error(t("Could not get your location", "无法获取您的位置"));
+        setIsUpdatingLocation(false);
+      },
+      { 
+        enableHighAccuracy: true, 
+        timeout: 10000, 
+        maximumAge: 0,
+        language: t.language
+      }
+    );
+  }, [onLocationUpdate, isUpdatingLocation, t]);
   
   const handleLegendToggle = useCallback((isOpen: boolean) => {
     setLegendOpen(isOpen);
@@ -170,7 +198,7 @@ export const usePhotoPointsMapContainer = ({
     legendOpen,
     mapReady,
     handleMapReady,
-    optimizedLocations,
+    optimizedLocations: validLocations,
     mapCenter,
     initialZoom,
     hoveredLocationId,
