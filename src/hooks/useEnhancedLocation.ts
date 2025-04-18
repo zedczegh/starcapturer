@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { EnhancedLocationDetails } from '@/services/geocoding/types/enhancedLocationTypes';
+import { Language } from '@/services/geocoding/types';
 
 interface UseEnhancedLocationProps {
   latitude?: number;
@@ -31,7 +32,7 @@ export function useEnhancedLocation({
   const [error, setError] = useState<Error | null>(null);
 
   // Get cached details or fetch new ones
-  const fetchLocationDetails = useCallback(async (lat: number, lng: number, lang: string) => {
+  const fetchLocationDetails = useCallback(async (lat: number, lng: number, lang: Language) => {
     // Generate cache key
     const cacheKey = `${lat.toFixed(6)}-${lng.toFixed(6)}-${lang}`;
     
@@ -84,7 +85,9 @@ export function useEnhancedLocation({
         setLoading(true);
         setError(null);
         
-        const details = await fetchLocationDetails(latitude, longitude, language);
+        // Fix: Ensure language is properly typed as 'en' | 'zh'
+        const languageValue: Language = language === 'zh' ? 'zh' : 'en';
+        const details = await fetchLocationDetails(latitude, longitude, languageValue);
         
         if (isMounted) {
           setLocationDetails(details);
@@ -112,7 +115,9 @@ export function useEnhancedLocation({
   const refetch = useCallback(() => {
     if (latitude && longitude) {
       setLoading(true);
-      fetchLocationDetails(latitude, longitude, language)
+      // Fix: Ensure language is properly typed here too
+      const languageValue: Language = language === 'zh' ? 'zh' : 'en';
+      fetchLocationDetails(latitude, longitude, languageValue)
         .then(details => {
           setLocationDetails(details);
           setLoading(false);
