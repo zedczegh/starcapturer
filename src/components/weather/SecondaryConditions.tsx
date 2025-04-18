@@ -61,7 +61,7 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
             <LightPollutionIndicator 
               bortleScale={bortleScale || 4} 
               size="sm" 
-              showLabel={false} 
+              showDescription={false} 
             />
           </div>
           <div>
