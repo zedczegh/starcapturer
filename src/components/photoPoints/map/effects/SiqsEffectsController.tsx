@@ -95,16 +95,16 @@ const SiqsEffectsController: React.FC<SiqsEffectsControllerProps> = ({
         
         // Only include high quality spots (SIQS >= 5.0)
         if (siqs && siqs.score >= 5.0) {
-          spots.push({
+          const newSpot: SharedAstroSpot = {
             id: `gen-${spotLat.toFixed(6)}-${spotLng.toFixed(6)}`,
             name: `Spot near ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
             latitude: spotLat,
             longitude: spotLng,
             siqs: siqs.score,
             siqsResult: siqs,
-            distance: distance,
-            generated: true
-          });
+            distance: distance
+          };
+          spots.push(newSpot);
         }
         
         // Pause between API calls to prevent rate limiting

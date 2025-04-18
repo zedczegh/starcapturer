@@ -9,4 +9,4 @@ export const calculateRealTimeSiqs = calculateSiqs;
 
 // Export cache clearing functions
 export const clearSiqsCache = clearAllSiqsCache;
-export const clearLocationCache = clearLocationSiqsCache;
+export { clearLocationSiqsCache };

@@ -3,23 +3,15 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import dynamic from 'next/dynamic';
+import { lazy, Suspense } from 'react';
 import MapLegend from './MapLegend';
-import MapInfoPanel from './MapInfoPanel';
 import SiqsDisplay from './SiqsDisplay';
 import RealTimeLocationUpdater from './RealTimeLocationUpdater';
 import useMapInteractions from '@/hooks/photoPoints/useMapInteractions';
 import SiqsEffectsController from './effects/SiqsEffectsController';
 
 // Dynamically load the map component without SSR
-const LazyMapContainer = dynamic(() => import('./LazyMapContainer'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-[450px] w-full justify-center items-center bg-muted/30 rounded-lg">
-      <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-    </div>
-  ),
-});
+const LazyMapContainer = lazy(() => import('./LazyMapContainer'));
 
 interface MapContainerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -97,14 +89,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
     >
       {/* Map Legend */}
       <MapLegend 
-        visible={legendVisible} 
         onToggle={handleLegendToggle} 
-      />
-      
-      {/* Info Panel */}
-      <MapInfoPanel 
-        visible={panelVisible}
-        onToggle={setPanelVisible}
       />
       
       {/* Location Controls */}
@@ -115,25 +100,31 @@ const MapContainer: React.FC<MapContainerProps> = ({
       />
       
       {/* Map Container */}
-      <LazyMapContainer
-        center={mapCenter}
-        userLocation={userLocation}
-        locations={locations}
-        searchRadius={searchRadius}
-        activeView={activeView}
-        onMapReady={handleMapReady}
-        onLocationClick={handleLocationClicked}
-        onMapClick={handleMapClick}
-        zoom={initialZoom}
-        hoveredLocationId={hoveredLocationId}
-        onMarkerHover={handleHover}
-        handleTouchStart={handleTouchStart}
-        handleTouchEnd={handleTouchEnd}
-        handleTouchMove={handleTouchMove}
-        isMobile={isMobile}
-        useMobileMapFixer={isMobile}
-        showRadiusCircles={activeView === 'calculated'}
-      />
+      <Suspense fallback={
+        <div className="flex h-full w-full justify-center items-center bg-muted/30 rounded-lg">
+          <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+        </div>
+      }>
+        <LazyMapContainer
+          center={mapCenter}
+          userLocation={userLocation}
+          locations={locations}
+          searchRadius={searchRadius}
+          activeView={activeView}
+          onMapReady={handleMapReady}
+          onLocationClick={handleLocationClicked}
+          onMapClick={handleMapClick}
+          zoom={initialZoom}
+          hoveredLocationId={hoveredLocationId}
+          onMarkerHover={handleHover}
+          handleTouchStart={handleTouchStart}
+          handleTouchEnd={handleTouchEnd}
+          handleTouchMove={handleTouchMove}
+          isMobile={isMobile}
+          useMobileMapFixer={isMobile}
+          showRadiusCircles={activeView === 'calculated'}
+        />
+      </Suspense>
       
       {/* SIQS Effects controller */}
       {mapReady && userLocation && (
