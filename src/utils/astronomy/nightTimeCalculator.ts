@@ -1,164 +1,118 @@
 
-/**
- * Astronomical night time calculator
- * Calculates the duration of astronomical night for a given location and date
- */
+import SunCalc from 'suncalc';
+import { getTimeZoneFromCoordinates } from '../timeZoneUtils';
+import { formatInTimeZone } from 'date-fns-tz';
 
 /**
- * Calculate sunrise and sunset times for a location
- * @param latitude Latitude in decimal degrees
- * @param longitude Longitude in decimal degrees
- * @param date Date to calculate for (defaults to current date)
- * @returns Object with sunrise and sunset times as Date objects
+ * Calculate astronomical night times for a specific location
+ * @param latitude Location latitude
+ * @param longitude Location longitude 
+ * @param date Optional date (defaults to today)
+ * @returns Object with start and end times for astronomical night
  */
-export function calculateSunriseSunset(
-  latitude: number,
+export const calculateAstronomicalNight = (
+  latitude: number, 
   longitude: number,
-  date: Date = new Date()
-): { sunrise: Date; sunset: Date } {
-  // Initialize date copies to avoid mutation
-  const sunriseDate = new Date(date);
-  const sunsetDate = new Date(date);
-  
-  // Get day of year (1-366)
-  const start = new Date(date.getFullYear(), 0, 0);
-  const diff = date.getTime() - start.getTime();
-  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
-  
-  // Calculate solar declination
-  const declination = -23.45 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10));
-  
-  // Calculate sunrise and sunset hour angles
-  const sunriseHourAngle = Math.acos(
-    -Math.tan(toRadians(latitude)) * Math.tan(toRadians(declination))
-  );
-  
-  // Convert hour angle to hours
-  const sunriseHour = 12 - toDegrees(sunriseHourAngle) / 15;
-  const sunsetHour = 12 + toDegrees(sunriseHourAngle) / 15;
-  
-  // Apply longitude correction (4 minutes per degree)
-  const longitudeCorrection = (longitude % 15) * 4 / 60; // in hours
-  const timeZoneOffset = date.getTimezoneOffset() / 60;
-  
-  // Set sunrise and sunset times
-  sunriseDate.setHours(
-    Math.floor(sunriseHour - timeZoneOffset - longitudeCorrection),
-    Math.round((sunriseHour - Math.floor(sunriseHour - timeZoneOffset - longitudeCorrection)) * 60),
-    0
-  );
-  
-  sunsetDate.setHours(
-    Math.floor(sunsetHour - timeZoneOffset - longitudeCorrection),
-    Math.round((sunsetHour - Math.floor(sunsetHour - timeZoneOffset - longitudeCorrection)) * 60),
-    0
-  );
-  
-  return { sunrise: sunriseDate, sunset: sunsetDate };
-}
-
-/**
- * Calculate astronomical night start and end times
- * Astronomical night is when the sun is 18 degrees below the horizon
- * @param latitude Latitude in decimal degrees
- * @param longitude Longitude in decimal degrees
- * @param date Date to calculate for (defaults to current date)
- * @returns Object with night start and end times as Date objects
- */
-export function calculateAstronomicalNight(
-  latitude: number,
-  longitude: number,
-  date: Date = new Date()
-): { start: Date; end: Date } {
-  // Get basic sunrise/sunset
-  const { sunrise, sunset } = calculateSunriseSunset(latitude, longitude, date);
-  
-  // Astronomical twilight starts/ends when sun is 18 degrees below horizon
-  // Approximately 1.5 hours after sunset / before sunrise
-  const nightStart = new Date(sunset);
-  nightStart.setMinutes(nightStart.getMinutes() + 90); // 1.5 hours after sunset
-  
-  const nightEnd = new Date(sunrise);
-  nightEnd.setMinutes(nightEnd.getMinutes() - 90); // 1.5 hours before sunrise
-  
-  // In extreme latitudes during summer, there might be no astronomical night
-  // In that case, use civil twilight (6 degrees below horizon)
-  if (nightEnd <= nightStart) {
-    // No astronomical night, use civil twilight
-    const civilNightStart = new Date(sunset);
-    civilNightStart.setMinutes(civilNightStart.getMinutes() + 30); // 30 minutes after sunset
+  date?: Date
+): { start: Date; end: Date } => {
+  try {
+    // Use today's date if not provided
+    const targetDate = date || new Date();
     
-    const civilNightEnd = new Date(sunrise);
-    civilNightEnd.setMinutes(civilNightEnd.getMinutes() - 30); // 30 minutes before sunrise
+    // Get the time zone for the coordinates
+    const timeZone = getTimeZoneFromCoordinates(latitude, longitude);
     
-    return { start: civilNightStart, end: civilNightEnd };
+    // Get astronomical twilight times for today
+    const todayTimes = SunCalc.getTimes(targetDate, latitude, longitude);
+    
+    // Get astronomical twilight times for tomorrow (for end time if night spans two days)
+    const tomorrowDate = new Date(targetDate);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowTimes = SunCalc.getTimes(tomorrowDate, latitude, longitude);
+    
+    // Astronomical night starts at evening astronomical twilight end
+    const start = todayTimes.night;
+    
+    // Astronomical night ends at morning astronomical twilight start
+    const end = todayTimes.nightEnd;
+    
+    // Handle edge cases where night or nightEnd might be invalid
+    if (!start || isNaN(start.getTime())) {
+      console.warn("Invalid astronomical night start time calculated");
+      // Fallback to 6 PM in the location's time zone
+      const fallbackStart = new Date(targetDate);
+      fallbackStart.setHours(18, 0, 0, 0);
+      return {
+        start: fallbackStart,
+        end: tomorrowTimes.nightEnd || new Date(tomorrowDate.setHours(6, 0, 0, 0))
+      };
+    }
+    
+    if (!end || isNaN(end.getTime()) || end <= start) {
+      console.warn("Invalid astronomical night end time calculated");
+      // Fallback to 6 AM the next day in the location's time zone
+      const fallbackEnd = new Date(targetDate);
+      fallbackEnd.setDate(fallbackEnd.getDate() + 1);
+      fallbackEnd.setHours(6, 0, 0, 0);
+      return {
+        start,
+        end: fallbackEnd
+      };
+    }
+    
+    return { start, end };
+  } catch (error) {
+    console.error("Error calculating astronomical night:", error);
+    
+    // Fallback to 6 PM - 6 AM definition
+    const start = new Date();
+    start.setHours(18, 0, 0, 0);
+    
+    const end = new Date();
+    end.setDate(end.getDate() + 1);
+    end.setHours(6, 0, 0, 0);
+    
+    return { start, end };
   }
-  
-  return { start: nightStart, end: nightEnd };
-}
+};
 
 /**
- * Get night hours for a specific location and date
- * @param latitude Latitude in decimal degrees
- * @param longitude Longitude in decimal degrees
- * @param date Date to calculate for (defaults to current date)
- * @returns Array of hours during the astronomical night
- */
-export function getNightHours(
-  latitude: number,
-  longitude: number,
-  date: Date = new Date()
-): number[] {
-  const { start, end } = calculateAstronomicalNight(latitude, longitude, date);
-  const nightHours = [];
-  
-  // Create a copy of start time
-  const time = new Date(start);
-  
-  // Add each hour until we reach end time
-  while (time < end) {
-    nightHours.push(time.getHours());
-    time.setHours(time.getHours() + 1);
-  }
-  
-  return nightHours;
-}
-
-/**
- * Format time as HH:MM
- * @param date Date object
+ * Format a time for display
+ * @param date Date object to format
+ * @param format Optional format string
  * @returns Formatted time string
  */
-export function formatTime(date: Date): string {
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
+export const formatTime = (date: Date, format = 'HH:mm'): string => {
+  if (!date || isNaN(date.getTime())) {
+    return "--:--";
+  }
+  
+  try {
+    // Format using 24-hour time
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  } catch (error) {
+    console.error("Error formatting time:", error);
+    return "--:--";
+  }
+};
 
 /**
- * Check if current time is during astronomical night
- * @param latitude Latitude in decimal degrees
- * @param longitude Longitude in decimal degrees
- * @returns Boolean indicating if it's currently night time
+ * Get length of astronomical night in hours
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Duration of astronomical night in hours
  */
-export function isNighttime(latitude: number, longitude: number): boolean {
-  const now = new Date();
-  const { start, end } = calculateAstronomicalNight(latitude, longitude, now);
-  return now >= start && now <= end;
-}
-
-/**
- * Helper function to convert degrees to radians
- * @param degrees Angle in degrees
- * @returns Angle in radians
- */
-function toRadians(degrees: number): number {
-  return degrees * Math.PI / 180;
-}
-
-/**
- * Helper function to convert radians to degrees
- * @param radians Angle in radians
- * @returns Angle in degrees
- */
-function toDegrees(radians: number): number {
-  return radians * 180 / Math.PI;
-}
+export const getAstronomicalNightDuration = (latitude: number, longitude: number): number => {
+  try {
+    const { start, end } = calculateAstronomicalNight(latitude, longitude);
+    
+    // Calculate duration in milliseconds and convert to hours
+    const durationMs = end.getTime() - start.getTime();
+    return durationMs / (1000 * 60 * 60);
+  } catch (error) {
+    console.error("Error calculating astronomical night duration:", error);
+    return 10; // Default to 10 hours if calculation fails
+  }
+};

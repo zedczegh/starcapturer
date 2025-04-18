@@ -1,4 +1,3 @@
-
 import React from "react";
 
 /**
@@ -124,11 +123,19 @@ export const hasHighCloudCover = (nightForecasts: any[], threshold: number = 40)
   return nightForecasts.some(forecast => (forecast.cloudCover || 0) > threshold);
 };
 
-// Format time for display
-export const formatTime = (isoTime: string) => {
+// Format time for display with time zone consideration
+export const formatTime = (isoTime: string, latitude?: number, longitude?: number) => {
   try {
     const date = new Date(isoTime);
     if (isNaN(date.getTime())) return "--:--";
+    
+    // If we have coordinates, use time zone-aware formatting
+    if (latitude !== undefined && longitude !== undefined) {
+      const { formatDateForTimeZone } = require('@/utils/timeZoneUtils');
+      return formatDateForTimeZone(date, latitude, longitude, 'HH:mm');
+    }
+    
+    // Fallback to browser's locale
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   } catch (error) {
     console.error("Error formatting time:", error);
@@ -136,11 +143,19 @@ export const formatTime = (isoTime: string) => {
   }
 };
 
-// Format date for display
-export const formatDate = (isoTime: string) => {
+// Format date for display with time zone consideration
+export const formatDate = (isoTime: string, latitude?: number, longitude?: number) => {
   try {
     const date = new Date(isoTime);
     if (isNaN(date.getTime())) return "--/--";
+    
+    // If we have coordinates, use time zone-aware formatting
+    if (latitude !== undefined && longitude !== undefined) {
+      const { formatDateForTimeZone } = require('@/utils/timeZoneUtils');
+      return formatDateForTimeZone(date, latitude, longitude, 'MMM d');
+    }
+    
+    // Fallback to browser's locale
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   } catch (error) {
     console.error("Error formatting date:", error);
