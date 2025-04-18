@@ -133,4 +133,4 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   );
 };
 
-export default React.memo(LocationMarker);
+export default LocationMarker;
