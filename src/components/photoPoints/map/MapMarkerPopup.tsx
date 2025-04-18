@@ -47,7 +47,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
     (location.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜天空保护区") : 
       (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
   
-  // Use our unified display SIQS function
+  // Use our unified display SIQS function - no default scores for certified locations
   const staticSiqs = getSiqsScore(location);
   const displaySiqs = getDisplaySiqs({
     realTimeSiqs,
@@ -73,14 +73,15 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
         <h4 className="font-semibold text-sm line-clamp-1">{displayName}</h4>
       </div>
       
-      {/* Always show SIQS with more detailed info */}
+      {/* Show SIQS with more detailed info - no default scores for certified locations */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center">
           <SiqsScoreBadge 
             score={displaySiqs} 
             compact={false} 
             loading={siqsLoading}
-            forceCertified={isCertified && staticSiqs <= 0 && realTimeSiqs === null}
+            isCertified={isCertified}
+            forceCertified={false} // Don't force certified default scores
           />
         </div>
         <button 

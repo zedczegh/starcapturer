@@ -11,10 +11,8 @@ import { formatMapSiqs, getSiqsColorClass } from './mapSiqsDisplay';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { hasCachedSiqs, getCachedSiqs } from '@/services/realTimeSiqs/siqsCache';
 
-// Constants for default SIQS values
+// Constants for default SIQS values - but we won't use these for certified locations anymore
 export const DEFAULT_SIQS = 0;
-export const CERTIFIED_DEFAULT_SIQS = 6.5;
-export const DARK_SKY_RESERVE_DEFAULT_SIQS = 7.5;
 
 interface SiqsDisplayOptions {
   latitude: number;
@@ -35,7 +33,7 @@ interface SiqsResult {
 
 /**
  * Get the appropriate display SIQS score based on available data
- * and location certification status
+ * Treats certified locations the same as calculated spots - no default scores
  */
 export function getDisplaySiqs(options: {
   realTimeSiqs: number | null;
@@ -43,7 +41,7 @@ export function getDisplaySiqs(options: {
   isCertified: boolean;
   isDarkSkyReserve: boolean;
 }): number {
-  const { realTimeSiqs, staticSiqs, isCertified, isDarkSkyReserve } = options;
+  const { realTimeSiqs, staticSiqs } = options;
   
   // Use realtime SIQS if available
   if (realTimeSiqs !== null && realTimeSiqs > 0) {
@@ -55,16 +53,8 @@ export function getDisplaySiqs(options: {
     return staticSiqs;
   }
   
-  // Default values based on certification
-  if (isDarkSkyReserve) {
-    return DARK_SKY_RESERVE_DEFAULT_SIQS;
-  }
-  
-  if (isCertified) {
-    return CERTIFIED_DEFAULT_SIQS;
-  }
-  
-  return DEFAULT_SIQS;
+  // No default scores for certified locations anymore
+  return 0;
 }
 
 /**
@@ -130,10 +120,8 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     existingSiqs = null
   } = options;
   
-  // Default result
-  const defaultSiqs = isDarkSkyReserve ? DARK_SKY_RESERVE_DEFAULT_SIQS : 
-                      isCertified ? CERTIFIED_DEFAULT_SIQS : 
-                      existingSiqs !== null ? getSiqsScore(existingSiqs) : DEFAULT_SIQS;
+  // Default result - no special treatment for certified locations
+  const defaultSiqs = existingSiqs !== null ? getSiqsScore(existingSiqs) : DEFAULT_SIQS;
                       
   const defaultResult: SiqsResult = {
     siqs: defaultSiqs,
@@ -161,21 +149,16 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
       };
     }
     
-    // Calculate real-time SIQS if no cache available
+    // Calculate real-time SIQS if no cache available - use same bortleScale for all locations
     const result = await calculateRealTimeSiqs(
       latitude,
       longitude,
-      isCertified ? Math.min(bortleScale, 4) : bortleScale
+      bortleScale
     );
     
     if (result && result.siqs > 0) {
-      // For certified locations, ensure minimum scores
-      let finalScore = result.siqs;
-      if (isDarkSkyReserve) {
-        finalScore = Math.max(finalScore, DARK_SKY_RESERVE_DEFAULT_SIQS);
-      } else if (isCertified) {
-        finalScore = Math.max(finalScore, CERTIFIED_DEFAULT_SIQS);
-      }
+      // No special treatment for certified locations
+      const finalScore = result.siqs;
       
       return {
         siqs: finalScore,

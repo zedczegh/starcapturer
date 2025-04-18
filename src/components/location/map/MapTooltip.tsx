@@ -52,7 +52,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   // Get SIQS score using helper function
   const initialSiqsScore = getSiqsScore(siqs);
   
-  // Use unified SIQS display function
+  // Use unified SIQS display function - no default scores for certified locations
   const displaySiqs = getDisplaySiqs({
     realTimeSiqs,
     staticSiqs: initialSiqsScore,
@@ -87,13 +87,14 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
           </div>
         )}
 
-        {/* Always display SIQS score */}
+        {/* Display SIQS score, but don't use default scores for certified locations */}
         <div className="mt-1.5 flex items-center">
           <SiqsScoreBadge 
             score={displaySiqs} 
             compact={true}
             loading={siqsLoading}
-            forceCertified={isCertified && initialSiqsScore <= 0 && realTimeSiqs === null}
+            isCertified={isCertified}
+            forceCertified={false} // Don't force certified default scores
           />
         </div>
         

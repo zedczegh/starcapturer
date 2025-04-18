@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState, useMemo } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -49,7 +48,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
     return location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
   
-  // Calculate the SIQS score to display, with improved logic
+  // Calculate the SIQS score to display, WITHOUT giving default scores to certified locations
   const siqsScore = useMemo(() => {
     // Use real-time SIQS if available
     if (realTimeSiqs !== null) return realTimeSiqs;
@@ -58,13 +57,9 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
     const locationSiqs = getSiqsScore(location);
     if (locationSiqs > 0) return locationSiqs;
     
-    // For certified locations without SIQS, provide a default good score
-    if (isCertified) {
-      return location.isDarkSkyReserve ? 7.5 : 6.5;
-    }
-    
+    // No default scores for certified locations - treat them like calculated spots
     return null;
-  }, [location, realTimeSiqs, isCertified]);
+  }, [location, realTimeSiqs]);
   
   // Determine the CSS class for styling based on SIQS
   const siqsClass = getSiqsClass(siqsScore);
@@ -174,13 +169,13 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
             )}
             
             <div className="mt-2 flex items-center justify-between">
-              {/* Always show SIQS badge for all locations */}
               <div className="flex items-center gap-1.5">
                 <SiqsScoreBadge 
-                  score={siqsScore !== null ? siqsScore : (isCertified ? 6.5 : 0)} 
+                  score={siqsScore} 
                   compact={true} 
                   loading={siqsLoading && isHovered}
-                  forceCertified={isCertified && !siqsScore}
+                  isCertified={isCertified}
+                  forceCertified={false} // Never force certified default scores
                 />
               </div>
               

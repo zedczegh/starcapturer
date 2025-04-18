@@ -25,22 +25,20 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   // Convert score to number using our helper function
   const numericScore = getSiqsScore(score);
   
-  // Skip rendering if score is 0 (invalid) and not certified or forced
-  if (numericScore <= 0 && !loading && !isCertified && !forceCertified) {
+  // Skip rendering if score is 0 (invalid) and not showing loading state
+  if (numericScore <= 0 && !loading && !forceCertified) {
     return null;
   }
   
-  // For certified locations with no score or when forceCertified is true, provide a default good score
-  const displayScore = numericScore > 0 ? formatSiqsForDisplay(numericScore) : "6.5";
+  // Display actual score - no default scores for certified locations
+  const displayScore = formatSiqsForDisplay(numericScore);
   
   // Get appropriate color based on score value
   const getColor = () => {
-    const scoreToUse = numericScore > 0 ? numericScore : 6.5;
-    
-    if (scoreToUse >= 8) return 'bg-green-500/20 text-green-400 border-green-500/40';
-    if (scoreToUse >= 6.5) return 'bg-lime-500/20 text-lime-400 border-lime-500/40';
-    if (scoreToUse >= 5) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
-    if (scoreToUse >= 3.5) return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
+    if (numericScore >= 8) return 'bg-green-500/20 text-green-400 border-green-500/40';
+    if (numericScore >= 6.5) return 'bg-lime-500/20 text-lime-400 border-lime-500/40';
+    if (numericScore >= 5) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
+    if (numericScore >= 3.5) return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
     return 'bg-red-500/20 text-red-300 border-red-500/40';
   };
 
