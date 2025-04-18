@@ -10,5 +10,6 @@ export {
 // Helper function to clear the location cache for external use
 export function clearAllSiqsCache(): void {
   clearSiqsCache();
-  console.log("Location cache cleared");
+  clearLocationCache();
+  console.log("All SIQS caches cleared");
 }

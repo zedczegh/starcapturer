@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -67,13 +68,9 @@ const LocationMarker = memo(({
     const locationSiqs = getSiqsScore(location);
     if (locationSiqs > 0) return locationSiqs;
     
-    // Default fallback for certified locations
-    if (isCertified) {
-      return location.isDarkSkyReserve ? 7.5 : 6.5;
-    }
-    
-    return null;
-  }, [location, realTimeSiqs, isCertified]);
+    // No default values - return 0 if no actual calculation available
+    return 0;
+  }, [location, realTimeSiqs]);
   
   const siqsClass = getSiqsClass(siqsScore);
 
@@ -145,14 +142,14 @@ const LocationMarker = memo(({
       latitude: location.latitude,
       longitude: location.longitude,
       bortleScale: location.bortleScale || 4,
-      siqs: siqsScore || (location.siqs !== undefined ? getSiqsScore(location) : undefined),
+      siqs: siqsScore > 0 ? siqsScore : undefined, // Only include if we have an actual score
       timestamp: new Date().toISOString(),
       fromPhotoPoints: true,
       isDarkSkyReserve: Boolean(location.isDarkSkyReserve),
       certification: location.certification || '',
-      siqsResult: (siqsScore !== null || location.siqs) ? { 
-        score: siqsScore !== null ? siqsScore : getSiqsScore(location),
-        isViable: typeof location.siqs === 'object' ? (location.siqs as any)?.isViable : (siqsScore !== null && siqsScore >= 2)
+      siqsResult: (siqsScore > 0) ? { 
+        score: siqsScore,
+        isViable: (siqsScore >= 2)
       } : undefined
     };
     
@@ -202,26 +199,15 @@ const LocationMarker = memo(({
   }
   
   const shouldShowRealTimeSiqs = useMemo(() => {
-    // Show real-time SIQS for:
-    // 1. Certified locations
-    // 2. Dark sky reserves
-    // 3. Locations with certification
-    // 4. Lodging and dark-site types
-    // 5. When hovering on any marker that doesn't have a SIQS score
-    return Boolean(
-      isCertified || 
-      location.isDarkSkyReserve || 
-      location.certification || 
-      (location.type === 'lodging') ||
-      (location.type === 'dark-site') ||
-      (isHovered && !realTimeSiqs && !location.siqs)
-    );
-  }, [isCertified, location, isHovered, realTimeSiqs]);
+    // Always calculate real-time SIQS for every visible location
+    // No special rules for certified locations anymore - every location uses the same calculation
+    return true;
+  }, []);
   
   return (
     <>
       <RealTimeSiqsFetcher
-        isVisible={isHovered}
+        isVisible={isHovered || activeView === 'calculated'}
         showRealTimeSiqs={shouldShowRealTimeSiqs}
         latitude={location.latitude}
         longitude={location.longitude}
@@ -268,10 +254,11 @@ const LocationMarker = memo(({
             )}
             
             <div className="mt-2 flex items-center justify-between">
-              {(siqsScore !== null || isCertified) && (
+              {/* Only show SIQS badge if we have a calculated value */}
+              {siqsScore > 0 && (
                 <div className="flex items-center gap-1.5">
                   <SiqsScoreBadge 
-                    score={siqsScore !== null ? siqsScore : (isCertified ? 6.5 : 0)} 
+                    score={siqsScore} 
                     compact={true} 
                     loading={siqsLoading && isHovered}
                   />
@@ -324,7 +311,7 @@ const UserLocationMarker = memo(({
           <div className="text-xs mt-1">
             {position[0].toFixed(5)}, {position[1].toFixed(5)}
           </div>
-          {currentSiqs !== null && (
+          {currentSiqs !== null && currentSiqs > 0 && (
             <div className="text-xs mt-1.5 flex items-center">
               <span className="mr-1">SIQS:</span>
               <SiqsScoreBadge score={currentSiqs} compact={true} />

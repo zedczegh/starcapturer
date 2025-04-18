@@ -4,15 +4,16 @@ import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 import { SiqsResult } from './siqsTypes';
 
 /**
- * Simplified SIQS calculation based primarily on nighttime cloud cover
+ * Simplified SIQS calculation based exclusively on nighttime cloud cover
+ * No default values are used - everything is determined by the actual cloud cover
  */
 export async function calculateRealTimeSiqs(
   latitude: number,
   longitude: number,
-  bortleScale: number = 4 // Default value, not used in simplified calculation
+  bortleScale: number = 4 // Value not used in simplified calculation, kept for interface compatibility
 ): Promise<SiqsResult> {
   try {
-    console.log(`Calculating simplified SIQS for [${latitude}, ${longitude}]`);
+    console.log(`Calculating SIQS based purely on nighttime cloud cover for [${latitude}, ${longitude}]`);
     
     // Fetch forecast data for nighttime cloud cover calculation
     const forecastData = await fetchForecastData({
@@ -29,60 +30,41 @@ export async function calculateRealTimeSiqs(
       };
     }
 
-    // Calculate tonight's cloud cover
+    // Calculate tonight's cloud cover - this is the ONLY factor
     const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly, latitude, longitude);
     console.log(`Tonight's cloud cover for location [${latitude}, ${longitude}]: ${tonightCloudCover}%`);
 
-    // If cloud cover is over 40%, location is not viable
-    if (tonightCloudCover > 40) {
-      const score = Math.max(1, 5 - (tonightCloudCover / 20));
-      
-      return {
-        score: score,
-        isViable: false,
-        siqs: score, // Add for backward compatibility
-        siqsResult: {
-          score: score,
-          isViable: false,
-          factors: [{
-            name: "Cloud Cover",
-            score: 0,
-            description: `Tonight's cloud cover of ${Math.round(tonightCloudCover)}% is too high for astronomy`
-          }]
-        }
-      };
-    }
-
-    // Calculate simplified SIQS score (0-10 scale)
-    // 0% cloud cover = 10 points, 40% cloud cover = 6 points
-    const siqsScore = 10 - ((tonightCloudCover / 40) * 4);
-    const finalScore = Math.min(10, Math.max(1, siqsScore));
+    // Calculate SIQS score based solely on cloud cover (0-10 scale)
+    // 0% cloud cover = 10 points, 100% cloud cover = 0 points
+    const siqsScore = Math.max(0, 10 - (tonightCloudCover / 10));
+    const finalScore = Math.min(10, Math.max(0, siqsScore));
     
-    // Calculate the cloud cover factor score (0-10 scale)
-    const cloudFactor = Math.min(10, Math.max(0, (100 - tonightCloudCover * 2.5) / 10));
+    const isViable = tonightCloudCover <= 40; // Only viable if cloud cover <= 40%
+    
+    console.log(`Final SIQS score based on ${tonightCloudCover}% cloud cover: ${finalScore.toFixed(1)}, viable: ${isViable}`);
 
     return {
       score: finalScore,
-      isViable: true,
+      isViable: isViable,
       siqs: finalScore, // Add for backward compatibility
       factors: [{
         name: "Cloud Cover",
-        score: cloudFactor,
+        score: (100 - tonightCloudCover) / 10, // 0-10 scale
         description: `Tonight's cloud cover: ${Math.round(tonightCloudCover)}%`
       }],
       siqsResult: {
         score: finalScore,
-        isViable: true,
+        isViable: isViable,
         factors: [{
           name: "Cloud Cover",
-          score: cloudFactor,
+          score: (100 - tonightCloudCover) / 10,
           description: `Tonight's cloud cover: ${Math.round(tonightCloudCover)}%`
         }]
       }
     };
 
   } catch (error) {
-    console.error("Error calculating real-time SIQS:", error);
+    console.error("Error calculating SIQS based on nighttime cloud cover:", error);
     return {
       score: 0,
       isViable: false,

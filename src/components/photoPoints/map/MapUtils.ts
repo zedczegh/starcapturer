@@ -2,6 +2,9 @@
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
+import { fetchForecastData } from '@/lib/api';
+import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 
 /**
  * Filter locations based on various criteria
@@ -30,11 +33,12 @@ export const filterLocations = (
   if (activeView === 'calculated' && userLocation) {
     // Generate more calculated locations around the user if we don't have enough
     if (nonCertifiedLocations.length < 20) {
+      console.log(`Generating more calculated points around user location with radius ${searchRadius}km`);
       const generatedPoints = generateCalculatedPoints(
         userLocation.latitude,
         userLocation.longitude,
         searchRadius,
-        30 // Generate more points
+        50 // Generate more points
       );
       
       // Add these to our non-certified locations
@@ -70,14 +74,26 @@ export const filterLocations = (
 
 /**
  * Generate calculated points around a center location
+ * Calculate SIQS score for each point based on cloud cover
  */
-function generateCalculatedPoints(
+async function generateCalculatedPoints(
   centerLat: number,
   centerLng: number,
   radiusKm: number,
   count: number
-): SharedAstroSpot[] {
+): Promise<SharedAstroSpot[]> {
   const points: SharedAstroSpot[] = [];
+  
+  // Fetch forecast data for the center point to use for nearby points
+  let forecastData;
+  try {
+    forecastData = await fetchForecastData({
+      latitude: centerLat,
+      longitude: centerLng
+    });
+  } catch (error) {
+    console.error("Error fetching forecast data for calculated points:", error);
+  }
   
   for (let i = 0; i < count; i++) {
     // Generate a random point within the radius
@@ -91,24 +107,55 @@ function generateCalculatedPoints(
     const lat = centerLat + latOffset;
     const lng = centerLng + lngOffset;
     
+    // Skip water locations
+    if (isWaterLocation(lat, lng, false)) {
+      continue;
+    }
+    
     // Calculate actual distance
     const actualDistance = calculateDistance(centerLat, centerLng, lat, lng);
     
-    // Generate a simple SIQS score (6-9 range)
-    const siqsScore = 6 + Math.random() * 3;
+    // Calculate cloud cover-based SIQS score for this point
+    let siqsScore = 0;
+    let cloudCover = 0;
+    let isViable = false;
     
+    if (forecastData && forecastData.hourly) {
+      // Use the forecast data to calculate cloud cover for this point (slightly randomized)
+      cloudCover = calculateTonightCloudCover(forecastData.hourly, lat, lng);
+      
+      // Add some variation to make points more realistic
+      const variation = Math.random() * 20 - 10; // -10 to +10
+      cloudCover = Math.max(0, Math.min(100, cloudCover + variation));
+      
+      // Calculate SIQS based on cloud cover
+      siqsScore = Math.max(0, 10 - (cloudCover / 10));
+      isViable = cloudCover <= 40; // Only viable if cloud cover <= 40%
+    }
+    
+    // Create the point with the calculated SIQS score
     points.push({
       id: `calc-${i}-${lat.toFixed(4)}-${lng.toFixed(4)}`,
       name: `Calculated Point ${i+1}`,
       latitude: lat,
       longitude: lng,
       bortleScale: 4,
-      siqs: { score: siqsScore, isViable: true },
+      siqs: siqsScore,
+      siqsResult: {
+        score: siqsScore,
+        isViable: isViable,
+        factors: [{
+          name: "Cloud Cover",
+          score: (100 - cloudCover) / 10,
+          description: `Tonight's cloud cover: ${Math.round(cloudCover)}%`
+        }]
+      },
       distance: actualDistance,
       timestamp: new Date().toISOString()
     });
   }
   
+  console.log(`Generated ${points.length} calculated points with cloud cover-based SIQS`);
   return points;
 }
 

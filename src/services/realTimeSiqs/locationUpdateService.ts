@@ -2,17 +2,18 @@
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateRealTimeSiqs } from "./siqsCalculator";
 import { clearSiqsCache } from "./siqsCache";
+import { fetchForecastData } from '@/lib/api';
+import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 
 /**
- * Update locations with simplified real-time SIQS data
- * Uses the night cloud cover calculation for all locations
+ * Update locations with simplified real-time SIQS data based only on nighttime cloud cover
  */
 export async function updateLocationsWithRealTimeSiqs(
   locations: SharedAstroSpot[]
 ): Promise<SharedAstroSpot[]> {
   if (!locations || locations.length === 0) return locations;
   
-  console.log(`Updating ${locations.length} locations with simplified real-time SIQS data based on night cloud cover`);
+  console.log(`Updating ${locations.length} locations with real-time cloud cover-based SIQS`);
   
   try {
     // Process in batches to prevent overwhelming the API
@@ -25,7 +26,7 @@ export async function updateLocationsWithRealTimeSiqs(
       // Process batch in parallel
       const batchPromises = batch.map(async (location) => {
         try {
-          // Calculate SIQS for this location
+          // Calculate SIQS for this location based only on cloud cover
           const siqsResult = await calculateRealTimeSiqs(
             location.latitude,
             location.longitude,
@@ -53,7 +54,7 @@ export async function updateLocationsWithRealTimeSiqs(
       }
     }
     
-    console.log(`Successfully updated ${updatedLocations.length} locations with SIQS data`);
+    console.log(`Successfully updated ${updatedLocations.length} locations with cloud cover-based SIQS data`);
     return updatedLocations;
     
   } catch (error) {
@@ -100,4 +101,13 @@ export function clearLocationCache(
   }
   
   clearSiqsCache();
+}
+
+/**
+ * Calculate SIQS directly from cloud cover - provides immediate feedback
+ * @param cloudCover Cloud cover percentage (0-100)
+ */
+export function calculateSiqsFromCloudCover(cloudCover: number): number {
+  // 0% cloud cover = 10 points, 100% cloud cover = 0 points
+  return Math.min(10, Math.max(0, 10 - (cloudCover / 10)));
 }

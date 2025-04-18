@@ -12,7 +12,11 @@ interface SiqsDisplayProps {
  * Component to display SIQS score with smooth transitions to prevent flickering
  */
 const SiqsDisplay: React.FC<SiqsDisplayProps> = ({ realTimeSiqs, loading }) => {
-  // Always render if there's a SIQS score
+  // Only render if there's an actual SIQS score or loading
+  if (realTimeSiqs === null && !loading) {
+    return null;
+  }
+  
   return (
     <motion.div 
       className="bg-cosmic-800/90 rounded-md p-1.5 shadow-md flex items-center justify-center border border-cosmic-700/30"

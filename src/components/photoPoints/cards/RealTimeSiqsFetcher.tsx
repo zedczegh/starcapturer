@@ -30,7 +30,7 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
       const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION;
       
       if (shouldFetch) {
-        console.log(`Fetching real-time SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        console.log(`Fetching cloud cover-based SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         const fetchSiqs = async () => {
           setLoading(true);
           onSiqsCalculated(null, true);
@@ -55,7 +55,7 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
               }
             }
             
-            // Calculate fresh data
+            // Calculate fresh data based on nighttime cloud cover
             const result = await calculateRealTimeSiqs(latitude, longitude, effectiveBortleScale);
             
             if (result && typeof result.score === 'number') {
@@ -69,7 +69,8 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
                 console.warn("Failed to cache SIQS data:", e);
               }
               
-              console.log(`Real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.score.toFixed(1)}`);
+              const cloudCover = result.factors?.[0]?.description?.match(/\d+/)?.[0] || 'unknown';
+              console.log(`Cloud cover-based SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.score.toFixed(1)} (cloud cover: ${cloudCover}%)`);
               onSiqsCalculated(result.score, false);
             } else {
               onSiqsCalculated(null, false);
