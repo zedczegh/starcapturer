@@ -1,106 +1,64 @@
 
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { calculateDistance } from "@/utils/geoUtils";
-import { isWaterLocation } from "@/utils/locationValidator";
-import { getSiqsScore } from "@/utils/siqsHelpers";
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * Efficiently filter locations by quality and distance
- * @param locations The locations to filter
- * @param userLocation The current user location
- * @param radius The search radius in kilometers
- * @param qualityThreshold Minimum SIQS score threshold
- * @returns Filtered array of locations
+ * Filter locations based on active view and deduplication
  */
-export function filterLocationsByQualityAndDistance(
+export const filterLocations = (
+  activeView: 'certified' | 'calculated',
+  certifiedLocations: SharedAstroSpot[],
+  calculatedLocations: SharedAstroSpot[]
+): SharedAstroSpot[] => {
+  if (activeView === 'certified') {
+    return certifiedLocations;
+  }
+
+  // Create a map for O(1) duplicate checking
+  const locationMap = new Map<string, SharedAstroSpot>();
+
+  // Add calculated locations first
+  calculatedLocations.forEach(loc => {
+    const key = `${loc.latitude}-${loc.longitude}`;
+    locationMap.set(key, loc);
+  });
+
+  // Add certified locations that don't overlap with calculated ones
+  certifiedLocations.forEach(loc => {
+    const key = `${loc.latitude}-${loc.longitude}`;
+    if (!locationMap.has(key)) {
+      locationMap.set(key, loc);
+    }
+  });
+
+  return Array.from(locationMap.values());
+};
+
+/**
+ * Optimize locations for mobile display
+ */
+export const optimizeLocationsForMobile = (
   locations: SharedAstroSpot[],
-  userLocation: { latitude: number; longitude: number } | null,
-  radius: number,
-  qualityThreshold: number = 0
-): SharedAstroSpot[] {
-  if (!locations || locations.length === 0) {
-    return [];
+  isMobile: boolean,
+  activeView: 'certified' | 'calculated'
+): SharedAstroSpot[] => {
+  if (!isMobile || !locations || locations.length === 0) {
+    return locations;
   }
-  
-  // Create a set for O(1) lookups for duplicate checking
-  const uniqueLocationKeys = new Set<string>();
-  
-  return locations.filter(location => {
-    // Skip locations with no coordinates
-    if (!location.latitude || !location.longitude) {
-      return false;
-    }
-    
-    // Deduplicate locations
-    const locationKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
-    if (uniqueLocationKeys.has(locationKey)) {
-      return false;
-    }
-    uniqueLocationKeys.add(locationKey);
-    
-    // Always keep certified locations
-    if (location.isDarkSkyReserve || location.certification) {
-      return true;
-    }
-    
-    // Filter out water locations for calculated spots
-    if (isWaterLocation(location.latitude, location.longitude)) {
-      return false;
-    }
-    
-    // Filter by quality
-    if (location.siqs !== undefined && getSiqsScore(location.siqs) < qualityThreshold) {
-      return false;
-    }
-    
-    // Filter by distance if user location is provided
-    if (userLocation && radius > 0) {
-      // Use existing distance property or calculate it
-      const distance = location.distance || calculateDistance(
-        userLocation.latitude,
-        userLocation.longitude,
-        location.latitude,
-        location.longitude
-      );
-      
-      // Add or update the distance property
-      location.distance = distance;
-      
-      // Filter out locations beyond the radius
-      return distance <= radius;
-    }
-    
-    return true;
-  });
-}
 
-/**
- * Sort locations by quality and distance
- * @param locations Locations to sort
- * @returns Sorted array of locations
- */
-export function sortLocationsByQualityAndDistance(
-  locations: SharedAstroSpot[]
-): SharedAstroSpot[] {
-  if (!locations || locations.length === 0) {
-    return [];
+  if (locations.length <= 30) {
+    return locations;
   }
+
+  const certified = locations.filter(loc => 
+    loc.isDarkSkyReserve || loc.certification
+  );
+
+  const nonCertifiedSamplingRate = activeView === 'certified' ? 5 : 3;
   
-  return [...locations].sort((a, b) => {
-    // First prioritize certified locations
-    if ((a.isDarkSkyReserve || a.certification) && !(b.isDarkSkyReserve || b.certification)) {
-      return -1;
-    }
-    if (!(a.isDarkSkyReserve || a.certification) && (b.isDarkSkyReserve || b.certification)) {
-      return 1;
-    }
-    
-    // Then sort by SIQS score
-    if ((a.siqs || 0) !== (b.siqs || 0)) {
-      return (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0);
-    }
-    
-    // Then sort by distance
-    return (a.distance || Infinity) - (b.distance || Infinity);
-  });
-}
+  const nonCertified = locations
+    .filter(loc => !loc.isDarkSkyReserve && !loc.certification)
+    .filter((_, index) => index % nonCertifiedSamplingRate === 0)
+    .slice(0, 40);
+
+  return [...certified, ...nonCertified];
+};
