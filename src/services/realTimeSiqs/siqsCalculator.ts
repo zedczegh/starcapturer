@@ -46,10 +46,10 @@ export async function calculateRealTimeSiqs(
     // Fetch clear sky rate
     const clearSkyRate = await fetchClearSkyRate(latitude, longitude);
     
-    // Calculate SIQS - use bortleScale directly as a number
+    // Update calculation to pass parameters in correct order
     const siqsResult = await calculateSIQSWithWeatherData(
       weatherData,
-      bortleScale, // Directly pass bortleScale as a number
+      bortleScale,  // Explicitly pass bortleScale as a number
       forecastData,
       lightPollutionData,
       clearSkyRate
