@@ -2,17 +2,15 @@
 import React from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { formatDate, formatTime, getSIQSRating } from "./ForecastUtils";
+import { formatDate, getSIQSRating } from "./ForecastUtils";
 import { DynamicCloudCoverIcon, DynamicWindIcon, DynamicHumidityIcon } from "@/components/weather/DynamicIcons";
 
 interface ForecastProps {
   forecast: any;
   index: number;
-  locationLatitude?: number;
-  locationLongitude?: number;
 }
 
-const ForecastRow: React.FC<ForecastProps> = ({ forecast, index, locationLatitude, locationLongitude }) => {
+const ForecastRow: React.FC<ForecastProps> = ({ forecast, index }) => {
   const { t } = useLanguage();
   const isNighttime = isNightHour(forecast.date);
   
@@ -27,8 +25,12 @@ const ForecastRow: React.FC<ForecastProps> = ({ forecast, index, locationLatitud
   const rowClass = `${index % 2 === 0 ? 'bg-cosmic-800/5' : 'bg-cosmic-800/10'} 
                  hover:bg-cosmic-800/20 ${isNighttime ? 'night-row' : ''}`;
   
-  // Format the time to display using location's coordinates if available
-  const displayTime = formatTime(forecast.date, locationLatitude, locationLongitude);
+  // Handle temperature coloring
+  const getTempColor = (max: number, min: number) => {
+    if (max > 30) return 'text-red-400';
+    if (min < 0) return 'text-blue-400';
+    return '';
+  };
   
   return (
     <TableRow className={rowClass}>
@@ -40,11 +42,11 @@ const ForecastRow: React.FC<ForecastProps> = ({ forecast, index, locationLatitud
               title={t("Night hours (6PM-7AM)", "夜间时段 (18:00-07:00)")}
             />
           )}
-          {displayTime}
+          {formatDate(forecast.date)}
         </div>
       </TableCell>
-      <TableCell className="text-center border-b border-cosmic-700/20">
-        {typeof forecast.temperature === 'number' ? `${forecast.temperature.toFixed(1)}°` : '--'}
+      <TableCell className={`text-center border-b border-cosmic-700/20 ${getTempColor(forecast.temperature_max, forecast.temperature_min)}`}>
+        {forecast.temperature_max.toFixed(0)}° / {forecast.temperature_min.toFixed(0)}°
       </TableCell>
       <TableCell className="text-center border-b border-cosmic-700/20">
         <div className="flex items-center justify-center">

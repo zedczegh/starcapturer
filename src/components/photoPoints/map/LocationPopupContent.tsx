@@ -8,7 +8,6 @@ import { Star, ExternalLink } from 'lucide-react';
 import { formatDistance } from '@/utils/geoUtils';
 import { getSiqsClass } from './MarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { getLocationDateTime } from '@/utils/timeZoneUtils';
 
 interface LocationPopupContentProps {
   location: SharedAstroSpot;
@@ -32,16 +31,6 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
   
   const siqsClass = getSiqsClass(siqsScore);
   
-  // Get current time at location to display in popup
-  let localTime = "";
-  try {
-    if (location.latitude && location.longitude) {
-      localTime = getLocationDateTime(location.latitude, location.longitude, 'HH:mm');
-    }
-  } catch (e) {
-    console.error("Error getting location time:", e);
-  }
-  
   return (
     <Popup 
       closeOnClick={false}
@@ -63,12 +52,6 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
           )}
           <span className="text-gray-100">{displayName}</span>
         </div>
-        
-        {localTime && (
-          <div className="text-xs text-gray-300 mb-1">
-            {localTime} {t("local time", "当地时间")}
-          </div>
-        )}
         
         {isCertified && location.certification && (
           <div className="mt-1 text-xs font-medium text-primary flex items-center">

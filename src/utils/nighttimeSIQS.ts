@@ -1,3 +1,4 @@
+
 import { calculateSIQS } from "@/lib/calculateSIQS";
 import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
 
@@ -76,10 +77,13 @@ export const calculateTonightCloudCover = (
     return 0;
   }
   
+  // Get current time and date info
+  const currentTime = new Date();
+  
   // Determine if we have valid coordinates
   const hasCoordinates = typeof latitude === 'number' && typeof longitude === 'number';
   
-  // Get astronomical night times for the location (in location's time zone)
+  // Get astronomical night times for the location
   let nightStart: Date, nightEnd: Date;
   let nightHours: number[] = [];
   let nightTimeStr = "18:00-7:00"; // Default fallback
@@ -112,30 +116,75 @@ export const calculateTonightCloudCover = (
     nightEnd = new Date(defaultNight);
   }
   
-  // Get current time in location's time zone
-  const currentTime = new Date();
+  // Current hour
+  const currentHour = currentTime.getHours();
   
   let totalCloudCover = 0;
   let hoursCount = 0;
   const cloudCoverValues: number[] = [];
   
+  // Current date in YYYY-MM-DD format
+  const today = currentTime.toISOString().split('T')[0];
+  const tomorrow = new Date(currentTime);
+  tomorrow.setDate(currentTime.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  
   // Process each hour in the forecast
   for (let i = 0; i < hourlyData.time.length; i++) {
     const timeStr = hourlyData.time[i];
     const forecastDate = new Date(timeStr);
+    const forecastHour = forecastDate.getHours();
+    const dateStr = timeStr.split('T')[0];
     
-    // Check if this forecast hour is during astronomical night
-    const isNightHour = (
-      (forecastDate >= nightStart && forecastDate <= nightEnd) || 
-      (nightEnd < nightStart && (forecastDate >= nightStart || forecastDate <= nightEnd))
-    );
+    // Logic depends on current time relative to night period
     
-    if (isNightHour && forecastDate >= currentTime) {
-      if (typeof hourlyData.cloud_cover[i] === 'number') {
-        const cloudCoverValue = hourlyData.cloud_cover[i];
-        totalCloudCover += cloudCoverValue;
-        cloudCoverValues.push(cloudCoverValue);
-        hoursCount++;
+    // CASE 1: Current time is before astronomical night
+    if (currentTime < nightStart) {
+      // Include all hours of tonight's astronomical night
+      if ((dateStr === today && forecastDate >= nightStart) || 
+          (dateStr === tomorrowStr && forecastDate <= nightEnd)) {
+        if (typeof hourlyData.cloud_cover[i] === 'number') {
+          const cloudCoverValue = hourlyData.cloud_cover[i];
+          totalCloudCover += cloudCoverValue;
+          cloudCoverValues.push(cloudCoverValue);
+          hoursCount++;
+        }
+      }
+    }
+    // CASE 2: Current time is during astronomical night
+    else if (currentTime >= nightStart && currentTime <= nightEnd) {
+      // Only include hours from current time until the end of night
+      if ((dateStr === today || dateStr === tomorrowStr) && 
+          forecastDate >= currentTime && forecastDate <= nightEnd) {
+        if (typeof hourlyData.cloud_cover[i] === 'number') {
+          const cloudCoverValue = hourlyData.cloud_cover[i];
+          totalCloudCover += cloudCoverValue;
+          cloudCoverValues.push(cloudCoverValue);
+          hoursCount++;
+        }
+      }
+    }
+    // CASE 3: Current time is after astronomical night
+    else {
+      // Use tomorrow night's forecast
+      const tomorrowNight = new Date(nightStart);
+      tomorrowNight.setDate(tomorrowNight.getDate() + 1);
+      
+      const tomorrowNightEnd = new Date(nightEnd);
+      tomorrowNightEnd.setDate(tomorrowNightEnd.getDate() + 1);
+      
+      const dayAfterTomorrow = new Date(tomorrow);
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+      const dayAfterTomorrowStr = dayAfterTomorrow.toISOString().split('T')[0];
+      
+      if ((dateStr === tomorrowStr && forecastDate >= tomorrowNight) || 
+          (dateStr === dayAfterTomorrowStr && forecastDate <= tomorrowNightEnd)) {
+        if (typeof hourlyData.cloud_cover[i] === 'number') {
+          const cloudCoverValue = hourlyData.cloud_cover[i];
+          totalCloudCover += cloudCoverValue;
+          cloudCoverValues.push(cloudCoverValue);
+          hoursCount++;
+        }
       }
     }
   }

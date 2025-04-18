@@ -1,7 +1,6 @@
 
 import { calculateRealTimeSiqs } from './siqsCalculator';
 import { SharedAstroSpot } from '@/types/weather';
-import { SiqsFactor } from './siqsTypes';
 
 /**
  * Process a batch of locations for SIQS calculation efficiently
@@ -27,12 +26,6 @@ export async function batchCalculateSiqs(
           location.bortleScale || 5
         );
         
-        // Ensure factors array always has descriptions (required property)
-        const factors = siqsResult.factors?.map(factor => ({
-          ...factor,
-          description: factor.description || `${factor.name} factor` // Provide default description if missing
-        })) || [];
-        
         // Merge SIQS results with the original location data
         return {
           ...location,
@@ -41,7 +34,7 @@ export async function batchCalculateSiqs(
           siqsResult: {
             score: siqsResult.siqs,
             isViable: siqsResult.isViable,
-            factors: factors
+            factors: siqsResult.factors || []
           }
         };
       })

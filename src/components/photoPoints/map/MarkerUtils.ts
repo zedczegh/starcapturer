@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation } from "@/utils/locationValidator";
@@ -107,31 +106,20 @@ export const getLocationColor = (location: SharedAstroSpot): string => {
 
 /**
  * Creates a custom marker for the map based on location properties
- * @param score SIQS score
+ * @param location The location data
  * @param isCertified Whether the location is certified
  * @param isHovered Whether the marker is currently hovered
- * @param isMobile Whether we're on a mobile device (optional)
+ * @param isMobile Whether we're on a mobile device
  * @returns Leaflet icon for the marker
  */
 export const getLocationMarker = (
-  score: number,
+  location: SharedAstroSpot,
   isCertified: boolean,
   isHovered: boolean,
-  isMobile: boolean = false
+  isMobile: boolean
 ): L.DivIcon => {
-  // Get color based on score
-  const getColorFromScore = (score: number): string => {
-    if (score >= 7.5) return '#10b981'; // Emerald
-    if (score >= 6) return '#22c55e'; // Green
-    if (score >= 4) return '#eab308'; // Yellow
-    if (score >= 2) return '#f97316'; // Orange
-    return '#ef4444'; // Red
-  };
-  
-  // Get the marker color based on properties
-  const color = isCertified ? 
-    'rgba(155, 135, 245, 0.85)' : // Purple for certified
-    getColorFromScore(score);
+  // Get the marker color based on location properties
+  const color = getLocationColor(location);
   
   // Determine size based on device and hover state
   const size = isMobile ? 

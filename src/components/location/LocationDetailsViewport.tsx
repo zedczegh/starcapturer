@@ -3,14 +3,15 @@ import React, { useState, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationDetailsContent from "./LocationDetailsContent";
 import LocationStatusMessage from "./LocationStatusMessage";
-import { formatDate, formatTime } from "../forecast/ForecastUtils";
-import WeatherAlerts from "../weather/WeatherAlerts";
+import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
+import WeatherAlerts from "@/components/weather/WeatherAlerts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import LocationDetailsHeader from "./LocationDetailsHeader";
 import BackButton from "@/components/navigation/BackButton";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import LocationSearchDialog from "./LocationSearchDialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import LocationSearch from "./LocationSearch";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -29,6 +30,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   setStatusMessage,
   handleUpdateLocation
 }) => {
+  const [gettingUserLocation, setGettingUserLocation] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const { t } = useLanguage();
   const isMobile = useIsMobile();
@@ -76,11 +78,11 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       </div>
       
       {/* Search Dialog */}
-      <LocationSearchDialog
-        open={searchDialogOpen}
-        onOpenChange={setSearchDialogOpen}
-        onSelectLocation={onLocationUpdate}
-      />
+      <Dialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <LocationSearch onSelectLocation={onLocationUpdate} />
+        </DialogContent>
+      </Dialog>
       
       <LocationStatusMessage 
         message={statusMessage}
