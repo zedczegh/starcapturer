@@ -34,13 +34,13 @@ export async function calculateRealTimeSiqs(
       longitude
     });
     
-    // Fetch forecast data
+    // Fetch forecast data - passing the coordinates object
     const forecastData = await fetchForecastData({
       latitude, 
       longitude
     });
     
-    // Fetch light pollution data
+    // Fetch light pollution data - passing the coordinates object
     const lightPollutionData = await fetchLightPollutionData({
       latitude, 
       longitude
@@ -49,13 +49,13 @@ export async function calculateRealTimeSiqs(
     // Fetch clear sky rate
     const clearSkyRate = await fetchClearSkyRate(latitude, longitude);
     
-    // Calculate SIQS
-    const siqsResult = calculateSIQSWithWeatherData(
+    // Calculate SIQS - use bortleScale directly as a number, not as an object
+    const siqsResult = await calculateSIQSWithWeatherData(
       weatherData,
       forecastData,
       lightPollutionData,
       clearSkyRate,
-      bortleScale
+      bortleScale // Pass bortleScale directly as a number
     );
     
     // Convert legacy format to new SiqsResult format if needed

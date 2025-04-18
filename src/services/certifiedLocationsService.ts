@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { findCertifiedLocations } from "./locationSearchService";
 
@@ -1154,8 +1155,8 @@ async function refreshCertifiedLocationsCache(): Promise<SharedAstroSpot[]> {
       findCertifiedLocations(
         location.latitude,
         location.longitude,
-        20000, // 20000 km - effectively global
-        500    // Increased limit to ensure we get ALL certified locations
+        20000 // 20000 km - effectively global
+        // Removed the fourth argument that was causing the TS error
       )
     );
     
