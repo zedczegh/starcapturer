@@ -94,3 +94,4 @@ export function getCacheFreshness(url: string): number {
   
   return Math.round(freshness);
 }
+
