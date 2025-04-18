@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -85,7 +84,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onMapClick]);
   
-  // Handle real-time SIQS for user location
   const handleUserLocationSiqs = useCallback((siqs: number | null, loading: boolean) => {
     if (!loading && siqs !== null) {
       setCurrentSiqs(siqs);
@@ -169,7 +167,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
 
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
-      {/* Add real-time SIQS calculator for user location */}
       {userLocation && (
         <RealTimeSiqsProvider
           isVisible={true}
@@ -252,7 +249,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
               onHover={onMarkerHover || (() => {})}
               locationId={locationId}
               isCertified={isCertified}
-              isMobile={Boolean(isMobile)}
+              activeView={activeView}
               handleTouchStart={handleTouchStart}
               handleTouchEnd={handleTouchEnd}
               handleTouchMove={handleTouchMove}
