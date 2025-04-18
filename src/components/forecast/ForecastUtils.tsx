@@ -18,6 +18,35 @@ export const extractFutureForecasts = (data: any[]): any[] => {
 };
 
 /**
+ * Extract nighttime forecasts (6PM-7AM hours)
+ * @param data Original forecast hourly array
+ * @returns Filtered forecasts for nighttime hours
+ */
+export const extractNightForecasts = (data: any[]): any[] => {
+  if (!data || !Array.isArray(data)) return [];
+  
+  const now = new Date();
+  
+  return data.filter(item => {
+    const forecastTime = new Date(item.time);
+    if (forecastTime < now) return false;
+    
+    const hour = forecastTime.getHours();
+    // Night hours between 6 PM and 7 AM
+    return hour >= 18 || hour < 7;
+  }).slice(0, 24); // Show next 24 night hours only
+};
+
+/**
+ * Checks if cloud cover is too high for night sky observation
+ * @param cloudCover Cloud cover percentage
+ * @returns Boolean indicating if cloud cover is too high
+ */
+export const hasHighCloudCover = (cloudCover: number): boolean => {
+  return cloudCover >= 40;
+};
+
+/**
  * Format date for display
  * @param dateString ISO date string
  * @param latitude Location latitude
@@ -78,6 +107,34 @@ export const formatTime = (
     console.error("Error formatting time:", error);
     return dateString;
   }
+};
+
+/**
+ * Generate fallback forecasts when no data is available
+ * @returns Array of fallback forecast objects
+ */
+export const generateFallbackForecasts = (): any[] => {
+  const forecasts = [];
+  const now = new Date();
+  
+  for (let i = 0; i < 15; i++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() + i);
+    
+    forecasts.push({
+      date: date.toISOString(),
+      temperature_max: 25,
+      temperature_min: 15,
+      humidity: 60,
+      cloudCover: 30,
+      windSpeed: 5,
+      precipitation: 0,
+      precipitation_probability: 0,
+      temperature: 25
+    });
+  }
+  
+  return forecasts;
 };
 
 /**
@@ -151,4 +208,62 @@ export const isNightHour = (dateStr: string): boolean => {
   const hour = date.getHours();
   // Night hours between 6 PM and 7 AM
   return hour >= 18 || hour < 7;
+};
+
+/**
+ * Detect extreme weather conditions from forecast data
+ * @param forecasts Forecast data array
+ * @param t Translation function
+ * @returns Array of weather alerts
+ */
+export const detectExtremeWeatherConditions = (forecasts: any[], t: any): any[] => {
+  if (!forecasts || forecasts.length === 0) return [];
+  
+  const alerts = [];
+  
+  // Look for high wind
+  const highWindForecasts = forecasts.filter(f => f.windSpeed > 30);
+  if (highWindForecasts.length > 0) {
+    alerts.push({
+      type: "wind",
+      title: t ? t("High Wind Alert", "强风预警") : "High Wind Alert",
+      description: t ? 
+        t("Strong winds expected that may affect observation conditions.", "预计将有强风，可能影响观测条件。") : 
+        "Strong winds expected that may affect observation conditions.",
+      time: highWindForecasts[0].time
+    });
+  }
+  
+  // Look for heavy precipitation
+  const heavyRainForecasts = forecasts.filter(f => f.precipitation > 5);
+  if (heavyRainForecasts.length > 0) {
+    alerts.push({
+      type: "rain",
+      title: t ? t("Heavy Precipitation Alert", "强降水预警") : "Heavy Precipitation Alert",
+      description: t ? 
+        t("Significant precipitation expected that will affect visibility.", "预计将有明显降水，将影响能见度。") : 
+        "Significant precipitation expected that will affect visibility.",
+      time: heavyRainForecasts[0].time
+    });
+  }
+  
+  // Look for extreme weather codes (thunderstorms, etc)
+  const extremeWeatherForecasts = forecasts.filter(f => {
+    // WMO weather codes for extreme conditions
+    const extremeCodes = [95, 96, 97, 98, 99]; // Thunderstorms with hail, etc.
+    return extremeCodes.includes(f.weatherCode);
+  });
+  
+  if (extremeWeatherForecasts.length > 0) {
+    alerts.push({
+      type: "storm",
+      title: t ? t("Severe Weather Alert", "恶劣天气预警") : "Severe Weather Alert",
+      description: t ? 
+        t("Thunderstorms or extreme conditions expected.", "预计将有雷暴或极端天气情况。") : 
+        "Thunderstorms or extreme conditions expected.",
+      time: extremeWeatherForecasts[0].time
+    });
+  }
+  
+  return alerts;
 };
