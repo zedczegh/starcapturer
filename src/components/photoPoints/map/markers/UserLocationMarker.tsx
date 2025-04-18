@@ -17,13 +17,31 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
+  const [isPopupOpen, setIsPopupOpen] = React.useState(false);
   
   const userMarkerIcon = createCustomMarker('#e11d48', 'circle', isMobile ? 1.2 : 1.0);
   
+  const handleMarkerClick = () => {
+    setIsPopupOpen(true);
+  };
+  
+  const handlePopupClose = () => {
+    setIsPopupOpen(false);
+  };
+  
   return (
-    <Marker position={position} icon={userMarkerIcon}>
+    <Marker 
+      position={position} 
+      icon={userMarkerIcon}
+      eventHandlers={{
+        click: handleMarkerClick
+      }}
+    >
       <Popup
         offset={[0, 10]}
+        eventHandlers={{
+          remove: handlePopupClose
+        }}
       >
         <div className="p-2 leaflet-popup-custom marker-popup-gradient">
           <strong>{t("Your Location", "您的位置")}</strong>
