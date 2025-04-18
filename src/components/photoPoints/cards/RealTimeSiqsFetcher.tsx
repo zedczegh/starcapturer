@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
+import { hasCachedSiqs, getCachedSiqs } from '@/services/realTimeSiqs/siqsCache';
 
 interface RealTimeSiqsFetcherProps {
   isVisible: boolean;
@@ -22,11 +22,23 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
-  const CACHE_DURATION = 5 * 60 * 1000; // Reduced to 5 minutes for fresher data
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for fresher data
   
   useEffect(() => {
     if (showRealTimeSiqs && isVisible && latitude && longitude) {
       const now = Date.now();
+      
+      // First check our enhanced cache system
+      if (hasCachedSiqs(latitude, longitude)) {
+        const cachedData = getCachedSiqs(latitude, longitude);
+        if (cachedData) {
+          console.log("Using cached SIQS from enhanced cache system:", cachedData.siqs);
+          onSiqsCalculated(cachedData.siqs, false);
+          return;
+        }
+      }
+      
+      // Otherwise check if we should fetch based on time
       const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION;
       
       if (shouldFetch) {

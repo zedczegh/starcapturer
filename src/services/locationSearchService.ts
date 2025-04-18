@@ -1,11 +1,12 @@
 import { SharedAstroSpot, getRecommendedPhotoPoints } from '@/lib/api/astroSpots';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { getCachedLocations, cacheLocations } from '@/services/locationCacheService';
-import { calculateDistance } from '@/lib/api/coordinates';
+import { calculateDistance } from '@/utils/geoUtils';
 import { locationDatabase } from '@/data/locationDatabase';
 import { isWaterLocation } from '@/utils/locationValidator';
 import { generateRandomPoint } from './locationFilters';
 import { getTerrainCorrectedBortleScale } from '@/utils/terrainCorrection';
+import { generateQualitySpots } from './locationSpotService';
 
 /**
  * Find locations within radius with improved caching and performance
@@ -36,7 +37,7 @@ export async function findLocationsWithinRadius(
 }
 
 /**
- * Enhanced algorithm for finding calculated locations with parallel processing
+ * Enhanced algorithm for finding calculated locations with batched processing
  * and improved accuracy using terrain analysis
  */
 export async function findCalculatedLocations(
@@ -54,68 +55,13 @@ export async function findCalculatedLocations(
     return cachedLocations;
   }
 
-  // Generate multiple points in parallel with improved distribution
-  const pointsToGenerate = Math.min(limit * 4, 40); // Generate more points for better selection
-  const pointPromises = Array(pointsToGenerate).fill(null).map(async () => {
-    const point = generateRandomPoint(latitude, longitude, radius);
-    
-    if (isWaterLocation(point.latitude, point.longitude)) {
-      return null;
-    }
-
-    // Get terrain-corrected Bortle scale for better accuracy
-    const correctedBortleScale = await getTerrainCorrectedBortleScale(
-      point.latitude,
-      point.longitude
-    );
-
-    try {
-      // Calculate SIQS with enhanced parameters
-      const siqsResult = await calculateRealTimeSiqs(
-        point.latitude,
-        point.longitude,
-        correctedBortleScale || 4
-      );
-
-      if (!siqsResult || siqsResult.siqs < 4) {
-        return null;
-      }
-
-      return {
-        id: `calc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name: 'Calculated Location',
-        latitude: point.latitude,
-        longitude: point.longitude,
-        bortleScale: correctedBortleScale || 4,
-        siqs: siqsResult.siqs * 10,
-        isViable: true,
-        distance: point.distance,
-        timestamp: new Date().toISOString()
-      };
-    } catch (error) {
-      console.warn('Error calculating SIQS for point:', error);
-      return null;
-    }
-  });
-
-  const generatedPoints = await Promise.all(pointPromises);
-  const validPoints = generatedPoints.filter(Boolean) as SharedAstroSpot[];
-
-  if (validPoints.length > 0) {
-    // Sort by quality and distance with improved weighting
-    const sortedPoints = validPoints.sort((a, b) => {
-      const aScore = typeof a.siqs === 'number' ? a.siqs : 0;
-      const bScore = typeof b.siqs === 'number' ? b.siqs : 0;
-      
-      // Weight SIQS more heavily than distance
-      const aQuality = aScore * 0.7 - (a.distance || 0) * 0.3;
-      const bQuality = bScore * 0.7 - (b.distance || 0) * 0.3;
-      
-      return bQuality - aQuality;
-    }).slice(0, limit);
-
-    cacheLocations('calculated', latitude, longitude, radius, sortedPoints);
-    return sortedPoints;
+  // Use our enhanced spot generation service with batched processing
+  const spots = await generateQualitySpots(latitude, longitude, radius, limit, 4);
+  
+  if (spots.length > 0) {
+    // Cache the results
+    cacheLocations('calculated', latitude, longitude, radius, spots);
+    return spots;
   }
 
   // Try larger radius if needed with gradual increase
