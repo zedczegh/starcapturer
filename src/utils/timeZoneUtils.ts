@@ -29,17 +29,17 @@ export const getLocationDateTime = (
  * Get time zone string from coordinates
  * @param latitude Location latitude
  * @param longitude Location longitude
- * @returns IANA time zone string (e.g. "America/New_York")
+ * @returns IANA time zone string (e.g. "Etc/GMT+8")
  */
 export const getTimeZoneFromCoordinates = (latitude: number, longitude: number): string => {
   try {
-    // Use a time zone API to get the time zone for the coordinates
-    // For now, we'll use a simplified approach based on longitude
+    // Use a simplified approach based on longitude
     // A proper implementation would use a time zone database
     const hourOffset = Math.round(longitude / 15);
     
     // Get approximate time zone based on longitude
-    const tzString = `Etc/GMT${hourOffset >= 0 ? '-' : '+'}${Math.abs(hourOffset)}`;
+    // Note: Etc/GMT+8 means UTC-8, Etc/GMT-8 means UTC+8 (opposite of what you'd expect)
+    const tzString = `Etc/GMT${hourOffset <= 0 ? '+' : '-'}${Math.abs(hourOffset)}`;
     
     return tzString;
   } catch (error) {
@@ -56,11 +56,13 @@ export const getTimeZoneFromCoordinates = (latitude: number, longitude: number):
  */
 export const getTimeZoneOffsetHours = (latitude: number, longitude: number): string => {
   try {
-    const timeZone = getTimeZoneFromCoordinates(latitude, longitude);
-    const now = new Date();
-    const formatted = formatInTimeZone(now, timeZone, 'xxx');
-    const timeParts = formatted.split(':');
-    return timeParts[0]; // Returns something like "+08" or "-05"
+    // Calculate offset based on longitude
+    const hourOffset = Math.round(longitude / 15);
+    const sign = hourOffset >= 0 ? '+' : '-';
+    const absHours = Math.abs(hourOffset);
+    
+    // Format as +08 or -05
+    return `${sign}${absHours.toString().padStart(2, '0')}`;
   } catch (error) {
     console.error("Error getting time zone offset:", error);
     return "+00";

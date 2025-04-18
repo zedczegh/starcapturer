@@ -30,7 +30,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   setStatusMessage,
   handleUpdateLocation
 }) => {
-  const [gettingUserLocation, setGettingUserLocation] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const { t } = useLanguage();
   const isMobile = useIsMobile();

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Clock } from 'lucide-react';
-import { getLocationDateTime } from '@/utils/timeZoneUtils';
+import { getTimeZoneFromCoordinates, formatDateForTimeZone } from '@/utils/timeZoneUtils';
 
 interface LocationTimeDisplayProps {
   latitude: number;
@@ -24,26 +24,23 @@ const LocationTimeDisplay: React.FC<LocationTimeDisplayProps> = ({
     try {
       if (!latitude || !longitude) return;
       
-      // Get formatted time for the location
+      // Get the time zone for the coordinates
+      const tzString = getTimeZoneFromCoordinates(latitude, longitude);
+      setTimeZone(tzString);
+      
+      // Format the time based on language preference
       const timeFormat = language === 'zh' ? 'HH:mm:ss' : 'h:mm:ss a';
       const dateFormat = language === 'zh' ? 'yyyy年MM月dd日' : 'MMM d, yyyy';
       
-      const time = getLocationDateTime(latitude, longitude, timeFormat);
-      const date = getLocationDateTime(latitude, longitude, dateFormat);
+      // Format the current time in the location's time zone
+      const now = new Date();
+      const time = formatDateForTimeZone(now, latitude, longitude, timeFormat);
+      const date = formatDateForTimeZone(now, latitude, longitude, dateFormat);
       
       setCurrentTime(`${time} - ${date}`);
-      
-      // Calculate timezone offset
-      const now = new Date();
-      const localOffset = now.getTimezoneOffset();
-      
-      // Try to approximate the timezone from coordinates
-      const hourOffset = Math.round(longitude / 15);
-      const tzString = `UTC${hourOffset >= 0 ? '+' : ''}${hourOffset}`;
-      
-      setTimeZone(tzString);
     } catch (error) {
       console.error('Error updating time:', error);
+      // Fallback to local time
       setCurrentTime(new Date().toLocaleTimeString());
     }
   };
