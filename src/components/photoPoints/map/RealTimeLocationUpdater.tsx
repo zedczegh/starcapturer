@@ -56,7 +56,8 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
         defaultBortleScale
       );
       
-      setRealTimeSiqs(result.siqs);
+      // Use score property and fallback to the old structure if needed
+      setRealTimeSiqs(result.score);
       
     } catch (error) {
       console.error("Error calculating real-time SIQS:", error);

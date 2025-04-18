@@ -7,6 +7,5 @@ export {
   clearLocationCache 
 } from './locationUpdateService';
 export {
-  updateCertifiedLocationsWithSiqs,
-  clearCertifiedLocationCache
-} from './certifiedLocationService';
+  updateCertifiedLocationsWithSiqs
+} from './locationUpdateService';
