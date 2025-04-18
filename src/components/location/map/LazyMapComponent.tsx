@@ -207,7 +207,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
       attributionControl={false}  // Additional safety
     >
       <TileLayer
-        attribution={tileOptions.attribution}
+        attribution=""
         url={tileOptions.url}
         maxZoom={tileOptions.maxZoom}
       />
