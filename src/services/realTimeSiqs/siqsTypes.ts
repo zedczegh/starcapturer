@@ -1,3 +1,4 @@
+
 // Define types for SIQS calculation
 export interface SiqsResult {
   siqs: number;

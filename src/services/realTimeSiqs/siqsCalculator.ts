@@ -39,7 +39,7 @@ function improveCalculatedLocationSIQS(initialScore: number, location: any): num
   return initialScore;
 }
 
-function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { average: number; timeRange: string }) {
+function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { average: number; timeRange: string; sourceType?: string }) {
   if (!nighttimeData) return cloudCover;
   
   const difference = Math.abs(cloudCover - nighttimeData.average);
@@ -92,13 +92,17 @@ export async function calculateRealTimeSiqs(
       finalBortleScale = terrainCorrectedScale;
     }
     
-    const weatherDataWithClearSky = {
+    const weatherDataWithClearSky: WeatherDataWithClearSky = {
       ...weatherData,
       clearSkyRate: clearSkyData?.annualRate || enhancedLocation?.clearSkyRate,
       latitude,
       longitude,
       _forecast: forecastData
     };
+    
+    if (weatherData && 'nighttimeCloudData' in weatherData) {
+      weatherDataWithClearSky.nighttimeCloudData = weatherData.nighttimeCloudData;
+    }
     
     let finalCloudCover = weatherDataWithClearSky.cloudCover;
     if (weatherDataWithClearSky.nighttimeCloudData) {
