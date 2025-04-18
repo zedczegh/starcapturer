@@ -1,12 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import EmptyLocationDisplay from '../EmptyLocationDisplay';
 import LocationsList from '../LocationsList';
 import { Loader2 } from 'lucide-react';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { Button } from "@/components/ui/button";
 
 interface LocationViewProps {
   locations: SharedAstroSpot[];
@@ -24,16 +23,13 @@ const LocationView: React.FC<LocationViewProps> = ({
   emptyDescription
 }) => {
   const { t } = useLanguage();
-  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalLocations, setTotalLocations] = useState(0);
-  const locationsPerPage = 50; // Increased from 20 to 50 to show more locations per page
+  const locationsPerPage = 5; // Changed from 50 to 5
   
   useEffect(() => {
     console.log(`LocationView received ${locations.length} locations`);
-    // Store the total count of locations
     setTotalLocations(locations.length);
-    // Reset to page 1 when locations data changes
     setCurrentPage(1);
   }, [locations]);
   
@@ -60,85 +56,28 @@ const LocationView: React.FC<LocationViewProps> = ({
     );
   }
   
-  const handleViewLocation = (point: SharedAstroSpot) => {
-    const locationId = point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
-    
-    const locationState = {
-      id: locationId,
-      name: point.name || 'Unnamed Location',
-      chineseName: point.chineseName || '',
-      latitude: point.latitude,
-      longitude: point.longitude,
-      bortleScale: point.bortleScale || 4,
-      siqs: point.siqs,
-      siqsResult: point.siqs ? { score: point.siqs } : undefined,
-      certification: point.certification || '',
-      isDarkSkyReserve: !!point.isDarkSkyReserve,
-      timestamp: new Date().toISOString(),
-      fromPhotoPoints: true
-    };
-    
-    try {
-      localStorage.setItem(`location_${locationId}`, JSON.stringify(locationState));
-      console.log(`Stored location ${locationId} in localStorage before navigation`);
-    } catch (error) {
-      console.error("Failed to store location in localStorage:", error);
-    }
-    
-    console.log(`Navigating to location ${locationId}`);
-    navigate(`/location/${locationId}`, { state: locationState });
-  };
-  
   // Calculate pagination values
-  const totalPages = Math.ceil(locations.length / locationsPerPage);
   const indexOfLastLocation = currentPage * locationsPerPage;
   const indexOfFirstLocation = indexOfLastLocation - locationsPerPage;
   
   // Get current page locations
-  const currentLocations = locations.slice(indexOfFirstLocation, indexOfLastLocation);
+  const currentLocations = locations.slice(0, indexOfLastLocation);
   
-  const handlePageChange = (pageNumber: number) => {
-    window.scrollTo(0, 0);
-    setCurrentPage(pageNumber);
-  };
-  
-  // Function to generate page numbers with proper ellipsis
-  const generatePaginationItems = () => {
-    // For small number of pages, show all
-    if (totalPages <= 7) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-    
-    // Always include first and last pages
-    const pages: Array<number | 'ellipsis'> = [1];
-    
-    // Logic for showing pages around current page with ellipsis
-    if (currentPage <= 3) {
-      // Near start: show 1, 2, 3, 4, 5, ..., totalPages
-      pages.push(2, 3, 4, 5, 'ellipsis', totalPages);
-    } else if (currentPage >= totalPages - 2) {
-      // Near end: show 1, ..., totalPages-4, totalPages-3, totalPages-2, totalPages-1, totalPages
-      pages.push('ellipsis', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
-    } else {
-      // Middle: show 1, ..., currentPage-1, currentPage, currentPage+1, ..., totalPages
-      pages.push('ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages);
-    }
-    
-    return pages;
+  const loadMore = () => {
+    setCurrentPage(prev => prev + 1);
   };
   
   return (
     <div className="space-y-6">
       <div className="text-sm text-muted-foreground mb-4 flex flex-wrap justify-between items-center">
         <span>
-          {t("Showing {{start}}-{{end}} of {{total}} locations", "显示 {{start}}-{{end}}，共 {{total}} 个位置")
-            .replace('{{start}}', String(indexOfFirstLocation + 1))
+          {t(
+            "Showing {{start}}-{{end}} of {{total}} locations",
+            "显示 {{start}}-{{end}}，共 {{total}} 个位置"
+          )
+            .replace('{{start}}', String(1))
             .replace('{{end}}', String(Math.min(indexOfLastLocation, locations.length)))
             .replace('{{total}}', String(totalLocations))}
-        </span>
-        <span className="text-xs mt-1 italic">
-          {t("Total certified locations: {{count}}", "认证地点总数: {{count}}")
-            .replace('{{count}}', String(totalLocations))}
         </span>
       </div>
       
@@ -146,53 +85,19 @@ const LocationView: React.FC<LocationViewProps> = ({
         locations={currentLocations}
         loading={loading}
         initialLoad={initialLoad}
-        onViewDetails={handleViewLocation}
+        showRealTimeSiqs={true}
       />
       
-      {totalPages > 1 && (
-        <Pagination className="mt-8">
-          <PaginationContent>
-            {currentPage > 1 && (
-              <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  aria-label={t("Previous page", "上一页")}
-                />
-              </PaginationItem>
-            )}
-            
-            {generatePaginationItems().map((page, index) => {
-              if (page === 'ellipsis') {
-                return (
-                  <PaginationItem key={`ellipsis-${index}`}>
-                    <span className="px-2">...</span>
-                  </PaginationItem>
-                );
-              }
-              
-              return (
-                <PaginationItem key={`page-${page}`}>
-                  <PaginationLink
-                    isActive={page === currentPage}
-                    onClick={() => handlePageChange(page as number)}
-                    aria-label={t(`Page ${page}`, `第${page}页`)}
-                  >
-                    {page}
-                  </PaginationLink>
-                </PaginationItem>
-              );
-            })}
-            
-            {currentPage < totalPages && (
-              <PaginationItem>
-                <PaginationNext 
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  aria-label={t("Next page", "下一页")}
-                />
-              </PaginationItem>
-            )}
-          </PaginationContent>
-        </Pagination>
+      {indexOfLastLocation < locations.length && (
+        <div className="flex justify-center mt-6">
+          <Button 
+            variant="outline"
+            onClick={loadMore}
+            className="w-full max-w-xs"
+          >
+            {t("Load More Locations", "加载更多位置")}
+          </Button>
+        </div>
       )}
     </div>
   );

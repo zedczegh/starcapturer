@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -33,7 +32,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   onSelect,
   onViewDetails,
   userLocation,
-  showRealTimeSiqs
+  showRealTimeSiqs = false
 }) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
@@ -75,7 +74,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     const locationId = getLocationId();
     if (!locationId) return;
     
-    // Ensure Chinese name is properly included in the navigation state
     navigate(`/location/${locationId}`, {
       state: {
         id: locationId,
@@ -95,7 +93,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     });
   };
 
-  // Determine the name to display based on language preference
   const primaryName = language === 'zh' && location.chineseName ? location.chineseName : (location.name || t("Unnamed Location", "未命名位置"));
   const secondaryName = language === 'zh' ? (location.name || "") : (location.chineseName || "");
   
@@ -128,17 +125,14 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   }
   
-  // Don't use framer motion animations to fix errors
   return (
     <VisibilityObserver onVisibilityChange={setIsVisible}>
-      <div
-        className={`glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30 ${isMobile ? 'will-change-transform backface-visibility-hidden' : ''}`}
+      <div className={`glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30 ${isMobile ? 'will-change-transform backface-visibility-hidden' : ''}`}
         style={{
           opacity: isVisible ? 1 : 0,
           transform: isVisible ? 'translateY(0)' : 'translateY(15px)',
           transition: `opacity 0.5s, transform 0.5s ease ${Math.min(index * 0.1, 0.5)}s`
-        }}
-      >
+        }}>
         <div className="flex justify-between items-start mb-2">
           <LocationHeader
             displayName={displayName}
@@ -147,15 +141,13 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             language={language}
           />
           
-          {/* Show SIQS badge with consistent display but don't glorify certified locations */}
           <SiqsScoreBadge 
             score={location.siqs} 
             compact={true}
-            isCertified={false} // Never treat as certified to avoid glorification
+            isCertified={false}
           />
         </div>
         
-        {/* Use imported CertificationBadge component properly */}
         {certInfo && (
           <div className="flex items-center mt-1.5 mb-2">
             <div className={`px-2 py-0.5 rounded-full text-xs flex items-center ${certInfo.color}`}>
@@ -195,7 +187,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         
         <RealTimeSiqsFetcher
           isVisible={isVisible}
-          showRealTimeSiqs={!!showRealTimeSiqs}
+          showRealTimeSiqs={showRealTimeSiqs}
           latitude={location.latitude}
           longitude={location.longitude}
           bortleScale={location.bortleScale}
