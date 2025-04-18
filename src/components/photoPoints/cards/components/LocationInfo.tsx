@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { LightPollutionIndicator } from '@/components/location/LightPollutionIndicator';
+import LightPollutionIndicator from '@/components/location/LightPollutionIndicator';
 import LocationMetadata from '../LocationMetadata';
-import { getCertificationInfo, getLocalizedCertText } from '../utils/certificationUtils';
+import { getCertificationInfo, getLocalizedCertText } from '@/components/photoPoints/utils/certificationUtils';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 interface LocationInfoProps {

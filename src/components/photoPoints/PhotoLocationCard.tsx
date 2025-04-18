@@ -69,10 +69,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     });
   }, [location, navigate, getLocationId]);
 
-  // State management for real-time SIQS
+  // State management for real-time SIQS with better stability
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   
   const isCertified = React.useMemo(() => 
     Boolean(location.certification || location.isDarkSkyReserve || location.type === 'dark-site'),
@@ -81,19 +82,21 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   
   const handleSiqsCalculated = React.useCallback((siqs: number | null, loading: boolean) => {
     setLoadingSiqs(loading);
+    setHasAttemptedLoad(true);
+    
+    // Only update state if we have a real score or are in loading state
     if (siqs !== null || loading) {
       setRealTimeSiqs(siqs);
     }
   }, []);
   
+  // Determine loading state with priority on certified locations
   const showLoadingState = React.useMemo(() => {
-    return isCertified && realTimeSiqs === null;
-  }, [isCertified, realTimeSiqs]);
-  
-  // Skip rendering non-certified locations with no valid SIQS score
-  if (!isCertified && realTimeSiqs === 0 && !loadingSiqs) {
-    return null;
-  }
+    if (!hasAttemptedLoad && isCertified) {
+      return true; // Show loading immediately for certified locations
+    }
+    return loadingSiqs;
+  }, [isCertified, loadingSiqs, hasAttemptedLoad]);
   
   return (
     <VisibilityObserver onVisibilityChange={setIsVisible}>
@@ -107,10 +110,10 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           />
           
           <SiqsScoreBadge 
-            score={realTimeSiqs}
+            score={realTimeSiqs || location.siqs}
             compact={true}
             isCertified={isCertified}
-            loading={loadingSiqs || showLoadingState}
+            loading={showLoadingState}
             forceCertified={isCertified && realTimeSiqs === null && !loadingSiqs}
           />
         </div>
@@ -133,7 +136,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           isDarkSkyReserve={location.isDarkSkyReserve}
           existingSiqs={location.siqs}
           onSiqsCalculated={handleSiqsCalculated}
-          forceUpdate={true}
+          forceUpdate={isVisible}
         />
       </CardContainer>
     </VisibilityObserver>

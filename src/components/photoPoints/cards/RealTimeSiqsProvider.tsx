@@ -28,6 +28,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   const [loading, setLoading] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
   const [isInitialFetch, setIsInitialFetch] = useState(true);
+  const [fetchAttempted, setFetchAttempted] = useState(false);
   
   // Use shorter cache duration for certified locations and force refresh more aggressively
   const REFRESH_INTERVAL = isCertified ? 30 * 1000 : 5 * 60 * 1000; // 30 seconds for certified, 5 min for others
@@ -51,6 +52,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     
     try {
       setLoading(true);
+      setFetchAttempted(true);
       onSiqsCalculated(null, true);
       
       console.log(`Fetching SIQS for ${isCertified ? 'certified' : 'regular'} location at ${latitude}, ${longitude}`);
@@ -88,16 +90,18 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   
   useEffect(() => {
     if (isVisible && latitude && longitude) {
-      const shouldFetch = forceUpdate || 
-                          (Date.now() - lastFetchTimestamp > REFRESH_INTERVAL) ||
-                          (isCertified && lastFetchTimestamp === 0); // Always fetch for certified locations on first visibility
+      const shouldFetch = 
+          forceUpdate || 
+          !fetchAttempted ||
+          (Date.now() - lastFetchTimestamp > REFRESH_INTERVAL) ||
+          (isCertified && !fetchAttempted); // Always fetch for certified locations on first visibility
       
       if (shouldFetch) {
         console.log(`Fetching real-time SIQS for ${isCertified ? 'certified' : 'regular'} location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         fetchSiqs();
       }
     }
-  }, [isVisible, latitude, longitude, lastFetchTimestamp, fetchSiqs, forceUpdate, isCertified, REFRESH_INTERVAL]);
+  }, [isVisible, latitude, longitude, lastFetchTimestamp, fetchSiqs, forceUpdate, isCertified, REFRESH_INTERVAL, fetchAttempted]);
   
   return null; // This is a headless component
 };
