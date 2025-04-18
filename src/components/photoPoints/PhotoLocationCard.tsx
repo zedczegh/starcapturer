@@ -160,7 +160,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           <div className="flex items-center mt-1.5 mb-2">
             <div className={`px-2 py-0.5 rounded-full text-xs flex items-center ${certInfo.color}`}>
               {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
-              <span>{certInfo.label}</span>
+              <span>{certInfo.text}</span>
             </div>
           </div>
         )}
