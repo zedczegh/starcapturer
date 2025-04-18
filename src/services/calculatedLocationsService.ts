@@ -129,6 +129,7 @@ export class CalculatedLocationsService {
     // Final SIQS score (0-10 scale)
     const siqsScore = Math.min(10, Math.max(1, cloudScore + preferenceBonus));
     
+    // Fix: Create proper structure for siqs property with both simple score and detailed siqsResult
     return {
       id,
       name: 'Calculated Location',
@@ -136,6 +137,10 @@ export class CalculatedLocationsService {
       longitude: randomPoint.longitude,
       bortleScale,
       siqs: {
+        score: siqsScore,
+        isViable
+      },
+      siqsResult: {
         score: siqsScore,
         isViable,
         factors: [
