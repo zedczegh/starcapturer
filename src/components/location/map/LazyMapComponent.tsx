@@ -180,7 +180,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   const mapOptions: L.MapOptions = {
     center: position,
     zoom: 5,
-    attributionControl: true,
+    attributionControl: false,  // Explicitly disable attribution control
     scrollWheelZoom: true,
     // Mobile-specific options
     tap: isMobile,
@@ -204,6 +204,7 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
       {...mapOptions}
       style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
       whenReady={() => onMapReady()}
+      attributionControl={false}  // Additional safety
     >
       <TileLayer
         attribution={tileOptions.attribution}

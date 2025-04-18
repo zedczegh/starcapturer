@@ -197,7 +197,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         ref={mapRef}
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
         whenReady={handleMapReady}
-        attributionControl={!isMobile}
+        attributionControl={false}
         worldCopyJump={true}
       >
         <TileLayer
