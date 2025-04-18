@@ -1,5 +1,32 @@
 
-// Continue implementation of SIQS caching
+/**
+ * Enhanced SIQS calculation caching system
+ * Provides efficient storage and retrieval of SIQS data with automatic cleanup
+ */
+
+// Cache implementation with Map for fast lookup
+const siqsCache = new Map<string, {
+  siqs: number;
+  isViable: boolean;
+  factors?: any[];
+  metadata?: any;
+  timestamp: number;
+}>();
+
+// Helper function to generate cache key from coordinates
+const getLocationKey = (latitude: number, longitude: number): string => {
+  // Round to 4 decimal places for consistent lookup (approx. 11 meters precision)
+  return `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+};
+
+// Default cache duration in milliseconds (30 minutes)
+const DEFAULT_CACHE_DURATION = 30 * 60 * 1000;
+
+// Get cache duration with possible override from environment
+const getCacheDuration = (): number => {
+  const envDuration = process.env.SIQS_CACHE_DURATION;
+  return envDuration ? parseInt(envDuration, 10) : DEFAULT_CACHE_DURATION;
+};
 
 /**
  * Check if a location has cached SIQS data
@@ -54,3 +81,50 @@ export const setSiqsCache = (latitude: number, longitude: number, data: any) => 
   }
 };
 
+/**
+ * Clear all SIQS cache entries
+ */
+export const clearSiqsCache = (): void => {
+  siqsCache.clear();
+  console.log("SIQS cache cleared");
+};
+
+/**
+ * Clear SIQS cache for a specific location
+ */
+export const clearLocationSiqsCache = (latitude: number, longitude: number): void => {
+  const key = getLocationKey(latitude, longitude);
+  
+  if (siqsCache.has(key)) {
+    siqsCache.delete(key);
+    console.log(`SIQS cache cleared for location ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+    return;
+  }
+  
+  console.log(`No cached SIQS found for location ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+};
+
+/**
+ * Get the current size of the SIQS cache
+ */
+export const getSiqsCacheSize = (): number => {
+  return siqsCache.size;
+};
+
+/**
+ * Clean up expired cache entries
+ * @returns Number of entries removed
+ */
+export const cleanupExpiredCache = (): number => {
+  const now = Date.now();
+  let expiredCount = 0;
+  
+  for (const [key, value] of siqsCache.entries()) {
+    if (now - value.timestamp > getCacheDuration()) {
+      siqsCache.delete(key);
+      expiredCount++;
+    }
+  }
+  
+  return expiredCount;
+};
