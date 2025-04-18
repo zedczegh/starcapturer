@@ -147,9 +147,12 @@ export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstr
       return bCertified - aCertified;
     }
     
-    // Then sort by SIQS score if available
-    if (a.siqs && b.siqs) {
-      return b.siqs - a.siqs;
+    // Then sort by SIQS score if available - Fix: Ensure we're using numbers for comparison
+    const aScore = typeof a.siqs === 'number' ? a.siqs : 0;
+    const bScore = typeof b.siqs === 'number' ? b.siqs : 0;
+    
+    if (aScore !== bScore) {
+      return bScore - aScore;
     }
     
     // Then by Bortle scale (lower is better)
