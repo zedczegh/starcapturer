@@ -44,6 +44,11 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
       // Store map reference
       mapRef.current = map;
       
+      // Remove attribution control if it exists
+      if (map.attributionControl) {
+        map.removeControl(map.attributionControl);
+      }
+      
       // Call onMapReady callback
       if (onMapReady) {
         onMapReady();
@@ -60,9 +65,10 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
       scrollWheelZoom={false}
       style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
       className="z-0"
+      attributionControl={false}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        attribution=""
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       

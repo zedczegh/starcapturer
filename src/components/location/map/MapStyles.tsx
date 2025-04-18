@@ -14,6 +14,10 @@ export function MapStyles() {
       
       .leaflet-control-attribution {
         display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        width: 0 !important;
+        opacity: 0 !important;
       }
       
       .leaflet-popup-content-wrapper, .leaflet-popup-tip {
