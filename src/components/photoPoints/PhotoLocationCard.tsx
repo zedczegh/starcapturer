@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -13,7 +14,7 @@ import LocationMetadata from './cards/LocationMetadata';
 import VisibilityObserver from './cards/VisibilityObserver';
 import RealTimeSiqsFetcher from './cards/RealTimeSiqsFetcher';
 import LocationHeader from './cards/LocationHeader';
-import { getCertificationInfo } from './cards/CertificationBadge';
+import { getCertificationInfo, getLocalizedCertText } from './utils/certificationUtils';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface PhotoLocationCardProps {
@@ -110,18 +111,24 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   });
   
+  // Determine if this is a certified location to properly handle SIQS scores
+  const isCertified = Boolean(location.certification || location.isDarkSkyReserve);
+  
   const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(siqs);
     setLoadingSiqs(loading);
   };
   
-  if (realTimeSiqs === 0) {
+  // Skip rendering locations with no valid SIQS data
+  if (realTimeSiqs === 0 && !loadingSiqs && !isCertified) {
     return null;
   }
   
+  // Use real-time SIQS if available, otherwise use static SIQS
   const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(location.siqs);
   
-  if (displaySiqs === 0 && !loadingSiqs) {
+  // Skip non-certified locations with no SIQS score
+  if (displaySiqs === 0 && !loadingSiqs && !isCertified) {
     return null;
   }
   
@@ -144,7 +151,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           <SiqsScoreBadge 
             score={location.siqs} 
             compact={true}
-            isCertified={false}
+            isCertified={isCertified}
+            loading={loadingSiqs && isCertified}
           />
         </div>
         
@@ -152,7 +160,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           <div className="flex items-center mt-1.5 mb-2">
             <div className={`px-2 py-0.5 rounded-full text-xs flex items-center ${certInfo.color}`}>
               {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
-              <span>{certInfo.text}</span>
+              <span>{getLocalizedCertText(certInfo, language)}</span>
             </div>
           </div>
         )}

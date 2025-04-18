@@ -1,9 +1,10 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoLocationCard from './PhotoLocationCard';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface LocationsListProps {
   locations: SharedAstroSpot[];
@@ -20,6 +21,16 @@ const LocationsList: React.FC<LocationsListProps> = ({
   onViewDetails,
   showRealTimeSiqs = false
 }) => {
+  const { t } = useLanguage();
+  
+  if (locations.length === 0 && !loading) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        {t("No locations found matching your criteria.", "未找到符合条件的位置。")}
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-4 pb-8">
       <div className="grid grid-cols-1 gap-4">
@@ -33,7 +44,7 @@ const LocationsList: React.FC<LocationsListProps> = ({
             <PhotoLocationCard
               location={location}
               index={index}
-              onViewDetails={onViewDetails}
+              onViewDetails={onViewDetails || (() => {})}
               showRealTimeSiqs={showRealTimeSiqs}
             />
           </motion.div>

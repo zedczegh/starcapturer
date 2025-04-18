@@ -32,7 +32,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   
   // Skip rendering if score is 0 (invalid) or negative and not showing loading state
   // No default scores for non-certified locations either
-  if (numericScore <= 0 && !loading && !forceCertified) {
+  if (numericScore <= 0 && !loading && !forceCertified && !isCertified) {
     return null;
   }
   

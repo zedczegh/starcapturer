@@ -25,7 +25,7 @@ const LocationView: React.FC<LocationViewProps> = ({
   const { t } = useLanguage();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalLocations, setTotalLocations] = useState(0);
-  const locationsPerPage = 5; // Changed from 50 to 5
+  const locationsPerPage = 5; // Fixed at 5 locations per page
   
   useEffect(() => {
     console.log(`LocationView received ${locations.length} locations`);
