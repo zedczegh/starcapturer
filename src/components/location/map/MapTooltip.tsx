@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useEnhancedLocationDetails } from './tooltip/EnhancedLocationDetails';
 import { Language } from '@/services/geocoding/types';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import SiqsScoreBadge from '@/components/photoPoints/cards/SiqsScoreBadge';
+import RealTimeSiqsProvider from '@/components/photoPoints/cards/RealTimeSiqsProvider';
 
 interface MapTooltipProps {
   name: string;
@@ -34,6 +35,8 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
 }) => {
   const { language } = useLanguage();
   const typedLanguage: Language = language === 'zh' ? 'zh' : 'en';
+  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
+  const [siqsLoading, setSiqsLoading] = useState(false);
   
   // Get enhanced location details using our custom hook
   const { detailedName } = useEnhancedLocationDetails({ 
@@ -46,10 +49,17 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   const isCertified = Boolean(isDarkSkyReserve || certification);
   
   // Get SIQS score using helper function
-  const siqsScore = getSiqsScore(siqs);
+  const initialSiqsScore = getSiqsScore(siqs);
   
-  // For certified locations without SIQS, use a default good score
-  const displaySiqs = siqsScore > 0 ? siqsScore : (isCertified ? 6.5 : 0);
+  // Use real-time SIQS if available, otherwise fall back to the initial SIQS
+  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : 
+                      initialSiqsScore > 0 ? initialSiqsScore : 
+                      (isCertified ? 6.5 : 0);
+  
+  const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
+    setRealTimeSiqs(siqs);
+    setSiqsLoading(loading);
+  };
   
   return (
     <Popup
@@ -73,18 +83,30 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
           </div>
         )}
 
-        {/* Display SIQS score if available or if it's a certified location */}
-        {(siqsScore > 0 || isCertified) && (
-          <div className="mt-1.5 flex items-center">
-            <SiqsScoreBadge 
-              score={displaySiqs} 
-              compact={true}
-              forceCertified={isCertified && siqsScore <= 0}
-            />
-          </div>
-        )}
+        {/* Display SIQS score for all locations */}
+        <div className="mt-1.5 flex items-center">
+          <SiqsScoreBadge 
+            score={displaySiqs} 
+            compact={true}
+            loading={siqsLoading}
+            forceCertified={isCertified && initialSiqsScore <= 0 && realTimeSiqs === null}
+          />
+        </div>
         
         {children}
+        
+        {/* Real-time SIQS provider - hidden component */}
+        {latitude !== undefined && longitude !== undefined && (
+          <RealTimeSiqsProvider
+            isVisible={true}
+            latitude={latitude}
+            longitude={longitude}
+            isCertified={isCertified}
+            isDarkSkyReserve={isDarkSkyReserve}
+            existingSiqs={siqs}
+            onSiqsCalculated={handleSiqsCalculated}
+          />
+        )}
       </div>
     </Popup>
   );

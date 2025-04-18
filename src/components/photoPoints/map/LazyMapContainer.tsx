@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -15,6 +16,7 @@ import L from 'leaflet';
 import { calculateDistance, getSafeScore } from '@/utils/geoUtils';
 import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
+import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 
 configureLeaflet();
 
@@ -82,6 +84,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [onMapClick]);
   
+  // Handle real-time SIQS for user location
+  const handleUserLocationSiqs = useCallback((siqs: number | null, loading: boolean) => {
+    if (!loading && siqs !== null) {
+      setCurrentSiqs(siqs);
+    }
+  }, []);
+  
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -117,36 +126,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
   }, [locations, userLocation, searchRadius, activeView, isMobile]);
 
-  const getCurrentSiqs = useCallback((location: SharedAstroSpot): number | null => {
-    if (!location || !location.siqs) return null;
-    return getSafeScore(location.siqs);
-  }, []);
-
-  useEffect(() => {
-    if (userLocation && locations.length > 0 && isMountedRef.current) {
-      const userLat = userLocation.latitude;
-      const userLng = userLocation.longitude;
-      
-      const sameLocation = locations.find(loc => 
-        Math.abs(loc.latitude - userLat) < 0.0001 && 
-        Math.abs(loc.longitude - userLng) < 0.0001
-      );
-      
-      if (sameLocation) {
-        setCurrentSiqs(getCurrentSiqs(sameLocation));
-      }
-    }
-  }, [userLocation?.latitude, userLocation?.longitude, locations, getCurrentSiqs]); 
-  
-  const handleMapReady = useCallback(() => {
-    if (isMountedRef.current) {
-      setMapReady(true);
-      if (onMapReady) {
-        onMapReady();
-      }
-    }
-  }, [onMapReady]);
-  
   useEffect(() => {
     if (!mapRef.current) return;
     
@@ -189,6 +168,17 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
 
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
+      {/* Add real-time SIQS calculator for user location */}
+      {userLocation && (
+        <RealTimeSiqsProvider
+          isVisible={true}
+          latitude={userLocation.latitude}
+          longitude={userLocation.longitude}
+          bortleScale={4}
+          onSiqsCalculated={handleUserLocationSiqs}
+        />
+      )}
+      
       <MapContainer
         center={center}
         zoom={getDefaultZoom()}
@@ -196,7 +186,10 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         scrollWheelZoom={!isMobile}
         ref={mapRef}
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
-        whenReady={handleMapReady}
+        whenReady={() => {
+          setMapReady(true);
+          if (onMapReady) onMapReady();
+        }}
         attributionControl={false}
         worldCopyJump={true}
       >
@@ -252,7 +245,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
               onHover={onMarkerHover || (() => {})}
               locationId={locationId}
               isCertified={isCertified}
-              activeView={activeView}
+              isMobile={isMobile}
               handleTouchStart={handleTouchStart}
               handleTouchEnd={handleTouchEnd}
               handleTouchMove={handleTouchMove}
@@ -260,13 +253,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           );
         })}
         
-        <MapController 
-          userLocation={userLocation} 
-          searchRadius={searchRadius}
-        />
+        {useMobileMapFixer && isMobile && <MobileMapFixer />}
+        
+        <MapLegend activeView={activeView} />
+        <MapController />
       </MapContainer>
     </div>
   );
 };
 
-export default LazyMapContainer;
+export default React.memo(LazyMapContainer);
