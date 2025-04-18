@@ -40,7 +40,7 @@ export async function calculateRealTimeSiqs(
       longitude
     });
     
-    // Fetch light pollution data - fix: pass latitude and longitude as separate arguments
+    // Fetch light pollution data 
     const lightPollutionData = await fetchLightPollutionData(latitude, longitude);
     
     // Fetch clear sky rate
@@ -49,10 +49,10 @@ export async function calculateRealTimeSiqs(
     // Calculate SIQS - use bortleScale directly as a number
     const siqsResult = await calculateSIQSWithWeatherData(
       weatherData,
+      bortleScale, // Directly pass bortleScale as a number
       forecastData,
       lightPollutionData,
-      clearSkyRate,
-      bortleScale // Pass bortleScale directly as a number
+      clearSkyRate
     );
     
     // Convert legacy format to new SiqsResult format if needed
