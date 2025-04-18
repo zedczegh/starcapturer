@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
 import MapContainer from './MapContainer';
@@ -57,6 +57,35 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     onLocationClick,
     onLocationUpdate
   });
+  
+  // Add persistent storage for locations
+  useEffect(() => {
+    if (locations.length > 0) {
+      try {
+        // Store locations in session storage for persistence
+        const storageKey = activeView === 'certified' ? 
+          'persistent_certified_locations' : 
+          'persistent_calculated_locations';
+        
+        // Only store the most important fields to reduce storage size
+        const simplifiedLocations = locations.map(loc => ({
+          id: loc.id,
+          name: loc.name,
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          siqs: loc.siqs,
+          isDarkSkyReserve: loc.isDarkSkyReserve,
+          certification: loc.certification,
+          distance: loc.distance
+        }));
+        
+        sessionStorage.setItem(storageKey, JSON.stringify(simplifiedLocations));
+        console.log(`Stored ${locations.length} ${activeView} locations to session storage`);
+      } catch (err) {
+        console.error('Error storing locations in session storage:', err);
+      }
+    }
+  }, [locations, activeView]);
   
   console.log(`PhotoPointsMap: optimizedLocations=${optimizedLocations?.length || 0}, mapReady=${mapReady}`);
   

@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getEnhancedLocationDetails, EnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
+import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
+import { EnhancedLocationDetails } from '@/services/geocoding/types/enhancedLocationTypes';
 
 interface UseEnhancedLocationProps {
   latitude?: number;

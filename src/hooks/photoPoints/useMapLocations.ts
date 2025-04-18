@@ -58,12 +58,13 @@ export const useMapLocations = ({
       }
     });
     
-    // Preserve existing locations that aren't in the new batch
+    // Important: Always preserve existing locations regardless of new batch
+    // This fixes the issue with calculated spots disappearing
     previousLocationsRef.current.forEach((loc, key) => {
       if (!newLocationsMap.has(key)) {
-        // Apply location filtering based on view mode
+        // When in calculated view, keep all previously visible locations
         if (activeView === 'calculated') {
-          // Keep locations within search radius
+          // For non-certified locations, respect search radius
           if (userLocation && !loc.isDarkSkyReserve && !loc.certification) {
             const distance = calculateDistance(
               userLocation.latitude,
@@ -72,17 +73,17 @@ export const useMapLocations = ({
               loc.longitude
             );
             
-            // Filter out locations outside search radius or in water
+            // Only filter by water for non-certified locations
             if (distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false)) {
-              newLocationsMap.set(key, loc as SharedAstroSpot);
+              newLocationsMap.set(key, loc);
             }
           } else if (loc.isDarkSkyReserve || loc.certification) {
-            // Keep certified locations
-            newLocationsMap.set(key, loc as SharedAstroSpot);
+            // Always keep certified locations
+            newLocationsMap.set(key, loc);
           }
         } else if (activeView === 'certified' && (loc.isDarkSkyReserve || loc.certification)) {
-          // For certified view, only keep certified locations
-          newLocationsMap.set(key, loc as SharedAstroSpot);
+          // For certified view, always keep certified locations
+          newLocationsMap.set(key, loc);
         }
       }
     });
@@ -111,16 +112,47 @@ export const useMapLocations = ({
           // In certified view, only show certified locations
           locationsToShow = certifiedLocations as SharedAstroSpot[];
         } else {
-          // For calculated view, show calculated locations
-          locationsToShow = calculatedLocations as SharedAstroSpot[];
-          
-          // In calculated view, certified locations are handled separately in the UI
-          // Only include certified locations if explicitly requested
-          if (viewChanged || userLocation) {
-            // Merge calculated and certified for calculated view
-            locationsToShow = [...calculatedLocations] as SharedAstroSpot[];
-          }
+          // For calculated view, include both calculated and certified locations
+          // This ensures calculated view shows all appropriate locations
+          locationsToShow = [...calculatedLocations, ...certifiedLocations] as SharedAstroSpot[];
         }
+        
+        // Make sure we don't lose previously shown locations when switching views
+        if (viewChanged) {
+          // Add locations from the cache when switching views
+          const cachedLocations = Array.from(locationCacheRef.current.values());
+          
+          // Filter cached locations by type based on active view
+          const relevantCachedLocations = activeView === 'certified' 
+            ? cachedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)
+            : cachedLocations;
+            
+          // Use a Map to deduplicate by coordinates
+          const tempMap = new Map<string, SharedAstroSpot>();
+          
+          // Add current locations first
+          locationsToShow.forEach(loc => {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            tempMap.set(key, loc);
+          });
+          
+          // Add cached locations that don't overlap
+          relevantCachedLocations.forEach(loc => {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            if (!tempMap.has(key)) {
+              tempMap.set(key, loc);
+            }
+          });
+          
+          // Convert back to array
+          locationsToShow = Array.from(tempMap.values());
+        }
+        
+        // Update the location cache with all locations for future use
+        allLocations.forEach(loc => {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locationCacheRef.current.set(key, loc);
+        });
         
         setProcessedLocations(locationsToShow);
       } catch (error) {
