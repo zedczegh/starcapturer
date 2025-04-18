@@ -15,6 +15,7 @@ interface MapDisplayProps {
   showInfoPanel?: boolean;
   isDarkSkyReserve?: boolean;
   certification?: string;
+  siqs?: number;
 }
 
 const MapDisplay: React.FC<MapDisplayProps> = ({
@@ -25,7 +26,8 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   onMapClick,
   showInfoPanel = false,
   isDarkSkyReserve = false,
-  certification = ''
+  certification = '',
+  siqs
 }) => {
   const { t } = useLanguage();
 
@@ -60,6 +62,7 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
           showInfoPanel={showInfoPanel}
           isDarkSkyReserve={isDarkSkyReserve}
           certification={certification}
+          siqs={siqs}
         />
       </Suspense>
     </div>

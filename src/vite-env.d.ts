@@ -44,13 +44,6 @@ declare module 'react-leaflet' {
     offset?: L.PointExpression;
     direction?: string;
     children?: React.ReactNode;
-    eventHandlers?: {
-      add?: (e: L.LeafletEvent) => void;
-      remove?: (e: L.LeafletEvent) => void;
-      popupopen?: (e: L.LeafletEvent) => void;
-      popupclose?: (e: L.LeafletEvent) => void;
-      [key: string]: ((e: L.LeafletEvent) => void) | undefined;
-    };
   }
   
   export interface CircleProps {

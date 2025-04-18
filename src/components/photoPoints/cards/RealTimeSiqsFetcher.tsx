@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
 
 interface RealTimeSiqsFetcherProps {
@@ -22,12 +22,14 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
-  const CACHE_DURATION = 5 * 60 * 1000; // Reduced to 5 minutes for fresher data
+  const [hasBeenFetched, setHasBeenFetched] = useState(false);
+  const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes - reduced API calls
   
   useEffect(() => {
     if (showRealTimeSiqs && isVisible && latitude && longitude) {
       const now = Date.now();
-      const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION;
+      // Only fetch if we haven't fetched before OR enough time has passed
+      const shouldFetch = !hasBeenFetched || now - lastFetchTimestamp > CACHE_DURATION;
       
       if (shouldFetch) {
         console.log(`Fetching real-time SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
@@ -52,6 +54,7 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
                 onSiqsCalculated(data.siqs, false);
                 setLastFetchTimestamp(timestamp);
                 setLoading(false);
+                setHasBeenFetched(true);
                 return;
               }
             }
@@ -71,10 +74,17 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
             if (result && result.siqs > 0) {
               console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.siqs}`);
               onSiqsCalculated(result.siqs, false);
+              
+              // Save to session storage to reduce API calls
+              sessionStorage.setItem(cacheKey, JSON.stringify({
+                data: result,
+                timestamp: now
+              }));
             } else {
               onSiqsCalculated(0, false);
             }
             setLastFetchTimestamp(now);
+            setHasBeenFetched(true);
           } catch (error) {
             console.error("Error fetching real-time SIQS:", error);
             onSiqsCalculated(null, false);
@@ -86,7 +96,7 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
         fetchSiqs();
       }
     }
-  }, [latitude, longitude, showRealTimeSiqs, isVisible, bortleScale, onSiqsCalculated, lastFetchTimestamp]);
+  }, [latitude, longitude, showRealTimeSiqs, isVisible, bortleScale, onSiqsCalculated, lastFetchTimestamp, hasBeenFetched]);
   
   return null;
 };

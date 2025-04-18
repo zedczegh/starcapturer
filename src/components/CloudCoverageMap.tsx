@@ -57,13 +57,11 @@ const CloudCoverageMap: React.FC<CloudCoverageMapProps> = ({
   
   useEffect(() => {
     if (!mapRef.current) return;
-  
-    const map = L.map(mapRef.current, {
-      attributionControl: false  // Disable attribution control
-    }).setView([latitude, longitude], 4);
+    
+    const map = L.map(mapRef.current).setView([latitude, longitude], 4);
     
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: ''  // Empty attribution
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
     
     L.marker([latitude, longitude])

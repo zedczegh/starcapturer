@@ -1,24 +1,31 @@
 
-/**
- * Utility for calculating SIQS based specifically on nighttime conditions
- */
-import { calculateSIQS } from '@/lib/calculateSIQS';
+import { calculateSIQS } from "@/lib/calculateSIQS";
+import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
 
 /**
- * Filter forecast data to include only nighttime hours (6 PM to 7 AM)
+ * Filter forecast data to include only astronomical nighttime hours
  * @param forecast Array of forecast items
+ * @param latitude Latitude for astronomical night calculation
+ * @param longitude Longitude for astronomical night calculation
  * @returns Filtered array with only nighttime hours
  */
-export const filterNighttimeForecast = (forecast: any[]): any[] => {
+export const filterNighttimeForecast = (
+  forecast: any[],
+  latitude: number = 0,
+  longitude: number = 0
+): any[] => {
   if (!forecast || !Array.isArray(forecast) || forecast.length === 0) return [];
+  
+  // Get astronomical night times for the location
+  const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
   
   return forecast.filter(item => {
     if (!item.time && !item.date) return false;
     const timeStr = item.time || item.date;
     const itemTime = new Date(timeStr);
-    const hour = itemTime.getHours();
-    // Nighttime is defined as 6 PM to 7 AM
-    return hour >= 18 || hour < 7;
+    
+    // Check if the forecast time falls within astronomical night
+    return itemTime >= nightStart && itemTime <= nightEnd;
   });
 };
 
@@ -45,69 +52,147 @@ export const calculateAverageValue = (
 };
 
 /**
- * Calculate average cloud cover for tonight from forecast data
- * @param forecastHourly Hourly forecast data
- * @returns Average cloud cover percentage
- */
-export const calculateTonightCloudCover = (
-  forecastHourly: any,
-  latitude?: number,
-  longitude?: number
-): number => {
-  try {
-    if (!forecastHourly) return 0;
-    
-    // Handle different forecast data structures
-    let hourlyData = [];
-    
-    if (Array.isArray(forecastHourly)) {
-      // Direct array format
-      hourlyData = forecastHourly;
-    } else if (forecastHourly.time && Array.isArray(forecastHourly.time)) {
-      // Open-meteo format with separate arrays
-      const times = forecastHourly.time;
-      const cloudCover = forecastHourly.cloud_cover || forecastHourly.cloudcover || [];
-      
-      hourlyData = times.map((time: string, index: number) => ({
-        time,
-        cloudCover: cloudCover[index]
-      }));
-    }
-    
-    // Filter for nighttime hours
-    const nightHours = hourlyData.filter(item => {
-      if (!item.time) return false;
-      const date = new Date(item.time);
-      const hour = date.getHours();
-      return hour >= 18 || hour < 7;
-    });
-    
-    if (nightHours.length === 0) return 0;
-    
-    // Calculate average cloud cover
-    const cloudProperty = 'cloudCover' in nightHours[0] ? 'cloudCover' : 
-                         'cloud_cover' in nightHours[0] ? 'cloud_cover' : 
-                         'cloudcover';
-    
-    const totalCloudCover = nightHours.reduce((sum, hour) => {
-      const value = hour[cloudProperty];
-      return sum + (typeof value === 'number' ? value : 0);
-    }, 0);
-    
-    return totalCloudCover / nightHours.length;
-  } catch (error) {
-    console.error('Error calculating tonight cloud cover:', error);
-    return 0;
-  }
-};
-
-/**
  * Checks if current conditions make imaging impossible
  * @param cloudCover Cloud cover percentage
  * @returns True if conditions make imaging impossible
  */
 export const isImagingImpossible = (cloudCover: number): boolean => {
   return typeof cloudCover === 'number' && cloudCover > 40;
+};
+
+/**
+ * Calculate tonight's cloud cover based on astronomical night hours
+ * Uses each hour's cloud cover from the forecast during astronomical night
+ * @param hourlyData Hourly forecast data
+ * @param latitude Latitude for astronomical night calculation
+ * @param longitude Longitude for astronomical night calculation
+ * @returns Average cloud cover during astronomical night
+ */
+export const calculateTonightCloudCover = (
+  hourlyData: any,
+  latitude?: number,
+  longitude?: number
+): number => {
+  if (!hourlyData || !hourlyData.time || !hourlyData.cloud_cover) {
+    return 0;
+  }
+  
+  // Get current time and date info
+  const currentTime = new Date();
+  
+  // Determine if we have valid coordinates
+  const hasCoordinates = typeof latitude === 'number' && typeof longitude === 'number';
+  
+  // Get astronomical night times for the location
+  let nightStart: Date, nightEnd: Date;
+  let nightHours: number[] = [];
+  let nightTimeStr = "18:00-7:00"; // Default fallback
+  
+  if (hasCoordinates && latitude !== 0 && longitude !== 0) {
+    // Calculate astronomical night times for the specific location
+    const nightTimes = calculateAstronomicalNight(latitude, longitude);
+    nightStart = nightTimes.start;
+    nightEnd = nightTimes.end;
+    
+    // Create a formatted time range string for display
+    nightTimeStr = `${formatTime(nightStart)}-${formatTime(nightEnd)}`;
+    
+    // Generate night hours array
+    let hour = nightStart.getHours();
+    while (hour !== nightEnd.getHours()) {
+      nightHours.push(hour);
+      hour = (hour + 1) % 24;
+    }
+    nightHours.push(nightEnd.getHours()); // Include the end hour
+  } else {
+    // Fall back to default night definition (18:00-7:00)
+    nightHours = Array.from({ length: 13 }, (_, i) => (i + 18) % 24);
+    const defaultNight = new Date();
+    defaultNight.setHours(18, 0, 0, 0);
+    nightStart = new Date(defaultNight);
+    
+    defaultNight.setDate(defaultNight.getDate() + 1);
+    defaultNight.setHours(7, 0, 0, 0);
+    nightEnd = new Date(defaultNight);
+  }
+  
+  // Current hour
+  const currentHour = currentTime.getHours();
+  
+  let totalCloudCover = 0;
+  let hoursCount = 0;
+  const cloudCoverValues: number[] = [];
+  
+  // Current date in YYYY-MM-DD format
+  const today = currentTime.toISOString().split('T')[0];
+  const tomorrow = new Date(currentTime);
+  tomorrow.setDate(currentTime.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  
+  // Process each hour in the forecast
+  for (let i = 0; i < hourlyData.time.length; i++) {
+    const timeStr = hourlyData.time[i];
+    const forecastDate = new Date(timeStr);
+    const forecastHour = forecastDate.getHours();
+    const dateStr = timeStr.split('T')[0];
+    
+    // Logic depends on current time relative to night period
+    
+    // CASE 1: Current time is before astronomical night
+    if (currentTime < nightStart) {
+      // Include all hours of tonight's astronomical night
+      if ((dateStr === today && forecastDate >= nightStart) || 
+          (dateStr === tomorrowStr && forecastDate <= nightEnd)) {
+        if (typeof hourlyData.cloud_cover[i] === 'number') {
+          const cloudCoverValue = hourlyData.cloud_cover[i];
+          totalCloudCover += cloudCoverValue;
+          cloudCoverValues.push(cloudCoverValue);
+          hoursCount++;
+        }
+      }
+    }
+    // CASE 2: Current time is during astronomical night
+    else if (currentTime >= nightStart && currentTime <= nightEnd) {
+      // Only include hours from current time until the end of night
+      if ((dateStr === today || dateStr === tomorrowStr) && 
+          forecastDate >= currentTime && forecastDate <= nightEnd) {
+        if (typeof hourlyData.cloud_cover[i] === 'number') {
+          const cloudCoverValue = hourlyData.cloud_cover[i];
+          totalCloudCover += cloudCoverValue;
+          cloudCoverValues.push(cloudCoverValue);
+          hoursCount++;
+        }
+      }
+    }
+    // CASE 3: Current time is after astronomical night
+    else {
+      // Use tomorrow night's forecast
+      const tomorrowNight = new Date(nightStart);
+      tomorrowNight.setDate(tomorrowNight.getDate() + 1);
+      
+      const tomorrowNightEnd = new Date(nightEnd);
+      tomorrowNightEnd.setDate(tomorrowNightEnd.getDate() + 1);
+      
+      const dayAfterTomorrow = new Date(tomorrow);
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+      const dayAfterTomorrowStr = dayAfterTomorrow.toISOString().split('T')[0];
+      
+      if ((dateStr === tomorrowStr && forecastDate >= tomorrowNight) || 
+          (dateStr === dayAfterTomorrowStr && forecastDate <= tomorrowNightEnd)) {
+        if (typeof hourlyData.cloud_cover[i] === 'number') {
+          const cloudCoverValue = hourlyData.cloud_cover[i];
+          totalCloudCover += cloudCoverValue;
+          cloudCoverValues.push(cloudCoverValue);
+          hoursCount++;
+        }
+      }
+    }
+  }
+  
+  console.log(`Calculated cloud cover for ${nightTimeStr}: ${cloudCoverValues.join(', ')}`);
+  
+  // Calculate average - if no valid hours found, return 0
+  return hoursCount > 0 ? totalCloudCover / hoursCount : 0;
 };
 
 /**
@@ -127,63 +212,103 @@ export const calculateNighttimeSIQS = (
     return null;
   }
   
-  // Extract nighttime hours from the forecast
-  const nightForecast = Array.isArray(forecastData.hourly) ? 
-    filterNighttimeForecast(forecastData.hourly) : 
-    filterNighttimeForecast(forecastData.hourly.time?.map((time: string, idx: number) => ({
-      time,
-      cloudCover: forecastData.hourly.cloud_cover?.[idx] || 0,
-      windSpeed: forecastData.hourly.wind_speed_10m?.[idx] || 0,
-      humidity: forecastData.hourly.relative_humidity_2m?.[idx] || 50,
-      precipitation: forecastData.hourly.precipitation?.[idx] || 0
-    })) || []);
-  
-  if (nightForecast.length === 0) {
-    console.log("No nighttime hours in forecast data");
+  try {
+    // Extract coordinates for astronomical night calculations
+    const latitude = locationData.latitude || 0;
+    const longitude = locationData.longitude || 0;
+    
+    // Get astronomical night times
+    const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
+    const nightTimeStr = `${formatTime(nightStart)}-${formatTime(nightEnd)}`;
+    
+    // Calculate tonight's cloud cover using astronomical night
+    const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly, latitude, longitude);
+    
+    // If no valid cloud cover data is available, we can't calculate
+    if (tonightCloudCover === 0 && !forecastData.hourly.cloud_cover) {
+      console.log("No valid cloud cover data found for tonight");
+      return null;
+    }
+    
+    console.log(`Calculated tonight's cloud cover (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}%`);
+    
+    // Check if average cloud cover makes imaging impossible
+    if (isImagingImpossible(tonightCloudCover)) {
+      console.log(`Tonight's cloud cover is ${tonightCloudCover.toFixed(1)}%, which exceeds 40% threshold`);
+      return {
+        score: 0,
+        isViable: false,
+        factors: [
+          {
+            name: translator ? translator("Cloud Cover", "云量") : "Cloud Cover",
+            score: 0,
+            description: translator
+              ? translator(
+                  `Cloud cover of ${Math.round(tonightCloudCover)}% makes imaging impossible`,
+                  `${Math.round(tonightCloudCover)}%的云量使成像不可能`
+                )
+              : `Cloud cover of ${Math.round(tonightCloudCover)}% makes imaging impossible`,
+            nighttimeData: {
+              average: tonightCloudCover,
+              timeRange: nightTimeStr
+            }
+          }
+        ]
+      };
+    }
+    
+    // Extract nighttime forecast for other weather parameters using astronomical night hours
+    const nightForecast = forecastData.hourly.time.map((time: string, i: number) => {
+      const forecastTime = new Date(time);
+      return {
+        time,
+        isNight: forecastTime >= nightStart && forecastTime <= nightEnd,
+        cloudCover: forecastData.hourly.cloud_cover?.[i] || 0,
+        windSpeed: forecastData.hourly.wind_speed_10m?.[i] || 0,
+        humidity: forecastData.hourly.relative_humidity_2m?.[i] || 0,
+        precipitation: forecastData.hourly.precipitation?.[i] || 0
+      };
+    }).filter((item: any) => item.isNight);
+    
+    // Calculate average values for other conditions during astronomical night
+    const avgWindSpeed = calculateAverageValue(nightForecast, 'windSpeed');
+    const avgHumidity = calculateAverageValue(nightForecast, 'humidity');
+    
+    // Calculate SIQS using tonight's cloud cover and other nighttime conditions
+    const siqsResult = calculateSIQS({
+      cloudCover: tonightCloudCover,
+      bortleScale: locationData.bortleScale || 5,
+      seeingConditions: locationData.seeingConditions || 3,
+      windSpeed: avgWindSpeed,
+      humidity: avgHumidity,
+      moonPhase: locationData.moonPhase || 0,
+      precipitation: calculateAverageValue(nightForecast, 'precipitation'),
+      aqi: locationData.weatherData?.aqi,
+      // Add nighttime forecast data for more detailed analysis
+      nightForecast: nightForecast
+    });
+    
+    // Add detailed nighttime cloud data to the cloud cover factor
+    if (siqsResult && siqsResult.factors) {
+      siqsResult.factors = siqsResult.factors.map((factor: any) => {
+        if (factor.name === "Cloud Cover" || 
+            (translator && factor.name === translator("Cloud Cover", "云层覆盖"))) {
+          return {
+            ...factor,
+            nighttimeData: {
+              average: tonightCloudCover,
+              timeRange: nightTimeStr,
+            }
+          };
+        }
+        return factor;
+      });
+    }
+    
+    console.log(`Calculated nighttime SIQS: ${siqsResult.score.toFixed(1)}`);
+    return siqsResult;
+  } catch (error) {
+    console.error("Error in nighttime SIQS calculation:", error);
     return null;
   }
-  
-  // Calculate average values for key weather conditions
-  const avgCloudCover = calculateAverageValue(nightForecast, 'cloudCover');
-  const avgWindSpeed = calculateAverageValue(nightForecast, 'windSpeed');
-  const avgHumidity = calculateAverageValue(nightForecast, 'humidity');
-  
-  // Check if average cloud cover makes imaging impossible
-  if (isImagingImpossible(avgCloudCover)) {
-    console.log(`Average nighttime cloud cover is ${avgCloudCover}%, which exceeds 40% threshold`);
-    return {
-      score: 0,
-      isViable: false,
-      factors: [
-        {
-          name: translator ? translator("Cloud Cover", "云量") : "Cloud Cover",
-          score: 0,
-          description: translator ? 
-            translator(
-              `Cloud cover of ${Math.round(avgCloudCover)}% makes imaging impossible`,
-              `${Math.round(avgCloudCover)}%的云量使成像不可能`
-            ) :
-            `Cloud cover of ${Math.round(avgCloudCover)}% makes imaging impossible`
-        }
-      ]
-    };
-  }
-  
-  // Calculate SIQS using the average nighttime conditions
-  const siqsResult = calculateSIQS({
-    cloudCover: avgCloudCover,
-    bortleScale: locationData.bortleScale || 5,
-    seeingConditions: locationData.seeingConditions || 3,
-    windSpeed: avgWindSpeed,
-    humidity: avgHumidity,
-    moonPhase: locationData.moonPhase || 0,
-    precipitation: calculateAverageValue(nightForecast, 'precipitation'),
-    aqi: locationData.weatherData?.aqi,
-    // Add nighttime forecast data for more detailed analysis
-    nightForecast: nightForecast
-  });
-  
-  console.log(`Calculated nighttime SIQS: ${siqsResult.score}`);
-  
-  return siqsResult;
 };

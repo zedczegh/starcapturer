@@ -1,291 +1,155 @@
 
 import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { validateLocationWithReverseGeocoding } from '@/utils/location/reverseGeocodingValidator';
-import { MarkerManager } from './markers/MarkerManager';
-import { LocationFilter } from './filters/LocationFilter';
+import { isWaterLocation } from '@/utils/locationValidator';
+import { calculateDistance } from '@/utils/geoUtils';
+import { getSiqsScore } from '@/utils/siqsHelpers';
+
+// Configuration for the map
+const FEATURE_COUNT_THRESHOLD = 500;
+const CLUSTER_DISTANCE = 40;
 
 /**
- * Manager for optimizing map marker rendering
- * Uses clustering, render throttling, and visibility checks
+ * Optimizes the locations for map display by filtering out invalid locations
+ * (e.g., those on water) and preparing them for Leaflet.
+ *
+ * @param locations An array of SharedAstroSpot objects representing the locations.
+ * @param userLocation The user's current location, used for distance calculation.
+ * @param searchRadius The radius within which to display locations.
+ * @returns An object containing the optimized locations and clustering settings
  */
-export class MapOptimizer {
-  private markerManager: MarkerManager;
-  private locationFilter: LocationFilter;
-  private map: L.Map | null = null;
-  private renderTimeout: NodeJS.Timeout | null = null;
-  private activeView: 'certified' | 'calculated' = 'certified';
-  private validatedLocations: Map<string, boolean> = new Map(); // Cache validation results
-  private previousLocations: Map<string, SharedAstroSpot> = new Map(); // Store previous locations
-  
-  constructor() {
-    this.markerManager = new MarkerManager();
-    this.locationFilter = new LocationFilter();
-    
-    // Try to load previously validated locations from storage
-    try {
-      const storedValidations = sessionStorage.getItem('validated_locations');
-      if (storedValidations) {
-        this.validatedLocations = new Map(JSON.parse(storedValidations));
-        console.log(`Loaded ${this.validatedLocations.size} cached location validations`);
-      }
-    } catch (err) {
-      console.error('Error loading validated locations from storage:', err);
-    }
-  }
-  
-  /**
-   * Initialize with the Leaflet map instance
-   */
-  public initialize(map: L.Map): void {
-    this.map = map;
-    this.markerManager.initialize(map);
-    
-    // Add viewport change listeners
-    map.on('moveend', () => this.refreshVisibleMarkers());
-    map.on('zoomend', () => this.refreshVisibleMarkers());
-    
-    // Load persisted locations based on view type
-    this.loadPersistedLocations();
-  }
-  
-  /**
-   * Set the active view type
-   */
-  public setActiveView(view: 'certified' | 'calculated'): void {
-    if (this.activeView !== view) {
-      this.activeView = view;
-      this.clearMarkers();
-      this.locationFilter.resetDistanceFilters();
-      
-      // Load the appropriate persisted locations for this view
-      this.loadPersistedLocations();
-    }
-  }
-  
-  /**
-   * Load persisted locations from session storage
-   */
-  private loadPersistedLocations(): void {
-    if (!this.map) return;
-    
-    try {
-      const storageKey = this.activeView === 'certified' ? 
-        'persistent_certified_locations' : 
-        'persistent_calculated_locations';
-      
-      const storedData = sessionStorage.getItem(storageKey);
-      
-      if (storedData) {
-        const persistedLocations = JSON.parse(storedData) as SharedAstroSpot[];
-        
-        if (persistedLocations.length > 0) {
-          console.log(`Loading ${persistedLocations.length} persisted ${this.activeView} locations`);
-          
-          // Clear existing markers before adding persisted ones
-          this.markerManager.clearMarkers();
-          
-          // Add persisted locations to the map
-          this.markerManager.renderMarkers(
-            persistedLocations, 
-            undefined, 
-            this.map.getBounds()
-          );
-          
-          // Store in previous locations
-          persistedLocations.forEach(loc => {
-            if (loc.latitude && loc.longitude) {
-              const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-              this.previousLocations.set(key, loc);
-            }
-          });
-        }
-      }
-    } catch (err) {
-      console.error('Error loading persisted locations:', err);
-    }
-  }
-  
-  /**
-   * Update markers with new location data
-   */
-  public async updateMarkers(locations: SharedAstroSpot[], selectedId?: string): Promise<void> {
-    if (!this.map) return;
-    
-    // Throttle rendering to prevent performance issues
-    if (this.renderTimeout) {
-      clearTimeout(this.renderTimeout);
-    }
-    
-    this.renderTimeout = setTimeout(async () => {
-      // Combine new locations with previous ones to ensure persistence
-      const combinedLocations = this.combineWithPreviousLocations(locations);
-      
-      // Filter locations through reverse geocoding for calculated spots
-      const validatedLocations = await this.validateLocations(combinedLocations);
-      
-      // Apply distance filtering to validated locations
-      const filteredLocations = this.locationFilter.filterByDistance(
-        validatedLocations, 
-        this.activeView
-      );
-      
-      // Save validations to session storage periodically
-      this.saveValidationsToStorage();
-      
-      // Update the markers
-      this.markerManager.renderMarkers(
-        filteredLocations, 
-        selectedId, 
-        this.map!.getBounds()
-      );
-      
-      // Update previous locations with the new set
-      filteredLocations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          this.previousLocations.set(key, loc);
-        }
-      });
-    }, 50);
-  }
-  
-  /**
-   * Combine new locations with previous ones to maintain persistence
-   */
-  private combineWithPreviousLocations(newLocations: SharedAstroSpot[]): SharedAstroSpot[] {
-    // Create a map of new locations by their coordinate key
-    const newLocationsMap = new Map<string, SharedAstroSpot>();
-    
-    // Add all new locations to the map
-    newLocations.forEach(loc => {
-      if (loc.latitude && loc.longitude) {
-        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        newLocationsMap.set(key, loc);
-      }
-    });
-    
-    // Add any previous locations not in the new set
-    this.previousLocations.forEach((prevLoc, key) => {
-      if (!newLocationsMap.has(key)) {
-        // Only include locations appropriate for the current view
-        if (this.activeView === 'certified') {
-          if (prevLoc.isDarkSkyReserve || prevLoc.certification) {
-            newLocationsMap.set(key, prevLoc);
-          }
-        } else {
-          // For calculated view, include all types
-          newLocationsMap.set(key, prevLoc);
-        }
-      }
-    });
-    
-    // Return as array
-    return Array.from(newLocationsMap.values());
-  }
+export function optimizeLocationsForMap(
+  locations: SharedAstroSpot[],
+  userLocation: { latitude: number; longitude: number } | null,
+  searchRadius: number
+): { 
+  optimizedLocations: SharedAstroSpot[], 
+  clusteringEnabled: boolean 
+} {
+  // Filter out locations on water and outside the search radius
+  const validLocations = locations.filter(location => {
+    if (!location.latitude || !location.longitude) return false;
 
-  /**
-   * Validate locations using reverse geocoding
-   */
-  private async validateLocations(locations: SharedAstroSpot[]): Promise<SharedAstroSpot[]> {
-    const validatedLocations: SharedAstroSpot[] = [];
-    
-    for (const location of locations) {
-      // Skip validation for certified locations
-      if (location.isDarkSkyReserve || location.certification) {
-        validatedLocations.push(location);
-        continue;
-      }
-      
-      // Create a key for this location
-      const locKey = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-      
-      // Check if we've already validated this location
-      if (this.validatedLocations.has(locKey)) {
-        const isValid = this.validatedLocations.get(locKey);
-        if (isValid) {
-          validatedLocations.push(location);
-        }
-        continue;
-      }
-      
-      // Validate calculated spots
-      const isValid = await validateLocationWithReverseGeocoding(location);
-      
-      // Store the validation result
-      this.validatedLocations.set(locKey, isValid);
-      
-      if (isValid) {
-        validatedLocations.push(location);
-      } else {
-        console.log(`Filtered out invalid location at [${location.latitude}, ${location.longitude}]`);
-      }
+    // Skip water locations
+    if (isWaterLocation(location.latitude, location.longitude)) {
+      return false;
     }
-    
-    return validatedLocations;
-  }
-  
-  /**
-   * Save validation results to session storage
-   */
-  private saveValidationsToStorage(): void {
-    try {
-      if (this.validatedLocations.size > 0) {
-        // Convert Map to array for storage
-        const validationsArray = Array.from(this.validatedLocations.entries());
-        sessionStorage.setItem('validated_locations', JSON.stringify(validationsArray));
-      }
-    } catch (err) {
-      console.error('Error saving validations to storage:', err);
-    }
-  }
-  
-  /**
-   * Refresh visible markers based on map bounds
-   */
-  private refreshVisibleMarkers(): void {
-    if (!this.map) return;
-    
-    // When map view changes, update markers with the combined locations
-    if (this.previousLocations.size > 0) {
-      const locationsArray = Array.from(this.previousLocations.values());
-      this.markerManager.renderMarkers(
-        locationsArray,
-        undefined,
-        this.map.getBounds()
+
+    // Skip locations outside the search radius if user location is available
+    if (userLocation) {
+      const distance = calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        location.latitude,
+        location.longitude
       );
+      return distance <= searchRadius;
     }
-  }
-  
-  /**
-   * Clear all markers
-   */
-  public clearMarkers(): void {
-    this.markerManager.clearMarkers();
-  }
-  
-  /**
-   * Clean up resources
-   */
-  public destroy(): void {
-    if (this.renderTimeout) {
-      clearTimeout(this.renderTimeout);
-    }
-    
-    this.clearMarkers();
-    
-    if (this.map) {
-      this.map.off('moveend');
-      this.map.off('zoomend');
-    }
-    
-    this.map = null;
-    this.markerManager.destroy();
-    
-    // Save validations before destroying
-    this.saveValidationsToStorage();
-  }
+
+    return true;
+  });
+
+  // Determine whether to enable clustering based on the number of features
+  const enableClustering = validLocations.length > FEATURE_COUNT_THRESHOLD;
+
+  return { 
+    optimizedLocations: validLocations, 
+    clusteringEnabled: enableClustering 
+  };
 }
 
-// Export singleton instance
-export const mapOptimizer = new MapOptimizer();
+/**
+ * Generates marker options for Leaflet based on location properties
+ *
+ * @param location The location to style
+ * @param hoveredLocationId The ID of the currently hovered location
+ * @param activeView The active view mode ('certified' or 'calculated')
+ * @returns An object with marker style options
+ */
+export function generateMarkerStyle(
+  location: SharedAstroSpot,
+  hoveredLocationId: string | null,
+  activeView: 'certified' | 'calculated'
+): { 
+  color: string;
+  fillColor: string;
+  radius: number;
+  weight: number;
+  opacity: number;
+  fillOpacity: number;
+} {
+  // Determine the base color based on whether the location is certified
+  let baseColor = location.isDarkSkyReserve || location.certification ? '#8b5cf6' : '#3b82f6';
+
+  // If the location is the hovered location, use a different color
+  if (location.id === hoveredLocationId) {
+    baseColor = '#f97316';
+  }
+
+  // If we have a siqsScore that's an object or a number, convert it properly
+  const siqsNumericValue = getSiqsScore(location.siqs);
+
+  // Determine the radius based on the SIQS score
+  let radius = 6;
+  if (siqsNumericValue > 7) {
+    radius = 10;
+  } else if (siqsNumericValue > 5) {
+    radius = 8;
+  }
+
+  return {
+    color: '#ffffff',
+    fillColor: baseColor,
+    radius: radius,
+    weight: 2,
+    opacity: 0.9,
+    fillOpacity: 0.8
+  };
+}
+
+/**
+ * Create a Leaflet cluster configuration based on location count
+ * 
+ * @param locations Array of locations to potentially cluster
+ * @returns Leaflet clustering options or null if clustering is not needed
+ */
+export function getClusterOptions(locations: SharedAstroSpot[]) {
+  const enableClustering = locations.length > FEATURE_COUNT_THRESHOLD;
+  
+  if (!enableClustering) {
+    return null;
+  }
+  
+  return {
+    chunkedLoading: true,
+    disableClusteringAtZoom: 13,
+    spiderfyOnMaxZoom: false,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    maxClusterRadius: CLUSTER_DISTANCE,
+    iconCreateFunction: createClusterIcon
+  };
+}
+
+/**
+ * Create a custom cluster icon based on the number of points
+ */
+function createClusterIcon(cluster: any) {
+  const count = cluster.getChildCount();
+  let size = 30;
+  let className = 'marker-cluster-small';
+  
+  if (count > 50) {
+    size = 45;
+    className = 'marker-cluster-large';
+  } else if (count > 10) {
+    size = 35;
+    className = 'marker-cluster-medium';
+  }
+  
+  return L.divIcon({
+    html: `<div><span>${count}</span></div>`,
+    className: `marker-cluster ${className}`,
+    iconSize: L.point(size, size)
+  });
+}

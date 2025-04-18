@@ -1,7 +1,6 @@
-
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { fetchRealTimeSiqs } from '@/services/realTimeSiqsService';
 import { clearLocationCache } from '@/services/realTimeSiqsService';
 import LocationControllers from './LocationControllers';
 import SiqsDisplay from './SiqsDisplay';
@@ -24,21 +23,18 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
   const locationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const [cacheCleared, setCacheCleared] = useState<boolean>(false);
 
-  // Update reference to track location changes
   useEffect(() => {
     if (userLocation) {
       locationRef.current = userLocation;
     }
   }, [userLocation]);
 
-  // Calculate real-time SIQS for current location
   const calculateCurrentSiqs = useCallback(async () => {
     if (!userLocation) {
       console.error("No location selected");
       return;
     }
 
-    // Avoid duplicate fetches within 10 seconds
     const now = Date.now();
     if (now - lastFetchRef.current < 10000) {
       return;
@@ -47,10 +43,9 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
 
     setLoading(true);
     try {
-      // Default Bortle scale if not available
       const defaultBortleScale = 4;
       
-      const result = await calculateRealTimeSiqs(
+      const result = await fetchRealTimeSiqs(
         userLocation.latitude,
         userLocation.longitude,
         defaultBortleScale
@@ -65,25 +60,21 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
     }
   }, [userLocation]);
 
-  // Clear location cache
   const handleClearCache = useCallback(() => {
     try {
       clearLocationCache();
       setCacheCleared(true);
       console.log("Location cache cleared");
       
-      // Reset flag after 3 seconds
       setTimeout(() => setCacheCleared(false), 3000);
     } catch (error) {
       console.error("Error clearing location cache:", error);
     }
   }, []);
 
-  // Automatically calculate SIQS when location changes
   useEffect(() => {
     if (!userLocation) return;
     
-    // Check if location has actually changed
     if (
       locationRef.current &&
       locationRef.current.latitude === userLocation.latitude &&
@@ -92,14 +83,11 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
       return;
     }
     
-    // Update the location reference
     locationRef.current = userLocation;
     
-    // Calculate SIQS for the new location
     calculateCurrentSiqs();
   }, [userLocation, calculateCurrentSiqs]);
 
-  // Get current location with high accuracy
   const handleGetCurrentLocation = useCallback(() => {
     setLoading(true);
     
@@ -109,18 +97,15 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
         onLocationUpdate(latitude, longitude);
         setLoading(false);
         
-        // Center map on user location using the globally accessible map instance
         try {
           const leafletMap = (window as any).leafletMap;
           if (leafletMap) {
-            // Use animation for a smoother experience and higher zoom level
             leafletMap.setView([latitude, longitude], 12, { 
               animate: true,
               duration: 1.5 
             });
             console.log("Map centered on current location:", latitude, longitude);
             
-            // Force dragging to be enabled
             if (leafletMap.dragging) {
               leafletMap.dragging.enable();
               console.log("Dragging explicitly enabled after location update");
@@ -136,7 +121,6 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
         console.error("Error getting location:", error);
         setLoading(false);
         
-        // Provide user-friendly error messages in console
         let errorMsg = "Failed to get your location";
         
         if (error.code === 1) {

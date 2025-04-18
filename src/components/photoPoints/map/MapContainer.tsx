@@ -19,6 +19,11 @@ interface MapContainerProps {
   initialZoom: number;
   mapContainerHeight: string;
   isMobile: boolean;
+  hoveredLocationId: string | null;
+  handleHover: (id: string | null) => void;
+  handleTouchStart: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove: (e: React.TouchEvent) => void;
   handleGetLocation: () => void;
   onLegendToggle: (isOpen: boolean) => void;
 }
@@ -36,6 +41,11 @@ const MapContainer: React.FC<MapContainerProps> = ({
   initialZoom,
   mapContainerHeight,
   isMobile,
+  hoveredLocationId,
+  handleHover,
+  handleTouchStart,
+  handleTouchEnd,
+  handleTouchMove,
   handleGetLocation,
   onLegendToggle
 }) => {
@@ -64,6 +74,11 @@ const MapContainer: React.FC<MapContainerProps> = ({
         onLocationClick={handleLocationClicked}
         onMapClick={handleMapClick}
         zoom={initialZoom}
+        hoveredLocationId={hoveredLocationId}
+        onMarkerHover={handleHover}
+        handleTouchStart={handleTouchStart}
+        handleTouchEnd={handleTouchEnd}
+        handleTouchMove={handleTouchMove}
         isMobile={isMobile}
         useMobileMapFixer={false}
         showRadiusCircles={activeView === 'calculated' && !isMobile}

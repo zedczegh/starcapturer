@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { createCustomMarker } from './map/MapMarkerUtils';
 import MapTooltip from './map/MapTooltip';
-import MapClickHandler from '../location/map/MapClickHandler';
+import MapClickHandler from './map/MapClickHandler';
 
 interface MapDisplayProps {
   position: [number, number];
@@ -44,11 +44,6 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
       // Store map reference
       mapRef.current = map;
       
-      // Remove attribution control if it exists
-      if (map.attributionControl) {
-        map.removeControl(map.attributionControl);
-      }
-      
       // Call onMapReady callback
       if (onMapReady) {
         onMapReady();
@@ -65,10 +60,9 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
       scrollWheelZoom={false}
       style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
       className="z-0"
-      attributionControl={false}
     >
       <TileLayer
-        attribution=""
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       

@@ -1,9 +1,7 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
-import { EnhancedLocationDetails } from '@/services/geocoding/types/enhancedLocationTypes';
-import { Language } from '@/services/geocoding/types';
+import { getEnhancedLocationDetails, EnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 
 interface UseEnhancedLocationProps {
   latitude?: number;
@@ -11,15 +9,8 @@ interface UseEnhancedLocationProps {
   skip?: boolean;
 }
 
-// Cache for location details
-const locationDetailsCache = new Map<string, {
-  details: EnhancedLocationDetails;
-  timestamp: number;
-}>();
-
 /**
  * Hook that provides enhanced location details including street-level data
- * With improved caching and error handling
  */
 export function useEnhancedLocation({ 
   latitude, 
@@ -31,47 +22,6 @@ export function useEnhancedLocation({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // Get cached details or fetch new ones
-  const fetchLocationDetails = useCallback(async (lat: number, lng: number, lang: Language) => {
-    // Generate cache key
-    const cacheKey = `${lat.toFixed(6)}-${lng.toFixed(6)}-${lang}`;
-    
-    // Check cache first (valid for 24 hours)
-    const cached = locationDetailsCache.get(cacheKey);
-    if (cached && (Date.now() - cached.timestamp < 24 * 60 * 60 * 1000)) {
-      console.log("Using cached location details");
-      return cached.details;
-    }
-    
-    // Fetch new details
-    try {
-      const details = await getEnhancedLocationDetails(lat, lng, lang);
-      
-      // Cache the result
-      locationDetailsCache.set(cacheKey, {
-        details,
-        timestamp: Date.now()
-      });
-      
-      // Clean cache if too large
-      if (locationDetailsCache.size > 100) {
-        const keysToDelete = [...locationDetailsCache.keys()]
-          .sort((a, b) => {
-            const aTime = locationDetailsCache.get(a)?.timestamp || 0;
-            const bTime = locationDetailsCache.get(b)?.timestamp || 0;
-            return aTime - bTime;
-          })
-          .slice(0, 20);
-        
-        keysToDelete.forEach(key => locationDetailsCache.delete(key));
-      }
-      
-      return details;
-    } catch (err) {
-      throw err;
-    }
-  }, []);
-
   useEffect(() => {
     // Skip if coordinates are missing or skip flag is set
     if (skip || !latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) {
@@ -80,14 +30,12 @@ export function useEnhancedLocation({
 
     let isMounted = true;
     
-    const getDetails = async () => {
+    const fetchLocationDetails = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        // Fix: Ensure language is properly typed as 'en' | 'zh'
-        const languageValue: Language = language === 'zh' ? 'zh' : 'en';
-        const details = await fetchLocationDetails(latitude, longitude, languageValue);
+        const details = await getEnhancedLocationDetails(latitude, longitude, language);
         
         if (isMounted) {
           setLocationDetails(details);
@@ -104,36 +52,24 @@ export function useEnhancedLocation({
       }
     };
 
-    getDetails();
+    fetchLocationDetails();
     
     return () => {
       isMounted = false;
     };
-  }, [latitude, longitude, language, skip, fetchLocationDetails]);
-
-  // Update refetch to use cached logic
-  const refetch = useCallback(() => {
-    if (latitude && longitude) {
-      setLoading(true);
-      // Fix: Ensure language is properly typed here too
-      const languageValue: Language = language === 'zh' ? 'zh' : 'en';
-      fetchLocationDetails(latitude, longitude, languageValue)
-        .then(details => {
-          setLocationDetails(details);
-          setLoading(false);
-        })
-        .catch(err => {
-          setError(err);
-          setLoading(false);
-        });
-    }
-  }, [latitude, longitude, language, fetchLocationDetails]);
+  }, [latitude, longitude, language, skip]);
 
   return {
     locationDetails,
     loading,
     error,
-    refetch
+    refetch: () => {
+      if (latitude && longitude) {
+        getEnhancedLocationDetails(latitude, longitude, language)
+          .then(details => setLocationDetails(details))
+          .catch(err => setError(err));
+      }
+    }
   };
 }
 

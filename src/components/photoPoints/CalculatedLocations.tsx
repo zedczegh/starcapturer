@@ -42,18 +42,14 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   
-  // Set up the event listener for expanding search radius
   useExpandSearchRadius({ onRefresh });
   
-  // Filter out locations with SIQS score of 0
   const validLocations = locations.filter(loc => loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0));
   
-  // Sort locations by distance (closest first)
   const sortedLocations = [...validLocations].sort((a, b) => 
     (a.distance || Infinity) - (b.distance || Infinity)
   );
   
-  // Determine if we should show loading state
   if (loading && sortedLocations.length === 0) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -62,7 +58,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     );
   }
   
-  // Show empty state if no locations available
   if (sortedLocations.length === 0) {
     return (
       <EmptyCalculatedState 
@@ -75,7 +70,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   const handleViewLocation = (point: SharedAstroSpot) => {
     const locationId = `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
     
-    // Navigate to location details page
     navigate(`/location/${locationId}`, {
       state: {
         ...point,
