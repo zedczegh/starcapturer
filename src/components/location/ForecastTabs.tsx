@@ -14,6 +14,7 @@ interface ForecastTabsProps {
   longRangeLoading: boolean;
   onRefreshForecast: () => void;
   onRefreshLongRange: () => void;
+  locationData?: any;
 }
 
 const ForecastTabs: React.FC<ForecastTabsProps> = ({
@@ -22,11 +23,16 @@ const ForecastTabs: React.FC<ForecastTabsProps> = ({
   forecastLoading,
   longRangeLoading,
   onRefreshForecast,
-  onRefreshLongRange
+  onRefreshLongRange,
+  locationData
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState("hourly");
+  
+  // Get location coordinates
+  const locationLatitude = locationData?.latitude;
+  const locationLongitude = locationData?.longitude;
   
   // Memoize tab labels to prevent unnecessary re-renders
   const tabLabels = useMemo(() => ({
@@ -80,6 +86,8 @@ const ForecastTabs: React.FC<ForecastTabsProps> = ({
           forecastData={forecastData}
           isLoading={forecastLoading}
           onRefresh={handleRefreshForecast}
+          locationLatitude={locationLatitude}
+          locationLongitude={locationLongitude}
         />
       </TabsContent>
       
@@ -88,6 +96,8 @@ const ForecastTabs: React.FC<ForecastTabsProps> = ({
           forecastData={longRangeForecast}
           isLoading={longRangeLoading}
           onRefresh={handleRefreshLongRange}
+          locationLatitude={locationLatitude}
+          locationLongitude={locationLongitude}
         />
       </TabsContent>
     </Tabs>

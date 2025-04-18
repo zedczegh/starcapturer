@@ -8,9 +8,11 @@ import { DynamicCloudCoverIcon, DynamicWindIcon, DynamicHumidityIcon } from "@/c
 interface ForecastProps {
   forecast: any;
   index: number;
+  locationLatitude?: number;
+  locationLongitude?: number;
 }
 
-const ForecastRow: React.FC<ForecastProps> = ({ forecast, index }) => {
+const ForecastRow: React.FC<ForecastProps> = ({ forecast, index, locationLatitude, locationLongitude }) => {
   const { t } = useLanguage();
   const isNighttime = isNightHour(forecast.date);
   
@@ -25,8 +27,8 @@ const ForecastRow: React.FC<ForecastProps> = ({ forecast, index }) => {
   const rowClass = `${index % 2 === 0 ? 'bg-cosmic-800/5' : 'bg-cosmic-800/10'} 
                  hover:bg-cosmic-800/20 ${isNighttime ? 'night-row' : ''}`;
   
-  // Format the time to display
-  const displayTime = formatTime(forecast.date);
+  // Format the time to display using location's coordinates if available
+  const displayTime = formatTime(forecast.date, locationLatitude, locationLongitude);
   
   return (
     <TableRow className={rowClass}>

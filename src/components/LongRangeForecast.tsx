@@ -15,12 +15,16 @@ interface LongRangeForecastProps {
   forecastData: any;
   isLoading?: boolean;
   onRefresh?: () => void;
+  locationLatitude?: number;
+  locationLongitude?: number;
 }
 
 const LongRangeForecast: React.FC<LongRangeForecastProps> = React.memo(({ 
   forecastData, 
   isLoading = false,
-  onRefresh
+  onRefresh,
+  locationLatitude,
+  locationLongitude
 }) => {
   const { t } = useLanguage();
 
@@ -47,7 +51,8 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = React.memo(({
             cloudCover: forecastData.daily.cloud_cover_mean?.[i] ?? 30,
             windSpeed: forecastData.daily.wind_speed_10m_max?.[i] ?? 5,
             precipitation: forecastData.daily.precipitation_sum?.[i] ?? 0,
-            precipitation_probability: forecastData.daily.precipitation_probability_max?.[i] ?? 0
+            precipitation_probability: forecastData.daily.precipitation_probability_max?.[i] ?? 0,
+            temperature: forecastData.daily.temperature_2m_max?.[i] ?? 25 // Add temperature field for compatibility with ForecastRow
           });
         }
         
@@ -120,7 +125,13 @@ const LongRangeForecast: React.FC<LongRangeForecastProps> = React.memo(({
             </TableHeader>
             <TableBody>
               {forecasts.map((forecast, index) => (
-                <ForecastRow key={index} forecast={forecast} index={index} />
+                <ForecastRow 
+                  key={forecast.date} 
+                  forecast={forecast} 
+                  index={index}
+                  locationLatitude={locationLatitude}
+                  locationLongitude={locationLongitude}
+                />
               ))}
             </TableBody>
           </Table>

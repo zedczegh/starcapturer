@@ -14,12 +14,16 @@ interface ForecastTableProps {
   forecastData: any;
   isLoading?: boolean;
   onRefresh?: () => void;
+  locationLatitude?: number;
+  locationLongitude?: number;
 }
 
 const ForecastTable: React.FC<ForecastTableProps> = ({ 
   forecastData, 
   isLoading = false,
-  onRefresh
+  onRefresh,
+  locationLatitude,
+  locationLongitude
 }) => {
   const { t } = useLanguage();
   
@@ -103,7 +107,13 @@ const ForecastTable: React.FC<ForecastTableProps> = ({
               </TableHeader>
               <TableBody>
                 {forecasts.map((forecast, index) => (
-                  <ForecastRow key={forecast.date} forecast={forecast} index={index} />
+                  <ForecastRow 
+                    key={forecast.date} 
+                    forecast={forecast} 
+                    index={index}
+                    locationLatitude={locationLatitude}
+                    locationLongitude={locationLongitude}
+                  />
                 ))}
               </TableBody>
             </Table>

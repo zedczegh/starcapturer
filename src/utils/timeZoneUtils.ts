@@ -1,5 +1,5 @@
 
-import { formatInTimeZone } from 'date-fns-tz';
+import { format, formatInTimeZone } from 'date-fns-tz';
 
 /**
  * Get current date and time for a specific location using its coordinates
@@ -58,7 +58,8 @@ export const getTimeZoneOffsetHours = (latitude: number, longitude: number): str
   try {
     const timeZone = getTimeZoneFromCoordinates(latitude, longitude);
     const now = new Date();
-    const timeParts = formatInTimeZone(now, timeZone, 'xxx').split(':');
+    const formatted = formatInTimeZone(now, timeZone, 'xxx');
+    const timeParts = formatted.split(':');
     return timeParts[0]; // Returns something like "+08" or "-05"
   } catch (error) {
     console.error("Error getting time zone offset:", error);

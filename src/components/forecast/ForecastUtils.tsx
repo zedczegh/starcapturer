@@ -141,8 +141,14 @@ export const formatTime = (isoTime: string, latitude?: number, longitude?: numbe
     
     // If we have coordinates, use time zone-aware formatting
     if (latitude !== undefined && longitude !== undefined) {
-      const { formatDateForTimeZone } = require('@/utils/timeZoneUtils');
-      return formatDateForTimeZone(date, latitude, longitude, 'HH:mm');
+      try {
+        const { formatDateForTimeZone } = require('@/utils/timeZoneUtils');
+        return formatDateForTimeZone(date, latitude, longitude, 'HH:mm');
+      } catch (error) {
+        console.error("Error using formatDateForTimeZone:", error);
+        // Fallback to basic formatting
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
     }
     
     // Fallback to browser's locale
@@ -161,8 +167,14 @@ export const formatDate = (isoTime: string, latitude?: number, longitude?: numbe
     
     // If we have coordinates, use time zone-aware formatting
     if (latitude !== undefined && longitude !== undefined) {
-      const { formatDateForTimeZone } = require('@/utils/timeZoneUtils');
-      return formatDateForTimeZone(date, latitude, longitude, 'MMM d');
+      try {
+        const { formatDateForTimeZone } = require('@/utils/timeZoneUtils');
+        return formatDateForTimeZone(date, latitude, longitude, 'MMM d');
+      } catch (error) {
+        console.error("Error using formatDateForTimeZone:", error);
+        // Fallback to basic formatting
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      }
     }
     
     // Fallback to browser's locale
