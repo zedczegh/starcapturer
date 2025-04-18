@@ -1,3 +1,4 @@
+
 import React, { useEffect, useCallback, useRef, memo, useMemo, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -102,32 +103,6 @@ const LocationMarker = memo(({
     return getLocationMarker(location, isCertified, isHovered, isMobile);
   }, [location, isCertified, isHovered, isMobile]);
   
-  useEffect(() => {
-    const marker = markerRef.current;
-    if (!marker) return;
-    
-    let closeTimer: number | null = null;
-    
-    if (isHovered) {
-      marker.openPopup();
-      marker.getElement()?.classList.add('hovered');
-      
-      if (closeTimer) {
-        clearTimeout(closeTimer);
-        closeTimer = null;
-      }
-    } else {
-      closeTimer = window.setTimeout(() => {
-        marker.closePopup();
-        marker.getElement()?.classList.remove('hovered');
-      }, isMobile ? 4000 : 2000);
-    }
-    
-    return () => {
-      if (closeTimer) clearTimeout(closeTimer);
-    };
-  }, [isHovered, isMobile]);
-  
   const handleClick = useCallback(() => {
     setIsOpen(true);
     onClick(location);
@@ -194,7 +169,10 @@ const LocationMarker = memo(({
       >
         {isOpen && (
           <Popup 
+            closeButton={true}
+            autoPan={true}
             closeOnClick={false}
+            autoPanPaddingTopLeft={[50, 50]}
             onClose={handlePopupClose}
           >
             <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}>
