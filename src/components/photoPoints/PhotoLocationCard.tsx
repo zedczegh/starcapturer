@@ -1,10 +1,9 @@
+
 import React, { useState } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { getCertificationInfo, getLocalizedCertText } from "./cards/CertificationBadge";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDisplayName } from "./cards/DisplayNameResolver";
@@ -15,6 +14,7 @@ import LocationMetadata from './cards/LocationMetadata';
 import VisibilityObserver from './cards/VisibilityObserver';
 import RealTimeSiqsFetcher from './cards/RealTimeSiqsFetcher';
 import LocationHeader from './cards/LocationHeader';
+import { getCertificationInfo } from './cards/CertificationBadge';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface PhotoLocationCardProps {
@@ -22,30 +22,35 @@ interface PhotoLocationCardProps {
   index: number;
   showRealTimeSiqs?: boolean;
   isMobile?: boolean;
+  onSelect?: (location: SharedAstroSpot) => void;
+  onViewDetails: (location: SharedAstroSpot) => void;
+  userLocation?: { latitude: number; longitude: number } | null;
 }
 
 const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ 
-  point, 
+  location, 
+  index = 0,
   onSelect,
   onViewDetails,
-  userLocation
+  userLocation,
+  showRealTimeSiqs
 }) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const certInfo = React.useMemo(() => getCertificationInfo(point), [point]);
+  const certInfo = React.useMemo(() => getCertificationInfo(location), [location]);
   
   const { displayName, showOriginalName } = useDisplayName({
-    location: point,
+    location,
     language,
     locationCounter: null
   });
   
   const nearestTownInfo = React.useMemo(() => 
-    point.latitude && point.longitude ? 
-      findNearestTown(point.latitude, point.longitude, language) : 
+    location.latitude && location.longitude ? 
+      findNearestTown(location.latitude, location.longitude, language) : 
       null
-  , [point.latitude, point.longitude, language]);
+  , [location.latitude, location.longitude, language]);
 
   const formatCardDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");
@@ -58,14 +63,14 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   };
 
   const getLocationId = () => {
-    if (!point || !point.latitude || !point.longitude) return null;
-    return point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+    if (!location || !location.latitude || !location.longitude) return null;
+    return location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
   };
 
   const handleViewDetails = (e: React.MouseEvent) => {
     e.stopPropagation();
     
-    if (!point || !point.latitude || !point.longitude) return;
+    if (!location || !location.latitude || !location.longitude) return;
     
     const locationId = getLocationId();
     if (!locationId) return;
@@ -74,16 +79,16 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     navigate(`/location/${locationId}`, {
       state: {
         id: locationId,
-        name: point.name || '',
-        chineseName: point.chineseName || '',
-        latitude: point.latitude,
-        longitude: point.longitude,
-        bortleScale: point.bortleScale || 4,
+        name: location.name || '',
+        chineseName: location.chineseName || '',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        bortleScale: location.bortleScale || 4,
         siqsResult: {
-          score: point.siqs || 0
+          score: location.siqs || 0
         },
-        certification: point.certification || '',
-        isDarkSkyReserve: !!point.isDarkSkyReserve,
+        certification: location.certification || '',
+        isDarkSkyReserve: !!location.isDarkSkyReserve,
         timestamp: new Date().toISOString(),
         fromPhotoPoints: true
       }
@@ -91,15 +96,15 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   };
 
   // Determine the name to display based on language preference
-  const primaryName = language === 'zh' && point.chineseName ? point.chineseName : (point.name || t("Unnamed Location", "未命名位置"));
-  const secondaryName = language === 'zh' ? (point.name || "") : (point.chineseName || "");
+  const primaryName = language === 'zh' && location.chineseName ? location.chineseName : (location.name || t("Unnamed Location", "未命名位置"));
+  const secondaryName = language === 'zh' ? (location.name || "") : (location.chineseName || "");
   
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   
   const [locationCounter] = useState(() => {
-    if (!point.id && !point.certification && !point.isDarkSkyReserve) {
+    if (!location.id && !location.certification && !location.isDarkSkyReserve) {
       const storedCounter = parseInt(localStorage.getItem('potentialDarkSiteCounter') || '0');
       const newCounter = storedCounter + 1;
       localStorage.setItem('potentialDarkSiteCounter', newCounter.toString());
@@ -117,56 +122,52 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   }
   
-  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(point.siqs);
+  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(location.siqs);
   
   if (displaySiqs === 0 && !loadingSiqs) {
     return null;
   }
   
-  const cardVariants = {
-    hidden: { opacity: 0, y: isMobile ? 10 : 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { 
-        duration: isMobile ? 0.2 : 0.4,
-        delay: isMobile ? Math.min(index * 0.05, 0.3) : Math.min(index * 0.1, 0.5)
-      }
-    }
-  };
-  
+  // Don't use framer motion animations to fix errors
   return (
     <VisibilityObserver onVisibilityChange={setIsVisible}>
-      <motion.div
-        variants={cardVariants}
-        initial="hidden"
-        animate={isVisible ? "visible" : "hidden"}
+      <div
         className={`glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30 ${isMobile ? 'will-change-transform backface-visibility-hidden' : ''}`}
-        layout={!isMobile}
+        style={{
+          opacity: isVisible ? 1 : 0,
+          transform: isVisible ? 'translateY(0)' : 'translateY(15px)',
+          transition: `opacity 0.5s, transform 0.5s ease ${Math.min(index * 0.1, 0.5)}s`
+        }}
       >
         <div className="flex justify-between items-start mb-2">
           <LocationHeader
             displayName={displayName}
             showOriginalName={showOriginalName}
-            location={point}
+            location={location}
             language={language}
           />
           
+          {/* Show SIQS badge with consistent display but don't glorify certified locations */}
           <SiqsScoreBadge 
-            score={point.siqs} 
+            score={location.siqs} 
             compact={true}
-            isCertified={!!point.isDarkSkyReserve || !!point.certification}
+            isCertified={false} // Never treat as certified to avoid glorification
           />
         </div>
         
-        <CertificationBadge 
-          certification={point.certification} 
-          isDarkSkyReserve={point.isDarkSkyReserve} 
-        />
+        {/* Use imported CertificationBadge component properly */}
+        {certInfo && (
+          <div className="flex items-center mt-1.5 mb-2">
+            <div className={`px-2 py-0.5 rounded-full text-xs flex items-center ${certInfo.color}`}>
+              {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
+              <span>{certInfo.label}</span>
+            </div>
+          </div>
+        )}
         
         <div className="mb-4 mt-2">
           <LightPollutionIndicator 
-            bortleScale={point.bortleScale || 5} 
+            bortleScale={location.bortleScale || 5} 
             size="md"
             showBortleNumber={true}
             className="text-base"
@@ -174,10 +175,10 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         </div>
         
         <LocationMetadata 
-          distance={point.distance} 
-          date={point.date}
-          latitude={point.latitude}
-          longitude={point.longitude}
+          distance={location.distance} 
+          date={location.date}
+          latitude={location.latitude}
+          longitude={location.longitude}
           locationName={displayName}
         />
         
@@ -194,13 +195,13 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         
         <RealTimeSiqsFetcher
           isVisible={isVisible}
-          showRealTimeSiqs={showRealTimeSiqs}
-          latitude={point.latitude}
-          longitude={point.longitude}
-          bortleScale={point.bortleScale}
+          showRealTimeSiqs={!!showRealTimeSiqs}
+          latitude={location.latitude}
+          longitude={location.longitude}
+          bortleScale={location.bortleScale}
           onSiqsCalculated={handleSiqsCalculated}
         />
-      </motion.div>
+      </div>
     </VisibilityObserver>
   );
 };

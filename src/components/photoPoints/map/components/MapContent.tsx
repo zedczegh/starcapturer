@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -107,7 +108,8 @@ const MapContent: React.FC<MapContentProps> = ({
         userLocation={userLocation}
         activeView={activeView}
         searchRadius={searchRadius}
-        effects={['zoom-controls']}
+        effects={['zoom-controls']} 
+        // Removed 'legend' to prevent redundant legend icon
       />
       
       {onMapClick && (
