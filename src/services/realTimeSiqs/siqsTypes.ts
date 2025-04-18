@@ -1,4 +1,3 @@
-
 // Define types for SIQS calculation
 export interface SiqsResult {
   siqs: number;
@@ -38,6 +37,11 @@ export interface WeatherDataWithClearSky {
   condition?: string;
   aqi?: number;
   _forecast?: any;
+  nighttimeCloudData?: {
+    average: number;
+    timeRange: string;
+    sourceType: 'forecast' | 'calculated' | 'historical';
+  };
 }
 
 export interface MoonlessNightInfo {

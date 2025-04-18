@@ -1,4 +1,3 @@
-
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -15,21 +14,16 @@ import { findClimateRegion, getClimateAdjustmentFactor } from "./climateRegions"
 import { findClosestEnhancedLocation } from "./enhancedLocationData";
 import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
 
-// Add a new utility function to validate and improve calculated location SIQS
 function improveCalculatedLocationSIQS(initialScore: number, location: any): number {
-  // If score is extremely low (close to 0), apply intelligent adjustments
   if (initialScore < 0.5) {
     console.log(`Improving low SIQS score for calculated location: ${initialScore}`);
     
-    // Use location characteristics to boost score
     const boostFactors = [
       location.isDarkSkyReserve ? 1.5 : 1,
       location.bortleScale ? (9 - location.bortleScale) * 0.5 : 0,
-      location.type === 'remote' ? 1.2 : 1,
-      // Add more intelligent adjustments based on location metadata
+      location.type === 'remote' ? 1.2 : 1
     ];
     
-    // Calculate a boost factor, ensuring it doesn't exceed 2
     const boostFactor = Math.min(
       2, 
       1 + boostFactors.reduce((acc, factor) => acc * factor, 1) - boostFactors.length
@@ -45,10 +39,18 @@ function improveCalculatedLocationSIQS(initialScore: number, location: any): num
   return initialScore;
 }
 
-/**
- * Calculate real-time SIQS for a given location with enhanced accuracy
- * using state-of-the-art algorithms and multiple data sources
- */
+function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { average: number; timeRange: string }) {
+  if (!nighttimeData) return cloudCover;
+  
+  const difference = Math.abs(cloudCover - nighttimeData.average);
+  if (difference > 20) {
+    console.log(`Using nighttime cloud cover ${nighttimeData.average}% instead of current ${cloudCover}%`);
+    return nighttimeData.average;
+  }
+  
+  return (nighttimeData.average * 0.7) + (cloudCover * 0.3);
+}
+
 export async function calculateRealTimeSiqs(
   latitude: number, 
   longitude: number, 
@@ -59,10 +61,8 @@ export async function calculateRealTimeSiqs(
     return { siqs: 0, isViable: false };
   }
   
-  // Use shorter caching duration for greater accuracy
   const CACHE_DURATION_MINS = 15;
   
-  // Check cache first with shorter duration for more frequent updates
   if (hasCachedSiqs(latitude, longitude)) {
     const cachedData = getCachedSiqs(latitude, longitude);
     if (cachedData && 
@@ -72,11 +72,9 @@ export async function calculateRealTimeSiqs(
   }
   
   try {
-    // Enhanced location data lookup with improved accuracy
     const enhancedLocation = await findClosestEnhancedLocation(latitude, longitude);
     const climateRegion = findClimateRegion(latitude, longitude);
     
-    // Parallel data fetching for all environmental factors
     const [weatherData, forecastData, clearSkyData, pollutionData] = await Promise.all([
       fetchWeatherData({ latitude, longitude }),
       fetchForecastData({ latitude, longitude, days: 2 }),
@@ -88,14 +86,12 @@ export async function calculateRealTimeSiqs(
       return { siqs: 0, isViable: false };
     }
     
-    // Enhanced Bortle scale calculation with terrain correction
     let finalBortleScale = bortleScale;
     const terrainCorrectedScale = await getTerrainCorrectedBortleScale(latitude, longitude);
     if (terrainCorrectedScale !== null) {
       finalBortleScale = terrainCorrectedScale;
     }
     
-    // Prepare comprehensive weather data
     const weatherDataWithClearSky = {
       ...weatherData,
       clearSkyRate: clearSkyData?.annualRate || enhancedLocation?.clearSkyRate,
@@ -104,19 +100,28 @@ export async function calculateRealTimeSiqs(
       _forecast: forecastData
     };
     
-    // Calculate SIQS with all available factors
+    let finalCloudCover = weatherDataWithClearSky.cloudCover;
+    if (weatherDataWithClearSky.nighttimeCloudData) {
+      finalCloudCover = validateNighttimeCloudData(
+        finalCloudCover,
+        weatherDataWithClearSky.nighttimeCloudData
+      );
+    }
+    
     const moonPhase = calculateMoonPhase();
     const seeingConditions = enhancedLocation?.averageVisibility === 'excellent' ? 2 : 3;
     
     const siqsResult = await calculateSIQSWithWeatherData(
-      weatherDataWithClearSky,
+      {
+        ...weatherDataWithClearSky,
+        cloudCover: finalCloudCover
+      },
       finalBortleScale,
       seeingConditions,
       moonPhase,
       forecastData
     );
     
-    // Apply intelligent adjustments with improved accuracy
     let adjustedScore = applyIntelligentAdjustments(
       siqsResult.score,
       weatherDataWithClearSky,
@@ -124,14 +129,12 @@ export async function calculateRealTimeSiqs(
       finalBortleScale
     );
     
-    // Apply climate and terrain adjustments
     if (climateRegion) {
       const month = new Date().getMonth();
       const climateAdjustment = getClimateAdjustmentFactor(latitude, longitude, month);
       adjustedScore *= climateAdjustment;
     }
     
-    // Cap and round the final score
     adjustedScore = Math.min(9.5, Math.max(0, adjustedScore));
     const finalScore = Math.round(adjustedScore * 10) / 10;
     
@@ -145,12 +148,13 @@ export async function calculateRealTimeSiqs(
           weather: true,
           forecast: !!forecastData,
           clearSky: !!clearSkyData,
-          lightPollution: !!pollutionData
+          lightPollution: !!pollutionData,
+          terrainCorrected: !!terrainCorrectedScale,
+          climate: !!climateRegion
         }
       }
     };
     
-    // Store in cache with metadata
     setSiqsCache(latitude, longitude, result);
     
     return result;
@@ -168,5 +172,3 @@ export async function calculateRealTimeSiqs(
     };
   }
 }
-
-// Note: Removed the duplicate improveCalculatedLocationSIQS function that was at the end of the file
