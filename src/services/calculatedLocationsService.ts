@@ -2,9 +2,8 @@ import { SharedAstroSpot } from '@/types/weather';
 import { generateRandomPoint } from '@/services/locationFilters';
 import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { fetchLightPollutionData } from '@/lib/api/pollution';
-import { fetchClearSkyRate } from '@/lib/api/clearSkyRate';
-import { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
+import { fetchForecastData } from '@/lib/api/forecast';
+import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 
 /**
  * Enhanced service for generating and filtering calculated astronomy locations
@@ -18,6 +17,7 @@ export class CalculatedLocationsService {
   private qualityThreshold: number;
   private adaptiveGeneration: boolean;
   private densityBasedSampling: boolean;
+  private forecastData: any = null;
 
   constructor(
     centerLatitude: number,
@@ -44,6 +44,22 @@ export class CalculatedLocationsService {
     console.log(`Generating ${this.numberOfPoints} points within ${this.searchRadiusKm}km of [${this.centerLatitude.toFixed(4)}, ${this.centerLongitude.toFixed(4)}]`);
     
     try {
+      // Fetch forecast data once for the center location
+      this.forecastData = await fetchForecastData({
+        latitude: this.centerLatitude,
+        longitude: this.centerLongitude
+      });
+      
+      // Check tonight's cloud cover for the center location
+      const tonightCloudCover = this.forecastData ? 
+        calculateTonightCloudCover(this.forecastData.hourly, this.centerLatitude, this.centerLongitude) : 100;
+      
+      // If cloud cover is over 40%, astronomy is not viable in this region
+      if (tonightCloudCover > 40) {
+        console.log(`Tonight's cloud cover is ${tonightCloudCover.toFixed(1)}%, which exceeds 40% threshold. No viable locations.`);
+        return [];
+      }
+      
       // Generate points with adaptive algorithms if enabled
       const generatedPoints = this.adaptiveGeneration 
         ? await this.generateAdaptivePoints()
@@ -73,41 +89,45 @@ export class CalculatedLocationsService {
     longitude: number; 
     distance: number;
     preferenceScore?: number;
+    cloudCover?: number;
   }): Promise<SharedAstroSpot> {
     const id = `calculated-${randomPoint.latitude.toFixed(6)}-${randomPoint.longitude.toFixed(6)}`;
     
-    // Try to get real light pollution data
-    let bortleScale = 4; // Default
-    try {
-      const pollutionData = await fetchLightPollutionData(
-        randomPoint.latitude, 
-        randomPoint.longitude
-      ).catch(() => null);
-      
-      if (pollutionData?.bortleScale) {
-        bortleScale = pollutionData.bortleScale;
-      }
-    } catch (error) {
-      console.warn(`Could not fetch light pollution data for ${id}`, error);
-    }
+    // Default bortle scale (since we don't have accurate data)
+    const bortleScale = 4;
     
-    // Calculate approximate SIQS score
-    let siqs = 50 + (Math.random() * 20); // Default range 50-70
-    
-    // Try to get real-time SIQS data when possible
-    try {
-      const siqsResult = await calculateRealTimeSiqs(
+    // Calculate SIQS score based on cloud cover
+    let cloudCover = randomPoint.cloudCover;
+    if (cloudCover === undefined && this.forecastData) {
+      // Get slightly varied cloud cover for this specific location
+      // This creates natural variation in the map
+      const baseCoverValue = calculateTonightCloudCover(
+        this.forecastData.hourly, 
         randomPoint.latitude,
-        randomPoint.longitude,
-        bortleScale
-      ).catch(() => ({ siqs: siqs / 10, isViable: true }));
+        randomPoint.longitude
+      );
       
-      if (siqsResult && typeof siqsResult.siqs === 'number') {
-        siqs = siqsResult.siqs * 10; // Convert 0-10 scale to 0-100
-      }
-    } catch (error) {
-      console.warn(`Could not calculate real-time SIQS for ${id}`, error);
+      // Add slight variation (-5% to +5%)
+      cloudCover = Math.max(0, Math.min(100, baseCoverValue + (Math.random() * 10 - 5)));
     }
+    
+    // If we have no cloud cover data, use a default
+    if (cloudCover === undefined) {
+      cloudCover = 20; // Default to somewhat clear
+    }
+    
+    // If cloud cover is over 40%, location is not viable
+    const isViable = cloudCover <= 40;
+    
+    // Calculate score on 0-10 scale based on cloud cover
+    // 0% cloud cover = 10 points, 40% cloud cover = 6 points
+    const cloudScore = isViable ? 10 - ((cloudCover / 40) * 4) : Math.max(1, 5 - (cloudCover / 20));
+    
+    // Apply any preference score bonus
+    const preferenceBonus = randomPoint.preferenceScore ? (randomPoint.preferenceScore - 1) * 0.5 : 0;
+    
+    // Final SIQS score (0-10 scale)
+    const siqsScore = Math.min(10, Math.max(1, cloudScore + preferenceBonus));
     
     return {
       id,
@@ -115,14 +135,24 @@ export class CalculatedLocationsService {
       latitude: randomPoint.latitude,
       longitude: randomPoint.longitude,
       bortleScale,
-      siqs,
+      siqs: {
+        score: siqsScore,
+        isViable,
+        factors: [
+          {
+            name: "Cloud Cover",
+            score: cloudScore,
+            description: `Tonight's cloud cover: ${Math.round(cloudCover)}%`
+          }
+        ]
+      },
       timestamp: new Date().toISOString(),
       distance: randomPoint.distance,
       isDarkSkyReserve: false,
       certification: null,
       description: null,
       chineseName: `计算位置 ${randomPoint.latitude.toFixed(6)}-${randomPoint.longitude.toFixed(6)}`,
-      isViable: true,
+      isViable,
       preferenceScore: randomPoint.preferenceScore
     };
   }
@@ -270,46 +300,11 @@ export class CalculatedLocationsService {
       return true;
     });
     
-    // Stage 2: Clear sky rate enhancement when available
-    try {
-      // Enhance up to 10 points with clear sky data in parallel
-      const enhancementPromises = validPoints.slice(0, 10).map(async (spot) => {
-        try {
-          const clearSkyData = await fetchClearSkyRate(spot.latitude, spot.longitude);
-          if (clearSkyData && clearSkyData.annualRate) {
-            // Apply clear sky bonus to SIQS
-            const clearSkyBonus = clearSkyData.annualRate / 100 * 10;
-            const currentSiqs = typeof spot.siqs === 'number' ? spot.siqs : 
-                               (spot.siqs && typeof spot.siqs === 'object' ? spot.siqs.score * 10 : 50);
-            
-            return {
-              ...spot,
-              siqs: Math.min(100, currentSiqs + clearSkyBonus),
-              clearSkyRate: clearSkyData.annualRate
-            };
-          }
-        } catch (error) {
-          // Silently continue without enhancement
-        }
-        return spot;
-      });
-      
-      // Replace the first 10 points with enhanced versions when available
-      const enhancedPoints = await Promise.all(enhancementPromises);
-      validPoints = [
-        ...enhancedPoints,
-        ...validPoints.slice(10)
-      ];
-    } catch (error) {
-      console.warn("Error enhancing points with clear sky data:", error);
-    }
-    
-    // Stage 3: Quality threshold filtering
-    if (this.qualityThreshold > 0) {
-      validPoints = validPoints.filter(spot => {
-        return spot.siqs === undefined || getSiqsScore(spot.siqs) >= this.qualityThreshold;
-      });
-    }
+    // Stage 2: Filter by cloud cover - keep only locations with good visibility
+    validPoints = validPoints.filter(spot => {
+      const siqsScore = getSiqsScore(spot.siqs);
+      return siqsScore >= 5; // Only keep locations with reasonable scores
+    });
     
     return validPoints;
   }
@@ -332,16 +327,7 @@ export class CalculatedLocationsService {
       const distanceA = a.distance || Infinity;
       const distanceB = b.distance || Infinity;
       
-      // Normalize distance to prevent it from overwhelming SIQS in ranking
-      const normalizedDistanceA = Math.min(1, distanceA / this.searchRadiusKm);
-      const normalizedDistanceB = Math.min(1, distanceB / this.searchRadiusKm);
-      
-      // Combine SIQS and distance into a weighted score
-      // Give SIQS 70% weight, distance 30% weight
-      const scoreA = (siqsA * 0.7) - (normalizedDistanceA * 0.3);
-      const scoreB = (siqsB * 0.7) - (normalizedDistanceB * 0.3);
-      
-      return scoreB - scoreA;
+      return distanceA - distanceB;
     });
   }
   
