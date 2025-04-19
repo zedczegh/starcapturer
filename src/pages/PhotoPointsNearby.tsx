@@ -1,4 +1,3 @@
-
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -18,7 +17,6 @@ const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   
-  // Get state from custom hook
   const {
     activeView,
     showMap,
@@ -34,7 +32,6 @@ const PhotoPointsNearby: React.FC = () => {
     toggleMapView
   } = usePhotoPointsState();
 
-  // Fetch locations data
   const {
     searchRadius,
     setSearchRadius,
@@ -53,7 +50,6 @@ const PhotoPointsNearby: React.FC = () => {
     currentSearchRadius
   );
 
-  // Process locations
   const {
     certifiedLocations,
     calculatedLocations,
@@ -61,12 +57,10 @@ const PhotoPointsNearby: React.FC = () => {
     calculatedCount
   } = useCertifiedLocations(locations);
 
-  // Update search radius when view changes
   React.useEffect(() => {
     setSearchRadius(currentSearchRadius);
   }, [currentSearchRadius, setSearchRadius]);
   
-  // Filter out locations with invalid SIQS score
   React.useEffect(() => {
     if (locations.length > 0) {
       console.log(`Total locations before filtering: ${locations.length}`);
@@ -75,12 +69,10 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [locations]);
   
-  // Handle location click to navigate to details with improved error handling
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (!location) return;
     
     try {
-      // Use the navigation helper to prepare location data
       const navigationData = prepareLocationForNavigation(location);
       
       if (navigationData) {
@@ -120,6 +112,7 @@ const PhotoPointsNearby: React.FC = () => {
             maxValue={1000}
             stepValue={100}
             loading={loading && !locationLoading}
+            loadingComplete={!loading && !locationLoading}
           />
         </div>
       )}

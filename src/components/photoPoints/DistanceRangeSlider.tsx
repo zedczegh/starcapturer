@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Slider } from '@/components/ui/slider';
-import { MapPin, Radar } from 'lucide-react';
+import { MapPin, Radar, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export interface DistanceRangeSliderProps {
@@ -11,6 +12,7 @@ export interface DistanceRangeSliderProps {
   maxValue?: number;
   stepValue?: number;
   loading?: boolean;
+  loadingComplete?: boolean;
 }
 
 const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
@@ -19,7 +21,8 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
   minValue = 100,
   maxValue = 1000,
   stepValue = 100,
-  loading = false
+  loading = false,
+  loadingComplete = false
 }) => {
   const { t } = useLanguage();
   
@@ -47,8 +50,14 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
       
       <div className="flex justify-between items-center mb-2">
         <div className="text-sm text-muted-foreground flex items-center">
-          <Radar className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin text-primary' : 'text-primary/80'}`} />
-          {t("Adjust Search Radius to find more potential spots!", "调整搜索半径以发现更多潜在地点！")}
+          {loading ? (
+            <Radar className="h-3.5 w-3.5 mr-1.5 animate-spin text-primary" />
+          ) : loadingComplete ? (
+            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-green-500 transition-colors duration-300" />
+          ) : (
+            <Radar className="h-3.5 w-3.5 mr-1.5 text-primary/80" />
+          )}
+          {t("Click anywhere on the map to update your search location!", "点击地图上的任意位置以更新搜索位置！")}
         </div>
         <motion.div 
           className="flex items-center gap-1.5 text-primary font-medium bg-background/20 px-2 py-0.5 rounded-md border border-primary/20"
@@ -70,21 +79,26 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
           step={stepValue}
           onValueChange={handleValueChange}
           className="mt-2 z-10 relative transition-all duration-200 ease-out"
-          disabled={loading}
         />
         
         <motion.div 
-          className="absolute top-2.5 left-0 h-2 bg-gradient-to-r from-primary/60 to-transparent rounded-full transition-all duration-200 ease-out"
+          className={`absolute top-2.5 left-0 h-2 rounded-full transition-all duration-200 ease-out
+            ${loading ? 'bg-gradient-to-r from-primary/60 to-transparent' : 
+              loadingComplete ? 'bg-gradient-to-r from-green-500/60 to-transparent' : 
+              'bg-gradient-to-r from-primary/60 to-transparent'}`}
           style={{ 
             width: `${percentage}%`,
             transition: 'width 200ms ease-out, opacity 300ms ease-in-out, box-shadow 300ms ease-in-out'
           }}
           animate={{ 
-            opacity: loading ? [0.3, 1, 0.3] : [0.6, 1, 0.6],
+            opacity: loading ? [0.3, 1, 0.3] : loadingComplete ? [0.6, 1] : [0.6, 1, 0.6],
             boxShadow: loading ? [
               '0 0 2px rgba(139, 92, 246, 0.2)',
               '0 0 12px rgba(139, 92, 246, 0.8)',
               '0 0 2px rgba(139, 92, 246, 0.2)'
+            ] : loadingComplete ? [
+              '0 0 2px rgba(34, 197, 94, 0.3)',
+              '0 0 8px rgba(34, 197, 94, 0.6)'
             ] : [
               '0 0 2px rgba(139, 92, 246, 0.3)',
               '0 0 8px rgba(139, 92, 246, 0.6)',
@@ -92,8 +106,8 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
             ]
           }}
           transition={{ 
-            duration: loading ? 1 : 2, 
-            repeat: Infinity,
+            duration: loading ? 1 : loadingComplete ? 0.5 : 2, 
+            repeat: loading || !loadingComplete ? Infinity : 0,
             ease: "easeInOut"
           }}
         />
