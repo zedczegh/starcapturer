@@ -1,4 +1,3 @@
-
 /**
  * Unified SIQS Display Utility
  * 
@@ -21,7 +20,6 @@ interface SiqsDisplayOptions {
   isCertified?: boolean;
   isDarkSkyReserve?: boolean;
   existingSiqs?: number | any;
-  skipCache?: boolean;
 }
 
 interface SiqsResult {
@@ -98,8 +96,8 @@ export function formatSiqsForDisplay(siqs: number | null): string {
 /**
  * Get cached SIQS with optimized performance
  */
-export function getCachedRealTimeSiqs(latitude: number, longitude: number, skipCache: boolean = false): number | null {
-  if (!skipCache && hasCachedSiqs(latitude, longitude)) {
+export function getCachedRealTimeSiqs(latitude: number, longitude: number): number | null {
+  if (hasCachedSiqs(latitude, longitude)) {
     const cached = getCachedSiqs(latitude, longitude);
     if (cached && cached.siqs > 0) {
       return cached.siqs;
@@ -140,8 +138,7 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     bortleScale = 4, 
     isCertified = false, 
     isDarkSkyReserve = false,
-    existingSiqs = null,
-    skipCache = false
+    existingSiqs = null
   } = options;
   
   // Get existing SIQS, without defaults - never use default scores
@@ -161,20 +158,16 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
   }
   
   try {
-    // Try to get cached SIQS first (unless we're skipping cache)
-    if (!skipCache) {
-      const cachedSiqs = getCachedRealTimeSiqs(latitude, longitude);
-      if (cachedSiqs !== null) {
-        return {
-          siqs: cachedSiqs,
-          loading: false,
-          formattedSiqs: formatSiqsForDisplay(cachedSiqs),
-          colorClass: getSiqsColorClass(cachedSiqs),
-          source: 'cached'
-        };
-      }
-    } else {
-      console.log(`Skipping cache for SIQS at ${latitude.toFixed(5)},${longitude.toFixed(5)}`);
+    // Try to get cached SIQS first
+    const cachedSiqs = getCachedRealTimeSiqs(latitude, longitude);
+    if (cachedSiqs !== null) {
+      return {
+        siqs: cachedSiqs,
+        loading: false,
+        formattedSiqs: formatSiqsForDisplay(cachedSiqs),
+        colorClass: getSiqsColorClass(cachedSiqs),
+        source: 'cached'
+      };
     }
     
     // For certified locations, use simplified calculation if the full calculation fails
