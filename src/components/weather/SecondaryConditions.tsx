@@ -1,10 +1,31 @@
-
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Sun, Moon, Info, CircleAlert, CloudFog } from "lucide-react";
+import { Sun, Moon, Info, CloudFog } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getBortleDescription } from "@/utils/weather/bortleScaleUtils";
-import { DynamicCloudCoverIcon } from "./DynamicIcons";
+
+const MOON_PHASE_TRANSLATIONS = {
+  'en': {
+    'New Moon': 'New Moon',
+    'Waxing Crescent': 'Waxing Crescent',
+    'First Quarter': 'First Quarter',
+    'Waxing Gibbous': 'Waxing Gibbous',
+    'Full Moon': 'Full Moon',
+    'Waning Gibbous': 'Waning Gibbous',
+    'Last Quarter': 'Last Quarter',
+    'Waning Crescent': 'Waning Crescent'
+  },
+  'zh': {
+    'New Moon': '新月',
+    'Waxing Crescent': '娥眉月',
+    'First Quarter': '上弦月',
+    'Waxing Gibbous': '盈凸月',
+    'Full Moon': '满月',
+    'Waning Gibbous': '亏凸月',
+    'Last Quarter': '下弦月',
+    'Waning Crescent': '残月'
+  }
+};
 
 interface SecondaryConditionsProps {
   cloudCover: number;
@@ -27,8 +48,11 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
   aqi,
   nighttimeCloudData
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
+  // Translate moon phase based on current language
+  const translatedMoonPhase = MOON_PHASE_TRANSLATIONS[language][moonPhase] || moonPhase;
+
   // Helper to get cloud cover color class based on value
   const getCloudCoverColorClass = (value: number) => {
     if (value <= 10) return "text-green-400";
@@ -111,7 +135,7 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
             <span className="font-medium">{t("Moon Phase", "月相")}</span>
           </div>
           <span className="font-bold text-lg text-cosmic-50">
-            {moonPhase}
+            {translatedMoonPhase}
           </span>
         </div>
         
