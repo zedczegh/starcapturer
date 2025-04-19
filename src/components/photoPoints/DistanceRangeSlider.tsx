@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Slider } from '@/components/ui/slider';
@@ -24,17 +23,14 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  // Format distance for display (always in km)
   const formatDistance = (distance: number) => {
     return `${(distance).toFixed(0)}${t("km", "公里")}`;
   };
   
-  // Handle slider value change
-  const handleValueChange = (values: number[]) => {
+  const handleValueChange = React.useCallback((values: number[]) => {
     onValueChange(values[0]);
-  };
+  }, [onValueChange]);
 
-  // Calculate percentage for radar animation
   const percentage = ((currentValue - minValue) / (maxValue - minValue)) * 100;
   
   return (
@@ -44,7 +40,6 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
     >
-      {/* Sci-fi decorative elements */}
       <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
       <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
       <div className="absolute left-0 top-0 w-0.5 h-full bg-gradient-to-b from-transparent via-primary/30 to-transparent"></div>
@@ -74,14 +69,16 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
           max={maxValue}
           step={stepValue}
           onValueChange={handleValueChange}
-          className="mt-2 z-10 relative"
+          className="mt-2 z-10 relative transition-all duration-200 ease-out"
           disabled={loading}
         />
         
-        {/* Animated radar-like effect */}
         <motion.div 
-          className="absolute top-2.5 left-0 h-2 bg-gradient-to-r from-primary/60 to-transparent rounded-full"
-          style={{ width: `${percentage}%` }}
+          className="absolute top-2.5 left-0 h-2 bg-gradient-to-r from-primary/60 to-transparent rounded-full transition-all duration-200 ease-out"
+          style={{ 
+            width: `${percentage}%`,
+            transition: 'width 200ms ease-out, opacity 300ms ease-in-out, box-shadow 300ms ease-in-out'
+          }}
           animate={{ 
             opacity: loading ? [0.3, 1, 0.3] : [0.6, 1, 0.6],
             boxShadow: loading ? [
@@ -117,15 +114,17 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
         </motion.div>
       </div>
       
-      {/* Tick marks for steps */}
       <div className="relative h-1 mt-1">
         {Array.from({ length: ((maxValue - minValue) / stepValue) + 1 }).map((_, i) => (
           <div 
             key={i} 
-            className={`absolute h-1 w-0.5 bg-primary/30 top-0 ${
+            className={`absolute h-1 w-0.5 transition-all duration-200 ease-out ${
               i * stepValue + minValue <= currentValue ? 'bg-primary/60' : 'bg-muted/40'
             }`}
-            style={{ left: `${(i * stepValue) / (maxValue - minValue) * 100}%` }}
+            style={{ 
+              left: `${(i * stepValue) / (maxValue - minValue) * 100}%`,
+              transition: 'background-color 200ms ease-out'
+            }}
           />
         ))}
       </div>
@@ -133,4 +132,4 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
   );
 };
 
-export default DistanceRangeSlider;
+export default React.memo(DistanceRangeSlider);
