@@ -1,4 +1,3 @@
-
 /**
  * Types and functions for working with shared astronomy spots
  * Enhanced with better Dark Sky International location support
@@ -28,19 +27,14 @@ export interface SharedAstroSpot {
   isViable?: boolean;
   distance?: number;
   description?: string;
-  date?: string | Date;
+  date?: string;
   timestamp: string;
   isDarkSkyReserve?: boolean;
   certification?: string;
   photographer?: string;
   cloudCover?: number;
   visibility?: number;
-  type?: string;
-  timeInfo?: {
-    isNighttime: boolean;
-    timeUntilNight?: number;
-    timeUntilDaylight?: number;
-  };
+  type?: string; // Adding the missing type property
   siqsResult?: {
     score: number;
     isViable: boolean;
