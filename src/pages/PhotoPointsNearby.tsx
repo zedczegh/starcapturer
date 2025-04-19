@@ -119,15 +119,16 @@ const PhotoPointsNearby: React.FC = () => {
             minValue={100}
             maxValue={1000}
             stepValue={100}
+            loading={loading && !locationLoading}
           />
         </div>
       )}
       
-      {showMap && (
+      {showMap && activeView === 'calculated' && (
         <div className="mb-4 text-center text-sm text-muted-foreground">
           {t(
-            "Click anywhere on the map to select that location. The map will center on your current location if available.",
-            "点击地图上的任意位置以选择该位置。如果可用，地图将以您当前位置为中心。"
+            "Adjust Search Radius to find more potential spots!",
+            "调整搜索半径以发现更多潜在地点！"
           )}
         </div>
       )}

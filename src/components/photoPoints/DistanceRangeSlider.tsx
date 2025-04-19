@@ -11,6 +11,7 @@ export interface DistanceRangeSliderProps {
   minValue?: number;
   maxValue?: number;
   stepValue?: number;
+  loading?: boolean;
 }
 
 const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
@@ -18,13 +19,13 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
   onValueChange,
   minValue = 100,
   maxValue = 1000,
-  stepValue = 100
+  stepValue = 100,
+  loading = false
 }) => {
   const { t } = useLanguage();
   
   // Format distance for display (always in km)
   const formatDistance = (distance: number) => {
-    // Always show in km since we're dealing with large distances
     return `${(distance).toFixed(0)}${t("km", "公里")}`;
   };
   
@@ -51,8 +52,8 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
       
       <div className="flex justify-between items-center mb-2">
         <div className="text-sm text-muted-foreground flex items-center">
-          <Radar className="h-3.5 w-3.5 mr-1.5 text-primary/80" />
-          {t("Search Radius", "搜索半径")}
+          <Radar className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin text-primary' : 'text-primary/80'}`} />
+          {t("Adjust Search Radius to find more potential spots!", "调整搜索半径以发现更多潜在地点！")}
         </div>
         <motion.div 
           className="flex items-center gap-1.5 text-primary font-medium bg-background/20 px-2 py-0.5 rounded-md border border-primary/20"
@@ -74,6 +75,7 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
           step={stepValue}
           onValueChange={handleValueChange}
           className="mt-2 z-10 relative"
+          disabled={loading}
         />
         
         {/* Animated radar-like effect */}
@@ -81,15 +83,19 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
           className="absolute top-2.5 left-0 h-2 bg-gradient-to-r from-primary/60 to-transparent rounded-full"
           style={{ width: `${percentage}%` }}
           animate={{ 
-            opacity: [0.6, 1, 0.6],
-            boxShadow: [
+            opacity: loading ? [0.3, 1, 0.3] : [0.6, 1, 0.6],
+            boxShadow: loading ? [
+              '0 0 2px rgba(139, 92, 246, 0.2)',
+              '0 0 12px rgba(139, 92, 246, 0.8)',
+              '0 0 2px rgba(139, 92, 246, 0.2)'
+            ] : [
               '0 0 2px rgba(139, 92, 246, 0.3)',
               '0 0 8px rgba(139, 92, 246, 0.6)',
               '0 0 2px rgba(139, 92, 246, 0.3)'
             ]
           }}
           transition={{ 
-            duration: 2, 
+            duration: loading ? 1 : 2, 
             repeat: Infinity,
             ease: "easeInOut"
           }}

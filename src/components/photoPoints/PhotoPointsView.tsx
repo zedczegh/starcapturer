@@ -54,7 +54,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   return (
     <div className="mt-4">
       {showMap && (
-        <div className="mb-6 relative">
+        <div className="mb-6 relative max-w-xl mx-auto">
           <PhotoPointsMap
             userLocation={effectiveLocation}
             locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
