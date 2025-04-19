@@ -127,8 +127,8 @@ const PhotoPointsNearby: React.FC = () => {
       {showMap && activeView === 'calculated' && (
         <div className="mb-4 text-center text-sm text-muted-foreground">
           {t(
-            "Adjust Search Radius to find more potential spots!",
-            "调整搜索半径以发现更多潜在地点！"
+            "Click anywhere on the map to update your search location!",
+            "点击地图上的任意位置以更新搜索位置！"
           )}
         </div>
       )}
