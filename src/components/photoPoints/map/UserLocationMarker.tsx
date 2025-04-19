@@ -48,6 +48,16 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     fetchLocationName();
   }, [position, language]);
 
+  // Force refresh SIQS data when position changes
+  useEffect(() => {
+    // Trigger refresh when position changes
+    handleRefreshSiqs();
+    
+    // Also reset the state to ensure we get fresh data
+    setSiqsLoading(true);
+    setRealTimeSiqs(null);
+  }, [position]);
+
   return (
     <>
       <RealTimeSiqsProvider
