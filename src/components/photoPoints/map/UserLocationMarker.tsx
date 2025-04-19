@@ -1,11 +1,12 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { MapPin } from 'lucide-react';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
+import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 
 interface UserLocationMarkerProps {
   position: [number, number];
@@ -13,10 +14,12 @@ interface UserLocationMarkerProps {
 }
 
 const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [siqsLoading, setSiqsLoading] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
+  const [locationName, setLocationName] = useState<string>('');
+  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
   
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(siqs);
@@ -27,6 +30,23 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     setForceUpdate(true);
     setTimeout(() => setForceUpdate(false), 100);
   };
+
+  // Fetch location name when position changes
+  useEffect(() => {
+    const fetchLocationName = async () => {
+      setIsLoadingLocation(true);
+      try {
+        const details = await getEnhancedLocationDetails(position[0], position[1], language === 'zh' ? 'zh' : 'en');
+        setLocationName(details.formattedName || '');
+      } catch (error) {
+        console.error('Error fetching location name:', error);
+      } finally {
+        setIsLoadingLocation(false);
+      }
+    };
+
+    fetchLocationName();
+  }, [position, language]);
 
   return (
     <>
@@ -51,7 +71,16 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
             </div>
             
             <div className="mb-2">
-              <div className="text-xs text-muted-foreground">
+              {isLoadingLocation ? (
+                <div className="text-sm text-muted-foreground animate-pulse">
+                  {t("Loading location...", "正在加载位置...")}
+                </div>
+              ) : locationName ? (
+                <div className="text-sm text-muted-foreground">
+                  {locationName}
+                </div>
+              ) : null}
+              <div className="text-xs text-muted-foreground mt-1">
                 {position[0].toFixed(4)}, {position[1].toFixed(4)}
               </div>
             </div>
