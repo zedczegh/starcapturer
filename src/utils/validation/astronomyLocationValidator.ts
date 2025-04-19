@@ -1,4 +1,6 @@
 
+import { isWaterLocation, isLikelyCoastalWater } from './waterLocationValidator';
+
 /**
  * Check if a location is valid for astronomy viewing
  * Combines multiple checks to filter out unusable spots with better performance
