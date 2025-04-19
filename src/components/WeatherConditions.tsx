@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -64,7 +65,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     }, 3000);
     
     return () => clearTimeout(timer);
-  }, [weatherData]);
+  }, [weatherData, isLoading]);
   
   const nighttimeCloudData = useMemo(() => {
     if (!forecastData || !forecastData.hourly) return null;
@@ -73,14 +74,62 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
       const { start, end } = calculateAstronomicalNight(latitude, longitude);
       const nightTimeStr = `${formatTime(start)}-${formatTime(end)}`;
       
+      // Get cloud cover for tonight from forecast
+      const forecastHourly = forecastData.hourly;
       const tonightCloudCover = calculateTonightCloudCover(
-        forecastData.hourly,
+        forecastHourly,
         latitude,
         longitude
       );
       
-      if (tonightCloudCover === 0 && !forecastData.hourly.cloud_cover) {
+      console.log(`Calculated astronomical night cloud cover: ${tonightCloudCover}%`);
+      
+      // Check if we have valid data before returning
+      if (isNaN(tonightCloudCover)) {
+        console.log("Invalid astronomical night cloud cover data");
         return null;
+      }
+      
+      // Split evening and morning times if possible
+      let eveningCloudCover = null;
+      let morningCloudCover = null;
+      
+      if (forecastHourly.time && forecastHourly.cloud_cover) {
+        // Calculate evening cloud cover (6pm-12am)
+        const eveningTimes = forecastHourly.time.filter((time: string) => {
+          const date = new Date(time);
+          const hour = date.getHours();
+          return hour >= 18 && hour <= 23;
+        });
+        
+        if (eveningTimes.length > 0) {
+          const eveningValues = eveningTimes.map((time: string) => {
+            const index = forecastHourly.time.indexOf(time);
+            return forecastHourly.cloud_cover[index];
+          }).filter((val: any) => typeof val === 'number' && !isNaN(val));
+          
+          if (eveningValues.length > 0) {
+            eveningCloudCover = eveningValues.reduce((sum: number, val: number) => sum + val, 0) / eveningValues.length;
+          }
+        }
+        
+        // Calculate morning cloud cover (12am-6am)
+        const morningTimes = forecastHourly.time.filter((time: string) => {
+          const date = new Date(time);
+          const hour = date.getHours();
+          return hour >= 0 && hour < 6;
+        });
+        
+        if (morningTimes.length > 0) {
+          const morningValues = morningTimes.map((time: string) => {
+            const index = forecastHourly.time.indexOf(time);
+            return forecastHourly.cloud_cover[index];
+          }).filter((val: any) => typeof val === 'number' && !isNaN(val));
+          
+          if (morningValues.length > 0) {
+            morningCloudCover = morningValues.reduce((sum: number, val: number) => sum + val, 0) / morningValues.length;
+          }
+        }
       }
       
       return {
@@ -88,7 +137,9 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
         timeRange: nightTimeStr,
         description: t ? 
           t("Astronomical Night Cloud Cover", "天文夜云量") : 
-          "Astronomical Night Cloud Cover"
+          "Astronomical Night Cloud Cover",
+        evening: eveningCloudCover,
+        morning: morningCloudCover
       };
     } catch (error) {
       console.error("Error calculating nighttime cloud cover:", error);

@@ -19,11 +19,18 @@ interface NighttimeCloudItemProps {
 const NighttimeCloudItem: React.FC<NighttimeCloudItemProps> = ({ nighttimeCloudData }) => {
   const { t } = useLanguage();
   
+  // Format cloud cover data with proper values
+  const cloudCoverValue = typeof nighttimeCloudData.average === 'number' ? 
+    nighttimeCloudData.average : 0;
+  
+  // Ensure the value is a percentage (0-100)
+  const normalizedCloudCover = Math.max(0, Math.min(100, cloudCoverValue));
+  
   return (
     <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
       <div className="flex items-center">
         <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
-          <DynamicCloudCoverIcon cloudCover={nighttimeCloudData.average} className="h-5 w-5 text-cosmic-200" />
+          <DynamicCloudCoverIcon cloudCover={normalizedCloudCover} className="h-5 w-5 text-cosmic-200" />
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -49,8 +56,8 @@ const NighttimeCloudItem: React.FC<NighttimeCloudItemProps> = ({ nighttimeCloudD
           </TooltipContent>
         </Tooltip>
       </div>
-      <span className={`font-bold text-lg ${getCloudCoverColorClass(nighttimeCloudData.average)}`}>
-        {nighttimeCloudData.average.toFixed(1)}%
+      <span className={`font-bold text-lg ${getCloudCoverColorClass(normalizedCloudCover)}`}>
+        {normalizedCloudCover.toFixed(1)}%
       </span>
     </div>
   );

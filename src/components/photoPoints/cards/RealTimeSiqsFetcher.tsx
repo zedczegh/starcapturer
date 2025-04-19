@@ -5,6 +5,7 @@ import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightT
 import { hasCachedSiqs, getCachedSiqs } from '@/services/realTimeSiqs/siqsCache';
 import { detectAndFixAnomalies, assessDataReliability } from '@/services/realTimeSiqs/siqsAnomalyDetector';
 import { WeatherDataWithClearSky } from '@/services/realTimeSiqs/siqsTypes';
+import { calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 
 interface RealTimeSiqsFetcherProps {
   isVisible: boolean;
@@ -71,6 +72,21 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
                 windSpeed: 0
               } as WeatherDataWithClearSky;
               
+              // Calculate tonight's cloud cover if forecast data is available
+              if (result.forecastData && result.forecastData.hourly) {
+                const tonightCloudCover = calculateTonightCloudCover(
+                  result.forecastData.hourly,
+                  latitude,
+                  longitude
+                );
+                
+                if (typeof tonightCloudCover === 'number' && !isNaN(tonightCloudCover)) {
+                  // Use tonight's cloud cover if available
+                  console.log(`Using tonight's cloud cover: ${tonightCloudCover}% for SIQS calculation`);
+                  weatherData.cloudCover = tonightCloudCover;
+                }
+              }
+              
               // Apply anomaly detection and correction
               const correctedResult = detectAndFixAnomalies(
                 result,
@@ -86,7 +102,10 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
                 onSiqsCalculated(correctedResult.siqs, false);
               } else {
                 console.warn(`Low reliability SIQS calculation:`, reliability.issues);
-                onSiqsCalculated(correctedResult.siqs * (reliability.confidenceScore / 10), false);
+                // Scale to 0-10 range if needed
+                const finalSiqs = correctedResult.siqs > 10 ? 
+                  correctedResult.siqs / 10 : correctedResult.siqs;
+                onSiqsCalculated(finalSiqs * (reliability.confidenceScore / 10), false);
               }
             } else {
               onSiqsCalculated(0, false);

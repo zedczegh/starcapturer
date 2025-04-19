@@ -37,12 +37,14 @@ export const calculateAverageValue = (
 ): number => {
   if (!forecast || forecast.length === 0) return defaultValue;
   
-  const sum = forecast.reduce((acc, item) => {
-    const value = item[property];
-    return acc + (typeof value === 'number' ? value : defaultValue);
-  }, 0);
+  const validItems = forecast.filter(item => 
+    item && typeof item[property] === 'number' && !isNaN(item[property])
+  );
   
-  return sum / forecast.length;
+  if (validItems.length === 0) return defaultValue;
+  
+  const sum = validItems.reduce((acc, item) => acc + item[property], 0);
+  return sum / validItems.length;
 };
 
 /**
@@ -57,25 +59,54 @@ export const calculateTonightCloudCover = (
   latitude: number,
   longitude: number
 ): number => {
-  if (!forecast || forecast.length === 0) return 0;
+  if (!forecast || forecast.length === 0) {
+    console.log("No forecast data available for night cloud calculation");
+    return 0;
+  }
+  
+  // Convert forecast to standard format if it's in API format
+  const standardizedForecast = forecast.map(item => {
+    if (item.time) return item;
+    
+    // Handle Open-Meteo API format
+    if (Array.isArray(forecast.time) && Array.isArray(forecast.cloud_cover)) {
+      const index = forecast.time.indexOf(item);
+      if (index >= 0) {
+        return {
+          time: forecast.time[index],
+          cloudCover: forecast.cloud_cover[index]
+        };
+      }
+    }
+    
+    return item;
+  });
   
   // Get night hours for the location
   const today = new Date();
   const nightHours = getNightHours(latitude, longitude, today);
   
   // If no night hours are found, fallback to standard 6pm-7am definition
-  if (!nightHours.length) {
-    return calculateAverageValue(filterNighttimeForecast(forecast), 'cloudCover');
+  if (!nightHours || nightHours.length === 0) {
+    console.log("No astronomical night hours found, using fallback definition");
+    const filteredForecast = filterNighttimeForecast(standardizedForecast);
+    return calculateAverageValue(filteredForecast, 'cloudCover');
   }
   
   // Filter forecast for tonight's night hours
-  const tonightForecast = forecast.filter(item => {
-    if (!item.time && !item.date) return false;
+  const tonightForecast = standardizedForecast.filter(item => {
+    if (!item || (!item.time && !item.date)) return false;
     const timeStr = item.time || item.date;
     const itemTime = new Date(timeStr);
     return nightHours.includes(itemTime.getHours());
   });
   
+  if (tonightForecast.length === 0) {
+    console.log("No forecast data points found within astronomical night hours");
+    return calculateAverageValue(filterNighttimeForecast(standardizedForecast), 'cloudCover');
+  }
+  
+  console.log(`Found ${tonightForecast.length} forecast data points for astronomical night`);
   return calculateAverageValue(tonightForecast, 'cloudCover');
 };
 
@@ -126,12 +157,12 @@ export const calculateNighttimeSIQS = (
       isViable: false,
       factors: [
         {
-          name: translator("Cloud Cover", "云量"),
+          name: translator ? translator("Cloud Cover", "云量") : "Cloud Cover",
           score: 0,
-          description: translator(
+          description: translator ? translator(
             `Cloud cover of ${Math.round(avgCloudCover)}% makes imaging impossible`,
             `${Math.round(avgCloudCover)}%的云量使成像不可能`
-          )
+          ) : `Cloud cover of ${Math.round(avgCloudCover)}% makes imaging impossible`
         }
       ]
     };

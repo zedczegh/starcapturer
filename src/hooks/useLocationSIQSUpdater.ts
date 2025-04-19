@@ -101,18 +101,60 @@ export const useLocationSIQSUpdater = (
             longitude
           );
           
-          if (tonightCloudCover !== null && tonightCloudCover !== undefined) {
+          if (tonightCloudCover !== null && tonightCloudCover !== undefined && !isNaN(tonightCloudCover)) {
             // Convert to SIQS score - giving more weight to nighttime cloud cover
             // Improved scoring algorithm for better accuracy
-            const cloudScore = tonightCloudCover <= 10 ? 10 : Math.max(0, 10 - (tonightCloudCover * 0.2));
+            const cloudScore = tonightCloudCover <= 10 ? 10 : Math.max(0, Math.min(10, 10 - (tonightCloudCover * 0.2)));
             
             console.log(`Using astronomical night cloud cover for SIQS (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}% -> ${cloudScore.toFixed(1)}`);
+            
+            // Split evening and morning times if possible
+            let eveningCloudCover = null;
+            let morningCloudCover = null;
+            
+            if (forecastData.hourly.time && forecastData.hourly.cloud_cover) {
+              // Calculate evening cloud cover (6pm-12am)
+              const eveningTimes = forecastData.hourly.time.filter((time: string) => {
+                const date = new Date(time);
+                const hour = date.getHours();
+                return hour >= 18 && hour <= 23;
+              });
+              
+              if (eveningTimes.length > 0) {
+                const eveningValues = eveningTimes.map((time: string) => {
+                  const index = forecastData.hourly.time.indexOf(time);
+                  return forecastData.hourly.cloud_cover[index];
+                }).filter((val: any) => typeof val === 'number' && !isNaN(val));
+                
+                if (eveningValues.length > 0) {
+                  eveningCloudCover = eveningValues.reduce((sum: number, val: number) => sum + val, 0) / eveningValues.length;
+                }
+              }
+              
+              // Calculate morning cloud cover (12am-6am)
+              const morningTimes = forecastData.hourly.time.filter((time: string) => {
+                const date = new Date(time);
+                const hour = date.getHours();
+                return hour >= 0 && hour < 6;
+              });
+              
+              if (morningTimes.length > 0) {
+                const morningValues = morningTimes.map((time: string) => {
+                  const index = forecastData.hourly.time.indexOf(time);
+                  return forecastData.hourly.cloud_cover[index];
+                }).filter((val: any) => typeof val === 'number' && !isNaN(val));
+                
+                if (morningValues.length > 0) {
+                  morningCloudCover = morningValues.reduce((sum: number, val: number) => sum + val, 0) / morningValues.length;
+                }
+              }
+            }
             
             // Create factors array with nighttime cloud cover as primary factor
             const factors = [
               {
                 name: t ? t("Astronomical Night Cloud Cover", "天文夜云层覆盖") : "Astronomical Night Cloud Cover",
-                score: (100 - tonightCloudCover * 2) / 10,
+                score: Math.max(0, Math.min(1, (10 - tonightCloudCover * 0.1) / 10)),  // Convert to 0-1 scale
                 description: t 
                   ? t(`Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% during astronomical night`, 
                     `天文夜间云量${tonightCloudCover.toFixed(1)}%`) 
@@ -120,7 +162,9 @@ export const useLocationSIQSUpdater = (
                 weight: 0.7, // Give higher weight to nighttime cloud cover
                 nighttimeData: {
                   average: tonightCloudCover,
-                  timeRange: nightTimeStr
+                  timeRange: nightTimeStr,
+                  evening: eveningCloudCover,
+                  morning: morningCloudCover
                 }
               }
             ];
@@ -129,15 +173,11 @@ export const useLocationSIQSUpdater = (
             if (locationData.bortleScale) {
               factors.push({
                 name: t ? t("Light Pollution", "光污染") : "Light Pollution",
-                score: Math.max(0, 10 - locationData.bortleScale) / 10,
+                score: Math.max(0, Math.min(1, (10 - locationData.bortleScale) / 10)), // Convert to 0-1 scale
                 description: t 
                   ? t(`Bortle Scale ${locationData.bortleScale}`, `布尔特尔等级${locationData.bortleScale}`) 
                   : `Bortle Scale ${locationData.bortleScale}`,
-                weight: 0.3,
-                nighttimeData: {  // Add missing nighttimeData property
-                  average: 0,
-                  timeRange: nightTimeStr
-                }
+                weight: 0.3
               });
             }
             
@@ -158,20 +198,19 @@ export const useLocationSIQSUpdater = (
           const currentCloudCover = validateCloudCover(locationData.weatherData.cloudCover);
           
           // Special handling for 0% cloud cover - should be score 10
-          const cloudScore = currentCloudCover === 0 ? 100 : Math.max(0, 100 - (currentCloudCover * 2));
-          const estimatedScore = cloudScore / 10;
+          const cloudScore = currentCloudCover === 0 ? 10 : Math.max(0, Math.min(10, 10 - (currentCloudCover * 0.1)));
           
-          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${estimatedScore.toFixed(2)}`);
+          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${cloudScore.toFixed(2)}`);
           
           setLocationData({
             ...locationData,
             siqsResult: {
-              score: estimatedScore,
-              isViable: estimatedScore > 2,
+              score: cloudScore,
+              isViable: cloudScore > 2,
               factors: [
                 {
                   name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: estimatedScore, // Already on 0-10 scale
+                  score: Math.max(0, Math.min(1, cloudScore / 10)), // Convert to 0-1 scale
                   description: t 
                     ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
                       `${currentCloudCover}%的云量影响成像质量`) 
