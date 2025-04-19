@@ -1,13 +1,31 @@
-
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateRealTimeSiqs } from '../realTimeSiqs/siqsCalculator';
 import { getTerrainCorrectedBortleScale } from '@/utils/terrainCorrection';
+import { isWaterLocation } from '@/utils/locationValidator';
+import { getEnhancedLocationDetails } from '../geocoding/enhancedReverseGeocoding';
 
 export const createSpotFromPoint = async (
   point: { latitude: number; longitude: number; distance: number },
   minQuality: number = 5
 ): Promise<SharedAstroSpot | null> => {
   try {
+    // First check: reject water locations immediately
+    if (isWaterLocation(point.latitude, point.longitude)) {
+      console.log(`Rejected water location at ${point.latitude}, ${point.longitude}`);
+      return null;
+    }
+    
+    // Double check with enhanced geocoding
+    const locationDetails = await getEnhancedLocationDetails(
+      point.latitude,
+      point.longitude
+    );
+    
+    if (locationDetails.isWater) {
+      console.log(`Rejected water location (geocoding) at ${point.latitude}, ${point.longitude}`);
+      return null;
+    }
+    
     // Get terrain-corrected Bortle scale
     const correctedBortleScale = await getTerrainCorrectedBortleScale(
       point.latitude, 
@@ -37,7 +55,6 @@ export const createSpotFromPoint = async (
     }
   } catch (err) {
     console.warn("Error processing spot:", err);
+    return null;
   }
-  
-  return null;
 };
