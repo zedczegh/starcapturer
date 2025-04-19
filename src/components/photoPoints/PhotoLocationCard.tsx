@@ -1,11 +1,8 @@
-
 import React, { useState, useCallback, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useDisplayName } from "./cards/DisplayNameResolver";
-import SiqsScoreBadge from './cards/SiqsScoreBadge';
 import VisibilityObserver from './cards/VisibilityObserver';
 import RealTimeSiqsProvider from './cards/RealTimeSiqsProvider';
 import LocationHeader from './cards/LocationHeader';
@@ -13,7 +10,9 @@ import { getCertificationInfo } from './utils/certificationUtils';
 import CardContainer from './cards/components/CardContainer';
 import LocationInfo from './cards/components/LocationInfo';
 import CardActions from './cards/components/CardActions';
+import SiqsDisplay from './cards/components/SiqsDisplay';
 import { getSiqsScore } from '@/utils/siqsHelpers';
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -39,7 +38,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     language,
     locationCounter: null
   });
-  
+
   const getLocationId = useCallback(() => {
     if (!location || !location.latitude || !location.longitude) return null;
     return location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
@@ -70,7 +69,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     });
   }, [location, navigate, getLocationId]);
 
-  // State management for real-time SIQS with better stability
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -91,37 +89,13 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     setLoadingSiqs(false);
     setHasAttemptedLoad(true);
     
-    // Only update state if we have a real score
     if (siqs !== null && siqs > 0) {
       setRealTimeSiqs(siqs);
-      
       if (confidence) {
         setSiqsConfidence(confidence);
       }
     }
   }, []);
-  
-  // Determine loading state with priority on certified locations
-  const showLoadingState = useMemo(() => {
-    if (!hasAttemptedLoad && isCertified && isVisible) {
-      return true; // Show loading immediately for certified locations
-    }
-    return loadingSiqs;
-  }, [isCertified, loadingSiqs, hasAttemptedLoad, isVisible]);
-  
-  // Prioritize real-time scores for display - never use default scores
-  const displayScore = useMemo(() => {
-    // Only use real scores, never default values
-    if (realTimeSiqs !== null && realTimeSiqs > 0) {
-      return realTimeSiqs;
-    }
-    const siqsScore = getSiqsScore(location.siqs);
-    if (siqsScore > 0) {
-      return siqsScore;
-    }
-    // Return null if no valid score to display
-    return null;
-  }, [realTimeSiqs, location.siqs]);
   
   return (
     <VisibilityObserver onVisibilityChange={setIsVisible}>
@@ -134,13 +108,14 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             language={language}
           />
           
-          <SiqsScoreBadge 
-            score={displayScore}
-            compact={true}
+          <SiqsDisplay
+            realTimeSiqs={realTimeSiqs}
+            loadingSiqs={loadingSiqs}
+            hasAttemptedLoad={hasAttemptedLoad}
+            isVisible={isVisible}
             isCertified={isCertified}
-            loading={showLoadingState}
-            forceCertified={false}
-            confidenceScore={siqsConfidence}
+            siqsConfidence={siqsConfidence}
+            locationSiqs={getSiqsScore(location.siqs)}
           />
         </div>
         
