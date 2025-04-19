@@ -78,7 +78,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
         latitude={position[0]}
         longitude={position[1]}
         onSiqsCalculated={handleSiqsCalculated}
-        forceUpdate={true} // Always force update to get fresh data
+        forceUpdate={forceUpdate} // Always force update to get fresh data
       />
       
       <Marker 
