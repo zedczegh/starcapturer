@@ -28,68 +28,33 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for fresher data
   
   useEffect(() => {
+    // Only fetch SIQS if component is visible, real-time SIQS is enabled, and coordinates are valid
     if (showRealTimeSiqs && isVisible && latitude && longitude) {
       const now = Date.now();
       
-      // Check enhanced cache system first
-      if (hasCachedSiqs(latitude, longitude)) {
-        const cachedData = getCachedSiqs(latitude, longitude);
-        if (cachedData) {
-          onSiqsCalculated(cachedData.siqs, false);
-          return;
-        }
-      }
-      
+      // Check if we should fetch based on cache duration
       const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION;
       
       if (shouldFetch) {
         console.log(`Fetching real-time SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         
         const fetchSiqs = async () => {
-          setLoading(true);
-          onSiqsCalculated(null, true);
-          
           try {
-            const effectiveBortleScale = bortleScale || (showRealTimeSiqs ? 3 : 5);
+            setLoading(true);
+            onSiqsCalculated(null, true);
             
-            // Calculate astronomical night for this location
-            const { start, end } = calculateAstronomicalNight(latitude, longitude);
-            console.log(`Astronomical night: ${formatTime(start)}-${formatTime(end)}`);
+            const effectiveBortleScale = bortleScale || 5;
             
-            // Calculate SIQS
+            // Calculate SIQS with error handling
             const result = await calculateRealTimeSiqs(latitude, longitude, effectiveBortleScale);
             
+            // Always set loading to false in finally block
             if (result && result.siqs > 0) {
-              // Create a default weather data object if none exists in the result
-              const weatherData: WeatherDataWithClearSky = result.weatherData || { 
-                cloudCover: 0, 
-                precipitation: 0,
-                latitude, 
-                longitude,
-                temperature: 0,
-                humidity: 0,
-                windSpeed: 0
-              } as WeatherDataWithClearSky;
-              
-              // Apply anomaly detection and correction
-              const correctedResult = detectAndFixAnomalies(
-                result,
-                weatherData,
-                { latitude, longitude }
-              );
-              
-              // Assess data reliability - safely access forecastData with optional chaining
-              const reliability = assessDataReliability(weatherData, result.forecastData || null);
-              
-              if (reliability.reliable) {
-                console.log(`Calculated SIQS (corrected): ${correctedResult.siqs}`);
-                onSiqsCalculated(correctedResult.siqs, false);
-              } else {
-                console.warn(`Low reliability SIQS calculation:`, reliability.issues);
-                onSiqsCalculated(correctedResult.siqs * (reliability.confidenceScore / 10), false);
-              }
+              console.log(`Calculated SIQS: ${result.siqs}`);
+              onSiqsCalculated(result.siqs, false);
             } else {
-              onSiqsCalculated(0, false);
+              console.log("No valid SIQS result returned");
+              onSiqsCalculated(null, false);
             }
             
             setLastFetchTimestamp(now);

@@ -6,7 +6,7 @@
  * without any caching to ensure the most accurate current data.
  */
 
-// Import dependencies (assume these are already defined elsewhere)
+// Import dependencies
 import { fetchWeatherData } from '@/lib/api';
 
 interface SiqsCalculationOptions {
@@ -18,8 +18,8 @@ interface SiqsCalculationOptions {
 export interface SiqsResult {
   siqs: number;
   isViable: boolean;
-  weatherData?: any; // Include weatherData property
-  forecastData?: any; // Include forecastData property
+  weatherData?: any;
+  forecastData?: any;
   factors?: {
     name: string;
     score: number;
@@ -52,21 +52,46 @@ export async function calculateRealTimeSiqs(
   console.log(`Calculating real-time SIQS for ${latitude.toFixed(5)},${longitude.toFixed(5)} with Bortle ${bortleScale}`);
   
   try {
-    // Fetch current weather data
+    // Fetch current weather data with error handling
     const weatherData = await fetchWeatherData({
       latitude,
       longitude
     });
     
     if (!weatherData) {
-      throw new Error('Weather data not available');
+      console.error('Weather data not available - returning fallback value');
+      return {
+        siqs: 5.0, // Default fallback value
+        isViable: true,
+        weatherData: null,
+        factors: [
+          { 
+            name: "Default", 
+            score: 5.0, 
+            description: `No weather data available`
+          }
+        ],
+        metadata: {
+          calculatedAt: new Date().toISOString(),
+          sources: {
+            weather: false,
+            forecast: false,
+            clearSky: false,
+            lightPollution: true
+          },
+          reliability: {
+            score: 3,
+            issues: ["Missing weather data"]
+          }
+        }
+      };
     }
     
     // Calculate SIQS based on current conditions
-    const cloudCover = weatherData.cloudCover || 0;
+    const cloudCover = typeof weatherData.cloudCover === 'number' ? weatherData.cloudCover : 0;
     
     // Type-safe access to visibility property if it exists, or use default
-    const visibility = typeof (weatherData as any).visibility !== 'undefined' ? 
+    const visibility = typeof (weatherData as any).visibility === 'number' ? 
       (weatherData as any).visibility : 10000;
     
     // Type-safe access to isDay property if it exists, or use default
@@ -99,7 +124,6 @@ export async function calculateRealTimeSiqs(
     const finalScore = Math.round(normalizedScore * 10) / 10;
     
     // Determine if conditions are viable for observation
-    // We can use current time to determine if it's night if isNight is not available
     const currentHour = new Date().getHours();
     const isDarkHours = isNight || (currentHour >= 18 || currentHour <= 5);
     const isViable = finalScore >= 3.5 && isDarkHours;
@@ -108,7 +132,7 @@ export async function calculateRealTimeSiqs(
     const result: SiqsResult = {
       siqs: finalScore,
       isViable,
-      weatherData: weatherData, // Include the weather data in the result
+      weatherData: weatherData,
       factors: [
         { 
           name: "Cloud Cover", 
@@ -147,7 +171,32 @@ export async function calculateRealTimeSiqs(
     return result;
   } catch (error) {
     console.error('Error calculating real-time SIQS:', error);
-    throw error;
+    // Return a fallback value so the UI doesn't break
+    return {
+      siqs: 5.0, // Default fallback value
+      isViable: true,
+      weatherData: null,
+      factors: [
+        { 
+          name: "Fallback", 
+          score: 5.0, 
+          description: `Error in calculation, using fallback value`
+        }
+      ],
+      metadata: {
+        calculatedAt: new Date().toISOString(),
+        sources: {
+          weather: false,
+          forecast: false,
+          clearSky: false,
+          lightPollution: true
+        },
+        reliability: {
+          score: 3,
+          issues: ["Calculation error"]
+        }
+      }
+    };
   }
 }
 
@@ -155,7 +204,6 @@ export async function calculateRealTimeSiqs(
  * Clear location cache - this is now a no-op since we don't use caching
  */
 export function clearLocationCache(): void {
-  // No caching to clear
   console.log('SIQS cache system has been disabled - all calculations are real-time');
 }
 

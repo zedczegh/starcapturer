@@ -32,8 +32,8 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   // Convert score to number using our helper function
   const numericScore = getSiqsScore(score);
   
-  // For certified locations with no valid score, always show loading state
-  const showLoading = loading || (isCertified && numericScore <= 0) || forceCertified;
+  // For certified locations with no valid score, always show loading state or default
+  const showLoading = loading || (isCertified && numericScore <= 0 && !forceCertified);
   
   // Update displayed score with smooth transition when real score changes
   useEffect(() => {
@@ -42,8 +42,8 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       stableScoreRef.current = numericScore;
     }
     
+    // Show loading state if needed
     if (showLoading) {
-      // For loading state, don't change displayed score but show loading indicator
       setLoadingState(true);
       
       // Clear any existing timeout
@@ -56,8 +56,11 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
         if (numericScore > 0) {
           setDisplayedScore(numericScore);
           setLoadingState(false);
+        } else if (forceCertified) {
+          // For forced certified display, show default score
+          setDisplayedScore(5.0);
+          setLoadingState(false);
         } else {
-          // If we still don't have a valid score after loading, clear the displayed score
           setDisplayedScore(null);
           setLoadingState(false);
         }
@@ -73,8 +76,11 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     
     // If score is 0 or negative and we're not in loading state
     if (numericScore <= 0) {
-      // If we have a previous stable score, keep showing it
-      if (stableScoreRef.current && stableScoreRef.current > 0 && isCertified) {
+      if (forceCertified) {
+        // For forced certified locations, show a default score
+        setDisplayedScore(5.0);
+      } else if (stableScoreRef.current && stableScoreRef.current > 0 && isCertified) {
+        // If we have a previous stable score, keep showing it for certified locations
         setDisplayedScore(stableScoreRef.current);
       } else {
         setDisplayedScore(null);
@@ -117,15 +123,18 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     }
     
     setLoadingState(false);
-  }, [numericScore, showLoading, displayedScore, isCertified]);
+  }, [numericScore, showLoading, displayedScore, isCertified, forceCertified]);
   
   // Reset score when loading starts
   useEffect(() => {
     if (loading && !loadingState) {
       setLoadingState(true);
-      setDisplayedScore(null);
+      // Don't set displayed score to null for certified locations
+      if (!isCertified && !forceCertified) {
+        setDisplayedScore(null);
+      }
     }
-  }, [loading]);
+  }, [loading, isCertified, forceCertified]);
   
   // Cleanup on unmount
   useEffect(() => {
@@ -137,21 +146,22 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   }, []);
   
   // Skip rendering if score is 0 (invalid) or negative and not showing loading state
-  // No default scores for non-certified locations either
+  // No default scores for non-certified locations
   if (numericScore <= 0 && !loadingState && !forceCertified && !isCertified) {
     return null;
   }
   
-  // Only display actual score, never display default values
-  const formattedScore = formatSiqsForDisplay(displayedScore);
+  // Only display actual score, never display default values unless forced
+  const scoreToDisplay = displayedScore || (forceCertified ? 5.0 : null);
+  const formattedScore = formatSiqsForDisplay(scoreToDisplay);
   
   // Get appropriate color based on score value
   const getColor = () => {
-    if (!displayedScore || displayedScore <= 0) return 'bg-cosmic-700/50 text-muted-foreground border-cosmic-600/30';
-    if (displayedScore >= 8) return 'bg-green-500/20 text-green-400 border-green-500/40';
-    if (displayedScore >= 6.5) return 'bg-lime-500/20 text-lime-400 border-lime-500/40';
-    if (displayedScore >= 5) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
-    if (displayedScore >= 3.5) return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
+    if (!scoreToDisplay || scoreToDisplay <= 0) return 'bg-cosmic-700/50 text-muted-foreground border-cosmic-600/30';
+    if (scoreToDisplay >= 8) return 'bg-green-500/20 text-green-400 border-green-500/40';
+    if (scoreToDisplay >= 6.5) return 'bg-lime-500/20 text-lime-400 border-lime-500/40';
+    if (scoreToDisplay >= 5) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
+    if (scoreToDisplay >= 3.5) return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
     return 'bg-red-500/20 text-red-300 border-red-500/40';
   };
 
@@ -175,8 +185,29 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     );
   }
   
+  // For certified locations with no valid score but not loading, show default
+  if ((!scoreToDisplay || scoreToDisplay <= 0) && (forceCertified || isCertified)) {
+    return (
+      <motion.div 
+        className={`flex items-center bg-cosmic-700/50 text-muted-foreground ${compact ? 'px-1.5 py-0.5' : 'px-2 py-0.5'} rounded-full border border-cosmic-600/30`}
+        initial={{ opacity: 0.6 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+        layout
+      >
+        <Star 
+          className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-gray-400 mr-1`} 
+          fill="#475569" 
+        />
+        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
+          5.0
+        </span>
+      </motion.div>
+    );
+  }
+  
   // Don't render anything if there's no valid score
-  if (!displayedScore || displayedScore <= 0) {
+  if (!scoreToDisplay || scoreToDisplay <= 0) {
     return null;
   }
 

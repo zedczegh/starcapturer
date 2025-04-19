@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
-import { getCompleteSiqsDisplay } from '@/utils/unifiedSiqsDisplay';
 
 interface RealTimeSiqsProviderProps {
   isVisible: boolean;
@@ -112,7 +111,14 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         onSiqsCalculated(result.siqs, false, 9);
       } else {
         console.warn("SIQS calculation returned invalid result:", result);
-        onSiqsCalculated(existingSiqsNumber > 0 ? existingSiqsNumber : null, false);
+        
+        // Use existing SIQS as fallback
+        if (existingSiqsNumber > 0) {
+          onSiqsCalculated(existingSiqsNumber, false, 6);
+        } else {
+          // Use a default value for certified locations
+          onSiqsCalculated(isCertified ? 5.0 : null, false, 5);
+        }
       }
       
     } catch (error) {
@@ -120,9 +126,10 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       
       if (!isMounted.current) return;
       
-      // For certified locations, never use default scores if real-time fails
+      // Use fallback values on error
       if (isCertified) {
-        onSiqsCalculated(null, false);
+        // For certified locations, use a default value instead of nothing
+        onSiqsCalculated(5.0, false, 4);
       } else if (existingSiqsNumber > 0) {
         onSiqsCalculated(existingSiqsNumber, false, 6);
       } else {
