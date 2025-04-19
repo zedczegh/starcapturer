@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useForecastManager } from "./locationDetails/useForecastManager";
 import { useWeatherUpdater } from "./useWeatherUpdater";
@@ -28,7 +27,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
   } = useForecastManager(locationData);
   
   const {
-    loading,
+    loading: weatherLoading,
     setLoading,
     handleRefreshAll: refreshWeather,
     updateLightPollutionData
@@ -85,7 +84,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
   }, [forecastData, forecastLoading, locationData, setLocationData, syncWeatherWithForecast, updateSIQSWithForecast]);
 
   // Memoized wrapper functions
-  const handleRefreshForecast = useCallback(() => {
+  const handleRefreshForecast = useCallback((latitude: number, longitude: number) => {
     if (!locationData) return;
     
     // Reset SIQS update flag to ensure it updates again
@@ -96,35 +95,29 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
     refreshForecast(locationData.latitude, locationData.longitude);
   }, [locationData, refreshForecast, resetUpdateState]);
 
-  const handleRefreshLongRangeForecast = useCallback(() => {
+  const handleRefreshLongRangeForecast = useCallback((latitude: number, longitude: number) => {
     if (!locationData) return;
     refreshLongRange(locationData.latitude, locationData.longitude);
   }, [locationData, refreshLongRange]);
   
   // Wrapper function for refreshing all data
-  const handleRefreshAll = useCallback(() => {
+  const handleRefreshAll = useCallback(async () => {
     if (!locationData) return;
     
-    // Reset SIQS update flag
     resetUpdateState();
     
-    const fetchBothForecasts = () => {
-      handleRefreshForecast();
-      handleRefreshLongRangeForecast();
+    const fetchAllData = async () => {
+      const results = await Promise.allSettled([
+        handleRefreshForecast(locationData.latitude, locationData.longitude),
+        handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude),
+        refreshWeather(locationData, setLocationData, () => {}, setStatusMessage)
+      ]);
+      
+      console.log("Refresh results:", results.map(r => r.status));
     };
-    
-    refreshWeather(locationData, setLocationData, fetchBothForecasts, setStatusMessage);
-    
-    // Schedule periodic data sync to ensure consistency
-    if (dataSyncTimerRef.current) {
-      window.clearTimeout(dataSyncTimerRef.current);
-    }
-    
-    dataSyncTimerRef.current = window.setTimeout(() => {
-      syncWeatherWithForecast(forecastData, locationData, setLocationData);
-      dataSyncTimerRef.current = null;
-    }, 5000); // Check for data consistency after 5 seconds
-  }, [locationData, setLocationData, refreshWeather, handleRefreshForecast, handleRefreshLongRangeForecast, setStatusMessage, syncWeatherWithForecast, forecastData, resetUpdateState]);
+
+    fetchAllData();
+  }, [locationData, setLocationData, handleRefreshForecast, handleRefreshLongRangeForecast, refreshWeather, resetUpdateState]);
 
   // Cleanup on unmount
   useEffect(() => {

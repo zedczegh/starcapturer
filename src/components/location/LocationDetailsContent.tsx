@@ -1,5 +1,4 @@
-
-import React, { memo, useEffect, useRef, useState } from "react";
+import React, { memo, useEffect, useRef, useState, useMemo } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -153,8 +152,16 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     };
   }, [locationData, handleRefreshAll, setLocationData, resetUpdateState, isRedirect, hasRequiredData]);
 
-  // Safe render with error boundary pattern
-  if (!locationData) {
+  // Memoize data to prevent unnecessary re-renders
+  const memoizedLocationData = useMemo(() => locationData, [
+    locationData?.latitude,
+    locationData?.longitude,
+    locationData?.name,
+    locationData?.timestamp
+  ]);
+
+  // Use loading skeleton while data is being fetched
+  if (!memoizedLocationData) {
     return (
       <div className="p-8 text-center">
         <Loader className="animate-spin h-8 w-8 mx-auto mb-4" />
@@ -172,14 +179,14 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       
       {loading || !contentLoaded ? (
         <div className="animate-pulse h-96 rounded-lg bg-gradient-to-b from-cosmic-800/20 to-cosmic-900/20 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+          <div className="text-center space-y-2">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
             <p className="text-sm text-muted-foreground">{t("Loading content...", "正在加载内容...")}</p>
           </div>
         </div>
       ) : (
         <LocationContentGrid 
-          locationData={locationData}
+          locationData={memoizedLocationData}
           forecastData={forecastData}
           longRangeForecast={longRangeForecast}
           forecastLoading={forecastLoading}
