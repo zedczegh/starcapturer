@@ -1,5 +1,4 @@
 
-
 declare module "@/types/weather" {
   export interface WeatherData {
     temperature: number;
