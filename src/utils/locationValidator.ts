@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation as checkWaterLocation } from "@/utils/locationWaterCheck";
 
@@ -32,7 +31,7 @@ export const isWaterLocation = (
 /**
  * Enhanced water detection for coastal areas
  */
-const isLikelyCoastalWater = (
+export const isLikelyCoastalWater = (
   latitude: number,
   longitude: number
 ): boolean => {
