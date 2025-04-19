@@ -1,8 +1,10 @@
+
 import React, { memo, useEffect, useRef, useState, useMemo, Suspense } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
+import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater"; // Add this import
 
 // Lazy load the content grid for better initial load performance
 const LocationContentGrid = React.lazy(() => import("./LocationContentGrid"));
