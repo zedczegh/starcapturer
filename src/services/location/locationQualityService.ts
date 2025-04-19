@@ -1,4 +1,6 @@
+
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 /**
  * Sort locations by quality factors (certified status, SIQS score, distance)
@@ -14,8 +16,11 @@ export const sortLocationsByQuality = (locations: SharedAstroSpot[]): SharedAstr
     }
     
     // Then by SIQS score (higher is better)
-    if (a.siqs !== b.siqs) {
-      return (b.siqs || 0) - (a.siqs || 0); 
+    const aSiqs = getSiqsScore(a.siqs);
+    const bSiqs = getSiqsScore(b.siqs);
+    
+    if (aSiqs !== bSiqs) {
+      return bSiqs - aSiqs; 
     }
     
     // Then by distance (closer is better)
@@ -37,6 +42,7 @@ export const filterLocationsByQuality = (
     }
     
     // Filter regular locations by SIQS score
-    return (location.siqs || 0) >= minQuality;
+    const locationSiqs = getSiqsScore(location.siqs);
+    return locationSiqs >= minQuality;
   });
 };
