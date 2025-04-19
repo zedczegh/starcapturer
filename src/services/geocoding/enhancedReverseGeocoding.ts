@@ -1,3 +1,4 @@
+
 import { Language } from './types';
 import { EnhancedLocationDetails } from './types/enhancedLocationTypes';
 import { fetchLocationDetails } from './providers/nominatimGeocodingProvider';
@@ -6,6 +7,7 @@ import { normalizeCoordinates } from './utils/coordinateUtils';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
 import { isWaterLocation } from '@/utils/validation';
 import { formatAddressComponents } from './formatters/addressFormatter';
+import { formatDistance } from '@/utils/location/formatDistance';
 
 export async function getEnhancedLocationDetails(
   latitude: number,
@@ -57,7 +59,7 @@ export async function getEnhancedLocationDetails(
       cityName: nearestTownInfo.city,
       countyName: nearestTownInfo.county,
       distance: nearestTownInfo.distance,
-      formattedDistance: nearestTownInfo.formattedDistance,
+      formattedDistance: formatDistance(nearestTownInfo.distance, language),
       detailedName: nearestTownInfo.detailedName,
       latitude: normalizedLat,
       longitude: normalizedLng,

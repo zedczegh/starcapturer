@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -8,11 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { formatSiqsScore } from "@/utils/siqsHelpers";
 import { getCertificationInfo, getLocalizedCertText } from "./cards/CertificationBadge";
 import { useNavigate } from "react-router-dom";
-import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDisplayName } from "./cards/DisplayNameResolver";
-import { findNearestTown } from "@/utils/nearestTownCalculator";
-import { formatDistance } from "@/utils/location/formatDistance";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -38,12 +34,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     locationCounter: null
   });
   
-  const nearestTownInfo = useMemo(() => 
-    point.latitude && point.longitude ? 
-      findNearestTown(point.latitude, point.longitude, language) : 
-      null
-  , [point.latitude, point.longitude, language]);
-  
   const formatCardDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");
     
@@ -67,7 +57,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     const locationId = getLocationId();
     if (!locationId) return;
     
-    // Ensure Chinese name is properly included in the navigation state
     navigate(`/location/${locationId}`, {
       state: {
         id: locationId,
@@ -87,7 +76,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     });
   };
 
-  // Determine the name to display based on language preference
   const primaryName = language === 'zh' && point.chineseName ? point.chineseName : (point.name || t("Unnamed Location", "未命名位置"));
   const secondaryName = language === 'zh' ? (point.name || "") : (point.chineseName || "");
   
@@ -116,22 +104,11 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      {/* Show secondary name if available */}
       {secondaryName && (
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
           <span className="text-xs text-muted-foreground line-clamp-1">
             {secondaryName}
-          </span>
-        </div>
-      )}
-      
-      {/* Only show nearest town if we don't have both names */}
-      {!secondaryName && nearestTownInfo && nearestTownInfo.detailedName && (
-        <div className="mt-1.5 mb-2 flex items-center">
-          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
-          <span className="text-xs text-muted-foreground line-clamp-1">
-            {nearestTownInfo.detailedName}
           </span>
         </div>
       )}
