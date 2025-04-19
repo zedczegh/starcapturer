@@ -15,3 +15,6 @@ export const MIN_SEARCH_RADIUS = 50; // km
 
 // Batch processing constants
 export const BATCH_SIZE = 5;
+
+// Certified locations radius - for fetching all certified dark sky locations globally
+export const DEFAULT_CERTIFIED_RADIUS = 20000; // km - large enough to get worldwide locations
