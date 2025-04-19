@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -50,6 +51,12 @@ const PhotoPointsNearby: React.FC = () => {
     effectiveLocation, 
     currentSearchRadius
   );
+  
+  // Get certified and calculated locations from the hook
+  const { 
+    certifiedLocations, 
+    calculatedLocations 
+  } = useCertifiedLocations(locations);
 
   useEffect(() => {
     if (locationInitialized && effectiveLocation) {
