@@ -1,11 +1,11 @@
-
-import React, { memo, useEffect, useRef, useState, useMemo } from "react";
+import React, { memo, useEffect, useRef, useState, useMemo, Suspense } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 import { Loader } from "lucide-react";
-import LocationContentGrid from "@/components/location/LocationContentGrid";
+
+// Lazy load the content grid for better initial load performance
+const LocationContentGrid = React.lazy(() => import("./LocationContentGrid"));
 
 interface LocationDetailsContentProps {
   locationData: any;
@@ -211,19 +211,23 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
           </div>
         </div>
       ) : (
-        <LocationContentGrid 
-          locationData={memoizedLocationData}
-          forecastData={forecastData}
-          longRangeForecast={longRangeForecast}
-          forecastLoading={forecastLoading}
-          longRangeLoading={longRangeLoading}
-          gettingUserLocation={gettingUserLocation}
-          onLocationUpdate={onLocationUpdate}
-          setGettingUserLocation={setGettingUserLocation}
-          setStatusMessage={setStatusMessage}
-          onRefreshForecast={handleRefreshForecastWithCoords}
-          onRefreshLongRange={handleRefreshLongRangeForecastWithCoords}
-        />
+        <Suspense fallback={
+          <div className="animate-pulse h-96 rounded-lg bg-gradient-to-b from-cosmic-800/20 to-cosmic-900/20" />
+        }>
+          <LocationContentGrid 
+            locationData={memoizedLocationData}
+            forecastData={forecastData}
+            longRangeForecast={longRangeForecast}
+            forecastLoading={forecastLoading}
+            longRangeLoading={longRangeLoading}
+            gettingUserLocation={gettingUserLocation}
+            onLocationUpdate={onLocationUpdate}
+            setGettingUserLocation={setGettingUserLocation}
+            setStatusMessage={setStatusMessage}
+            onRefreshForecast={handleRefreshForecastWithCoords}
+            onRefreshLongRange={handleRefreshLongRangeForecastWithCoords}
+          />
+        </Suspense>
       )}
     </div>
   );

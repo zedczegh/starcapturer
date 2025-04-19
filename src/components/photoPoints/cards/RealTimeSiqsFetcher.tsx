@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
@@ -31,16 +30,17 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
   useEffect(() => {
     if (showRealTimeSiqs && isVisible && latitude && longitude) {
       const now = Date.now();
+      const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
       
-      // Check enhanced cache system first
+      // Enhanced cache check with timestamp validation
       if (hasCachedSiqs(latitude, longitude)) {
         const cachedData = getCachedSiqs(latitude, longitude);
-        if (cachedData) {
+        if (cachedData && (now - new Date(cachedData.metadata?.calculatedAt || 0).getTime()) < CACHE_DURATION) {
           onSiqsCalculated(cachedData.siqs, false);
           return;
         }
       }
-      
+
       const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION;
       
       if (shouldFetch) {
@@ -125,8 +125,8 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
         fetchSiqs();
       }
     }
-  }, [latitude, longitude, showRealTimeSiqs, isVisible, bortleScale, onSiqsCalculated, lastFetchTimestamp]);
-  
+  }, [latitude, longitude, showRealTimeSiqs, isVisible, bortleScale, onSiqsCalculated]);
+
   return null;
 };
 
