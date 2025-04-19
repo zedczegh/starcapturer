@@ -35,7 +35,7 @@ export async function calculateSIQSWithWeatherData(
       
       // Use the formula: sum(cc percentage of each hour tonight: 18:00-7:00)/13
       // or current time to 7:00 if current time is within nighttime hours
-      const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly, 0, 0);
+      const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly);
       console.log(`Tonight's cloud cover (18:00-7:00): ${tonightCloudCover.toFixed(1)}%`);
       
       // If we have valid tonight cloud cover data

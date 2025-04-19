@@ -61,85 +61,27 @@ export function getMoonPhaseNameByPhase(phase: number): string {
 
 /**
  * Calculate moonrise and moonset times for a specific location
- * Enhanced version with better error handling and fallbacks
  */
 export function calculateMoonriseMoonsetTimes(latitude: number, longitude: number, date = new Date()) {
   try {
     // Use SunCalc library to calculate moon times
     const moonTimes = SunCalc.getMoonTimes(date, latitude, longitude);
     
-    // In some locations/dates, moonrise or moonset might not happen
-    // Add fallback values based on previous/next day
-    let moonriseTime = moonTimes.rise;
-    let moonsetTime = moonTimes.set;
-    
-    // If moonrise is missing, try previous day
-    if (!moonriseTime) {
-      const yesterdayDate = new Date(date);
-      yesterdayDate.setDate(date.getDate() - 1);
-      const yesterdayTimes = SunCalc.getMoonTimes(yesterdayDate, latitude, longitude);
-      moonriseTime = yesterdayTimes.rise;
-    }
-    
-    // If moonset is missing, try next day
-    if (!moonsetTime) {
-      const tomorrowDate = new Date(date);
-      tomorrowDate.setDate(date.getDate() + 1);
-      const tomorrowTimes = SunCalc.getMoonTimes(tomorrowDate, latitude, longitude);
-      moonsetTime = tomorrowTimes.set;
-    }
-    
     // Format times for display
     const formatTime = (time: Date | undefined) => {
       if (!time) return "Unknown";
-      
-      try {
-        return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      } catch (error) {
-        console.error("Error formatting moon time:", error);
-        return "Unknown";
-      }
+      return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
     
     return {
-      moonrise: formatTime(moonriseTime),
-      moonset: formatTime(moonsetTime)
+      moonrise: formatTime(moonTimes.rise),
+      moonset: formatTime(moonTimes.set)
     };
   } catch (error) {
     console.error("Error calculating moon times:", error);
-    
-    // Provide fallback based on phase when calculation fails
-    const phase = calculateMoonPhase(date);
-    let fallbackRise = "Unknown";
-    let fallbackSet = "Unknown";
-    
-    // Rough estimation based on moon phase
-    // New moon rises with sun, full moon rises at sunset
-    const now = new Date(date);
-    if (phase < 0.25) {
-      // Near new moon: rises in morning, sets in evening
-      fallbackRise = "06:00";
-      fallbackSet = "18:00";
-    } else if (phase < 0.5) {
-      // Waxing to full: rises around noon, sets around midnight
-      fallbackRise = "12:00";
-      fallbackSet = "00:00";
-    } else if (phase < 0.75) {
-      // Waning from full: rises around evening, sets around morning
-      fallbackRise = "18:00";
-      fallbackSet = "06:00";
-    } else {
-      // Waning to new: rises at night, sets during day
-      fallbackRise = "00:00";
-      fallbackSet = "12:00";
-    }
-    
-    // Log the fallback
-    console.log("Using fallback moon times based on phase:", phase);
-    
     return {
-      moonrise: fallbackRise,
-      moonset: fallbackSet
+      moonrise: "Unknown",
+      moonset: "Unknown"
     };
   }
 }

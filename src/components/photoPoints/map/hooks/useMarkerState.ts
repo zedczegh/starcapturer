@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -29,25 +30,30 @@ export function useMarkerState({
     return location.name || t("Unnamed Location", "未命名位置");
   }, [language, location.chineseName, location.name, t]);
 
-  // Calculate SIQS score - always use real-time or location's SIQS
+  // Calculate SIQS score - ONLY use real-time or location's actual SIQS
+  // Never use default scores for certified locations
   const siqsScore = useMemo(() => {
     // Always prefer real-time SIQS if available
     if (realTimeSiqs !== null && realTimeSiqs > 0) {
       return realTimeSiqs;
     }
     
-    // Use location's SIQS regardless of certification status
-    const locationSiqs = getSiqsScore(location);
-    if (locationSiqs > 0) {
-      return locationSiqs;
+    // Use location's calculated SIQS if available and not certified
+    // For certified locations, we only want real-time data
+    if (!isCertified) {
+      const locationSiqs = getSiqsScore(location);
+      if (locationSiqs > 0) {
+        return locationSiqs;
+      }
     }
     
     // Return null if no valid SIQS available
     return null;
-  }, [location, realTimeSiqs]);
+  }, [location, realTimeSiqs, isCertified]);
   
-  // Get marker icon without considering Bortle scale
+  // Get marker icon
   const icon = useMemo(() => {
+    // For certified locations, we want a special marker even if SIQS is unknown
     return getLocationMarker(location, isCertified, isHovered, isMobile);
   }, [location, isCertified, isHovered, isMobile]);
 

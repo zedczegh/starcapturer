@@ -1,14 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { Star, ExternalLink } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { getSiqsScore } from '@/utils/siqsHelpers';
-import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 import { formatDistance } from '@/utils/geoUtils';
 import { getSiqsClass } from './MarkerUtils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface LocationPopupContentProps {
   location: SharedAstroSpot;
@@ -37,7 +37,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
       setStabilizedScore(siqsScore);
     }
   }, [siqsScore]);
-
+  
   // Get SIQS class for coloring the popup based on score
   const siqsClass = getSiqsClass(stabilizedScore || siqsScore);
   
