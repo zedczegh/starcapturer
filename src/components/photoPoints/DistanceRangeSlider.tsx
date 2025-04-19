@@ -81,34 +81,14 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
           className="mt-2 z-10 relative transition-all duration-200 ease-out"
         />
         
-        <motion.div 
+        <div 
           className={`absolute top-2.5 left-0 h-2 rounded-full transition-all duration-200 ease-out
             ${loading ? 'bg-gradient-to-r from-primary/60 to-transparent' : 
               loadingComplete ? 'bg-gradient-to-r from-green-500/60 to-transparent' : 
               'bg-gradient-to-r from-primary/60 to-transparent'}`}
           style={{ 
             width: `${percentage}%`,
-            transition: 'width 200ms ease-out, opacity 300ms ease-in-out, box-shadow 300ms ease-in-out'
-          }}
-          animate={{ 
-            opacity: loading ? [0.3, 1, 0.3] : loadingComplete ? [0.6, 1] : [0.6, 1, 0.6],
-            boxShadow: loading ? [
-              '0 0 2px rgba(139, 92, 246, 0.2)',
-              '0 0 12px rgba(139, 92, 246, 0.8)',
-              '0 0 2px rgba(139, 92, 246, 0.2)'
-            ] : loadingComplete ? [
-              '0 0 2px rgba(34, 197, 94, 0.3)',
-              '0 0 8px rgba(34, 197, 94, 0.6)'
-            ] : [
-              '0 0 2px rgba(139, 92, 246, 0.3)',
-              '0 0 8px rgba(139, 92, 246, 0.6)',
-              '0 0 2px rgba(139, 92, 246, 0.3)'
-            ]
-          }}
-          transition={{ 
-            duration: loading ? 1 : loadingComplete ? 0.5 : 2, 
-            repeat: loading || !loadingComplete ? Infinity : 0,
-            ease: "easeInOut"
+            transition: 'width 200ms ease-out, opacity 300ms ease-in-out'
           }}
         />
       </div>

@@ -2,6 +2,7 @@
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { generateQualitySpots } from '../locationSpotService';
 import { sessionStorageAvailable } from '@/utils/storageCheck';
+import { toast } from 'sonner';
 
 const BATCH_SIZE = 5;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -13,6 +14,7 @@ const MEMORY_CACHE = new Map<string, {
 
 // Add event system for location updates
 const locationUpdateListeners: (() => void)[] = [];
+let pendingLocationUpdate: ReturnType<typeof setTimeout> | null = null;
 
 export const loadCalculatedLocations = async (
   latitude: number,
@@ -20,6 +22,12 @@ export const loadCalculatedLocations = async (
   radius: number,
   limit: number = 10
 ): Promise<SharedAstroSpot[]> => {
+  // Validate inputs to prevent NaN errors
+  if (!isFinite(latitude) || !isFinite(longitude) || !isFinite(radius)) {
+    console.error("Invalid coordinates or radius", { latitude, longitude, radius });
+    return [];
+  }
+
   const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}-${radius}`;
   const now = Date.now();
   const cached = MEMORY_CACHE.get(cacheKey);
@@ -57,7 +65,8 @@ export const loadCalculatedLocations = async (
           longitude: spot.longitude,
           name: spot.name,
           siqs: spot.siqs,
-          distance: spot.distance
+          distance: spot.distance,
+          bortleScale: spot.bortleScale
         }));
         sessionStorage.setItem(`calc_${cacheKey}`, JSON.stringify(simplified));
       } catch (err) {
@@ -118,13 +127,20 @@ export const addLocationUpdateListener = (listener: () => void) => {
   };
 };
 
-// Notify all listeners
+// Notify all listeners with debouncing to prevent excessive updates
 const notifyLocationUpdateListeners = () => {
-  locationUpdateListeners.forEach(listener => {
-    try {
-      listener();
-    } catch (e) {
-      console.error("Error in location update listener:", e);
-    }
-  });
+  if (pendingLocationUpdate) {
+    clearTimeout(pendingLocationUpdate);
+  }
+  
+  pendingLocationUpdate = setTimeout(() => {
+    locationUpdateListeners.forEach(listener => {
+      try {
+        listener();
+      } catch (e) {
+        console.error("Error in location update listener:", e);
+      }
+    });
+    pendingLocationUpdate = null;
+  }, 150); // Debounce notifications
 };

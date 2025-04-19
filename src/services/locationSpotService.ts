@@ -33,15 +33,19 @@ export async function generateQualitySpots(
           }
 
           try {
+            const defaultBortleScale = 4; // Default Bortle scale as a fallback
             const siqsResult = await calculateRealTimeSiqs(
               point.latitude,
               point.longitude,
-              4 // Default Bortle scale, will be refined by SIQS calculation
+              defaultBortleScale
             );
 
             if (!siqsResult || !siqsResult.isViable) {
               return null;
             }
+            
+            // Calculate appropriate Bortle scale based on SIQS (10-SIQS, clamped between 1-9)
+            const calculatedBortleScale = Math.max(1, Math.min(9, Math.floor(10 - siqsResult.siqs)));
 
             return {
               id: `calc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -52,7 +56,7 @@ export async function generateQualitySpots(
               isViable: siqsResult.isViable,
               distance: point.distance,
               timestamp: new Date().toISOString(),
-              bortleScale: 4 // Adding the required bortleScale property
+              bortleScale: calculatedBortleScale
             };
           } catch (err) {
             console.warn('Error calculating SIQS for point:', err);

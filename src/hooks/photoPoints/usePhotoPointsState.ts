@@ -1,9 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { getCurrentPosition } from '@/utils/geolocationUtils';
+import { clearLocationCache } from '@/services/location/optimizedLocationLoader';
 
 export const usePhotoPointsState = () => {
   const { t, language } = useLanguage();
@@ -22,6 +24,7 @@ export const usePhotoPointsState = () => {
   
   const [locationInitialized, setLocationInitialized] = useState(false);
   const [locationAttempted, setLocationAttempted] = useState(false);
+  const lastLocationUpdate = useRef<number>(0);
   
   useEffect(() => {
     if (currentPosition) {
@@ -67,6 +70,7 @@ export const usePhotoPointsState = () => {
   
   const currentSearchRadius = activeView === 'certified' ? 20000 : calculatedSearchRadius;
   
+  // Throttle radius changes to prevent too many API calls
   const handleRadiusChange = useCallback((value: number) => {
     setCalculatedSearchRadius(value);
   }, []);
@@ -77,16 +81,32 @@ export const usePhotoPointsState = () => {
       return;
     }
     
+    // Throttle updates to prevent excessive calls
+    const now = Date.now();
+    if (now - lastLocationUpdate.current < 300) {
+      return;
+    }
+    lastLocationUpdate.current = now;
+    
     const newLocation = {
       latitude,
       longitude
     };
     
+    // Clear location cache when location changes significantly
+    const significantChange = !effectiveLocation || 
+      Math.abs(effectiveLocation.latitude - latitude) > 0.01 ||
+      Math.abs(effectiveLocation.longitude - longitude) > 0.01;
+      
+    if (significantChange) {
+      clearLocationCache();
+    }
+    
     setEffectiveLocation(newLocation);
     setLocationInitialized(true);
     
     console.log(`Location manually updated to: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-  }, [t]);
+  }, [t, effectiveLocation]);
   
   const handleResetLocation = useCallback(() => {
     getCurrentPosition(
@@ -96,6 +116,9 @@ export const usePhotoPointsState = () => {
           latitude,
           longitude
         });
+        
+        // Clear cache on reset
+        clearLocationCache();
         
         console.log(`Location reset to current position: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         
