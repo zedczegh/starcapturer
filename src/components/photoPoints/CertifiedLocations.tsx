@@ -29,6 +29,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   const { t } = useLanguage();
   const [selectedType, setSelectedType] = useState<CertificationType>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [displayLimit, setDisplayLimit] = useState(5);
   
   // Filter locations based on certification type and search query
   const filteredLocations = locations.filter(location => {
@@ -63,6 +64,15 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
     
     return true;
   });
+  
+  // Handle load more
+  const handleLoadMore = () => {
+    setDisplayLimit(prev => prev + 5);
+  };
+  
+  // Get the locations to display based on the current limit
+  const locationsToDisplay = filteredLocations.slice(0, displayLimit);
+  const hasMoreToShow = displayLimit < filteredLocations.length;
   
   if (initialLoad && loading) {
     return (
@@ -102,7 +112,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
       </div>
       
       <div className="grid grid-cols-1 gap-4">
-        {filteredLocations.map((location, index) => (
+        {locationsToDisplay.map((location, index) => (
           <PhotoLocationCard
             key={location.id || `${location.latitude}-${location.longitude}-${index}`}
             location={location}
@@ -112,11 +122,11 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
         ))}
       </div>
       
-      {hasMore && (
+      {hasMoreToShow && (
         <div className="mt-6 flex justify-center">
           <Button
             variant="outline"
-            onClick={onLoadMore}
+            onClick={handleLoadMore}
             disabled={loading}
             className="min-w-[120px]"
           >
