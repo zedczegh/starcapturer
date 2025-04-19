@@ -1,4 +1,3 @@
-
 /**
  * Utility for calculating SIQS based specifically on nighttime conditions
  */
@@ -55,17 +54,18 @@ export const calculateAverageValue = (
  * @returns Average cloud cover during nighttime or null if not available
  */
 export const calculateTonightCloudCover = (
-  forecast: any[],
+  forecast: any,
   latitude: number,
   longitude: number
 ): number | null => {
-  if (!forecast || !Array.isArray(forecast) || forecast.length === 0) {
+  if (!forecast || (Array.isArray(forecast) && forecast.length === 0)) {
     console.log("No forecast data available for night cloud calculation");
     return null;
   }
   
   // Check if forecast is in Open-Meteo format with time and cloud_cover arrays
-  const isOpenMeteoFormat = !forecast[0]?.time && 
+  const isOpenMeteoFormat = 
+    !Array.isArray(forecast) && 
     Array.isArray(forecast.time) && 
     Array.isArray(forecast.cloud_cover);
   
@@ -77,14 +77,14 @@ export const calculateTonightCloudCover = (
       cloudCover: forecast.cloud_cover[index]
     }))
     // Handle standard format
-    : forecast.map(item => {
+    : Array.isArray(forecast) ? forecast.map(item => {
         if (item.time) return item;
         // For any other format, try to extract cloud cover
         return {
           time: item.date || new Date().toISOString(),
           cloudCover: item.cloudCover || item.cloud_cover
         };
-      });
+      }) : [];
   
   // Get night hours for the location
   const today = new Date();
