@@ -41,6 +41,13 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   
   useEffect(() => {
     isMounted.current = true;
+    
+    // For certified locations, always start fetch immediately regardless of visibility
+    if (isCertified && !fetchAttempted) {
+      console.log(`RealTimeSiqsProvider: Initiating immediate fetch for certified location at ${latitude},${longitude}`);
+      fetchSiqs();
+    }
+    
     // Cleanup function to prevent setState on unmounted component
     return () => {
       isMounted.current = false;
@@ -119,12 +126,14 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       forceUpdate || 
       !fetchAttempted ||
       (Date.now() - lastFetchTimestamp > REFRESH_INTERVAL) ||
-      (isCertified && !fetchAttempted) || 
-      (isCertified && isVisible); // Always fetch for certified locations when visible
+      (isCertified && !fetchAttempted);
     
+    // Always fetch for certified locations, regardless of visibility
     if ((isVisible || isCertified) && latitude && longitude && shouldFetch) {
       // Use a small delay for certified locations to avoid all fetches happening simultaneously
-      const delay = isCertified ? Math.random() * 500 + 100 : 0; // Random delay up to 600ms for certified locations
+      // Spread them out based on their position in the list
+      const delay = isCertified ? 
+        Math.random() * 500 + (Math.abs(latitude) + Math.abs(longitude)) % 1000 : 0;
       
       fetchTimeoutRef.current = window.setTimeout(() => {
         fetchSiqs();

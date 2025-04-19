@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -27,6 +28,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   location, 
   index = 0,
   onViewDetails,
+  showRealTimeSiqs = true
 }) => {
   const { language } = useLanguage();
   const navigate = useNavigate();
@@ -97,9 +99,12 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
   }, []);
   
+  // Force visibility for certified locations
+  const effectiveIsVisible = isCertified || isVisible;
+  
   return (
     <VisibilityObserver onVisibilityChange={setIsVisible}>
-      <CardContainer index={index} isVisible={isVisible} isMobile={isMobile}>
+      <CardContainer index={index} isVisible={effectiveIsVisible} isMobile={isMobile}>
         <div className="flex justify-between items-start mb-2">
           <LocationHeader
             displayName={displayName}
@@ -112,7 +117,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             realTimeSiqs={realTimeSiqs}
             loadingSiqs={loadingSiqs}
             hasAttemptedLoad={hasAttemptedLoad}
-            isVisible={isVisible}
+            isVisible={effectiveIsVisible}
             isCertified={isCertified}
             siqsConfidence={siqsConfidence}
             locationSiqs={getSiqsScore(location.siqs)}
@@ -128,16 +133,19 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         
         <CardActions onViewDetails={handleViewDetails} />
         
-        <RealTimeSiqsProvider
-          isVisible={isVisible}
-          latitude={location.latitude}
-          longitude={location.longitude}
-          bortleScale={location.bortleScale}
-          isCertified={isCertified}
-          isDarkSkyReserve={location.isDarkSkyReserve}
-          existingSiqs={location.siqs}
-          onSiqsCalculated={handleSiqsCalculated}
-        />
+        {showRealTimeSiqs && (
+          <RealTimeSiqsProvider
+            isVisible={effectiveIsVisible}
+            latitude={location.latitude}
+            longitude={location.longitude}
+            bortleScale={location.bortleScale}
+            isCertified={isCertified}
+            isDarkSkyReserve={location.isDarkSkyReserve}
+            existingSiqs={location.siqs}
+            onSiqsCalculated={handleSiqsCalculated}
+            forceUpdate={isCertified} // Force update for certified locations
+          />
+        )}
       </CardContainer>
     </VisibilityObserver>
   );
