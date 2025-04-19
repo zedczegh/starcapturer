@@ -3,6 +3,7 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation } from "@/utils/validation";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
 import { getSiqsScore } from "@/utils/siqsHelpers";
+import L from 'leaflet'; // Add this import for the Leaflet library
 
 /**
  * Get SIQS quality class for styling
