@@ -20,9 +20,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, className = '' }
         placeholder={t("Search dark sky locations...", "搜索暗夜地点...")}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="pr-8"
+        className="pr-8 focus:ring-2 focus:ring-primary/30"
       />
-      <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
     </div>
   );
 };

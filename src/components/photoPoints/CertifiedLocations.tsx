@@ -1,10 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoLocationCard from './PhotoLocationCard';
 import { Button } from '../ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import CertificationFilter, { CertificationType } from './filters/CertificationFilter';
+import SearchBar from './filters/SearchBar';
 
 interface CertifiedLocationsProps {
   locations: SharedAstroSpot[];
@@ -25,6 +27,42 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   initialLoad
 }) => {
   const { t } = useLanguage();
+  const [selectedType, setSelectedType] = useState<CertificationType>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Filter locations based on certification type and search query
+  const filteredLocations = locations.filter(location => {
+    // First filter by certification type
+    if (selectedType !== 'all') {
+      const certification = (location.certification || '').toLowerCase();
+      switch (selectedType) {
+        case 'reserve':
+          return certification.includes('reserve') || location.isDarkSkyReserve;
+        case 'park':
+          return certification.includes('park');
+        case 'community':
+          return certification.includes('community');
+        case 'urban':
+          return certification.includes('urban');
+        case 'lodging':
+          return certification.includes('lodging');
+        default:
+          return true;
+      }
+    }
+    
+    // Then filter by search query if present
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        location.name?.toLowerCase().includes(query) ||
+        location.chineseName?.toLowerCase().includes(query) ||
+        location.certification?.toLowerCase().includes(query)
+      );
+    }
+    
+    return true;
+  });
   
   if (initialLoad && loading) {
     return (
@@ -34,12 +72,13 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
     );
   }
   
-  if (locations.length === 0 && !loading) {
+  if (filteredLocations.length === 0 && !loading) {
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground">
-          {t("No certified dark sky locations found in this area.", 
-             "在此区域中未找到认证的暗空地点。")}
+          {searchQuery || selectedType !== 'all' 
+            ? t("No matching certified locations found.", "未找到匹配的认证地点。")
+            : t("No certified dark sky locations found in this area.", "在此区域中未找到认证的暗空地点。")}
         </p>
       </div>
     );
@@ -47,8 +86,23 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   
   return (
     <div>
+      <div className="space-y-4 mb-6">
+        <CertificationFilter 
+          selectedType={selectedType} 
+          onTypeChange={setSelectedType}
+        />
+        
+        <div className="flex gap-2 max-w-xl mx-auto">
+          <SearchBar 
+            value={searchQuery}
+            onChange={setSearchQuery}
+            className="flex-1"
+          />
+        </div>
+      </div>
+      
       <div className="grid grid-cols-1 gap-4">
-        {locations.map((location, index) => (
+        {filteredLocations.map((location, index) => (
           <PhotoLocationCard
             key={location.id || `${location.latitude}-${location.longitude}-${index}`}
             location={location}
