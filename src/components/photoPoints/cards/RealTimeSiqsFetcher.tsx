@@ -84,6 +84,8 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
                   // Use tonight's cloud cover if available
                   console.log(`Using tonight's cloud cover: ${tonightCloudCover}% for SIQS calculation`);
                   weatherData.cloudCover = tonightCloudCover;
+                } else {
+                  console.log("No astronomical night cloud cover data available, using current conditions");
                 }
               }
               

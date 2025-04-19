@@ -101,7 +101,7 @@ export const useLocationSIQSUpdater = (
             longitude
           );
           
-          if (tonightCloudCover !== null && tonightCloudCover !== undefined && !isNaN(tonightCloudCover)) {
+          if (tonightCloudCover !== null && !isNaN(tonightCloudCover)) {
             // Convert to SIQS score - giving more weight to nighttime cloud cover
             // Improved scoring algorithm for better accuracy
             const cloudScore = tonightCloudCover <= 10 ? 10 : Math.max(0, Math.min(10, 10 - (tonightCloudCover * 0.2)));
@@ -160,7 +160,7 @@ export const useLocationSIQSUpdater = (
                     `天文夜间云量${tonightCloudCover.toFixed(1)}%`) 
                   : `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% during astronomical night`,
                 weight: 0.7, // Give higher weight to nighttime cloud cover
-                nighttimeData: {
+                nighttimeData: {  // Added required nighttimeData property
                   average: tonightCloudCover,
                   timeRange: nightTimeStr,
                   evening: eveningCloudCover,
@@ -177,7 +177,13 @@ export const useLocationSIQSUpdater = (
                 description: t 
                   ? t(`Bortle Scale ${locationData.bortleScale}`, `布尔特尔等级${locationData.bortleScale}`) 
                   : `Bortle Scale ${locationData.bortleScale}`,
-                weight: 0.3
+                weight: 0.3,
+                nighttimeData: {  // Added required nighttimeData property
+                  average: 0, // Not applicable for bortle scale
+                  timeRange: nightTimeStr,
+                  evening: null,
+                  morning: null
+                }
               });
             }
             
@@ -215,9 +221,11 @@ export const useLocationSIQSUpdater = (
                     ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
                       `${currentCloudCover}%的云量影响成像质量`) 
                     : `Cloud cover of ${currentCloudCover}% affects imaging quality`,
-                  nighttimeData: {  // Add missing nighttimeData property
+                  nighttimeData: {  // Add required nighttimeData property 
                     average: currentCloudCover,
-                    timeRange: "current" 
+                    timeRange: "current",
+                    evening: null,
+                    morning: null
                   }
                 }
               ]

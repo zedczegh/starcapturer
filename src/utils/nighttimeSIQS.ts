@@ -52,35 +52,39 @@ export const calculateAverageValue = (
  * @param forecast Hourly forecast data
  * @param latitude Location latitude
  * @param longitude Location longitude
- * @returns Average cloud cover during nighttime
+ * @returns Average cloud cover during nighttime or null if not available
  */
 export const calculateTonightCloudCover = (
   forecast: any[],
   latitude: number,
   longitude: number
-): number => {
-  if (!forecast || forecast.length === 0) {
+): number | null => {
+  if (!forecast || !Array.isArray(forecast) || forecast.length === 0) {
     console.log("No forecast data available for night cloud calculation");
-    return 0;
+    return null;
   }
   
+  // Check if forecast is in Open-Meteo format with time and cloud_cover arrays
+  const isOpenMeteoFormat = !forecast[0]?.time && 
+    Array.isArray(forecast.time) && 
+    Array.isArray(forecast.cloud_cover);
+  
   // Convert forecast to standard format if it's in API format
-  const standardizedForecast = forecast.map(item => {
-    if (item.time) return item;
-    
+  const standardizedForecast = isOpenMeteoFormat ? 
     // Handle Open-Meteo API format
-    if (Array.isArray(forecast.time) && Array.isArray(forecast.cloud_cover)) {
-      const index = forecast.time.indexOf(item);
-      if (index >= 0) {
+    forecast.time.map((timeValue: string, index: number) => ({
+      time: timeValue,
+      cloudCover: forecast.cloud_cover[index]
+    }))
+    // Handle standard format
+    : forecast.map(item => {
+        if (item.time) return item;
+        // For any other format, try to extract cloud cover
         return {
-          time: forecast.time[index],
-          cloudCover: forecast.cloud_cover[index]
+          time: item.date || new Date().toISOString(),
+          cloudCover: item.cloudCover || item.cloud_cover
         };
-      }
-    }
-    
-    return item;
-  });
+      });
   
   // Get night hours for the location
   const today = new Date();
@@ -90,7 +94,20 @@ export const calculateTonightCloudCover = (
   if (!nightHours || nightHours.length === 0) {
     console.log("No astronomical night hours found, using fallback definition");
     const filteredForecast = filterNighttimeForecast(standardizedForecast);
-    return calculateAverageValue(filteredForecast, 'cloudCover');
+    
+    // If we still have no data, return null instead of default
+    if (filteredForecast.length === 0) {
+      console.log("No nighttime forecast data available");
+      return null;
+    }
+    
+    const cloudCoverValues = filteredForecast
+      .map(item => item.cloudCover)
+      .filter(value => typeof value === 'number' && !isNaN(value));
+    
+    if (cloudCoverValues.length === 0) return null;
+    
+    return cloudCoverValues.reduce((sum, val) => sum + val, 0) / cloudCoverValues.length;
   }
   
   // Filter forecast for tonight's night hours
@@ -103,11 +120,25 @@ export const calculateTonightCloudCover = (
   
   if (tonightForecast.length === 0) {
     console.log("No forecast data points found within astronomical night hours");
-    return calculateAverageValue(filterNighttimeForecast(standardizedForecast), 'cloudCover');
+    // Try fallback but don't default to 0
+    const fallbackForecast = filterNighttimeForecast(standardizedForecast);
+    if (fallbackForecast.length === 0) return null;
+    
+    const validCloudValues = fallbackForecast
+      .map(item => item.cloudCover)
+      .filter(value => typeof value === 'number' && !isNaN(value));
+    
+    if (validCloudValues.length === 0) return null;
+    return validCloudValues.reduce((sum, val) => sum + val, 0) / validCloudValues.length;
   }
   
   console.log(`Found ${tonightForecast.length} forecast data points for astronomical night`);
-  return calculateAverageValue(tonightForecast, 'cloudCover');
+  const cloudValues = tonightForecast
+    .map(item => item.cloudCover)
+    .filter(value => typeof value === 'number' && !isNaN(value));
+  
+  if (cloudValues.length === 0) return null;
+  return cloudValues.reduce((sum, val) => sum + val, 0) / cloudValues.length;
 };
 
 /**
