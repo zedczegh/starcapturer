@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore } from '@/utils/siqsHelpers';
@@ -31,7 +30,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   const stableScoreRef = useRef<number | null>(null);
   
   // Convert score to number using our helper function
-  const numericScore = score === null ? 0 : getSiqsScore(score);
+  const numericScore = getSiqsScore(score);
   
   // For certified locations with no valid score, always show loading state
   const showLoading = loading || (isCertified && numericScore <= 0) || forceCertified;
@@ -56,6 +55,10 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       loadingTimeoutRef.current = window.setTimeout(() => {
         if (numericScore > 0) {
           setDisplayedScore(numericScore);
+          setLoadingState(false);
+        } else {
+          // If we still don't have a valid score after loading, clear the displayed score
+          setDisplayedScore(null);
           setLoadingState(false);
         }
         loadingTimeoutRef.current = null;
@@ -115,6 +118,14 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     
     setLoadingState(false);
   }, [numericScore, showLoading, displayedScore, isCertified]);
+  
+  // Reset score when loading starts
+  useEffect(() => {
+    if (loading && !loadingState) {
+      setLoadingState(true);
+      setDisplayedScore(null);
+    }
+  }, [loading]);
   
   // Cleanup on unmount
   useEffect(() => {

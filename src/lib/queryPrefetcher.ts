@@ -1,4 +1,3 @@
-
 import { QueryClient } from '@tanstack/react-query';
 import { fetchWeatherData, fetchLightPollutionData, fetchForecastData } from './api';
 
@@ -17,52 +16,40 @@ const generateCacheKeys = (latitude: number, longitude: number) => {
 
 /**
  * Pre-fetches common location data to improve page transition speed
- * Called before navigation to have data ready when the page loads
  */
 export const prefetchLocationData = async (
   queryClient: QueryClient, 
   latitude: number, 
   longitude: number
 ) => {
-  const { weatherKey, lightPollutionKey, forecastKey, siqsDetailsKey } = generateCacheKeys(latitude, longitude);
+  const { weatherKey, lightPollutionKey, forecastKey } = generateCacheKeys(latitude, longitude);
   
-  // Always fetch the light pollution data first as it's critical for accurate SIQS
-  try {
-    // Force refresh light pollution data
-    await queryClient.fetchQuery({
+  // Use Promise.allSettled to fetch all data in parallel without blocking on errors
+  const results = await Promise.allSettled([
+    // Fetch weather and light pollution in parallel
+    queryClient.fetchQuery({
+      queryKey: weatherKey,
+      queryFn: () => fetchWeatherData({ latitude, longitude }),
+      staleTime: 5 * 60 * 1000 // 5 minutes
+    }),
+    queryClient.fetchQuery({
       queryKey: lightPollutionKey,
       queryFn: () => fetchLightPollutionData(latitude, longitude),
       staleTime: 60 * 60 * 1000 // 1 hour
-    });
-  } catch (error) {
-    console.error("Error prefetching light pollution data:", error);
-  }
-  
-  // Use Promise.all to fetch remaining data in parallel
-  await Promise.all([
-    // Prefetch weather data
-    !queryClient.getQueryData(weatherKey) && 
-      queryClient.prefetchQuery({
-        queryKey: weatherKey,
-        queryFn: () => fetchWeatherData({ latitude, longitude }),
-        staleTime: 5 * 60 * 1000 // 5 minutes
-      })
+    }),
+    // Also fetch forecast data in parallel
+    queryClient.fetchQuery({
+      queryKey: forecastKey,
+      queryFn: () => fetchForecastData({ 
+        latitude, 
+        longitude, 
+        days: 3 
+      }),
+      staleTime: 30 * 60 * 1000 // 30 minutes
+    })
   ]);
-  
-  // Lower priority data can be fetched after the main data
-  if (!queryClient.getQueryData(forecastKey)) {
-    setTimeout(() => {
-      queryClient.fetchQuery({
-        queryKey: forecastKey,
-        queryFn: () => fetchForecastData({ 
-          latitude, 
-          longitude, 
-          days: 3 
-        }),
-        staleTime: 30 * 60 * 1000 // 30 minutes
-      });
-    }, 100);
-  }
+
+  console.log("Prefetch results:", results.map(r => r.status));
 };
 
 /**

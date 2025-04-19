@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -46,9 +45,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
-  // Set loading state based on weather data completeness
   useEffect(() => {
-    // Check if we have valid weather data
     const hasValidWeatherData = 
       weatherData && 
       weatherData.temperature !== undefined && 
@@ -58,12 +55,10 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
       
     setIsLoading(!hasValidWeatherData);
     
-    // If we have data, update the stable state
     if (hasValidWeatherData) {
       setStableWeatherData(weatherData);
     }
     
-    // Auto-hide loading state after 3 seconds even if data is missing
     const timer = setTimeout(() => {
       if (isLoading) setIsLoading(false);
     }, 3000);
@@ -75,11 +70,9 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     if (!forecastData || !forecastData.hourly) return null;
     
     try {
-      // Get astronomical night times for the location
       const { start, end } = calculateAstronomicalNight(latitude, longitude);
       const nightTimeStr = `${formatTime(start)}-${formatTime(end)}`;
       
-      // Calculate tonight's cloud cover using astronomical night hours
       const tonightCloudCover = calculateTonightCloudCover(
         forecastData.hourly,
         latitude,

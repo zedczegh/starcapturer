@@ -90,7 +90,16 @@ export async function getMapDisplaySiqs({
       return defaultResult;
     }
     
-    const weatherData = result.weatherData || {} as WeatherDataWithClearSky;
+    // Create a default weather data object if none exists in the result
+    const weatherData: WeatherDataWithClearSky = result.weatherData || {
+      cloudCover: 0, 
+      precipitation: 0,
+      latitude, 
+      longitude,
+      temperature: 0,
+      humidity: 0,
+      windSpeed: 0
+    } as WeatherDataWithClearSky;
     
     // Apply anomaly detection and correction
     const correctedResult = detectAndFixAnomalies(
@@ -99,8 +108,8 @@ export async function getMapDisplaySiqs({
       { latitude, longitude }
     );
     
-    // Get reliability assessment
-    const reliability = assessDataReliability(weatherData, result.forecastData);
+    // Get reliability assessment with safe access to forecastData
+    const reliability = assessDataReliability(weatherData, result.forecastData || null);
     
     // For certified locations, ensure minimum scores
     let finalScore = correctedResult.siqs;
@@ -155,4 +164,3 @@ export function getSiqsColorClass(siqs: number | null): string {
   if (siqs >= 3.5) return 'text-orange-500';
   return 'text-red-500';
 }
-
