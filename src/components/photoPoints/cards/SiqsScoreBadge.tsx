@@ -57,6 +57,10 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
         if (numericScore > 0) {
           setDisplayedScore(numericScore);
           setLoadingState(false);
+        } else {
+          // If we still don't have a valid score after loading, clear the displayed score
+          setDisplayedScore(null);
+          setLoadingState(false);
         }
         loadingTimeoutRef.current = null;
       }, 600);
@@ -115,6 +119,14 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     
     setLoadingState(false);
   }, [numericScore, showLoading, displayedScore, isCertified]);
+  
+  // Reset score when loading starts
+  useEffect(() => {
+    if (loading && !loadingState) {
+      setLoadingState(true);
+      setDisplayedScore(null);
+    }
+  }, [loading]);
   
   // Cleanup on unmount
   useEffect(() => {
