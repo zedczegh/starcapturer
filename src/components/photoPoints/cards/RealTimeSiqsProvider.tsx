@@ -53,12 +53,15 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   
   // Immediately signal loading state for certified locations to avoid flickering
   useEffect(() => {
-    if (isInitialFetch && isCertified && isVisible) {
+    if (isInitialFetch && isCertified) {
       // Tell the parent we're loading immediately to avoid showing default score
       onSiqsCalculated(null, true);
       setIsInitialFetch(false);
+      
+      // Trigger fetch immediately for certified locations
+      fetchSiqs();
     }
-  }, [isInitialFetch, isCertified, isVisible, onSiqsCalculated]);
+  }, [isInitialFetch, isCertified]);
   
   // Memoize the fetch function to prevent unnecessary re-renders
   const fetchSiqs = useCallback(async () => {
@@ -111,22 +114,22 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       fetchTimeoutRef.current = null;
     }
     
-    if (isVisible && latitude && longitude) {
-      const shouldFetch = 
-          forceUpdate || 
-          !fetchAttempted ||
-          (Date.now() - lastFetchTimestamp > REFRESH_INTERVAL) ||
-          (isCertified && !fetchAttempted); // Always fetch for certified locations on first visibility
+    // For certified locations, we always want to fetch regardless of visibility
+    const shouldFetch = 
+      forceUpdate || 
+      !fetchAttempted ||
+      (Date.now() - lastFetchTimestamp > REFRESH_INTERVAL) ||
+      (isCertified && !fetchAttempted) || 
+      (isCertified && isVisible); // Always fetch for certified locations when visible
+    
+    if ((isVisible || isCertified) && latitude && longitude && shouldFetch) {
+      // Use a small delay for certified locations to avoid all fetches happening simultaneously
+      const delay = isCertified ? Math.random() * 500 + 100 : 0; // Random delay up to 600ms for certified locations
       
-      if (shouldFetch) {
-        // Use a small delay for certified locations to avoid all fetches happening simultaneously
-        const delay = isCertified ? Math.random() * 500 + 100 : 0; // Random delay up to 600ms for certified locations
-        
-        fetchTimeoutRef.current = window.setTimeout(() => {
-          fetchSiqs();
-          fetchTimeoutRef.current = null;
-        }, delay);
-      }
+      fetchTimeoutRef.current = window.setTimeout(() => {
+        fetchSiqs();
+        fetchTimeoutRef.current = null;
+      }, delay);
     }
     
     // Clear any pending timers on cleanup

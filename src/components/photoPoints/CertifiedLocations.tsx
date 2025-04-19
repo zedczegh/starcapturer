@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoLocationCard from './PhotoLocationCard';
 import { Button } from '../ui/button';
@@ -30,6 +30,17 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   const [selectedType, setSelectedType] = useState<CertificationType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [displayLimit, setDisplayLimit] = useState(5);
+  const [allLocationsLoaded, setAllLocationsLoaded] = useState(false);
+  
+  useEffect(() => {
+    // Force loading of all certified locations by setting allLocationsLoaded to true
+    setAllLocationsLoaded(true);
+    
+    // Make sure at least 5 are shown initially (if available)
+    if (locations.length > 0 && displayLimit < 5) {
+      setDisplayLimit(5);
+    }
+  }, [locations.length]);
   
   // Filter locations based on certification type and search query
   const filteredLocations = locations.filter(location => {
@@ -73,6 +84,11 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   // Get the locations to display based on the current limit
   const locationsToDisplay = filteredLocations.slice(0, displayLimit);
   const hasMoreToShow = displayLimit < filteredLocations.length;
+  
+  // Log locations for debugging
+  console.log(`Total certified locations: ${locations.length}`);
+  console.log(`Filtered locations: ${filteredLocations.length}`);
+  console.log(`Locations to display: ${locationsToDisplay.length}`);
   
   if (initialLoad && loading) {
     return (
@@ -118,6 +134,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
             location={location}
             index={index}
             onViewDetails={() => onViewDetails(location)}
+            showRealTimeSiqs={true}
           />
         ))}
       </div>
