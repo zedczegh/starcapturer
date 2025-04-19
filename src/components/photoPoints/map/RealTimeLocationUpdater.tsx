@@ -2,7 +2,8 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
-import { clearLocationCache } from '@/services/realTimeSiqsService';
+import { clearLocationCache } from '@/services/location/optimizedLocationLoader';
+import { Loader2 } from 'lucide-react';
 import LocationControllers from './LocationControllers';
 import SiqsDisplay from './SiqsDisplay';
 
@@ -23,6 +24,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
   const lastFetchRef = useRef<number>(0);
   const locationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const [cacheCleared, setCacheCleared] = useState<boolean>(false);
+  const [locationUpdating, setLocationUpdating] = useState<boolean>(false);
 
   // Update reference to track location changes
   useEffect(() => {
@@ -101,13 +103,13 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
 
   // Get current location with high accuracy
   const handleGetCurrentLocation = useCallback(() => {
-    setLoading(true);
+    setLocationUpdating(true);
     
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
         onLocationUpdate(latitude, longitude);
-        setLoading(false);
+        setLocationUpdating(false);
         
         // Center map on user location using the globally accessible map instance
         try {
@@ -134,7 +136,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
       },
       (error) => {
         console.error("Error getting location:", error);
-        setLoading(false);
+        setLocationUpdating(false);
         
         // Provide user-friendly error messages in console
         let errorMsg = "Failed to get your location";
@@ -165,12 +167,19 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
         loading={loading}
         cacheCleared={cacheCleared}
         userLocation={userLocation}
+        locationUpdating={locationUpdating}
       />
       
       <SiqsDisplay 
         realTimeSiqs={realTimeSiqs} 
-        loading={loading} 
+        loading={loading || locationUpdating} 
       />
+      
+      {locationUpdating && (
+        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center z-50">
+          <Loader2 className="animate-spin text-primary h-5 w-5" />
+        </div>
+      )}
     </div>
   );
 };

@@ -9,6 +9,9 @@ const MEMORY_CACHE = new Map<string, {
   timestamp: number;
 }>();
 
+// Add event system for location updates
+const locationUpdateListeners: (() => void)[] = [];
+
 export const loadCalculatedLocations = async (
   latitude: number,
   longitude: number,
@@ -19,13 +22,15 @@ export const loadCalculatedLocations = async (
   const now = Date.now();
   const cached = MEMORY_CACHE.get(cacheKey);
 
-  // Use in-memory cache first (5 minute validity)
+  // Use in-memory cache only for the SAME location (5 minute validity)
   if (cached && (now - cached.timestamp) < 5 * 60 * 1000) {
     console.log(`Using in-memory cached locations for ${cacheKey}`);
     return cached.data;
   }
 
   try {
+    console.log(`Generating fresh locations for ${latitude.toFixed(6)},${longitude.toFixed(6)} with radius ${radius}km`);
+    
     // Generate locations in batches
     const spots = await generateQualitySpots(latitude, longitude, radius, limit);
     
@@ -52,6 +57,9 @@ export const loadCalculatedLocations = async (
       }
     }
 
+    // Notify listeners that location data has been updated
+    notifyLocationUpdateListeners();
+    
     return spots;
   } catch (error) {
     console.error('Error loading calculated locations:', error);
@@ -68,4 +76,28 @@ export const clearLocationCache = () => {
       }
     });
   }
+  // Notify listeners that cache was cleared
+  notifyLocationUpdateListeners();
+};
+
+// Register a listener for location updates
+export const addLocationUpdateListener = (listener: () => void) => {
+  locationUpdateListeners.push(listener);
+  return () => {
+    const index = locationUpdateListeners.indexOf(listener);
+    if (index !== -1) {
+      locationUpdateListeners.splice(index, 1);
+    }
+  };
+};
+
+// Notify all listeners
+const notifyLocationUpdateListeners = () => {
+  locationUpdateListeners.forEach(listener => {
+    try {
+      listener();
+    } catch (e) {
+      console.error("Error in location update listener:", e);
+    }
+  });
 };
