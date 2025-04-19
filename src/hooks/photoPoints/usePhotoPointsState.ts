@@ -86,18 +86,6 @@ export const usePhotoPointsState = () => {
     setLocationInitialized(true);
     
     console.log(`Location manually updated to: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-    
-    try {
-      const leafletMap = (window as any).leafletMap;
-      if (leafletMap) {
-        leafletMap.setView([latitude, longitude], 12, { 
-          animate: true,
-          duration: 1.5 
-        });
-      }
-    } catch (e) {
-      console.error("Could not center map:", e);
-    }
   }, [t]);
   
   const handleResetLocation = useCallback(() => {
