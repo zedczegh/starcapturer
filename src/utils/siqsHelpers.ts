@@ -1,3 +1,4 @@
+
 /**
  * Helper functions for safely working with SIQS values that might be numbers or objects
  */
@@ -6,7 +7,6 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
  * Get numeric SIQS score from any SIQS format (number or object)
- * Auto-converts 0-100 scale to 0-10 scale
  * @param siqs SIQS value which could be a number or object
  * @returns number value of SIQS or 0 if undefined
  */
@@ -15,35 +15,32 @@ export function getSiqsScore(siqs?: number | string | { score: number; isViable:
     return 0;
   }
   
-  let score = 0;
-  
   // Handle string values (parsing to number)
   if (typeof siqs === 'string') {
-    score = parseFloat(siqs);
+    const parsed = parseFloat(siqs);
+    return isNaN(parsed) ? 0 : parsed;
   }
+  
   // Handle numeric values directly
-  else if (typeof siqs === 'number') {
-    score = siqs;
+  if (typeof siqs === 'number') {
+    return isNaN(siqs) ? 0 : siqs;
   }
+  
   // Handle SharedAstroSpot object with siqs property
-  else if (typeof siqs === 'object' && siqs !== null) {
+  if (typeof siqs === 'object' && siqs !== null) {
     // Case: location.siqs passed directly as an object with score property
     if ('siqs' in siqs && typeof siqs.siqs !== 'undefined') {
-      score = getSiqsScore(siqs.siqs);
+      return getSiqsScore(siqs.siqs);
     }
+    
     // Case: { score: number } object
-    else if ('score' in siqs && typeof siqs.score === 'number') {
-      score = siqs.score;
+    if ('score' in siqs && typeof siqs.score === 'number') {
+      return isNaN(siqs.score) ? 0 : siqs.score;
     }
   }
   
-  // Convert 0-100 scale to 0-10 scale if needed
-  if (score > 10) {
-    score = score / 10;
-  }
-  
-  // Ensure score is in valid range
-  return Math.max(0, Math.min(10, score));
+  // Default fallback
+  return 0;
 }
 
 /**
@@ -90,7 +87,7 @@ export function getLocationSiqs(location: SharedAstroSpot | any): number {
 }
 
 /**
- * Format SIQS score for display (always 1-10 scale)
+ * Format SIQS score for display
  */
 export function formatSiqsScore(siqs: number | any): string {
   const score = typeof siqs === 'number' ? siqs : getSiqsScore(siqs);
@@ -99,12 +96,9 @@ export function formatSiqsScore(siqs: number | any): string {
 }
 
 /**
- * Format SIQS for display with consistent 1-10 scale
+ * Get appropriate SIQS display format
  */
 export function formatSiqsForDisplay(score: number | null): string {
   if (score === null || score <= 0) return 'N/A';
-  
-  // Convert 0-100 scale to 0-10 if needed
-  const normalizedScore = score > 10 ? score / 10 : score;
-  return normalizedScore.toFixed(1);
+  return score.toFixed(1);
 }

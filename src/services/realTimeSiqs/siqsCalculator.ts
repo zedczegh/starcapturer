@@ -6,7 +6,7 @@
  * without any caching to ensure the most accurate current data.
  */
 
-// Import dependencies
+// Import dependencies (assume these are already defined elsewhere)
 import { fetchWeatherData } from '@/lib/api';
 
 interface SiqsCalculationOptions {
@@ -18,8 +18,8 @@ interface SiqsCalculationOptions {
 export interface SiqsResult {
   siqs: number;
   isViable: boolean;
-  weatherData?: any;
-  forecastData?: any;
+  weatherData?: any; // Include weatherData property
+  forecastData?: any; // Include forecastData property
   factors?: {
     name: string;
     score: number;
@@ -52,50 +52,22 @@ export async function calculateRealTimeSiqs(
   console.log(`Calculating real-time SIQS for ${latitude.toFixed(5)},${longitude.toFixed(5)} with Bortle ${bortleScale}`);
   
   try {
-    // Fetch current weather data with error handling
+    // Fetch current weather data
     const weatherData = await fetchWeatherData({
       latitude,
       longitude
     });
     
     if (!weatherData) {
-      console.error('Weather data not available - returning fallback value');
-      return {
-        siqs: 5.0, // Default fallback value
-        isViable: true,
-        weatherData: null,
-        factors: [
-          { 
-            name: "Default", 
-            score: 5.0, 
-            description: `No weather data available`
-          }
-        ],
-        metadata: {
-          calculatedAt: new Date().toISOString(),
-          sources: {
-            weather: false,
-            forecast: false,
-            clearSky: false,
-            lightPollution: true
-          },
-          reliability: {
-            score: 3,
-            issues: ["Missing weather data"]
-          }
-        }
-      };
+      throw new Error('Weather data not available');
     }
     
     // Calculate SIQS based on current conditions
-    const cloudCover = typeof weatherData.cloudCover === 'number' ? weatherData.cloudCover : 0;
-    
-    // Type-safe access to visibility property if it exists, or use default
-    const visibility = typeof (weatherData as any).visibility === 'number' ? 
-      (weatherData as any).visibility : 10000;
-    
-    // Type-safe access to isDay property if it exists, or use default
-    const isNight = (weatherData as any).isDay === 0 || false;
+    const cloudCover = weatherData.cloudCover || 0;
+    // Use optional properties or defaults for visibility and night detection
+    // These properties may not exist on WeatherData type
+    const visibility = 10000; // Default visibility in meters
+    const isNight = false; // Default night status
     
     // Cloud cover heavily impacts SIQS (0-100%)
     // 0% clouds = best, 100% = worst
@@ -124,15 +96,16 @@ export async function calculateRealTimeSiqs(
     const finalScore = Math.round(normalizedScore * 10) / 10;
     
     // Determine if conditions are viable for observation
+    // Since we're using real-time data, check current time if isNight is not available
     const currentHour = new Date().getHours();
-    const isDarkHours = isNight || (currentHour >= 18 || currentHour <= 5);
+    const isDarkHours = currentHour >= 19 || currentHour <= 5; // Assume night between 7PM and 5AM
     const isViable = finalScore >= 3.5 && isDarkHours;
 
     // Add the weatherData to the result
     const result: SiqsResult = {
       siqs: finalScore,
       isViable,
-      weatherData: weatherData,
+      weatherData: weatherData, // Include the weather data in the result
       factors: [
         { 
           name: "Cloud Cover", 
@@ -165,38 +138,10 @@ export async function calculateRealTimeSiqs(
       }
     };
     
-    // Debug log the result
-    console.log(`SIQS calculation successful - score: ${finalScore}`);
-    
     return result;
   } catch (error) {
     console.error('Error calculating real-time SIQS:', error);
-    // Return a fallback value so the UI doesn't break
-    return {
-      siqs: 5.0, // Default fallback value
-      isViable: true,
-      weatherData: null,
-      factors: [
-        { 
-          name: "Fallback", 
-          score: 5.0, 
-          description: `Error in calculation, using fallback value`
-        }
-      ],
-      metadata: {
-        calculatedAt: new Date().toISOString(),
-        sources: {
-          weather: false,
-          forecast: false,
-          clearSky: false,
-          lightPollution: true
-        },
-        reliability: {
-          score: 3,
-          issues: ["Calculation error"]
-        }
-      }
-    };
+    throw error;
   }
 }
 
@@ -204,6 +149,7 @@ export async function calculateRealTimeSiqs(
  * Clear location cache - this is now a no-op since we don't use caching
  */
 export function clearLocationCache(): void {
+  // No caching to clear
   console.log('SIQS cache system has been disabled - all calculations are real-time');
 }
 
@@ -213,3 +159,4 @@ export function clearLocationCache(): void {
 export function getCacheFreshness(): number {
   return 0; // Always fresh - no cache
 }
+

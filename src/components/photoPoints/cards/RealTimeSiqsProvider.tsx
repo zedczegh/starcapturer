@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
+import { getCompleteSiqsDisplay } from '@/utils/unifiedSiqsDisplay';
 
 interface RealTimeSiqsProviderProps {
   isVisible: boolean;
@@ -95,41 +95,29 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       setFetchAttempted(true);
       onSiqsCalculated(null, true);
       
-      console.log(`Fetching real-time SIQS for ${latitude.toFixed(5)},${longitude.toFixed(5)}`);
-      
       // Always force fresh calculation - no caching!
-      const result = await calculateRealTimeSiqs(
-        latitude, 
-        longitude, 
-        bortleScale
-      );
+      const result = await getCompleteSiqsDisplay({
+        latitude,
+        longitude,
+        bortleScale,
+        isCertified,
+        isDarkSkyReserve,
+        existingSiqs: existingSiqsNumber,
+        skipCache: true // Always skip cache to get fresh data
+      });
       
       if (!isMounted.current) return;
       
-      if (result && result.siqs > 0) {
-        console.log(`Real-time SIQS calculation successful: ${result.siqs}`);
-        onSiqsCalculated(result.siqs, false, 9);
-      } else {
-        console.warn("SIQS calculation returned invalid result:", result);
-        
-        // Use existing SIQS as fallback
-        if (existingSiqsNumber > 0) {
-          onSiqsCalculated(existingSiqsNumber, false, 6);
-        } else {
-          // Use a default value for certified locations
-          onSiqsCalculated(isCertified ? 5.0 : null, false, 5);
-        }
-      }
+      onSiqsCalculated(result.siqs, false, result.source === 'realtime' ? 9 : 7);
       
     } catch (error) {
       console.error("Error in RealTimeSiqsProvider:", error);
       
       if (!isMounted.current) return;
       
-      // Use fallback values on error
+      // For certified locations, never use default scores if real-time fails
       if (isCertified) {
-        // For certified locations, use a default value instead of nothing
-        onSiqsCalculated(5.0, false, 4);
+        onSiqsCalculated(null, false);
       } else if (existingSiqsNumber > 0) {
         onSiqsCalculated(existingSiqsNumber, false, 6);
       } else {
@@ -141,7 +129,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         setIsInitialFetch(false);
       }
     }
-  }, [latitude, longitude, bortleScale, isCertified, existingSiqsNumber, onSiqsCalculated]);
+  }, [latitude, longitude, bortleScale, isCertified, isDarkSkyReserve, existingSiqsNumber, onSiqsCalculated]);
   
   useEffect(() => {
     if (fetchTimeoutRef.current) {
