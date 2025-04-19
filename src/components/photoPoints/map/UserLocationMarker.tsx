@@ -8,7 +8,6 @@ import { MapPin, ExternalLink } from 'lucide-react';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 
 interface UserLocationMarkerProps {
   position: [number, number];
