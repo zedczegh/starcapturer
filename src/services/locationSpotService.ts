@@ -51,7 +51,8 @@ export async function generateQualitySpots(
               siqs: siqsResult.siqs * 10,
               isViable: siqsResult.isViable,
               distance: point.distance,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              bortleScale: 4 // Adding the required bortleScale property
             };
           } catch (err) {
             console.warn('Error calculating SIQS for point:', err);
