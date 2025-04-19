@@ -64,8 +64,13 @@ export async function calculateRealTimeSiqs(
     
     // Calculate SIQS based on current conditions
     const cloudCover = weatherData.cloudCover || 0;
-    const visibility = weatherData.visibility || 10000;
-    const isNight = weatherData.isDay === 0 || false;
+    
+    // Type-safe access to visibility property if it exists, or use default
+    const visibility = typeof (weatherData as any).visibility !== 'undefined' ? 
+      (weatherData as any).visibility : 10000;
+    
+    // Type-safe access to isDay property if it exists, or use default
+    const isNight = (weatherData as any).isDay === 0 || false;
     
     // Cloud cover heavily impacts SIQS (0-100%)
     // 0% clouds = best, 100% = worst
@@ -94,7 +99,10 @@ export async function calculateRealTimeSiqs(
     const finalScore = Math.round(normalizedScore * 10) / 10;
     
     // Determine if conditions are viable for observation
-    const isViable = finalScore >= 3.5 && isNight;
+    // We can use current time to determine if it's night if isNight is not available
+    const currentHour = new Date().getHours();
+    const isDarkHours = isNight || (currentHour >= 18 || currentHour <= 5);
+    const isViable = finalScore >= 3.5 && isDarkHours;
 
     // Add the weatherData to the result
     const result: SiqsResult = {
@@ -123,7 +131,7 @@ export async function calculateRealTimeSiqs(
         sources: {
           weather: true,
           forecast: false,
-          clearSky: isNight,
+          clearSky: isDarkHours,
           lightPollution: true
         },
         reliability: {
