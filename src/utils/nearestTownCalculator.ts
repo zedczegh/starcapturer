@@ -1,15 +1,7 @@
-
 import { calculateDistance } from "@/data/locationDatabase";
 import { DetailedLocationEntry, combinedTownLocations } from "./location/townData";
 import { formatDistance } from "./location/formatDistance";
 
-/**
- * Find the nearest town/city to a given location with enhanced details
- * @param latitude Latitude of the target location
- * @param longitude Longitude of the target location
- * @param language Current display language
- * @returns Object containing the nearest town and distance information with detailed naming
- */
 export function findNearestTown(
   latitude: number, 
   longitude: number,
@@ -17,7 +9,6 @@ export function findNearestTown(
 ): {
   townName: string;
   distance: number;
-  formattedDistance: string;
   detailedName: string;
   village?: string;
   county?: string;
@@ -27,8 +18,10 @@ export function findNearestTown(
     return {
       townName: language === 'en' ? 'Unknown location' : '未知位置',
       distance: 0,
-      formattedDistance: language === 'en' ? 'Unknown distance' : '未知距离',
       detailedName: language === 'en' ? 'Unknown location' : '未知位置',
+      village: undefined,
+      county: undefined,
+      city: undefined,
     };
   }
 
@@ -181,7 +174,6 @@ export function findNearestTown(
   return {
     townName,
     distance: selectedLocation.distance,
-    formattedDistance,
     detailedName,
     village: hasVillage ? (language === 'en' ? selectedLocation.village : selectedLocation.villageZh) : undefined,
     county: hasCounty ? (language === 'en' ? selectedLocation.county : selectedLocation.countyZh) : undefined,
@@ -189,9 +181,7 @@ export function findNearestTown(
   };
 }
 
-/**
- * Create a detailed name that includes village, county, and city when available
- */
+// Modify the createDetailedName function to remove distance in parentheses
 function createDetailedName(
   location: DetailedLocationEntry & { distance: number },
   language: string
@@ -274,14 +264,6 @@ function createDetailedName(
   } else {
     // For Chinese, use the Chinese name if available
     detailedName = location.chineseName || location.name;
-  }
-  
-  // For very far locations, add distance context
-  if (location.distance > 80) {
-    const distanceText = formatDistance(location.distance, language);
-    detailedName = language === 'en' 
-      ? `${detailedName} (${distanceText})`
-      : `${detailedName}（${distanceText}）`;
   }
   
   return detailedName;
