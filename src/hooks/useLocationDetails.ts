@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useForecastManager } from "./locationDetails/useForecastManager";
 import { useWeatherUpdater } from "./useWeatherUpdater";
@@ -131,7 +132,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
   return {
     forecastData,
     longRangeForecast,
-    loading,
+    loading: weatherLoading, // Use weatherLoading as the overall loading state
     forecastLoading,
     longRangeLoading,
     gettingUserLocation,

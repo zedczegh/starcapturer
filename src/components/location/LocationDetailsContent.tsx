@@ -1,3 +1,4 @@
+
 import React, { memo, useEffect, useRef, useState, useMemo } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
@@ -79,8 +80,20 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
           console.log("Multiple refresh attempts failed, trying alternative approach");
           setTimeout(() => {
             // Try individual refresh operations separately
-            try { handleRefreshForecast(); } catch (e) { console.error("Forecast refresh failed:", e); }
-            try { handleRefreshLongRangeForecast(); } catch (e) { console.error("Long range refresh failed:", e); }
+            try { 
+              if (locationData?.latitude && locationData?.longitude) {
+                handleRefreshForecast(locationData.latitude, locationData.longitude); 
+              }
+            } catch (e) { 
+              console.error("Forecast refresh failed:", e); 
+            }
+            try { 
+              if (locationData?.latitude && locationData?.longitude) {
+                handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude); 
+              }
+            } catch (e) { 
+              console.error("Long range refresh failed:", e); 
+            }
           }, 1000);
         }
       }
@@ -96,7 +109,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         container.removeEventListener('forceRefresh', handleForceRefresh);
       }
     };
-  }, [handleRefreshAll, resetUpdateState, handleRefreshForecast, handleRefreshLongRangeForecast, retryCount]);
+  }, [handleRefreshAll, resetUpdateState, handleRefreshForecast, handleRefreshLongRangeForecast, retryCount, locationData]);
   
   // Enhanced auto-refresh when page is opened or location is updated
   useEffect(() => {
@@ -170,6 +183,19 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     );
   }
 
+  // Helper functions to ensure coordinate parameters are properly passed
+  const handleRefreshForecastWithCoords = () => {
+    if (locationData?.latitude && locationData?.longitude) {
+      handleRefreshForecast(locationData.latitude, locationData.longitude);
+    }
+  };
+  
+  const handleRefreshLongRangeForecastWithCoords = () => {
+    if (locationData?.latitude && locationData?.longitude) {
+      handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+    }
+  };
+
   return (
     <div className="transition-all duration-300 animate-fade-in" ref={containerRef}> 
       <StatusMessage 
@@ -195,8 +221,8 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
           onLocationUpdate={onLocationUpdate}
           setGettingUserLocation={setGettingUserLocation}
           setStatusMessage={setStatusMessage}
-          onRefreshForecast={handleRefreshForecast}
-          onRefreshLongRange={handleRefreshLongRangeForecast}
+          onRefreshForecast={handleRefreshForecastWithCoords}
+          onRefreshLongRange={handleRefreshLongRangeForecastWithCoords}
         />
       )}
     </div>
