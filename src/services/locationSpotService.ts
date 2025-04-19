@@ -1,6 +1,5 @@
-
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { isWaterLocation } from '@/utils/locationValidator';
+import { isWaterLocation } from '@/utils/validation';
 import { generateDistributedPoints } from './location/pointGenerationService';
 import { getCachedSpots, cacheSpots } from './location/spotCacheService';
 import { createSpotFromPoint } from './location/spotCreationService';

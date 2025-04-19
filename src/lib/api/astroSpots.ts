@@ -1,4 +1,3 @@
-
 /**
  * Types and functions for working with shared astronomy spots
  * Enhanced with better Dark Sky International location support
@@ -7,7 +6,12 @@
 import { normalizeCoordinates } from './coordinates';
 import { darkSkyLocations } from '@/data/regions/darkSkyLocations';
 import { calculateDistance } from '@/data/utils/distanceCalculator';
-import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from '@/utils/locationValidator';
+import { 
+  isWaterLocation, 
+  isLikelyCoastalWater, 
+  isValidAstronomyLocation,
+  isCertifiedLocation 
+} from '@/utils/validation';
 
 /**
  * Represents a shared astronomy spot with location details and quality metrics

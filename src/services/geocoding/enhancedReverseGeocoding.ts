@@ -1,11 +1,10 @@
-
 import { Language } from './types';
 import { EnhancedLocationDetails } from './types/enhancedLocationTypes';
 import { fetchLocationDetails } from './providers/nominatimGeocodingProvider';
 import { GeocodeCache, addToCache, getFromCache } from './cache/geocodingCache';
 import { normalizeCoordinates } from './utils/coordinateUtils';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
-import { isWaterLocation } from '@/utils/locationValidator';
+import { isWaterLocation } from '@/utils/validation';
 import { formatAddressComponents } from './formatters/addressFormatter';
 
 export async function getEnhancedLocationDetails(
