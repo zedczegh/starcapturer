@@ -3,6 +3,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateRealTimeSiqs } from '../realTimeSiqs/siqsCalculator';
 import { isWaterLocation } from '@/utils/validation';
 import { getEnhancedLocationDetails } from '../geocoding/enhancedReverseGeocoding';
+import { getLocationTimeInfo } from '@/utils/timezone/timeZoneCalculator';
 
 export const createSpotFromPoint = async (
   point: { latitude: number; longitude: number; distance: number },
@@ -24,6 +25,9 @@ export const createSpotFromPoint = async (
       return null;
     }
     
+    // Get location time info
+    const timeInfo = getLocationTimeInfo(point.latitude, point.longitude);
+    
     // Calculate SIQS with default Bortle scale
     const defaultBortleScale = 4;
     
@@ -41,11 +45,16 @@ export const createSpotFromPoint = async (
         name: 'Calculated Location',
         latitude: point.latitude,
         longitude: point.longitude,
-        bortleScale: defaultBortleScale, // Use default Bortle scale
+        bortleScale: defaultBortleScale,
         siqs: siqsResult.siqs * 10,
         isViable: siqsResult.isViable,
         distance: point.distance,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        timeInfo: {
+          isNighttime: timeInfo.isNighttime,
+          timeUntilNight: timeInfo.timeUntilNight,
+          timeUntilDaylight: timeInfo.timeUntilDaylight
+        }
       };
     }
   } catch (err) {
