@@ -4,9 +4,11 @@ import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
-import { MapPin } from 'lucide-react';
+import { MapPin, ExternalLink } from 'lucide-react';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 interface UserLocationMarkerProps {
   position: [number, number];
@@ -15,6 +17,7 @@ interface UserLocationMarkerProps {
 
 const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => {
   const { t, language } = useLanguage();
+  const navigate = useNavigate();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [siqsLoading, setSiqsLoading] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
@@ -57,6 +60,17 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     setSiqsLoading(true);
     setRealTimeSiqs(null);
   }, [position]);
+
+  const handleViewDetails = () => {
+    navigate(`/location/${position[0].toFixed(6)},${position[1].toFixed(6)}`, {
+      state: {
+        latitude: position[0],
+        longitude: position[1],
+        name: locationName || t("Your Location", "您的位置"),
+        isUserLocation: true
+      }
+    });
+  };
 
   return (
     <>
@@ -102,11 +116,12 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
                 loading={siqsLoading}
               />
               <button
-                onClick={handleRefreshSiqs}
-                className="text-xs text-primary hover:text-primary/80 px-2 py-1"
+                onClick={handleViewDetails}
+                className="text-xs text-primary hover:text-primary/80 px-2 py-1 flex items-center"
                 disabled={siqsLoading}
               >
-                {t("Refresh", "刷新")}
+                <ExternalLink className="h-3 w-3 mr-1" />
+                {t("View Details", "查看详情")}
               </button>
             </div>
           </div>
