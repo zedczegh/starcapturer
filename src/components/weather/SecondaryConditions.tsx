@@ -1,10 +1,9 @@
-
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Sun, Moon, Info, CloudFog } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getBortleDescription } from "@/utils/weather/bortleScaleUtils";
-import { DynamicCloudCoverIcon } from "@/components/weather/icons/DynamicCloudCoverIcon";
+import DynamicCloudCoverIcon from "@/components/weather/icons/DynamicCloudCoverIcon";
 
 const MOON_PHASE_TRANSLATIONS = {
   'en': {
@@ -52,10 +51,8 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
 }) => {
   const { t, language } = useLanguage();
   
-  // Translate moon phase based on current language
   const translatedMoonPhase = MOON_PHASE_TRANSLATIONS[language][moonPhase] || moonPhase;
 
-  // Helper to get cloud cover color class based on value
   const getCloudCoverColorClass = (value: number) => {
     if (value <= 10) return "text-green-400";
     if (value <= 20) return "text-green-300";
@@ -65,7 +62,6 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
     return "text-red-400";
   };
   
-  // Helper to get AQI color class and label
   const getAqiInfo = (value: number) => {
     if (value <= 20) return { color: "text-green-400", label: t("Excellent", "极佳") };
     if (value <= 40) return { color: "text-green-300", label: t("Good", "良好") };
@@ -78,7 +74,6 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
   return (
     <div className="grid grid-cols-1 gap-4 text-cosmic-100">
       <TooltipProvider>
-        {/* Current Cloud Cover */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
           <div className="flex items-center">
             <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
@@ -91,7 +86,6 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
           </span>
         </div>
 
-        {/* Astronomical Night Cloud Cover */}
         {nighttimeCloudData && (
           <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
             <div className="flex items-center">
@@ -128,7 +122,6 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
           </div>
         )}
         
-        {/* Moon Phase */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
           <div className="flex items-center">
             <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
@@ -141,7 +134,6 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
           </span>
         </div>
         
-        {/* Bortle Scale */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
           <div className="flex items-center">
             <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
@@ -166,7 +158,6 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
           </span>
         </div>
         
-        {/* Air Quality */}
         {aqi !== undefined && (
           <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
             <div className="flex items-center">
