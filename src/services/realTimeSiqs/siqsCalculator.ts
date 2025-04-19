@@ -18,13 +18,6 @@ interface SiqsCalculationOptions {
 export interface SiqsResult {
   siqs: number;
   isViable: boolean;
-  weatherData?: any; // Include weatherData property
-  forecastData?: any; // Include forecastData property
-  factors?: {
-    name: string;
-    score: number;
-    description: string;
-  }[];
   metadata: {
     calculatedAt: string;
     sources: {
@@ -63,11 +56,9 @@ export async function calculateRealTimeSiqs(
     }
     
     // Calculate SIQS based on current conditions
-    const cloudCover = weatherData.cloudCover || 0;
-    // Use optional properties or defaults for visibility and night detection
-    // These properties may not exist on WeatherData type
-    const visibility = 10000; // Default visibility in meters
-    const isNight = false; // Default night status
+    const cloudCover = weatherData.current?.cloud_cover || 0;
+    const visibility = weatherData.current?.visibility || 10000;
+    const isNight = weatherData.current?.is_day === 0;
     
     // Cloud cover heavily impacts SIQS (0-100%)
     // 0% clouds = best, 100% = worst
@@ -96,39 +87,18 @@ export async function calculateRealTimeSiqs(
     const finalScore = Math.round(normalizedScore * 10) / 10;
     
     // Determine if conditions are viable for observation
-    // Since we're using real-time data, check current time if isNight is not available
-    const currentHour = new Date().getHours();
-    const isDarkHours = currentHour >= 19 || currentHour <= 5; // Assume night between 7PM and 5AM
-    const isViable = finalScore >= 3.5 && isDarkHours;
-
-    // Add the weatherData to the result
-    const result: SiqsResult = {
+    const isViable = finalScore >= 3.5 && isNight;
+    
+    // Return result with metadata
+    return {
       siqs: finalScore,
       isViable,
-      weatherData: weatherData, // Include the weather data in the result
-      factors: [
-        { 
-          name: "Cloud Cover", 
-          score: cloudFactor, 
-          description: `${cloudCover}% cloud cover impacts visibility`
-        },
-        { 
-          name: "Light Pollution", 
-          score: bortleFactor, 
-          description: `Bortle ${bortleScale} light pollution level`
-        },
-        { 
-          name: "Visibility", 
-          score: visibilityFactor, 
-          description: `Atmospheric visibility conditions`
-        }
-      ],
       metadata: {
         calculatedAt: new Date().toISOString(),
         sources: {
           weather: true,
           forecast: false,
-          clearSky: isDarkHours,
+          clearSky: isNight,
           lightPollution: true
         },
         reliability: {
@@ -137,8 +107,6 @@ export async function calculateRealTimeSiqs(
         }
       }
     };
-    
-    return result;
   } catch (error) {
     console.error('Error calculating real-time SIQS:', error);
     throw error;
@@ -159,4 +127,3 @@ export function clearLocationCache(): void {
 export function getCacheFreshness(): number {
   return 0; // Always fresh - no cache
 }
-
