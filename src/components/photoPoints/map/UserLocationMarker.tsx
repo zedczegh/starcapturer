@@ -78,7 +78,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
         latitude={position[0]}
         longitude={position[1]}
         onSiqsCalculated={handleSiqsCalculated}
-        forceUpdate={true} // Always force update to get fresh data
+        forceUpdate={forceUpdate}
       />
       
       <Marker 
@@ -86,45 +86,38 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
         icon={createCustomMarker('#e11d48')}
         onClick={handleRefreshSiqs}
       >
-        <Popup 
-          closeOnClick={false} 
-          autoClose={false}
-          offset={[0, 10]}
-          direction="bottom"
-        >
-          <div className="py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient">
-            <div className="font-medium text-sm mb-1.5 flex items-center">
-              <MapPin className="h-3.5 w-3.5 mr-1 text-primary" />
-              <span className="text-gray-100">{t("Your Location", "您的位置")}</span>
+        <Popup closeOnClick={false} autoClose={false}>
+          <div className="p-2 min-w-[200px]">
+            <div className="font-medium text-sm mb-2 flex items-center">
+              <MapPin className="h-4 w-4 mr-1 text-primary" />
+              {t("Your Location", "您的位置")}
             </div>
             
-            <div className="mt-1 mb-2">
+            <div className="mb-2">
               {isLoadingLocation ? (
-                <div className="text-xs text-muted-foreground animate-pulse">
+                <div className="text-sm text-muted-foreground animate-pulse">
                   {t("Loading location...", "正在加载位置...")}
                 </div>
               ) : locationName ? (
-                <div className="text-xs text-muted-foreground">
+                <div className="text-sm text-muted-foreground">
                   {locationName}
                 </div>
               ) : null}
-              <div className="text-xs text-muted-foreground mt-0.5">
+              <div className="text-xs text-muted-foreground mt-1">
                 {position[0].toFixed(4)}, {position[1].toFixed(4)}
               </div>
             </div>
             
-            <div className="mt-2 flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <SiqsScoreBadge 
                 score={realTimeSiqs} 
                 compact={true}
                 loading={siqsLoading}
               />
-            </div>
-            
-            <div className="mt-2 text-center">
-              <button 
+              <button
                 onClick={handleViewDetails}
-                className="text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground py-1.5 px-2 rounded transition-colors"
+                className="text-xs text-primary hover:text-primary/80 px-2 py-1 flex items-center"
+                disabled={siqsLoading}
               >
                 <ExternalLink className="h-3 w-3 mr-1" />
                 {t("View Details", "查看详情")}
