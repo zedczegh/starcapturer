@@ -133,7 +133,11 @@ export const useLocationSIQSUpdater = (
                 description: t 
                   ? t(`Bortle Scale ${locationData.bortleScale}`, `布尔特尔等级${locationData.bortleScale}`) 
                   : `Bortle Scale ${locationData.bortleScale}`,
-                weight: 0.3
+                weight: 0.3,
+                nighttimeData: {  // Add missing nighttimeData property
+                  average: 0,
+                  timeRange: nightTimeStr
+                }
               });
             }
             
@@ -171,7 +175,11 @@ export const useLocationSIQSUpdater = (
                   description: t 
                     ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
                       `${currentCloudCover}%的云量影响成像质量`) 
-                    : `Cloud cover of ${currentCloudCover}% affects imaging quality`
+                    : `Cloud cover of ${currentCloudCover}% affects imaging quality`,
+                  nighttimeData: {  // Add missing nighttimeData property
+                    average: currentCloudCover,
+                    timeRange: "current" 
+                  }
                 }
               ]
             }

@@ -1,9 +1,8 @@
-
 import React, { useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
 import CalculatedLocations from './CalculatedLocations';
-import CertifiedLocations from '../certifiedLocations/CertifiedLocations';
+import CertifiedLocations from './CertifiedLocations';
 
 // Note: Changed from lazy loading to regular import to fix "Failed to fetch" error
 
