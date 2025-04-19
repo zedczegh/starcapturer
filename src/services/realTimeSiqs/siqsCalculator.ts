@@ -141,6 +141,9 @@ export async function calculateRealTimeSiqs(
       }
     };
     
+    // Debug log the result
+    console.log(`SIQS calculation successful - score: ${finalScore}`);
+    
     return result;
   } catch (error) {
     console.error('Error calculating real-time SIQS:', error);

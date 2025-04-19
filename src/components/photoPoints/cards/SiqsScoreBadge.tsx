@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore } from '@/utils/siqsHelpers';
@@ -31,7 +30,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   const stableScoreRef = useRef<number | null>(null);
   
   // Convert score to number using our helper function
-  const numericScore = score === null ? 0 : getSiqsScore(score);
+  const numericScore = getSiqsScore(score);
   
   // For certified locations with no valid score, always show loading state
   const showLoading = loading || (isCertified && numericScore <= 0) || forceCertified;
