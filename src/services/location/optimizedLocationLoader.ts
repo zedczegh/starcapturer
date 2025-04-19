@@ -19,7 +19,7 @@ export const loadCalculatedLocations = async (
   longitude: number,
   radius: number,
   limit: number = 10
-): Promise<SharedAstroSpot[]> {
+): Promise<SharedAstroSpot[]> => {
   const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}-${radius}`;
   const now = Date.now();
   const cached = MEMORY_CACHE.get(cacheKey);
