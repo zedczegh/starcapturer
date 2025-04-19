@@ -26,7 +26,7 @@ const BATCH_SIZE = 5; // Process spots in batches of 5 for better performance
  * @param radius Search radius in kilometers
  * @param limit Maximum number of spots to generate
  * @param minQuality Minimum SIQS score (0-10)
- * @returns Array of SharedAstroSpot objects
+ * @returns Promise resolving to an array of matching locations
  */
 export async function generateQualitySpots(
   centerLat: number,
@@ -35,7 +35,7 @@ export async function generateQualitySpots(
   limit: number = 10,
   minQuality: number = 5
 ): Promise<SharedAstroSpot[]> {
-  // Check cache first
+  // Check cache first with more precise key
   const cacheKey = `spots-${centerLat.toFixed(2)}-${centerLng.toFixed(2)}-${radius}-${limit}`;
   const cachedSpots = spotCache.get(cacheKey);
   
