@@ -1,8 +1,9 @@
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { isWaterLocation } from '@/utils/validation';
-import { generateDistributedPoints } from './location/pointGenerationService';
-import { getCachedSpots, cacheSpots } from './location/spotCacheService';
-import { createSpotFromPoint } from './location/spotCreationService';
+
+import { SharedAstroSpot } from '@/types/weather';
+import { generateRandomPoint } from '@/services/locationFilters';
+import { isWaterLocation, isValidAstronomyLocation } from '@/utils/validation';
+import { getSiqsScore } from '@/utils/siqsHelpers';
+import { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
 
 const BATCH_SIZE = 5;
 
@@ -13,77 +14,77 @@ export async function generateQualitySpots(
   limit: number = 10,
   minQuality: number = 5
 ): Promise<SharedAstroSpot[]> {
-  // Check cache first
-  const cachedSpots = getCachedSpots(centerLat, centerLng, radius, limit);
-  if (cachedSpots) {
-    return cachedSpots;
-  }
-  
   console.log(`Generating ${limit} quality spots within ${radius}km of [${centerLat.toFixed(4)}, ${centerLng.toFixed(4)}]`);
-  
+
   try {
-    // Generate candidate points with better distribution
-    const points = generateDistributedPoints(centerLat, centerLng, radius, limit * 3);
-    
-    // Process points in batches
-    const validSpots: SharedAstroSpot[] = [];
-    const batches = chunkArray(points, BATCH_SIZE);
-    
-    for (const batch of batches) {
-      if (validSpots.length >= limit) break;
-      
-      const batchPromises = batch.map(async point => {
-        if (isWaterLocation(point.latitude, point.longitude)) {
-          return null;
+    // Generate initial points in parallel batches for better performance
+    const batchCount = Math.ceil((limit * 1.5) / BATCH_SIZE);
+    const batchPromises = Array(batchCount).fill(0).map(async () => {
+      const batchPoints = Array(BATCH_SIZE).fill(0).map(() =>
+        generateRandomPoint(centerLat, centerLng, radius)
+      );
+
+      // Process batch in parallel
+      const batchResults = await Promise.all(
+        batchPoints.map(async point => {
+          // Quick validation first
+          if (!point || isWaterLocation(point.latitude, point.longitude)) {
+            return null;
+          }
+
+          try {
+            const siqsResult = await calculateRealTimeSiqs(
+              point.latitude,
+              point.longitude,
+              4 // Default Bortle scale, will be refined by SIQS calculation
+            );
+
+            if (!siqsResult || !siqsResult.isViable) {
+              return null;
+            }
+
+            return {
+              id: `calc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              name: 'Calculated Location',
+              latitude: point.latitude,
+              longitude: point.longitude,
+              siqs: siqsResult.siqs * 10,
+              isViable: siqsResult.isViable,
+              distance: point.distance,
+              timestamp: new Date().toISOString(),
+              bortleScale: 4 // Adding the required bortleScale property
+            };
+          } catch (err) {
+            console.warn('Error calculating SIQS for point:', err);
+            return null;
+          }
+        })
+      );
+
+      return batchResults.filter(Boolean);
+    });
+
+    // Wait for all batches to complete
+    const batchResults = await Promise.all(batchPromises);
+    const allSpots = batchResults.flat();
+
+    // Filter and sort by quality
+    const qualitySpots = allSpots
+      .filter(spot => spot && getSiqsScore(spot.siqs) >= minQuality)
+      .sort((a, b) => {
+        const scoreA = getSiqsScore(a.siqs);
+        const scoreB = getSiqsScore(b.siqs);
+        if (Math.abs(scoreA - scoreB) > 1) {
+          return scoreB - scoreA;
         }
-        
-        return createSpotFromPoint(point, minQuality);
-      });
-      
-      const batchResults = await Promise.all(batchPromises);
-      const validBatchSpots = batchResults.filter(Boolean) as SharedAstroSpot[];
-      validSpots.push(...validBatchSpots);
-    }
-    
-    // Sort and cache results
-    const sortedSpots = sortByQualityAndDistance(validSpots)
+        return (a.distance || 0) - (b.distance || 0);
+      })
       .slice(0, limit);
-    
-    cacheSpots(centerLat, centerLng, radius, limit, sortedSpots);
-    
-    console.log(`Generated ${sortedSpots.length} quality spots`);
-    return sortedSpots;
-    
+
+    console.log(`Generated ${qualitySpots.length} quality spots`);
+    return qualitySpots;
   } catch (error) {
     console.error("Error generating quality spots:", error);
     return [];
   }
 }
-
-function sortByQualityAndDistance(spots: SharedAstroSpot[]): SharedAstroSpot[] {
-  return [...spots].sort((a, b) => {
-    const aScore = typeof a.siqs === 'number' ? a.siqs : 0;
-    const bScore = typeof b.siqs === 'number' ? b.siqs : 0;
-    
-    const aQuality = (aScore * 0.7) - ((a.distance || 0) * 0.3);
-    const bQuality = (bScore * 0.7) - ((b.distance || 0) * 0.3);
-    
-    return bQuality - aQuality;
-  });
-}
-
-function chunkArray<T>(array: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-  return chunks;
-}
-
-// Re-export location store functions
-export {
-  addLocationToStore,
-  getLocationFromStore,
-  getAllLocationsFromStore,
-  clearLocationStore
-} from './locationStore';

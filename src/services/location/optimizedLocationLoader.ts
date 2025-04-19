@@ -4,9 +4,11 @@ import { generateQualitySpots } from '../locationSpotService';
 import { sessionStorageAvailable } from '@/utils/storageCheck';
 
 const BATCH_SIZE = 5;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const MEMORY_CACHE = new Map<string, {
   data: SharedAstroSpot[];
   timestamp: number;
+  quality: number;
 }>();
 
 // Add event system for location updates
@@ -22,25 +24,31 @@ export const loadCalculatedLocations = async (
   const now = Date.now();
   const cached = MEMORY_CACHE.get(cacheKey);
 
-  // Use in-memory cache only for the SAME location (5 minute validity)
-  if (cached && (now - cached.timestamp) < 5 * 60 * 1000) {
-    console.log(`Using in-memory cached locations for ${cacheKey}`);
+  // Enhanced cache validation with quality check
+  if (cached && 
+      (now - cached.timestamp) < CACHE_DURATION && 
+      cached.quality >= 0.7) { // Only use high-quality cached results
+    console.log(`Using high-quality cached locations for ${cacheKey}`);
     return cached.data;
   }
 
   try {
     console.log(`Generating fresh locations for ${latitude.toFixed(6)},${longitude.toFixed(6)} with radius ${radius}km`);
     
-    // Generate locations in batches
+    // Generate locations with parallel processing for better performance
     const spots = await generateQualitySpots(latitude, longitude, radius, limit);
     
-    // Store in memory cache
+    // Calculate cache quality score based on spot distribution and SIQS scores
+    const quality = calculateCacheQuality(spots, radius);
+    
+    // Store in memory cache with quality score
     MEMORY_CACHE.set(cacheKey, {
       data: spots,
-      timestamp: now
+      timestamp: now,
+      quality
     });
 
-    // Try to store in session storage as backup
+    // Try to store in session storage as backup with simplified data
     if (sessionStorageAvailable()) {
       try {
         const simplified = spots.map(spot => ({
@@ -67,6 +75,26 @@ export const loadCalculatedLocations = async (
   }
 };
 
+// Calculate cache quality based on spot distribution and SIQS scores
+function calculateCacheQuality(spots: SharedAstroSpot[], radius: number): number {
+  if (!spots.length) return 0;
+
+  // Check spatial distribution
+  const distances = spots.map(spot => spot.distance || 0);
+  const avgDistance = distances.reduce((a, b) => a + b, 0) / distances.length;
+  const distanceScore = avgDistance / radius; // Higher score for better distribution
+
+  // Check SIQS quality
+  const siqsScores = spots.map(spot => 
+    typeof spot.siqs === 'number' ? spot.siqs / 100 : 
+    typeof spot.siqs === 'object' ? spot.siqs.score / 10 : 0
+  );
+  const avgSiqs = siqsScores.reduce((a, b) => a + b, 0) / siqsScores.length;
+
+  // Combine scores (60% SIQS weight, 40% distribution weight)
+  return (avgSiqs * 0.6) + (distanceScore * 0.4);
+}
+
 export const clearLocationCache = () => {
   MEMORY_CACHE.clear();
   if (sessionStorageAvailable()) {
@@ -76,7 +104,6 @@ export const clearLocationCache = () => {
       }
     });
   }
-  // Notify listeners that cache was cleared
   notifyLocationUpdateListeners();
 };
 
