@@ -60,8 +60,8 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
             const result = await calculateRealTimeSiqs(latitude, longitude, effectiveBortleScale);
             
             if (result && result.siqs > 0) {
-              // Get weather data from result or fallback to empty object
-              const weatherData = result.weatherData || { 
+              // Create a default weather data object if none exists in the result
+              const weatherData: WeatherDataWithClearSky = result.weatherData || { 
                 cloudCover: 0, 
                 precipitation: 0,
                 latitude, 
@@ -78,8 +78,8 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
                 { latitude, longitude }
               );
               
-              // Assess data reliability
-              const reliability = assessDataReliability(weatherData, result.forecastData);
+              // Assess data reliability - safely access forecastData with optional chaining
+              const reliability = assessDataReliability(weatherData, result.forecastData || null);
               
               if (reliability.reliable) {
                 console.log(`Calculated SIQS (corrected): ${correctedResult.siqs}`);

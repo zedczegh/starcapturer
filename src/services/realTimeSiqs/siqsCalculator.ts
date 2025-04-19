@@ -18,6 +18,13 @@ interface SiqsCalculationOptions {
 export interface SiqsResult {
   siqs: number;
   isViable: boolean;
+  weatherData?: any; // Include weatherData property
+  forecastData?: any; // Include forecastData property
+  factors?: {
+    name: string;
+    score: number;
+    description: string;
+  }[];
   metadata: {
     calculatedAt: string;
     sources: {
@@ -56,9 +63,9 @@ export async function calculateRealTimeSiqs(
     }
     
     // Calculate SIQS based on current conditions
-    const cloudCover = weatherData.current?.cloud_cover || 0;
-    const visibility = weatherData.current?.visibility || 10000;
-    const isNight = weatherData.current?.is_day === 0;
+    const cloudCover = weatherData.cloudCover || 0;
+    const visibility = weatherData.visibility || 10000;
+    const isNight = weatherData.isDay === 0 || false;
     
     // Cloud cover heavily impacts SIQS (0-100%)
     // 0% clouds = best, 100% = worst
@@ -88,11 +95,29 @@ export async function calculateRealTimeSiqs(
     
     // Determine if conditions are viable for observation
     const isViable = finalScore >= 3.5 && isNight;
-    
-    // Return result with metadata
-    return {
+
+    // Add the weatherData to the result
+    const result: SiqsResult = {
       siqs: finalScore,
       isViable,
+      weatherData: weatherData, // Include the weather data in the result
+      factors: [
+        { 
+          name: "Cloud Cover", 
+          score: cloudFactor, 
+          description: `${cloudCover}% cloud cover impacts visibility`
+        },
+        { 
+          name: "Light Pollution", 
+          score: bortleFactor, 
+          description: `Bortle ${bortleScale} light pollution level`
+        },
+        { 
+          name: "Visibility", 
+          score: visibilityFactor, 
+          description: `Atmospheric visibility conditions`
+        }
+      ],
       metadata: {
         calculatedAt: new Date().toISOString(),
         sources: {
@@ -107,6 +132,8 @@ export async function calculateRealTimeSiqs(
         }
       }
     };
+    
+    return result;
   } catch (error) {
     console.error('Error calculating real-time SIQS:', error);
     throw error;
