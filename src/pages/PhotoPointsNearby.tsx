@@ -1,7 +1,6 @@
 
 import React, { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
@@ -14,7 +13,6 @@ import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocat
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
-import { clearLocationCache } from '@/services/location/optimizedLocationLoader';
 
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
@@ -35,29 +33,6 @@ const PhotoPointsNearby: React.FC = () => {
     handleResetLocation,
     toggleMapView
   } = usePhotoPointsState();
-
-  // Track location changes to refresh data
-  const [prevLocation, setPrevLocation] = React.useState<string | null>(null);
-
-  useEffect(() => {
-    if (effectiveLocation) {
-      const locationKey = `${effectiveLocation.latitude.toFixed(4)},${effectiveLocation.longitude.toFixed(4)}`;
-      
-      // Check if location has changed significantly
-      if (prevLocation !== null && prevLocation !== locationKey) {
-        console.log('Location changed significantly, clearing cache and refreshing data');
-        // Clear location cache when location changes significantly
-        clearLocationCache();
-        
-        // Also refresh data
-        if (refreshSiqsData) {
-          refreshSiqsData();
-        }
-      }
-      
-      setPrevLocation(locationKey);
-    }
-  }, [effectiveLocation]);
 
   const {
     searchRadius,
@@ -114,12 +89,6 @@ const PhotoPointsNearby: React.FC = () => {
       console.error("Error navigating to location details:", error, location);
     }
   }, [navigate]);
-
-  // This ensures toast notification when location is updated
-  const handleLocationUpdateWithToast = useCallback((latitude: number, longitude: number) => {
-    toast.info(t("Updating location...", "正在更新位置..."));
-    handleLocationUpdate(latitude, longitude);
-  }, [handleLocationUpdate, t]);
   
   return (
     <PhotoPointsLayout>
@@ -175,7 +144,7 @@ const PhotoPointsNearby: React.FC = () => {
         loadMore={loadMore}
         refreshSiqs={refreshSiqsData}
         onLocationClick={handleLocationClick}
-        onLocationUpdate={handleLocationUpdateWithToast}
+        onLocationUpdate={handleLocationUpdate}
         canLoadMoreCalculated={canLoadMoreCalculated}
         loadMoreCalculated={loadMoreCalculatedLocations}
         loadMoreClickCount={loadMoreClickCount}

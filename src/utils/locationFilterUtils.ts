@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
 import { isWaterLocation } from "@/utils/validation";
@@ -48,14 +47,13 @@ export function filterLocationsByQualityAndDistance(
       return false;
     }
     
-    // Filter by quality
+    // Filter by quality threshold only if SIQS is available
     if (location.siqs !== undefined && getSiqsScore(location.siqs) < qualityThreshold) {
       return false;
     }
     
     // Filter by distance if user location is provided
     if (userLocation && radius > 0) {
-      // Use existing distance property or calculate it
       const distance = location.distance || calculateDistance(
         userLocation.latitude,
         userLocation.longitude,
@@ -63,10 +61,7 @@ export function filterLocationsByQualityAndDistance(
         location.longitude
       );
       
-      // Add or update the distance property
       location.distance = distance;
-      
-      // Filter out locations beyond the radius
       return distance <= radius;
     }
     
