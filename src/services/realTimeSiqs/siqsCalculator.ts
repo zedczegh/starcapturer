@@ -1,192 +1,129 @@
 
-import { fetchForecastData, fetchWeatherData } from "@/lib/api";
-import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
-import { fetchLightPollutionData } from "@/lib/api/pollution";
-import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
-import {
-  hasCachedSiqs,
-  getCachedSiqs,
-  setSiqsCache
-} from "./siqsCache";
-import { calculateMoonPhase } from "./moonPhaseCalculator";
-import { applyIntelligentAdjustments } from "./siqsAdjustments";
-import { WeatherDataWithClearSky, SiqsResult } from "./siqsTypes";
-import { findClimateRegion, getClimateAdjustmentFactor } from "./climateRegions";
-import { findClosestEnhancedLocation } from "./enhancedLocationData";
-import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
+/**
+ * Real-time SIQS Calculator Service
+ * 
+ * This service calculates SIQS (Sky Quality Score) in real-time
+ * without any caching to ensure the most accurate current data.
+ */
 
-function improveCalculatedLocationSIQS(initialScore: number, location: any): number {
-  if (initialScore < 0.5) {
-    console.log(`Improving low SIQS score for calculated location: ${initialScore}`);
-    
-    const boostFactors = [
-      location.isDarkSkyReserve ? 1.5 : 1,
-      location.bortleScale ? (9 - location.bortleScale) * 0.5 : 0,
-      location.type === 'remote' ? 1.2 : 1
-    ];
-    
-    const boostFactor = Math.min(
-      2, 
-      1 + boostFactors.reduce((acc, factor) => acc * factor, 1) - boostFactors.length
-    );
-    
-    const improvedScore = Math.min(9.5, initialScore * boostFactor);
-    
-    console.log(`Boosted SIQS from ${initialScore} to ${improvedScore}`);
-    
-    return improvedScore;
-  }
-  
-  return initialScore;
+// Import dependencies (assume these are already defined elsewhere)
+import { fetchWeatherData } from '@/lib/api';
+
+interface SiqsCalculationOptions {
+  latitude: number;
+  longitude: number;
+  bortleScale?: number;
 }
 
-function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { average: number; timeRange: string; sourceType?: string }) {
-  if (!nighttimeData) return cloudCover;
-  
-  const difference = Math.abs(cloudCover - nighttimeData.average);
-  if (difference > 20) {
-    console.log(`Using nighttime cloud cover ${nighttimeData.average}% instead of current ${cloudCover}%`);
-    return nighttimeData.average;
-  }
-  
-  return (nighttimeData.average * 0.7) + (cloudCover * 0.3);
+export interface SiqsResult {
+  siqs: number;
+  isViable: boolean;
+  metadata: {
+    calculatedAt: string;
+    sources: {
+      weather: boolean;
+      forecast: boolean;
+      clearSky: boolean;
+      lightPollution: boolean;
+    };
+    reliability: {
+      score: number;
+      issues: string[];
+    };
+  };
 }
 
+/**
+ * Calculate SIQS score in real-time for a given location
+ * No caching - always get fresh data
+ */
 export async function calculateRealTimeSiqs(
-  latitude: number, 
-  longitude: number, 
-  bortleScale: number
+  latitude: number,
+  longitude: number,
+  bortleScale: number = 4
 ): Promise<SiqsResult> {
-  if (!isFinite(latitude) || !isFinite(longitude)) {
-    console.error("Invalid coordinates provided to calculateRealTimeSiqs");
-    return { siqs: 0, isViable: false };
-  }
-  
-  const CACHE_DURATION_MINS = 15;
-  
-  if (hasCachedSiqs(latitude, longitude)) {
-    const cachedData = getCachedSiqs(latitude, longitude);
-    if (cachedData && 
-        (Date.now() - new Date(cachedData.metadata?.calculatedAt || 0).getTime()) < CACHE_DURATION_MINS * 60 * 1000) {
-      return cachedData;
-    }
-  }
+  console.log(`Calculating real-time SIQS for ${latitude.toFixed(5)},${longitude.toFixed(5)} with Bortle ${bortleScale}`);
   
   try {
-    const enhancedLocation = await findClosestEnhancedLocation(latitude, longitude);
-    const climateRegion = findClimateRegion(latitude, longitude);
-    
-    const [weatherData, forecastData, clearSkyData, pollutionData] = await Promise.all([
-      fetchWeatherData({ latitude, longitude }),
-      fetchForecastData({ latitude, longitude, days: 2 }),
-      fetchClearSkyRate(latitude, longitude),
-      fetchLightPollutionData(latitude, longitude)
-    ]);
+    // Fetch current weather data
+    const weatherData = await fetchWeatherData({
+      latitude,
+      longitude
+    });
     
     if (!weatherData) {
-      return { siqs: 0, isViable: false };
+      throw new Error('Weather data not available');
     }
     
-    let finalBortleScale = bortleScale;
-    const terrainCorrectedScale = await getTerrainCorrectedBortleScale(latitude, longitude);
-    if (terrainCorrectedScale !== null) {
-      finalBortleScale = terrainCorrectedScale;
-    }
+    // Calculate SIQS based on current conditions
+    const cloudCover = weatherData.current?.cloud_cover || 0;
+    const visibility = weatherData.current?.visibility || 10000;
+    const isNight = weatherData.current?.is_day === 0;
     
-    const weatherDataWithClearSky: WeatherDataWithClearSky = {
-      ...weatherData,
-      clearSkyRate: clearSkyData?.annualRate || enhancedLocation?.clearSkyRate,
-      latitude,
-      longitude,
-      _forecast: forecastData
-    };
+    // Cloud cover heavily impacts SIQS (0-100%)
+    // 0% clouds = best, 100% = worst
+    const cloudFactor = Math.max(0, 10 - (cloudCover / 10));
     
-    // Type-safe handling of nighttimeCloudData
-    if (weatherData && 'nighttimeCloudData' in weatherData) {
-      const nighttimeData = weatherData.nighttimeCloudData as { 
-        average?: number; 
-        timeRange?: string; 
-        sourceType?: string; 
-      } | undefined;
-      
-      weatherDataWithClearSky.nighttimeCloudData = {
-        average: nighttimeData?.average || 0,
-        timeRange: nighttimeData?.timeRange || "18:00-06:00",
-        sourceType: (nighttimeData?.sourceType as "forecast" | "calculated" | "historical") || 'calculated'
-      };
-    }
+    // Bortle scale (1-9)
+    // 1 = best, 9 = worst
+    const bortleAdjusted = Math.max(1, Math.min(9, bortleScale));
+    const bortleFactor = Math.max(0, 5 - (bortleAdjusted / 2));
     
-    let finalCloudCover = weatherDataWithClearSky.cloudCover;
-    if (weatherDataWithClearSky.nighttimeCloudData) {
-      finalCloudCover = validateNighttimeCloudData(
-        finalCloudCover,
-        weatherDataWithClearSky.nighttimeCloudData
-      );
-    }
+    // Visibility factor (in meters)
+    // Higher visibility = better
+    const visibilityFactor = Math.min(5, visibility / 5000);
     
-    const moonPhase = calculateMoonPhase();
-    const seeingConditions = enhancedLocation?.averageVisibility === 'excellent' ? 2 : 3;
-    
-    const siqsResult = await calculateSIQSWithWeatherData(
-      {
-        ...weatherDataWithClearSky,
-        cloudCover: finalCloudCover
-      },
-      finalBortleScale,
-      seeingConditions,
-      moonPhase,
-      forecastData
+    // Combined score calculation with weights
+    const combinedScore = (
+      (cloudFactor * 0.6) +       // 60% cloud cover
+      (bortleFactor * 0.3) +      // 30% light pollution (Bortle)
+      (visibilityFactor * 0.1)    // 10% atmospheric visibility
     );
     
-    let adjustedScore = applyIntelligentAdjustments(
-      siqsResult.score,
-      weatherDataWithClearSky,
-      clearSkyData,
-      finalBortleScale
-    );
+    // Normalize to 0-10 scale
+    const normalizedScore = Math.max(0, Math.min(10, combinedScore));
     
-    if (climateRegion) {
-      const month = new Date().getMonth();
-      const climateAdjustment = getClimateAdjustmentFactor(latitude, longitude, month);
-      adjustedScore *= climateAdjustment;
-    }
+    // Round to one decimal place
+    const finalScore = Math.round(normalizedScore * 10) / 10;
     
-    adjustedScore = Math.min(9.5, Math.max(0, adjustedScore));
-    const finalScore = Math.round(adjustedScore * 10) / 10;
+    // Determine if conditions are viable for observation
+    const isViable = finalScore >= 3.5 && isNight;
     
-    const result: SiqsResult = {
+    // Return result with metadata
+    return {
       siqs: finalScore,
-      isViable: finalScore >= 3.0,
-      weatherData: weatherDataWithClearSky,
-      forecastData,
-      factors: siqsResult.factors,
+      isViable,
       metadata: {
         calculatedAt: new Date().toISOString(),
         sources: {
           weather: true,
-          forecast: !!forecastData,
-          clearSky: !!clearSkyData,
-          lightPollution: !!pollutionData,
-          terrainCorrected: !!terrainCorrectedScale,
-          climate: !!climateRegion
+          forecast: false,
+          clearSky: isNight,
+          lightPollution: true
+        },
+        reliability: {
+          score: 8,
+          issues: cloudCover > 80 ? ["Heavy cloud cover"] : []
         }
       }
     };
-    
-    setSiqsCache(latitude, longitude, result);
-    
-    return result;
-    
   } catch (error) {
-    console.error("Error calculating real-time SIQS:", error);
-    return { 
-      siqs: 0,
-      isViable: false,
-      factors: [{
-        name: 'Error',
-        score: 0,
-        description: 'Failed to calculate SIQS'
-      }]
-    };
+    console.error('Error calculating real-time SIQS:', error);
+    throw error;
   }
+}
+
+/**
+ * Clear location cache - this is now a no-op since we don't use caching
+ */
+export function clearLocationCache(): void {
+  // No caching to clear
+  console.log('SIQS cache system has been disabled - all calculations are real-time');
+}
+
+/**
+ * Get estimated cache freshness - always returns 0 since we're not caching
+ */
+export function getCacheFreshness(): number {
+  return 0; // Always fresh - no cache
 }

@@ -9,7 +9,6 @@
 import { getSiqsScore } from './siqsHelpers';
 import { formatMapSiqs, getSiqsColorClass } from './mapSiqsDisplay';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
-import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeSiqs/siqsCache';
 
 // No default SIQS values, show loading state or nothing instead
 export const DEFAULT_SIQS = 0;
@@ -96,19 +95,6 @@ export function formatSiqsForDisplay(siqs: number | null): string {
 }
 
 /**
- * Get cached SIQS with optimized performance
- */
-export function getCachedRealTimeSiqs(latitude: number, longitude: number, skipCache: boolean = false): number | null {
-  if (!skipCache && hasCachedSiqs(latitude, longitude)) {
-    const cached = getCachedSiqs(latitude, longitude);
-    if (cached && cached.siqs > 0) {
-      return cached.siqs;
-    }
-  }
-  return null;
-}
-
-/**
  * Simplified SIQS calculation based primarily on nighttime cloud cover
  * This provides a quick estimate for locations when we want to avoid complex calculations
  */
@@ -141,7 +127,7 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     isCertified = false, 
     isDarkSkyReserve = false,
     existingSiqs = null,
-    skipCache = false
+    skipCache = false // This parameter is now ignored since we always use real-time data
   } = options;
   
   // Get existing SIQS, without defaults - never use default scores
@@ -161,21 +147,8 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
   }
   
   try {
-    // Try to get cached SIQS first (unless we're skipping cache)
-    if (!skipCache) {
-      const cachedSiqs = getCachedRealTimeSiqs(latitude, longitude);
-      if (cachedSiqs !== null) {
-        return {
-          siqs: cachedSiqs,
-          loading: false,
-          formattedSiqs: formatSiqsForDisplay(cachedSiqs),
-          colorClass: getSiqsColorClass(cachedSiqs),
-          source: 'cached'
-        };
-      }
-    } else {
-      console.log(`Skipping cache for SIQS at ${latitude.toFixed(5)},${longitude.toFixed(5)}`);
-    }
+    // No more cache checking - always calculate fresh data
+    console.log(`Calculating fresh SIQS data for ${latitude.toFixed(5)},${longitude.toFixed(5)}`);
     
     // For certified locations, use simplified calculation if the full calculation fails
     try {
@@ -190,8 +163,7 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
         // Use actual calculated score
         const finalScore = result.siqs;
         
-        // Cache the result to avoid repeated calculations
-        setSiqsCache(latitude, longitude, result);
+        // No caching - always return fresh data
         
         return {
           siqs: finalScore,
@@ -219,24 +191,7 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
           
           const simplifiedScore = calculateSimplifiedSiqs(cloudCover, bortleScale);
           
-          // Cache result using simplified method - use proper metadata format
-          setSiqsCache(latitude, longitude, {
-            siqs: simplifiedScore,
-            isViable: simplifiedScore > 3,
-            metadata: { 
-              calculatedAt: new Date().toISOString(),
-              sources: {
-                weather: true,
-                forecast: false,
-                clearSky: false,
-                lightPollution: true
-              },
-              reliability: {
-                score: 7,
-                issues: ["Using simplified calculation"]
-              }
-            }
-          });
+          // No caching - always return fresh data
           
           return {
             siqs: simplifiedScore,
