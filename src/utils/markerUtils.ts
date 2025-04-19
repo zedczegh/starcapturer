@@ -4,7 +4,7 @@
  * IMPORTANT: This file contains critical marker creation and styling logic.
  */
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { isWaterLocation } from "@/utils/locationValidator";
+import { isWaterLocation } from "@/utils/validation";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
 import { getSiqsScore } from "@/utils/siqsHelpers";
 

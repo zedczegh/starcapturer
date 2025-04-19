@@ -9,9 +9,9 @@ import { calculateDistance } from '@/data/utils/distanceCalculator';
 import { 
   isWaterLocation, 
   isLikelyCoastalWater, 
-  isValidAstronomyLocation,
-  isCertifiedLocation 
+  isValidAstronomyLocation
 } from '@/utils/validation';
+import { isCertifiedLocation } from '@/utils/validation/coordinateValidator';
 
 /**
  * Represents a shared astronomy spot with location details and quality metrics

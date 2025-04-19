@@ -1,7 +1,7 @@
 
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
-import { isWaterLocation } from "@/utils/locationValidator";
+import { isWaterLocation } from "@/utils/validation";
 import { getSiqsScore } from "@/utils/siqsHelpers";
 
 /**

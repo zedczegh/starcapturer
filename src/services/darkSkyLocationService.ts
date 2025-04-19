@@ -1,4 +1,3 @@
-
 /**
  * Service for efficiently retrieving Dark Sky locations
  * Provides optimized access to the dark sky locations database
@@ -7,7 +6,7 @@
 import { locationDatabase, LocationEntry } from '@/data/locationDatabase';
 import { calculateDistance } from '@/lib/api/coordinates';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { isWaterLocation } from '@/utils/locationValidator';
+import { isWaterLocation } from '@/utils/validation';
 
 // Cache of dark sky locations for quick access
 let cachedDarkSkyLocations: LocationEntry[] | null = null;

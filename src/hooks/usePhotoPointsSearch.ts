@@ -4,7 +4,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { isWaterLocation } from '@/utils/locationValidator';
+import { isWaterLocation } from '@/utils/validation';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isCertifiedLocation } from '@/utils/locationFiltering';
 

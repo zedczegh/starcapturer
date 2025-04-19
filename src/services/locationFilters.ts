@@ -1,6 +1,5 @@
-
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
+import { isWaterLocation, isValidAstronomyLocation } from '@/utils/validation';
 import { calculateDistance } from '@/lib/api/coordinates';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 

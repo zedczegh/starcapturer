@@ -1,7 +1,8 @@
+
 import { toast } from "sonner";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { findLocationsWithinRadius, findCalculatedLocations } from "@/services/locationSearchService";
-import { isValidAstronomyLocation } from "@/utils/locationValidator";
+import { isValidAstronomyLocation } from "@/utils/validation";
 import { Language } from "@/contexts/LanguageContext";
 import { isSiqsGreaterThan } from "@/utils/siqsHelpers";
 

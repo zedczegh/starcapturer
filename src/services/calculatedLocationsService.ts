@@ -1,6 +1,7 @@
+
 import { SharedAstroSpot } from '@/types/weather';
 import { generateRandomPoint } from '@/services/locationFilters';
-import { isWaterLocation, isValidAstronomyLocation } from '@/utils/locationValidator';
+import { isWaterLocation, isValidAstronomyLocation } from '@/utils/validation';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import { fetchLightPollutionData } from '@/lib/api/pollution';
 import { fetchClearSkyRate } from '@/lib/api/clearSkyRate';

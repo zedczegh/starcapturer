@@ -1,7 +1,8 @@
+
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateRealTimeSiqs } from '../realTimeSiqs/siqsCalculator';
 import { getTerrainCorrectedBortleScale } from '@/utils/terrainCorrection';
-import { isWaterLocation } from '@/utils/locationValidator';
+import { isWaterLocation } from '@/utils/validation';
 import { getEnhancedLocationDetails } from '../geocoding/enhancedReverseGeocoding';
 
 export const createSpotFromPoint = async (
