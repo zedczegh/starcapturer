@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -23,6 +23,7 @@ const PhotoPointsNearby: React.FC = () => {
     initialLoad,
     locationLoading,
     effectiveLocation,
+    locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
     handleRadiusChange,
@@ -50,16 +51,12 @@ const PhotoPointsNearby: React.FC = () => {
     currentSearchRadius
   );
 
-  const {
-    certifiedLocations,
-    calculatedLocations,
-    certifiedCount,
-    calculatedCount
-  } = useCertifiedLocations(locations);
-
-  React.useEffect(() => {
-    setSearchRadius(currentSearchRadius);
-  }, [currentSearchRadius, setSearchRadius]);
+  useEffect(() => {
+    if (locationInitialized && effectiveLocation) {
+      setSearchRadius(currentSearchRadius);
+      refreshSiqsData();
+    }
+  }, [locationInitialized, effectiveLocation, currentSearchRadius, setSearchRadius, refreshSiqsData]);
   
   React.useEffect(() => {
     if (locations.length > 0) {
