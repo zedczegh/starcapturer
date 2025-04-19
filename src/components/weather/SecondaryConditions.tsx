@@ -4,7 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Sun, Moon, Info, CloudFog } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getBortleDescription } from "@/utils/weather/bortleScaleUtils";
-import { DynamicCloudCoverIcon } from "@/components/weather/DynamicIcons";
+import { DynamicCloudCoverIcon } from "@/components/weather/icons/DynamicCloudCoverIcon";
 
 const MOON_PHASE_TRANSLATIONS = {
   'en': {
