@@ -76,5 +76,6 @@ declare module "@/types/weather" {
       timeUntilNight?: number;
       timeUntilDaylight?: number;
     };
+    date?: string | Date;
   }
 }
