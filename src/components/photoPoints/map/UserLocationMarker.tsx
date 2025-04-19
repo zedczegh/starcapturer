@@ -2,7 +2,7 @@
 import React, { useState, useCallback } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { createUserLocationMarker } from '@/components/location/map/MapMarkerUtils';
+import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { MapPin } from 'lucide-react';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
@@ -40,15 +40,12 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
       
       <Marker 
         position={position} 
-        icon={createUserLocationMarker()}
-        eventHandlers={{
-          click: handleRefreshSiqs
-        }}
+        icon={createCustomMarker('#e11d48')}
+        onClick={handleRefreshSiqs}
       >
         <Popup closeOnClick={false} autoClose={false}>
           <div className="p-2 min-w-[200px]">
-            <div className="font-medium text-sm mb-2 flex items
--center">
+            <div className="font-medium text-sm mb-2 flex items-center">
               <MapPin className="h-4 w-4 mr-1 text-primary" />
               {t("Your Location", "您的位置")}
             </div>
