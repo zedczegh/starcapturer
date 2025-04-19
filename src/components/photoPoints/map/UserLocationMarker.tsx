@@ -18,20 +18,17 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
-  const [siqsLoading, setSiqsLoading] = useState(true); // Start with loading state
+  const [siqsLoading, setSiqsLoading] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
   const [locationName, setLocationName] = useState<string>('');
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
   
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean) => {
-    console.log(`User location SIQS updated: ${siqs}, loading: ${loading}`);
     setRealTimeSiqs(siqs);
     setSiqsLoading(loading);
   }, []);
 
   const handleRefreshSiqs = () => {
-    console.log("Forcing SIQS refresh for user location");
-    setSiqsLoading(true);
     setForceUpdate(true);
     setTimeout(() => setForceUpdate(false), 100);
   };
@@ -81,7 +78,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
         latitude={position[0]}
         longitude={position[1]}
         onSiqsCalculated={handleSiqsCalculated}
-        forceUpdate={forceUpdate} // Use the state-controlled forceUpdate flag
+        forceUpdate={true} // Always force update to get fresh data
       />
       
       <Marker 

@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { getCompleteSiqsDisplay } from '@/utils/unifiedSiqsDisplay';
 
 interface RealTimeSiqsProviderProps {
@@ -96,24 +95,20 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       setFetchAttempted(true);
       onSiqsCalculated(null, true);
       
-      console.log(`Fetching real-time SIQS for ${latitude.toFixed(5)},${longitude.toFixed(5)}`);
-      
       // Always force fresh calculation - no caching!
-      const result = await calculateRealTimeSiqs(
-        latitude, 
-        longitude, 
-        bortleScale
-      );
+      const result = await getCompleteSiqsDisplay({
+        latitude,
+        longitude,
+        bortleScale,
+        isCertified,
+        isDarkSkyReserve,
+        existingSiqs: existingSiqsNumber,
+        skipCache: true // Always skip cache to get fresh data
+      });
       
       if (!isMounted.current) return;
       
-      if (result && result.siqs > 0) {
-        console.log(`Real-time SIQS calculation successful: ${result.siqs}`);
-        onSiqsCalculated(result.siqs, false, 9);
-      } else {
-        console.warn("SIQS calculation returned invalid result:", result);
-        onSiqsCalculated(existingSiqsNumber > 0 ? existingSiqsNumber : null, false);
-      }
+      onSiqsCalculated(result.siqs, false, result.source === 'realtime' ? 9 : 7);
       
     } catch (error) {
       console.error("Error in RealTimeSiqsProvider:", error);
@@ -134,7 +129,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         setIsInitialFetch(false);
       }
     }
-  }, [latitude, longitude, bortleScale, isCertified, existingSiqsNumber, onSiqsCalculated]);
+  }, [latitude, longitude, bortleScale, isCertified, isDarkSkyReserve, existingSiqsNumber, onSiqsCalculated]);
   
   useEffect(() => {
     if (fetchTimeoutRef.current) {
