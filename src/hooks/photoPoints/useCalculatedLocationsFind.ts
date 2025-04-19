@@ -1,16 +1,14 @@
+
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { findCalculatedLocations } from "@/services/locationSearchService";
+import { loadCalculatedLocations } from "@/services/location/optimizedLocationLoader";
 import { isSiqsAtLeast } from "@/utils/siqsHelpers";
 
 export const useCalculatedLocationsFind = () => {
   const { t } = useLanguage();
 
-  /**
-   * Find calculated locations within a specified radius
-   */
   const findCalculatedLocationsWithinRadius = useCallback(
     async (
       latitude: number,
@@ -24,47 +22,30 @@ export const useCalculatedLocationsFind = () => {
       try {
         console.log(`Finding calculated locations within ${radius}km of [${latitude.toFixed(4)}, ${longitude.toFixed(4)}]`);
         
-        // Get new locations from the service
-        const newLocations = await findCalculatedLocations(
+        // Get new locations using optimized loader
+        const newLocations = await loadCalculatedLocations(
           latitude, 
           longitude, 
           radius,
-          allowExpansion,
           limit
         );
         
         if (preservePrevious && previousLocations.length > 0) {
-          console.log(`Preserving ${previousLocations.length} previous locations`);
-          
-          // Create a Set of location coordinates for quick lookup
+          // Use Set for faster duplication check
           const existingCoords = new Set(
             previousLocations.map(loc => `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`)
           );
           
-          // Filter out locations we already have
+          // Filter new locations efficiently
           const uniqueNewLocations = newLocations.filter(loc => {
             const coordKey = `${loc.latitude.toFixed(4)},${loc.longitude.toFixed(4)}`;
-            return !existingCoords.has(coordKey);
+            return !existingCoords.has(coordKey) && isSiqsAtLeast(loc.siqs, 5);
           });
           
-          // Filter out locations with SIQS below 5
-          const qualityFilteredLocations = uniqueNewLocations.filter(loc => {
-            // If siqs is null/undefined or >= 5, keep the location
-            return loc.siqs === undefined || loc.siqs === null || isSiqsAtLeast(loc.siqs, 5);
-          });
-          
-          // Combine previous and new locations
-          console.log(`Adding ${qualityFilteredLocations.length} new unique locations to ${previousLocations.length} existing ones`);
-          return [...previousLocations, ...qualityFilteredLocations];
+          return [...previousLocations, ...uniqueNewLocations];
         }
         
-        // Filter new locations by quality
-        const qualityFilteredLocations = newLocations.filter(loc => {
-          // If siqs is null/undefined or >= 5, keep the location
-          return loc.siqs === undefined || loc.siqs === null || isSiqsAtLeast(loc.siqs, 5);
-        });
-        
-        return qualityFilteredLocations;
+        return newLocations.filter(loc => isSiqsAtLeast(loc.siqs, 5));
       } catch (error) {
         console.error("Error finding calculated locations:", error);
         toast.error(t(
