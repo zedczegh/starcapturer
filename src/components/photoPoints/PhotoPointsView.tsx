@@ -4,6 +4,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
 import CalculatedLocations from './CalculatedLocations';
 import { LocationListFilter } from './ViewToggle';
+import CertifiedLocations from './CertifiedLocations';
 
 interface PhotoPointsViewProps {
   showMap: boolean;
@@ -85,9 +86,21 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
         </div>
       )}
 
-      {!showMap && (
+      {!showMap && activeFilter === 'certified' && (
+        <CertifiedLocations
+          locations={certifiedLocations}
+          loading={loading}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          onViewDetails={onLocationClick}
+          onRefresh={refreshSiqs}
+          initialLoad={initialLoad}
+        />
+      )}
+
+      {!showMap && activeFilter !== 'certified' && (
         <CalculatedLocations
-          locations={filteredLocations}
+          locations={activeFilter === 'calculated' ? calculatedLocations : filteredLocations}
           loading={loading}
           hasMore={hasMore}
           onLoadMore={loadMore}

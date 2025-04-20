@@ -61,7 +61,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     searchRadius,
     onLocationClick,
     onLocationUpdate,
-    activeView: 'calculated' // Set a default value for activeView
+    activeView: activeFilter === 'calculated' ? 'calculated' : 'certified'
   });
   
   // Store locations in session storage for persistence
@@ -76,11 +76,22 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
           siqs: loc.siqs,
           isDarkSkyReserve: loc.isDarkSkyReserve,
           certification: loc.certification,
-          distance: loc.distance
+          distance: loc.distance,
+          type: loc.type
         }));
         
         sessionStorage.setItem('persistent_locations', JSON.stringify(simplifiedLocations));
         console.log(`Stored ${simplifiedLocations.length} locations to session storage`);
+        
+        // Store certified locations separately for better access
+        const certifiedOnly = simplifiedLocations.filter(loc => 
+          loc.isDarkSkyReserve || loc.certification
+        );
+        
+        if (certifiedOnly.length > 0) {
+          sessionStorage.setItem('persistent_certified_locations', JSON.stringify(certifiedOnly));
+          console.log(`Stored ${certifiedOnly.length} certified locations to session storage`);
+        }
       } catch (err) {
         console.error('Error storing locations in session storage:', err);
       }
@@ -107,7 +118,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       handleTouchMove={handleTouchMove}
       handleGetLocation={handleGetLocation}
       onLegendToggle={handleLegendToggle}
-      activeView="calculated"
+      activeView={activeFilter === 'calculated' ? 'calculated' : 'certified'}
       activeFilter={activeFilter}
     />
   );

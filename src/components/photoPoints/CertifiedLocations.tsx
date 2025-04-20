@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoLocationCard from './PhotoLocationCard';
 import { Button } from '../ui/button';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import CertificationFilter, { CertificationType } from './filters/CertificationFilter';
 import SearchBar from './filters/SearchBar';
@@ -25,12 +25,13 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   hasMore,
   onLoadMore,
   onViewDetails,
+  onRefresh,
   initialLoad
 }) => {
   const { t } = useLanguage();
   const [selectedType, setSelectedType] = useState<CertificationType>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayLimit, setDisplayLimit] = useState(5);
+  const [displayLimit, setDisplayLimit] = useState(25); // Show more initially
   
   // Use our specialized hook to ensure we get ALL certified locations
   const {
@@ -52,6 +53,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
           locationMap.set(key, loc);
         }
       });
+      console.log(`Added ${locations.length} locations from props`);
     }
     
     // Then add all certified locations from our hook
@@ -62,10 +64,29 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
           locationMap.set(key, loc);
         }
       });
+      console.log(`Added ${allCertifiedLocations.length} locations from certified hook`);
+    }
+    
+    // Try to add any additional locations from session storage
+    try {
+      const sessionLocations = JSON.parse(sessionStorage.getItem('persistent_certified_locations') || '[]');
+      if (sessionLocations && sessionLocations.length > 0) {
+        sessionLocations.forEach((loc: SharedAstroSpot) => {
+          if (loc.latitude && loc.longitude) {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            locationMap.set(key, loc);
+          }
+        });
+        console.log(`Added ${sessionLocations.length} locations from session storage`);
+      }
+    } catch (e) {
+      console.error("Error parsing session locations:", e);
     }
     
     // Convert back to array
-    return Array.from(locationMap.values());
+    const combined = Array.from(locationMap.values());
+    console.log(`Combined total: ${combined.length} unique certified locations`);
+    return combined;
   }, [locations, allCertifiedLocations]);
   
   useEffect(() => {
@@ -76,14 +97,20 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
     if (combinedLocations.length > 0) {
       console.log('First 5 locations:', combinedLocations.slice(0, 5).map(loc => loc.name || 'Unnamed'));
     }
-  }, [combinedLocations]);
-  
-  useEffect(() => {
-    // Make sure at least 5 are shown initially (if available)
-    if (combinedLocations.length > 0 && displayLimit < 5) {
-      setDisplayLimit(5);
+    
+    // If we got more than 5 locations, use a higher display limit
+    if (combinedLocations.length > 10 && displayLimit <= 5) {
+      setDisplayLimit(25);
     }
-  }, [combinedLocations.length]);
+  }, [combinedLocations.length, displayLimit]);
+  
+  // Handle refresh when onRefresh is called
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+    }
+    refreshLocations();
+  };
   
   // Filter locations based on certification type and search query
   const filteredLocations = React.useMemo(() => {
@@ -91,17 +118,19 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
       // First filter by certification type
       if (selectedType !== 'all') {
         const certification = (location.certification || '').toLowerCase();
+        const type = location.type || '';
+        
         switch (selectedType) {
           case 'reserve':
-            return certification.includes('reserve') || location.isDarkSkyReserve;
+            return certification.includes('reserve') || location.isDarkSkyReserve || type === 'reserve';
           case 'park':
-            return certification.includes('park');
+            return certification.includes('park') || type === 'park';
           case 'community':
-            return certification.includes('community');
+            return certification.includes('community') || type === 'community';
           case 'urban':
-            return certification.includes('urban');
+            return certification.includes('urban') || type === 'urban';
           case 'lodging':
-            return certification.includes('lodging');
+            return certification.includes('lodging') || type === 'lodging';
           default:
             return true;
         }
@@ -111,9 +140,9 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         return (
-          location.name?.toLowerCase().includes(query) ||
-          location.chineseName?.toLowerCase().includes(query) ||
-          location.certification?.toLowerCase().includes(query)
+          (location.name?.toLowerCase().includes(query) || false) ||
+          (location.chineseName?.toLowerCase().includes(query) || false) ||
+          (location.certification?.toLowerCase().includes(query) || false)
         );
       }
       
@@ -123,7 +152,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   
   // Handle load more
   const handleLoadMore = () => {
-    setDisplayLimit(prev => prev + 5);
+    setDisplayLimit(prev => prev + 25); // Load more items each time
   };
   
   // Get the locations to display based on the current limit
@@ -158,7 +187,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
         <Button 
           variant="outline" 
           className="mt-4"
-          onClick={refreshLocations}
+          onClick={handleRefresh}
         >
           {t("Refresh Locations", "刷新位置")}
         </Button>
@@ -180,6 +209,30 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
             onChange={setSearchQuery}
             className="flex-1"
           />
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoadingLocations}
+            className="shrink-0"
+          >
+            {isLoadingLocations ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              t("Refresh", "刷新")
+            )}
+          </Button>
+        </div>
+        
+        <div className="text-sm text-muted-foreground text-center">
+          {t(
+            "Showing {{shown}} of {{total}} certified dark sky locations",
+            "显示 {{shown}}/{{total}} 个认证暗夜地点"
+          )
+            .replace('{{shown}}', String(locationsToDisplay.length))
+            .replace('{{total}}', String(filteredLocations.length))
+          }
         </div>
       </div>
       
