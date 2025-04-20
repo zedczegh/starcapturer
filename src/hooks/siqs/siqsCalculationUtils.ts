@@ -12,6 +12,68 @@ export function normalizeScore(score: number): number {
 }
 
 /**
+ * Extract single hour cloud cover data for efficient SIQS calculation
+ * @param forecastData Forecast data containing hourly predictions
+ * @param targetHour Target hour to extract (e.g., 1 for 1:00 AM)
+ * @returns The cloud cover percentage at the target hour or average if not found
+ */
+export function extractSingleHourCloudCover(forecastData: any, targetHour: number = 1): number {
+  try {
+    if (!forecastData?.hourly) return 50; // Default to medium cloud cover
+    
+    const hourlyData = forecastData.hourly;
+    let cloudCover = 50;
+    
+    // Check if hourly data is an array of objects with time and cloud_cover
+    if (Array.isArray(hourlyData.time) && Array.isArray(hourlyData.cloud_cover)) {
+      // Find entries for the target hour
+      const targetHourEntries: number[] = [];
+      
+      for (let i = 0; i < hourlyData.time.length; i++) {
+        const time = hourlyData.time[i];
+        if (!time) continue;
+        
+        // Parse the timestamp to get the hour
+        const timestamp = new Date(time);
+        if (isNaN(timestamp.getTime())) continue;
+        
+        // Check if this entry is for our target hour
+        if (timestamp.getHours() === targetHour) {
+          const cover = hourlyData.cloud_cover[i];
+          if (typeof cover === 'number') {
+            targetHourEntries.push(cover);
+          }
+        }
+      }
+      
+      // If we found entries for the target hour, average them
+      if (targetHourEntries.length > 0) {
+        cloudCover = targetHourEntries.reduce((sum, val) => sum + val, 0) / targetHourEntries.length;
+        console.log(`Found ${targetHourEntries.length} entries for ${targetHour}:00, avg cloud cover: ${cloudCover.toFixed(1)}%`);
+      }
+    } else if (Array.isArray(hourlyData)) {
+      // Handle array of objects format
+      const targetEntries = hourlyData.filter((entry: any) => {
+        if (!entry?.time) return false;
+        const date = new Date(entry.time);
+        return !isNaN(date.getTime()) && date.getHours() === targetHour;
+      });
+      
+      if (targetEntries.length > 0) {
+        cloudCover = targetEntries.reduce((sum: number, entry: any) => 
+          sum + (entry.cloud_cover || 50), 0) / targetEntries.length;
+        console.log(`Found ${targetEntries.length} entries for ${targetHour}:00, avg cloud cover: ${cloudCover.toFixed(1)}%`);
+      }
+    }
+    
+    return cloudCover;
+  } catch (error) {
+    console.error("Error extracting single hour cloud cover:", error);
+    return 50; // Default to medium cloud cover on error
+  }
+}
+
+/**
  * Calculate SIQS score with weather data
  * This function accepts forecast data as an optional parameter
  */
@@ -33,8 +95,33 @@ export async function calculateSIQSWithWeatherData(
     if (forecastData && forecastData.hourly) {
       console.log("Using forecast data for nighttime SIQS calculation");
       
-      // Use the formula: sum(cc percentage of each hour tonight: 18:00-7:00)/13
-      // or current time to 7:00 if current time is within nighttime hours
+      // First try using the optimized single-hour approach for faster calculation
+      const singleHourCloudCover = extractSingleHourCloudCover(forecastData, 1); // Use 1 AM
+      
+      // If we have valid single hour cloud cover, use it for SIQS calculation
+      if (singleHourCloudCover !== null) {
+        const cloudScore = Math.max(0, 100 - (singleHourCloudCover * 2.5));
+        const normalizedScore = normalizeScore(cloudScore / 10);
+        
+        return {
+          score: normalizedScore,
+          isViable: normalizedScore >= 2.0,
+          factors: [
+            {
+              name: "Cloud Cover",
+              score: cloudScore / 100,
+              description: `1 AM cloud cover: ${singleHourCloudCover.toFixed(1)}%`,
+              nighttimeData: {
+                average: singleHourCloudCover,
+                timeRange: "1:00-2:00",
+                sourceType: "optimized"
+              }
+            }
+          ]
+        };
+      }
+      
+      // Fall back to using full night calculation if single-hour approach fails
       const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly, 0, 0);
       console.log(`Tonight's cloud cover (18:00-7:00): ${tonightCloudCover.toFixed(1)}%`);
       

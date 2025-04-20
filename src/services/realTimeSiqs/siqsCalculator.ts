@@ -1,6 +1,6 @@
 
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
-import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
+import { calculateSIQSWithWeatherData, extractSingleHourCloudCover } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
 import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
 import {
@@ -52,22 +52,36 @@ function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { averag
   return (nighttimeData.average * 0.7) + (cloudCover * 0.3);
 }
 
+/**
+ * Optimized real-time SIQS calculation with single-hour sampling option
+ */
 export async function calculateRealTimeSiqs(
   latitude: number, 
   longitude: number, 
-  bortleScale: number
+  bortleScale: number,
+  options: {
+    useSingleHourSampling?: boolean;
+    targetHour?: number;
+    cacheDurationMins?: number;
+  } = {}
 ): Promise<SiqsResult> {
   if (!isFinite(latitude) || !isFinite(longitude)) {
     console.error("Invalid coordinates provided to calculateRealTimeSiqs");
     return { siqs: 0, isViable: false };
   }
   
-  const CACHE_DURATION_MINS = 15;
+  // Default options
+  const {
+    useSingleHourSampling = true,
+    targetHour = 1, // Default to 1 AM for best astronomical viewing
+    cacheDurationMins = 15
+  } = options;
   
+  // Check cache first before proceeding
   if (hasCachedSiqs(latitude, longitude)) {
     const cachedData = getCachedSiqs(latitude, longitude);
     if (cachedData && 
-        (Date.now() - new Date(cachedData.metadata?.calculatedAt || 0).getTime()) < CACHE_DURATION_MINS * 60 * 1000) {
+        (Date.now() - new Date(cachedData.metadata?.calculatedAt || 0).getTime()) < cacheDurationMins * 60 * 1000) {
       return cachedData;
     }
   }
@@ -93,6 +107,7 @@ export async function calculateRealTimeSiqs(
       finalBortleScale = terrainCorrectedScale;
     }
     
+    // Prepare weather data with clear sky info
     const weatherDataWithClearSky: WeatherDataWithClearSky = {
       ...weatherData,
       clearSkyRate: clearSkyData?.annualRate || enhancedLocation?.clearSkyRate,
@@ -101,8 +116,22 @@ export async function calculateRealTimeSiqs(
       _forecast: forecastData
     };
     
-    // Type-safe handling of nighttimeCloudData
-    if (weatherData && 'nighttimeCloudData' in weatherData) {
+    // Apply single hour cloud cover sampling if enabled and forecast is available
+    if (useSingleHourSampling && forecastData?.hourly) {
+      const singleHourCloudCover = extractSingleHourCloudCover(forecastData, targetHour);
+      
+      if (singleHourCloudCover !== null) {
+        console.log(`Using ${targetHour}AM cloud cover for SIQS: ${singleHourCloudCover.toFixed(1)}%`);
+        weatherDataWithClearSky.cloudCover = singleHourCloudCover;
+        weatherDataWithClearSky.nighttimeCloudData = {
+          average: singleHourCloudCover,
+          timeRange: `${targetHour}:00-${targetHour+1}:00`,
+          sourceType: 'optimized'
+        };
+      }
+    }
+    // Use traditional nighttime cloud data if available
+    else if (weatherData && 'nighttimeCloudData' in weatherData) {
       const nighttimeData = weatherData.nighttimeCloudData as { 
         average?: number; 
         timeRange?: string; 
@@ -116,6 +145,7 @@ export async function calculateRealTimeSiqs(
       };
     }
     
+    // Validate and finalize cloud cover
     let finalCloudCover = weatherDataWithClearSky.cloudCover;
     if (weatherDataWithClearSky.nighttimeCloudData) {
       finalCloudCover = validateNighttimeCloudData(
@@ -127,6 +157,7 @@ export async function calculateRealTimeSiqs(
     const moonPhase = calculateMoonPhase();
     const seeingConditions = enhancedLocation?.averageVisibility === 'excellent' ? 2 : 3;
     
+    // Calculate SIQS using the weather data with appropriate cloud cover
     const siqsResult = await calculateSIQSWithWeatherData(
       {
         ...weatherDataWithClearSky,
@@ -138,6 +169,7 @@ export async function calculateRealTimeSiqs(
       forecastData
     );
     
+    // Apply adjustments to the raw score
     let adjustedScore = applyIntelligentAdjustments(
       siqsResult.score,
       weatherDataWithClearSky,
@@ -168,11 +200,13 @@ export async function calculateRealTimeSiqs(
           clearSky: !!clearSkyData,
           lightPollution: !!pollutionData,
           terrainCorrected: !!terrainCorrectedScale,
-          climate: !!climateRegion
+          climate: !!climateRegion,
+          singleHourSampling: useSingleHourSampling && forecastData?.hourly ? true : false
         }
       }
     };
     
+    // Cache the result
     setSiqsCache(latitude, longitude, result);
     
     return result;

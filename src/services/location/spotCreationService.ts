@@ -31,11 +31,17 @@ export const createSpotFromPoint = async (
     // Calculate SIQS with default Bortle scale
     const defaultBortleScale = 4;
     
-    // Calculate SIQS without waiting for Bortle data
+    // Use the optimized single-hour sampling approach for faster batch processing
+    // This significantly reduces API calls when generating multiple spots
     const siqsResult = await calculateRealTimeSiqs(
       point.latitude,
       point.longitude,
-      defaultBortleScale
+      defaultBortleScale,
+      {
+        useSingleHourSampling: true,
+        targetHour: 1, // 1 AM is typically a good hour for astronomy
+        cacheDurationMins: 30 // Use longer cache duration for batch processing
+      }
     );
     
     // Filter by quality threshold

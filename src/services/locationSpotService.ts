@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isWaterLocation } from '@/utils/validation';
 import { generateDistributedPoints } from './location/pointGenerationService';
@@ -25,18 +26,20 @@ export async function generateQualitySpots(
     // Generate candidate points with better distribution
     const points = generateDistributedPoints(centerLat, centerLng, radius, limit * 3);
     
-    // Process points in batches
+    // Process points in batches with optimized SIQS calculation
     const validSpots: SharedAstroSpot[] = [];
     const batches = chunkArray(points, BATCH_SIZE);
     
     for (const batch of batches) {
       if (validSpots.length >= limit) break;
       
+      // Process batch in parallel for better performance
       const batchPromises = batch.map(async point => {
         if (isWaterLocation(point.latitude, point.longitude)) {
           return null;
         }
         
+        // Using optimized spot creation with single-hour cloud cover sampling
         return createSpotFromPoint(point, minQuality);
       });
       
