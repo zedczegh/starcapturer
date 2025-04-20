@@ -33,6 +33,21 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [displayLimit, setDisplayLimit] = useState(5);
 
+  // Debug the locations prop
+  useEffect(() => {
+    console.log(`CertifiedLocations received ${locations.length} locations`);
+    if (locations.length > 0) {
+      console.log('Sample location:', locations[0]);
+    }
+    
+    // If we have fewer than expected locations, try to load all certified locations
+    if (locations.length < 5 && !loading) {
+      console.log('Few certified locations received, attempting to load from service directly');
+      const allCertified = getAllCertifiedLocations();
+      console.log(`Direct service load found ${allCertified.length} locations`);
+    }
+  }, [locations, loading]);
+
   // Filter locations based on search and type
   const filteredLocations = useMemo(() => {
     return locations.filter(location => {
@@ -50,10 +65,10 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
             if (!certification.includes('community')) return false;
             break;
           case 'urban':
-            if (!certification.includes('urban')) return false;
+            if (!certification.includes('urban') && !certification.includes('night sky place')) return false;
             break;
           case 'lodging':
-            if (!certification.includes('lodging')) return false;
+            if (!certification.includes('lodging') && !certification.includes('friendly')) return false;
             break;
         }
       }
@@ -99,6 +114,12 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
           onChange={setSearchQuery}
           className="max-w-xl mx-auto"
         />
+        
+        {filteredLocations.length === 0 && !loading && (
+          <div className="text-center py-8 text-muted-foreground">
+            {t("No certified locations found matching your criteria.", "未找到符合条件的认证地点。")}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4">
@@ -130,6 +151,14 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
               t("Load More", "加载更多")
             )}
           </Button>
+        </div>
+      )}
+      
+      {/* Debug info */}
+      {filteredLocations.length > 0 && (
+        <div className="mt-6 text-xs text-muted-foreground text-center">
+          {t(`Showing ${displayedLocations.length} of ${filteredLocations.length} locations`, 
+             `显示 ${displayedLocations.length} 个，共 ${filteredLocations.length} 个地点`)}
         </div>
       )}
     </div>

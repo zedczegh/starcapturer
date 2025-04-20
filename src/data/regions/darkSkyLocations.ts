@@ -563,5 +563,102 @@ export const darkSkyLocations: (LocationEntry & {
       fall: { clearSkyRate: 85, averageTemperature: 18 },
       winter: { clearSkyRate: 90, averageTemperature: 8 }
     }
+  },
+
+  // Adding Dark Sky Friendly Lodging locations
+  {
+    name: "Hyatt Regency Maui Resort Dark Sky Friendly Lodging",
+    chineseName: "茂宜岛凯悦酒店暗夜天空友好住宿",
+    coordinates: [20.9125, -156.6950],
+    bortleScale: 3.5,
+    radius: 2,
+    type: 'lodging',
+    certification: 'Dark Sky Friendly Lodging',
+    clearSkyRate: 78,
+    clearestMonths: ['Apr', 'May', 'Jun', 'Sep'],
+    annualPrecipitationDays: 60,
+    visibility: 'good',
+    seasonalTrends: {
+      spring: { clearSkyRate: 80, averageTemperature: 25 },
+      summer: { clearSkyRate: 75, averageTemperature: 28 },
+      fall: { clearSkyRate: 78, averageTemperature: 27 },
+      winter: { clearSkyRate: 70, averageTemperature: 24 }
+    }
+  },
+  {
+    name: "Cosmic Campground Dark Sky Lodging",
+    chineseName: "宇宙营地暗夜天空住宿",
+    coordinates: [33.4674, -108.9209],
+    bortleScale: 1.5,
+    radius: 10,
+    type: 'lodging',
+    certification: 'Dark Sky Friendly Lodging',
+    clearSkyRate: 85,
+    clearestMonths: ['May', 'Jun', 'Sep', 'Oct'],
+    annualPrecipitationDays: 50,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 83, averageTemperature: 15 },
+      summer: { clearSkyRate: 72, averageTemperature: 25 },
+      fall: { clearSkyRate: 88, averageTemperature: 18 },
+      winter: { clearSkyRate: 80, averageTemperature: 5 }
+    }
+  },
+  {
+    name: "Primland Resort Dark Sky Observatory",
+    chineseName: "普里姆兰度假村暗夜天空天文台",
+    coordinates: [36.6204, -80.3120],
+    bortleScale: 3.0,
+    radius: 8,
+    type: 'lodging',
+    certification: 'Dark Sky Friendly Lodging',
+    clearSkyRate: 67,
+    clearestMonths: ['Aug', 'Sep', 'Oct'],
+    annualPrecipitationDays: 115,
+    visibility: 'good',
+    seasonalTrends: {
+      spring: { clearSkyRate: 60, averageTemperature: 15 },
+      summer: { clearSkyRate: 65, averageTemperature: 25 },
+      fall: { clearSkyRate: 75, averageTemperature: 18 },
+      winter: { clearSkyRate: 55, averageTemperature: 5 }
+    }
+  },
+  {
+    name: "Under Canvas Dark Sky Lodging Moab",
+    chineseName: "摩押帐篷下暗夜天空住宿",
+    coordinates: [38.6517, -109.4814],
+    bortleScale: 2.0,
+    radius: 15,
+    type: 'lodging',
+    certification: 'Dark Sky Friendly Lodging',
+    clearSkyRate: 82,
+    clearestMonths: ['May', 'Jun', 'Sep', 'Oct'],
+    annualPrecipitationDays: 55,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 78, averageTemperature: 18 },
+      summer: { clearSkyRate: 75, averageTemperature: 30 },
+      fall: { clearSkyRate: 85, averageTemperature: 20 },
+      winter: { clearSkyRate: 70, averageTemperature: 5 }
+    }
+  },
+  {
+    name: "Wuksachi Lodge Sequoia Dark Sky Program",
+    chineseName: "红杉树国家公园武克萨奇小屋暗夜天空项目",
+    coordinates: [36.5650, -118.7734],
+    bortleScale: 2.0,
+    radius: 12,
+    type: 'lodging',
+    certification: 'Dark Sky Friendly Lodging',
+    clearSkyRate: 78,
+    clearestMonths: ['Jul', 'Aug', 'Sep'],
+    annualPrecipitationDays: 65,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 70, averageTemperature: 12 },
+      summer: { clearSkyRate: 85, averageTemperature: 25 },
+      fall: { clearSkyRate: 80, averageTemperature: 15 },
+      winter: { clearSkyRate: 60, averageTemperature: 2 }
+    }
   }
 ];

@@ -24,13 +24,17 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   const scoreRef = useRef<number | null>(null);
   const [displayedScore, setDisplayedScore] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(loading);
+  const previousScoreRef = useRef<number | null>(null);
   
   useEffect(() => {
     const numericScore = getSiqsScore(score);
     
-    // Only update if score changed significantly
-    if (Math.abs((scoreRef.current || 0) - numericScore) >= 0.2) {
+    // Only update if score changed significantly or is initial display
+    if (previousScoreRef.current === null || 
+        Math.abs((previousScoreRef.current || 0) - numericScore) >= 0.2) {
+      
       scoreRef.current = numericScore;
+      previousScoreRef.current = numericScore;
       setDisplayedScore(numericScore > 0 ? numericScore : null);
     }
     
