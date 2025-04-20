@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -125,18 +126,23 @@ export const usePhotoPointsState = () => {
     );
   }, [t, language]);
   
+  // Simplified view change handler with no delays
   const handleViewChange = useCallback((view: 'certified' | 'calculated') => {
-    setActiveView(view);
-  }, []);
+    if (view !== activeView) {
+      console.log(`Switching to ${view} view mode`);
+      setActiveView(view);
+    }
+  }, [activeView]);
   
   const toggleMapView = useCallback(() => {
     setShowMap(prev => !prev);
   }, []);
   
+  // Shorter initial load timeout for better responsiveness
   useEffect(() => {
     const timer = setTimeout(() => {
       setInitialLoad(false);
-    }, 1500);
+    }, 500);
     return () => clearTimeout(timer);
   }, []);
   

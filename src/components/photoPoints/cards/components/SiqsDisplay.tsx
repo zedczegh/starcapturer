@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useMemo } from 'react';
 import SiqsScoreBadge from '../SiqsScoreBadge';
@@ -21,13 +22,20 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
   siqsConfidence,
   locationSiqs
 }) => {
+  // Only show loading state when absolutely necessary
   const showLoadingState = useMemo(() => {
-    if (!hasAttemptedLoad && isCertified && isVisible && !realTimeSiqs) {
-      return true;
+    // Never show loading state if we already have a score
+    if (realTimeSiqs !== null && realTimeSiqs > 0) {
+      return false;
     }
-    return loadingSiqs && !realTimeSiqs;
-  }, [isCertified, loadingSiqs, hasAttemptedLoad, isVisible, realTimeSiqs]);
+    if (locationSiqs && locationSiqs > 0) {
+      return false;
+    }
+    // Only show loading for certified locations when no score is available
+    return isCertified && isVisible && loadingSiqs;
+  }, [isCertified, loadingSiqs, isVisible, realTimeSiqs, locationSiqs]);
   
+  // Use the best available score
   const displayScore = useMemo(() => {
     if (realTimeSiqs !== null && realTimeSiqs > 0) {
       return realTimeSiqs;

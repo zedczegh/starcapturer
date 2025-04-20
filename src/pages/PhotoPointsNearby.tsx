@@ -58,6 +58,7 @@ const PhotoPointsNearby: React.FC = () => {
     calculatedLocations 
   } = useCertifiedLocations(locations);
 
+  // Update search radius when view changes, but avoid unnecessary refreshes
   useEffect(() => {
     if (locationInitialized && effectiveLocation) {
       setSearchRadius(currentSearchRadius);
@@ -104,7 +105,7 @@ const PhotoPointsNearby: React.FC = () => {
       <ViewToggle
         activeView={activeView}
         onViewChange={handleViewChange}
-        loading={loading && !locationLoading}
+        loading={false} // Remove loading dependency for instant switching
       />
       
       {activeView === 'calculated' && (
