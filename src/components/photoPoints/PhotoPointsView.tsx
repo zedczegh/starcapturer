@@ -1,49 +1,43 @@
-import React, { useCallback } from 'react';
+
+import React, { useCallback, useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
 import CalculatedLocations from './CalculatedLocations';
+import { LocationListFilter } from './ViewToggle';
 import CertifiedLocations from './CertifiedLocations';
-
-// Note: Changed from lazy loading to regular import to fix "Failed to fetch" error
 
 interface PhotoPointsViewProps {
   showMap: boolean;
-  activeView: 'certified' | 'calculated';
+  activeFilter: LocationListFilter;
   initialLoad: boolean;
   effectiveLocation: { latitude: number; longitude: number } | null;
-  certifiedLocations: SharedAstroSpot[];
-  calculatedLocations: SharedAstroSpot[];
+  locations: SharedAstroSpot[];
   searchRadius: number;
-  calculatedSearchRadius: number;
   loading: boolean;
   hasMore: boolean;
   loadMore: () => void;
   refreshSiqs?: () => void;
   onLocationClick: (location: SharedAstroSpot) => void;
   onLocationUpdate: (lat: number, lng: number) => void;
-  canLoadMoreCalculated?: boolean;
-  loadMoreCalculated?: () => void;
+  canLoadMore?: boolean;
   loadMoreClickCount?: number;
   maxLoadMoreClicks?: number;
 }
 
 const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   showMap,
-  activeView,
+  activeFilter,
   initialLoad,
   effectiveLocation,
-  certifiedLocations,
-  calculatedLocations,
+  locations,
   searchRadius,
-  calculatedSearchRadius,
   loading,
   hasMore,
   loadMore,
   refreshSiqs,
   onLocationClick,
   onLocationUpdate,
-  canLoadMoreCalculated = false,
-  loadMoreCalculated,
+  canLoadMore = false,
   loadMoreClickCount = 0,
   maxLoadMoreClicks = 2
 }) => {
@@ -51,24 +45,48 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     onLocationUpdate(lat, lng);
   }, [onLocationUpdate]);
 
+  // Filter locations based on the active filter
+  const filteredLocations = useMemo(() => {
+    if (activeFilter === 'all') return locations;
+    
+    return locations.filter(loc => {
+      const isCertified = Boolean(loc.isDarkSkyReserve || loc.certification);
+      return activeFilter === 'certified' ? isCertified : !isCertified;
+    });
+  }, [locations, activeFilter]);
+
+  // Separate certified and calculated locations for mapping
+  const certifiedLocations = useMemo(() => 
+    locations.filter(loc => loc.isDarkSkyReserve || loc.certification),
+    [locations]
+  );
+  
+  const calculatedLocations = useMemo(() => 
+    locations.filter(loc => !loc.isDarkSkyReserve && !loc.certification),
+    [locations]
+  );
+  
+  // Debug count of locations
+  React.useEffect(() => {
+    console.log(`PhotoPointsView: locations=${locations.length}, filtered=${filteredLocations.length}, certified=${certifiedLocations.length}, calculated=${calculatedLocations.length}`);
+  }, [locations, filteredLocations, certifiedLocations, calculatedLocations]);
+
   return (
     <div className="mt-4">
       {showMap && (
         <div className="mb-6 relative max-w-xl mx-auto">
           <PhotoPointsMap
             userLocation={effectiveLocation}
-            locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
+            locations={locations}
+            searchRadius={searchRadius}
             onLocationClick={onLocationClick}
             onLocationUpdate={handleMapLocationUpdate}
-            searchRadius={activeView === 'calculated' ? calculatedSearchRadius : searchRadius}
-            certifiedLocations={certifiedLocations}
-            calculatedLocations={calculatedLocations}
-            activeView={activeView}
+            activeFilter={activeFilter}
           />
         </div>
       )}
 
-      {!showMap && activeView === 'certified' && (
+      {!showMap && activeFilter === 'certified' && (
         <CertifiedLocations
           locations={certifiedLocations}
           loading={loading}
@@ -80,19 +98,20 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
         />
       )}
 
-      {!showMap && activeView === 'calculated' && (
+      {!showMap && activeFilter !== 'certified' && (
         <CalculatedLocations
-          locations={calculatedLocations}
+          locations={activeFilter === 'calculated' ? calculatedLocations : filteredLocations}
           loading={loading}
           hasMore={hasMore}
           onLoadMore={loadMore}
           onRefresh={refreshSiqs}
-          searchRadius={calculatedSearchRadius}
+          searchRadius={searchRadius}
           initialLoad={initialLoad}
-          canLoadMoreCalculated={canLoadMoreCalculated}
-          onLoadMoreCalculated={loadMoreCalculated}
+          canLoadMoreCalculated={canLoadMore}
+          onLoadMoreCalculated={loadMore}
           loadMoreClickCount={loadMoreClickCount}
           maxLoadMoreClicks={maxLoadMoreClicks}
+          onViewDetails={onLocationClick}
         />
       )}
     </div>

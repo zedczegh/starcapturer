@@ -2,96 +2,164 @@
 /**
  * SIQS Reliability Assessment
  * 
- * This module provides tools to assess the reliability of SIQS calculations
- * based on available data quality and completeness.
+ * This module evaluates the reliability of weather data used for SIQS calculations
+ * to detect potential inaccuracies and provide confidence scores.
  */
 
 import { WeatherDataWithClearSky } from './siqsTypes';
 
 interface ReliabilityResult {
-  reliable: boolean;
+  confidenceScore: number; // 0-100
   issues: string[];
-  confidenceScore: number; // 0-10 scale
+  reliable: boolean; // Added missing 'reliable' property
 }
 
 /**
- * Assess the reliability of data used for SIQS calculation
+ * Assess reliability of weather data with anomaly and inconsistency detection
  */
 export function assessDataReliability(
-  weatherData?: WeatherDataWithClearSky,
-  forecastData?: any
+  weatherData: WeatherDataWithClearSky,
+  forecastData: any | null
 ): ReliabilityResult {
   const issues: string[] = [];
-  let confidenceScore = 10;
+  let confidence = 100; // Start with perfect confidence
   
-  // Check if we have weather data
-  if (!weatherData) {
-    issues.push("Missing weather data");
-    confidenceScore -= 5;
-  } else {
-    // Check for critical weather data fields
-    if (weatherData.cloudCover === undefined) {
-      issues.push("Missing cloud cover data");
-      confidenceScore -= 3;
+  // Check for missing critical data
+  if (weatherData.cloudCover === undefined) {
+    issues.push('Missing cloud cover data');
+    confidence -= 40;
+  }
+  
+  // Check for implausible values
+  if (weatherData.cloudCover !== undefined) {
+    if (weatherData.cloudCover < 0 || weatherData.cloudCover > 100) {
+      issues.push('Cloud cover value outside valid range');
+      confidence -= 30;
     }
     
-    if (weatherData.humidity === undefined) {
-      issues.push("Missing humidity data");
-      confidenceScore -= 1;
+    // Check for suspiciously perfect values
+    if (weatherData.cloudCover === 0 || weatherData.cloudCover === 100) {
+      issues.push('Suspicious boundary cloud cover value');
+      confidence -= 10;
     }
+  }
+  
+  // Check for night vs day inconsistencies
+  if (weatherData.nighttimeCloudData && weatherData.cloudCover !== undefined) {
+    const nightCloudAvg = weatherData.nighttimeCloudData.average;
+    const difference = Math.abs(weatherData.cloudCover - nightCloudAvg);
     
-    if (weatherData.temperature === undefined) {
-      issues.push("Missing temperature data");
-      confidenceScore -= 1;
+    if (difference > 40) {
+      issues.push('High discrepancy between current and nighttime cloud cover');
+      confidence -= 20;
     }
+  }
+  
+  // Check forecast data for inconsistencies
+  if (forecastData && forecastData.hourly) {
+    const hourlyCloudCover = forecastData.hourly.cloudcover || [];
     
-    // Check for nighttime cloud data which is critical for good SIQS
-    if (!weatherData.nighttimeCloudData || 
-        weatherData.nighttimeCloudData.average === undefined) {
-      issues.push("Missing nighttime cloud data");
-      confidenceScore -= 2.5;
-    } else {
-      // Check source of nighttime cloud data - forecast is more reliable than calculated
-      if (weatherData.nighttimeCloudData.sourceType === 'calculated') {
-        issues.push("Using calculated nighttime cloud data");
-        confidenceScore -= 0.5;
+    if (hourlyCloudCover.length > 0) {
+      // Calculate variance in forecasted cloud cover
+      const values = hourlyCloudCover.slice(0, 8); // Look at next 8 hours
+      const avg = values.reduce((sum: number, val: number) => sum + val, 0) / values.length;
+      const variance = values.reduce((sum: number, val: number) => sum + Math.pow(val - avg, 2), 0) / values.length;
+      
+      // Suspiciously constant forecasts
+      if (variance < 1 && values.length > 3) {
+        issues.push('Suspiciously constant forecast data');
+        confidence -= 15;
+      }
+      
+      // Highly erratic forecasts
+      if (variance > 800) {
+        issues.push('Highly erratic forecast data');
+        confidence -= 10;
       }
     }
+  }
+  
+  // Check for data freshness - using timestamp property instead of time
+  if (weatherData.timestamp) {
+    const dataTime = new Date(weatherData.timestamp).getTime();
+    const now = Date.now();
+    const dataAgeHours = (now - dataTime) / (1000 * 60 * 60);
     
-    // Check if there's precipitation which can affect reliability
-    if (weatherData.precipitation && weatherData.precipitation > 1) {
-      issues.push("Precipitation detected");
-      confidenceScore -= 1;
+    if (dataAgeHours > 3) {
+      issues.push('Weather data is more than 3 hours old');
+      confidence -= 20;
+    } else if (dataAgeHours > 1) {
+      issues.push('Weather data is more than 1 hour old');
+      confidence -= 5;
     }
   }
   
-  // Check forecast data availability
-  if (!forecastData) {
-    issues.push("Missing forecast data");
-    confidenceScore -= 2;
-  } else if (!Array.isArray(forecastData) || forecastData.length === 0) {
-    issues.push("Invalid forecast data format");
-    confidenceScore -= 2;
+  // Add source quality factor - using quality property instead of sourceQuality
+  if (weatherData.quality === 'high') {
+    confidence = Math.min(100, confidence + 5);
+  } else if (weatherData.quality === 'low') {
+    issues.push('Low quality data source');
+    confidence -= 10;
   }
   
-  // Ensure confidence score is within bounds
-  confidenceScore = Math.max(0, Math.min(10, confidenceScore));
+  // Ensure confidence stays in valid range
+  confidence = Math.max(0, Math.min(100, confidence));
+  
+  // Determine if data is reliable based on confidence score
+  const reliable = confidence >= 70;
   
   return {
-    reliable: confidenceScore > 6,
+    confidenceScore: confidence,
     issues,
-    confidenceScore
+    reliable
   };
 }
 
 /**
- * Get confidence level description based on score
+ * Check if weather data shows consistency across multiple dimensions
  */
-export function getConfidenceDescription(score: number): string {
-  if (score >= 9) return "Very High";
-  if (score >= 7) return "High";
-  if (score >= 5) return "Moderate";
-  if (score >= 3) return "Low";
-  return "Very Low";
+export function checkDataConsistency(weatherData: WeatherDataWithClearSky): boolean {
+  // Check cloud cover vs other weather parameters consistency
+  if (weatherData.cloudCover !== undefined && weatherData.precipitation !== undefined) {
+    // High clouds with no precipitation is consistent
+    // Low clouds with precipitation is consistent
+    // Inconsistent pattern: low clouds with high precipitation or vice versa
+    const isInconsistent = (weatherData.cloudCover < 30 && weatherData.precipitation > 1) ||
+                          (weatherData.cloudCover > 80 && weatherData.precipitation === 0);
+    
+    if (isInconsistent) {
+      return false;
+    }
+  }
+  
+  // More consistency checks can be added here
+  
+  return true;
 }
 
+/**
+ * Get recommended adjustments based on reliability assessment
+ */
+export function getReliabilityAdjustments(reliability: ReliabilityResult): {
+  siqsAdjustment: number;
+  recommendations: string[];
+} {
+  const recommendations: string[] = [];
+  let siqsAdjustment = 0;
+  
+  if (reliability.confidenceScore < 50) {
+    siqsAdjustment = -1;
+    recommendations.push('Consider onsite visual observation due to low data reliability');
+  } else if (reliability.confidenceScore < 70) {
+    siqsAdjustment = -0.5;
+    recommendations.push('Cross-check with local observations recommended');
+  } else if (reliability.confidenceScore < 85) {
+    siqsAdjustment = -0.2;
+    recommendations.push('Generally reliable data with minor concerns');
+  }
+  
+  return {
+    siqsAdjustment,
+    recommendations
+  };
+}

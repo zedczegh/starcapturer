@@ -56,17 +56,17 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
   
   const certification = (location.certification || '').toLowerCase();
   
-  // IMPORTANT: Ensure communities use gold/yellow color
+  // IMPORTANT: Match colors with the legend
   if (certification.includes('community')) {
-    return 'rgba(255, 215, 0, 0.85)'; // Gold for Dark Sky Community #FFD700
+    return 'rgba(255, 165, 0, 0.85)'; // Orange/Gold for Dark Sky Community #FFA500
   } else if (certification.includes('reserve') || certification.includes('sanctuary') || location.isDarkSkyReserve) {
     return 'rgba(155, 135, 245, 0.85)'; // Purple for reserves #9b87f5
   } else if (certification.includes('park')) {
     return 'rgba(74, 222, 128, 0.85)'; // Green for Dark Sky Park #4ADE80
   } else if (certification.includes('urban') || certification.includes('night sky place')) {
-    return 'rgba(30, 174, 219, 0.85)'; // Blue for Urban Night Sky #1EAEDB
+    return 'rgba(14, 165, 233, 0.85)'; // Blue for Urban Night Sky #0EA5E9
   } else if (certification.includes('lodging')) {
-    return 'rgba(0, 0, 128, 0.85)'; // Navy blue for Dark Sky Lodging
+    return 'rgba(30, 58, 138, 0.85)'; // Dark blue for Dark Sky Lodging #1e3a8a
   } else {
     return 'rgba(155, 135, 245, 0.85)'; // Default to reserve color
   }
@@ -106,7 +106,11 @@ export const getLocationColor = (location: SharedAstroSpot): string => {
   if (location.isDarkSkyReserve || location.certification) {
     return getCertificationColor(location);
   } else {
-    const defaultColor = '#4ADE80'; // Bright green fallback
-    return location.siqs ? getProgressColor(getSiqsScore(location.siqs)) : defaultColor;
+    // Use SIQS score colors that match the legend
+    const siqsScore = getSiqsScore(location);
+    if (siqsScore >= 7.5) return '#22c55e'; // Excellent - match legend
+    if (siqsScore >= 5.5) return '#eab308'; // Good - match legend
+    if (siqsScore >= 4.0) return '#f97316'; // Average - match legend
+    return '#ef4444'; // Below Average - match legend
   }
 };

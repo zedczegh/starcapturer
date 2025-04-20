@@ -43,26 +43,29 @@ export const isWaterSpot = (location: SharedAstroSpot): boolean => {
  */
 export const getCertificationColor = (location: SharedAstroSpot): string => {
   if (!location.isDarkSkyReserve && !location.certification) {
-    return 'rgba(74, 222, 128, 0.85)'; // Default green with transparency
+    return '#4ADE80'; // Default green for non-certified
   }
   
   const certification = (location.certification || '').toLowerCase();
   
-  // IMPORTANT: Ensure communities use gold/yellow color
+  // IMPORTANT: Match colors with the legend - these must match exactly
   if (certification.includes('community')) {
-    return 'rgba(255, 215, 0, 0.85)'; // Gold for Dark Sky Community #FFD700
+    return '#FFA500'; // Gold/Orange for Dark Sky Community
   } else if (certification.includes('reserve') || certification.includes('sanctuary') || location.isDarkSkyReserve) {
-    return 'rgba(155, 135, 245, 0.85)'; // Purple for reserves #9b87f5
+    return '#9b87f5'; // Purple for reserves #9b87f5
   } else if (certification.includes('park')) {
-    return 'rgba(74, 222, 128, 0.85)'; // Green for Dark Sky Park #4ADE80
+    return '#4ADE80'; // Green for Dark Sky Park #4ADE80
   } else if (certification.includes('urban') || certification.includes('night sky place')) {
-    return 'rgba(30, 174, 219, 0.85)'; // Blue for Urban Night Sky #1EAEDB
+    return '#0EA5E9'; // Blue for Urban Night Sky #0EA5E9
   } else if (certification.includes('lodging')) {
-    return 'rgba(0, 0, 128, 0.85)'; // Navy blue for Dark Sky Lodging
+    return '#1e3a8a'; // Dark blue for Dark Sky Lodging
   } else {
-    return 'rgba(155, 135, 245, 0.85)'; // Default to reserve color
+    return '#9b87f5'; // Default to reserve color
   }
 };
+
+// Cache for markers to improve performance
+const markerCache = new Map<string, L.DivIcon>();
 
 /**
  * Determine if a location should be shown based on the active view
@@ -98,15 +101,18 @@ export const getLocationColor = (location: SharedAstroSpot): string => {
   if (location.isDarkSkyReserve || location.certification) {
     return getCertificationColor(location);
   } else {
-    const defaultColor = '#4ADE80'; // Bright green fallback
-    // Use our centralized getSiqsScore helper
+    // Match SIQS score colors with the legend - these must match exactly
     const siqsScore = getSiqsScore(location);
-    return siqsScore > 0 ? getProgressColor(siqsScore) : defaultColor;
+    if (siqsScore >= 7.5) return '#22c55e'; // Excellent - match legend exactly
+    if (siqsScore >= 5.5) return '#eab308'; // Good - match legend exactly
+    if (siqsScore >= 4.0) return '#f97316'; // Average - match legend exactly
+    return '#ef4444'; // Below Average - match legend exactly
   }
 };
 
 /**
  * Creates a custom marker for the map based on location properties
+ * with improved performance through caching
  * @param location The location data
  * @param isCertified Whether the location is certified
  * @param isHovered Whether the marker is currently hovered
@@ -127,8 +133,16 @@ export const getLocationMarker = (
     (isHovered ? 22 : 16) : // Mobile sizes
     (isHovered ? 28 : 24);  // Desktop sizes
   
+  // Create a cache key based on the parameters
+  const cacheKey = `${color}-${isCertified ? 1 : 0}-${isHovered ? 1 : 0}-${size}`;
+  
+  // Check if we have this marker in the cache
+  if (markerCache.has(cacheKey)) {
+    return markerCache.get(cacheKey)!;
+  }
+  
   // Create a marker with a custom HTML representation
-  return L.divIcon({
+  const marker = L.divIcon({
     className: 'custom-div-icon',
     html: `
       <div 
@@ -154,6 +168,16 @@ export const getLocationMarker = (
     iconSize: [size, size],
     iconAnchor: [size/2, size/2]
   });
+  
+  // Store in the cache for future use (limit cache size)
+  if (markerCache.size > 1000) {
+    // Clear part of the cache if it gets too large
+    const keysToDelete = Array.from(markerCache.keys()).slice(0, 200);
+    keysToDelete.forEach(key => markerCache.delete(key));
+  }
+  markerCache.set(cacheKey, marker);
+  
+  return marker;
 };
 
 /**

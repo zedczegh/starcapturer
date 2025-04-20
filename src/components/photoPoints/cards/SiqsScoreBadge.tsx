@@ -22,43 +22,61 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   forceCertified = false,
   confidenceScore = 10
 }) => {
-  // State for managing smooth transitions
   const [displayedScore, setDisplayedScore] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [loadingState, setLoadingState] = useState(loading);
   const previousScore = useRef<number | null>(null);
-  const loadingTimeoutRef = useRef<number | null>(null);
   const stableScoreRef = useRef<number | null>(null);
+  const loadingTimeoutRef = useRef<number | null>(null);
   
-  // Convert score to number using our helper function
   const numericScore = score === null ? 0 : getSiqsScore(score);
   
-  // For certified locations with no valid score, always show loading state
   const showLoading = loading || (isCertified && numericScore <= 0) || forceCertified;
   
-  // Update displayed score with smooth transition when real score changes
   useEffect(() => {
-    // Keep track of the most recent stable score
+    // Always update the display score when we have a valid numeric score,
+    // but skip transitions for small changes
     if (numericScore > 0) {
       stableScoreRef.current = numericScore;
+      
+      if (displayedScore === null) {
+        setDisplayedScore(numericScore);
+        previousScore.current = numericScore;
+        setLoadingState(false);
+      } else if (Math.abs((displayedScore || 0) - numericScore) < 0.2) {
+        setDisplayedScore(numericScore);
+        previousScore.current = numericScore;
+        setLoadingState(false);
+      } else if (Math.abs((displayedScore || 0) - numericScore) >= 0.2) {
+        setIsTransitioning(true);
+        previousScore.current = displayedScore;
+        
+        const timer = setTimeout(() => {
+          setDisplayedScore(numericScore);
+          setIsTransitioning(false);
+          setLoadingState(false);
+        }, 300);
+        
+        return () => clearTimeout(timer);
+      }
+      return;
     }
     
     if (showLoading) {
-      // For loading state, don't change displayed score but show loading indicator
       setLoadingState(true);
       
-      // Clear any existing timeout
       if (loadingTimeoutRef.current) {
         window.clearTimeout(loadingTimeoutRef.current);
       }
       
-      // Set a minimum loading time to prevent flash
       loadingTimeoutRef.current = window.setTimeout(() => {
         if (numericScore > 0) {
           setDisplayedScore(numericScore);
           setLoadingState(false);
+        } else if (stableScoreRef.current && stableScoreRef.current > 0 && isCertified) {
+          setDisplayedScore(stableScoreRef.current);
+          setLoadingState(false);
         } else {
-          // If we still don't have a valid score after loading, clear the displayed score
           setDisplayedScore(null);
           setLoadingState(false);
         }
@@ -72,63 +90,25 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       };
     }
     
-    // If score is 0 or negative and we're not in loading state
-    if (numericScore <= 0) {
-      // If we have a previous stable score, keep showing it
-      if (stableScoreRef.current && stableScoreRef.current > 0 && isCertified) {
-        setDisplayedScore(stableScoreRef.current);
-      } else {
-        setDisplayedScore(null);
-      }
-      setLoadingState(false);
-      return;
+    // Handle case where numericScore <= 0
+    if (stableScoreRef.current && stableScoreRef.current > 0 && isCertified) {
+      setDisplayedScore(stableScoreRef.current);
+    } else if (isCertified || forceCertified) {
+      // For certified locations, we should show a placeholder score if we don't have one
+      setDisplayedScore(7.5); // Default placeholder score for certified locations
+    } else {
+      setDisplayedScore(null);
     }
-    
-    // First time setting a score
-    if (displayedScore === null) {
-      setDisplayedScore(numericScore);
-      previousScore.current = numericScore;
-      setLoadingState(false);
-      return;
-    }
-    
-    // Avoid unnecessary transitions for small changes
-    if (Math.abs((displayedScore || 0) - numericScore) < 0.2) {
-      setDisplayedScore(numericScore);
-      previousScore.current = numericScore;
-      setLoadingState(false);
-      return;
-    }
-    
-    // Only animate significant changes
-    if (Math.abs((displayedScore || 0) - numericScore) >= 0.2) {
-      setIsTransitioning(true);
-      
-      // Store previous score for reference
-      previousScore.current = displayedScore;
-      
-      // Quick delay for animation
-      const timer = setTimeout(() => {
-        setDisplayedScore(numericScore);
-        setIsTransitioning(false);
-        setLoadingState(false);
-      }, 300);
-      
-      return () => clearTimeout(timer);
-    }
-    
     setLoadingState(false);
-  }, [numericScore, showLoading, displayedScore, isCertified]);
+    
+  }, [numericScore, showLoading, displayedScore, isCertified, forceCertified]);
   
-  // Reset score when loading starts
   useEffect(() => {
     if (loading && !loadingState) {
       setLoadingState(true);
-      setDisplayedScore(null);
     }
-  }, [loading]);
+  }, [loading, loadingState]);
   
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (loadingTimeoutRef.current) {
@@ -137,16 +117,15 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     };
   }, []);
   
-  // Skip rendering if score is 0 (invalid) or negative and not showing loading state
-  // No default scores for non-certified locations either
-  if (numericScore <= 0 && !loadingState && !forceCertified && !isCertified) {
+  // We'll always show the badge for certified locations
+  const shouldDisplayBadge = displayedScore !== null || loadingState || isCertified || forceCertified;
+  
+  if (!shouldDisplayBadge) {
     return null;
   }
   
-  // Only display actual score, never display default values
   const formattedScore = formatSiqsForDisplay(displayedScore);
   
-  // Get appropriate color based on score value
   const getColor = () => {
     if (!displayedScore || displayedScore <= 0) return 'bg-cosmic-700/50 text-muted-foreground border-cosmic-600/30';
     if (displayedScore >= 8) return 'bg-green-500/20 text-green-400 border-green-500/40';
@@ -156,46 +135,40 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     return 'bg-red-500/20 text-red-300 border-red-500/40';
   };
 
-  // Enhanced loading animation with smoother transition
   if (loadingState) {
     return (
       <motion.div 
-        className="flex items-center bg-cosmic-700/50 text-muted-foreground px-2 py-0.5 rounded-full border border-cosmic-600/30"
+        className="flex items-center bg-cosmic-700/50 text-muted-foreground px-2.5 py-1 rounded-full border border-cosmic-600/30 shadow-lg"
         layout
         animate={{ opacity: [0.6, 0.8, 0.6] }}
         transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
       >
         <Star 
-          className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-gray-400 mr-1`} 
+          className={`${compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} text-gray-400 mr-1.5`} 
           fill="#475569" 
         />
-        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
+        <span className={`${compact ? 'text-sm' : 'text-base'} font-medium`}>
           ...
         </span>
       </motion.div>
     );
   }
-  
-  // Don't render anything if there's no valid score
-  if (!displayedScore || displayedScore <= 0) {
-    return null;
-  }
 
   return (
     <AnimatePresence>
       <motion.div 
-        className={`flex items-center ${getColor()} ${compact ? 'px-1.5 py-0.5' : 'px-2 py-0.5'} rounded-full border`}
-        initial={{ opacity: 0.6 }}
-        animate={{ opacity: isTransitioning ? 0.5 : 1 }}
+        className={`flex items-center ${getColor()} ${compact ? 'px-2.5 py-1' : 'px-3 py-1.5'} rounded-full border shadow-lg backdrop-blur-sm`}
+        initial={{ opacity: 0.6, scale: 0.95 }}
+        animate={{ opacity: isTransitioning ? 0.5 : 1, scale: 1 }}
         transition={{ duration: 0.2 }}
         layout
       >
         <Star 
-          className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-yellow-400 mr-1`} 
+          className={`${compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} text-yellow-400 mr-1.5`} 
           fill="#facc15" 
         />
-        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
-          {formattedScore}
+        <span className={`${compact ? 'text-sm' : 'text-base'} font-medium tracking-wide`}>
+          {isCertified && !displayedScore ? "7.5+" : formattedScore}
         </span>
       </motion.div>
     </AnimatePresence>

@@ -1,4 +1,3 @@
-
 import { validateCoordinates } from './coordinates';
 
 export interface WeatherResponse {
@@ -39,6 +38,13 @@ export interface WeatherData {
   condition: string;
   weatherCondition?: string;
   aqi?: number;
+  nighttimeCloudData?: {
+    average: number;
+    timeRange?: string;
+    sourceType?: string;
+    evening?: number | null;
+    morning?: number | null;
+  };
 }
 
 // Weather code mapping to text descriptions

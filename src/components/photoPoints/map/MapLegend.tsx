@@ -259,3 +259,4 @@ function hexToRgb(hex: string): string {
 }
 
 export default MapLegend;
+

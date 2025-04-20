@@ -1,13 +1,13 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoLocationCard from './PhotoLocationCard';
 import { Button } from '../ui/button';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import CertificationFilter, { CertificationType } from './filters/CertificationFilter';
 import SearchBar from './filters/SearchBar';
 import { useCertifiedLocationsLoader } from '@/hooks/photoPoints/useCertifiedLocationsLoader';
+import { getAllCertifiedLocations } from '@/services/certifiedLocationsService';
 
 interface CertifiedLocationsProps {
   locations: SharedAstroSpot[];
@@ -25,117 +25,146 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   hasMore,
   onLoadMore,
   onViewDetails,
+  onRefresh,
   initialLoad
 }) => {
   const { t } = useLanguage();
   const [selectedType, setSelectedType] = useState<CertificationType>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayLimit, setDisplayLimit] = useState(5);
+  const [displayLimit, setDisplayLimit] = useState(5); // Reduced from 25 to 5
+  
+  // Get all certified locations directly from the service - use useMemo to prevent excessive recalculations
+  const allCertifiedLocations = useMemo(() => getAllCertifiedLocations(), []);
   
   // Use our specialized hook to ensure we get ALL certified locations
   const {
-    certifiedLocations: allCertifiedLocations,
+    certifiedLocations: hookCertifiedLocations,
     isLoading: certifiedLoading,
     refreshLocations
   } = useCertifiedLocationsLoader(true);
   
-  // Combine the props locations with all certified locations
-  const combinedLocations = React.useMemo(() => {
+  // Combine all locations sources to ensure we have all certified locations - with useMemo for performance
+  const combinedLocations = useMemo(() => {
+    console.log("Recalculating combined locations");
+    
     // Create a map to store unique locations by coordinates
     const locationMap = new Map<string, SharedAstroSpot>();
     
-    // First add all the locations passed in props
-    if (locations && locations.length > 0) {
-      locations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          locationMap.set(key, loc);
-        }
-      });
-    }
+    // Process all location sources
+    const processLocations = (locationsArray: SharedAstroSpot[], source: string) => {
+      if (locationsArray && locationsArray.length > 0) {
+        let added = 0;
+        locationsArray.forEach(loc => {
+          if (loc.latitude && loc.longitude) {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            // Only add if we don't already have this location
+            if (!locationMap.has(key)) {
+              locationMap.set(key, loc);
+              added++;
+            }
+          }
+        });
+        console.log(`Added ${added} locations from ${source}`);
+      }
+    };
     
-    // Then add all certified locations from our hook
-    if (allCertifiedLocations && allCertifiedLocations.length > 0) {
-      allCertifiedLocations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          locationMap.set(key, loc);
-        }
-      });
+    // Add locations from props first
+    processLocations(locations, 'props');
+    
+    // Then add locations from our service
+    processLocations(allCertifiedLocations, 'certified service');
+    
+    // Then add locations from our hook
+    processLocations(hookCertifiedLocations, 'certified hook');
+    
+    // Try to add any additional locations from session storage
+    try {
+      const sessionLocations = JSON.parse(sessionStorage.getItem('persistent_certified_locations') || '[]');
+      processLocations(sessionLocations, 'session storage');
+    } catch (e) {
+      console.error("Error parsing session locations:", e);
     }
     
     // Convert back to array
-    return Array.from(locationMap.values());
-  }, [locations, allCertifiedLocations]);
+    const combined = Array.from(locationMap.values());
+    console.log(`Combined total: ${combined.length} unique certified locations`);
+    return combined;
+  }, [locations, allCertifiedLocations, hookCertifiedLocations]);
   
+  // If we got more than 5 locations, use a higher display limit
   useEffect(() => {
-    // Log the total number of combined locations
-    console.log(`CertifiedLocations: Total combined locations: ${combinedLocations.length}`);
+    if (combinedLocations.length > 10 && displayLimit <= 5) {
+      setDisplayLimit(30);
+    }
+  }, [combinedLocations.length, displayLimit]);
+  
+  // Handle refresh when onRefresh is called
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+    }
+    refreshLocations();
+  };
+  
+  // Filter locations based on certification type and search query - with useMemo for performance
+  const filteredLocations = useMemo(() => {
+    console.log("Filtering locations based on:", { selectedType, searchQuery });
     
-    // For debug: log the first 5 locations
-    if (combinedLocations.length > 0) {
-      console.log('First 5 locations:', combinedLocations.slice(0, 5).map(loc => loc.name || 'Unnamed'));
-    }
-  }, [combinedLocations]);
-  
-  useEffect(() => {
-    // Make sure at least 5 are shown initially (if available)
-    if (combinedLocations.length > 0 && displayLimit < 5) {
-      setDisplayLimit(5);
-    }
-  }, [combinedLocations.length]);
-  
-  // Filter locations based on certification type and search query
-  const filteredLocations = React.useMemo(() => {
     return combinedLocations.filter(location => {
       // First filter by certification type
       if (selectedType !== 'all') {
         const certification = (location.certification || '').toLowerCase();
+        const type = location.type || '';
+        
         switch (selectedType) {
           case 'reserve':
-            return certification.includes('reserve') || location.isDarkSkyReserve;
+            if (!(certification.includes('reserve') || location.isDarkSkyReserve || type === 'reserve')) {
+              return false;
+            }
+            break;
           case 'park':
-            return certification.includes('park');
+            if (!(certification.includes('park') || type === 'park')) {
+              return false;
+            }
+            break;
           case 'community':
-            return certification.includes('community');
+            if (!(certification.includes('community') || type === 'community')) {
+              return false;
+            }
+            break;
           case 'urban':
-            return certification.includes('urban');
+            if (!(certification.includes('urban') || type === 'urban')) {
+              return false;
+            }
+            break;
           case 'lodging':
-            return certification.includes('lodging');
-          default:
-            return true;
+            if (!(certification.includes('lodging') || type === 'lodging')) {
+              return false;
+            }
+            break;
         }
       }
       
       // Then filter by search query if present
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        return (
-          location.name?.toLowerCase().includes(query) ||
-          location.chineseName?.toLowerCase().includes(query) ||
-          location.certification?.toLowerCase().includes(query)
-        );
+        const nameMatch = location.name?.toLowerCase().includes(query) || false;
+        const chineseNameMatch = location.chineseName?.toLowerCase().includes(query) || false;
+        const certificationMatch = location.certification?.toLowerCase().includes(query) || false;
+        
+        return nameMatch || chineseNameMatch || certificationMatch;
       }
       
       return true;
     });
   }, [combinedLocations, selectedType, searchQuery]);
   
-  // Handle load more
-  const handleLoadMore = () => {
-    setDisplayLimit(prev => prev + 5);
-  };
+  // Get the locations to display based on the current limit - with useMemo for performance
+  const locationsToDisplay = useMemo(() => {
+    return filteredLocations.slice(0, displayLimit);
+  }, [filteredLocations, displayLimit]);
   
-  // Get the locations to display based on the current limit
-  const locationsToDisplay = filteredLocations.slice(0, displayLimit);
   const hasMoreToShow = displayLimit < filteredLocations.length;
-  
-  // Log locations for debugging
-  useEffect(() => {
-    console.log(`CertifiedLocations: Total certified locations: ${combinedLocations.length}`);
-    console.log(`CertifiedLocations: Filtered locations: ${filteredLocations.length}`);
-    console.log(`CertifiedLocations: Locations to display: ${locationsToDisplay.length}`);
-  }, [combinedLocations.length, filteredLocations.length, locationsToDisplay.length]);
   
   const isLoadingLocations = initialLoad && (loading || certifiedLoading);
   
@@ -158,13 +187,17 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
         <Button 
           variant="outline" 
           className="mt-4"
-          onClick={refreshLocations}
+          onClick={handleRefresh}
         >
           {t("Refresh Locations", "刷新位置")}
         </Button>
       </div>
     );
   }
+  
+  const handleLoadMore = () => {
+    setDisplayLimit(prevLimit => prevLimit + 5);
+  };
   
   return (
     <div>
@@ -180,6 +213,30 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
             onChange={setSearchQuery}
             className="flex-1"
           />
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoadingLocations}
+            className="shrink-0"
+          >
+            {isLoadingLocations ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              t("Refresh", "刷新")
+            )}
+          </Button>
+        </div>
+        
+        <div className="text-sm text-muted-foreground text-center">
+          {t(
+            "Showing {{shown}} of {{total}} certified dark sky locations",
+            "显示 {{shown}}/{{total}} 个认证暗夜地点"
+          )
+            .replace('{{shown}}', String(locationsToDisplay.length))
+            .replace('{{total}}', String(filteredLocations.length))
+          }
         </div>
       </div>
       

@@ -1,6 +1,5 @@
-
 import { calculateMoonPhase, calculateMoonriseMoonsetTimes, getNextNewMoonDate } from '@/services/realTimeSiqs/moonPhaseCalculator';
-import type { MoonlessNightInfo } from '@/services/realTimeSiqs/siqsTypes';
+import { MoonlessNightInfo } from '@/services/realTimeSiqs/siqsTypes';
 import { getAstronomicalNight, formatTimeString } from '@/utils/weather/astronomicalTimeUtils';
 import { getAllAstronomicalPeriods } from '@/utils/weather/astronomicalTimeCalculator';
 
