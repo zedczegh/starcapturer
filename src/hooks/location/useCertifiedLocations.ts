@@ -2,7 +2,6 @@
 import { useMemo, useEffect, useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { preloadCertifiedLocations, getAllCertifiedLocations } from '@/services/certifiedLocationsService';
 
 /**
  * Hook to separate certified and calculated recommendation locations
@@ -16,109 +15,19 @@ export function useCertifiedLocations(locations: SharedAstroSpot[]) {
   
   // Use effect to process locations whenever they change
   useEffect(() => {
-    // Always try to load certified locations first to ensure we have all of them
-    const loadAllCertifiedLocations = async () => {
-      try {
-        // This will preload ALL certified locations (should be 80+)
-        const certifiedLocations = await preloadCertifiedLocations();
-        console.log(`Preloaded ${certifiedLocations.length} certified locations`);
-        
-        // Continue with normal processing
-        processAllLocations(locations, certifiedLocations);
-      } catch (error) {
-        console.error("Error preloading certified locations:", error);
-        // Fall back to just using the locations passed in
-        processAllLocations(locations, []);
-      }
-    };
-    
-    loadAllCertifiedLocations();
-  }, [locations]);
-  
-  // Function to process all locations with certified locations
-  const processAllLocations = (
-    userLocations: SharedAstroSpot[],
-    allCertifiedLocations: SharedAstroSpot[]
-  ) => {
-    if (!userLocations || userLocations.length === 0) {
-      // If no user locations provided, just use the certified locations
-      if (allCertifiedLocations.length > 0) {
-        console.log(`Using ${allCertifiedLocations.length} preloaded certified locations`);
-        setProcessedLocations({ 
-          certified: allCertifiedLocations,
-          calculated: [] 
-        });
-      } else {
-        // Try to load from cache as a last resort
-        try {
-          const cachedCertifiedLocations = localStorage.getItem('cachedCertifiedLocations');
-          const sessionCertifiedLocations = sessionStorage.getItem('persistent_certified_locations');
-          
-          // Choose the source with more locations
-          let certifiedSource = [];
-          let certifiedCount = 0;
-          
-          if (cachedCertifiedLocations) {
-            try {
-              const parsed = JSON.parse(cachedCertifiedLocations);
-              if (Array.isArray(parsed) && parsed.length > certifiedCount) {
-                certifiedSource = parsed;
-                certifiedCount = parsed.length;
-              }
-            } catch (e) {
-              console.error('Error parsing cached certified locations:', e);
-            }
-          }
-          
-          if (sessionCertifiedLocations) {
-            try {
-              const parsed = JSON.parse(sessionCertifiedLocations);
-              if (Array.isArray(parsed) && parsed.length > certifiedCount) {
-                certifiedSource = parsed;
-                certifiedCount = parsed.length;
-              }
-            } catch (e) {
-              console.error('Error parsing session certified locations:', e);
-            }
-          }
-          
-          if (certifiedSource && certifiedSource.length > 0) {
-            console.log(`Using ${certifiedSource.length} cached certified locations`);
-            setProcessedLocations({ 
-              certified: certifiedSource,
-              calculated: [] 
-            });
-            return;
-          }
-        } catch (e) {
-          console.error('Error loading cached certified locations:', e);
-        }
-        
-        setProcessedLocations({ certified: [], calculated: [] });
-      }
+    if (!locations || locations.length === 0) {
+      setProcessedLocations({ certified: [], calculated: [] });
       return;
     }
     
-    console.log(`Processing ${userLocations.length} locations and ${allCertifiedLocations.length} certified locations`);
+    console.log(`Processing ${locations.length} locations for certified/calculated separation`);
     
     // Use a map to ensure we don't have duplicates by coordinates
     const certifiedMap = new Map<string, SharedAstroSpot>();
     const calculatedMap = new Map<string, SharedAstroSpot>();
     
-    // First add all the preloaded certified locations
-    if (allCertifiedLocations && allCertifiedLocations.length > 0) {
-      allCertifiedLocations.forEach(location => {
-        if (!location.latitude || !location.longitude) return;
-        
-        const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-        if (!certifiedMap.has(key)) {
-          certifiedMap.set(key, location);
-        }
-      });
-    }
-    
-    // Then process each user-provided location
-    userLocations.forEach(location => {
+    // Process each location
+    locations.forEach(location => {
       if (!location.latitude || !location.longitude) return;
       
       const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
@@ -133,9 +42,13 @@ export function useCertifiedLocations(locations: SharedAstroSpot[]) {
           location.name.toLowerCase().includes('park')));
       
       if (isCertified) {
-        certifiedMap.set(key, location);
+        if (!certifiedMap.has(key)) {
+          certifiedMap.set(key, location);
+        }
       } else {
-        calculatedMap.set(key, location);
+        if (!calculatedMap.has(key)) {
+          calculatedMap.set(key, location);
+        }
       }
     });
     
@@ -178,15 +91,30 @@ export function useCertifiedLocations(locations: SharedAstroSpot[]) {
       certified: sortedCertified,
       calculated: sortedCalculated
     });
-    
-    // Store the certified locations in localStorage for future use
-    try {
-      localStorage.setItem('cachedCertifiedLocations', JSON.stringify(sortedCertified));
-      console.log(`Cached ${sortedCertified.length} certified locations in localStorage`);
-    } catch (e) {
-      console.error('Error caching certified locations:', e);
+  }, [locations]);
+  
+  // Try to load locations from cache if we don't have any
+  useEffect(() => {
+    if ((processedLocations.certified.length === 0 || processedLocations.calculated.length === 0) && locations.length === 0) {
+      try {
+        // Check both local storage and session storage
+        const cachedCertifiedLocations = localStorage.getItem('cachedCertifiedLocations');
+        
+        if (cachedCertifiedLocations) {
+          const parsedCertified = JSON.parse(cachedCertifiedLocations);
+          if (Array.isArray(parsedCertified) && parsedCertified.length > 0) {
+            console.log(`Using ${parsedCertified.length} cached certified locations from localStorage`);
+            setProcessedLocations(prev => ({
+              ...prev,
+              certified: parsedCertified
+            }));
+          }
+        }
+      } catch (e) {
+        console.error("Error loading certified locations from cache:", e);
+      }
     }
-  };
+  }, [locations, processedLocations]);
   
   // Memoized values derived from processed locations
   const certifiedLocations = useMemo(() => processedLocations.certified, [processedLocations]);
