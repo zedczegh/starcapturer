@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
 import { isWaterLocation } from "@/utils/validation";
@@ -20,29 +19,42 @@ export function filterLocations(
   // Create a Map for faster lookups and deduplication
   const locationMap = new Map<string, SharedAstroSpot>();
   
-  // First, process all certified locations separately (they should always be shown)
-  locations.forEach(loc => {
+  // OPTIMIZATION: First process all certified locations separately using Set for faster lookup
+  const certifiedCoordinates = new Set<string>();
+  const certifiedLocations: SharedAstroSpot[] = [];
+  
+  // Process certified locations first (always shown regardless of view)
+  for (let i = 0; i < locations.length; i++) {
+    const loc = locations[i];
     if ((loc.certification || loc.isDarkSkyReserve) && loc.latitude && loc.longitude) {
       const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-      locationMap.set(key, loc);
+      if (!certifiedCoordinates.has(key)) {
+        certifiedCoordinates.add(key);
+        certifiedLocations.push(loc);
+        locationMap.set(key, loc);
+      }
     }
-  });
+  }
   
   // For certified view, return all certified locations without further filtering
   if (activeView === 'certified') {
-    return Array.from(locationMap.values());
+    return certifiedLocations;
   }
   
   // For calculated view, add filtered non-certified locations
-  locations.forEach(loc => {
+  const calculatedMax = 50; // Limit number of calculated locations for performance
+  let calculatedCount = 0;
+  
+  for (let i = 0; i < locations.length && calculatedCount < calculatedMax; i++) {
+    const loc = locations[i];
     // Skip certified locations (already processed)
-    if (loc.certification || loc.isDarkSkyReserve) return;
+    if (loc.certification || loc.isDarkSkyReserve) continue;
     
     // Skip invalid locations
-    if (!loc.latitude || !loc.longitude) return;
+    if (!loc.latitude || !loc.longitude) continue;
     
     // Skip water locations
-    if (isWaterLocation(loc.latitude, loc.longitude)) return;
+    if (isWaterLocation(loc.latitude, loc.longitude)) continue;
     
     // Filter by distance if user location is available
     if (userLocation) {
@@ -53,13 +65,16 @@ export function filterLocations(
         loc.longitude
       );
       
-      if (distance > searchRadius) return; // Skip locations too far away
+      if (distance > searchRadius) continue; // Skip locations too far away
     }
     
-    // Add to map
+    // Add to map if not already present
     const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-    locationMap.set(key, loc);
-  });
+    if (!locationMap.has(key)) {
+      locationMap.set(key, loc);
+      calculatedCount++;
+    }
+  }
   
   return Array.from(locationMap.values());
 }
@@ -73,14 +88,32 @@ export function optimizeLocationsForMobile(
   isMobile: boolean, 
   activeView: string
 ): SharedAstroSpot[] {
-  if (!isMobile) return locations;
+  if (!isMobile) {
+    // For desktop, still limit total locations for performance but keep more
+    const certifiedLocations = locations.filter(loc => 
+      Boolean(loc.certification || loc.isDarkSkyReserve)
+    );
+    
+    if (activeView === 'certified') {
+      return certifiedLocations;
+    }
+    
+    const calculatedLocations = locations.filter(loc => 
+      !loc.certification && !loc.isDarkSkyReserve
+    );
+    
+    // Higher limit for desktop
+    const desktopCalculatedLimit = 100;
+    const limitedCalculated = calculatedLocations.slice(0, desktopCalculatedLimit);
+    
+    return [...certifiedLocations, ...limitedCalculated];
+  }
   
-  // Always include all certified locations regardless of device
+  // For mobile devices
   const certifiedLocations = locations.filter(loc => 
     Boolean(loc.certification || loc.isDarkSkyReserve)
   );
   
-  // For certified view on mobile, return all certified locations
   if (activeView === 'certified') {
     return certifiedLocations;
   }
