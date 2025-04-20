@@ -60,7 +60,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const isMountedRef = useRef(true);
   const previousLocations = useRef<SharedAstroSpot[]>([]);
   
-  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}, activeFilter: ${activeFilter}`);
+  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeFilter: ${activeFilter}`);
   
   // Filter locations based on the active filter
   const filteredLocations = useMemo(() => {
@@ -71,6 +71,19 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       return activeFilter === 'certified' ? isCertified : !isCertified;
     });
   }, [locations, activeFilter]);
+  
+  // Debug the output of the filter
+  useEffect(() => {
+    const certifiedCount = filteredLocations.filter(loc => 
+      loc.isDarkSkyReserve || loc.certification
+    ).length;
+    
+    const calculatedCount = filteredLocations.filter(loc => 
+      !loc.isDarkSkyReserve && !loc.certification
+    ).length;
+    
+    console.log(`LazyMapContainer filtered locations: ${filteredLocations.length} total, ${certifiedCount} certified, ${calculatedCount} calculated`);
+  }, [filteredLocations]);
   
   const handleUserLocationSiqs = useCallback((siqs: number | null, loading: boolean) => {
     if (!loading && siqs !== null) {
@@ -152,6 +165,15 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   }, [mapRef.current]);
 
   const locationsToShow = displayLocations();
+  
+  // Debug the locations being shown on the map
+  useEffect(() => {
+    const certifiedCount = locationsToShow.filter(loc => 
+      loc.isDarkSkyReserve || loc.certification
+    ).length;
+    
+    console.log(`LazyMapContainer showing ${locationsToShow.length} locations, ${certifiedCount} certified locations`);
+  }, [locationsToShow]);
   
   const handleMapReady = useCallback(() => {
     setMapReady(true);

@@ -57,10 +57,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     locations,
     certifiedLocations,
     calculatedLocations,
-    activeFilter, // Pass the active filter
+    activeFilter,
     searchRadius,
     onLocationClick,
-    onLocationUpdate
+    onLocationUpdate,
+    activeView: 'calculated' // Set a default value for activeView
   });
   
   // Store locations in session storage for persistence

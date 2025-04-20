@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
@@ -38,10 +39,17 @@ export const usePhotoPointsMapContainer = ({
     touchMoved: false
   });
   
+  // Debug log to see how many certified locations we're receiving
+  useEffect(() => {
+    console.log(`usePhotoPointsMapContainer received ${certifiedLocations.length} certified locations`);
+    console.log(`usePhotoPointsMapContainer received ${calculatedLocations.length} calculated locations`);
+    console.log(`Active filter: ${activeFilter}`);
+  }, [certifiedLocations.length, calculatedLocations.length, activeFilter]);
+  
   // Determine how many locations to display based on device
   const getMaxLocations = useCallback(() => {
     // For certified locations, always show all of them
-    const certifiedLimit = 500;
+    const certifiedLimit = 1000; // Increased from 500 to show more certified locations
     
     // For calculated locations, limit based on device
     const calculatedLimit = isMobile ? 30 : 50;
@@ -71,6 +79,8 @@ export const usePhotoPointsMapContainer = ({
     // First filter by the active filter selection
     const filteredByType = filterLocationsByActiveFilter();
     
+    console.log(`Filtered by type: ${filteredByType.length} locations`);
+    
     // Then filter by distance for non-certified locations
     const filteredByDistance = userLocation 
       ? filteredByType.map(loc => {
@@ -98,17 +108,33 @@ export const usePhotoPointsMapContainer = ({
         })
       : filteredByType;
 
+    console.log(`Filtered by distance: ${filteredByDistance.length} locations`);
+
+    // Use a much higher limit for certified locations
+    const maxLocationsToShow = getMaxLocations();
+    console.log(`Max locations to show: ${maxLocationsToShow}`);
+    
+    // For certified locations, don't use optimization to show all of them
+    if (activeFilter === 'certified') {
+      console.log(`Returning all ${filteredByDistance.length} certified locations without optimization`);
+      return filteredByDistance;
+    }
+    
     // Use filterVisibleLocations to optimize for the map
-    return filterVisibleLocations(
+    const optimized = filterVisibleLocations(
       filteredByDistance, 
       userLocation,
-      getMaxLocations()
+      maxLocationsToShow
     );
+
+    console.log(`After optimization: ${optimized.length} locations`);
+    return optimized;
   }, [
     filterLocationsByActiveFilter,
     userLocation, 
     searchRadius,
-    getMaxLocations
+    getMaxLocations,
+    activeFilter
   ]);
 
   // Calculate map center coordinates 

@@ -54,17 +54,33 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     });
   }, [locations, activeFilter]);
 
+  // Separate certified and calculated locations for mapping
+  const certifiedLocations = useMemo(() => 
+    locations.filter(loc => loc.isDarkSkyReserve || loc.certification),
+    [locations]
+  );
+  
+  const calculatedLocations = useMemo(() => 
+    locations.filter(loc => !loc.isDarkSkyReserve && !loc.certification),
+    [locations]
+  );
+  
+  // Debug count of locations
+  React.useEffect(() => {
+    console.log(`PhotoPointsView: locations=${locations.length}, filtered=${filteredLocations.length}, certified=${certifiedLocations.length}, calculated=${calculatedLocations.length}`);
+  }, [locations, filteredLocations, certifiedLocations, calculatedLocations]);
+
   return (
     <div className="mt-4">
       {showMap && (
         <div className="mb-6 relative max-w-xl mx-auto">
           <PhotoPointsMap
             userLocation={effectiveLocation}
-            locations={locations} // Show all locations on map
+            locations={locations}
+            searchRadius={searchRadius}
             onLocationClick={onLocationClick}
             onLocationUpdate={handleMapLocationUpdate}
-            searchRadius={searchRadius}
-            activeFilter={activeFilter} // Pass the active filter to the map
+            activeFilter={activeFilter}
           />
         </div>
       )}
