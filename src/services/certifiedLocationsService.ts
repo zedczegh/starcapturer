@@ -54,7 +54,7 @@ function loadLocationsFromDatabase(): SharedAstroSpot[] {
   // Convert darkSkyLocations to SharedAstroSpot format
   return darkSkyLocations.map((loc, index) => {
     // Determine certification type from location type
-    const certification = getCertificationFromType(loc.type, loc.certification);
+    const certification = getCertificationFromType(loc.type, loc.certification || undefined);
     
     return {
       id: `db-dark-sky-${index}-${loc.name.replace(/\s+/g, '-').toLowerCase()}`,

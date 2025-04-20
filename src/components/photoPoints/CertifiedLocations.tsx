@@ -31,7 +31,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   const { t } = useLanguage();
   const [selectedType, setSelectedType] = useState<CertificationType>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayLimit, setDisplayLimit] = useState(5);
+  const [displayLimit, setDisplayLimit] = useState(5); // Start with 5 items
 
   // Debug the locations prop
   useEffect(() => {
@@ -54,21 +54,27 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
       // Filter by type if not 'all'
       if (selectedType !== 'all') {
         const certification = (location.certification || '').toLowerCase();
+        const locationType = (location.type || '').toLowerCase();
+        
         switch (selectedType) {
           case 'reserve':
             if (!certification.includes('reserve') && !location.isDarkSkyReserve) return false;
             break;
           case 'park':
-            if (!certification.includes('park')) return false;
+            if (!certification.includes('park') && locationType !== 'park') return false;
             break;
           case 'community':
-            if (!certification.includes('community')) return false;
+            if (!certification.includes('community') && locationType !== 'community') return false;
             break;
           case 'urban':
-            if (!certification.includes('urban') && !certification.includes('night sky place')) return false;
+            if (!certification.includes('urban') && 
+                !certification.includes('night sky place') && 
+                locationType !== 'urban') return false;
             break;
           case 'lodging':
-            if (!certification.includes('lodging') && !certification.includes('friendly')) return false;
+            if (!certification.includes('lodging') && 
+                !certification.includes('friendly') && 
+                locationType !== 'lodging') return false;
             break;
         }
       }
@@ -90,7 +96,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   }, [filteredLocations, displayLimit]);
 
   const handleLoadMore = () => {
-    setDisplayLimit(prev => prev + 5);
+    setDisplayLimit(prev => prev + 5);  // Load 5 more items at a time
   };
 
   if (loading && initialLoad) {
