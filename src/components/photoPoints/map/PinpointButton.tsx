@@ -35,9 +35,15 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
     // Call the location handler directly
     onGetLocation();
     
+    // Show a toast to provide user feedback
+    toast.success(t("Finding your location...", "正在获取您的位置..."), {
+      id: "finding-location",
+      duration: 2000
+    });
+    
     // Visual feedback animation
     setTimeout(() => setIsClicking(false), 1000);
-  }, [onGetLocation]);
+  }, [onGetLocation, t]);
 
   return (
     <div 

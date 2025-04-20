@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getCompleteSiqsDisplay } from '@/utils/unifiedSiqsDisplay';
 import { SiqsDisplayOptions } from '@/services/realTimeSiqs/siqsTypes';
@@ -51,20 +52,42 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   const REFRESH_INTERVAL = isCertified ? 30 * 1000 : 5 * 60 * 1000;
   
   const existingSiqsNumber = typeof existingSiqs === 'number' ? existingSiqs : 
-    (typeof existingSiqs === 'object' && existingSiqs && 'score' in existingSiqs) ? existingSiqs.score : null;
+    (typeof existingSiqs === 'object' && existingSiqs && 'score' in existingSiqs) ? existingSiqs.score : 0;
   
   const getCacheKey = useCallback(() => {
     if (!latitude || !longitude) return null;
     return `siqs-${latitude.toFixed(5)}-${longitude.toFixed(5)}-${bortleScale}`;
   }, [latitude, longitude, bortleScale]);
   
-  // Calculate SIQS first time immediately on mount
   useEffect(() => {
     isMounted.current = true;
     
-    // For certified locations or when forced, calculate immediately
-    if ((isCertified || forceUpdate) && latitude && longitude && isVisible) {
-      console.log(`RealTimeSiqsProvider: Immediate fetch on mount for location at ${latitude},${longitude}`);
+    // Check for cached results first
+    const cacheKey = getCacheKey();
+    if (cacheKey && !forceUpdate) {
+      const cached = resultCache.get(cacheKey);
+      if (cached && (Date.now() - cached.timestamp < CACHE_DURATION_CERTIFIED)) {
+        onSiqsCalculated(cached.data.siqs, false, cached.data.source === 'realtime' ? 9 : 7);
+        setFetchAttempted(true);
+        console.log(`Using cached SIQS result for ${latitude},${longitude}`);
+        return;
+      }
+    }
+    
+    // For certified locations, use cached value first to prevent flashing
+    if (cacheKey && isCertified) {
+      const cached = resultCache.get(cacheKey);
+      if (cached && cached.data && cached.data.siqs > 0) {
+        onSiqsCalculated(cached.data.siqs, false, cached.data.source === 'realtime' ? 9 : 7);
+        if (Date.now() - cached.timestamp < CACHE_DURATION_CERTIFIED && !forceUpdate) {
+          return; // Use cache if still valid
+        }
+      }
+    }
+    
+    // For certified locations, fetch immediately but only once
+    if (isCertified && !fetchAttempted && isVisible) {
+      console.log(`RealTimeSiqsProvider: Initiating immediate fetch for certified location at ${latitude},${longitude}`);
       fetchSiqs();
     }
     
@@ -86,13 +109,15 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       const newPositionKey = `${latitude.toFixed(5)}-${longitude.toFixed(5)}`;
       if (newPositionKey !== positionKey.current) {
         positionKey.current = newPositionKey;
-        setFetchAttempted(false);
-        fetchSiqs();
+        if (!isInitialFetch) {
+          console.log(`Position changed to ${latitude.toFixed(5)},${longitude.toFixed(5)}, forcing new SIQS calculation`);
+          setFetchAttempted(false);
+          fetchSiqs();
+        }
       }
     }
   }, [latitude, longitude]);
   
-  // Force initial SIQS calculation for certified locations
   useEffect(() => {
     if (isInitialFetch && isCertified) {
       onSiqsCalculated(null, true);
@@ -100,14 +125,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       fetchSiqs();
     }
   }, [isInitialFetch, isCertified]);
-  
-  // Force recalculation when forceUpdate changes
-  useEffect(() => {
-    if (forceUpdate && latitude && longitude) {
-      console.log(`Forcing SIQS update for ${latitude},${longitude}`);
-      fetchSiqs();
-    }
-  }, [forceUpdate, latitude, longitude]);
   
   const fetchSiqs = useCallback(async () => {
     if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) return;
@@ -149,15 +166,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       setLoading(true);
       setFetchAttempted(true);
       onSiqsCalculated(null, true);
-      
-      // For certified locations, try to use cached data for faster response initially
-      if (isCertified && cacheKey) {
-        const cached = resultCache.get(cacheKey);
-        if (cached && cached.data && cached.data.siqs > 0) {
-          onSiqsCalculated(cached.data.siqs, false, 7);
-          // Still continue with fresh calculation but don't show loading state
-        }
-      }
       
       // First create the complete options object with all required properties
       const options: SiqsDisplayOptions = {
@@ -202,12 +210,10 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       
       if (!isMounted.current) return;
       
-      // Fall back to existing SIQS if available
-      if (existingSiqsNumber && existingSiqsNumber > 0) {
-        onSiqsCalculated(existingSiqsNumber, false, 6);
-      } else if (isCertified) {
-        // For certified locations, keep showing loading state
+      if (isCertified) {
         onSiqsCalculated(null, false);
+      } else if (existingSiqsNumber > 0) {
+        onSiqsCalculated(existingSiqsNumber, false, 6);
       } else {
         onSiqsCalculated(null, false);
       }

@@ -1,52 +1,94 @@
 
 import React from 'react';
-import { Button } from '../../ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Globe, Trees, Building2, MapPin, Hotel } from 'lucide-react';
 
-export type CertificationType = 'all' | 'reserve' | 'park' | 'community' | 'urban' | 'lodging';
+export type CertificationType = 'reserve' | 'park' | 'community' | 'urban' | 'lodging' | 'all';
 
 interface CertificationFilterProps {
   selectedType: CertificationType;
   onTypeChange: (type: CertificationType) => void;
-  className?: string;
 }
 
-const CertificationFilter: React.FC<CertificationFilterProps> = ({ 
-  selectedType, 
-  onTypeChange,
-  className = ''
+const CertificationFilter: React.FC<CertificationFilterProps> = ({
+  selectedType,
+  onTypeChange
 }) => {
   const { t } = useLanguage();
-
-  const certificationTypes: { 
-    value: CertificationType; 
-    label: { en: string; zh: string }; 
-    count?: number;
-  }[] = [
-    { value: 'all', label: { en: 'All', zh: '全部' } },
-    { value: 'reserve', label: { en: 'Reserves', zh: '保护区' } },
-    { value: 'park', label: { en: 'Parks', zh: '公园' } },
-    { value: 'community', label: { en: 'Communities', zh: '社区' } },
-    { value: 'urban', label: { en: 'Urban Places', zh: '城市地区' } },
-    { value: 'lodging', label: { en: 'Lodging', zh: '住宿' } },
+  
+  const filterOptions: Array<{
+    id: CertificationType;
+    label: string;
+    icon: React.ElementType;
+    color: string;
+  }> = [
+    {
+      id: 'all',
+      label: t('All Types', '全部类型'),
+      icon: MapPin,
+      color: 'text-muted-foreground border-border bg-background/50 hover:bg-background/80'
+    },
+    {
+      id: 'reserve',
+      label: t('Dark Sky Reserve', '暗夜保护区'),
+      icon: Globe,
+      color: 'text-primary border-primary/30 bg-primary/10 hover:bg-primary/20'
+    },
+    {
+      id: 'park',
+      label: t('Dark Sky Park', '暗夜公园'),
+      icon: Trees,
+      color: 'text-primary border-primary/30 bg-primary/10 hover:bg-primary/20'
+    },
+    {
+      id: 'community',
+      label: t('Dark Sky Community', '暗夜社区'),
+      icon: Building2,
+      color: 'text-primary border-primary/30 bg-primary/10 hover:bg-primary/20'
+    },
+    {
+      id: 'urban',
+      label: t('Urban Night Sky', '城市夜空'),
+      icon: Building2,
+      color: 'text-primary border-primary/30 bg-primary/10 hover:bg-primary/20'
+    },
+    {
+      id: 'lodging',
+      label: t('Dark Sky Lodging', '暗夜住宿'),
+      icon: Hotel,
+      color: 'text-primary border-primary/30 bg-primary/10 hover:bg-primary/20'
+    }
   ];
 
   return (
-    <div className={`flex flex-wrap justify-center gap-2 ${className}`}>
-      {certificationTypes.map(type => (
-        <Button
-          key={type.value}
-          size="sm"
-          variant={selectedType === type.value ? "default" : "outline"}
-          onClick={() => onTypeChange(type.value)}
-          className="min-w-[80px]"
-        >
-          {t(type.label.en, type.label.zh)}
-          {type.count !== undefined && ` (${type.count})`}
-        </Button>
-      ))}
+    <div className="mb-4 px-2">
+      <div className="text-sm text-muted-foreground mb-2">
+        {t('Filter by certification type', '按认证类型筛选')}:
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {filterOptions.map((option) => (
+          <Badge
+            key={option.id}
+            variant="outline"
+            className={`
+              ${option.color}
+              px-2.5 py-1.5 
+              rounded-full 
+              flex items-center
+              cursor-pointer
+              transition-all
+              ${selectedType === option.id ? 'ring-2 ring-primary ring-offset-1' : ''}
+            `}
+            onClick={() => onTypeChange(option.id)}
+          >
+            <option.icon className="h-3.5 w-3.5 mr-1.5" />
+            <span className="text-sm">{option.label}</span>
+          </Badge>
+        ))}
+      </div>
     </div>
   );
 };
 
-export default React.memo(CertificationFilter);
+export default CertificationFilter;

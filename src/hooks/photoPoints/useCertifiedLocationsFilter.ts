@@ -37,7 +37,7 @@ export function useCertifiedLocationsFilter(
           certTypes.community++;
         } else if (cert.includes('urban') || cert.includes('night sky place')) {
           certTypes.urban++;
-        } else if (cert.includes('lodging') || cert.includes('friendly lodging')) {
+        } else if (cert.includes('lodging')) {
           certTypes.lodging++;
         } else {
           certTypes.other++;
@@ -61,29 +61,22 @@ export function useCertifiedLocationsFilter(
       }
       
       const certification = (location.certification || '').toLowerCase();
-      const locationType = (location.type || '').toLowerCase();
       
       // Check certification type with expanded matching
       switch (selectedType) {
         case 'reserve':
           return certification.includes('reserve') || 
                  certification.includes('sanctuary') ||
-                 Boolean(location.isDarkSkyReserve) ||
-                 locationType === 'dark-site';
+                 Boolean(location.isDarkSkyReserve);
         case 'park':
-          return certification.includes('park') ||
-                 locationType === 'park';
+          return certification.includes('park');
         case 'community':
-          return certification.includes('community') ||
-                 locationType === 'community';
+          return certification.includes('community');
         case 'urban':
           return certification.includes('urban') || 
-                 certification.includes('night sky place') ||
-                 locationType === 'urban';
+                 certification.includes('night sky place');
         case 'lodging':
-          return certification.includes('lodging') || 
-                 certification.includes('friendly') ||
-                 locationType === 'lodging';
+          return certification.includes('lodging');
         default:
           return true;
       }
