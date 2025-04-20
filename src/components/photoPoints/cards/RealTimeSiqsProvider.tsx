@@ -26,6 +26,8 @@ const pendingCalculations = new Map<string, Promise<any>>();
 let activeApiCalls = 0;
 const MAX_CONCURRENT_CALLS = 5;
 
+const loadingTimeoutRef = { current: null as number | null };
+
 const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   isVisible,
   latitude,
@@ -43,7 +45,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   const [fetchAttempted, setFetchAttempted] = useState(false);
   const isMounted = useRef(true);
   const fetchTimeoutRef = useRef<number | null>(null);
-  const loadingTimeoutRef = useRef<number | null>(null);
   const positionKey = useRef<string>('');
   
   // Increase cache duration for certified locations to reduce flashing
@@ -96,10 +97,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       if (fetchTimeoutRef.current) {
         window.clearTimeout(fetchTimeoutRef.current);
         fetchTimeoutRef.current = null;
-      }
-      if (loadingTimeoutRef.current) {
-        window.clearTimeout(loadingTimeoutRef.current);
-        loadingTimeoutRef.current = null;
       }
     };
   }, []);

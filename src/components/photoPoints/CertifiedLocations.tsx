@@ -195,10 +195,6 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
     );
   }
   
-  const handleLoadMore = () => {
-    setDisplayLimit(prevLimit => prevLimit + 5);
-  };
-  
   return (
     <div>
       <div className="space-y-4 mb-6">
