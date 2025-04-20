@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from "react";
+import React from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Star, Navigation } from "lucide-react";
@@ -10,6 +10,7 @@ import { getCertificationInfo, getLocalizedCertText } from "./cards/Certificatio
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDisplayName } from "./cards/DisplayNameResolver";
+import CardActions from "./cards/components/CardActions";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -27,7 +28,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const certInfo = useMemo(() => getCertificationInfo(point), [point]);
+  const certInfo = React.useMemo(() => getCertificationInfo(point), [point]);
   
   const { displayName, showOriginalName } = useDisplayName({
     location: point,
@@ -45,13 +46,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     return t(`${Math.round(distance / 100) * 100} km`, `${Math.round(distance / 100) * 100} 公里`);
   };
 
-  const getLocationId = () => {
-    if (!point || !point.latitude || !point.longitude) return null;
-    return point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
-  };
-
-  // Modified to use the passed onViewDetails function
-  const handleCardClick = (e: React.MouseEvent) => {
+  const handleCardClick = () => {
     if (onSelect) {
       onSelect(point);
     }
@@ -112,16 +107,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      <div className="mt-3 flex justify-end">
-        <Button 
-          variant="ghost"
-          size="sm"
-          onClick={onViewDetails} 
-          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300 text-sm z-10"
-        >
-          {t("View Details", "查看详情")}
-        </Button>
-      </div>
+      <CardActions onViewDetails={onViewDetails} />
     </div>
   );
 };

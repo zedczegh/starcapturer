@@ -85,6 +85,11 @@ const Collections = () => {
     );
   };
 
+  // Navigate to location details page
+  const handleViewDetails = (locationId: string) => {
+    navigate(`/location/${locationId}`);
+  };
+
   // LocationCard component with fixed event handling
   const LocationCard = ({ location }: { location: any }) => {
     const { locationDetails } = useEnhancedLocation({
@@ -100,20 +105,14 @@ const Collections = () => {
       enhancedName = locationDetails?.formattedName || location.name;
     }
 
-    // Explicitly handle view details to ensure it works correctly
-    const handleViewDetails = (e: React.MouseEvent) => {
-      e.preventDefault(); // Prevent default anchor behavior
-      e.stopPropagation(); // Prevent event bubbling
-      navigate(`/location/${location.id}`);
-    };
-
     return (
       <div 
-        className={`relative rounded-lg overflow-hidden ${
+        className={`relative rounded-lg overflow-hidden cursor-pointer ${
           location.certification || location.isdarkskyreserve 
             ? 'border-2 border-primary/50 bg-primary/5' 
             : 'border border-border'
         }`}
+        onClick={() => navigate(`/location/${location.id}`)}
       >
         <PhotoPointCard
           point={{
@@ -129,10 +128,14 @@ const Collections = () => {
             timestamp: location.timestamp || location.created_at
           }}
           onSelect={() => {}}
-          onViewDetails={handleViewDetails}
+          onViewDetails={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleViewDetails(location.id);
+          }}
           userLocation={null}
         />
-        <div className="absolute bottom-3 left-3 z-20">
+        <div className="absolute bottom-3 left-3 z-30">
           <DeleteLocationButton 
             locationId={location.id} 
             userId={user.id} 

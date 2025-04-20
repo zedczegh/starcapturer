@@ -20,7 +20,7 @@ const CardActions: React.FC<CardActionsProps> = ({ onViewDetails }) => {
           e.preventDefault(); // Prevent default behavior
           onViewDetails(e);
         }}
-        className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-sm z-20"
+        className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-sm z-30"
       >
         {t("View Details", "查看详情")}
       </Button>
