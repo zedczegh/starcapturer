@@ -19,7 +19,7 @@ export interface SiqsResult {
       lightPollution: boolean;
       terrainCorrected?: boolean;
       climate?: boolean;
-      singleHourSampling?: boolean; // Add this field to fix error #2
+      singleHourSampling?: boolean;
     };
     reliability?: {
       score: number;
@@ -44,7 +44,7 @@ export interface WeatherDataWithClearSky {
   nighttimeCloudData?: {
     average: number;
     timeRange: string;
-    sourceType: 'forecast' | 'calculated' | 'historical' | 'optimized'; // Add 'optimized' to fix error #1
+    sourceType: 'forecast' | 'calculated' | 'historical' | 'optimized';
   };
 }
 
@@ -75,4 +75,6 @@ export interface SiqsCalculationOptions {
   includeForecast?: boolean;
   reliability?: boolean;
   adjustForLatitude?: boolean;
+  useSingleHourSampling?: boolean;
+  targetHour?: number;
 }

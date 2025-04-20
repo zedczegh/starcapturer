@@ -41,7 +41,11 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     setLoading
   } = useSiqsCalculatorState({
     noAutoLocationRequest,
-    onSiqsCalculated
+    onSiqsCalculated,
+    siqsOptions: {
+      useSingleHourSampling: true,
+      targetHour: 1
+    }
   });
   
   // Location handling

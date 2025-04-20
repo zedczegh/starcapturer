@@ -55,6 +55,8 @@ export const createSpotFromPoint = async (
         }
       };
     }
+    
+    return null;
   } catch (err) {
     console.warn("Error processing spot:", err);
     return null;
