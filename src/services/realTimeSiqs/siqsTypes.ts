@@ -1,4 +1,3 @@
-
 // Add this if the file doesn't exist or update it if it does
 
 export interface WeatherDataWithClearSky {
@@ -17,6 +16,8 @@ export interface WeatherDataWithClearSky {
     timeRange: string;
     sourceType?: string;
   };
+  timestamp?: string;  // Replaces 'time' for tracking when data was collected
+  quality?: string;    // Replaces 'sourceQuality' for tracking data source quality
 }
 
 export interface SiqsResult {
