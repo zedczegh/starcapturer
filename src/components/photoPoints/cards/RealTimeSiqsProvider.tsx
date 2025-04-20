@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getCompleteSiqsDisplay } from '@/utils/unifiedSiqsDisplay';
 import { SiqsDisplayOptions } from '@/services/realTimeSiqs/siqsTypes';
@@ -25,9 +26,6 @@ const pendingCalculations = new Map<string, Promise<any>>();
 let activeApiCalls = 0;
 const MAX_CONCURRENT_CALLS = 5;
 
-// Create a static loadingTimeoutRef using React.useRef pattern
-const loadingTimeoutRef = React.useRef<number | null>(null);
-
 const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   isVisible,
   latitude,
@@ -45,6 +43,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   const [fetchAttempted, setFetchAttempted] = useState(false);
   const isMounted = useRef(true);
   const fetchTimeoutRef = useRef<number | null>(null);
+  const loadingTimeoutRef = useRef<number | null>(null);
   const positionKey = useRef<string>('');
   
   // Increase cache duration for certified locations to reduce flashing
@@ -97,6 +96,10 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       if (fetchTimeoutRef.current) {
         window.clearTimeout(fetchTimeoutRef.current);
         fetchTimeoutRef.current = null;
+      }
+      if (loadingTimeoutRef.current) {
+        window.clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
       }
     };
   }, []);
