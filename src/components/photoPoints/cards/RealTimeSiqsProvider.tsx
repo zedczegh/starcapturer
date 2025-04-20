@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getCompleteSiqsDisplay } from '@/utils/unifiedSiqsDisplay';
 import { SiqsDisplayOptions } from '@/services/realTimeSiqs/siqsTypes';
@@ -109,21 +108,20 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       
       const useCache = !forceUpdate;
       
+      // First create the complete options object with all required properties
       const options: SiqsDisplayOptions = {
-        skipCache: forceUpdate,
-        useSingleHourSampling: true,
-        targetHour: 1
-      };
-      
-      const result = await getCompleteSiqsDisplay({
         latitude,
         longitude,
         bortleScale,
         isCertified,
         isDarkSkyReserve,
         existingSiqs: existingSiqsNumber,
-        ...options
-      });
+        skipCache: forceUpdate,
+        useSingleHourSampling: true,
+        targetHour: 1
+      };
+      
+      const result = await getCompleteSiqsDisplay(options);
       
       if (!isMounted.current) return;
       
