@@ -15,7 +15,7 @@ import { Card } from '@/components/ui/card';
 import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
 
 interface Profile {
-  username: string;
+  username: string | null;
   avatar_url: string | null;
   date_of_birth: string | null;
 }
