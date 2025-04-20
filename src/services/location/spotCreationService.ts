@@ -10,12 +10,10 @@ export const createSpotFromPoint = async (
   minQuality: number = 5
 ): Promise<SharedAstroSpot | null> => {
   try {
-    // First check: reject water locations immediately
     if (isWaterLocation(point.latitude, point.longitude)) {
       return null;
     }
     
-    // Double check with enhanced geocoding
     const locationDetails = await getEnhancedLocationDetails(
       point.latitude,
       point.longitude
@@ -25,26 +23,20 @@ export const createSpotFromPoint = async (
       return null;
     }
     
-    // Get location time info
     const timeInfo = getLocationTimeInfo(point.latitude, point.longitude);
-    
-    // Calculate SIQS with default Bortle scale
     const defaultBortleScale = 4;
     
-    // Use the optimized single-hour sampling approach for faster batch processing
-    // This significantly reduces API calls when generating multiple spots
     const siqsResult = await calculateRealTimeSiqs(
       point.latitude,
       point.longitude,
       defaultBortleScale,
       {
         useSingleHourSampling: true,
-        targetHour: 1, // 1 AM is typically a good hour for astronomy
-        cacheDurationMins: 30 // Use longer cache duration for batch processing
+        targetHour: 1, // Use 1 AM for optimal viewing conditions
+        cacheDurationMins: 30
       }
     );
     
-    // Filter by quality threshold
     if (siqsResult && siqsResult.siqs >= minQuality) {
       return {
         id: `calc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,

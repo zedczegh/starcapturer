@@ -32,7 +32,6 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
       const now = Date.now();
       const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
       
-      // Enhanced cache check with timestamp validation
       if (hasCachedSiqs(latitude, longitude)) {
         const cachedData = getCachedSiqs(latitude, longitude);
         if (cachedData && (now - new Date(cachedData.metadata?.calculatedAt || 0).getTime()) < CACHE_DURATION) {
@@ -53,15 +52,18 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
           try {
             const effectiveBortleScale = bortleScale || (showRealTimeSiqs ? 3 : 5);
             
-            // Calculate astronomical night for this location
-            const { start, end } = calculateAstronomicalNight(latitude, longitude);
-            console.log(`Astronomical night: ${formatTime(start)}-${formatTime(end)}`);
-            
-            // Calculate SIQS
-            const result = await calculateRealTimeSiqs(latitude, longitude, effectiveBortleScale);
+            const result = await calculateRealTimeSiqs(
+              latitude, 
+              longitude, 
+              effectiveBortleScale,
+              {
+                useSingleHourSampling: true,
+                targetHour: 1,
+                cacheDurationMins: 5
+              }
+            );
             
             if (result && result.siqs > 0) {
-              // Get weather data from result or fallback to empty object
               const weatherData = result.weatherData || { 
                 cloudCover: 0, 
                 precipitation: 0,
@@ -72,31 +74,12 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
                 windSpeed: 0
               } as WeatherDataWithClearSky;
               
-              // Calculate tonight's cloud cover if forecast data is available
-              if (result.forecastData && result.forecastData.hourly) {
-                const tonightCloudCover = calculateTonightCloudCover(
-                  result.forecastData.hourly,
-                  latitude,
-                  longitude
-                );
-                
-                if (typeof tonightCloudCover === 'number' && !isNaN(tonightCloudCover)) {
-                  // Use tonight's cloud cover if available
-                  console.log(`Using tonight's cloud cover: ${tonightCloudCover}% for SIQS calculation`);
-                  weatherData.cloudCover = tonightCloudCover;
-                } else {
-                  console.log("No astronomical night cloud cover data available, using current conditions");
-                }
-              }
-              
-              // Apply anomaly detection and correction
               const correctedResult = detectAndFixAnomalies(
                 result,
                 weatherData,
                 { latitude, longitude }
               );
               
-              // Assess data reliability
               const reliability = assessDataReliability(weatherData, result.forecastData);
               
               if (reliability.reliable) {
@@ -104,7 +87,6 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
                 onSiqsCalculated(correctedResult.siqs, false);
               } else {
                 console.warn(`Low reliability SIQS calculation:`, reliability.issues);
-                // Scale to 0-10 range if needed
                 const finalSiqs = correctedResult.siqs > 10 ? 
                   correctedResult.siqs / 10 : correctedResult.siqs;
                 onSiqsCalculated(finalSiqs * (reliability.confidenceScore / 10), false);
