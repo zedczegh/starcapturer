@@ -1,8 +1,9 @@
 
-import React, { useCallback, useRef, useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { BadgeCheck, MapPin } from 'lucide-react';
+import { useViewToggle } from '@/hooks/photoPoints/useViewToggle';
 
 export type PhotoPointsViewMode = 'certified' | 'calculated';
 
@@ -18,46 +19,16 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   loading = false
 }) => {
   const { t } = useLanguage();
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const debounceTimerRef = useRef<number | null>(null);
-  
-  // Optimized function to handle view changes with debounce protection
-  const handleViewChange = useCallback((view: PhotoPointsViewMode) => {
-    // Prevent rapid clicking - only trigger if not already in transition
-    if (view !== activeView && !loading && !isTransitioning) {
-      console.log(`ViewToggle: Switching to ${view} view`);
-      
-      // Set transitioning state to prevent further clicks
-      setIsTransitioning(true);
-      
-      // Clear any existing timeout
-      if (debounceTimerRef.current) {
-        window.clearTimeout(debounceTimerRef.current);
-      }
-      
-      // Call the handler
-      onViewChange(view);
-      
-      // Reset transition state after a delay
-      debounceTimerRef.current = window.setTimeout(() => {
-        setIsTransitioning(false);
-        debounceTimerRef.current = null;
-      }, 1000); // 1 second protection against repeated clicks
-    }
-  }, [activeView, onViewChange, loading, isTransitioning]);
-  
-  // Clean up timeout on unmount
-  React.useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        window.clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
-  
-  // Determine if button should be disabled
-  const certifiedDisabled = loading || isTransitioning || activeView === 'certified';
-  const calculatedDisabled = loading || isTransitioning || activeView === 'calculated';
+  const { 
+    isTransitioning,
+    handleViewChange,
+    certifiedDisabled,
+    calculatedDisabled
+  } = useViewToggle({
+    activeView,
+    onViewChange,
+    loading
+  });
   
   return (
     <div className="flex justify-center mb-6 px-4">

@@ -1,8 +1,8 @@
-
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import SiqsScoreBadge from '@/components/photoPoints/cards/SiqsScoreBadge';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSiqsState } from '@/hooks/photoPoints/useSiqsState';
 
 interface SiqsDisplayProps {
   realTimeSiqs: number | null;
@@ -24,53 +24,13 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
   locationSiqs
 }) => {
   const isMobile = useIsMobile();
-  const [stableSiqs, setStableSiqs] = useState<number | null>(null);
-  const [displaySiqs, setDisplaySiqs] = useState<number | null>(locationSiqs);
-  const [updateTime, setUpdateTime] = useState<number>(Date.now());
-  const updateTimeoutRef = useRef<number | null>(null);
+  const { displaySiqs, stableSiqs } = useSiqsState({
+    realTimeSiqs,
+    locationSiqs
+  });
   
-  // Always prioritize existing SIQS data if available to prevent flickering
-  useEffect(() => {
-    if (locationSiqs && locationSiqs > 0) {
-      setDisplaySiqs(locationSiqs);
-      setStableSiqs(locationSiqs);
-    }
-  }, [locationSiqs]);
-  
-  // Update stable SIQS when real-time data is available, with debounce
-  useEffect(() => {
-    if (realTimeSiqs !== null && realTimeSiqs > 0) {
-      // Always update stable SIQS (used during loading)
-      setStableSiqs(realTimeSiqs);
-      
-      // Clear any existing timeout to prevent rapid updates
-      if (updateTimeoutRef.current) {
-        window.clearTimeout(updateTimeoutRef.current);
-      }
-      
-      // Only update display SIQS if it's significantly different or after a delay
-      const now = Date.now();
-      if ((!displaySiqs || Math.abs(realTimeSiqs - displaySiqs) > 0.5) && 
-          (now - updateTime > 2000)) {  // 2 second throttle
-        
-        updateTimeoutRef.current = window.setTimeout(() => {
-          setDisplaySiqs(realTimeSiqs);
-          setUpdateTime(Date.now());
-          updateTimeoutRef.current = null;
-        }, 300); // Short delay to batch updates
-      }
-    }
-    
-    // Cleanup timeout on unmount
-    return () => {
-      if (updateTimeoutRef.current) {
-        window.clearTimeout(updateTimeoutRef.current);
-      }
-    };
-  }, [realTimeSiqs, displaySiqs, updateTime]);
-
   // Memoize the score to display to prevent unnecessary re-renders
-  const scoreToShow = useMemo(() => {
+  const scoreToShow = React.useMemo(() => {
     if (loadingSiqs && stableSiqs) {
       // If loading but we have stable data, use that
       return stableSiqs;
