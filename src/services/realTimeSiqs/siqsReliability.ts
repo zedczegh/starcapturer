@@ -11,6 +11,7 @@ import { WeatherDataWithClearSky } from './siqsTypes';
 interface ReliabilityResult {
   confidenceScore: number; // 0-100
   issues: string[];
+  reliable: boolean; // Added missing 'reliable' property
 }
 
 /**
@@ -78,9 +79,9 @@ export function assessDataReliability(
     }
   }
   
-  // Check for data freshness
-  if (weatherData.time) {
-    const dataTime = new Date(weatherData.time).getTime();
+  // Check for data freshness - using timestamp property instead of time
+  if (weatherData.timestamp) {
+    const dataTime = new Date(weatherData.timestamp).getTime();
     const now = Date.now();
     const dataAgeHours = (now - dataTime) / (1000 * 60 * 60);
     
@@ -93,10 +94,10 @@ export function assessDataReliability(
     }
   }
   
-  // Add source quality factor
-  if (weatherData.sourceQuality === 'high') {
+  // Add source quality factor - using quality property instead of sourceQuality
+  if (weatherData.quality === 'high') {
     confidence = Math.min(100, confidence + 5);
-  } else if (weatherData.sourceQuality === 'low') {
+  } else if (weatherData.quality === 'low') {
     issues.push('Low quality data source');
     confidence -= 10;
   }
@@ -104,9 +105,13 @@ export function assessDataReliability(
   // Ensure confidence stays in valid range
   confidence = Math.max(0, Math.min(100, confidence));
   
+  // Determine if data is reliable based on confidence score
+  const reliable = confidence >= 70;
+  
   return {
     confidenceScore: confidence,
-    issues
+    issues,
+    reliable
   };
 }
 
