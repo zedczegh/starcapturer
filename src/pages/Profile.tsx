@@ -12,12 +12,18 @@ import { User, Camera, Pencil, X, CheckCircle2 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
-import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { Label } from '@/components/ui/label';
 
 interface Profile {
   username: string | null;
   avatar_url: string | null;
   date_of_birth: string | null;
+}
+
+interface ProfileFormValues {
+  username: string;
+  date_of_birth: string;
 }
 
 const Profile = () => {
@@ -26,11 +32,16 @@ const Profile = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [username, setUsername] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const { register, handleSubmit, setValue } = useForm<ProfileFormValues>({
+    defaultValues: {
+      username: '',
+      date_of_birth: ''
+    }
+  });
 
   useEffect(() => {
     if (!user) {
@@ -59,14 +70,14 @@ const Profile = () => {
         };
         
         setProfile(profileData);
-        setUsername(data.username || '');
-        setDateOfBirth(data.date_of_birth || '');
+        setValue('username', data.username || '');
+        setValue('date_of_birth', data.date_of_birth || '');
         setAvatarUrl(data.avatar_url);
       }
     };
 
     fetchProfile();
-  }, [user, navigate, t]);
+  }, [user, navigate, t, setValue]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,8 +88,7 @@ const Profile = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (formData: ProfileFormValues) => {
     if (!user) return;
 
     try {
@@ -116,8 +126,8 @@ const Profile = () => {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
-          username,
-          date_of_birth: dateOfBirth || null,
+          username: formData.username,
+          date_of_birth: formData.date_of_birth || null,
           avatar_url: newAvatarUrl,
           updated_at: new Date().toISOString()
         })
@@ -202,19 +212,17 @@ const Profile = () => {
 
             <Separator className="bg-cosmic-800" />
             
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <FormLabel className="text-white mb-2 block">
+                    <Label htmlFor="username" className="text-white mb-2 block">
                       {t("Username", "用户名")}
-                    </FormLabel>
+                    </Label>
                     <div className="relative">
                       <Input
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        minLength={3}
-                        required
+                        id="username"
+                        {...register('username', { required: true, minLength: 3 })}
                         className="pl-10 bg-cosmic-800 border-cosmic-700 text-white focus:border-primary"
                       />
                       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-cosmic-400">
@@ -224,14 +232,14 @@ const Profile = () => {
                   </div>
 
                   <div>
-                    <FormLabel className="text-white mb-2 block">
+                    <Label htmlFor="date_of_birth" className="text-white mb-2 block">
                       {t("Date of Birth", "出生日期")}
-                    </FormLabel>
+                    </Label>
                     <div className="relative">
                       <Input
+                        id="date_of_birth"
                         type="date"
-                        value={dateOfBirth}
-                        onChange={(e) => setDateOfBirth(e.target.value)}
+                        {...register('date_of_birth')}
                         className="pl-10 bg-cosmic-800 border-cosmic-700 text-white focus:border-primary"
                       />
                       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-cosmic-400">
