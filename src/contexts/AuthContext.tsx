@@ -12,6 +12,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updatePassword: (password: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -94,8 +95,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const updatePassword = async (password: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      
+      toast.success("Password updated successfully");
+      return true;
+    } catch (error: any) {
+      toast.error("Failed to update password", {
+        description: error.message
+      });
+      return false;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, signUp, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      signUp, 
+      signIn, 
+      signOut, 
+      refreshProfile,
+      updatePassword 
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { useForm } from 'react-hook-form';
 import ProfileAvatar from '@/components/profile/ProfileAvatar';
 import ProfileForm from '@/components/profile/ProfileForm';
+import ChangePasswordForm from '@/components/profile/ChangePasswordForm';
 
 interface Profile {
   username: string | null;
@@ -24,7 +25,7 @@ interface ProfileFormValues {
 }
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -85,25 +86,75 @@ const Profile = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(t("Image too large (max 5MB)", "图片太大（最大5MB）"));
-          return;
-        }
-        
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-          toast.error(t("File must be an image", "文件必须是图像"));
-          return;
-        }
-        
         setAvatarFile(file);
         const previewUrl = URL.createObjectURL(file);
         setAvatarUrl(previewUrl);
+        
+        // Upload the file immediately when selected
+        await uploadAvatar(file);
       } catch (err) {
         console.error("Error handling avatar change:", err);
         toast.error(t("Failed to process image", "处理图像失败"));
       }
+    }
+  };
+
+  const uploadAvatar = async (file: File) => {
+    if (!user) return;
+    
+    try {
+      setUploadingAvatar(true);
+      
+      // Create a unique file name to prevent collisions
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      
+      // Upload the file
+      const { error: uploadError, data: uploadData } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        toast.error(t("Avatar upload failed", "头像上传失败") + `: ${uploadError.message}`);
+        return;
+      }
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      // Update profile with the new avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error("Profile update error:", updateError);
+        toast.error(t("Failed to update avatar", "更新头像失败"));
+        return;
+      }
+
+      // Update the avatar URL state
+      setAvatarUrl(publicUrl);
+      
+      // Refresh the user profile context
+      await refreshProfile();
+      
+      toast.success(t("Avatar updated successfully", "头像更新成功"));
+    } catch (error: any) {
+      console.error("Avatar upload error:", error);
+      toast.error(t("Avatar upload failed", "头像上传失败"));
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -113,63 +164,12 @@ const Profile = () => {
     try {
       setLoading(true);
 
-      let newAvatarUrl = avatarUrl;
-      if (avatarFile) {
-        try {
-          setUploadingAvatar(true);
-          
-          // Create a unique file name to prevent collisions
-          const fileExt = avatarFile.name.split('.').pop();
-          const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-          
-          // Check if bucket exists first
-          const { data: buckets } = await supabase.storage.listBuckets();
-          const avatarBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
-          
-          if (!avatarBucketExists) {
-            toast.error(t("Avatar upload failed: Storage bucket not configured properly", "头像上传失败：存储桶未正确配置"));
-            setUploadingAvatar(false);
-            setLoading(false);
-            return;
-          }
-          
-          // Upload the file
-          const { error: uploadError, data: uploadData } = await supabase.storage
-            .from('avatars')
-            .upload(fileName, avatarFile, {
-              cacheControl: '3600',
-              upsert: true
-            });
-
-          if (uploadError) {
-            console.error("Upload error:", uploadError);
-            toast.error(t("Avatar upload failed", "头像上传失败") + `: ${uploadError.message}`);
-            setUploadingAvatar(false);
-            setLoading(false);
-            return;
-          }
-
-          // Get the public URL if upload was successful
-          const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(fileName);
-
-          newAvatarUrl = publicUrl;
-          
-          // Revoke the object URL to avoid memory leaks
-          URL.revokeObjectURL(avatarUrl || "");
-        } finally {
-          setUploadingAvatar(false);
-        }
-      }
-
       // Update profile data
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
           username: formData.username,
           date_of_birth: formData.date_of_birth || null,
-          avatar_url: newAvatarUrl,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
@@ -213,6 +213,9 @@ const Profile = () => {
       // Clear state
       setAvatarUrl(null);
       setAvatarFile(null);
+      
+      // Refresh profile context
+      await refreshProfile();
       
       toast.success(t("Avatar removed successfully", "头像已成功删除"));
     } catch (error: any) {
@@ -259,6 +262,10 @@ const Profile = () => {
               loading={loading}
               onSubmit={handleSubmit(onSubmit)}
             />
+
+            <Separator className="bg-cosmic-800" />
+            
+            <ChangePasswordForm />
           </div>
         </Card>
       </div>
