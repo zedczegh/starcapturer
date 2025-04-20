@@ -20,36 +20,68 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
   onSiqsCalculated
 }) => {
   const [loading, setLoading] = useState(false);
+  const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
+  const CACHE_DURATION = 5 * 60 * 1000; // Reduced to 5 minutes for fresher data
   
   useEffect(() => {
     if (showRealTimeSiqs && isVisible && latitude && longitude) {
-      const fetchSiqs = async () => {
-        setLoading(true);
-        try {
-          const result = await calculateRealTimeSiqs(
-            latitude,
-            longitude,
-            bortleScale
-          );
-          
-          if (result.siqs > 0) {
-            onSiqsCalculated(result.siqs, false);
-          } else {
-            onSiqsCalculated(0, false);
-          }
-        } catch (error) {
-          console.error("Error fetching real-time SIQS:", error);
-          onSiqsCalculated(null, false);
-        } finally {
-          setLoading(false);
-        }
-      };
+      const now = Date.now();
+      const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION;
       
-      fetchSiqs();
+      if (shouldFetch) {
+        console.log(`Fetching real-time SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        const fetchSiqs = async () => {
+          setLoading(true);
+          onSiqsCalculated(null, true);
+          
+          try {
+            const effectiveBortleScale = bortleScale || 
+              (showRealTimeSiqs ? 3 : 5);
+            
+            // Try to get cached data from sessionStorage first
+            const cacheKey = `siqs_${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+            const cachedData = sessionStorage.getItem(cacheKey);
+            
+            if (cachedData) {
+              const { data, timestamp } = JSON.parse(cachedData);
+              const age = now - timestamp;
+              
+              if (age < CACHE_DURATION) {
+                console.log("Using cached SIQS from session storage");
+                onSiqsCalculated(data.siqs, false);
+                setLastFetchTimestamp(timestamp);
+                setLoading(false);
+                return;
+              }
+            }
+            
+            const result = await calculateRealTimeSiqs(
+              latitude,
+              longitude,
+              effectiveBortleScale
+            );
+            
+            if (result && result.siqs > 0) {
+              console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.siqs}`);
+              onSiqsCalculated(result.siqs, false);
+            } else {
+              onSiqsCalculated(0, false);
+            }
+            setLastFetchTimestamp(now);
+          } catch (error) {
+            console.error("Error fetching real-time SIQS:", error);
+            onSiqsCalculated(null, false);
+          } finally {
+            setLoading(false);
+          }
+        };
+        
+        fetchSiqs();
+      }
     }
-  }, [latitude, longitude, showRealTimeSiqs, isVisible, bortleScale, onSiqsCalculated]);
+  }, [latitude, longitude, showRealTimeSiqs, isVisible, bortleScale, onSiqsCalculated, lastFetchTimestamp]);
   
-  return null; // This is a logic-only component
+  return null;
 };
 
 export default RealTimeSiqsFetcher;

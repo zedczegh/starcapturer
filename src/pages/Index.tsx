@@ -10,17 +10,15 @@ import Footer from "@/components/index/Footer";
 import { currentSiqsStore } from "@/components/index/CalculatorSection";
 import { useGeolocation } from "@/hooks/location/useGeolocation";
 
-const Index = () => {
+const IndexPage = () => {
   const queryClient = useQueryClient();
   const [hasRestoredLocation, setHasRestoredLocation] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   
-  // Always try to get the user's location on page load for global use
   const { coords, getPosition } = useGeolocation({
     enableHighAccuracy: true
   });
   
-  // Save user location for global use
   const saveUserLocation = useCallback((location: { latitude: number; longitude: number }) => {
     try {
       localStorage.setItem('userLocation', JSON.stringify(location));
@@ -30,7 +28,6 @@ const Index = () => {
     }
   }, []);
   
-  // Update user location when coords change
   useEffect(() => {
     if (coords) {
       const userLocation = {
@@ -41,26 +38,20 @@ const Index = () => {
     }
   }, [coords, saveUserLocation]);
   
-  // Request location on page load
   useEffect(() => {
     getPosition();
   }, [getPosition]);
   
   useEffect(() => {
-    // Prefetch data for popular locations when the home page loads
     prefetchPopularLocations(queryClient);
     
-    // Check if we need to restore previous location
     try {
-      // Check localStorage for saved location
       const savedLocationString = localStorage.getItem('latest_siqs_location');
       
       if (savedLocationString) {
-        // We have a saved location, parse it and mark as restored
         const savedLocation = JSON.parse(savedLocationString);
         
         if (savedLocation && savedLocation.name) {
-          // Mark as restored to prevent auto-triggering current location
           setHasRestoredLocation(true);
           console.log("Found saved location, disabling auto location request");
           
@@ -72,7 +63,6 @@ const Index = () => {
       console.error("Error checking for location restoration:", error);
     }
     
-    // Scroll to calculator section or hash if present in URL
     const hash = window.location.hash;
     if (hash) {
       const element = document.querySelector(hash);
@@ -83,7 +73,6 @@ const Index = () => {
       }
     }
     
-    // Update the currentSiqsStore value
     const updateCurrentSiqs = () => {
       try {
         const savedLocationString = localStorage.getItem('latest_siqs_location');
@@ -104,13 +93,17 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-cosmic-950">
-      <HeroSection />
-      <CalculatorSection noAutoLocationRequest={hasRestoredLocation} />
-      <ScienceSection />
-      <PhotoPointsSection />
-      <Footer />
+      <div className="fixed inset-0 bg-cosmic-950/70 z-0"></div>
+      
+      <div className="relative z-10">
+        <HeroSection />
+        <CalculatorSection noAutoLocationRequest={hasRestoredLocation} />
+        <ScienceSection />
+        <PhotoPointsSection />
+        <Footer />
+      </div>
     </div>
   );
 };
 
-export default Index;
+export default IndexPage;

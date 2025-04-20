@@ -1,7 +1,7 @@
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { saveLocationFromPhotoPoints, getLocationDetailsById } from "@/utils/locationStorage";
+import { saveLocationFromPhotoPoints, getLocationDetailsById, saveLocationDetails } from "@/utils/locationStorage";
 
 interface PhotoPointsNavigationState {
   needsRefresh: boolean;
@@ -16,6 +16,7 @@ export function usePhotoPointsNavigation(locationId: string | undefined): PhotoP
   const location = useLocation();
   const [needsRefresh, setNeedsRefresh] = useState(false);
   const refreshHandledRef = useRef(false);
+  const locationStateRef = useRef(location.state);
   
   // Process navigation from PhotoPoints
   useEffect(() => {
@@ -26,26 +27,50 @@ export function usePhotoPointsNavigation(locationId: string | undefined): PhotoP
     
     // Check if we're coming from PhotoPoints page
     const fromPhotoPoints = location.state?.fromPhotoPoints === true;
+    const fromCalculator = location.state?.fromCalculator === true;
     
-    if (fromPhotoPoints) {
-      console.log("Detected navigation from PhotoPoints page with ID:", locationId);
-      refreshHandledRef.current = true;
+    if (fromPhotoPoints || fromCalculator) {
+      console.log(`Detected navigation from ${fromPhotoPoints ? 'PhotoPoints' : 'Calculator'} page with ID:`, locationId);
       
       try {
-        processPhotoPointsNavigation(locationId);
+        processPhotoPointsNavigation(locationId, location.state);
+        
+        // Ensure we only process once per navigation
+        refreshHandledRef.current = true;
       } catch (error) {
-        console.error("Error processing PhotoPoints navigation:", error);
+        console.error(`Error processing ${fromPhotoPoints ? 'PhotoPoints' : 'Calculator'} navigation:`, error);
       }
     }
-  }, [location.state, locationId]);
+  }, [locationId]);
   
-  // Helper function to process the navigation from PhotoPoints
-  const processPhotoPointsNavigation = (id: string) => {
-    // Get existing location data
+  // Helper function to process the navigation
+  const processPhotoPointsNavigation = (id: string, navigationState: any) => {
+    // Check if we have state passed from navigation first
+    if (navigationState) {
+      console.log("Processing navigation with state data:", navigationState);
+      
+      // Ensure navigation state is fully saved to localStorage
+      try {
+        // Save the full state for retrieval if needed
+        saveLocationDetails(id, navigationState);
+        console.log("Navigation state saved to localStorage");
+        
+        // Set flag to trigger refresh if needed
+        if (!navigationState.siqsResult || !navigationState.weatherData) {
+          setNeedsRefresh(true);
+        }
+      } catch (e) {
+        console.error("Error saving navigation state:", e);
+        setNeedsRefresh(true);
+      }
+      return;
+    }
+    
+    // Fall back to existing location data if no state
     const existingData = getLocationDetailsById(id);
     
     if (existingData) {
-      // Update the data with the fromPhotoPoints flag
+      // Update the data with navigation flags
       const updatedData = {
         ...existingData,
         fromPhotoPoints: true
@@ -56,19 +81,17 @@ export function usePhotoPointsNavigation(locationId: string | undefined): PhotoP
       
       // Indicate that a refresh is needed
       setNeedsRefresh(true);
-      
-      // Log instead of toast
-      console.log("Refreshing location data");
     } else {
       console.warn(`No existing location data found for ID: ${id}`);
+      setNeedsRefresh(true);
     }
   };
   
   // Function to mark refresh as complete
-  const markRefreshComplete = () => {
+  const markRefreshComplete = useCallback(() => {
     refreshHandledRef.current = true;
     setNeedsRefresh(false);
-  };
+  }, []);
   
   return { 
     needsRefresh,

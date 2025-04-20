@@ -1,12 +1,13 @@
 
 import { useMemo, useEffect, useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 /**
  * Hook to separate certified and calculated recommendation locations
  * Uses memoization for better performance
  */
-export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius?: number) {
+export function useCertifiedLocations(locations: SharedAstroSpot[]) {
   const [processedLocations, setProcessedLocations] = useState<{
     certified: SharedAstroSpot[],
     calculated: SharedAstroSpot[]
@@ -21,7 +22,7 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
     
     console.log(`Processing ${locations.length} locations for certified/calculated separation`);
     
-    // Identify certified locations with improved criteria
+    // Identify certified locations with improved criteria - without any distance filtering
     const certified = locations.filter(location => {
       // Check for explicit Dark Sky Reserve flag
       if (location.isDarkSkyReserve === true) {
@@ -37,8 +38,10 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
           cert.includes('dark sky reserve') || 
           cert.includes('dark sky park') ||
           cert.includes('dark sky community') ||
-          cert.includes('urban night sky place') ||
+          cert.includes('urban night sky') ||
+          cert.includes('dark sky lodging') ||
           cert.includes('dark sky association') ||
+          cert.includes('lodging') ||
           cert.includes('ida')
         );
       }
@@ -52,12 +55,16 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
            name.includes('sanctuary') || 
            name.includes('park') ||
            name.includes('community') ||
+           name.includes('lodging') ||
+           name.includes('urban night') ||
            name.includes('certified'))
         );
       }
       
       return false;
     });
+    
+    console.log(`Found ${certified.length} certified locations (not filtered by distance)`);
     
     // All locations that are not certified are calculated
     const calculated = locations.filter(location => 
@@ -69,13 +76,33 @@ export function useCertifiedLocations(locations: SharedAstroSpot[], searchRadius
     
     console.log(`Found ${certified.length} certified and ${calculated.length} calculated locations`);
     
-    // Sort both arrays by distance (if available)
-    const sortedCertified = [...certified].sort((a, b) => 
-      (a.distance || Infinity) - (b.distance || Infinity)
-    );
+    // Sort certified locations by name for better discoverability
+    const sortedCertified = [...certified].sort((a, b) => {
+      // First prioritize by certification type
+      const getTypeOrder = (loc: SharedAstroSpot) => {
+        const cert = (loc.certification || '').toLowerCase();
+        if (loc.isDarkSkyReserve || cert.includes('reserve')) return 1;
+        if (cert.includes('park')) return 2;
+        if (cert.includes('community')) return 3;
+        if (cert.includes('urban')) return 4;
+        if (cert.includes('lodging')) return 5;
+        return 6;
+      };
+      
+      const typeOrderA = getTypeOrder(a);
+      const typeOrderB = getTypeOrder(b);
+      
+      if (typeOrderA !== typeOrderB) {
+        return typeOrderA - typeOrderB;
+      }
+      
+      // Then sort by name
+      return (a.name || '').localeCompare(b.name || '');
+    });
     
+    // Sort calculated locations by SIQS quality if available
     const sortedCalculated = [...calculated].sort((a, b) => 
-      (a.distance || Infinity) - (b.distance || Infinity)
+      (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0)
     );
     
     setProcessedLocations({

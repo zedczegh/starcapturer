@@ -1,9 +1,9 @@
-
 import { toast } from "sonner";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { findLocationsWithinRadius, findCalculatedLocations } from "@/services/locationSearchService";
 import { isValidAstronomyLocation } from "@/utils/locationValidator";
 import { Language } from "@/contexts/LanguageContext";
+import { isSiqsGreaterThan } from "@/utils/siqsHelpers";
 
 // Maximum calculated locations to request per batch
 export const MAX_CALCULATED_LOCATIONS = 10;
@@ -48,7 +48,7 @@ export const searchStandardLocations = async (
       }
       
       // Then check SIQS
-      return loc.siqs !== undefined && loc.siqs > 0;
+      return loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0);
     });
     
     return { locations: validLocations, message: null };
@@ -107,7 +107,7 @@ export const searchCalculatedLocations = async (
       }
       
       // Then check SIQS
-      return loc.siqs !== undefined && loc.siqs > 0;
+      return loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0);
     });
     
     if (validLocations.length === 0) {

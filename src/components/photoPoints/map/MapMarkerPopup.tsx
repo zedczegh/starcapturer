@@ -3,11 +3,11 @@ import React from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Star, Award, Shield, MapPin, Navigation } from 'lucide-react';
-import { formatSIQSScore } from '@/utils/geoUtils';
+import { Star, MapPin, Navigation } from 'lucide-react';
+import { formatDistance } from '@/utils/geoUtils';
 import { useDisplayName } from '../cards/DisplayNameResolver';
-import { findNearestTown } from '@/utils/nearestTownCalculator';
-import { formatDistance } from '@/utils/location/formatDistance';
+import SiqsScoreBadge from '../cards/SiqsScoreBadge';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface MapMarkerPopupProps {
   location: SharedAstroSpot;
@@ -15,66 +15,76 @@ interface MapMarkerPopupProps {
   onViewDetails: (location: SharedAstroSpot) => void;
 }
 
-const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onViewDetails }) => {
+const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ 
+  location, 
+  onClose, 
+  onViewDetails 
+}) => {
   const { language, t } = useLanguage();
   
-  // Use the shared display name resolver
   const { displayName, showOriginalName, nearestTownInfo } = useDisplayName({
     location,
     language,
     locationCounter: null
   });
   
-  // Get certification info if available
-  const hasCertification = location.certification || location.isDarkSkyReserve;
+  // Determine if this is a certified location of any type
+  // Handle the potentially undefined type property safely
+  const isCertified = Boolean(
+    location.isDarkSkyReserve || 
+    (location.certification && location.certification !== '') || 
+    (location.type === 'lodging') || 
+    (location.type === 'dark-site')
+  );
   
-  // Get certification type display text
-  const getCertificationText = () => {
-    if (location.isDarkSkyReserve) {
-      return language === 'en' ? 'Dark Sky Reserve' : '暗夜保护区';
-    }
-    if (location.certification) {
-      return location.certification;
-    }
-    return '';
-  };
+  // Get certification text safely
+  const certificationText = location.certification || 
+    (location.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜天空保护区") : 
+      (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
+  
+  // Extract SIQS score from any format using our helper function
+  const siqsScore = getSiqsScore(location);
+  // Always show SIQS badge for certified locations, with a minimum score
+  const hasSiqs = siqsScore > 0 || isCertified;
+  // For certified locations without SIQS, use a default good score
+  const displaySiqs = siqsScore > 0 ? siqsScore : (isCertified ? 6.5 : 0);
   
   return (
     <div className="p-3 min-w-[200px] max-w-[280px]">
       <div className="flex justify-between items-center mb-2">
         <h4 className="font-semibold text-sm line-clamp-1">{displayName}</h4>
         
-        {location.siqs > 0 && (
-          <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full border border-yellow-500/40">
-            <Star className="h-3 w-3 text-yellow-400 mr-1" fill="#facc15" />
-            <span className="text-xs font-medium">{formatSIQSScore(location.siqs)}</span>
-          </div>
+        {/* Always show SIQS badge for certified locations */}
+        {hasSiqs && (
+          <SiqsScoreBadge 
+            score={displaySiqs} 
+            compact={true} 
+            forceCertified={isCertified && siqsScore <= 0}
+          />
         )}
       </div>
       
-      {hasCertification && (
+      {/* Show certification for all certified location types */}
+      {isCertified && certificationText && (
         <div className="flex items-center mb-2 mt-1">
-          <div className="flex items-center text-xs">
-            {location.isDarkSkyReserve ? 
-              <Award className="h-3.5 w-3.5 mr-1 text-blue-400" /> : 
-              <Shield className="h-3.5 w-3.5 mr-1 text-green-400" />
-            }
-            <span>{getCertificationText()}</span>
+          <div className="flex items-center text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+            <Star className="h-3.5 w-3.5 mr-1" />
+            <span>{certificationText}</span>
           </div>
         </div>
       )}
-      
-      {/* Show original location name if different from nearest town name */}
+
+      {/* Show original name if different */}
       {showOriginalName && (
         <div className="flex items-center mb-2">
           <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
           <span className="text-xs text-muted-foreground line-clamp-1">
-            {language === 'en' ? location.name : (location.chineseName || location.name)}
+            {language === 'zh' ? location.name : location.chineseName}
           </span>
         </div>
       )}
       
-      {/* Display detailed location information from nearestTownInfo */}
+      {/* Show nearest town info */}
       {nearestTownInfo && nearestTownInfo.detailedName && (
         <div className="flex items-center mb-2">
           <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
@@ -89,7 +99,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onVi
         <div className="flex items-center mb-2">
           <Navigation className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">
-            {formatDistance(location.distance, language)}
+            {formatDistance(location.distance)}
           </span>
         </div>
       )}

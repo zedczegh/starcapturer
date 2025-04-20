@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
@@ -81,12 +80,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       const updateWithSiqs = async () => {
         try {
           // Apply real-time SIQS to all locations including certified ones
-          const updated = await updateLocationsWithRealTimeSiqs(
-            locationsToEnhance,
-            userLocation,
-            100000, // Large radius to include all locations
-            'certified' // Treat all as certified to ensure updates
-          );
+          const updated = await updateLocationsWithRealTimeSiqs(locationsToEnhance);
           setEnhancedLocations(updated);
         } catch (err) {
           console.error("Error updating recommended locations with SIQS:", err);

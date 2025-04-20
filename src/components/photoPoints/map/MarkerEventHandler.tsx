@@ -1,51 +1,55 @@
 
-import React, { useEffect, useRef } from 'react';
-import L from 'leaflet';
+import { useEffect, useRef } from 'react';
+import { Marker } from 'leaflet';
+
+type EventMap = {
+  [key: string]: (e: any) => void;
+};
 
 interface MarkerEventHandlerProps {
-  marker: L.Marker | null;
-  eventMap: {
-    click?: () => void;
-    mouseover?: () => void;
-    mouseout?: () => void;
-    touchstart?: (e: TouchEvent) => void;
-    touchend?: (e: TouchEvent) => void;
-    touchmove?: (e: TouchEvent) => void;
-  };
+  marker: Marker | null;
+  eventMap: EventMap;
 }
 
 /**
- * Helper component to attach event handlers to Leaflet markers
- * Works around TypeScript limitations with react-leaflet
+ * A component to safely attach event handlers to Leaflet markers
+ * Helps prevent "Cannot read properties of undefined (reading '_leaflet_pos')" errors
  */
-const MarkerEventHandler: React.FC<MarkerEventHandlerProps> = ({ marker, eventMap }) => {
-  const handlers = useRef<any[]>([]);
+const MarkerEventHandler = ({ marker, eventMap }: MarkerEventHandlerProps) => {
+  const handlerRefs = useRef<{ [key: string]: (e: any) => void }>({});
   
   useEffect(() => {
     if (!marker) return;
     
-    // Clean up any existing handlers
-    handlers.current.forEach(h => {
-      if (h.event && h.handler) {
-        marker.off(h.event, h.handler);
-      }
-    });
-    
-    handlers.current = [];
-    
-    // Attach new handlers
+    // Create stable reference functions for each event handler
     Object.entries(eventMap).forEach(([event, handler]) => {
-      if (handler) {
-        marker.on(event, handler);
-        handlers.current.push({ event, handler });
-      }
+      // Wrap each handler in a try/catch to prevent errors from crashing the app
+      handlerRefs.current[event] = (e: any) => {
+        try {
+          // Check if marker is valid before calling handler
+          if (marker && marker.getLatLng) {
+            handler(e);
+          }
+        } catch (error) {
+          console.warn(`Error in marker ${event} handler:`, error);
+        }
+      };
+      
+      // Attach the event handler
+      marker.on(event, handlerRefs.current[event]);
     });
     
-    // Cleanup on unmount
+    // Cleanup function to remove event listeners
     return () => {
-      handlers.current.forEach(h => {
-        if (h.event && h.handler && marker) {
-          marker.off(h.event, h.handler);
+      if (!marker) return;
+      
+      Object.entries(eventMap).forEach(([event]) => {
+        if (handlerRefs.current[event]) {
+          try {
+            marker.off(event, handlerRefs.current[event]);
+          } catch (error) {
+            // Ignore cleanup errors
+          }
         }
       });
     };

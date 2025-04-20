@@ -1,4 +1,3 @@
-
 import { Location, Language } from '../types';
 import { getWesternCitiesDatabase } from './westernCities';
 import { findSmallTownMatches } from '../../geocoding/smallTownsDatabase';
@@ -70,6 +69,9 @@ export function handleSpecialCases(query: string, language: Language): Location[
   // Check if this could be an East Asian dark sky location
   if (query.includes('xichong') || 
       query.includes('shenzhen') ||
+      query.includes('xiyong') || // Add alternative spelling
+      query.includes('西涌') || // Add Chinese character version
+      query.includes('西冲') || // Keep old spelling for backward compatibility
       query.includes('yeongyang') ||
       query.includes('jindo') ||
       query.includes('firefly') ||

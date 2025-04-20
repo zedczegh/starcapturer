@@ -15,7 +15,7 @@ import { chinaMountainLocations } from './regions/chinaMountainLocations';
 import { darkSkyLocations } from './regions/darkSkyLocations';
 import { chinaCityLocations } from './regions/chinaCityLocations';
 import { internationalLocations } from './regions/internationalLocations';
-import { calculateDistance, deg2rad } from '@/utils/geoUtils';
+import { calculateDistance, degToRad } from '@/utils/geoUtils';
 
 export interface LocationEntry {
   name: string;
@@ -43,7 +43,7 @@ export const locationDatabase: LocationEntry[] = [
 ];
 
 // Export utility functions from geoUtils to avoid duplication
-export { calculateDistance, deg2rad } from '@/utils/geoUtils';
+export { calculateDistance, degToRad } from '@/utils/geoUtils';
 
 /**
  * Find the closest location to given coordinates

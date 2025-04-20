@@ -53,7 +53,11 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
   let displayName;
   
   if (language === 'zh') {
-    if (enhancedLocation?.formattedName && 
+    // For Chinese, prioritize the explicit Chinese name first
+    if (location.chineseName) {
+      // Use explicit Chinese name if available
+      displayName = location.chineseName;
+    } else if (enhancedLocation?.formattedName && 
         enhancedLocation.formattedName !== '偏远地区' && 
         !isLoading) {
       // Use enhanced name from our new service for Chinese
@@ -62,9 +66,6 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
                nearestTownInfo.detailedName !== '偏远地区') {
       // Use detailed name from our enhanced database for Chinese
       displayName = nearestTownInfo.detailedName;
-    } else if (location.chineseName) {
-      // Use explicit Chinese name if available
-      displayName = location.chineseName;
     } else if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
       // Fallback for potential ideal dark sites in Chinese
       displayName = `潜在理想暗夜地点 ${locationCounter}`;
@@ -73,6 +74,7 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
       displayName = location.name;
     }
   } else {
+    // For English, use the default name
     if (enhancedLocation?.formattedName && 
         enhancedLocation.formattedName !== 'Remote area' && 
         !isLoading) {
@@ -92,15 +94,16 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
   }
   
   // Check if we need to show original name
-  const showOriginalName = (enhancedLocation || nearestTownInfo) && 
+  const showOriginalName = (language === 'zh' && location.chineseName && location.name !== location.chineseName) || 
+    ((enhancedLocation || nearestTownInfo) && 
     ((enhancedLocation && enhancedLocation.formattedName !== (language === 'en' ? 'Remote area' : '偏远地区')) ||
      (nearestTownInfo && nearestTownInfo.townName !== (language === 'en' ? 'Remote area' : '偏远地区'))) && 
-    ((language === 'zh' && location.chineseName && 
-      ((enhancedLocation && location.chineseName !== enhancedLocation.formattedName) ||
-       (!enhancedLocation && location.chineseName !== nearestTownInfo.detailedName))) ||
+    ((language === 'zh' && location.name && 
+      ((enhancedLocation && location.name !== enhancedLocation.formattedName) ||
+       (!enhancedLocation && location.name !== nearestTownInfo?.detailedName))) ||
      (language === 'en' && location.name && 
       ((enhancedLocation && location.name !== enhancedLocation.formattedName) ||
-       (!enhancedLocation && location.name !== nearestTownInfo.detailedName))));
+       (!enhancedLocation && location.name !== nearestTownInfo?.detailedName)))));
   
   return { 
     displayName, 

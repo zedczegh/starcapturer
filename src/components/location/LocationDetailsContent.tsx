@@ -1,9 +1,10 @@
 
-import React, { memo, lazy, Suspense, useEffect, useCallback, useRef } from "react";
+import React, { memo, lazy, Suspense, useEffect, useCallback, useRef, useState } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
+import { Loader } from "lucide-react";
 
 // Lazy load the content grid for better performance
 const LocationContentGrid = lazy(() => import("@/components/location/LocationContentGrid"));
@@ -24,6 +25,8 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   const refreshTimerRef = useRef<number | null>(null);
   const autoRefreshAttemptedRef = useRef<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [contentLoaded, setContentLoaded] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Check if this is a redirect with data that doesn't need refresh
   const isRedirect = locationData?.fromPhotoPoints || locationData?.fromCalculator;
@@ -51,13 +54,39 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     setLocationData,
     t
   );
+  
+  // Mark content as loaded after a delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setContentLoaded(true);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Listen for parent component requesting a refresh
   useEffect(() => {
     const handleForceRefresh = () => {
       console.log("Force refresh request received from parent");
-      handleRefreshAll();
-      resetUpdateState(); // Reset SIQS updater state on manual refresh
+      // Add error handling around refresh operations
+      try {
+        handleRefreshAll();
+        resetUpdateState(); // Reset SIQS updater state on manual refresh
+      } catch (error) {
+        console.error("Error during force refresh:", error);
+        // If refresh fails, increment retry counter
+        setRetryCount(prev => prev + 1);
+        
+        // After 3 retries, try a different approach
+        if (retryCount >= 3) {
+          console.log("Multiple refresh attempts failed, trying alternative approach");
+          setTimeout(() => {
+            // Try individual refresh operations separately
+            try { handleRefreshForecast(); } catch (e) { console.error("Forecast refresh failed:", e); }
+            try { handleRefreshLongRangeForecast(); } catch (e) { console.error("Long range refresh failed:", e); }
+          }, 1000);
+        }
+      }
     };
     
     const container = containerRef.current;
@@ -70,7 +99,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         container.removeEventListener('forceRefresh', handleForceRefresh);
       }
     };
-  }, [handleRefreshAll, resetUpdateState]);
+  }, [handleRefreshAll, resetUpdateState, handleRefreshForecast, handleRefreshLongRangeForecast, retryCount]);
   
   // Enhanced auto-refresh when page is opened or location is updated
   useEffect(() => {
@@ -94,10 +123,10 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     }
     
     // Create a location signature to detect changes
-    const locationSignature = `${locationData?.latitude}-${locationData?.longitude}`;
+    const locationSignature = locationData ? `${locationData.latitude}-${locationData.longitude}` : 'none';
     
     // If location has changed or we haven't refreshed yet, refresh data
-    if (locationSignature !== lastLocationRef.current || !autoRefreshAttemptedRef.current) {
+    if ((locationSignature !== lastLocationRef.current || !autoRefreshAttemptedRef.current) && locationData) {
       lastLocationRef.current = locationSignature;
       autoRefreshAttemptedRef.current = true;
       
@@ -108,10 +137,14 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       
       // Set a small delay before refreshing to allow component to fully mount
       refreshTimerRef.current = window.setTimeout(() => {
-        console.log("Auto-refreshing data after location update or page load");
-        handleRefreshAll();
-        resetUpdateState(); // Reset SIQS updater state
-      }, 300); // Reduced from 500ms for faster refresh
+        try {
+          console.log("Auto-refreshing data after location update or page load");
+          handleRefreshAll();
+          resetUpdateState(); // Reset SIQS updater state
+        } catch (error) {
+          console.error("Error during auto-refresh:", error);
+        }
+      }, 500);
     }
     
     // Cleanup on unmount
@@ -121,6 +154,16 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       }
     };
   }, [locationData, handleRefreshAll, setLocationData, resetUpdateState, isRedirect, hasRequiredData]);
+
+  // Safe render with error boundary pattern
+  if (!locationData) {
+    return (
+      <div className="p-8 text-center">
+        <Loader className="animate-spin h-8 w-8 mx-auto mb-4" />
+        <p>{t("Loading location data...", "正在加载位置数据...")}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="transition-all duration-300 animate-fade-in" ref={containerRef}> 

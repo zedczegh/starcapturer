@@ -1,10 +1,9 @@
-
 import React, { useEffect, useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointCard from './PhotoPointCard';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
-import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
+import { updateCertifiedLocationsWithSiqs } from '@/services/realTimeSiqsService/certifiedLocationService';
 
 interface LocationsListProps {
   locations: SharedAstroSpot[];
@@ -21,22 +20,17 @@ const LocationsList: React.FC<LocationsListProps> = ({
 }) => {
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   
-  // Update certified locations with real-time SIQS
+  // Update locations with real-time SIQS - no distance filtering for certified locations
   useEffect(() => {
     if (locations.length > 0) {
       const updateWithSiqs = async () => {
         try {
-          // Apply real-time SIQS to all locations including certified ones
-          const updated = await updateLocationsWithRealTimeSiqs(
-            locations,
-            null, // We don't need user location for certified locations
-            100000, // Large radius to include all certified locations
-            'certified'
-          );
+          // Use specialized certified locations update service
+          const updated = await updateCertifiedLocationsWithSiqs(locations);
+          console.log(`LocationsList: Enhanced ${updated.length} certified locations with SIQS data`);
           setEnhancedLocations(updated);
         } catch (err) {
-          console.error("Error updating locations with real-time SIQS:", err);
-          // Fallback to original locations
+          console.error("Error updating certified locations with real-time SIQS:", err);
           setEnhancedLocations(locations);
         }
       };
@@ -63,7 +57,7 @@ const LocationsList: React.FC<LocationsListProps> = ({
             <PhotoPointCard
               point={location}
               onViewDetails={onViewDetails}
-              userLocation={null} // This doesn't use current location for distance
+              userLocation={null} // Explicitly null to avoid distance filtering
             />
           </motion.div>
         ))}

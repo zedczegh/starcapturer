@@ -56,7 +56,20 @@ declare module "@/types/weather" {
       score: number;
       isViable: boolean;
     };
+    siqsResult?: SIQSData;
     distance?: number;
     isViable?: boolean;
+    siqsFactors?: Array<{
+      name: string;
+      score: number;
+      description: string;
+    }>;
+    certification?: string;
+    isDarkSkyReserve?: boolean;
+    type?: string;
+    preferenceScore?: number; // Added for enhanced calculations
+    clearSkyRate?: number; // Added for enhanced calculations
+    isCertified?: boolean; // Added for certified location handling
+    certificationRating?: number; // Added for certification rating
   }
 }

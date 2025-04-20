@@ -1,4 +1,3 @@
-
 // Cache management system for SIQS calculations
 
 // Create a cache to avoid redundant API calls with improved invalidation strategy
@@ -10,8 +9,8 @@ const siqsCache = new Map<string, {
 }>();
 
 // Invalidate cache entries older than 30 minutes for nighttime, 15 minutes for daytime
-const NIGHT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
-const DAY_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+const NIGHT_CACHE_DURATION = 20 * 60 * 1000; // 20 minutes at night
+const DAY_CACHE_DURATION = 10 * 60 * 1000;  // 10 minutes during day
 
 /**
  * Determine if it's nighttime for cache duration purposes
@@ -73,7 +72,20 @@ export const getCachedSiqs = (latitude: number, longitude: number) => {
 export const setSiqsCache = (
   latitude: number,
   longitude: number,
-  data: { siqs: number; isViable: boolean; factors?: any[] }
+  data: { 
+    siqs: number; 
+    isViable: boolean; 
+    factors?: any[];
+    metadata?: {
+      calculatedAt: string;
+      sources: {
+        weather: boolean;
+        forecast: boolean;
+        clearSky: boolean;
+        lightPollution: boolean;
+      };
+    };
+  }
 ) => {
   const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
   
@@ -81,6 +93,16 @@ export const setSiqsCache = (
     ...data,
     timestamp: Date.now()
   });
+  
+  // Also store in sessionStorage for persistence between page loads
+  try {
+    sessionStorage.setItem(`siqs_${cacheKey}`, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.error("Failed to store SIQS in sessionStorage:", error);
+  }
 };
 
 /**

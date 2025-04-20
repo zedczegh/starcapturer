@@ -1,10 +1,9 @@
-
 import React, { useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { createCustomMarker } from './MapMarkerUtils';
+import { createCustomMarker, getFastTileLayer, getTileLayerOptions } from './MapMarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 // Fix Leaflet icon issue
@@ -26,6 +25,7 @@ const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
     
     let clickTimeout: number | null = null;
     let isDragging = false;
+    let touchStartPos: { x: number, y: number } | null = null;
     
     const handleClick = (e: L.LeafletMouseEvent) => {
       if (isDragging) return;
@@ -34,45 +34,92 @@ const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => v
     
     // Enhanced mobile touch handling
     if (isMobile) {
-      map.on('dragstart', () => {
-        isDragging = true;
-        if (clickTimeout !== null) {
-          window.clearTimeout(clickTimeout);
+      // Detect touch start position
+      map.getContainer().addEventListener('touchstart', (e: TouchEvent) => {
+        if (e.touches && e.touches[0]) {
+          touchStartPos = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY
+          };
         }
-      });
+      }, { passive: true });
       
-      map.on('dragend', () => {
-        // Short delay to prevent click right after drag
-        setTimeout(() => {
+      // Track touch movement to detect drags
+      map.getContainer().addEventListener('touchmove', (e: TouchEvent) => {
+        if (!touchStartPos || !e.touches || !e.touches[0]) return;
+        
+        const dx = Math.abs(e.touches[0].clientX - touchStartPos.x);
+        const dy = Math.abs(e.touches[0].clientY - touchStartPos.y);
+        
+        // If moved more than threshold, consider it a drag
+        if (dx > 10 || dy > 10) {
+          isDragging = true;
+        }
+      }, { passive: true });
+      
+      // Handle touch end
+      map.getContainer().addEventListener('touchend', (e: TouchEvent) => {
+        if (isDragging) {
+          // Reset for next interaction
           isDragging = false;
-        }, 50);
-      });
-      
-      // Better touch handling for mobile
-      map.on('tap', (e: any) => {
-        if (isDragging) return;
-        
-        if (clickTimeout !== null) {
-          window.clearTimeout(clickTimeout);
+          touchStartPos = null;
+          return;
         }
         
-        // Slight delay to ensure it's a tap not drag
-        clickTimeout = window.setTimeout(() => {
-          handleClick(e);
-        }, 50);
-      });
+        // If not dragging, handle as a tap
+        if (touchStartPos && map) {
+          // Convert touch to map coordinates
+          const point = map.containerPointToLatLng(
+            L.point(touchStartPos.x, touchStartPos.y)
+          );
+          
+          // Clear any existing timeout
+          if (clickTimeout) {
+            window.clearTimeout(clickTimeout);
+          }
+          
+          // Add slight delay to ensure it's a tap
+          clickTimeout = window.setTimeout(() => {
+            onMapClick(point.lat, point.lng);
+          }, 50);
+        }
+        
+        // Reset for next interaction
+        touchStartPos = null;
+      }, { passive: true });
+      
+      // Also keep standard tap handler as fallback
+      map.on('click', handleClick);
     } else {
       // Standard click for desktop
       map.on('click', handleClick);
     }
     
+    // Handle drag events
+    map.on('dragstart', () => {
+      isDragging = true;
+      if (clickTimeout !== null) {
+        window.clearTimeout(clickTimeout);
+        clickTimeout = null;
+      }
+    });
+    
+    map.on('dragend', () => {
+      // Add small delay before allowing clicks again
+      setTimeout(() => {
+        isDragging = false;
+      }, 100);
+    });
+    
     return () => {
       map.off('click', handleClick);
       if (isMobile) {
-        map.off('tap');
-        map.off('dragstart');
-        map.off('dragend');
+        map.getContainer().removeEventListener('touchstart', () => {});
+        map.getContainer().removeEventListener('touchmove', () => {});
+        map.getContainer().removeEventListener('touchend', () => {});
       }
+      map.off('dragstart');
+      map.off('dragend');
       if (clickTimeout !== null) {
         window.clearTimeout(clickTimeout);
       }
@@ -106,17 +153,22 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
+  // Get optimized tile layer
+  const { url: tileUrl, attribution } = getFastTileLayer();
+  const tileOptions = getTileLayerOptions(isMobile);
+  
   // Call the onMapReady callback when the component mounts
   useEffect(() => {
     onMapReady();
   }, [onMapReady]);
 
-  // Handle map click events
+  // Handle map click events - ALWAYS enabled on mobile
   const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (editable) {
+    // Always allow map clicks, regardless of editable state on mobile
+    if (isMobile || editable) {
       onMapClick(lat, lng);
     }
-  }, [editable, onMapClick]);
+  }, [editable, onMapClick, isMobile]);
 
   // Get custom marker icon - red for editable, blue for non-editable
   const markerIcon = React.useMemo(() => {
@@ -133,7 +185,6 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
     // Mobile-specific options
     tap: isMobile,
     touchZoom: isMobile ? 'center' : true,
-    bounceAtZoomLimits: !isMobile, // Disable bounce on mobile
     // Reduce map animation to improve performance on mobile
     zoomAnimation: !isMobile,
     fadeAnimation: !isMobile,
@@ -143,7 +194,9 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
     inertiaDeceleration: isMobile ? 2000 : 3000,
     // Smoothness settings
     wheelDebounceTime: isMobile ? 40 : 80,
-    zoomSnap: isMobile ? 0.5 : 1
+    zoomSnap: isMobile ? 0.5 : 1,
+    // Performance improvements
+    worldCopyJump: true,
   };
   
   return (
@@ -153,8 +206,9 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
       whenReady={() => onMapReady()}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution={tileOptions.attribution}
+        url={tileOptions.url}
+        maxZoom={tileOptions.maxZoom}
       />
       <Marker position={position} icon={markerIcon}>
         <Popup>
@@ -177,8 +231,8 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
         </Popup>
       </Marker>
       
-      {/* Add MapEvents component to handle clicks with mobile optimization */}
-      {editable && <MapEvents onMapClick={handleMapClick} />}
+      {/* Always add MapEvents for map clicks - ESPECIALLY on mobile */}
+      <MapEvents onMapClick={handleMapClick} />
     </MapContainer>
   );
 };

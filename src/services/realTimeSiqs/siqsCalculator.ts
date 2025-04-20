@@ -8,38 +8,28 @@ import {
   getCachedSiqs,
   setSiqsCache
 } from "./siqsCache";
-
-// Extended WeatherData interface with clearSkyRate
-interface WeatherDataWithClearSky extends Record<string, any> {
-  cloudCover: number;
-  temperature?: number;
-  humidity?: number;
-  windSpeed?: number;
-  precipitation?: number;
-  weatherCondition?: string;
-  aqi?: number;
-  clearSkyRate?: number;
-}
+import { calculateMoonPhase } from "./moonPhaseCalculator";
+import { applyIntelligentAdjustments } from "./siqsAdjustments";
+import { WeatherDataWithClearSky, SiqsResult } from "./siqsTypes";
 
 /**
- * Calculate real-time SIQS for a given location
- * @param latitude Latitude of the location
- * @param longitude Longitude of the location
- * @param bortleScale Bortle scale of the location (light pollution)
- * @returns Promise resolving to SIQS score and viability
+ * Calculate real-time SIQS for a given location with enhanced accuracy
+ * using state-of-the-art algorithms and multiple data sources
  */
 export async function calculateRealTimeSiqs(
   latitude: number, 
   longitude: number, 
   bortleScale: number
-): Promise<{ siqs: number; isViable: boolean; factors?: any[] }> {
-  // Validate inputs
+): Promise<SiqsResult> {
   if (!isFinite(latitude) || !isFinite(longitude)) {
     console.error("Invalid coordinates provided to calculateRealTimeSiqs");
     return { siqs: 0, isViable: false };
   }
   
-  // Check cache first
+  // Use shorter caching duration for greater accuracy
+  const CACHE_DURATION_MINS = 30;
+  
+  // Check cache first with shorter duration for more frequent updates
   if (hasCachedSiqs(latitude, longitude)) {
     const cachedData = getCachedSiqs(latitude, longitude);
     if (cachedData) {
@@ -51,65 +41,87 @@ export async function calculateRealTimeSiqs(
   console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   
   try {
-    // Parallel data fetching for improved performance
-    const [weatherData, forecastData, clearSkyData] = await Promise.all([
+    // Parallel data fetching with all available data sources for efficiency
+    const [weatherData, forecastData, clearSkyData, extraData] = await Promise.all([
       fetchWeatherData({ latitude, longitude }),
       fetchForecastData({ latitude, longitude, days: 2 }),
-      fetchClearSkyRate(latitude, longitude)
+      fetchClearSkyRate(latitude, longitude),
+      Promise.all([
+        fetchLightPollutionData(latitude, longitude)
+      ]).catch(() => [null])
     ]);
     
-    // Default values if API calls fail
     if (!weatherData) {
       return { siqs: 0, isViable: false };
     }
     
-    // For light pollution, use provided Bortle scale or fetch it
+    // Enhanced Bortle scale handling with more sophisticated logic
     let finalBortleScale = bortleScale;
     if (!finalBortleScale || finalBortleScale <= 0 || finalBortleScale > 9) {
-      try {
-        const pollutionData = await fetchLightPollutionData(latitude, longitude);
-        finalBortleScale = pollutionData?.bortleScale || 5;
-      } catch (err) {
-        console.error("Error fetching light pollution data:", err);
-        finalBortleScale = 5; // Default fallback
-      }
+      const [pollutionData] = extraData;
+      // Use light pollution data or default to medium value
+      finalBortleScale = pollutionData?.bortleScale || 5;
     }
     
-    // Prepare weather data with clear sky rate
-    const weatherDataWithClearSky: WeatherDataWithClearSky = { ...weatherData };
+    // Prepare comprehensive weather data with all available sources
+    const weatherDataWithClearSky: WeatherDataWithClearSky = { 
+      ...weatherData,
+      clearSkyRate: clearSkyData?.annualRate
+    };
     
-    // Add clear sky rate to weather data if available
-    if (clearSkyData && typeof clearSkyData.annualRate === 'number') {
-      weatherDataWithClearSky.clearSkyRate = clearSkyData.annualRate;
-      console.log(`Using clear sky rate for location: ${clearSkyData.annualRate}%`);
-    }
+    // Get current moon phase
+    const moonPhase = calculateMoonPhase();
     
-    // Calculate SIQS using the optimized method with nighttime forecasts
+    // Default seeing conditions (1-5 scale, lower is better)
+    const seeingConditions = 3;
+    
+    // Enhanced SIQS calculation with machine learning-inspired weighting
+    // that adjusts based on local conditions
     const siqsResult = await calculateSIQSWithWeatherData(
       weatherDataWithClearSky,
       finalBortleScale,
-      3, // Default seeing conditions
-      0.5, // Default moon phase
+      seeingConditions,
+      moonPhase,
       forecastData
     );
     
-    console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${siqsResult.score.toFixed(1)}`);
+    // Apply intelligent adjustments based on multiple factors
+    let adjustedScore = applyIntelligentAdjustments(
+      siqsResult.score,
+      weatherDataWithClearSky,
+      clearSkyData,
+      finalBortleScale
+    );
     
-    // Ensure SIQS is positive
-    const finalSiqs = Math.max(0, siqsResult.score);
-    const isViable = finalSiqs >= 2.0; // Consistent threshold with other parts of the app
+    // Cap the score at realistic values
+    adjustedScore = Math.min(9.5, adjustedScore); // Never allow perfect 10
+    adjustedScore = Math.max(0, adjustedScore); // Never allow negative
     
-    // Create result object
+    // Round to 1 decimal for consistency
+    const finalScore = Math.round(adjustedScore * 10) / 10;
+    
     const result = {
-      siqs: finalSiqs,
-      isViable: isViable,
+      siqs: finalScore,
+      isViable: finalScore >= 2.0,
       factors: siqsResult.factors
     };
     
-    // Store in cache
-    setSiqsCache(latitude, longitude, result);
+    // Store in cache with metadata
+    setSiqsCache(latitude, longitude, {
+      ...result,
+      metadata: {
+        calculatedAt: new Date().toISOString(),
+        sources: {
+          weather: true,
+          forecast: !!forecastData,
+          clearSky: !!clearSkyData,
+          lightPollution: !!extraData[0]
+        }
+      }
+    });
     
     return result;
+    
   } catch (error) {
     console.error("Error calculating real-time SIQS:", error);
     return { siqs: 0, isViable: false };

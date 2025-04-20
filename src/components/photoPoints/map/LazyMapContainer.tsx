@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -6,16 +5,18 @@ import './MarkerStyles.css';
 import './MapStyles.css';
 import { LocationMarker, UserLocationMarker } from './MarkerComponents';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
+import { configureLeaflet, getFastTileLayer, getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
 import MapController from './MapController';
 import MapLegend from './MapLegend';
 import MobileMapFixer from './MobileMapFixer';
-import { MapEvents, WorldBoundsController } from './MapEffectsController';
-import PinpointButton from './PinpointButton';
-import { getCurrentPosition } from '@/utils/geolocationUtils';
+import { MapEvents } from './MapEffectsController';
 import { MapEffectsComposer } from './MapComponents';
+import L from 'leaflet';
+import CenteringPinpointButton from './CenteringPinpointButton';
+import { calculateDistance, getSafeScore } from '@/utils/geoUtils';
+import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
+import { isWaterLocation } from '@/utils/locationWaterCheck';
 
-// Configure Leaflet before any map component renders
 configureLeaflet();
 
 interface LazyMapContainerProps {
@@ -61,10 +62,69 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef(true);
+  const previousLocations = useRef<SharedAstroSpot[]>([]);
   
-  // Effect to find SIQS value of user's current location
+  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}`);
+  
+  const tileOptions = isMobile ? 
+    getTileLayerOptions(true) : 
+    getTileLayerOptions(Boolean(isMobile));
+  
+  const stableOnLocationClick = useCallback((location: SharedAstroSpot) => {
+    if (onLocationClick) {
+      onLocationClick(location);
+    }
+  }, [onLocationClick]);
+  
+  const stableOnMapClick = useCallback((lat: number, lng: number) => {
+    if (onMapClick) {
+      onMapClick(lat, lng);
+    }
+  }, [onMapClick]);
+  
   useEffect(() => {
-    if (userLocation && locations.length > 0) {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+  
+  useEffect(() => {
+    if (locations && locations.length > 0) {
+      const locationIds = new Set(locations.map(loc => 
+        `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
+      ));
+      
+      const previousToKeep = previousLocations.current.filter(loc => {
+        const locId = `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`;
+        return !locationIds.has(locId);
+      });
+      
+      const combinedLocations = activeView === 'calculated' 
+        ? [...locations, ...previousToKeep] 
+        : locations;
+      
+      previousLocations.current = combinedLocations;
+    }
+  }, [locations, activeView]);
+  
+  const filteredLocations = useCallback(() => {
+    if (!previousLocations.current || previousLocations.current.length === 0) {
+      return locations || [];
+    }
+    
+    const filtered = filterLocations(previousLocations.current, userLocation, searchRadius, activeView);
+    return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
+  }, [locations, userLocation, searchRadius, activeView, isMobile]);
+
+  const getCurrentSiqs = useCallback((location: SharedAstroSpot): number | null => {
+    if (!location || !location.siqs) return null;
+    return getSafeScore(location.siqs);
+  }, []);
+
+  useEffect(() => {
+    if (userLocation && locations.length > 0 && isMountedRef.current) {
       const userLat = userLocation.latitude;
       const userLng = userLocation.longitude;
       
@@ -73,117 +133,81 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         Math.abs(loc.longitude - userLng) < 0.0001
       );
       
-      if (sameLocation && sameLocation.siqs) {
-        setCurrentSiqs(sameLocation.siqs);
-      } else {
-        setCurrentSiqs(null);
+      if (sameLocation) {
+        setCurrentSiqs(getCurrentSiqs(sameLocation));
       }
     }
-  }, [userLocation, locations]);
+  }, [userLocation?.latitude, userLocation?.longitude, locations, getCurrentSiqs]); 
   
-  // Handler for when the map is ready
   const handleMapReady = useCallback(() => {
-    setMapReady(true);
-    if (onMapReady) {
-      onMapReady();
-    }
-    
-    // Set global map reference for debugging
-    if (mapRef.current) {
-      (window as any).leafletMap = mapRef.current;
+    if (isMountedRef.current) {
+      setMapReady(true);
+      if (onMapReady) {
+        onMapReady();
+      }
     }
   }, [onMapReady]);
   
-  // Location click handler
-  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
-    if (onLocationClick) {
-      onLocationClick(location);
-    }
-  }, [onLocationClick]);
-  
-  // Map click handler
-  const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (onMapClick) {
-      onMapClick(lat, lng);
-      console.log("Map clicked, updating location to:", lat, lng);
-    }
-  }, [onMapClick]);
-  
-  // Get user's geolocation
-  const handleGetLocation = useCallback(() => {
-    if (onMapClick) {
-      getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          onMapClick(latitude, longitude);
-          
-          if (mapRef.current) {
-            const leafletMap = mapRef.current;
-            leafletMap.setView([latitude, longitude], 12, {
-              animate: true,
-              duration: 1
-            });
-          }
-          
-          console.log("Got user position:", latitude, longitude);
-        },
-        (error) => {
-          console.error("Error getting location:", error.message);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0
-        }
-      );
-    }
-  }, [onMapClick]);
-  
-  // Effect to ensure map is properly sized and invalidate size on container resize
   useEffect(() => {
     if (!mapRef.current) return;
     
     const map = mapRef.current;
     
-    // Handle window resize events to properly resize the map
+    let resizeTimeout: number | null = null;
     const handleResize = () => {
-      // Add a small delay to ensure the DOM has updated
-      setTimeout(() => {
+      if (resizeTimeout) {
+        window.clearTimeout(resizeTimeout);
+      }
+      resizeTimeout = window.setTimeout(() => {
         if (map) map.invalidateSize();
-      }, 100);
+        resizeTimeout = null;
+      }, 300);
     };
     
     window.addEventListener('resize', handleResize);
     
-    // Initial invalidateSize to prevent _leaflet_pos errors
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       if (map) map.invalidateSize();
-    }, 200);
+    }, 300);
     
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (resizeTimeout) {
+        window.clearTimeout(resizeTimeout);
+      }
+      clearTimeout(timeoutId);
     };
-  }, [mapRef.current]);
-  
+  }, []);
+
+  const getDefaultZoom = () => {
+    if (activeView === 'calculated') {
+      return isMobile ? 3 : 4;
+    }
+    return isMobile ? zoom - 1 : zoom;
+  };
+
+  const displayLocations = filteredLocations();
+
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
       <MapContainer
         center={center}
-        zoom={zoom}
+        zoom={getDefaultZoom()}
         style={{ height: "100%", width: "100%" }}
-        scrollWheelZoom={true}
+        scrollWheelZoom={!isMobile}
         ref={mapRef}
         className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
         whenReady={handleMapReady}
-        attributionControl={true}
-        key={`map-${center[0]}-${center[1]}-${searchRadius}`}
+        attributionControl={!isMobile}
+        worldCopyJump={true}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution={tileOptions.attribution}
+          url={tileOptions.url}
+          maxZoom={isMobile ? tileOptions.maxZoom - 2 : tileOptions.maxZoom}
         />
         
-        {showRadiusCircles && userLocation && (
+        {showRadiusCircles && userLocation && !isMobile && (
           <Circle
             center={[userLocation.latitude, userLocation.longitude]}
             pathOptions={{
@@ -198,15 +222,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         )}
         
         <MapEffectsComposer 
-          center={center}
-          zoom={zoom}
           userLocation={userLocation}
           activeView={activeView}
           searchRadius={searchRadius}
-          onSiqsCalculated={(siqs) => setCurrentSiqs(siqs)}
+          effects={['zoom-controls']}
         />
         
-        <MapEvents onMapClick={handleMapClick} />
+        <MapEvents onMapClick={stableOnMapClick} />
         
         {userLocation && (
           <UserLocationMarker 
@@ -215,18 +237,18 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           />
         )}
         
-        {locations.map(location => {
-          if (!location.latitude || !location.longitude) return null;
+        {displayLocations.map(location => {
+          if (!location || !location.latitude || !location.longitude) return null;
           
           const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-          const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+          const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
           const isHovered = hoveredLocationId === locationId;
           
           return (
             <LocationMarker
               key={locationId}
               location={location}
-              onClick={handleLocationClick}
+              onClick={stableOnLocationClick}
               isHovered={isHovered}
               onHover={onMarkerHover || (() => {})}
               locationId={locationId}
@@ -243,8 +265,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           userLocation={userLocation} 
           searchRadius={searchRadius}
         />
-        
-        {useMobileMapFixer && isMobile && <MobileMapFixer />}
       </MapContainer>
     </div>
   );

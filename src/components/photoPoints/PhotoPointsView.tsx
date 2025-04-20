@@ -1,4 +1,3 @@
-
 import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { PhotoPointsViewMode } from './ViewToggle';
@@ -55,12 +54,17 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
   
   const [loaderVisible, setLoaderVisible] = useState(initialLoad || loading);
   
+  // For calculated view - filter by distance, certified view - show all
   const filteredCalculatedLocations = React.useMemo(() => {
     if (!effectiveLocation) return calculatedLocations;
     
     return calculatedLocations.filter(loc => {
       if (!loc.latitude || !loc.longitude) return false;
       
+      // Skip distance filtering for certified locations
+      if (loc.isDarkSkyReserve || loc.certification) return true;
+      
+      // Calculate distance if not already set
       const distance = loc.distance || calculateDistance(
         effectiveLocation.latitude,
         effectiveLocation.longitude,
@@ -68,10 +72,16 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
         loc.longitude
       );
       
+      // Only include locations within current radius
       return distance <= calculatedSearchRadius;
     });
   }, [calculatedLocations, effectiveLocation, calculatedSearchRadius]);
   
+  // When in certified view, don't filter by distance - show all certified locations globally
+  const displayedCertifiedLocations = React.useMemo(() => {
+    return certifiedLocations;
+  }, [certifiedLocations]);
+
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (location && onLocationClick) {
       const safeLocation = {
@@ -95,6 +105,16 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
     return () => clearTimeout(timer);
   }, [initialLoad, loading, activeView]);
   
+  // Debugging outputs
+  useEffect(() => {
+    console.log(`PhotoPointsView rendering`);
+    console.log(`- Active view: ${activeView}`);
+    console.log(`- Certified locations: ${certifiedLocations?.length || 0}`);
+    console.log(`- Calculated locations: ${calculatedLocations?.length || 0}`);
+    console.log(`- Show map: ${showMap}`);
+    console.log(`- Search radius: ${searchRadius}`);
+  }, [activeView, certifiedLocations, calculatedLocations, showMap, searchRadius]);
+  
   // If loader should be shown, always render the same loading UI
   if (loaderVisible) {
     return (
@@ -108,14 +128,14 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
   if (showMap) {
     return (
       <Suspense fallback={<PageLoader />}>
-        <div className="h-auto w-full rounded-lg overflow-hidden border border-border shadow-lg">
+        <div className="h-auto w-full max-w-xl mx-auto rounded-lg overflow-hidden border border-border shadow-lg">
           <PhotoPointsMap 
             userLocation={effectiveLocation}
-            locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
+            locations={activeView === 'certified' ? displayedCertifiedLocations : filteredCalculatedLocations}
             certifiedLocations={certifiedLocations}
             calculatedLocations={calculatedLocations}
             activeView={activeView}
-            searchRadius={searchRadius}
+            searchRadius={activeView === 'certified' ? searchRadius : calculatedSearchRadius}
             onLocationClick={handleLocationClick}
             onLocationUpdate={onLocationUpdate}
           />
@@ -124,18 +144,20 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
     );
   }
   
-  // For list view
+  // For list view - use key prop to force re-rendering on view change
   return (
     <Suspense fallback={<PageLoader />}>
       <div className="min-h-[300px]">
         {activeView === 'certified' ? (
           <DarkSkyLocations
-            locations={certifiedLocations}
+            key="certified-view"
+            locations={displayedCertifiedLocations}
             loading={loading}
             initialLoad={initialLoad}
           />
         ) : (
           <CalculatedLocations
+            key="calculated-view"
             locations={filteredCalculatedLocations}
             loading={loading}
             initialLoad={initialLoad}

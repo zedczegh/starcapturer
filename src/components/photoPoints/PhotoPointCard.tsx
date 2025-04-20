@@ -5,8 +5,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Star, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatSIQSScore } from "@/utils/geoUtils";
-import { getCertificationInfo, getLocalizedCertText } from "./utils/certificationUtils";
+import { formatSiqsScore } from "@/utils/siqsHelpers";
+import { getCertificationInfo, getLocalizedCertText } from "./cards/CertificationBadge";
 import { useNavigate } from "react-router-dom";
 import LightPollutionIndicator from "@/components/location/LightPollutionIndicator";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -32,14 +32,12 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const isMobile = useIsMobile();
   const certInfo = useMemo(() => getCertificationInfo(point), [point]);
   
-  // Use the shared display name resolver
   const { displayName, showOriginalName } = useDisplayName({
     location: point,
     language,
     locationCounter: null
   });
   
-  // Get detailed location information
   const nearestTownInfo = useMemo(() => 
     point.latitude && point.longitude ? 
       findNearestTown(point.latitude, point.longitude, language) : 
@@ -50,15 +48,15 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     if (distance === undefined) return t("Unknown distance", "未知距离");
     
     if (distance < 1) 
-      return t(`${Math.round(distance * 1000)} m away`, `距离 ${Math.round(distance * 1000)} 米`);
+      return t(`${Math.round(distance * 1000)} m`, `${Math.round(distance * 1000)} 米`);
     if (distance < 100) 
-      return t(`${Math.round(distance)} km away`, `距离 ${Math.round(distance)} 公里`);
-    return t(`${Math.round(distance / 100) * 100} km away`, `距离 ${Math.round(distance / 100) * 100} 公里`);
+      return t(`${Math.round(distance)} km`, `${Math.round(distance)} 公里`);
+    return t(`${Math.round(distance / 100) * 100} km`, `${Math.round(distance / 100) * 100} 公里`);
   };
 
   const getLocationId = () => {
     if (!point || !point.latitude || !point.longitude) return null;
-    return `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+    return point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
   };
 
   const handleViewDetails = (e: React.MouseEvent) => {
@@ -69,25 +67,30 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     const locationId = getLocationId();
     if (!locationId) return;
     
+    // Ensure Chinese name is properly included in the navigation state
     navigate(`/location/${locationId}`, {
       state: {
         id: locationId,
-        name: point.name,
-        chineseName: point.chineseName,
+        name: point.name || '',
+        chineseName: point.chineseName || '',
         latitude: point.latitude,
         longitude: point.longitude,
         bortleScale: point.bortleScale || 4,
         siqsResult: {
           score: point.siqs || 0
         },
-        certification: point.certification,
-        isDarkSkyReserve: point.isDarkSkyReserve,
+        certification: point.certification || '',
+        isDarkSkyReserve: !!point.isDarkSkyReserve,
         timestamp: new Date().toISOString(),
         fromPhotoPoints: true
       }
     });
   };
 
+  // Determine the name to display based on language preference
+  const primaryName = language === 'zh' && point.chineseName ? point.chineseName : (point.name || t("Unnamed Location", "未命名位置"));
+  const secondaryName = language === 'zh' ? (point.name || "") : (point.chineseName || "");
+  
   return (
     <div 
       className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
@@ -95,12 +98,12 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     >
       <div className="flex items-center justify-between mb-1.5">
         <h4 className="font-medium text-sm line-clamp-1">
-          {displayName}
+          {displayName || primaryName}
         </h4>
         
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
-          <span className="text-xs font-medium">{formatSIQSScore(point.siqs)}</span>
+          <span className="text-xs font-medium">{formatSiqsScore(point.siqs)}</span>
         </div>
       </div>
       
@@ -113,18 +116,18 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      {/* Show original location name if we're using nearest town as main title and they differ */}
-      {showOriginalName && (
+      {/* Show secondary name if available */}
+      {secondaryName && (
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
           <span className="text-xs text-muted-foreground line-clamp-1">
-            {language === 'en' ? point.name : (point.chineseName || point.name)}
+            {secondaryName}
           </span>
         </div>
       )}
       
-      {/* Display detailed location information from nearestTownInfo */}
-      {nearestTownInfo && nearestTownInfo.detailedName && (
+      {/* Only show nearest town if we don't have both names */}
+      {!secondaryName && nearestTownInfo && nearestTownInfo.detailedName && (
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
           <span className="text-xs text-muted-foreground line-clamp-1">
@@ -133,7 +136,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      {/* Display coordinates */}
       {point.latitude && point.longitude && (
         <div className="mt-1.5 mb-2 flex items-center">
           <Navigation className="h-3.5 w-3.5 text-muted-foreground mr-1" />
@@ -143,36 +145,27 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         </div>
       )}
       
-      <div className="flex justify-between items-center mt-2">
-        <div className="flex items-center">
-          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
-          <span className="text-sm text-muted-foreground font-medium">
+      {userLocation && point.latitude && point.longitude && (
+        <div className="mt-1.5 mb-2 flex items-center">
+          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+          <span className="text-xs text-muted-foreground">
             {formatCardDistance(point.distance)}
           </span>
         </div>
-        
-        <div className="flex items-center">
-          <LightPollutionIndicator 
-            bortleScale={point.bortleScale || 4} 
-            size="sm" 
-            showBortleNumber={true}
-            className="text-xs"
-          />
-        </div>
-      </div>
+      )}
       
       <div className="mt-3 flex justify-end">
         <Button 
-          size="sm" 
-          variant="ghost" 
-          className="h-7 text-sm px-2.5 bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30 text-primary/90 hover:text-primary"
+          variant="ghost"
+          size="sm"
           onClick={handleViewDetails}
+          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300 text-sm"
         >
-          {t("View", "查看")}
+          {t("View Details", "查看详情")}
         </Button>
       </div>
     </div>
   );
 };
 
-export default React.memo(PhotoPointCard);
+export default PhotoPointCard;

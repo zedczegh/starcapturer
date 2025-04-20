@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +13,7 @@ import VisibilityObserver from './cards/VisibilityObserver';
 import RealTimeSiqsFetcher from './cards/RealTimeSiqsFetcher';
 import LocationHeader from './cards/LocationHeader';
 import { useDisplayName } from './cards/DisplayNameResolver';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -44,14 +44,12 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   });
   
-  // Use the extracted display name logic
   const { displayName, showOriginalName } = useDisplayName({
     location,
     language,
     locationCounter
   });
   
-  // Handle SIQS calculation results
   const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(siqs);
     setLoadingSiqs(loading);
@@ -61,29 +59,39 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     return null;
   }
   
-  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
+  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(location.siqs);
   
   if (displaySiqs === 0 && !loadingSiqs) {
     return null;
   }
   
   const handleViewDetails = () => {
+    const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    
     const locationData = {
-      id: location.id || `calc-loc-${Date.now()}`,
-      name: location.name,
-      chineseName: location.chineseName,
+      id: locationId,
+      name: location.name || 'Unnamed Location',
+      chineseName: location.chineseName || '',
       latitude: location.latitude,
       longitude: location.longitude,
-      bortleScale: location.bortleScale,
+      bortleScale: location.bortleScale || 4,
+      siqs: realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(location.siqs),
       timestamp: new Date().toISOString(),
       fromPhotoPoints: true,
-      isDarkSkyReserve: location.isDarkSkyReserve,
-      certification: location.certification
+      isDarkSkyReserve: !!location.isDarkSkyReserve,
+      certification: location.certification || '',
+      siqsResult: (realTimeSiqs !== null || location.siqs) ? { 
+        score: realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(location.siqs) 
+      } : undefined
     };
     
     saveLocationFromPhotoPoints(locationData);
     
-    navigate(`/location/${locationData.id}`, { state: { fromPhotoPoints: true, ...locationData } });
+    console.log(`Navigating to location details: ${locationId}`, locationData);
+    
+    navigate(`/location/${locationId}`, { 
+      state: locationData 
+    });
   };
   
   const cardVariants = {

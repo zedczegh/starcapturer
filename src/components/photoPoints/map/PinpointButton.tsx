@@ -8,11 +8,13 @@ import { toast } from 'sonner';
 interface PinpointButtonProps {
   onGetLocation: () => void;
   className?: string;
+  shouldCenter?: boolean;
 }
 
 const PinpointButton: React.FC<PinpointButtonProps> = ({ 
   onGetLocation,
-  className = "absolute top-4 right-16 z-[999]"
+  className = "absolute top-4 right-16 z-[999]", // Positioned at top-right corner to align with legend
+  shouldCenter = true
 }) => {
   const { t } = useLanguage();
   const [isClicking, setIsClicking] = useState(false);

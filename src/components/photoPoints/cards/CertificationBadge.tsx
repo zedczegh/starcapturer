@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Globe, Trees, Building2, ShieldCheck } from 'lucide-react';
+import { Globe, Trees, Building2, ShieldCheck, Hotel } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Language } from '@/contexts/LanguageContext';
 
@@ -43,7 +43,7 @@ const CertificationBadge: React.FC<CertificationBadgeProps> = ({
 };
 
 // Helper function to get certification info
-function getCertificationInfo({ certification, isDarkSkyReserve }: { 
+export function getCertificationInfo({ certification, isDarkSkyReserve }: { 
   certification?: string; 
   isDarkSkyReserve?: boolean;
 }): CertificationInfo | null {
@@ -53,41 +53,47 @@ function getCertificationInfo({ certification, isDarkSkyReserve }: {
   
   const cert = (certification || '').toLowerCase();
   
-  if (cert.includes('sanctuary') || cert.includes('reserve') || isDarkSkyReserve) {
+  if (cert.includes('lodging')) {
+    return {
+      icon: Hotel,
+      text: 'Dark Sky Lodging',
+      color: 'text-primary border-primary/30 bg-primary/10'
+    };
+  } else if (cert.includes('sanctuary') || cert.includes('reserve') || isDarkSkyReserve) {
     return {
       icon: Globe,
       text: 'Dark Sky Reserve',
-      color: 'text-blue-400 border-blue-400/30 bg-blue-400/10'
+      color: 'text-primary border-primary/30 bg-primary/10'
     };
   } else if (cert.includes('park')) {
     return {
       icon: Trees,
       text: 'Dark Sky Park',
-      color: 'text-green-400 border-green-400/30 bg-green-400/10'
+      color: 'text-primary border-primary/30 bg-primary/10'
     };
   } else if (cert.includes('community')) {
     return {
       icon: Building2,
       text: 'Dark Sky Community',
-      color: 'text-amber-400 border-amber-400/30 bg-amber-400/10'
+      color: 'text-primary border-primary/30 bg-primary/10'
     };
   } else if (cert.includes('urban')) {
     return {
       icon: Building2,
       text: 'Urban Night Sky',
-      color: 'text-purple-400 border-purple-400/30 bg-purple-400/10'
+      color: 'text-primary border-primary/30 bg-primary/10'
     };
   } else {
     return {
       icon: ShieldCheck,
       text: 'Certified Location',
-      color: 'text-blue-300 border-blue-300/30 bg-blue-300/10'
+      color: 'text-primary border-primary/30 bg-primary/10'
     };
   }
 }
 
 // Helper function to get localized certification text
-function getLocalizedCertText(certInfo: CertificationInfo, language: Language): string {
+export function getLocalizedCertText(certInfo: CertificationInfo, language: Language): string {
   if (!certInfo) return '';
   
   const certText = certInfo.text;
@@ -98,6 +104,7 @@ function getLocalizedCertText(certInfo: CertificationInfo, language: Language): 
     if (certText === 'Dark Sky Community') return '暗夜社区';
     if (certText === 'Urban Night Sky') return '城市夜空';
     if (certText === 'Certified Location') return '认证地点';
+    if (certText === 'Dark Sky Lodging') return '暗夜住宿';
   }
   
   return certText;

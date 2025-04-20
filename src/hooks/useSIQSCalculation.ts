@@ -98,7 +98,7 @@ export const useSIQSCalculation = (
       // We need to recalculate moon phase to ensure it's fresh
       const freshMoonPhase = calculateMoonPhase();
       
-      // Calculate SIQS score using utility function
+      // Calculate SIQS score using utility function with optional forecast data
       const siqsResult = await calculateSIQSWithWeatherData(
         data,
         validBortleScale,

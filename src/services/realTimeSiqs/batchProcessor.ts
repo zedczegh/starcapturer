@@ -1,6 +1,7 @@
 
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateRealTimeSiqs } from './siqsCalculator';
+import { getSiqsScore, isSiqsGreaterThan } from '@/utils/siqsHelpers';
 
 /**
  * Batch process multiple locations for SIQS calculation
@@ -93,6 +94,6 @@ export async function batchCalculateSiqs(
   
   // Filter out any locations with SIQS = 0 and sort by SIQS (highest first)
   return updatedLocations
-    .filter(loc => loc.siqs > 0)
-    .sort((a, b) => (b.siqs || 0) - (a.siqs || 0));
+    .filter(loc => isSiqsGreaterThan(loc.siqs, 0))
+    .sort((a, b) => (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0));
 }

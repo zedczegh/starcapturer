@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import useMapMarkers from '@/hooks/photoPoints/useMapMarkers';
@@ -8,7 +8,7 @@ import LazyMapContainer from './LazyMapContainer';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
 import PageLoader from '@/components/loaders/PageLoader';
 import MapLegend from './MapLegend';
-import PinpointButton from './PinpointButton';
+import CenteringPinpointButton from './CenteringPinpointButton';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -35,10 +35,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   
   const { t } = useLanguage();
   const isMobile = useIsMobile();
-  const [mapContainerHeight, setMapContainerHeight] = useState('500px');
+  const [mapContainerHeight, setMapContainerHeight] = useState('450px');
   const [legendOpen, setLegendOpen] = useState(false);
+  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   
-  // Use marker hook for tracking hover states
   const { 
     hoveredLocationId, 
     handleHover,
@@ -47,7 +47,19 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     handleTouchMove
   } = useMapMarkers();
   
-  // Use map hook for core functionality
+  console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
+  
+  // Determine which locations to display based on active view
+  const locationsToShow = useMemo(() => {
+    if (activeView === 'certified') {
+      return certifiedLocations;
+    } else {
+      // For calculated view, include both certified and calculated locations
+      return [...calculatedLocations, ...(activeView === 'calculated' ? [] : certifiedLocations)];
+    }
+  }, [activeView, certifiedLocations, calculatedLocations]);
+  
+  // Pass all locations to the hook, but let it handle filtering based on activeView
   const { 
     mapReady,
     handleMapReady,
@@ -59,20 +71,53 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     certifiedLocationsLoading
   } = usePhotoPointsMap({
     userLocation,
-    locations,
+    locations: locationsToShow,
     searchRadius,
     activeView
   });
   
-  // Adjust height based on device
+  console.log(`PhotoPointsMap: validLocations=${validLocations?.length || 0}, mapReady=${mapReady}`);
+  
+  // Filter out some locations on mobile for better performance
+  const optimizedLocations = useMemo(() => {
+    // If no valid locations available, return empty array
+    if (!validLocations || validLocations.length === 0) {
+      console.log("No valid locations to display");
+      return [];
+    }
+
+    if (!isMobile) {
+      console.log(`Displaying all ${validLocations.length} locations (desktop)`);
+      return validLocations;
+    }
+    
+    // For mobile, limit the number of displayed locations
+    if (validLocations.length <= 30) {
+      console.log(`Displaying all ${validLocations.length} locations (mobile, under limit)`);
+      return validLocations;
+    }
+    
+    // Always keep certified locations
+    const certified = validLocations.filter(loc => 
+      loc.isDarkSkyReserve || loc.certification
+    );
+    
+    // For non-certified locations, if we have too many, sample them
+    const nonCertified = validLocations
+      .filter(loc => !loc.isDarkSkyReserve && !loc.certification)
+      .filter((_, index) => index % (activeView === 'certified' ? 4 : 2) === 0)
+      .slice(0, 50); // Hard limit for performance
+    
+    console.log(`Optimized for mobile: ${certified.length} certified + ${nonCertified.length} calculated locations`);
+    return [...certified, ...nonCertified];
+  }, [validLocations, isMobile, activeView]);
+  
   useEffect(() => {
     const adjustHeight = () => {
       if (isMobile) {
-        setMapContainerHeight(window.innerHeight >= 700 
-          ? 'calc(70vh - 180px)'
-          : 'calc(80vh - 160px)');
+        setMapContainerHeight('calc(70vh - 200px)');
       } else {
-        setMapContainerHeight('500px');
+        setMapContainerHeight('450px');
       }
     };
     
@@ -81,13 +126,21 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     return () => window.removeEventListener('resize', adjustHeight);
   }, [isMobile]);
   
-  // Handler functions
+  // Debounced map click handler to prevent rapid location changes
   const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (onLocationUpdate) {
-      onLocationUpdate(lat, lng);
+    if (onLocationUpdate && !isUpdatingLocation) {
+      setIsUpdatingLocation(true);
       console.log("Setting new location from map click:", lat, lng);
+      
+      // Call the location update and reset the updating state after a delay
+      onLocationUpdate(lat, lng);
+      
+      // Prevent multiple updates in quick succession
+      setTimeout(() => {
+        setIsUpdatingLocation(false);
+      }, 1000);
     }
-  }, [onLocationUpdate]);
+  }, [onLocationUpdate, isUpdatingLocation]);
   
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {
@@ -98,26 +151,33 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   }, [onLocationClick, handleLocationClick]);
   
   const handleGetLocation = useCallback(() => {
-    if (onLocationUpdate && navigator.geolocation) {
+    if (onLocationUpdate && navigator.geolocation && !isUpdatingLocation) {
+      setIsUpdatingLocation(true);
+      
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           onLocationUpdate(latitude, longitude);
           console.log("Got user position:", latitude, longitude);
+          
+          // Reset updating state after delay
+          setTimeout(() => {
+            setIsUpdatingLocation(false);
+          }, 1000);
         },
         (error) => {
           console.error("Error getting location:", error.message);
+          setIsUpdatingLocation(false);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     }
-  }, [onLocationUpdate]);
+  }, [onLocationUpdate, isUpdatingLocation]);
   
   const handleLegendToggle = useCallback((isOpen: boolean) => {
     setLegendOpen(isOpen);
   }, []);
   
-  // Render map container
   return (
     <div 
       style={{ height: mapContainerHeight }} 
@@ -129,16 +189,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         </div>
       )}
       
-      {certifiedLocationsLoading && !certifiedLocationsLoaded && (
-        <div className="absolute top-4 left-0 right-0 mx-auto w-auto max-w-xs z-30 bg-background/80 backdrop-blur-sm px-4 py-2 rounded-md text-center text-sm text-muted-foreground">
-          {t("Loading certified locations...", "正在加载认证地点...")}
-        </div>
-      )}
-      
       <LazyMapContainer
         center={mapCenter}
         userLocation={userLocation}
-        locations={validLocations}
+        locations={optimizedLocations}
         searchRadius={searchRadius}
         activeView={activeView}
         onMapReady={handleMapReady}
@@ -151,24 +205,26 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         handleTouchEnd={handleTouchEnd}
         handleTouchMove={handleTouchMove}
         isMobile={isMobile}
-        useMobileMapFixer={true}
-        showRadiusCircles={activeView === 'calculated'}
+        useMobileMapFixer={false}
+        showRadiusCircles={activeView === 'calculated' && !isMobile}
       />
       
-      <MapLegend 
-        activeView={activeView} 
-        showStarLegend={activeView === 'certified'}
-        showCircleLegend={activeView === 'calculated'}
-        onToggle={handleLegendToggle}
-        className="absolute bottom-4 right-4"
-      />
-      
-      {!legendOpen && (
-        <PinpointButton 
-          onGetLocation={handleGetLocation} 
-          className="absolute top-4 right-4"
+      {!isMobile && (
+        <MapLegend 
+          activeView={activeView} 
+          showStarLegend={activeView === 'certified'}
+          showCircleLegend={activeView === 'calculated'}
+          onToggle={handleLegendToggle}
+          className="absolute top-4 right-4 z-[999]"
         />
       )}
+      
+      {/* Position the pinpoint button at bottom-right corner of the map */}
+      <CenteringPinpointButton
+        onGetLocation={handleGetLocation}
+        userLocation={userLocation}
+        className="absolute bottom-4 right-4 z-[999]"
+      />
     </div>
   );
 };

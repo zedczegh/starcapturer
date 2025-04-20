@@ -1,8 +1,9 @@
 
-// Re-export components from different files for better organization
-export { WorldBoundsController, MapEvents } from './MapEffectsController';
-export { default as MapEffectsComposer } from './effects/MapEffectsComposer';
-export { default as SiqsEffectsController } from './effects/SiqsEffectsController';
+import React from 'react';
 
-// Add optimized component for lazy loading map and markers
-export { default as LazyMapContainer } from './LazyMapContainer';
+// Re-export the MapEffectsComposer component
+import MapEffectsComposer from './effects/MapEffectsComposer';
+export { MapEffectsComposer };
+
+// Export other common map components if needed
+export * from './MarkerUtils';
