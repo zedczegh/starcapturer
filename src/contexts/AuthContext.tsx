@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,7 +30,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
@@ -39,7 +37,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -53,15 +50,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
       
-      // Show user confirmation message about email verification
       if (data.user && !data.user.confirmed_at) {
-        toast.success("Verification email sent! Please check your inbox and confirm your email.", {
-          duration: 6000,
-          description: "You will need to verify your email before logging in."
-        });
+        toast.success(
+          t("Verification email sent!", "验证邮件已发送！"),
+          {
+            description: t(
+              "Please check your inbox and spam folder. Click the verification link to complete your registration.",
+              "请检查收件箱和垃圾邮件文件夹。点击验证链接完成注册。"
+            ),
+            duration: 8000,
+          }
+        );
       }
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(
+        t("Sign up failed", "注册失败"),
+        {
+          description: error.message
+        }
+      );
     }
   };
 
@@ -69,16 +76,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      toast.success("Signed in successfully!");
+
+      toast.success(
+        t("Signed in successfully!", "登录成功！"),
+        {
+          description: t(
+            "Welcome back to AstroSIQS!", 
+            "欢迎回到 AstroSIQS！"
+          )
+        }
+      );
     } catch (error: any) {
       if (error.message.includes("Email not confirmed")) {
-        toast.error("Please confirm your email before signing in.", {
-          description: "Check your inbox for the verification email."
-        });
+        toast.error(
+          t("Email not verified", "邮箱未验证"),
+          {
+            description: t(
+              "Please check your email and click the verification link to complete registration.",
+              "请检查您的邮箱并点击验证链接完成注册。"
+            )
+          }
+        );
       } else {
-        toast.error("Sign in failed", {
-          description: error.message
-        });
+        toast.error(
+          t("Sign in failed", "登录失败"),
+          {
+            description: error.message
+          }
+        );
       }
     }
   };
