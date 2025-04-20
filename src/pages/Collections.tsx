@@ -106,7 +106,14 @@ const Collections = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {locations.map((location) => (
-              <div key={location.id} className="relative">
+              <div 
+                key={location.id} 
+                className={`relative rounded-lg overflow-hidden ${
+                  location.certification || location.isDarkSkyReserve 
+                    ? 'border-2 border-primary/50 bg-primary/5' 
+                    : 'border border-border'
+                }`}
+              >
                 <PhotoPointCard
                   point={{
                     id: location.id,
@@ -123,10 +130,11 @@ const Collections = () => {
                   onViewDetails={() => navigate(`/location/${location.id}`)}
                   userLocation={null}
                 />
-                <DeleteLocationButton locationId={location.id} userId={user.id} />
+                <div className="absolute bottom-3 left-3">
+                  <DeleteLocationButton locationId={location.id} userId={user.id} />
+                </div>
                 <RealTimeSiqsProvider
                   isVisible={true}
-                  showRealTimeSiqs={true}
                   latitude={Number(location.latitude)}
                   longitude={Number(location.longitude)}
                   bortleScale={location.bortlescale}

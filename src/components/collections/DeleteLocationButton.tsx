@@ -32,10 +32,10 @@ const DeleteLocationButton = ({ locationId, userId }: DeleteLocationButtonProps)
 
   return (
     <Button 
-      variant="ghost" 
+      variant="destructive" 
       size="sm" 
       onClick={handleDelete}
-      className="absolute top-2 right-2 text-muted-foreground hover:text-destructive"
+      className="bg-destructive/90 hover:bg-destructive"
     >
       <Trash2 className="h-4 w-4" />
     </Button>
