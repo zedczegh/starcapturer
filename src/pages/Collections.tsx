@@ -14,7 +14,7 @@ import useEnhancedLocation from "@/hooks/useEnhancedLocation";
 
 const Collections = () => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +91,12 @@ const Collections = () => {
       skip: false
     });
 
-    const enhancedName = locationDetails?.formattedName || location.name;
+    let enhancedName;
+    if (language === 'zh') {
+      enhancedName = locationDetails?.chineseName || locationDetails?.formattedName || location.name;
+    } else {
+      enhancedName = locationDetails?.formattedName || location.name;
+    }
 
     return (
       <div 
@@ -105,6 +110,7 @@ const Collections = () => {
           point={{
             id: location.id,
             name: enhancedName,
+            chineseName: locationDetails?.chineseName,
             latitude: Number(location.latitude),
             longitude: Number(location.longitude),
             bortleScale: location.bortlescale,
