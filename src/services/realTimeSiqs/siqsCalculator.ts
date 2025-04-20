@@ -1,3 +1,4 @@
+
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -14,6 +15,10 @@ import { findClimateRegion, getClimateAdjustmentFactor } from "./climateRegions"
 import { findClosestEnhancedLocation } from "./enhancedLocationData";
 import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
 import { extractSingleHourCloudCover } from "@/utils/weather/hourlyCloudCoverExtractor";
+
+// Performance optimization: Reduce duplicate calculations with memoization
+const memoizedResults = new Map<string, {result: SiqsResult, timestamp: number}>();
+const MEMO_EXPIRY = 5 * 60 * 1000; // 5 minutes
 
 function improveCalculatedLocationSIQS(initialScore: number, location: any): number {
   if (initialScore < 0.5) {
@@ -77,24 +82,43 @@ export async function calculateRealTimeSiqs(
     cacheDurationMins = 15
   } = options;
   
-  // Check cache first before proceeding
+  // Generate a cache key
+  const cacheKey = `siqs-${latitude.toFixed(4)}-${longitude.toFixed(4)}-${bortleScale.toFixed(1)}`;
+  
+  // Check memory cache first (fastest)
+  const memoizedResult = memoizedResults.get(cacheKey);
+  if (memoizedResult && (Date.now() - memoizedResult.timestamp) < MEMO_EXPIRY) {
+    console.log("Using in-memory cached SIQS result");
+    return memoizedResult.result;
+  }
+  
+  // Check persistent cache next
   if (hasCachedSiqs(latitude, longitude)) {
     const cachedData = getCachedSiqs(latitude, longitude);
     if (cachedData && 
         (Date.now() - new Date(cachedData.metadata?.calculatedAt || 0).getTime()) < cacheDurationMins * 60 * 1000) {
+      // Store in memory cache for even faster access next time
+      memoizedResults.set(cacheKey, {
+        result: cachedData,
+        timestamp: Date.now()
+      });
       return cachedData;
     }
   }
   
   try {
-    const enhancedLocation = await findClosestEnhancedLocation(latitude, longitude);
-    const climateRegion = findClimateRegion(latitude, longitude);
+    // Use Promise.all for parallel API calls
+    const [enhancedLocation, climateRegion, forecastData] = await Promise.all([
+      findClosestEnhancedLocation(latitude, longitude),
+      findClimateRegion(latitude, longitude),
+      fetchForecastData({ latitude, longitude, days: 2 }).catch(() => null)
+    ]);
     
-    const [weatherData, forecastData, clearSkyData, pollutionData] = await Promise.all([
+    // Only fetch these if needed and after initial forecast check
+    const [weatherData, clearSkyData, pollutionData] = await Promise.all([
       fetchWeatherData({ latitude, longitude }),
-      fetchForecastData({ latitude, longitude, days: 2 }),
-      fetchClearSkyRate(latitude, longitude),
-      fetchLightPollutionData(latitude, longitude)
+      fetchClearSkyRate(latitude, longitude).catch(() => null),
+      fetchLightPollutionData(latitude, longitude).catch(() => null)
     ]);
     
     if (!weatherData) {
@@ -102,9 +126,13 @@ export async function calculateRealTimeSiqs(
     }
     
     let finalBortleScale = bortleScale;
-    const terrainCorrectedScale = await getTerrainCorrectedBortleScale(latitude, longitude);
-    if (terrainCorrectedScale !== null) {
-      finalBortleScale = terrainCorrectedScale;
+    try {
+      const terrainCorrectedScale = await getTerrainCorrectedBortleScale(latitude, longitude);
+      if (terrainCorrectedScale !== null) {
+        finalBortleScale = terrainCorrectedScale;
+      }
+    } catch (e) {
+      console.warn("Could not get terrain-corrected Bortle scale:", e);
     }
     
     // Prepare weather data with clear sky info
@@ -121,7 +149,6 @@ export async function calculateRealTimeSiqs(
       const singleHourCloudCover = extractSingleHourCloudCover(forecastData, targetHour);
       
       if (singleHourCloudCover !== null) {
-        console.log(`Using ${targetHour}AM cloud cover for SIQS: ${singleHourCloudCover.toFixed(1)}%`);
         weatherDataWithClearSky.cloudCover = singleHourCloudCover;
         weatherDataWithClearSky.nighttimeCloudData = {
           average: singleHourCloudCover,
@@ -208,6 +235,12 @@ export async function calculateRealTimeSiqs(
     
     // Cache the result
     setSiqsCache(latitude, longitude, result);
+    
+    // Add to memory cache
+    memoizedResults.set(cacheKey, {
+      result,
+      timestamp: Date.now()
+    });
     
     return result;
     

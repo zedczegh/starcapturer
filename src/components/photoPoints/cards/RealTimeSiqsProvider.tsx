@@ -15,6 +15,10 @@ interface RealTimeSiqsProviderProps {
   forceUpdate?: boolean;
 }
 
+// In-memory cache across all provider instances
+const resultCache = new Map<string, {data: any, timestamp: number}>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   isVisible,
   latitude,
@@ -39,10 +43,27 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   const existingSiqsNumber = typeof existingSiqs === 'number' ? existingSiqs : 
     (typeof existingSiqs === 'object' && existingSiqs && 'score' in existingSiqs) ? existingSiqs.score : 0;
   
+  const getCacheKey = useCallback(() => {
+    if (!latitude || !longitude) return null;
+    return `siqs-${latitude.toFixed(5)}-${longitude.toFixed(5)}-${bortleScale}`;
+  }, [latitude, longitude, bortleScale]);
+  
   useEffect(() => {
     isMounted.current = true;
     
-    if (isCertified && !fetchAttempted) {
+    // Check for cached results first
+    const cacheKey = getCacheKey();
+    if (cacheKey && !forceUpdate) {
+      const cached = resultCache.get(cacheKey);
+      if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+        onSiqsCalculated(cached.data.siqs, false, cached.data.source === 'realtime' ? 9 : 7);
+        setFetchAttempted(true);
+        console.log(`Using cached SIQS result for ${latitude},${longitude}`);
+        return;
+      }
+    }
+    
+    if (isCertified && !fetchAttempted && isVisible) {
       console.log(`RealTimeSiqsProvider: Initiating immediate fetch for certified location at ${latitude},${longitude}`);
       fetchSiqs();
     }
@@ -109,6 +130,15 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       onSiqsCalculated(result.siqs, false, result.source === 'realtime' ? 9 : 7);
       setLastFetchTimestamp(Date.now());
       
+      // Update the cache
+      const cacheKey = getCacheKey();
+      if (cacheKey) {
+        resultCache.set(cacheKey, {
+          data: result,
+          timestamp: Date.now()
+        });
+      }
+      
     } catch (error) {
       console.error("Error in RealTimeSiqsProvider:", error);
       
@@ -127,7 +157,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         setIsInitialFetch(false);
       }
     }
-  }, [latitude, longitude, bortleScale, isCertified, isDarkSkyReserve, existingSiqsNumber, onSiqsCalculated, forceUpdate]);
+  }, [latitude, longitude, bortleScale, isCertified, isDarkSkyReserve, existingSiqsNumber, onSiqsCalculated, forceUpdate, getCacheKey]);
   
   useEffect(() => {
     if (fetchTimeoutRef.current) {
@@ -141,12 +171,15 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       return;
     }
     
+    // Reduce unnecessary fetches by checking visibility and cache
     const shouldFetch = 
-      !fetchAttempted ||
-      (Date.now() - lastFetchTimestamp > REFRESH_INTERVAL) ||
-      (isCertified && !fetchAttempted);
+      isVisible && 
+      latitude && 
+      longitude && 
+      (!fetchAttempted || (Date.now() - lastFetchTimestamp > REFRESH_INTERVAL));
     
-    if ((isVisible || isCertified) && latitude && longitude && shouldFetch) {
+    if (shouldFetch) {
+      // Use a staggered delay to prevent all components from fetching at once
       const delay = isCertified ? 
         Math.random() * 500 + (Math.abs(latitude) + Math.abs(longitude)) % 1000 : 0;
       
