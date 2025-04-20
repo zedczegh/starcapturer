@@ -1,109 +1,97 @@
 
 /**
- * Utility functions for star counting and sky brightness analysis
- * These help improve the accuracy of Bortle scale measurements
+ * Utilities for counting stars in images and calculating Bortle scale
+ * This enables more accurate Bortle scale determination based on direct observation
  */
 
 /**
- * Count stars in image data with enhanced detection algorithm
- * @param imageData Raw image data from camera
- * @returns Number of stars detected
+ * Count stars in an image using pixel brightness analysis
+ * @param imageData Image data from canvas
+ * @returns Estimated star count
  */
 export function countStarsInImage(imageData: ImageData): number {
-  const data = imageData.data;
   const width = imageData.width;
   const height = imageData.height;
+  const data = imageData.data;
   
-  // Optimized threshold values for star detection based on astronomical research
-  const brightnessThreshold = 170; // Slightly lower threshold to catch more stars
-  const contrastThreshold = 45;    // Improved contrast threshold
-  const minStarSize = 2;          // Minimum size in pixels to be considered a star
+  // Parameters for star detection
+  const brightnessTolerance = 80; // Higher = more stars detected
+  const minBrightness = 150; // Minimum pixel brightness to be considered a star
+  const minStarSize = 2; // Minimum star size in pixels
+  const maxStarSize = 20; // Maximum star size in pixels
   
+  // Track visited pixels to avoid counting the same star twice
+  const visited = new Set<number>();
+  
+  // Stars found
   let starCount = 0;
-  const starPixels = new Set(); // To avoid counting the same star multiple times
   
-  // First pass: calculate background luminance for adaptive thresholding
-  let totalLuminance = 0;
-  let pixelCount = 0;
+  // Helper to get pixel index
+  const getPixelIndex = (x: number, y: number) => (y * width + x) * 4;
   
-  for (let y = 0; y < height; y += 4) { // Sample every 4th pixel for speed
-    for (let x = 0; x < width; x += 4) {
-      const i = (y * width + x) * 4;
-      const pixelBrightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-      totalLuminance += pixelBrightness;
-      pixelCount++;
-    }
-  }
+  // Helper to get pixel brightness
+  const getBrightness = (index: number) => {
+    const r = data[index];
+    const g = data[index + 1];
+    const b = data[index + 2];
+    return (r + g + b) / 3;
+  };
   
-  // Calculate average background luminance
-  const avgLuminance = totalLuminance / pixelCount;
+  // Helper to check if a pixel is a star
+  const isStarPixel = (index: number) => {
+    const brightness = getBrightness(index);
+    return brightness >= minBrightness;
+  };
   
-  // Adjust threshold based on background luminance
-  // This helps in both very dark and light polluted areas
-  const adaptiveBrightnessThreshold = Math.max(
-    brightnessThreshold,
-    avgLuminance + contrastThreshold
-  );
-  
-  // Second pass: detect stars using adaptive threshold
-  for (let y = minStarSize; y < height - minStarSize; y++) {
-    for (let x = minStarSize; x < width - minStarSize; x++) {
-      const i = (y * width + x) * 4;
+  // Flood fill algorithm to find connected star pixels
+  const floodFill = (startX: number, startY: number) => {
+    const stack = [{x: startX, y: startY}];
+    let size = 0;
+    
+    while (stack.length > 0) {
+      const {x, y} = stack.pop()!;
+      const index = getPixelIndex(x, y);
       
-      // Calculate pixel brightness (weighted RGB for better star color detection)
-      const brightness = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
-      
-      // Skip pixels below threshold
-      if (brightness <= adaptiveBrightnessThreshold) continue;
-      
-      // Check if this could be a star center
-      let isLocalMax = true;
-      let surroundingBrightness = 0;
-      let surroundingCount = 0;
-      
-      // Check 8 surrounding pixels
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          if (dx === 0 && dy === 0) continue; // Skip the center pixel
-          
-          const ni = ((y + dy) * width + (x + dx)) * 4;
-          const neighborBrightness = (data[ni] * 0.299 + data[ni + 1] * 0.587 + data[ni + 2] * 0.114);
-          
-          surroundingBrightness += neighborBrightness;
-          surroundingCount++;
-          
-          // If a neighboring pixel is brighter, this is not a local max
-          if (neighborBrightness > brightness) {
-            isLocalMax = false;
-            break;
-          }
-        }
-        if (!isLocalMax) break;
+      // Skip if already visited or out of bounds
+      if (x < 0 || x >= width || y < 0 || y >= height || visited.has(index)) {
+        continue;
       }
       
-      // Calculate contrast with surrounding pixels
-      if (isLocalMax && surroundingCount > 0) {
-        const avgSurroundingBrightness = surroundingBrightness / surroundingCount;
-        const contrast = brightness - avgSurroundingBrightness;
-        
-        // Check if contrast is high enough and not already counted
-        if (contrast > contrastThreshold) {
-          const starKey = `${x}-${y}`;
-          if (!starPixels.has(starKey)) {
-            starCount++;
-            
-            // Mark this and nearby pixels as part of a star (radius based on brightness)
-            const starRadius = Math.min(4, Math.max(2, Math.floor(contrast / 20)));
-            for (let dy = -starRadius; dy <= starRadius; dy++) {
-              for (let dx = -starRadius; dx <= starRadius; dx++) {
-                const sx = x + dx;
-                const sy = y + dy;
-                if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
-                  starPixels.add(`${sx}-${sy}`);
-                }
-              }
-            }
-          }
+      // Skip if not bright enough
+      if (!isStarPixel(index)) {
+        continue;
+      }
+      
+      // Mark as visited
+      visited.add(index);
+      size++;
+      
+      // Add neighbors to stack
+      stack.push({x: x + 1, y: y});
+      stack.push({x: x - 1, y: y});
+      stack.push({x: x, y: y + 1});
+      stack.push({x: x, y: y - 1});
+    }
+    
+    // Only count as a star if size is within limits
+    return size >= minStarSize && size <= maxStarSize;
+  };
+  
+  // Scan the image for stars
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = getPixelIndex(x, y);
+      
+      // Skip if already visited
+      if (visited.has(index)) {
+        continue;
+      }
+      
+      // Check if this pixel is bright enough to be a star
+      if (isStarPixel(index)) {
+        // Use flood fill to find the entire star
+        if (floodFill(x, y)) {
+          starCount++;
         }
       }
     }
@@ -113,81 +101,30 @@ export function countStarsInImage(imageData: ImageData): number {
 }
 
 /**
- * Calculate Bortle scale based on star count and brightness with improved algorithm
- * @param starCount Number of stars detected in the image
- * @param skyBrightness Average brightness value of the sky (0-255)
- * @returns Estimated Bortle scale (1-9)
+ * Calculate Bortle scale from star count and average sky brightness
+ * 
+ * @param starCount Number of stars visible
+ * @param avgBrightness Average brightness of the sky
+ * @returns Calculated Bortle scale (1-9)
  */
-export function calculateBortleFromStars(starCount: number, skyBrightness: number): number {
-  // Enhanced normalization that accounts for camera sensor differences
-  // Higher star counts with smartphone cameras typically max around 150-200 for very dark skies
-  const normalizedStarCount = Math.min(10, starCount / 15);
+export function calculateBortleFromStars(starCount: number, avgBrightness: number): number {
+  // Normalize star count based on image size (assuming 1080p image)
+  // This would need to be adjusted for different image sizes
+  const normalizedStarCount = starCount * (1920 * 1080) / (1920 * 1080);
   
-  // Improved sky brightness processing with exponential mapping
-  // This better reflects how light pollution affects star visibility
-  const brightnessImpact = Math.pow(skyBrightness / 255, 0.8) * 10;
-  const normalizedBrightness = 10 - brightnessImpact;
+  // Adjust for sky brightness (darker sky = more visible stars)
+  const brightnessAdjustment = Math.max(0, (128 - avgBrightness) / 128);
+  const adjustedStarCount = normalizedStarCount * (1 + brightnessAdjustment);
   
-  // Weighted combination with star count given higher priority (60/40 split)
-  // Research shows star count is more reliable than general sky brightness
-  const combinedMetric = (normalizedStarCount * 0.6) + (normalizedBrightness * 0.4);
-  
-  // Improved mapping to Bortle scale that's more accurate in middle ranges
-  // Uses a non-linear transform that's more accurate for Bortle 3-7 (most common)
-  let bortle = 9.5 - combinedMetric;
-  
-  // Apply correction for extreme values to improve accuracy at scale boundaries
-  if (combinedMetric > 7) {
-    // Dark sky correction (Bortle 1-2)
-    bortle = Math.max(1, 3 - (combinedMetric - 7) / 1.5);
-  } else if (combinedMetric < 3) {
-    // Light polluted correction (Bortle 7-9)
-    bortle = Math.min(9, 7 + (3 - combinedMetric) / 1.5);
-  }
-  
-  // Round to nearest 0.5 for more precise measurement
-  bortle = Math.round(bortle * 2) / 2;
-  
-  // Ensure result is within valid range
-  return Math.max(1, Math.min(9, bortle));
-}
-
-/**
- * Estimate star visibility based on Bortle scale with improved accuracy
- * @param bortleScale Bortle scale value (1-9)
- * @returns Approximate number of stars visible in a typical frame
- */
-export function estimateStarCountFromBortle(bortleScale: number): number {
-  // Enhanced estimation based on astronomical research
-  // Bortle 1: 150+ stars visible in frame with typical smartphone
-  // Bortle 9: < 5 stars visible
-  
-  // Use exponential decay function for more accurate mapping
-  // Stars visible drops exponentially with increasing Bortle scale
-  if (bortleScale <= 1) return 150 + Math.floor(Math.random() * 50);
-  if (bortleScale >= 9) return Math.max(0, Math.floor(Math.random() * 5));
-  
-  // Exponential decay function: stars = baseStars * e^(-k * bortleScale)
-  const baseStars = 200;
-  const decayFactor = 0.4;
-  const estimatedCount = Math.floor(baseStars * Math.exp(-decayFactor * (bortleScale - 1)));
-  
-  // Add small random variation to make it more realistic
-  const variationPercent = 0.15; // 15% variation
-  const randomVariation = Math.floor((Math.random() * 2 - 1) * estimatedCount * variationPercent);
-  
-  return Math.max(0, estimatedCount + randomVariation);
-}
-
-/**
- * Convert star count to a descriptive label with more accurate thresholds
- * @param count Approximate star count
- * @returns Description of star visibility
- */
-export function getStarVisibilityLabel(count: number): "exceptional" | "many" | "some" | "few" | "very few" {
-  if (count >= 100) return "exceptional";
-  if (count >= 50) return "many";
-  if (count >= 20) return "some";
-  if (count >= 8) return "few";
-  return "very few";
+  // Map adjusted star count to Bortle scale
+  // These thresholds are approximate and would need calibration
+  if (adjustedStarCount > 5000) return 1;       // Excellent dark-sky site
+  if (adjustedStarCount > 2500) return 2;       // Typical truly dark site
+  if (adjustedStarCount > 1200) return 3;       // Rural sky
+  if (adjustedStarCount > 600) return 4;        // Rural/suburban transition
+  if (adjustedStarCount > 300) return 5;        // Suburban sky
+  if (adjustedStarCount > 150) return 6;        // Bright suburban sky
+  if (adjustedStarCount > 50) return 7;         // Suburban/urban transition
+  if (adjustedStarCount > 20) return 8;         // City sky
+  return 9;                                    // Inner city sky
 }
