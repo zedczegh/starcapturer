@@ -40,6 +40,11 @@ const ProfileButton = () => {
     }
   }, [user]);
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/photo-points');
+  };
+
   if (!user) {
     return (
       <>

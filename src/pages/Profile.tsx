@@ -46,7 +46,11 @@ const Profile = () => {
       }
 
       if (data) {
-        setProfile(data);
+        setProfile({
+          username: data.username || '',
+          avatar_url: data.avatar_url,
+          date_of_birth: data.date_of_birth
+        });
         setUsername(data.username || '');
         setDateOfBirth(data.date_of_birth || '');
         setAvatarUrl(data.avatar_url);
