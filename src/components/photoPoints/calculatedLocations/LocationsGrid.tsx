@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -42,6 +43,15 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
 
   const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : locations;
   
+  // Create a handler function that wraps the onViewDetails callback
+  // to match the expected function signature
+  const handleViewDetails = (location: SharedAstroSpot) => (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event bubbling
+    if (onViewDetails) {
+      onViewDetails(location);
+    }
+  };
+  
   return (
     <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2'} gap-4 mb-6`}>
       {locationsToDisplay.map((location, index) => (
@@ -53,7 +63,7 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
         >
           <PhotoPointCard
             point={location}
-            onViewDetails={onViewDetails}
+            onViewDetails={handleViewDetails(location)}
             userLocation={null} // This doesn't use current location for distance
           />
         </motion.div>

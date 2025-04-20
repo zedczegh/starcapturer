@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -75,14 +74,15 @@ const AboutFooter = () => {
           </Button>
         </Link>
         
-        <Button 
-          variant="outline" 
-          className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
-          onClick={handleSIQSClick}
-        >
-          <Info className="mr-2 h-4 w-4 text-teal-400" />
-          {t("Calculate SIQS", "计算SIQS")}
-        </Button>
+        <Link to="/location/siqs-calculator">
+          <Button 
+            variant="outline" 
+            className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
+          >
+            <Info className="mr-2 h-4 w-4 text-teal-400" />
+            {t("Calculate SIQS", "计算SIQS")}
+          </Button>
+        </Link>
       </motion.div>
       
       <motion.div variants={buttonVariants} className="mt-8">
@@ -101,7 +101,6 @@ const AboutFooter = () => {
         </div>
       </motion.div>
       
-      {/* Social links */}
       <motion.div variants={buttonVariants} className="flex justify-center gap-4 pt-4">
         <a href="https://github.com/bortle-now" target="_blank" rel="noopener noreferrer" className="text-cosmic-400 hover:text-cosmic-200 transition-colors">
           <Github size={20} />

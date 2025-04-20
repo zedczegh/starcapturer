@@ -1,23 +1,28 @@
 
 import React, { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import NavBar from "@/components/NavBar";
 import { Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import PhotoPointCard from "@/components/photoPoints/PhotoPointCard";
+import { Card, CardContent } from "@/components/ui/card";
 import DeleteLocationButton from "@/components/collections/DeleteLocationButton";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import useEnhancedLocation from "@/hooks/useEnhancedLocation";
-import { userCollectionsService, SavedLocation } from "@/services/collections/userCollectionsService";
+import { MapPin, Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { formatSiqsScore } from "@/utils/siqsHelpers";
+import { getCertificationInfo, getLocalizedCertText } from "@/components/photoPoints/utils/certificationUtils";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 
 const Collections = () => {
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
-  const [locations, setLocations] = useState<SavedLocation[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [siqsScores, setSiqsScores] = useState<Record<string, number>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
@@ -32,8 +37,14 @@ const Collections = () => {
     const fetchCollections = async () => {
       try {
         setLoading(true);
-        const data = await userCollectionsService.getUserLocations(user.id);
-        setLocations(data);
+        const { data, error } = await supabase
+          .from('saved_locations')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setLocations(data || []);
       } catch (error: any) {
         console.error('Error fetching collections:', error);
         toast.error(t("Failed to load your collections", "无法加载您的收藏"));
@@ -54,7 +65,8 @@ const Collections = () => {
           table: 'saved_locations',
           filter: `user_id=eq.${user.id}`
         },
-        () => {
+        (payload) => {
+          console.log('Location deleted via real-time:', payload);
           fetchCollections();
         }
       )
@@ -72,80 +84,125 @@ const Collections = () => {
     setLoadingSiqs(prev => ({ ...prev, [locationId]: loading }));
   };
 
-  const handleLocationDelete = async (deletedLocationId: string) => {
-    try {
-      if (!user) return;
-      await userCollectionsService.deleteLocation(deletedLocationId, user.id);
-      setLocations(prevLocations => 
-        prevLocations.filter(location => location.id !== deletedLocationId)
-      );
-      toast.success(t("Location removed from collection", "位置已从收藏中删除"));
-    } catch (error) {
-      console.error('Error deleting location:', error);
-      toast.error(t("Failed to delete location", "删除位置失败"));
-    }
+  const handleLocationDelete = (deletedLocationId: string) => {
+    setLocations(prevLocations => 
+      prevLocations.filter(location => location.id !== deletedLocationId)
+    );
   };
 
-  const LocationCard = ({ location }: { location: SavedLocation }) => {
+  const LocationCard = ({ location }: { location: any }) => {
     const { locationDetails } = useEnhancedLocation({
       latitude: location.latitude,
       longitude: location.longitude,
       skip: false
     });
 
-    const handleViewDetails = (e: React.MouseEvent) => {
-      e.stopPropagation();
+    let displayName;
+    if (language === 'zh') {
+      displayName = locationDetails?.chineseName || locationDetails?.formattedName || location.name;
+    } else {
+      displayName = locationDetails?.formattedName || location.name;
+    }
+
+    const locationForCertInfo: SharedAstroSpot = {
+      id: location.id,
+      name: location.name,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      bortleScale: location.bortlescale,
+      timestamp: location.created_at || location.timestamp,
+      certification: location.certification,
+      isDarkSkyReserve: location.isdarkskyreserve
+    };
+
+    const certInfo = getCertificationInfo(locationForCertInfo);
+
+    // This function handles card clicks but ignores button clicks
+    const handleCardClick = (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Check if the click is on a button or inside a button
+      if (target.tagName === 'BUTTON' || 
+          target.closest('button') ||
+          target.getAttribute('role') === 'button') {
+        return; // Don't navigate if clicking on or inside a button
+      }
       navigate(`/location/${location.id}`);
     };
 
-    let enhancedName;
-    if (language === 'zh') {
-      enhancedName = locationDetails?.chineseName || locationDetails?.formattedName || location.name;
-    } else {
-      enhancedName = locationDetails?.formattedName || location.name;
-    }
+    // Don't use this function inside buttons - use direct inline functions instead
+    const navigateToDetails = () => {
+      navigate(`/location/${location.id}`);
+    };
 
     return (
-      <div 
-        className={`relative rounded-lg overflow-hidden ${
+      <Card 
+        className={`relative cursor-pointer border ${
           location.certification || location.isdarkskyreserve 
             ? 'border-2 border-primary/50 bg-primary/5' 
-            : 'border border-border'
+            : 'border-border'
         }`}
-        onClick={handleViewDetails}
+        onClick={handleCardClick}
       >
-        <PhotoPointCard
-          point={{
-            id: location.id,
-            name: enhancedName,
-            chineseName: locationDetails?.chineseName,
-            latitude: Number(location.latitude),
-            longitude: Number(location.longitude),
-            bortleScale: location.bortlescale,
-            siqs: siqsScores[location.id] || location.siqs,
-            isDarkSkyReserve: location.isdarkskyreserve,
-            certification: location.certification,
-            timestamp: location.timestamp || location.created_at
-          }}
-          onSelect={() => {}}
-          onViewDetails={handleViewDetails}
-          userLocation={null}
-        />
-        <div className="absolute bottom-3 left-3 z-10" onClick={e => e.stopPropagation()}>
-          <DeleteLocationButton 
-            locationId={location.id} 
-            userId={user!.id} 
-            onDelete={handleLocationDelete}
+        <CardContent className="p-4 relative">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-medium text-base line-clamp-1">{displayName}</h3>
+            
+            <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
+              <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
+              <span className="text-xs font-medium">
+                {formatSiqsScore(siqsScores[location.id] || location.siqs)}
+              </span>
+            </div>
+          </div>
+          
+          {certInfo && (
+            <div className="my-2">
+              <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${certInfo.color}`}>
+                {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
+                <span>{getLocalizedCertText(certInfo, language)}</span>
+              </div>
+            </div>
+          )}
+          
+          <div className="mt-2 flex items-center text-muted-foreground text-xs">
+            <MapPin className="h-3.5 w-3.5 mr-1.5" />
+            <span>{location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</span>
+          </div>
+          
+          <div className="mt-4 flex justify-between items-center">
+            {/* Using a wrapper div to prevent event bubbling */}
+            <div onClick={(e) => e.stopPropagation()}>
+              <DeleteLocationButton 
+                locationId={location.id} 
+                userId={user.id} 
+                onDelete={handleLocationDelete}
+              />
+            </div>
+            
+            {/* Using a wrapper div to prevent event bubbling */}
+            <div onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  navigate(`/location/${location.id}`);
+                }}
+                className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300 text-sm"
+              >
+                {t("View Details", "查看详情")}
+              </Button>
+            </div>
+          </div>
+          
+          <RealTimeSiqsProvider
+            isVisible={true}
+            latitude={Number(location.latitude)}
+            longitude={Number(location.longitude)}
+            bortleScale={location.bortlescale}
+            onSiqsCalculated={(siqs, loading) => handleSiqsUpdate(location.id, siqs, loading)}
           />
-        </div>
-        <RealTimeSiqsProvider
-          isVisible={true}
-          latitude={Number(location.latitude)}
-          longitude={Number(location.longitude)}
-          bortleScale={location.bortlescale}
-          onSiqsCalculated={(siqs, loading) => handleSiqsUpdate(location.id, siqs, loading)}
-        />
-      </div>
+        </CardContent>
+      </Card>
     );
   };
 
