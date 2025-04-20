@@ -77,4 +77,12 @@ export interface SiqsCalculationOptions {
   adjustForLatitude?: boolean;
   useSingleHourSampling?: boolean;
   targetHour?: number;
+  cacheDurationMins?: number;
+}
+
+// Add interface for display options
+export interface SiqsDisplayOptions {
+  skipCache?: boolean;
+  useSingleHourSampling?: boolean;
+  targetHour?: number;
 }

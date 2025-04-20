@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getCompleteSiqsDisplay } from '@/utils/unifiedSiqsDisplay';
+import { SiqsDisplayOptions } from '@/services/realTimeSiqs/siqsTypes';
 
 interface RealTimeSiqsProviderProps {
   isVisible: boolean;
@@ -87,6 +88,12 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       
       const useCache = !forceUpdate;
       
+      const options: SiqsDisplayOptions = {
+        skipCache: forceUpdate,
+        useSingleHourSampling: true,
+        targetHour: 1
+      };
+      
       const result = await getCompleteSiqsDisplay({
         latitude,
         longitude,
@@ -94,9 +101,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         isCertified,
         isDarkSkyReserve,
         existingSiqs: existingSiqsNumber,
-        skipCache: forceUpdate,
-        useSingleHourSampling: true,
-        targetHour: 1
+        ...options
       });
       
       if (!isMounted.current) return;
