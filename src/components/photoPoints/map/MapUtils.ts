@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
 import { isWaterLocation } from "@/utils/validation";
@@ -15,12 +16,12 @@ export function filterLocations(
     return [];
   }
   
-  // Always keep certified locations - apply filtering to calculated locations only
+  // First, ensure we have all certified locations separately
   const certifiedLocations = locations.filter(loc => 
     Boolean(loc.certification || loc.isDarkSkyReserve)
   );
   
-  // For certified view, just return certified locations
+  // For certified view, just return certified locations without any filtering
   if (activeView === 'certified') {
     return certifiedLocations;
   }

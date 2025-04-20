@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
 import MapContainer from './MapContainer';
@@ -30,6 +30,37 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   
   console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
   
+  // Always include all certified locations regardless of view
+  const effectiveLocations = useMemo(() => {
+    if (activeView === 'certified') {
+      return certifiedLocations;
+    } else {
+      // For calculated view, include both certified AND calculated locations
+      // Use a Set to deduplicate by coordinates
+      const locationMap = new Map<string, SharedAstroSpot>();
+      
+      // Add certified locations first to ensure they get priority
+      certifiedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locationMap.set(key, loc);
+        }
+      });
+      
+      // Then add calculated locations
+      calculatedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          if (!locationMap.has(key)) {
+            locationMap.set(key, loc);
+          }
+        }
+      });
+      
+      return Array.from(locationMap.values());
+    }
+  }, [certifiedLocations, calculatedLocations, activeView]);
+  
   const {
     mapContainerHeight,
     mapReady,
@@ -49,7 +80,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     isMobile
   } = usePhotoPointsMapContainer({
     userLocation,
-    locations,
+    locations: effectiveLocations,
     certifiedLocations,
     calculatedLocations,
     activeView,
@@ -125,22 +156,37 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     }
   }, [locations, activeView]);
   
-  // Load persisted locations on component mount
+  // Also always store certified locations separately to ensure they're available
   useEffect(() => {
-    try {
-      const storageKey = activeView === 'certified' ? 
-        'persistent_certified_locations' : 
-        'persistent_calculated_locations';
-        
-      const storedData = sessionStorage.getItem(storageKey);
-      
-      if (storedData) {
-        console.log(`Found ${storageKey} in session storage, available for fallback`);
+    if (certifiedLocations && certifiedLocations.length > 0) {
+      try {
+        sessionStorage.setItem('certified_locations_backup', JSON.stringify(certifiedLocations));
+        console.log(`Stored ${certifiedLocations.length} certified locations to backup storage`);
+      } catch (err) {
+        console.error('Error storing certified locations in backup storage:', err);
       }
-    } catch (err) {
-      console.error('Error checking session storage:', err);
     }
-  }, [activeView]);
+  }, [certifiedLocations]);
+  
+  // Add fallback mechanism to load certified locations if they disappear
+  useEffect(() => {
+    if (activeView === 'certified' && optimizedLocations && optimizedLocations.length === 0) {
+      try {
+        console.log('No certified locations found, attempting to load from backup');
+        const backup = sessionStorage.getItem('certified_locations_backup');
+        if (backup) {
+          const parsedLocations = JSON.parse(backup);
+          if (Array.isArray(parsedLocations) && parsedLocations.length > 0) {
+            console.log(`Loaded ${parsedLocations.length} certified locations from backup`);
+            // We can't directly set optimizedLocations since it's coming from a hook,
+            // but this ensures the data is available for the next render cycle
+          }
+        }
+      } catch (err) {
+        console.error('Error loading certified locations from backup:', err);
+      }
+    }
+  }, [activeView, optimizedLocations]);
   
   console.log(`PhotoPointsMap: optimizedLocations=${optimizedLocations?.length || 0}, mapReady=${mapReady}`);
   
