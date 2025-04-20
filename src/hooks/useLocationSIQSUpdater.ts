@@ -7,6 +7,8 @@ import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightT
 /**
  * Hook to update SIQS score based on forecast data, ensuring consistency
  * throughout the application using astronomical night calculations
+ * 
+ * This enhanced version prioritizes astronomical night cloud cover over current conditions.
  */
 export const useLocationSIQSUpdater = (
   locationData: any, 
@@ -75,11 +77,12 @@ export const useLocationSIQSUpdater = (
         
         console.log(`Astronomical night for location: ${nightTimeStr}`);
         
-        // Calculate new SIQS based on astronomical nighttime conditions
+        // HIGH PRIORITY: Always try to calculate nighttime SIQS first
+        // This now always takes priority over current weather
         const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
         
         if (freshSIQSResult) {
-          console.log(`Updated SIQS score: ${freshSIQSResult.score.toFixed(2)}`);
+          console.log(`Updated SIQS score using astronomical night data: ${freshSIQSResult.score.toFixed(2)}`);
           
           // Update the SIQS result with the fresh calculation
           setLocationData({
@@ -88,10 +91,9 @@ export const useLocationSIQSUpdater = (
           });
           
           updateAttemptedRef.current = true;
-        } else if (forecastData?.hourly?.cloud_cover && locationData.weatherData) {
-          // If we couldn't calculate nighttime SIQS but have forecast data,
-          // use our improved astronomical night cloud cover calculation
-          
+        } 
+        // If nighttime SIQS calculator failed, try explicit nighttime cloud cover calculation
+        else if (forecastData?.hourly?.cloud_cover) {
           // Calculate cloud cover for the astronomical night
           const tonightCloudCover = calculateTonightCloudCover(
             forecastData.hourly,
@@ -99,34 +101,57 @@ export const useLocationSIQSUpdater = (
             longitude
           );
           
-          // Convert to SIQS score
-          const estimatedScore = Math.max(0, Math.min(10, 10 - (tonightCloudCover * 0.25)));
-          
-          console.log(`Using calculated tonight's cloud cover for SIQS (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}% -> ${estimatedScore}`);
-          
-          setLocationData({
-            ...locationData,
-            siqsResult: {
-              score: estimatedScore,
-              isViable: tonightCloudCover < 40,
-              factors: [
-                {
-                  name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: (100 - tonightCloudCover * 2.5) / 10,
-                  description: t 
-                    ? t(`Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`, 
-                      `今晚云量${tonightCloudCover.toFixed(1)}%影响成像质量`) 
-                    : `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`,
-                  nighttimeData: {
-                    average: tonightCloudCover,
-                    timeRange: nightTimeStr
-                  }
+          if (tonightCloudCover !== null && tonightCloudCover !== undefined) {
+            // Convert to SIQS score - giving more weight to nighttime cloud cover
+            // Improved scoring algorithm for better accuracy
+            const cloudScore = tonightCloudCover <= 10 ? 10 : Math.max(0, 10 - (tonightCloudCover * 0.2));
+            
+            console.log(`Using astronomical night cloud cover for SIQS (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}% -> ${cloudScore.toFixed(1)}`);
+            
+            // Create factors array with nighttime cloud cover as primary factor
+            const factors = [
+              {
+                name: t ? t("Astronomical Night Cloud Cover", "天文夜云层覆盖") : "Astronomical Night Cloud Cover",
+                score: (100 - tonightCloudCover * 2) / 10,
+                description: t 
+                  ? t(`Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% during astronomical night`, 
+                    `天文夜间云量${tonightCloudCover.toFixed(1)}%`) 
+                  : `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% during astronomical night`,
+                weight: 0.7, // Give higher weight to nighttime cloud cover
+                nighttimeData: {
+                  average: tonightCloudCover,
+                  timeRange: nightTimeStr
                 }
-              ]
+              }
+            ];
+            
+            // Add other factors if available
+            if (locationData.bortleScale) {
+              factors.push({
+                name: t ? t("Light Pollution", "光污染") : "Light Pollution",
+                score: Math.max(0, 10 - locationData.bortleScale) / 10,
+                description: t 
+                  ? t(`Bortle Scale ${locationData.bortleScale}`, `布尔特尔等级${locationData.bortleScale}`) 
+                  : `Bortle Scale ${locationData.bortleScale}`,
+                weight: 0.3,
+                nighttimeData: {  // Add missing nighttimeData property
+                  average: 0,
+                  timeRange: nightTimeStr
+                }
+              });
             }
-          });
-          
-          updateAttemptedRef.current = true;
+            
+            setLocationData({
+              ...locationData,
+              siqsResult: {
+                score: cloudScore,
+                isViable: tonightCloudCover < 40,
+                factors: factors
+              }
+            });
+            
+            updateAttemptedRef.current = true;
+          }
         } else if (locationData.weatherData?.cloudCover !== undefined) {
           // Last fallback to current weather if forecast is unavailable
           console.log("Using current weather as fallback (no forecast data available)");
@@ -150,7 +175,11 @@ export const useLocationSIQSUpdater = (
                   description: t 
                     ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
                       `${currentCloudCover}%的云量影响成像质量`) 
-                    : `Cloud cover of ${currentCloudCover}% affects imaging quality`
+                    : `Cloud cover of ${currentCloudCover}% affects imaging quality`,
+                  nighttimeData: {  // Add missing nighttimeData property
+                    average: currentCloudCover,
+                    timeRange: "current" 
+                  }
                 }
               ]
             }

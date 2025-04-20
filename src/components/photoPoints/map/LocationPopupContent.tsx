@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -8,6 +8,7 @@ import { Star, ExternalLink } from 'lucide-react';
 import { formatDistance } from '@/utils/geoUtils';
 import { getSiqsClass } from './MarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface LocationPopupContentProps {
   location: SharedAstroSpot;
@@ -28,8 +29,20 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
+  const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
   
-  const siqsClass = getSiqsClass(siqsScore);
+  // Stabilize SIQS score to prevent flashing
+  useEffect(() => {
+    if (siqsScore !== null && siqsScore > 0) {
+      setStabilizedScore(siqsScore);
+    }
+  }, [siqsScore]);
+  
+  // Get SIQS class for coloring the popup based on score
+  const siqsClass = getSiqsClass(stabilizedScore || siqsScore);
+  
+  // Only use real scores (never default values)
+  const hasValidScore = stabilizedScore !== null || (siqsScore !== null && siqsScore > 0);
   
   return (
     <Popup 
@@ -38,13 +51,14 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
       offset={[0, 10]}
       direction="bottom"
     >
-      <div className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}
-           onClick={() => {
-             // Force refresh on popup click
-             if (isCertified) {
-               console.log("Certified location popup clicked, forcing update");
-             }
-           }}
+      <div 
+        className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}
+        onClick={() => {
+          // Force refresh on popup click
+          if (isCertified) {
+            console.log("Certified location popup clicked, forcing update");
+          }
+        }}
       >
         <div className="font-medium text-sm mb-1.5 flex items-center">
           {isCertified && (
@@ -63,11 +77,11 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
         <div className="mt-2 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <SiqsScoreBadge 
-              score={siqsScore} 
+              score={hasValidScore ? (stabilizedScore || siqsScore) : null} 
               compact={true} 
-              loading={siqsLoading || (isCertified && !siqsScore)}
+              loading={siqsLoading}
               isCertified={isCertified}
-              forceCertified={false} // Never force default scores
+              forceCertified={false}
             />
           </div>
           

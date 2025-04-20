@@ -43,12 +43,17 @@ export const calculateAverageValue = (
 ): number => {
   if (!forecast || forecast.length === 0) return defaultValue;
   
+  let validValues = 0;
   const sum = forecast.reduce((acc, item) => {
     const value = item[property];
-    return acc + (typeof value === 'number' ? value : defaultValue);
+    if (typeof value === 'number' && !isNaN(value)) {
+      validValues++;
+      return acc + value;
+    }
+    return acc;
   }, 0);
   
-  return sum / forecast.length;
+  return validValues > 0 ? sum / validValues : defaultValue;
 };
 
 /**
@@ -240,14 +245,14 @@ export const calculateNighttimeSIQS = (
         isViable: false,
         factors: [
           {
-            name: translator ? translator("Cloud Cover", "云量") : "Cloud Cover",
+            name: translator ? translator("Astronomical Night Cloud Cover", "天文夜云量") : "Astronomical Night Cloud Cover",
             score: 0,
             description: translator
               ? translator(
-                  `Cloud cover of ${Math.round(tonightCloudCover)}% makes imaging impossible`,
-                  `${Math.round(tonightCloudCover)}%的云量使成像不可能`
+                  `Cloud cover of ${Math.round(tonightCloudCover)}% during astronomical night makes imaging impossible`,
+                  `天文夜间${Math.round(tonightCloudCover)}%的云量使成像不可能`
                 )
-              : `Cloud cover of ${Math.round(tonightCloudCover)}% makes imaging impossible`,
+              : `Cloud cover of ${Math.round(tonightCloudCover)}% during astronomical night makes imaging impossible`,
             nighttimeData: {
               average: tonightCloudCover,
               timeRange: nightTimeStr
@@ -289,16 +294,25 @@ export const calculateNighttimeSIQS = (
     });
     
     // Add detailed nighttime cloud data to the cloud cover factor
+    // Rename the factor to explicitly indicate astronomical night
     if (siqsResult && siqsResult.factors) {
       siqsResult.factors = siqsResult.factors.map((factor: any) => {
         if (factor.name === "Cloud Cover" || 
             (translator && factor.name === translator("Cloud Cover", "云层覆盖"))) {
           return {
-            ...factor,
+            name: translator ? translator("Astronomical Night Cloud Cover", "天文夜云量") : "Astronomical Night Cloud Cover",
+            score: factor.score,
+            description: translator
+              ? translator(
+                  `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% during astronomical night (${nightTimeStr})`,
+                  `天文夜间（${nightTimeStr}）云量${tonightCloudCover.toFixed(1)}%`
+                )
+              : `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% during astronomical night (${nightTimeStr})`,
             nighttimeData: {
               average: tonightCloudCover,
               timeRange: nightTimeStr,
-            }
+            },
+            weight: 0.7 // Increase weight of nighttime cloud cover
           };
         }
         return factor;

@@ -29,73 +29,76 @@ export function getSiqsScore(siqs?: number | string | { score: number; isViable:
   // Handle SharedAstroSpot object with siqs property
   if (typeof siqs === 'object' && siqs !== null) {
     // Case: location.siqs passed directly as an object with score property
-    if ('siqs' in siqs && typeof siqs.siqs === 'object' && siqs.siqs !== null && 'score' in siqs.siqs) {
-      return typeof siqs.siqs.score === 'number' ? siqs.siqs.score : 0;
+    if ('siqs' in siqs && typeof siqs.siqs !== 'undefined') {
+      return getSiqsScore(siqs.siqs);
     }
     
-    // Case: entire location object passed (need to extract siqs)
-    if ('siqs' in siqs && (typeof siqs.siqs === 'number' || typeof siqs.siqs === 'string')) {
-      return typeof siqs.siqs === 'number' ? siqs.siqs : parseFloat(siqs.siqs);
-    }
-    
-    // Handle direct score property (standard format)
+    // Case: { score: number } object
     if ('score' in siqs && typeof siqs.score === 'number') {
-      return siqs.score;
+      return isNaN(siqs.score) ? 0 : siqs.score;
     }
-    
-    // Handle possible siqsResult nested format
-    if ('siqsResult' in siqs && siqs.siqsResult && typeof siqs.siqsResult.score === 'number') {
-      return siqs.siqsResult.score;
-    }
+  }
+  
+  // Default fallback
+  return 0;
+}
+
+/**
+ * Check if SIQS score is at least a certain value
+ */
+export function isSiqsAtLeast(siqs: any, minValue: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score >= minValue;
+}
+
+/**
+ * Check if SIQS score is greater than a value
+ */
+export function isSiqsGreaterThan(siqs: any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score > threshold;
+}
+
+/**
+ * Check if SIQS score is valid (greater than 0)
+ */
+export function isValidSiqs(siqs: any): boolean {
+  const score = getSiqsScore(siqs);
+  return score > 0;
+}
+
+/**
+ * Get SIQS score from a location object
+ */
+export function getLocationSiqs(location: SharedAstroSpot | any): number {
+  if (!location) return 0;
+  
+  // Use direct SIQS property if available
+  if ('siqs' in location) {
+    return getSiqsScore(location.siqs);
+  }
+  
+  // Try to get from siqsResult if available
+  if ('siqsResult' in location && location.siqsResult) {
+    return getSiqsScore(location.siqsResult);
   }
   
   return 0;
 }
 
 /**
- * Check if SIQS is greater than a threshold
- * @param siqs SIQS value which could be a number or object
- * @param threshold Threshold to compare against
- * @returns boolean indicating if SIQS exceeds threshold
+ * Format SIQS score for display
  */
-export function isSiqsGreaterThan(siqs: number | { score: number; isViable: boolean } | undefined, threshold: number): boolean {
-  const score = getSiqsScore(siqs);
-  return score > threshold;
-}
-
-/**
- * Check if SIQS is greater than or equal to a threshold
- * @param siqs SIQS value which could be a number or object
- * @param threshold Threshold to compare against
- * @returns boolean indicating if SIQS meets or exceeds threshold
- */
-export function isSiqsAtLeast(siqs: number | { score: number; isViable: boolean } | undefined, threshold: number): boolean {
-  const score = getSiqsScore(siqs);
-  return score >= threshold;
-}
-
-/**
- * Format SIQS for display, handling both number and object formats
- * @param siqs SIQS value which could be a number or object
- * @returns Formatted string representation of the SIQS score
- */
-export function formatSiqsScore(siqs: number | { score: number; isViable: boolean } | undefined): string {
-  const score = getSiqsScore(siqs);
+export function formatSiqsScore(siqs: number | any): string {
+  const score = typeof siqs === 'number' ? siqs : getSiqsScore(siqs);
+  if (score <= 0) return 'N/A';
   return score.toFixed(1);
 }
 
 /**
- * Get the display name for a location, preferring the language-specific name if available
- * @param location Location object
- * @param language Current language
- * @returns Display name string
+ * Get appropriate SIQS display format
  */
-export function getLocationDisplayName(
-  location: SharedAstroSpot, 
-  language: 'en' | 'zh' = 'en'
-): string {
-  if (language === 'zh' && location.chineseName) {
-    return location.chineseName;
-  }
-  return location.name || 'Unnamed Location';
+export function formatSiqsForDisplay(score: number | null): string {
+  if (score === null || score <= 0) return 'N/A';
+  return score.toFixed(1);
 }
