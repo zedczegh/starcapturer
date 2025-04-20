@@ -1,3 +1,4 @@
+
 import React, { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
@@ -155,28 +156,34 @@ const LocationDetails = () => {
       isInChina(locationData.latitude, locationData.longitude) : false;
     
     if (inChina || locationData.bortleScale === null || locationData.bortleScale === undefined) {
-      try {
-        console.log("Location may be in China or needs Bortle update:", locationData.name);
-        
-        const newBortleScale = await updateBortleScale(
-          locationData.latitude,
-          locationData.longitude,
-          locationData.name,
-          locationData.bortleScale
-        );
-        
-        if (newBortleScale !== null && newBortleScale !== locationData.bortleScale) {
-          console.log(`Bortle scale updated: ${locationData.bortleScale} -> ${newBortleScale}`);
-          setLocationData({
-            ...locationData,
-            bortleScale: newBortleScale
-          });
+      // Create an async function inside the useEffect
+      const updateBortleScaleAsync = async () => {
+        try {
+          console.log("Location may be in China or needs Bortle update:", locationData.name);
           
-          resetUpdateState();
+          const newBortleScale = await updateBortleScale(
+            locationData.latitude,
+            locationData.longitude,
+            locationData.name,
+            locationData.bortleScale
+          );
+          
+          if (newBortleScale !== null && newBortleScale !== locationData.bortleScale) {
+            console.log(`Bortle scale updated: ${locationData.bortleScale} -> ${newBortleScale}`);
+            setLocationData({
+              ...locationData,
+              bortleScale: newBortleScale
+            });
+            
+            resetUpdateState();
+          }
+        } catch (error) {
+          console.error("Failed to update Bortle scale:", error);
         }
-      } catch (error) {
-        console.error("Failed to update Bortle scale:", error);
-      }
+      };
+      
+      // Call the async function
+      updateBortleScaleAsync();
     }
   }, [locationData, isLoading, setLocationData, updateBortleScale, resetUpdateState]);
 
