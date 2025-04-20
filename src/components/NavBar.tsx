@@ -5,6 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import NavHeader from "./navbar/NavHeader";
 import DesktopNav from "./navbar/DesktopNav";
 import MobileNav from "./navbar/MobileNav";
+import ProfileButton from "./navbar/ProfileButton";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -34,6 +35,9 @@ const NavBar = () => {
           location={location} 
           locationId={locationId}
         />
+        <div className="flex md:hidden items-center">
+          <ProfileButton />
+        </div>
       </NavHeader>
       
       <MobileNav 

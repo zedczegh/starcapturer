@@ -32,7 +32,8 @@ const ProfileButton = () => {
           variant="ghost" 
           size="sm" 
           onClick={() => setShowAuthDialog(true)}
-          className="text-primary hover:text-primary-focus"
+          className="text-primary hover:text-primary-focus rounded-full flex items-center justify-center"
+          aria-label="Login"
         >
           <UserRound className="h-5 w-5" />
         </Button>
@@ -47,7 +48,7 @@ const ProfileButton = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative">
+        <Button variant="ghost" size="sm" className="relative rounded-full p-0">
           <Avatar className="h-8 w-8">
             <AvatarFallback>
               {user.email?.[0].toUpperCase()}
