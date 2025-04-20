@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -15,7 +16,6 @@ import LocationDetails from './pages/LocationDetails';
 import UsefulLinks from './pages/UsefulLinks';
 import ShareLocation from './pages/ShareLocation';
 import Collections from './pages/Collections';
-import Profile from './pages/Profile';
 import './App.css';
 
 // Create React Query client
@@ -47,7 +47,6 @@ function App() {
                   <Route path="/useful-links" element={<UsefulLinks />} />
                   <Route path="/share" element={<ShareLocation />} />
                   <Route path="/collections" element={<Collections />} />
-                  <Route path="/profile" element={<Profile />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <Toaster />
