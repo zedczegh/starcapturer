@@ -34,11 +34,12 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
   const [isInitialFetch, setIsInitialFetch] = useState(true);
   const [fetchAttempted, setFetchAttempted] = useState(false);
+  const [calculationComplete, setCalculationComplete] = useState(false);
   const isMounted = useRef(true);
   const fetchTimeoutRef = useRef<number | null>(null);
   const positionKey = useRef<string>('');
   
-  const REFRESH_INTERVAL = isCertified ? 30 * 1000 : 5 * 60 * 1000;
+  const REFRESH_INTERVAL = isCertified ? 5 * 60 * 1000 : 5 * 60 * 1000; // 5 minutes for all
   
   const existingSiqsNumber = typeof existingSiqs === 'number' ? existingSiqs : 
     (typeof existingSiqs === 'object' && existingSiqs && 'score' in existingSiqs) ? existingSiqs.score : 0;
@@ -58,6 +59,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
         onSiqsCalculated(cached.data.siqs, false, cached.data.source === 'realtime' ? 9 : 7);
         setFetchAttempted(true);
+        setCalculationComplete(true);
         console.log(`Using cached SIQS result for ${latitude},${longitude}`);
         return;
       }
@@ -85,6 +87,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         if (!isInitialFetch) {
           console.log(`Position changed to ${latitude.toFixed(5)},${longitude.toFixed(5)}, forcing new SIQS calculation`);
           setFetchAttempted(false);
+          setCalculationComplete(false);
           fetchSiqs();
         }
       }
@@ -100,7 +103,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   }, [isInitialFetch, isCertified]);
   
   const fetchSiqs = useCallback(async () => {
-    if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) return;
+    if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude) || calculationComplete) return;
     
     try {
       setLoading(true);
@@ -127,6 +130,8 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       
       if (!isMounted.current) return;
       
+      // Mark calculation as complete to prevent re-calculations
+      setCalculationComplete(true);
       onSiqsCalculated(result.siqs, false, result.source === 'realtime' ? 9 : 7);
       setLastFetchTimestamp(Date.now());
       
@@ -145,9 +150,16 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       if (!isMounted.current) return;
       
       if (isCertified) {
-        onSiqsCalculated(null, false);
+        // For certified locations, use existing score if available
+        if (existingSiqsNumber > 0) {
+          onSiqsCalculated(existingSiqsNumber, false, 7);
+          setCalculationComplete(true);
+        } else {
+          onSiqsCalculated(null, false);
+        }
       } else if (existingSiqsNumber > 0) {
         onSiqsCalculated(existingSiqsNumber, false, 6);
+        setCalculationComplete(true);
       } else {
         onSiqsCalculated(null, false);
       }
@@ -157,7 +169,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         setIsInitialFetch(false);
       }
     }
-  }, [latitude, longitude, bortleScale, isCertified, isDarkSkyReserve, existingSiqsNumber, onSiqsCalculated, forceUpdate, getCacheKey]);
+  }, [latitude, longitude, bortleScale, isCertified, isDarkSkyReserve, existingSiqsNumber, onSiqsCalculated, forceUpdate, getCacheKey, calculationComplete]);
   
   useEffect(() => {
     if (fetchTimeoutRef.current) {
@@ -165,9 +177,14 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       fetchTimeoutRef.current = null;
     }
     
-    if (forceUpdate) {
+    if (forceUpdate && !calculationComplete) {
       console.log("Force update triggered for SIQS calculation");
       fetchSiqs();
+      return;
+    }
+    
+    // Only fetch if we haven't already completed the calculation
+    if (calculationComplete) {
       return;
     }
     
@@ -195,7 +212,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         fetchTimeoutRef.current = null;
       }
     };
-  }, [isVisible, latitude, longitude, lastFetchTimestamp, fetchSiqs, forceUpdate, isCertified, REFRESH_INTERVAL, fetchAttempted]);
+  }, [isVisible, latitude, longitude, lastFetchTimestamp, fetchSiqs, forceUpdate, isCertified, REFRESH_INTERVAL, fetchAttempted, calculationComplete]);
   
   return null;
 };

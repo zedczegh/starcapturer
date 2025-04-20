@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
@@ -76,15 +76,30 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const [siqsConfidence, setSiqsConfidence] = useState<number>(8);
+  const [initialScoreSet, setInitialScoreSet] = useState(false);
   
   const isCertified = useMemo(() => 
     Boolean(location.certification || location.isDarkSkyReserve || location.type === 'dark-site'),
     [location]
   );
   
+  // If there's a static SIQS already, use it initially to prevent flickering
+  useEffect(() => {
+    if (!initialScoreSet) {
+      const staticSiqs = getSiqsScore(location.siqs);
+      if (staticSiqs > 0 && isCertified) {
+        setRealTimeSiqs(staticSiqs);
+        setInitialScoreSet(true);
+      }
+    }
+  }, [location.siqs, isCertified, initialScoreSet]);
+  
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
     if (loading) {
-      setLoadingSiqs(true);
+      // Only show loading if we don't already have a score
+      if (!realTimeSiqs || realTimeSiqs <= 0) {
+        setLoadingSiqs(true);
+      }
       return;
     }
     
@@ -93,11 +108,20 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     
     if (siqs !== null && siqs > 0) {
       setRealTimeSiqs(siqs);
+      setInitialScoreSet(true);
       if (confidence) {
         setSiqsConfidence(confidence);
       }
+    } else if (!realTimeSiqs && isCertified) {
+      // If we still don't have a score but this is a certified location, 
+      // use the static score if available
+      const staticSiqs = getSiqsScore(location.siqs);
+      if (staticSiqs > 0) {
+        setRealTimeSiqs(staticSiqs);
+        setInitialScoreSet(true);
+      }
     }
-  }, []);
+  }, [realTimeSiqs, isCertified, location.siqs]);
   
   // Force visibility for certified locations
   const effectiveIsVisible = isCertified || isVisible;
@@ -116,7 +140,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           <SiqsDisplay
             realTimeSiqs={realTimeSiqs}
             loadingSiqs={loadingSiqs}
-            hasAttemptedLoad={hasAttemptedLoad}
+            hasAttemptedLoad={hasAttemptedLoad || initialScoreSet}
             isVisible={effectiveIsVisible}
             isCertified={isCertified}
             siqsConfidence={siqsConfidence}
@@ -143,7 +167,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             isDarkSkyReserve={location.isDarkSkyReserve}
             existingSiqs={location.siqs}
             onSiqsCalculated={handleSiqsCalculated}
-            forceUpdate={isCertified} // Force update for certified locations
+            forceUpdate={false} // Don't force update by default
           />
         )}
       </CardContainer>

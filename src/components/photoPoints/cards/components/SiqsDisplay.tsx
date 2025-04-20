@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useMemo } from 'react';
 import SiqsScoreBadge from '../SiqsScoreBadge';
@@ -23,18 +22,24 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
   locationSiqs
 }) => {
   const showLoadingState = useMemo(() => {
-    if (!hasAttemptedLoad && isCertified && isVisible) {
+    if (!hasAttemptedLoad && isCertified && isVisible && !realTimeSiqs) {
       return true;
     }
-    return loadingSiqs;
-  }, [isCertified, loadingSiqs, hasAttemptedLoad, isVisible]);
+    return loadingSiqs && !realTimeSiqs;
+  }, [isCertified, loadingSiqs, hasAttemptedLoad, isVisible, realTimeSiqs]);
   
   const displayScore = useMemo(() => {
     if (realTimeSiqs !== null && realTimeSiqs > 0) {
       return realTimeSiqs;
     }
-    return locationSiqs && locationSiqs > 0 ? locationSiqs : null;
-  }, [realTimeSiqs, locationSiqs]);
+    if (locationSiqs && locationSiqs > 0) {
+      return locationSiqs;
+    }
+    if (isCertified) {
+      return locationSiqs && locationSiqs > 0 ? locationSiqs : null;
+    }
+    return null;
+  }, [realTimeSiqs, locationSiqs, isCertified]);
 
   return (
     <SiqsScoreBadge 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore } from '@/utils/siqsHelpers';
@@ -33,8 +32,8 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   // Convert score to number using our helper function
   const numericScore = score === null ? 0 : getSiqsScore(score);
   
-  // For certified locations with no valid score, always show loading state
-  const showLoading = loading || (isCertified && numericScore <= 0) || forceCertified;
+  // For certified locations with no valid score, show loading state only initially
+  const showLoading = loading && !stableScoreRef.current;
   
   // Update displayed score with smooth transition when real score changes
   useEffect(() => {
@@ -43,7 +42,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       stableScoreRef.current = numericScore;
     }
     
-    if (showLoading) {
+    if (showLoading && !stableScoreRef.current) {
       // For loading state, don't change displayed score but show loading indicator
       setLoadingState(true);
       
@@ -56,6 +55,10 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       loadingTimeoutRef.current = window.setTimeout(() => {
         if (numericScore > 0) {
           setDisplayedScore(numericScore);
+          setLoadingState(false);
+        } else if (stableScoreRef.current) {
+          // If we have a stable score, use it
+          setDisplayedScore(stableScoreRef.current);
           setLoadingState(false);
         } else {
           // If we still don't have a valid score after loading, clear the displayed score
@@ -72,61 +75,51 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       };
     }
     
-    // If score is 0 or negative and we're not in loading state
-    if (numericScore <= 0) {
-      // If we have a previous stable score, keep showing it
-      if (stableScoreRef.current && stableScoreRef.current > 0 && isCertified) {
+    // If score is 0 or negative and we have a previous stable score
+    if (numericScore <= 0 && stableScoreRef.current && stableScoreRef.current > 0) {
+      // Keep showing the last valid score for certified locations
+      if (isCertified || forceCertified) {
         setDisplayedScore(stableScoreRef.current);
-      } else {
-        setDisplayedScore(null);
-      }
-      setLoadingState(false);
-      return;
-    }
-    
-    // First time setting a score
-    if (displayedScore === null) {
-      setDisplayedScore(numericScore);
-      previousScore.current = numericScore;
-      setLoadingState(false);
-      return;
-    }
-    
-    // Avoid unnecessary transitions for small changes
-    if (Math.abs((displayedScore || 0) - numericScore) < 0.2) {
-      setDisplayedScore(numericScore);
-      previousScore.current = numericScore;
-      setLoadingState(false);
-      return;
-    }
-    
-    // Only animate significant changes
-    if (Math.abs((displayedScore || 0) - numericScore) >= 0.2) {
-      setIsTransitioning(true);
-      
-      // Store previous score for reference
-      previousScore.current = displayedScore;
-      
-      // Quick delay for animation
-      const timer = setTimeout(() => {
-        setDisplayedScore(numericScore);
-        setIsTransitioning(false);
         setLoadingState(false);
-      }, 300);
-      
-      return () => clearTimeout(timer);
+      }
+      return;
     }
     
-    setLoadingState(false);
-  }, [numericScore, showLoading, displayedScore, isCertified]);
-  
-  // Reset score when loading starts
-  useEffect(() => {
-    if (loading && !loadingState) {
-      setLoadingState(true);
-      setDisplayedScore(null);
+    // If we have a valid score
+    if (numericScore > 0) {
+      // First time setting a score
+      if (displayedScore === null) {
+        setDisplayedScore(numericScore);
+        previousScore.current = numericScore;
+        setLoadingState(false);
+        return;
+      }
+      
+      // Avoid unnecessary transitions for small changes
+      if (Math.abs((displayedScore || 0) - numericScore) < 0.2) {
+        setDisplayedScore(numericScore);
+        previousScore.current = numericScore;
+        setLoadingState(false);
+        return;
+      }
+      
+      // Only animate significant changes and don't reset to loading
+      if (Math.abs((displayedScore || 0) - numericScore) >= 0.2) {
+        setIsTransitioning(true);
+        
+        // Store previous score for reference
+        previousScore.current = displayedScore;
+        
+        // Quick delay for animation
+        const timer = setTimeout(() => {
+          setDisplayedScore(numericScore);
+          setIsTransitioning(false);
+        }, 300);
+        
+        return () => clearTimeout(timer);
+      }
     }
-  }, [loading]);
+  }, [numericScore, showLoading, displayedScore, isCertified, forceCertified]);
   
   // Cleanup on unmount
   useEffect(() => {
@@ -137,27 +130,29 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     };
   }, []);
   
-  // Skip rendering if score is 0 (invalid) or negative and not showing loading state
-  // No default scores for non-certified locations either
-  if (numericScore <= 0 && !loadingState && !forceCertified && !isCertified) {
+  // Skip rendering if score is 0 (invalid) or negative and not showing loading state or not certified
+  if (numericScore <= 0 && !loadingState && !forceCertified && !isCertified && !stableScoreRef.current) {
     return null;
   }
   
-  // Only display actual score, never display default values
-  const formattedScore = formatSiqsForDisplay(displayedScore);
+  // Use stable score if it exists and we're in a valid state
+  const scoreToDisplay = displayedScore || (stableScoreRef.current && (isCertified || forceCertified) ? stableScoreRef.current : null);
+  
+  // Format score for display
+  const formattedScore = formatSiqsForDisplay(scoreToDisplay);
   
   // Get appropriate color based on score value
   const getColor = () => {
-    if (!displayedScore || displayedScore <= 0) return 'bg-cosmic-700/50 text-muted-foreground border-cosmic-600/30';
-    if (displayedScore >= 8) return 'bg-green-500/20 text-green-400 border-green-500/40';
-    if (displayedScore >= 6.5) return 'bg-lime-500/20 text-lime-400 border-lime-500/40';
-    if (displayedScore >= 5) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
-    if (displayedScore >= 3.5) return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
+    if (!scoreToDisplay || scoreToDisplay <= 0) return 'bg-cosmic-700/50 text-muted-foreground border-cosmic-600/30';
+    if (scoreToDisplay >= 8) return 'bg-green-500/20 text-green-400 border-green-500/40';
+    if (scoreToDisplay >= 6.5) return 'bg-lime-500/20 text-lime-400 border-lime-500/40';
+    if (scoreToDisplay >= 5) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
+    if (scoreToDisplay >= 3.5) return 'bg-orange-500/20 text-orange-300 border-orange-500/40';
     return 'bg-red-500/20 text-red-300 border-red-500/40';
   };
 
   // Enhanced loading animation with smoother transition
-  if (loadingState) {
+  if (loadingState && !stableScoreRef.current) {
     return (
       <motion.div 
         className="flex items-center bg-cosmic-700/50 text-muted-foreground px-2 py-0.5 rounded-full border border-cosmic-600/30"
@@ -176,8 +171,8 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     );
   }
   
-  // Don't render anything if there's no valid score
-  if (!displayedScore || displayedScore <= 0) {
+  // Don't render anything if there's no valid score to show
+  if ((!scoreToDisplay || scoreToDisplay <= 0) && !stableScoreRef.current) {
     return null;
   }
 
