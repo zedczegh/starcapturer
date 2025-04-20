@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Slider } from '@/components/ui/slider';
@@ -57,7 +56,7 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
           ) : (
             <Radar className="h-3.5 w-3.5 mr-1.5 text-primary/80" />
           )}
-          {t("Click anywhere on the map to update your search location!", "点击地图上的任意位置以更新搜索位置！")}
+          {t("Move the slider on the bar to find more potential Astro Spots!", "滑动滑块寻找更多的天文景点！")}
         </div>
         <motion.div 
           className="flex items-center gap-1.5 text-primary font-medium bg-background/20 px-2 py-0.5 rounded-md border border-primary/20"
