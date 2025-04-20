@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import { CloudMoon, Sun, Moon, Calendar, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
+import { getMoonInfo, calculateMoonriseMoonsetTimes } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import { calculateMoonlessNightDuration } from '@/utils/weather/moonUtils';
 import {
   Tooltip,
@@ -31,6 +31,11 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
   
   // Get moonless night information with detailed timing data
   const nightInfo = calculateMoonlessNightDuration(latitude, longitude);
+
+  // Get direct moonrise/moonset times as a fallback
+  const directMoonTimes = useMemo(() => {
+    return calculateMoonriseMoonsetTimes(latitude, longitude);
+  }, [latitude, longitude]);
   
   // Format time label and value with better alignment
   const TimeItem = ({ label, value }: { label: string; value: string }) => (
@@ -42,9 +47,19 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
   
   // Format moon time for display safely
   const formatMoonTime = (time: Date | string) => {
-    if (typeof time === 'string') return time;
+    if (typeof time === 'string') {
+      // If we got "Unknown" from the calculation but have direct times available, use those
+      if (time === 'Unknown') {
+        return '-';
+      }
+      return time;
+    }
     return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  // Get the most reliable moonrise/moonset times available
+  const moonriseTime = nightInfo.moonrise === 'Unknown' ? directMoonTimes.moonrise : nightInfo.moonrise;
+  const moonsetTime = nightInfo.moonset === 'Unknown' ? directMoonTimes.moonset : nightInfo.moonset;
 
   // Format astronomical night times
   const astroNightStart = formatAstronomicalTime(astronomyData.astronomicalNight.start);
@@ -116,11 +131,11 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             <TimeItem 
               label={t('Rise', '月出')} 
-              value={formatMoonTime(nightInfo.moonrise)} 
+              value={formatMoonTime(moonriseTime)} 
             />
             <TimeItem 
               label={t('Set', '月落')} 
-              value={formatMoonTime(nightInfo.moonset)} 
+              value={formatMoonTime(moonsetTime)} 
             />
           </div>
         </div>

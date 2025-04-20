@@ -1,6 +1,6 @@
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
-import { isWaterLocation } from '@/utils/locationWaterCheck';
+import { isWaterLocation } from '@/utils/validation';
 
 /**
  * Filter locations based on various criteria

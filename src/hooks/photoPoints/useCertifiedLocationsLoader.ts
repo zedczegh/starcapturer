@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { preloadCertifiedLocations, getAllCertifiedLocations } from '@/services/certifiedLocationsService';
+import { preloadCertifiedLocations, getAllCertifiedLocations, forceCertifiedLocationsRefresh } from '@/services/certifiedLocationsService';
 
 /**
  * Hook for efficiently loading certified locations with preloading capabilities
@@ -48,6 +48,7 @@ export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
         
         // If component is still mounted, update state
         if (mounted) {
+          console.log(`Loaded ${locations.length} certified locations globally`);
           setCertifiedLocations(locations);
           setLoadingProgress(100);
           setIsLoading(false);
@@ -106,10 +107,12 @@ export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
     setLoadingProgress(10);
     
     try {
-      const freshLocations = await getAllCertifiedLocations();
+      const freshLocations = await forceCertifiedLocationsRefresh();
       setCertifiedLocations(freshLocations);
       setLoadingProgress(100);
       setIsLoading(false);
+      
+      console.log(`Refreshed ${freshLocations.length} certified locations globally`);
       
       // Update cache with fresh locations
       try {

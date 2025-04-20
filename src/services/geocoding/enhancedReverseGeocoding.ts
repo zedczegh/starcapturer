@@ -2,17 +2,13 @@
 import { Language } from './types';
 import { EnhancedLocationDetails } from './types/enhancedLocationTypes';
 import { fetchLocationDetails } from './providers/nominatimGeocodingProvider';
-import { GeocodeCache, addToCache, getFromCache, cleanupCache } from './cache/geocodingCache';
+import { GeocodeCache, addToCache, getFromCache } from './cache/geocodingCache';
 import { normalizeCoordinates } from './utils/coordinateUtils';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
-import { isWaterLocation } from '@/utils/locationWaterCheck';
+import { isWaterLocation } from '@/utils/validation';
 import { formatAddressComponents } from './formatters/addressFormatter';
+import { formatDistance } from '@/utils/location/formatDistance';
 
-/**
- * Enhanced reverse geocoding service that combines multiple data sources
- * to get detailed address information from coordinates.
- * Optimized for faster response times and better water detection.
- */
 export async function getEnhancedLocationDetails(
   latitude: number,
   longitude: number,
@@ -30,13 +26,29 @@ export async function getEnhancedLocationDetails(
     // Check cache first for fast response
     const cachedResult = getFromCache(cacheKey);
     if (cachedResult) {
-      return cachedResult;
+      return {
+        ...cachedResult,
+        isWater: isWaterLocation(normalizedLat, normalizedLng)
+      };
     }
     
     // Check for water location first to avoid unnecessary API calls
     const isWater = isWaterLocation(normalizedLat, normalizedLng);
     
-    // Get nearest town info from our internal database first
+    // For water locations, return immediately with appropriate naming
+    if (isWater) {
+      const waterLocation = {
+        name: language === 'en' ? 'Water Location' : '水域位置',
+        formattedName: language === 'en' ? 'Water Location' : '水域位置',
+        latitude: normalizedLat,
+        longitude: normalizedLng,
+        isWater: true
+      };
+      addToCache(cacheKey, waterLocation);
+      return waterLocation;
+    }
+    
+    // Get nearest town info for non-water locations
     const nearestTownInfo = findNearestTown(normalizedLat, normalizedLng, language);
     
     // Start building our result with the nearest town info
@@ -47,7 +59,7 @@ export async function getEnhancedLocationDetails(
       cityName: nearestTownInfo.city,
       countyName: nearestTownInfo.county,
       distance: nearestTownInfo.distance,
-      formattedDistance: nearestTownInfo.formattedDistance,
+      formattedDistance: formatDistance(nearestTownInfo.distance, language),
       detailedName: nearestTownInfo.detailedName,
       latitude: normalizedLat,
       longitude: normalizedLng,
@@ -91,8 +103,6 @@ export async function getEnhancedLocationDetails(
     return result;
   } catch (error) {
     console.error("Error in reverse geocoding:", error);
-    
-    // Return a fallback with minimal information
     return {
       name: language === 'en' ? 
         `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}` : 

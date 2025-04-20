@@ -7,7 +7,12 @@
 import { normalizeCoordinates } from './coordinates';
 import { darkSkyLocations } from '@/data/regions/darkSkyLocations';
 import { calculateDistance } from '@/data/utils/distanceCalculator';
-import { isWaterLocation, isValidAstronomyLocation, isLikelyCoastalWater } from '@/utils/locationValidator';
+import { 
+  isWaterLocation, 
+  isLikelyCoastalWater, 
+  isValidAstronomyLocation
+} from '@/utils/validation';
+import { isCertifiedLocation } from '@/utils/validation/coordinateValidator';
 
 /**
  * Represents a shared astronomy spot with location details and quality metrics
@@ -23,14 +28,19 @@ export interface SharedAstroSpot {
   isViable?: boolean;
   distance?: number;
   description?: string;
-  date?: string;
+  date?: string | Date;
   timestamp: string;
   isDarkSkyReserve?: boolean;
   certification?: string;
   photographer?: string;
   cloudCover?: number;
   visibility?: number;
-  type?: string; // Adding the missing type property
+  type?: string;
+  timeInfo?: {
+    isNighttime: boolean;
+    timeUntilNight?: number;
+    timeUntilDaylight?: number;
+  };
   siqsResult?: {
     score: number;
     isViable: boolean;

@@ -1,6 +1,5 @@
-
 import { generateRandomPoint } from '@/services/locationFilters';
-import { isWaterLocation } from '@/utils/locationValidator';
+import { isWaterLocation } from '@/utils/validation';
 
 self.onmessage = (e: MessageEvent) => {
   const { centerLat, centerLng, radius, count } = e.data;

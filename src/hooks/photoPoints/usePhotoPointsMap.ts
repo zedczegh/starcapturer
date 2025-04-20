@@ -33,16 +33,23 @@ export const usePhotoPointsMap = ({
   
   const [certifiedLocationsLoaded, setCertifiedLocationsLoaded] = useState(false);
   
-  // Store all certified locations for persistence
+  // Store all certified locations in localStorage for persistent access
   useEffect(() => {
     if (allCertifiedLocations.length > 0) {
-      console.log(`Storing ${allCertifiedLocations.length} certified locations in persistent storage`);
+      console.log(`Storing ${allCertifiedLocations.length} certified locations in localStorage`);
+      try {
+        localStorage.setItem('cachedCertifiedLocations', JSON.stringify(allCertifiedLocations));
+        setCertifiedLocationsLoaded(true);
+      } catch (err) {
+        console.error("Error storing certified locations in localStorage:", err);
+      }
+      
+      // Also store each location individually in persistent storage
       allCertifiedLocations.forEach(location => {
         if (location.isDarkSkyReserve || location.certification) {
           addLocationToStore(location);
         }
       });
-      setCertifiedLocationsLoaded(true);
     }
   }, [allCertifiedLocations]);
   
@@ -84,8 +91,6 @@ export const usePhotoPointsMap = ({
     return result;
   }, [locations, allCertifiedLocations, activeView]);
   
-  console.log("Combined locations length:", combinedLocations().length);
-  
   // Use the location processing hook without distance filtering for certified locations
   const { processedLocations } = useMapLocations({
     userLocation,
@@ -94,8 +99,6 @@ export const usePhotoPointsMap = ({
     activeView,
     mapReady
   });
-
-  console.log(`Processed locations: ${processedLocations.length}`);
 
   // Calculate map center coordinates - default to China if no location
   const mapCenter: [number, number] = userLocation 

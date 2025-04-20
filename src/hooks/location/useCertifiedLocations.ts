@@ -22,57 +22,39 @@ export function useCertifiedLocations(locations: SharedAstroSpot[]) {
     
     console.log(`Processing ${locations.length} locations for certified/calculated separation`);
     
-    // Identify certified locations with improved criteria - without any distance filtering
-    const certified = locations.filter(location => {
-      // Check for explicit Dark Sky Reserve flag
-      if (location.isDarkSkyReserve === true) {
-        return true;
-      }
+    // Use a map to ensure we don't have duplicates by coordinates
+    const certifiedMap = new Map<string, SharedAstroSpot>();
+    const calculatedMap = new Map<string, SharedAstroSpot>();
+    
+    // Process each location
+    locations.forEach(location => {
+      if (!location.latitude || !location.longitude) return;
       
-      // Check for certifications based on official Dark Sky names or properties
-      if (location.certification && location.certification !== '') {
-        const cert = location.certification.toLowerCase();
-        return (
-          cert.includes('international dark sky') || 
-          cert.includes('dark sky sanctuary') || 
-          cert.includes('dark sky reserve') || 
-          cert.includes('dark sky park') ||
-          cert.includes('dark sky community') ||
-          cert.includes('urban night sky') ||
-          cert.includes('dark sky lodging') ||
-          cert.includes('dark sky association') ||
-          cert.includes('lodging') ||
-          cert.includes('ida')
-        );
-      }
+      const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
       
-      // Also check name for potential certified locations that might be missing proper flags
-      if (location.name) {
-        const name = location.name.toLowerCase();
-        return (
-          (name.includes('dark sky') || name.includes('dark-sky')) &&
-          (name.includes('reserve') || 
-           name.includes('sanctuary') || 
-           name.includes('park') ||
-           name.includes('community') ||
-           name.includes('lodging') ||
-           name.includes('urban night') ||
-           name.includes('certified'))
-        );
-      }
+      // Determine if location is certified
+      const isCertified = 
+        location.isDarkSkyReserve === true || 
+        (location.certification && location.certification !== '') ||
+        (location.name && location.name.toLowerCase().includes('dark sky') && 
+         (location.name.toLowerCase().includes('reserve') || 
+          location.name.toLowerCase().includes('sanctuary') || 
+          location.name.toLowerCase().includes('park')));
       
-      return false;
+      if (isCertified) {
+        if (!certifiedMap.has(key)) {
+          certifiedMap.set(key, location);
+        }
+      } else {
+        if (!calculatedMap.has(key)) {
+          calculatedMap.set(key, location);
+        }
+      }
     });
     
-    console.log(`Found ${certified.length} certified locations (not filtered by distance)`);
-    
-    // All locations that are not certified are calculated
-    const calculated = locations.filter(location => 
-      !certified.some(cert => 
-        cert.id === location.id || 
-        (cert.latitude === location.latitude && cert.longitude === location.longitude)
-      )
-    );
+    // Convert maps back to arrays
+    const certified = Array.from(certifiedMap.values());
+    const calculated = Array.from(calculatedMap.values());
     
     console.log(`Found ${certified.length} certified and ${calculated.length} calculated locations`);
     
@@ -110,6 +92,29 @@ export function useCertifiedLocations(locations: SharedAstroSpot[]) {
       calculated: sortedCalculated
     });
   }, [locations]);
+  
+  // Try to load locations from cache if we don't have any
+  useEffect(() => {
+    if ((processedLocations.certified.length === 0 || processedLocations.calculated.length === 0) && locations.length === 0) {
+      try {
+        // Check both local storage and session storage
+        const cachedCertifiedLocations = localStorage.getItem('cachedCertifiedLocations');
+        
+        if (cachedCertifiedLocations) {
+          const parsedCertified = JSON.parse(cachedCertifiedLocations);
+          if (Array.isArray(parsedCertified) && parsedCertified.length > 0) {
+            console.log(`Using ${parsedCertified.length} cached certified locations from localStorage`);
+            setProcessedLocations(prev => ({
+              ...prev,
+              certified: parsedCertified
+            }));
+          }
+        }
+      } catch (e) {
+        console.error("Error loading certified locations from cache:", e);
+      }
+    }
+  }, [locations, processedLocations]);
   
   // Memoized values derived from processed locations
   const certifiedLocations = useMemo(() => processedLocations.certified, [processedLocations]);

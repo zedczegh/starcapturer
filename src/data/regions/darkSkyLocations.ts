@@ -1,4 +1,3 @@
-
 import { LocationEntry } from "../locationDatabase";
 
 /**
@@ -432,6 +431,137 @@ export const darkSkyLocations: (LocationEntry & {
       summer: { clearSkyRate: 85, averageTemperature: 28 },
       fall: { clearSkyRate: 80, averageTemperature: 18 },
       winter: { clearSkyRate: 75, averageTemperature: 5 }
+    }
+  },
+  // Additional Dark Sky Reserves
+  { 
+    name: "River Murray Dark Sky Reserve",
+    chineseName: "默里河暗夜天空保护区",
+    coordinates: [-34.4048, 139.2851],
+    bortleScale: 1.5,
+    radius: 40,
+    type: 'dark-site',
+    clearSkyRate: 82,
+    clearestMonths: ['Jan', 'Feb', 'Mar'],
+    annualPrecipitationDays: 65,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 75, averageTemperature: 18 },
+      summer: { clearSkyRate: 85, averageTemperature: 28 },
+      fall: { clearSkyRate: 80, averageTemperature: 20 },
+      winter: { clearSkyRate: 70, averageTemperature: 12 }
+    }
+  },
+  { 
+    name: "Cranborne Chase Dark Sky Reserve",
+    chineseName: "克兰伯恩追逐暗夜天空保护区",
+    coordinates: [51.0290, -2.1370],
+    bortleScale: 2.5,
+    radius: 35,
+    type: 'dark-site',
+    clearSkyRate: 58,
+    clearestMonths: ['Jul', 'Aug', 'Sep'],
+    annualPrecipitationDays: 160,
+    visibility: 'good',
+    seasonalTrends: {
+      spring: { clearSkyRate: 55, averageTemperature: 12 },
+      summer: { clearSkyRate: 65, averageTemperature: 18 },
+      fall: { clearSkyRate: 60, averageTemperature: 14 },
+      winter: { clearSkyRate: 45, averageTemperature: 5 }
+    }
+  },
+  { 
+    name: "Moore's Reserve at Cherry Springs",
+    chineseName: "莫尔斯樱桃泉暗夜天空保护区",
+    coordinates: [41.6626, -77.8236],
+    bortleScale: 2.0,
+    radius: 30,
+    type: 'dark-site',
+    clearSkyRate: 60,
+    clearestMonths: ['Aug', 'Sep', 'Oct'],
+    annualPrecipitationDays: 135,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 55, averageTemperature: 10 },
+      summer: { clearSkyRate: 65, averageTemperature: 22 },
+      fall: { clearSkyRate: 70, averageTemperature: 12 },
+      winter: { clearSkyRate: 45, averageTemperature: -2 }
+    }
+  },
+  { 
+    name: "Snowdonia Dark Sky Reserve",
+    chineseName: "斯诺多尼亚暗夜天空保护区",
+    coordinates: [52.9493, -3.8872],
+    bortleScale: 2.5,
+    radius: 35,
+    type: 'dark-site',
+    clearSkyRate: 55,
+    clearestMonths: ['Apr', 'May', 'Sep'],
+    annualPrecipitationDays: 180,
+    visibility: 'good',
+    seasonalTrends: {
+      spring: { clearSkyRate: 60, averageTemperature: 10 },
+      summer: { clearSkyRate: 55, averageTemperature: 16 },
+      fall: { clearSkyRate: 50, averageTemperature: 12 },
+      winter: { clearSkyRate: 45, averageTemperature: 4 }
+    }
+  },
+
+  // South American Dark Sky Sites
+  { 
+    name: "El Leoncito Dark Sky Reserve",
+    chineseName: "小狮子暗夜天空保护区",
+    coordinates: [-31.7986, -69.2956],
+    bortleScale: 1.0,
+    radius: 45,
+    type: 'dark-site',
+    clearSkyRate: 88,
+    clearestMonths: ['May', 'Jun', 'Jul', 'Aug'],
+    annualPrecipitationDays: 30,
+    visibility: 'exceptional',
+    seasonalTrends: {
+      spring: { clearSkyRate: 85, averageTemperature: 15 },
+      summer: { clearSkyRate: 75, averageTemperature: 25 },
+      fall: { clearSkyRate: 90, averageTemperature: 18 },
+      winter: { clearSkyRate: 95, averageTemperature: 8 }
+    }
+  },
+  { 
+    name: "Cerro Tololo Dark Sky Reserve",
+    chineseName: "托洛洛山暗夜天空保护区",
+    coordinates: [-30.1689, -70.8067],
+    bortleScale: 1.0,
+    radius: 40,
+    type: 'dark-site',
+    clearSkyRate: 87,
+    clearestMonths: ['May', 'Jun', 'Jul', 'Aug'],
+    annualPrecipitationDays: 25,
+    visibility: 'exceptional',
+    seasonalTrends: {
+      spring: { clearSkyRate: 80, averageTemperature: 16 },
+      summer: { clearSkyRate: 70, averageTemperature: 26 },
+      fall: { clearSkyRate: 90, averageTemperature: 19 },
+      winter: { clearSkyRate: 95, averageTemperature: 9 }
+    }
+  },
+
+  // African Dark Sky Sites
+  { 
+    name: "Sutherland Dark Sky Reserve",
+    chineseName: "萨瑟兰暗夜天空保护区",
+    coordinates: [-32.3956, 20.8101],
+    bortleScale: 1.0,
+    radius: 40,
+    type: 'dark-site',
+    clearSkyRate: 85,
+    clearestMonths: ['Jun', 'Jul', 'Aug'],
+    annualPrecipitationDays: 45,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 80, averageTemperature: 15 },
+      summer: { clearSkyRate: 75, averageTemperature: 25 },
+      fall: { clearSkyRate: 85, averageTemperature: 18 },
+      winter: { clearSkyRate: 90, averageTemperature: 8 }
     }
   }
 ];

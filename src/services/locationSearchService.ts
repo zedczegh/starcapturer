@@ -3,7 +3,7 @@ import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { getCachedLocations, cacheLocations } from '@/services/locationCacheService';
 import { calculateDistance } from '@/utils/geoUtils';
 import { locationDatabase } from '@/data/locationDatabase';
-import { isWaterLocation } from '@/utils/locationValidator';
+import { isWaterLocation } from '@/utils/validation';
 import { generateRandomPoint } from './locationFilters';
 import { getTerrainCorrectedBortleScale } from '@/utils/terrainCorrection';
 import { generateQualitySpots } from './locationSpotService';

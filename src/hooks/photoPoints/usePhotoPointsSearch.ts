@@ -26,8 +26,8 @@ export const usePhotoPointsSearch = ({
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [activeView, setActiveView] = useState<'certified' | 'calculated'>('certified');
 
-  // Always use a large radius for certified locations to get all of them globally
-  const effectiveRadius = activeView === 'certified' ? 100000 : searchRadius;
+  // Always use a large radius for certified locations to get ALL of them globally
+  const effectiveRadius = activeView === 'certified' ? 500000 : searchRadius;
   
   const {
     locations,
@@ -64,7 +64,7 @@ export const usePhotoPointsSearch = ({
                 })
               : parsed;
             
-          // Don't limit certified locations
+          // Don't limit certified locations during initial load
           const locationsToDisplay = activeView === 'certified' 
             ? filteredLocations 
             : filteredLocations.slice(0, maxInitialResults);
@@ -129,11 +129,10 @@ export const usePhotoPointsSearch = ({
         return (a.distance || Infinity) - (b.distance || Infinity);
       });
       
-      // Don't apply limits to certified locations view
-      const locationsToDisplay = activeView === 'certified' 
-        ? sortedLocations 
-        : sortedLocations.slice(0, maxInitialResults);
-        
+      // For certified view, don't limit locations - we want to show all of them
+      // but they'll be paginated in the UI
+      const locationsToDisplay = sortedLocations;
+      
       setDisplayedLocations(locationsToDisplay);
       setInitialLoadComplete(true);
       
@@ -144,7 +143,7 @@ export const usePhotoPointsSearch = ({
         console.error("Error saving locations to cache:", error);
       }
     }
-  }, [locations, maxInitialResults, searchRadius, userLocation, activeView]);
+  }, [locations, searchRadius, userLocation, activeView]);
 
   // Handle errors and refresh data
   const handleRefresh = useCallback(() => {

@@ -1,16 +1,10 @@
 
-/**
- * Location validation utilities
- * IMPORTANT: These functions validate location data to prevent rendering errors.
- * Any changes should be carefully tested against edge cases.
- */
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation as checkWaterLocation } from "@/utils/locationWaterCheck";
 
 /**
  * Check if coordinates represent a water location
  * This is a critical function for filtering out unusable spots
- * Improved with better water detection algorithm
+ * Now with enhanced water detection including coastlines and large water bodies
  */
 export const isWaterLocation = (
   latitude: number, 
@@ -21,8 +15,45 @@ export const isWaterLocation = (
   // This ensures certified locations are always displayed regardless of location
   if (isCertified) return false;
   
-  // Use the common water location check utility
-  return checkWaterLocation(latitude, longitude, false);
+  // First check: Basic water detection
+  if (checkWaterLocation(latitude, longitude, false)) {
+    return true;
+  }
+  
+  // Second check: Coastline detection
+  if (isLikelyCoastalWater(latitude, longitude)) {
+    return true;
+  }
+  
+  return false;
+};
+
+/**
+ * Enhanced water detection for coastal areas
+ */
+export const isLikelyCoastalWater = (
+  latitude: number,
+  longitude: number
+): boolean => {
+  // Known coastal waters lookup table (compressed for better performance)
+  const coastalZones = [
+    // Major coastlines (lat1, lat2, lng1, lng2)
+    [25, 50, -130, -115], // US West Coast
+    [25, 45, -85, -75],   // US East Coast
+    [35, 60, -10, 20],    // European Coast
+    [30, 45, 115, 145],   // East Asian Coast
+    [0, 25, 110, 125],    // Southeast Asian Waters
+  ];
+  
+  // Check if point falls within any coastal zone
+  for (const [minLat, maxLat, minLng, maxLng] of coastalZones) {
+    if (latitude >= minLat && latitude <= maxLat && 
+        longitude >= minLng && longitude <= maxLng) {
+      return true;
+    }
+  }
+  
+  return false;
 };
 
 /**
@@ -32,7 +63,7 @@ export const isWaterLocation = (
  * @param longitude Location longitude
  * @returns boolean indicating if location is likely coastal water
  */
-export const isLikelyCoastalWater = (
+export const isLikelyCoastalWaterOld = (
   latitude: number,
   longitude: number
 ): boolean => {
@@ -122,95 +153,3 @@ function getCoastalPointsForZone(lat: number, lng: number): [number, number, num
   
   return [];
 }
-
-/**
- * Check if a location is valid for astronomy viewing
- * Combines multiple checks to filter out unusable spots with better performance
- * @param latitude Location latitude
- * @param longitude Location longitude
- * @param locationName Optional location name for additional checks
- * @returns boolean indicating if location is valid for astronomy
- */
-export const isValidAstronomyLocation = (
-  latitude: number, 
-  longitude: number,
-  locationName?: string
-): boolean => {
-  // Must have valid coordinates - fast check first
-  if (!isFinite(latitude) || !isFinite(longitude) ||
-      Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
-    return false;
-  }
-  
-  // Check if it's a water location - passing false to ensure certified locations aren't filtered
-  if (checkWaterLocation(latitude, longitude, false)) {
-    return false;
-  }
-  
-  // Check if it's likely coastal water
-  if (isLikelyCoastalWater(latitude, longitude)) {
-    return false;
-  }
-  
-  // If location has a name that suggests water (optional check)
-  if (locationName) {
-    const lowerName = locationName.toLowerCase();
-    // Use faster includes method and early returns
-    const commonWaterTerms = ['ocean', 'sea', 'bay', 'gulf', 'lake'];
-    
-    for (const term of commonWaterTerms) {
-      if (lowerName.includes(term)) return false;
-    }
-    
-    // Only check less common terms if we pass the common ones
-    const otherWaterTerms = [
-      'strait', 'channel', 'sound', 'harbor', 'harbour', 'port', 
-      'pier', 'marina', 'lagoon', 'reservoir', 'fjord', 
-      'canal', 'pond', 'basin', 'cove', 'inlet', 'beach'
-    ];
-    
-    for (const term of otherWaterTerms) {
-      if (lowerName.includes(term)) return false;
-    }
-  }
-  
-  // All checks passed
-  return true;
-};
-
-/**
- * Validate location coordinates are within valid ranges
- * @param location Location to validate
- * @returns boolean indicating if location is valid
- */
-export const hasValidCoordinates = (location: SharedAstroSpot): boolean => {
-  return Boolean(
-    location && 
-    typeof location.latitude === 'number' && 
-    typeof location.longitude === 'number' &&
-    isFinite(location.latitude) &&
-    isFinite(location.longitude) &&
-    Math.abs(location.latitude) <= 90 &&
-    Math.abs(location.longitude) <= 180
-  );
-};
-
-/**
- * Create a unique ID for a location
- * @param location Location to create ID for
- * @returns string ID
- */
-export const getLocationId = (location: SharedAstroSpot): string => {
-  return location.id || 
-    `location-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
-};
-
-/**
- * Check if a location is a certified dark sky location
- * @param location Location to check
- * @returns boolean indicating if location is certified
- */
-export const isCertifiedLocation = (location: SharedAstroSpot): boolean => {
-  return location.isDarkSkyReserve === true || 
-    (location.certification && location.certification !== '');
-};

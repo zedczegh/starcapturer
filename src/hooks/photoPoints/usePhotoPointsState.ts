@@ -9,17 +9,10 @@ export const usePhotoPointsState = () => {
   const { t, language } = useLanguage();
   const location = useLocation();
   
-  // Changed initial view to 'calculated'
   const [activeView, setActiveView] = useState<'certified' | 'calculated'>('calculated');
-  
-  // Set showMap to true by default
   const [showMap, setShowMap] = useState(true);
-  
-  // For initializing states
   const [initialLoad, setInitialLoad] = useState(true);
   const [autoLocationRequested, setAutoLocationRequested] = useState(false);
-  
-  // For location tracking
   const [effectiveLocation, setEffectiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const { 
     coords: currentPosition, 
@@ -27,22 +20,23 @@ export const usePhotoPointsState = () => {
     getPosition: requestGeolocation
   } = useGeolocation();
   
-  // Update effective location when current position changes
+  const [locationInitialized, setLocationInitialized] = useState(false);
+  const [locationAttempted, setLocationAttempted] = useState(false);
+  
   useEffect(() => {
     if (currentPosition) {
       setEffectiveLocation({
         latitude: currentPosition.latitude,
         longitude: currentPosition.longitude
       });
-      
+      setLocationInitialized(true);
       console.log(`Location updated from geolocation: ${currentPosition.latitude}, ${currentPosition.longitude}`);
     }
   }, [currentPosition]);
 
-  // Auto-request location when the component mounts
   useEffect(() => {
-    if (!effectiveLocation && !autoLocationRequested && initialLoad) {
-      setAutoLocationRequested(true);
+    if (!effectiveLocation && !locationAttempted) {
+      setLocationAttempted(true);
       
       getCurrentPosition(
         (position) => {
@@ -51,47 +45,50 @@ export const usePhotoPointsState = () => {
             latitude,
             longitude
           });
+          setLocationInitialized(true);
           console.log("Auto-located user at:", latitude, longitude);
         },
         (error) => {
-          console.error("Error auto-locating user:", error);
-          // Silent failure - we don't want to show an error toast for auto-location
+          console.warn("Error auto-locating user:", error);
+          const defaultLocation = {
+            latitude: 35.8617,
+            longitude: 104.1954
+          };
+          setEffectiveLocation(defaultLocation);
+          setLocationInitialized(true);
+          console.log("Using fallback location:", defaultLocation);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     }
-  }, [effectiveLocation, autoLocationRequested, initialLoad]);
+  }, [effectiveLocation, locationAttempted]);
 
-  // Default calculated search radius set to 500km exactly as requested
   const [calculatedSearchRadius, setCalculatedSearchRadius] = useState(500);
   
-  // Determine the current search radius based on active view
   const currentSearchRadius = activeView === 'certified' ? 20000 : calculatedSearchRadius;
   
-  // Handle search radius slider change
   const handleRadiusChange = useCallback((value: number) => {
     setCalculatedSearchRadius(value);
   }, []);
   
-  // Update location without auto-refresh
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
     if (!isFinite(latitude) || !isFinite(longitude)) {
       toast.error(t("Invalid location coordinates", "无效的位置坐标"));
       return;
     }
     
-    setEffectiveLocation({
+    const newLocation = {
       latitude,
       longitude
-    });
+    };
     
-    console.log(`Location updated to: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+    setEffectiveLocation(newLocation);
+    setLocationInitialized(true);
+    
+    console.log(`Location manually updated to: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   }, [t]);
   
-  // Reset location to user's current position with improved reliability
   const handleResetLocation = useCallback(() => {
-    // First set a loading state if needed
-    // Then use our enhanced getCurrentPosition utility
     getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -102,7 +99,6 @@ export const usePhotoPointsState = () => {
         
         console.log(`Location reset to current position: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         
-        // Try to center map if it exists
         try {
           const leafletMap = (window as any).leafletMap;
           if (leafletMap) {
@@ -129,17 +125,14 @@ export const usePhotoPointsState = () => {
     );
   }, [t, language]);
   
-  // Toggle between certified and calculated views
   const handleViewChange = useCallback((view: 'certified' | 'calculated') => {
     setActiveView(view);
   }, []);
   
-  // Toggle between map and list views
   const toggleMapView = useCallback(() => {
     setShowMap(prev => !prev);
   }, []);
   
-  // Set initial load flag to false after a delay
   useEffect(() => {
     const timer = setTimeout(() => {
       setInitialLoad(false);
@@ -153,6 +146,7 @@ export const usePhotoPointsState = () => {
     initialLoad,
     locationLoading,
     effectiveLocation,
+    locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
     handleRadiusChange,
