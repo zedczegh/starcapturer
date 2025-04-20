@@ -82,7 +82,8 @@ const Collections = () => {
                   bortleScale: location.bortlescale,
                   siqs: location.siqs,
                   isDarkSkyReserve: location.isdarkskyreserve,
-                  certification: location.certification
+                  certification: location.certification,
+                  timestamp: location.timestamp || location.created_at // Add the missing timestamp property
                 }}
                 onSelect={() => {}}
                 onViewDetails={() => navigate(`/location/${location.id}`)}

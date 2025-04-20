@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import AuthDialog from '../auth/AuthDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useLocationDetailsService } from './header/LocationDetailsService';
 
 interface LocationDetailsHeaderProps {
   name: string;
@@ -22,12 +23,22 @@ const LocationDetailsHeader = ({
   longitude,
   timestamp 
 }: LocationDetailsHeaderProps) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { saveLocation } = useLocationCollection();
   const { user } = useAuth();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Use the location details service to get enhanced location name
+  const { enhancedName } = useLocationDetailsService({
+    latitude,
+    longitude,
+    language
+  });
+
+  // Display the enhanced name if available, otherwise fall back to the provided name
+  const displayName = enhancedName || name;
 
   // Check if location is already saved by user
   useEffect(() => {
@@ -83,7 +94,7 @@ const LocationDetailsHeader = ({
       } else {
         // Add to collection
         await saveLocation({
-          name,
+          name: displayName, // Use the enhanced name for saving
           latitude,
           longitude,
           timestamp
@@ -101,7 +112,7 @@ const LocationDetailsHeader = ({
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold mb-2">{name}</h1>
+        <h1 className="text-2xl font-bold mb-2">{displayName}</h1>
         <Button
           variant="ghost"
           size="sm"
