@@ -5,6 +5,7 @@ import { calculateDistance } from '@/utils/geoUtils';
 import { filterVisibleLocations } from '@/utils/filterUtils';
 import { useDevice } from '@/hooks/useDevice';
 import { LocationListFilter } from '@/components/photoPoints/ViewToggle';
+import { getAllCertifiedLocations } from '@/services/certifiedLocationsService';
 
 interface UsePhotoPointsMapContainerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -39,40 +40,79 @@ export const usePhotoPointsMapContainer = ({
     touchMoved: false
   });
   
-  // Debug log to see how many certified locations we're receiving
+  // Get all certified locations to ensure we have all 80+ locations
+  const allCertifiedLocations = useCallback(() => {
+    const loaded = getAllCertifiedLocations();
+    console.log(`usePhotoPointsMapContainer: Got ${loaded.length} certified locations from service`);
+    return loaded;
+  }, []);
+  
+  // Ensure we have the complete set of certified locations
   useEffect(() => {
     console.log(`usePhotoPointsMapContainer received ${certifiedLocations.length} certified locations`);
     console.log(`usePhotoPointsMapContainer received ${calculatedLocations.length} calculated locations`);
     console.log(`Active filter: ${activeFilter}`);
-  }, [certifiedLocations.length, calculatedLocations.length, activeFilter]);
+    
+    // If we don't have many certified locations, load more from the full dataset
+    if (certifiedLocations.length < 20 && activeFilter !== 'calculated') {
+      const allCertified = allCertifiedLocations();
+      console.log(`Additionally loaded ${allCertified.length} certified locations from service`);
+    }
+  }, [certifiedLocations.length, calculatedLocations.length, activeFilter, allCertifiedLocations]);
   
-  // Determine how many locations to display based on device
+  // Determine how many locations to display based on device and view
   const getMaxLocations = useCallback(() => {
-    // For certified locations, always show all of them
-    const certifiedLimit = 1000; // Increased from 500 to show more certified locations
+    // For certified locations, always show all of them (hundreds)
+    const certifiedLimit = activeFilter === 'certified' ? 500 : 200;
     
     // For calculated locations, limit based on device
     const calculatedLimit = isMobile ? 30 : 50;
     
-    // Return combined limit
-    return certifiedLimit + calculatedLimit;
-  }, [isMobile]);
+    // Return appropriate limit based on filter
+    return activeFilter === 'calculated' ? calculatedLimit : certifiedLimit;
+  }, [isMobile, activeFilter]);
 
   // Filter locations based on the active filter
   const filterLocationsByActiveFilter = useCallback(() => {
+    // Start with the full set of certified locations
+    const allCertified = activeFilter !== 'calculated' ? allCertifiedLocations() : certifiedLocations;
+    
     // If showing all, return all locations
     if (activeFilter === 'all') {
-      return [...certifiedLocations, ...calculatedLocations];
+      // Create a map to avoid duplicates
+      const locationMap = new Map<string, SharedAstroSpot>();
+      
+      // Add all certified locations first
+      allCertified.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locationMap.set(key, loc);
+        }
+      });
+      
+      // Then add calculated locations
+      calculatedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locationMap.set(key, loc);
+        }
+      });
+      
+      const combined = Array.from(locationMap.values());
+      console.log(`Filter 'all': Combined ${allCertified.length} certified and ${calculatedLocations.length} calculated for ${combined.length} locations`);
+      return combined;
     }
     
     // If showing certified only
     if (activeFilter === 'certified') {
-      return [...certifiedLocations];
+      console.log(`Filter 'certified': Showing ${allCertified.length} certified locations`);
+      return allCertified;
     }
     
     // If showing calculated only
-    return [...calculatedLocations];
-  }, [certifiedLocations, calculatedLocations, activeFilter]);
+    console.log(`Filter 'calculated': Showing ${calculatedLocations.length} calculated locations`);
+    return calculatedLocations;
+  }, [certifiedLocations, calculatedLocations, activeFilter, allCertifiedLocations]);
 
   // Optimize locations for the map view
   const optimizedLocations = useCallback(() => {
@@ -81,8 +121,8 @@ export const usePhotoPointsMapContainer = ({
     
     console.log(`Filtered by type: ${filteredByType.length} locations`);
     
-    // Then filter by distance for non-certified locations
-    const filteredByDistance = userLocation 
+    // Then filter by distance for non-certified locations if we're not in certified view
+    const filteredByDistance = userLocation && activeFilter !== 'certified'
       ? filteredByType.map(loc => {
           if (!loc.latitude || !loc.longitude) return loc;
           
@@ -110,7 +150,7 @@ export const usePhotoPointsMapContainer = ({
 
     console.log(`Filtered by distance: ${filteredByDistance.length} locations`);
 
-    // Use a much higher limit for certified locations
+    // Get maximum locations to show
     const maxLocationsToShow = getMaxLocations();
     console.log(`Max locations to show: ${maxLocationsToShow}`);
     
@@ -144,6 +184,11 @@ export const usePhotoPointsMapContainer = ({
 
   // Set dynamic zoom level based on search radius
   const getInitialZoom = useCallback(() => {
+    if (activeFilter === 'certified') {
+      // For certified view, use a wider view to see more locations globally
+      return isMobile ? 2 : 3;
+    }
+    
     // Use search radius to determine zoom level
     const zoomLevels = [
       { radius: 50, zoom: 10 },
@@ -159,7 +204,7 @@ export const usePhotoPointsMapContainer = ({
     
     // Reduce zoom slightly for mobile
     return isMobile ? Math.max(3, calculatedZoom - 1) : calculatedZoom;
-  }, [searchRadius, isMobile]);
+  }, [searchRadius, isMobile, activeFilter]);
 
   const initialZoom = getInitialZoom();
 

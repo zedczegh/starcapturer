@@ -4,6 +4,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
 import MapContainer from './MapContainer';
 import { LocationListFilter } from '../ViewToggle';
+import { getAllCertifiedLocations } from '@/services/certifiedLocationsService';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -24,16 +25,55 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     activeFilter
   } = props;
   
+  // Get all available certified locations from the service
+  const allCertifiedLocations = useMemo(() => getAllCertifiedLocations(), []);
+  
+  // Combine passed locations with all certified locations when needed
+  const combinedLocations = useMemo(() => {
+    // For certified or all filters, ensure we include all certified locations
+    if (activeFilter === 'certified' || activeFilter === 'all') {
+      // Create a map to avoid duplicates
+      const locationMap = new Map<string, SharedAstroSpot>();
+      
+      // Add passed locations first
+      locations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locationMap.set(key, loc);
+        }
+      });
+      
+      // Then add all certified locations
+      allCertifiedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locationMap.set(key, loc);
+        }
+      });
+      
+      console.log(`PhotoPointsMap: Combined ${locations.length} passed locations with ${allCertifiedLocations.length} certified locations for a total of ${locationMap.size} unique locations`);
+      return Array.from(locationMap.values());
+    } 
+    
+    // For calculated filter, just use the passed locations
+    return locations;
+  }, [locations, allCertifiedLocations, activeFilter]);
+  
   // Split locations into certified and calculated for the hook
   const certifiedLocations = useMemo(() => 
-    locations.filter(loc => loc.isDarkSkyReserve || loc.certification),
-    [locations]
+    combinedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification),
+    [combinedLocations]
   );
   
   const calculatedLocations = useMemo(() => 
-    locations.filter(loc => !loc.isDarkSkyReserve && !loc.certification),
-    [locations]
+    combinedLocations.filter(loc => !loc.isDarkSkyReserve && !loc.certification),
+    [combinedLocations]
   );
+  
+  // Log the counts for debugging
+  useEffect(() => {
+    console.log(`PhotoPointsMap: Using ${combinedLocations.length} total locations (${certifiedLocations.length} certified, ${calculatedLocations.length} calculated)`);
+  }, [combinedLocations.length, certifiedLocations.length, calculatedLocations.length]);
   
   const {
     mapContainerHeight,
@@ -54,7 +94,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     isMobile
   } = usePhotoPointsMapContainer({
     userLocation,
-    locations,
+    locations: combinedLocations,
     certifiedLocations,
     calculatedLocations,
     activeFilter,
@@ -66,9 +106,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   
   // Store locations in session storage for persistence
   useEffect(() => {
-    if (locations && locations.length > 0) {
+    if (combinedLocations && combinedLocations.length > 0) {
       try {
-        const simplifiedLocations = locations.map(loc => ({
+        const simplifiedLocations = combinedLocations.map(loc => ({
           id: loc.id || `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`,
           name: loc.name || 'Unknown Location',
           latitude: loc.latitude,
@@ -96,7 +136,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         console.error('Error storing locations in session storage:', err);
       }
     }
-  }, [locations]);
+  }, [combinedLocations]);
   
   return (
     <MapContainer

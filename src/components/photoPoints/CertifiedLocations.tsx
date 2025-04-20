@@ -8,6 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import CertificationFilter, { CertificationType } from './filters/CertificationFilter';
 import SearchBar from './filters/SearchBar';
 import { useCertifiedLocationsLoader } from '@/hooks/photoPoints/useCertifiedLocationsLoader';
+import { getAllCertifiedLocations } from '@/services/certifiedLocationsService';
 
 interface CertifiedLocationsProps {
   locations: SharedAstroSpot[];
@@ -33,14 +34,17 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [displayLimit, setDisplayLimit] = useState(25); // Show more initially
   
+  // Get all certified locations directly from the service
+  const allCertifiedLocations = React.useMemo(() => getAllCertifiedLocations(), []);
+  
   // Use our specialized hook to ensure we get ALL certified locations
   const {
-    certifiedLocations: allCertifiedLocations,
+    certifiedLocations: hookCertifiedLocations,
     isLoading: certifiedLoading,
     refreshLocations
   } = useCertifiedLocationsLoader(true);
   
-  // Combine the props locations with all certified locations
+  // Combine all locations sources to ensure we have all certified locations
   const combinedLocations = React.useMemo(() => {
     // Create a map to store unique locations by coordinates
     const locationMap = new Map<string, SharedAstroSpot>();
@@ -56,7 +60,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
       console.log(`Added ${locations.length} locations from props`);
     }
     
-    // Then add all certified locations from our hook
+    // Then add all certified locations from our service
     if (allCertifiedLocations && allCertifiedLocations.length > 0) {
       allCertifiedLocations.forEach(loc => {
         if (loc.latitude && loc.longitude) {
@@ -64,7 +68,18 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
           locationMap.set(key, loc);
         }
       });
-      console.log(`Added ${allCertifiedLocations.length} locations from certified hook`);
+      console.log(`Added ${allCertifiedLocations.length} locations from certified service`);
+    }
+    
+    // Then add all certified locations from our hook
+    if (hookCertifiedLocations && hookCertifiedLocations.length > 0) {
+      hookCertifiedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locationMap.set(key, loc);
+        }
+      });
+      console.log(`Added ${hookCertifiedLocations.length} locations from certified hook`);
     }
     
     // Try to add any additional locations from session storage
@@ -87,7 +102,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
     const combined = Array.from(locationMap.values());
     console.log(`Combined total: ${combined.length} unique certified locations`);
     return combined;
-  }, [locations, allCertifiedLocations]);
+  }, [locations, allCertifiedLocations, hookCertifiedLocations]);
   
   useEffect(() => {
     // Log the total number of combined locations
@@ -100,7 +115,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
     
     // If we got more than 5 locations, use a higher display limit
     if (combinedLocations.length > 10 && displayLimit <= 5) {
-      setDisplayLimit(25);
+      setDisplayLimit(30);
     }
   }, [combinedLocations.length, displayLimit]);
   

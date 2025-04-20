@@ -29,7 +29,6 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
         value={activeFilter} 
         onValueChange={handleValueChange}
         className="w-full max-w-md"
-        disabled={loading}
       >
         <TabsList className="grid grid-cols-3 w-full">
           <TabsTrigger value="all" disabled={loading}>

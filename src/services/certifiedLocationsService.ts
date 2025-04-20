@@ -1,5 +1,6 @@
 
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { darkSkyLocations } from '@/data/regions/darkSkyLocations';
 
 // In-memory cache for certified locations
 let certifiedLocationsCache: SharedAstroSpot[] = [];
@@ -20,15 +21,30 @@ export async function preloadCertifiedLocations(): Promise<SharedAstroSpot[]> {
   }
   
   try {
-    // In a real app, this would fetch from an API
-    // For this demo, we'll generate a large set of certified locations
-    const allCertifiedLocations = await generateCertifiedLocations();
+    // Get locations from our database first
+    const databaseLocations = loadLocationsFromDatabase();
+    console.log(`Loaded ${databaseLocations.length} certified locations from database`);
+    
+    // Then generate additional locations for demo
+    const generatedLocations = await generateAdditionalCertifiedLocations();
+    console.log(`Generated ${generatedLocations.length} additional certified locations`);
+    
+    // Combine both sources
+    const allCertifiedLocations = [...databaseLocations, ...generatedLocations];
     
     // Update cache
     certifiedLocationsCache = allCertifiedLocations;
     lastCacheUpdate = Date.now();
     
-    console.log(`Loaded ${allCertifiedLocations.length} certified locations globally`);
+    console.log(`Loaded total of ${allCertifiedLocations.length} certified locations globally`);
+    
+    // Store in localStorage for persistence
+    try {
+      localStorage.setItem('cachedCertifiedLocations', JSON.stringify(allCertifiedLocations));
+    } catch (e) {
+      console.error("Error caching to localStorage:", e);
+    }
+    
     return allCertifiedLocations;
   } catch (error) {
     console.error("Error loading certified locations:", error);
@@ -49,13 +65,48 @@ export async function preloadCertifiedLocations(): Promise<SharedAstroSpot[]> {
 }
 
 /**
+ * Load certified locations from our database (darkSkyLocations)
+ */
+function loadLocationsFromDatabase(): SharedAstroSpot[] {
+  console.log(`Loading from database, found ${darkSkyLocations.length} dark sky locations`);
+  
+  // Convert darkSkyLocations to SharedAstroSpot format
+  return darkSkyLocations.map((loc, index) => ({
+    id: `db-dark-sky-${index}`,
+    name: loc.name,
+    chineseName: loc.chineseName,
+    latitude: loc.coordinates[0],
+    longitude: loc.coordinates[1],
+    bortleScale: loc.bortleScale,
+    siqs: 10 - loc.bortleScale, // Estimate SIQS based on Bortle scale
+    isViable: true,
+    description: `A certified dark sky location with Bortle scale ${loc.bortleScale}`,
+    timestamp: new Date().toISOString(),
+    isDarkSkyReserve: loc.type === 'dark-site',
+    certification: loc.type === 'dark-site' 
+      ? 'International Dark Sky Reserve' 
+      : loc.type === 'urban'
+        ? 'Urban Night Sky Place'
+        : 'International Dark Sky Park',
+    type: loc.type === 'dark-site' ? 'reserve' : loc.type
+  }));
+}
+
+/**
  * Force refresh of all certified locations, bypassing the cache
  */
 export async function forceCertifiedLocationsRefresh(): Promise<SharedAstroSpot[]> {
   console.log("Force refreshing ALL certified locations");
   
   try {
-    const allCertifiedLocations = await generateCertifiedLocations();
+    // Get locations from our database first
+    const databaseLocations = loadLocationsFromDatabase();
+    
+    // Then generate additional locations for demo
+    const generatedLocations = await generateAdditionalCertifiedLocations();
+    
+    // Combine both sources
+    const allCertifiedLocations = [...databaseLocations, ...generatedLocations];
     
     // Update cache
     certifiedLocationsCache = allCertifiedLocations;
@@ -80,11 +131,21 @@ export async function forceCertifiedLocationsRefresh(): Promise<SharedAstroSpot[
  * Get all cached certified locations without making a new request
  */
 export function getAllCertifiedLocations(): SharedAstroSpot[] {
+  // First try the in-memory cache
   if (certifiedLocationsCache.length > 0) {
+    console.log(`Returning ${certifiedLocationsCache.length} certified locations from memory cache`);
     return certifiedLocationsCache;
   }
   
-  // Try to load from localStorage
+  // If no cache, load from database directly
+  const databaseLocations = loadLocationsFromDatabase();
+  if (databaseLocations.length > 0) {
+    certifiedLocationsCache = databaseLocations;
+    console.log(`Loaded ${databaseLocations.length} certified locations from database`);
+    return databaseLocations;
+  }
+  
+  // Try to load from localStorage as fallback
   try {
     const cachedLocations = JSON.parse(localStorage.getItem('cachedCertifiedLocations') || '[]');
     if (Array.isArray(cachedLocations) && cachedLocations.length > 0) {
@@ -96,14 +157,27 @@ export function getAllCertifiedLocations(): SharedAstroSpot[] {
     console.error("Error loading from localStorage:", e);
   }
   
+  // If still no locations, try session storage
+  try {
+    const sessionLocations = JSON.parse(sessionStorage.getItem('persistent_certified_locations') || '[]');
+    if (Array.isArray(sessionLocations) && sessionLocations.length > 0) {
+      certifiedLocationsCache = sessionLocations;
+      console.log(`Loaded ${sessionLocations.length} certified locations from session storage`);
+      return sessionLocations;
+    }
+  } catch (e) {
+    console.error("Error loading from session storage:", e);
+  }
+  
+  console.log("No certified locations available, returning empty array");
   return [];
 }
 
 /**
- * Generate a comprehensive list of certified dark sky locations
- * This creates a realistic dataset of 80+ locations
+ * Generate additional certified dark sky locations
+ * This creates a realistic dataset of certified locations
  */
-async function generateCertifiedLocations(): Promise<SharedAstroSpot[]> {
+async function generateAdditionalCertifiedLocations(): Promise<SharedAstroSpot[]> {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 300));
   
@@ -180,43 +254,7 @@ async function generateCertifiedLocations(): Promise<SharedAstroSpot[]> {
     { name: "Galloway Forest Park", lat: 55.1000, lng: -4.3000, type: "park" },
     { name: "Westhavelland Nature Park", lat: 52.7272, lng: 12.3850, type: "park" },
     { name: "Eifel National Park", lat: 50.5810, lng: 6.4263, type: "park" },
-    { name: "Ramon Crater", lat: 30.5833, lng: 34.8000, type: "park" },
-    
-    // Additional Oceania locations
-    { name: "Wai-iti Dark Sky Reserve", lat: -41.4341, lng: 173.1375, type: "reserve" },
-    { name: "Warrumbungle National Park", lat: -31.2756, lng: 149.0639, type: "park" },
-    { name: "Winton, Queensland", lat: -22.3933, lng: 143.0362, type: "community" },
-    
-    // Additional locations in other regions
-    { name: "Parsian International Dark Sky Sanctuary", lat: 27.1191, lng: 53.1521, type: "sanctuary" },
-    { name: "Rainbow Bridge National Monument", lat: 37.0780, lng: -110.9646, type: "park" },
-    { name: "Petrified Forest National Park", lat: 35.0571, lng: -109.7820, type: "park" },
-    { name: "Cosmic Campground", lat: 33.4733, lng: -108.9208, type: "sanctuary" },
-    { name: "Dark Sky Alqueva Reserve", lat: 38.3744, lng: -7.3403, type: "reserve" },
-    { name: "Snowdonia National Park", lat: 52.9007, lng: -3.8526, type: "park" },
-    { name: "South Downs National Park", lat: 50.9641, lng: -0.5212, type: "park" },
-    { name: "Kickapoo Valley Reserve", lat: 43.6504, lng: -90.6004, type: "reserve" },
-    { name: "Julian, California", lat: 33.0789, lng: -116.6016, type: "community" },
-    { name: "Westcliffe and Silver Cliff, Colorado", lat: 38.1361, lng: -105.4639, type: "community" },
-    { name: "Ridgway, Colorado", lat: 38.1527, lng: -107.7514, type: "community" },
-    { name: "Bon Accord, Alberta", lat: 53.8320, lng: -113.4135, type: "community" },
-    
-    // Urban Night Sky Places
-    { name: "Sark Island", lat: 49.4322, lng: -2.3603, type: "urban" },
-    { name: "Valle de Oro National Wildlife Refuge", lat: 34.9956, lng: -106.6839, type: "urban" },
-    { name: "Lost Trail National Wildlife Refuge", lat: 48.1133, lng: -114.4547, type: "urban" },
-    { name: "Timpanogos Cave National Monument", lat: 40.4400, lng: -111.7080, type: "urban" },
-    { name: "Prineville Reservoir State Park", lat: 44.1127, lng: -120.7037, type: "urban" },
-    
-    // Dark Sky Lodges
-    { name: "Primland Resort", lat: 36.6735, lng: -80.3221, type: "lodging" },
-    { name: "Hyatt Regency Maui Resort", lat: 20.9033, lng: -156.6907, type: "lodging" },
-    { name: "Kielder Observatory and Forest", lat: 55.2344, lng: -2.5884, type: "lodging" },
-    { name: "Sunriver Resort", lat: 43.8765, lng: -121.4372, type: "lodging" },
-    { name: "Luliwa Ranch", lat: -22.9921, lng: 18.1268, type: "lodging" },
-    { name: "Wherever Outfitters", lat: 46.7755, lng: -108.5781, type: "lodging" },
-    { name: "Camp Kipwe", lat: -20.5323, lng: 14.9033, type: "lodging" },
-    { name: "Wyndham Grand Astronomy Hotel", lat: 39.2833, lng: 26.7000, type: "lodging" }
+    { name: "Ramon Crater", lat: 30.5833, lng: 34.8000, type: "park" }
   ];
   
   // Create locations with appropriate certification types
@@ -247,7 +285,6 @@ async function generateCertifiedLocations(): Promise<SharedAstroSpot[]> {
     }
     
     // Calculate a realistic SIQS score based on type
-    // Dark Sky Reserves and Sanctuaries typically have the best scores
     let siqs;
     if (loc.type === "reserve" || loc.type === "sanctuary") {
       siqs = 7.5 + (Math.random() * 2.5); // 7.5 to 10
@@ -278,12 +315,12 @@ async function generateCertifiedLocations(): Promise<SharedAstroSpot[]> {
   }
   
   // Log for debugging
-  console.log(`Generated ${locations.length} certified locations`);
+  console.log(`Generated ${locations.length} additional certified locations`);
   
   // Save to session storage for persistence
   try {
     sessionStorage.setItem('persistent_certified_locations', JSON.stringify(locations));
-    console.log(`Saved ${locations.length} certified locations to session storage`);
+    console.log(`Saved generated locations to session storage`);
   } catch (e) {
     console.error("Error saving to session storage:", e);
   }
