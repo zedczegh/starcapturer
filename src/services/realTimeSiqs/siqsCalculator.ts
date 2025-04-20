@@ -106,7 +106,7 @@ export async function calculateRealTimeSiqs(
       latitude,
       longitude,
       _forecast: forecastData,
-      nighttimeCloudData: weatherData.nighttimeCloudData || {
+      nighttimeCloudData: {
         average: weatherData.cloudCover,
         timeRange: 'default',
         sourceType: 'calculated'
