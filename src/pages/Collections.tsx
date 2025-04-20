@@ -85,7 +85,7 @@ const Collections = () => {
     );
   };
 
-  // Fixed version of LocationCard component with proper event stopping
+  // LocationCard component with fixed event handling
   const LocationCard = ({ location }: { location: any }) => {
     const { locationDetails } = useEnhancedLocation({
       latitude: location.latitude,
@@ -100,8 +100,10 @@ const Collections = () => {
       enhancedName = locationDetails?.formattedName || location.name;
     }
 
+    // Explicitly handle view details to ensure it works correctly
     const handleViewDetails = (e: React.MouseEvent) => {
-      e.stopPropagation(); // Prevent event propagation
+      e.preventDefault(); // Prevent default anchor behavior
+      e.stopPropagation(); // Prevent event bubbling
       navigate(`/location/${location.id}`);
     };
 
@@ -130,7 +132,7 @@ const Collections = () => {
           onViewDetails={handleViewDetails}
           userLocation={null}
         />
-        <div className="absolute bottom-3 left-3 z-10">
+        <div className="absolute bottom-3 left-3 z-20">
           <DeleteLocationButton 
             locationId={location.id} 
             userId={user.id} 

@@ -21,9 +21,9 @@ const DeleteLocationButton = ({ locationId, userId, onDelete }: DeleteLocationBu
   const { t } = useLanguage();
   
   const handleDelete = async (e: React.MouseEvent) => {
-    // Stop propagation to prevent card click event
-    e.stopPropagation();
+    // Ensure event doesn't bubble up and prevent default behavior
     e.preventDefault();
+    e.stopPropagation();
     
     try {
       const { error } = await supabase
@@ -53,7 +53,7 @@ const DeleteLocationButton = ({ locationId, userId, onDelete }: DeleteLocationBu
           variant="destructive" 
           size="sm" 
           onClick={handleDelete}
-          className="bg-destructive/90 hover:bg-destructive z-10"
+          className="bg-destructive/90 hover:bg-destructive z-20"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
