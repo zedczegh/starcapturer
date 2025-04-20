@@ -21,6 +21,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     onLocationUpdate
   } = props;
   
+  // Split locations into certified and calculated for the hook
+  const certifiedLocations = locations.filter(loc => loc.isDarkSkyReserve || loc.certification);
+  const calculatedLocations = locations.filter(loc => !loc.isDarkSkyReserve && !loc.certification);
+  
   const {
     mapContainerHeight,
     mapReady,
@@ -41,6 +45,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   } = usePhotoPointsMapContainer({
     userLocation,
     locations,
+    certifiedLocations,
+    calculatedLocations,
+    // Always use calculated view for the map, simplifying the implementation
+    activeView: 'calculated',
     searchRadius,
     onLocationClick,
     onLocationUpdate
@@ -89,6 +97,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       handleTouchMove={handleTouchMove}
       handleGetLocation={handleGetLocation}
       onLegendToggle={handleLegendToggle}
+      activeView="calculated"
     />
   );
 };

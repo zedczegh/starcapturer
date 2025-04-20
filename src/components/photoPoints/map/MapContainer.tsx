@@ -81,14 +81,14 @@ const MapContainer: React.FC<MapContainerProps> = ({
         handleTouchMove={handleTouchMove}
         isMobile={isMobile}
         useMobileMapFixer={false}
-        showRadiusCircles={activeView === 'calculated' && !isMobile}
+        showRadiusCircles={true}
       />
       
       {/* Add MapLegend for both mobile and desktop */}
       <MapLegend 
         activeView={activeView} 
-        showStarLegend={activeView === 'certified'}
-        showCircleLegend={activeView === 'calculated'}
+        showStarLegend={true}
+        showCircleLegend={true}
         onToggle={onLegendToggle}
         className="absolute top-4 right-4 z-[999]"
       />

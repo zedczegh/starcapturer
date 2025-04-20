@@ -1,10 +1,11 @@
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
 import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
-import ViewToggle from '@/components/photoPoints/ViewToggle';
+import ViewToggle, { LocationListFilter } from '@/components/photoPoints/ViewToggle';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
 import PhotoPointsView from '@/components/photoPoints/PhotoPointsView';
 import { usePhotoPointsState } from '@/hooks/photoPoints/usePhotoPointsState';
