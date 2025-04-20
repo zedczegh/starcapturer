@@ -51,27 +51,37 @@ export async function preloadCertifiedLocations(): Promise<SharedAstroSpot[]> {
 function loadLocationsFromDatabase(): SharedAstroSpot[] {
   console.log(`Loading from database, found ${darkSkyLocations.length} dark sky locations`);
   
+  if (!darkSkyLocations || darkSkyLocations.length === 0) {
+    console.error("Dark sky locations array is empty or undefined!");
+    return [];
+  }
+  
   // Convert darkSkyLocations to SharedAstroSpot format
   return darkSkyLocations.map((loc, index) => {
-    // Determine certification type from location type
-    const certification = getCertificationFromType(loc.type, loc.certification || undefined);
-    
-    return {
-      id: `db-dark-sky-${index}-${loc.name.replace(/\s+/g, '-').toLowerCase()}`,
-      name: loc.name,
-      chineseName: loc.chineseName,
-      latitude: loc.coordinates[0],
-      longitude: loc.coordinates[1],
-      bortleScale: loc.bortleScale,
-      siqs: 10 - loc.bortleScale, // Estimate SIQS based on Bortle scale
-      isViable: true,
-      description: `A certified dark sky location with Bortle scale ${loc.bortleScale}`,
-      timestamp: new Date().toISOString(),
-      isDarkSkyReserve: loc.type === 'dark-site' || certification.includes('Reserve'),
-      certification: certification,
-      type: loc.type
-    };
-  });
+    try {
+      // Determine certification type from location type
+      const certification = getCertificationFromType(loc.type, loc.certification || undefined);
+      
+      return {
+        id: `db-dark-sky-${index}-${loc.name.replace(/\s+/g, '-').toLowerCase()}`,
+        name: loc.name,
+        chineseName: loc.chineseName,
+        latitude: loc.coordinates[0],
+        longitude: loc.coordinates[1],
+        bortleScale: loc.bortleScale,
+        siqs: 10 - loc.bortleScale, // Estimate SIQS based on Bortle scale
+        isViable: true,
+        description: `A certified dark sky location with Bortle scale ${loc.bortleScale}`,
+        timestamp: new Date().toISOString(),
+        isDarkSkyReserve: loc.type === 'dark-site' || certification.includes('Reserve'),
+        certification: certification,
+        type: loc.type
+      };
+    } catch (error) {
+      console.error(`Error converting location ${loc.name}:`, error);
+      return null;
+    }
+  }).filter(Boolean) as SharedAstroSpot[]; // Filter out any null entries
 }
 
 /**

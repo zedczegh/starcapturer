@@ -31,7 +31,8 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   const { t } = useLanguage();
   const [selectedType, setSelectedType] = useState<CertificationType>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayLimit, setDisplayLimit] = useState(5); // Start with 5 items
+  const [displayLimit, setDisplayLimit] = useState(10); // Increased from 5 to 10 initially
+  const [forceUpdate, setForceUpdate] = useState(false);
 
   // Debug the locations prop
   useEffect(() => {
@@ -45,6 +46,11 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
       console.log('Few certified locations received, attempting to load from service directly');
       const allCertified = getAllCertifiedLocations();
       console.log(`Direct service load found ${allCertified.length} locations`);
+      
+      // If we found more locations than received, trigger a re-render
+      if (allCertified.length > locations.length) {
+        setForceUpdate(prev => !prev);
+      }
     }
   }, [locations, loading]);
 
@@ -96,7 +102,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   }, [filteredLocations, displayLimit]);
 
   const handleLoadMore = () => {
-    setDisplayLimit(prev => prev + 5);  // Load 5 more items at a time
+    setDisplayLimit(prev => prev + 10);  // Load 10 more items at a time (increased from 5)
   };
 
   if (loading && initialLoad) {

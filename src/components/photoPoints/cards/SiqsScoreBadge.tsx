@@ -25,21 +25,55 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   const [displayedScore, setDisplayedScore] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(loading);
   const previousScoreRef = useRef<number | null>(null);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mountedRef = useRef(true);
+  
+  // Ensure smooth transition from loading to score display
+  useEffect(() => {
+    if (loading !== isLoading) {
+      // If transitioning from loading to not loading, delay a bit
+      if (isLoading && !loading) {
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+        }
+        loadingTimeoutRef.current = setTimeout(() => {
+          if (mountedRef.current) {
+            setIsLoading(false);
+          }
+        }, 300);
+      } else {
+        setIsLoading(loading);
+      }
+    }
+    
+    return () => {
+      mountedRef.current = false;
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, [loading]);
   
   useEffect(() => {
     const numericScore = getSiqsScore(score);
     
-    // Only update if score changed significantly or is initial display
-    if (previousScoreRef.current === null || 
-        Math.abs((previousScoreRef.current || 0) - numericScore) >= 0.2) {
+    // Debug score changes
+    if (previousScoreRef.current !== numericScore && numericScore > 0) {
+      console.log(`SiqsScoreBadge: Score changed from ${previousScoreRef.current} to ${numericScore}`);
+    }
+    
+    // Only update if score is valid and either:
+    // 1. First time setting a score, or
+    // 2. Significant change (to prevent flickering)
+    if (numericScore > 0 && 
+        (previousScoreRef.current === null || 
+         Math.abs((previousScoreRef.current || 0) - numericScore) >= 0.1)) {
       
       scoreRef.current = numericScore;
       previousScoreRef.current = numericScore;
-      setDisplayedScore(numericScore > 0 ? numericScore : null);
+      setDisplayedScore(numericScore);
     }
-    
-    setIsLoading(loading);
-  }, [score, loading]);
+  }, [score]);
 
   if (isLoading) {
     return (
@@ -58,6 +92,25 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     );
   }
 
+  // If we have no valid score but component is certified, show loading
+  if ((!displayedScore || displayedScore <= 0) && isCertified) {
+    return (
+      <motion.div 
+        className="flex items-center bg-cosmic-700/50 text-muted-foreground px-2 py-0.5 rounded-full border border-cosmic-600/30"
+        initial={{ opacity: 0.6 }}
+        animate={{ opacity: [0.6, 0.8, 0.6] }}
+        transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+      >
+        <Star 
+          className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-gray-400 mr-1`} 
+          fill="#475569" 
+        />
+        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>...</span>
+      </motion.div>
+    );
+  }
+
+  // Don't render if no score and not certified
   if (!displayedScore || displayedScore <= 0) return null;
 
   const getColor = () => {

@@ -52,6 +52,9 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   // Get SIQS score using helper function
   const initialSiqsScore = getSiqsScore(siqs);
   
+  // Track when real-time SIQS score has been loaded
+  const [hasLoadedRealTime, setHasLoadedRealTime] = useState(false);
+  
   // Use unified SIQS display function - no default scores for certified locations
   const displaySiqs = getDisplaySiqs({
     realTimeSiqs,
@@ -60,10 +63,34 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     isDarkSkyReserve
   });
   
+  // Log successful SIQS updates
+  useEffect(() => {
+    if (realTimeSiqs !== null && realTimeSiqs > 0) {
+      console.log(`MapTooltip: Got real-time SIQS of ${realTimeSiqs.toFixed(1)} for ${name}`);
+      setHasLoadedRealTime(true);
+    }
+  }, [realTimeSiqs, name]);
+  
   const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
+    console.log(`MapTooltip SIQS callback: ${name}, siqs=${siqs}, loading=${loading}`);
     setRealTimeSiqs(siqs);
     setSiqsLoading(loading);
+    
+    if (siqs !== null && siqs > 0) {
+      setHasLoadedRealTime(true);
+    }
   };
+  
+  // Force recalculation for certified locations after mounting
+  const [forceUpdate, setForceUpdate] = useState(isCertified);
+  
+  // Reset force update after initial render
+  useEffect(() => {
+    if (forceUpdate) {
+      const timer = setTimeout(() => setForceUpdate(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [forceUpdate]);
   
   return (
     <Popup
@@ -92,7 +119,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
           <SiqsScoreBadge 
             score={displaySiqs} 
             compact={true}
-            loading={siqsLoading}
+            loading={siqsLoading && !hasLoadedRealTime}
             isCertified={isCertified}
             forceCertified={false} // Don't force certified default scores
           />
@@ -110,6 +137,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
             isDarkSkyReserve={isDarkSkyReserve}
             existingSiqs={siqs}
             onSiqsCalculated={handleSiqsCalculated}
+            forceUpdate={forceUpdate}
           />
         )}
       </div>

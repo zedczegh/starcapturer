@@ -1,3 +1,4 @@
+
 /**
  * Unified SIQS Display Utility
  * 
@@ -32,7 +33,7 @@ export function getDisplaySiqs(options: {
   isCertified: boolean;
   isDarkSkyReserve: boolean;
 }): number {
-  const { realTimeSiqs, staticSiqs } = options;
+  const { realTimeSiqs, staticSiqs, isCertified, isDarkSkyReserve } = options;
   
   // Use realtime SIQS if available
   if (realTimeSiqs !== null && realTimeSiqs > 0) {
@@ -42,6 +43,11 @@ export function getDisplaySiqs(options: {
   // Use static SIQS if available
   if (staticSiqs > 0) {
     return staticSiqs;
+  }
+  
+  // Use better defaults for certified locations instead of showing nothing
+  if (isCertified) {
+    return isDarkSkyReserve ? 8.5 : 7.5;
   }
   
   // Return 0 for no valid score - will trigger loading state or no display
@@ -121,7 +127,7 @@ export function calculateSimplifiedSiqs(cloudCover: number, bortleScale: number 
 
 /**
  * All-in-one function to get complete SIQS display information
- * No default scores for certified locations
+ * Provide better defaults for certified locations
  */
 export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promise<SiqsResult> {
   const { 
@@ -134,14 +140,17 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     skipCache = false
   } = options;
   
-  // Get existing SIQS, without defaults - never use default scores
+  // Get existing SIQS
   const staticSiqs = existingSiqs !== null ? getSiqsScore(existingSiqs) : 0;
+  
+  // Provide good default scores for certified locations to avoid flashing
+  const defaultSiqs = isCertified ? (isDarkSkyReserve ? 8.5 : 7.5) : 0;
                       
   const defaultResult: SiqsResult = {
-    siqs: 0, // Never use default scores - return 0 instead
-    loading: isCertified, // Show loading for certified locations with no score
-    formattedSiqs: formatSiqsForDisplay(staticSiqs > 0 ? staticSiqs : null),
-    colorClass: getSiqsColorClass(staticSiqs),
+    siqs: staticSiqs > 0 ? staticSiqs : defaultSiqs,
+    loading: isCertified && staticSiqs <= 0, // Show loading for certified locations with no score
+    formattedSiqs: formatSiqsForDisplay(staticSiqs > 0 ? staticSiqs : defaultSiqs),
+    colorClass: getSiqsColorClass(staticSiqs > 0 ? staticSiqs : defaultSiqs),
     source: 'default'
   };
   
@@ -163,8 +172,6 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
           source: 'cached'
         };
       }
-    } else {
-      console.log(`Skipping cache for SIQS at ${latitude.toFixed(5)},${longitude.toFixed(5)}`);
     }
     
     // For certified locations, use simplified calculation if the full calculation fails
@@ -241,33 +248,11 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
       }
     }
     
-    // If we reach here, we couldn't calculate SIQS for some reason
-    // For certified locations, show loading instead of default score
-    if (isCertified) {
-      return {
-        siqs: 0, // No default scores
-        loading: true, // Always show loading for certified locations with no data
-        formattedSiqs: "N/A",
-        colorClass: "text-muted-foreground",
-        source: 'default'
-      };
-    }
-    
+    // Return default result with appropriate defaults for certified locations
     return defaultResult;
+    
   } catch (error) {
     console.error("Error getting SIQS display data:", error);
-    
-    // For certified locations with errors, show loading instead of default score
-    if (isCertified) {
-      return {
-        siqs: 0, // No default scores
-        loading: true,
-        formattedSiqs: "N/A",
-        colorClass: "text-muted-foreground",
-        source: 'default'
-      };
-    }
-    
     return defaultResult;
   }
 }
