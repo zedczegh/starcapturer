@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
 import { Camera, X, Loader2 } from 'lucide-react';
@@ -7,6 +7,8 @@ import { User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProfileAvatarProps {
   avatarUrl: string | null;
@@ -22,8 +24,40 @@ const ProfileAvatar = ({
   uploadingAvatar 
 }: ProfileAvatarProps) => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [isHovered, setIsHovered] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(avatarUrl);
+
+  // Effect to fetch the user's avatar when component mounts
+  useEffect(() => {
+    if (user) {
+      const fetchAvatar = async () => {
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('avatar_url')
+            .eq('id', user.id)
+            .single();
+          
+          if (data?.avatar_url) {
+            setProfileAvatarUrl(data.avatar_url);
+          }
+        } catch (error) {
+          console.error('Error fetching avatar:', error);
+        }
+      };
+
+      fetchAvatar();
+    }
+  }, [user]);
+
+  // Update profileAvatarUrl whenever avatarUrl prop changes
+  useEffect(() => {
+    if (avatarUrl) {
+      setProfileAvatarUrl(avatarUrl);
+    }
+  }, [avatarUrl]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,8 +78,8 @@ const ProfileAvatar = ({
 
   const handleClickUpload = () => {
     // If there's already an avatar, open it in a new tab
-    if (avatarUrl) {
-      window.open(avatarUrl, '_blank');
+    if (profileAvatarUrl) {
+      window.open(profileAvatarUrl, '_blank');
     } else {
       // If no avatar, trigger file input
       fileInputRef.current?.click();
@@ -56,20 +90,20 @@ const ProfileAvatar = ({
     <TooltipProvider>
       <div className="flex flex-col items-center">
         <div className="relative w-28 h-28">
-          {avatarUrl ? (
+          {profileAvatarUrl ? (
             <div 
               className="relative group"
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
             >
               <img
-                src={avatarUrl}
+                src={profileAvatarUrl}
                 alt="Profile"
                 className={cn(
                   "w-full h-full rounded-full object-cover border-2 border-primary shadow-glow transition-all duration-300 cursor-pointer",
                   isHovered && "brightness-75"
                 )}
-                onClick={() => window.open(avatarUrl, '_blank')}
+                onClick={() => window.open(profileAvatarUrl, '_blank')}
               />
               <div 
                 className={cn(
@@ -128,7 +162,7 @@ const ProfileAvatar = ({
               </label>
             </TooltipTrigger>
             <TooltipContent>
-              {avatarUrl 
+              {profileAvatarUrl 
                 ? t("View full image", "查看完整图片")
                 : t("Upload avatar", "上传头像")
               }
@@ -138,7 +172,7 @@ const ProfileAvatar = ({
         <p className="text-cosmic-400 text-sm mt-2">
           {uploadingAvatar 
             ? t("Uploading...", "上传中...") 
-            : avatarUrl 
+            : profileAvatarUrl 
               ? t("Click to view or remove", "点击查看或删除") 
               : t("Click to add photo", "点击添加照片")
           }

@@ -54,7 +54,7 @@ const ChangePasswordForm = () => {
         {t("Change Password", "更改密码")}
       </h3>
       
-      <div>
+      <div className="block">
         <Label htmlFor="oldPassword" className="text-white mb-2 block">
           {t("Current Password", "当前密码")}
         </Label>
@@ -66,6 +66,7 @@ const ChangePasswordForm = () => {
             onChange={(e) => setOldPassword(e.target.value)}
             className="pl-10 bg-cosmic-800 border-cosmic-700 text-white focus:border-primary pr-10"
             placeholder={t("Enter current password", "输入当前密码")}
+            autoFocus
           />
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-cosmic-400">
             <Lock className="w-5 h-5" />
