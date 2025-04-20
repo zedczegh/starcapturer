@@ -4,18 +4,18 @@ import { calculateRealTimeSiqs } from '../realTimeSiqs/siqsCalculator';
 import { isWaterLocation } from '@/utils/validation';
 import { getEnhancedLocationDetails } from '../geocoding/enhancedReverseGeocoding';
 import { getLocationTimeInfo } from '@/utils/timezone/timeZoneCalculator';
+import { SiqsCalculationOptions, SiqsResult } from '../realTimeSiqs/siqsTypes';
 
 export const createSpotFromPoint = async (
   point: { latitude: number; longitude: number; distance: number },
-  minQuality: number = 5
+  minQuality: number = 5,
+  precalculatedSiqs?: SiqsResult
 ): Promise<SharedAstroSpot | null> => {
   try {
-    // First check: reject water locations immediately
     if (isWaterLocation(point.latitude, point.longitude)) {
       return null;
     }
     
-    // Double check with enhanced geocoding
     const locationDetails = await getEnhancedLocationDetails(
       point.latitude,
       point.longitude
@@ -25,26 +25,29 @@ export const createSpotFromPoint = async (
       return null;
     }
     
-    // Get location time info
     const timeInfo = getLocationTimeInfo(point.latitude, point.longitude);
-    
-    // Calculate SIQS with default Bortle scale
     const defaultBortleScale = 4;
     
-    // Use the optimized single-hour sampling approach for faster batch processing
-    // This significantly reduces API calls when generating multiple spots
-    const siqsResult = await calculateRealTimeSiqs(
-      point.latitude,
-      point.longitude,
-      defaultBortleScale,
-      {
-        useSingleHourSampling: true,
-        targetHour: 1, // 1 AM is typically a good hour for astronomy
-        cacheDurationMins: 30 // Use longer cache duration for batch processing
-      }
-    );
+    let siqsResult: SiqsResult;
     
-    // Filter by quality threshold
+    // Use precalculated SIQS if available to reduce API calls
+    if (precalculatedSiqs) {
+      siqsResult = precalculatedSiqs;
+    } else {
+      const options: SiqsCalculationOptions = {
+        useSingleHourSampling: true,
+        targetHour: 1, // Use 1 AM for optimal viewing conditions
+        cacheDurationMins: 30
+      };
+
+      siqsResult = await calculateRealTimeSiqs(
+        point.latitude,
+        point.longitude,
+        defaultBortleScale,
+        options
+      );
+    }
+    
     if (siqsResult && siqsResult.siqs >= minQuality) {
       return {
         id: `calc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -63,6 +66,8 @@ export const createSpotFromPoint = async (
         }
       };
     }
+    
+    return null;
   } catch (err) {
     console.warn("Error processing spot:", err);
     return null;
