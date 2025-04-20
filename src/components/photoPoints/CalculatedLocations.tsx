@@ -24,7 +24,6 @@ interface CalculatedLocationsProps {
   canLoadMoreCalculated?: boolean;
   loadMoreClickCount?: number;
   maxLoadMoreClicks?: number;
-  onViewDetails?: (location: SharedAstroSpot) => void;
 }
 
 const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
@@ -38,8 +37,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   onLoadMoreCalculated,
   canLoadMoreCalculated = false,
   loadMoreClickCount = 0,
-  maxLoadMoreClicks = 2,
-  onViewDetails
+  maxLoadMoreClicks = 2
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
@@ -76,11 +74,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   }
   
   const handleViewLocation = (point: SharedAstroSpot) => {
-    if (onViewDetails) {
-      onViewDetails(point);
-      return;
-    }
-    
     const locationId = `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
     
     // Navigate to location details page

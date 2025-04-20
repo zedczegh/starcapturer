@@ -5,7 +5,6 @@ import { preloadCertifiedLocations, getAllCertifiedLocations, forceCertifiedLoca
 
 /**
  * Hook for efficiently loading certified locations with preloading capabilities
- * Ensures ALL certified locations (~80+) are loaded
  * @param shouldLoad Control whether to load certified locations or not
  */
 export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
@@ -25,34 +24,16 @@ export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
     setIsLoading(true);
     setIsError(false);
     
-    // First, try to use already cached locations in memory
-    const cachedLocations = getAllCertifiedLocations();
-    if (cachedLocations.length > 0 && mounted) {
-      console.log(`Using ${cachedLocations.length} already loaded certified locations`);
-      setCertifiedLocations(cachedLocations);
-      setLoadingProgress(90); // We'll still do a refresh in the background
-    }
-    else {
-      // Try to use cached locations from storage for immediate display
-      try {
-        const storedLocations = JSON.parse(localStorage.getItem('cachedCertifiedLocations') || '[]');
-        if (storedLocations.length > 0 && mounted) {
-          console.log(`Using ${storedLocations.length} cached certified locations for immediate display`);
-          setCertifiedLocations(storedLocations);
-          setLoadingProgress(50); // Show 50% progress since we're still refreshing from API
-        }
-        else {
-          // Also try session storage 
-          const sessionLocations = JSON.parse(sessionStorage.getItem('persistent_certified_locations') || '[]');
-          if (sessionLocations.length > 0 && mounted) {
-            console.log(`Using ${sessionLocations.length} session certified locations for immediate display`);
-            setCertifiedLocations(sessionLocations);
-            setLoadingProgress(50);
-          }
-        }
-      } catch (e) {
-        console.error("Error parsing cached locations:", e);
+    // Try to use cached locations first for immediate display
+    try {
+      const cachedLocations = JSON.parse(localStorage.getItem('cachedCertifiedLocations') || '[]');
+      if (cachedLocations.length > 0 && mounted) {
+        console.log(`Using ${cachedLocations.length} cached certified locations for immediate display`);
+        setCertifiedLocations(cachedLocations);
+        setLoadingProgress(50); // Show 50% progress since we're still refreshing from API
       }
+    } catch (e) {
+      console.error("Error parsing cached locations:", e);
     }
     
     const loadLocations = async () => {
@@ -62,7 +43,7 @@ export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
           setLoadingProgress(10);
         }
         
-        // Preload certified locations - this should get ALL of them (~80+)
+        // Preload certified locations
         const locations = await preloadCertifiedLocations();
         
         // If component is still mounted, update state
@@ -116,7 +97,7 @@ export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
       mounted = false;
       clearInterval(progressInterval);
     };
-  }, [shouldLoad, loadingProgress]);
+  }, [shouldLoad]);
   
   // Refresh certified locations
   const refreshLocations = useCallback(async () => {
@@ -136,9 +117,6 @@ export function useCertifiedLocationsLoader(shouldLoad: boolean = true) {
       // Update cache with fresh locations
       try {
         localStorage.setItem('cachedCertifiedLocations', JSON.stringify(freshLocations));
-        
-        // Also update session storage for persistence
-        sessionStorage.setItem('persistent_certified_locations', JSON.stringify(freshLocations));
       } catch (e) {
         console.error("Error caching certified locations:", e);
       }

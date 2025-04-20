@@ -1,11 +1,11 @@
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
 import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
-import ViewToggle, { LocationListFilter } from '@/components/photoPoints/ViewToggle';
+import ViewToggle from '@/components/photoPoints/ViewToggle';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
 import PhotoPointsView from '@/components/photoPoints/PhotoPointsView';
 import { usePhotoPointsState } from '@/hooks/photoPoints/usePhotoPointsState';
@@ -52,12 +52,11 @@ const PhotoPointsNearby: React.FC = () => {
     currentSearchRadius
   );
   
+  // Get certified and calculated locations from the hook
   const { 
     certifiedLocations, 
     calculatedLocations 
   } = useCertifiedLocations(locations);
-
-  const [activeFilter, setActiveFilter] = useState<LocationListFilter>('all');
 
   useEffect(() => {
     if (locationInitialized && effectiveLocation) {
@@ -103,12 +102,12 @@ const PhotoPointsNearby: React.FC = () => {
       />
       
       <ViewToggle
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
+        activeView={activeView}
+        onViewChange={handleViewChange}
         loading={loading && !locationLoading}
       />
       
-      {activeFilter === 'calculated' && (
+      {activeView === 'calculated' && (
         <div className="max-w-xl mx-auto mb-6">
           <DistanceRangeSlider
             currentValue={calculatedSearchRadius}
@@ -122,7 +121,7 @@ const PhotoPointsNearby: React.FC = () => {
         </div>
       )}
       
-      {showMap && (
+      {showMap && activeView === 'calculated' && (
         <div className="mb-4 text-center text-sm text-muted-foreground">
           {t(
             "Click anywhere on the map to update your search location!",
@@ -133,18 +132,21 @@ const PhotoPointsNearby: React.FC = () => {
       
       <PhotoPointsView
         showMap={showMap}
-        activeFilter={activeFilter}
+        activeView={activeView}
         initialLoad={initialLoad}
         effectiveLocation={effectiveLocation}
-        locations={locations}
+        certifiedLocations={certifiedLocations}
+        calculatedLocations={calculatedLocations}
         searchRadius={currentSearchRadius}
+        calculatedSearchRadius={calculatedSearchRadius}
         loading={loading && !locationLoading}
         hasMore={hasMore}
         loadMore={loadMore}
         refreshSiqs={refreshSiqsData}
         onLocationClick={handleLocationClick}
         onLocationUpdate={handleLocationUpdate}
-        canLoadMore={canLoadMoreCalculated}
+        canLoadMoreCalculated={canLoadMoreCalculated}
+        loadMoreCalculated={loadMoreCalculatedLocations}
         loadMoreClickCount={loadMoreClickCount}
         maxLoadMoreClicks={maxLoadMoreClicks}
       />

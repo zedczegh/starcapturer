@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
@@ -71,27 +71,6 @@ const MapContent: React.FC<MapContentProps> = ({
       onMapClick(lat, lng);
     }
   }, [onMapClick]);
-  
-  // Add useEffect to store map instance globally for other components to access
-  useEffect(() => {
-    const handleMapReadyAndStoreInstance = () => {
-      if (mapRef.current) {
-        // Store map instance in window object for global access
-        (window as any).leafletMap = mapRef.current;
-        console.log("Map instance stored globally for location centering");
-      }
-      
-      // Call the provided onMapReady callback
-      if (onMapReady) {
-        onMapReady();
-      }
-    };
-    
-    // If map ref is already available, store it
-    if (mapRef.current) {
-      handleMapReadyAndStoreInstance();
-    }
-  }, [mapRef, onMapReady]);
 
   return (
     <MapContainer
@@ -130,6 +109,7 @@ const MapContent: React.FC<MapContentProps> = ({
         activeView={activeView}
         searchRadius={searchRadius}
         effects={['zoom-controls']} 
+        // Removed 'legend' to prevent redundant legend icon
       />
       
       {onMapClick && (

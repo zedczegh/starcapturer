@@ -30,20 +30,33 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
     stopPropagation(e);
     setIsClicking(true);
     
-    console.log("PinpointButton clicked, getting location");
-    
-    // Call the location handler directly
+    // Call the location handler
     onGetLocation();
     
-    // Show a toast to provide user feedback
-    toast.success(t("Finding your location...", "正在获取您的位置..."), {
-      id: "finding-location",
-      duration: 2000
-    });
+    // Try to center the map on user location
+    if (shouldCenter) {
+      try {
+        const leafletMap = (window as any).leafletMap;
+        if (leafletMap) {
+          setTimeout(() => {
+            leafletMap.setView(
+              [leafletMap.getCenter().lat, leafletMap.getCenter().lng],
+              12,
+              { 
+                animate: true,
+                duration: 1 
+              }
+            );
+          }, 300); // Small delay to allow location update
+        }
+      } catch (error) {
+        console.error("Error centering map:", error);
+        toast.error(t("Could not center map", "无法将地图居中"));
+      }
+    }
     
-    // Visual feedback animation
     setTimeout(() => setIsClicking(false), 1000);
-  }, [onGetLocation, t]);
+  }, [onGetLocation, shouldCenter, t]);
 
   return (
     <div 
@@ -75,7 +88,6 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
         className={`flex items-center justify-center p-0.5 bg-gradient-to-br from-purple-500/70 via-blue-500/60 to-blue-400/70
                   rounded-full shadow-lg border border-blue-300/30 backdrop-blur-sm transition-all relative`}
         style={{ boxShadow: '0 0 15px rgba(139, 92, 246, 0.5)' }}
-        title={t("Center on my location", "定位到我的位置")}
       >
         <div className="w-9 h-9 flex items-center justify-center rounded-full bg-gradient-to-br from-purple-600/80 to-blue-500/80">
           <MapPin className="h-5 w-5 text-white/90" strokeWidth={2.2} />

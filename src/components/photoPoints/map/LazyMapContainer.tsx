@@ -1,5 +1,4 @@
-
-import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
@@ -8,7 +7,6 @@ import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
 import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import MapContent from './components/MapContent';
-import { LocationListFilter } from '../ViewToggle';
 
 configureLeaflet();
 
@@ -18,7 +16,6 @@ interface LazyMapContainerProps {
   locations: SharedAstroSpot[];
   searchRadius: number;
   activeView: 'certified' | 'calculated';
-  activeFilter: LocationListFilter;
   onMapReady?: () => void;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onMapClick?: (lat: number, lng: number) => void;
@@ -39,7 +36,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   locations,
   searchRadius,
   activeView,
-  activeFilter,
   onMapReady,
   onLocationClick,
   onMapClick,
@@ -60,30 +56,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const isMountedRef = useRef(true);
   const previousLocations = useRef<SharedAstroSpot[]>([]);
   
-  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeFilter: ${activeFilter}`);
-  
-  // Filter locations based on the active filter
-  const filteredLocations = useMemo(() => {
-    if (activeFilter === 'all') return locations;
-    
-    return locations.filter(loc => {
-      const isCertified = Boolean(loc.isDarkSkyReserve || loc.certification);
-      return activeFilter === 'certified' ? isCertified : !isCertified;
-    });
-  }, [locations, activeFilter]);
-  
-  // Debug the output of the filter
-  useEffect(() => {
-    const certifiedCount = filteredLocations.filter(loc => 
-      loc.isDarkSkyReserve || loc.certification
-    ).length;
-    
-    const calculatedCount = filteredLocations.filter(loc => 
-      !loc.isDarkSkyReserve && !loc.certification
-    ).length;
-    
-    console.log(`LazyMapContainer filtered locations: ${filteredLocations.length} total, ${certifiedCount} certified, ${calculatedCount} calculated`);
-  }, [filteredLocations]);
+  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}`);
   
   const handleUserLocationSiqs = useCallback((siqs: number | null, loading: boolean) => {
     if (!loading && siqs !== null) {
@@ -99,8 +72,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   }, []);
   
   useEffect(() => {
-    if (filteredLocations && filteredLocations.length > 0) {
-      const locationIds = new Set(filteredLocations.map(loc => 
+    if (locations && locations.length > 0) {
+      const locationIds = new Set(locations.map(loc => 
         `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
       ));
       
@@ -109,19 +82,22 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         return !locationIds.has(locId);
       });
       
-      const combinedLocations = [...filteredLocations, ...previousToKeep];
+      const combinedLocations = activeView === 'calculated' 
+        ? [...locations, ...previousToKeep] 
+        : locations;
+      
       previousLocations.current = combinedLocations;
     }
-  }, [filteredLocations]);
+  }, [locations, activeView]);
   
-  const displayLocations = useCallback(() => {
+  const filteredLocations = useCallback(() => {
     if (!previousLocations.current || previousLocations.current.length === 0) {
-      return filteredLocations || [];
+      return locations || [];
     }
     
     const filtered = filterLocations(previousLocations.current, userLocation, searchRadius, activeView);
     return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
-  }, [filteredLocations, userLocation, searchRadius, activeView, isMobile]);
+  }, [locations, userLocation, searchRadius, activeView, isMobile]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -164,16 +140,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [mapRef.current]);
 
-  const locationsToShow = displayLocations();
-  
-  // Debug the locations being shown on the map
-  useEffect(() => {
-    const certifiedCount = locationsToShow.filter(loc => 
-      loc.isDarkSkyReserve || loc.certification
-    ).length;
-    
-    console.log(`LazyMapContainer showing ${locationsToShow.length} locations, ${certifiedCount} certified locations`);
-  }, [locationsToShow]);
+  const displayLocations = filteredLocations();
   
   const handleMapReady = useCallback(() => {
     setMapReady(true);
@@ -196,7 +163,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         center={center}
         userLocation={userLocation}
         zoom={zoom}
-        displayLocations={locationsToShow}
+        displayLocations={displayLocations}
         isMobile={Boolean(isMobile)}
         activeView={activeView}
         searchRadius={searchRadius}

@@ -3,7 +3,6 @@ import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
 import { clearLocationCache } from '@/services/realTimeSiqsService';
-import { toast } from 'sonner';
 import LocationControllers from './LocationControllers';
 import SiqsDisplay from './SiqsDisplay';
 
@@ -71,7 +70,6 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
     try {
       clearLocationCache();
       setCacheCleared(true);
-      toast.success(t("Location cache cleared", "位置缓存已清除"));
       console.log("Location cache cleared");
       
       // Reset flag after 3 seconds
@@ -79,7 +77,7 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
     } catch (error) {
       console.error("Error clearing location cache:", error);
     }
-  }, [t]);
+  }, []);
 
   // Automatically calculate SIQS when location changes
   useEffect(() => {
@@ -101,10 +99,9 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
     calculateCurrentSiqs();
   }, [userLocation, calculateCurrentSiqs]);
 
-  // Get current location with high accuracy and center map
+  // Get current location with high accuracy
   const handleGetCurrentLocation = useCallback(() => {
     setLoading(true);
-    toast.loading(t("Getting your location...", "正在获取您的位置..."), { id: "getting-location" });
     
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -112,14 +109,12 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
         onLocationUpdate(latitude, longitude);
         setLoading(false);
         
-        toast.success(t("Location found!", "已找到位置!"), { id: "getting-location" });
-        
         // Center map on user location using the globally accessible map instance
         try {
           const leafletMap = (window as any).leafletMap;
           if (leafletMap) {
-            // Use flyTo for a smoother animation and higher zoom level
-            leafletMap.flyTo([latitude, longitude], 13, { 
+            // Use animation for a smoother experience and higher zoom level
+            leafletMap.setView([latitude, longitude], 12, { 
               animate: true,
               duration: 1.5 
             });
@@ -132,34 +127,31 @@ const RealTimeLocationUpdater: React.FC<RealTimeLocationUpdaterProps> = ({
             }
           } else {
             console.warn("Leaflet map instance not found in window object");
-            toast.error(t("Could not center map: Map not ready", "无法居中地图：地图未准备好"));
           }
         } catch (e) {
           console.error("Could not center map:", e);
-          toast.error(t("Could not center map on your location", "无法将地图居中到您的位置"));
         }
       },
       (error) => {
         console.error("Error getting location:", error);
         setLoading(false);
-        toast.error(t("Could not get your location", "无法获取您的位置"), { id: "getting-location" });
         
         // Provide user-friendly error messages in console
         let errorMsg = "Failed to get your location";
         
         if (error.code === 1) {
-          errorMsg = t("Location permission denied", "位置权限被拒绝");
+          errorMsg = "Location permission denied";
         } else if (error.code === 2) {
-          errorMsg = t("Location unavailable", "位置不可用");
+          errorMsg = "Location unavailable";
         } else if (error.code === 3) {
-          errorMsg = t("Location request timed out", "位置请求超时");
+          errorMsg = "Location request timed out";
         }
         
         console.error(errorMsg);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-  }, [onLocationUpdate, t]);
+  }, [onLocationUpdate]);
 
   if (!showControls) {
     return null;
