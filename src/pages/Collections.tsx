@@ -61,8 +61,10 @@ const Collections = () => {
           table: 'saved_locations',
           filter: `user_id=eq.${user.id}`
         },
-        () => {
-          fetchCollections(); // Refresh the list when a location is deleted
+        (payload) => {
+          console.log('Location deleted via real-time:', payload);
+          // This is a backup mechanism, but we'll handle deletion directly in the UI
+          fetchCollections(); 
         }
       )
       .subscribe();
@@ -78,6 +80,13 @@ const Collections = () => {
       setSiqsScores(prev => ({ ...prev, [locationId]: siqs }));
     }
     setLoadingSiqs(prev => ({ ...prev, [locationId]: loading }));
+  };
+
+  // Handle immediate deletion in the UI
+  const handleLocationDelete = (deletedLocationId: string) => {
+    setLocations(prevLocations => 
+      prevLocations.filter(location => location.id !== deletedLocationId)
+    );
   };
 
   return (
@@ -131,7 +140,11 @@ const Collections = () => {
                   userLocation={null}
                 />
                 <div className="absolute bottom-3 left-3">
-                  <DeleteLocationButton locationId={location.id} userId={user.id} />
+                  <DeleteLocationButton 
+                    locationId={location.id} 
+                    userId={user.id} 
+                    onDelete={handleLocationDelete}
+                  />
                 </div>
                 <RealTimeSiqsProvider
                   isVisible={true}
