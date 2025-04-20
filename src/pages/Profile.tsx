@@ -43,32 +43,38 @@ const Profile = () => {
   useEffect(() => {
     if (!user) {
       navigate('/photo-points');
+      toast.error(t("Please sign in to view your profile", "请登录以查看您的个人资料"));
       return;
     }
 
     const fetchProfile = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('username, avatar_url, date_of_birth')
-        .eq('id', user.id)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('username, avatar_url, date_of_birth')
+          .eq('id', user.id)
+          .single();
 
-      if (error) {
-        toast.error(t("Failed to load profile", "加载个人资料失败"));
-        return;
-      }
+        if (error) {
+          console.error("Error fetching profile:", error);
+          toast.error(t("Failed to load profile", "加载个人资料失败"));
+          return;
+        }
 
-      if (data) {
-        const profileData: Profile = {
-          username: data.username || '',
-          avatar_url: data.avatar_url,
-          date_of_birth: data.date_of_birth || null
-        };
-        
-        setProfile(profileData);
-        setValue('username', data.username || '');
-        setValue('date_of_birth', data.date_of_birth || '');
-        setAvatarUrl(data.avatar_url);
+        if (data) {
+          const profileData: Profile = {
+            username: data.username || '',
+            avatar_url: data.avatar_url,
+            date_of_birth: data.date_of_birth || null
+          };
+          
+          setProfile(profileData);
+          setValue('username', data.username || '');
+          setValue('date_of_birth', data.date_of_birth || '');
+          setAvatarUrl(data.avatar_url);
+        }
+      } catch (err) {
+        console.error("Error in profile fetch:", err);
       }
     };
 
@@ -78,9 +84,26 @@ const Profile = () => {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setAvatarFile(file);
-      const previewUrl = URL.createObjectURL(file);
-      setAvatarUrl(previewUrl);
+      try {
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(t("Image too large (max 5MB)", "图片太大（最大5MB）"));
+          return;
+        }
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          toast.error(t("File must be an image", "文件必须是图像"));
+          return;
+        }
+        
+        setAvatarFile(file);
+        const previewUrl = URL.createObjectURL(file);
+        setAvatarUrl(previewUrl);
+      } catch (err) {
+        console.error("Error handling avatar change:", err);
+        toast.error(t("Failed to process image", "处理图像失败"));
+      }
     }
   };
 
@@ -92,33 +115,55 @@ const Profile = () => {
 
       let newAvatarUrl = avatarUrl;
       if (avatarFile) {
-        setUploadingAvatar(true);
-        const fileExt = avatarFile.name.split('.').pop();
-        const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, avatarFile);
-
-        if (uploadError) {
-          if (uploadError.message.includes('Bucket not found')) {
-            toast.error(t("Avatar upload failed: Storage bucket not configured", "头像上传失败：存储桶未配置"));
-          } else {
-            toast.error(uploadError.message);
+        try {
+          setUploadingAvatar(true);
+          
+          // Create a unique file name to prevent collisions
+          const fileExt = avatarFile.name.split('.').pop();
+          const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+          
+          // Check if bucket exists first
+          const { data: buckets } = await supabase.storage.listBuckets();
+          const avatarBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
+          
+          if (!avatarBucketExists) {
+            toast.error(t("Avatar upload failed: Storage bucket not configured properly", "头像上传失败：存储桶未正确配置"));
+            setUploadingAvatar(false);
+            setLoading(false);
+            return;
           }
+          
+          // Upload the file
+          const { error: uploadError, data: uploadData } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, avatarFile, {
+              cacheControl: '3600',
+              upsert: true
+            });
+
+          if (uploadError) {
+            console.error("Upload error:", uploadError);
+            toast.error(t("Avatar upload failed", "头像上传失败") + `: ${uploadError.message}`);
+            setUploadingAvatar(false);
+            setLoading(false);
+            return;
+          }
+
+          // Get the public URL if upload was successful
+          const { data: { publicUrl } } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(fileName);
+
+          newAvatarUrl = publicUrl;
+          
+          // Revoke the object URL to avoid memory leaks
+          URL.revokeObjectURL(avatarUrl || "");
+        } finally {
           setUploadingAvatar(false);
-          setLoading(false);
-          return;
         }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(fileName);
-
-        newAvatarUrl = publicUrl;
-        setUploadingAvatar(false);
       }
 
+      // Update profile data
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
@@ -129,22 +174,58 @@ const Profile = () => {
         })
         .eq('id', user.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Profile update error:", updateError);
+        throw updateError;
+      }
 
       toast.success(t("Profile updated successfully", "个人资料更新成功"));
     } catch (error: any) {
-      toast.error(error.message);
+      console.error("Profile update error:", error);
+      toast.error(t("Failed to update profile", "更新个人资料失败") + `: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const removeAvatar = () => {
-    setAvatarUrl(null);
-    setAvatarFile(null);
+  const removeAvatar = async () => {
+    if (!user || !avatarUrl) return;
+    
+    try {
+      setLoading(true);
+      
+      // If the avatar URL is from storage, extract the filename and delete it
+      const storageMatch = avatarUrl.match(/\/avatars\/([^?]+)/);
+      if (storageMatch && storageMatch[1]) {
+        const fileName = decodeURIComponent(storageMatch[1]);
+        await supabase.storage.from('avatars').remove([fileName]);
+      }
+      
+      // Update profile with null avatar_url
+      await supabase
+        .from('profiles')
+        .update({
+          avatar_url: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+      
+      // Clear state
+      setAvatarUrl(null);
+      setAvatarFile(null);
+      
+      toast.success(t("Avatar removed successfully", "头像已成功删除"));
+    } catch (error: any) {
+      console.error("Remove avatar error:", error);
+      toast.error(t("Failed to remove avatar", "删除头像失败"));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!user || !profile) return null;
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900">
