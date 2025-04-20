@@ -4,18 +4,18 @@ import { calculateRealTimeSiqs } from '../realTimeSiqs/siqsCalculator';
 import { isWaterLocation } from '@/utils/validation';
 import { getEnhancedLocationDetails } from '../geocoding/enhancedReverseGeocoding';
 import { getLocationTimeInfo } from '@/utils/timezone/timeZoneCalculator';
-import { SiqsCalculationOptions, SiqsResult } from '../realTimeSiqs/siqsTypes';
 
 export const createSpotFromPoint = async (
   point: { latitude: number; longitude: number; distance: number },
-  minQuality: number = 5,
-  precalculatedSiqs?: SiqsResult
+  minQuality: number = 5
 ): Promise<SharedAstroSpot | null> => {
   try {
+    // First check: reject water locations immediately
     if (isWaterLocation(point.latitude, point.longitude)) {
       return null;
     }
     
+    // Double check with enhanced geocoding
     const locationDetails = await getEnhancedLocationDetails(
       point.latitude,
       point.longitude
@@ -25,29 +25,20 @@ export const createSpotFromPoint = async (
       return null;
     }
     
+    // Get location time info
     const timeInfo = getLocationTimeInfo(point.latitude, point.longitude);
+    
+    // Calculate SIQS with default Bortle scale
     const defaultBortleScale = 4;
     
-    let siqsResult: SiqsResult;
+    // Calculate SIQS without waiting for Bortle data
+    const siqsResult = await calculateRealTimeSiqs(
+      point.latitude,
+      point.longitude,
+      defaultBortleScale
+    );
     
-    // Use precalculated SIQS if available to reduce API calls
-    if (precalculatedSiqs) {
-      siqsResult = precalculatedSiqs;
-    } else {
-      const options: SiqsCalculationOptions = {
-        useSingleHourSampling: true,
-        targetHour: 1, // Use 1 AM for optimal viewing conditions
-        cacheDurationMins: 30
-      };
-
-      siqsResult = await calculateRealTimeSiqs(
-        point.latitude,
-        point.longitude,
-        defaultBortleScale,
-        options
-      );
-    }
-    
+    // Filter by quality threshold
     if (siqsResult && siqsResult.siqs >= minQuality) {
       return {
         id: `calc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -66,8 +57,6 @@ export const createSpotFromPoint = async (
         }
       };
     }
-    
-    return null;
   } catch (err) {
     console.warn("Error processing spot:", err);
     return null;

@@ -11,8 +11,11 @@ import { fetchForecastData } from "@/lib/api";
 // Extract forecast fetching logic
 import { fetchForecastForLocation } from "./siqs/forecastFetcher";
 
-// Extract scoring and calculation logic
-import { calculateSIQSWithWeatherData, normalizeScore } from "./siqs/siqsCalculationUtils";
+// Extract scoring and normalization logic
+import { 
+  normalizeScore, 
+  calculateSIQSWithWeatherData 
+} from "./siqs/siqsCalculationUtils";
 
 export const useSIQSCalculation = (
   setCachedData: (key: string, data: any) => void,
