@@ -5,6 +5,7 @@ import { isWaterLocation } from "@/utils/validation";
 
 /**
  * Filter locations based on map view parameters
+ * Optimized to prioritize performance and prevent freezing
  */
 export function filterLocations(
   locations: SharedAstroSpot[],
@@ -16,27 +17,32 @@ export function filterLocations(
     return [];
   }
   
-  // First, ensure we have all certified locations separately
-  const certifiedLocations = locations.filter(loc => 
-    Boolean(loc.certification || loc.isDarkSkyReserve)
-  );
+  // Create a Map for faster lookups and deduplication
+  const locationMap = new Map<string, SharedAstroSpot>();
   
-  // For certified view, just return certified locations without any filtering
+  // First, process all certified locations separately (they should always be shown)
+  locations.forEach(loc => {
+    if ((loc.certification || loc.isDarkSkyReserve) && loc.latitude && loc.longitude) {
+      const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+      locationMap.set(key, loc);
+    }
+  });
+  
+  // For certified view, return all certified locations without further filtering
   if (activeView === 'certified') {
-    return certifiedLocations;
+    return Array.from(locationMap.values());
   }
   
-  // For calculated view, filter non-certified locations
-  const calculatedLocations = locations.filter(loc => 
-    !loc.certification && !loc.isDarkSkyReserve
-  );
-  
-  const filteredCalculated = calculatedLocations.filter(loc => {
-    // Filter out invalid locations
-    if (!loc.latitude || !loc.longitude) return false;
+  // For calculated view, add filtered non-certified locations
+  locations.forEach(loc => {
+    // Skip certified locations (already processed)
+    if (loc.certification || loc.isDarkSkyReserve) return;
     
-    // Filter out water locations
-    if (isWaterLocation(loc.latitude, loc.longitude)) return false;
+    // Skip invalid locations
+    if (!loc.latitude || !loc.longitude) return;
+    
+    // Skip water locations
+    if (isWaterLocation(loc.latitude, loc.longitude)) return;
     
     // Filter by distance if user location is available
     if (userLocation) {
@@ -47,18 +53,20 @@ export function filterLocations(
         loc.longitude
       );
       
-      return distance <= searchRadius;
+      if (distance > searchRadius) return; // Skip locations too far away
     }
     
-    return true;
+    // Add to map
+    const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+    locationMap.set(key, loc);
   });
   
-  // ALWAYS include certified locations first, then add filtered calculated locations
-  return [...certifiedLocations, ...filteredCalculated];
+  return Array.from(locationMap.values());
 }
 
 /**
  * Optimize locations for mobile display to prevent performance issues
+ * Ensures certified locations are always included
  */
 export function optimizeLocationsForMobile(
   locations: SharedAstroSpot[],
@@ -77,13 +85,13 @@ export function optimizeLocationsForMobile(
     return certifiedLocations;
   }
   
-  // For calculated view on mobile, limit non-certified locations for better performance
+  // For calculated view on mobile, use more locations but still limit for performance
   const calculatedLocations = locations.filter(loc => 
     !loc.certification && !loc.isDarkSkyReserve
   );
   
-  // Limit calculated locations on mobile for performance
-  const mobileCalculatedLimit = 20;
+  // Increase limit for mobile to prevent emptiness but maintain performance
+  const mobileCalculatedLimit = 30;
   const limitedCalculated = calculatedLocations.slice(0, mobileCalculatedLimit);
   
   // Return all certified locations plus the limited calculated ones

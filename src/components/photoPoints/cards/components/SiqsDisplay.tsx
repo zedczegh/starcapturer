@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import SiqsScoreBadge from '@/components/photoPoints/cards/SiqsScoreBadge';
@@ -104,4 +105,4 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
   return <span className="text-xs text-muted-foreground">SIQS</span>;
 };
 
-export default SiqsDisplay;
+export default React.memo(SiqsDisplay);

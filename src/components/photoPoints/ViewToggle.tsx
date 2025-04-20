@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { BadgeCheck, MapPin } from 'lucide-react';
@@ -19,13 +19,14 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  // Consistent function to handle view changes
-  const handleViewChange = (view: PhotoPointsViewMode) => {
+  // Optimized function to handle view changes with debounce protection
+  const handleViewChange = useCallback((view: PhotoPointsViewMode) => {
+    // Only trigger if the view actually changes and not already loading
     if (view !== activeView && !loading) {
       console.log(`ViewToggle: Switching to ${view} view`);
       onViewChange(view);
     }
-  };
+  }, [activeView, onViewChange, loading]);
   
   return (
     <div className="flex justify-center mb-6 px-4">
@@ -76,4 +77,4 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   );
 };
 
-export default ViewToggle;
+export default React.memo(ViewToggle);
