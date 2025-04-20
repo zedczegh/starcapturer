@@ -41,7 +41,7 @@ const Profile = () => {
     const fetchProfile = async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('username, avatar_url, date_of_birth')
         .eq('id', user.id)
         .single();
 
