@@ -3,7 +3,7 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
 import { isWaterLocation } from "@/utils/validation";
 import { filterMapLocations } from '@/utils/mapFilters';
-import { optimizeLocationsForMobile } from '@/utils/filterUtils';
+import { optimizeLocationsForMobile as optimizeForMobile } from '@/utils/filterUtils';
 
 /**
  * Filter locations based on map view parameters
@@ -31,7 +31,7 @@ export function optimizeLocationsForMobile(
   isMobile: boolean, 
   activeView: string
 ): SharedAstroSpot[] {
-  return optimizeLocationsForMobile(locations, isMobile, activeView);
+  return optimizeForMobile(locations, isMobile, activeView);
 }
 
 /**
