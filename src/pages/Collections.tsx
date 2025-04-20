@@ -1,17 +1,16 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import NavBar from "@/components/NavBar";
-import { Loader } from "lucide-react";
+import { Loader, Minus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { prepareLocationForNavigation } from "@/utils/locationNavigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
-import DeleteLocationButton from "@/components/collections/DeleteLocationButton";
 
 const Collections = () => {
   const { user } = useAuth();
@@ -19,6 +18,7 @@ const Collections = () => {
   const navigate = useNavigate();
   const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -38,16 +38,15 @@ const Collections = () => {
 
         if (error) throw error;
 
-        // Transform the data to match SharedAstroSpot type, mapping the database column names correctly
         const transformedLocations: SharedAstroSpot[] = (data || []).map(loc => ({
           id: loc.id,
           name: loc.name,
           latitude: loc.latitude,
           longitude: loc.longitude,
-          bortleScale: loc.bortlescale, // Correct mapping from bortlescale to bortleScale
+          bortleScale: loc.bortlescale,
           siqs: loc.siqs,
           certification: loc.certification || null,
-          isDarkSkyReserve: loc.isdarkskyreserve || false, // Correct mapping from isdarkskyreserve to isDarkSkyReserve
+          isDarkSkyReserve: loc.isdarkskyreserve || false,
           timestamp: loc.timestamp || new Date().toISOString(),
         }));
 
@@ -62,7 +61,6 @@ const Collections = () => {
 
     fetchCollections();
 
-    // Set up realtime subscription for delete events
     const channel = supabase
       .channel('schema-db-changes')
       .on(
@@ -91,9 +89,22 @@ const Collections = () => {
     }
   };
 
-  // Function to remove location from local state after deletion
-  const handleLocationDeleted = (locationId: string) => {
-    setLocations(prev => prev.filter(loc => loc.id !== locationId));
+  const handleDeleteLocation = async (locationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('saved_locations')
+        .delete()
+        .eq('id', locationId)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setLocations(prev => prev.filter(loc => loc.id !== locationId));
+      toast.success(t("Location removed from collection", "位置已从收藏中删除"));
+    } catch (error) {
+      console.error('Error deleting location:', error);
+      toast.error(t("Failed to delete location", "删除位置失败"));
+    }
   };
 
   return (
@@ -102,9 +113,20 @@ const Collections = () => {
       
       <TooltipProvider>
         <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
-          <h1 className="text-2xl font-bold mb-6 text-foreground">
-            {t("My Collections", "我的收藏")}
-          </h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-foreground">
+              {t("My Collections", "我的收藏")}
+            </h1>
+            {locations.length > 0 && (
+              <Button
+                variant="ghost"
+                onClick={() => setIsEditing(!isEditing)}
+                className="text-primary hover:text-primary-focus"
+              >
+                {isEditing ? t("Done", "完成") : t("Edit", "编辑")}
+              </Button>
+            )}
+          </div>
           
           {loading ? (
             <div className="flex justify-center items-center h-40">
@@ -125,22 +147,23 @@ const Collections = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {locations.map((location, index) => (
-                <div key={location.id} className="relative">
-                  <PhotoLocationCard
-                    location={location}
-                    index={index}
-                    onViewDetails={handleViewDetails}
-                    showRealTimeSiqs={true}
-                  />
-                  {user && (
-                    <div className="absolute top-3 right-3 z-20">
-                      <DeleteLocationButton 
-                        locationId={location.id} 
-                        userId={user.id}
-                        onDelete={handleLocationDeleted}
-                      />
-                    </div>
+                <div key={location.id} className="relative group">
+                  {isEditing && (
+                    <button
+                      onClick={() => handleDeleteLocation(location.id)}
+                      className="absolute -top-2 -left-2 z-30 bg-destructive hover:bg-destructive/90 rounded-full p-1.5 transition-all duration-200 shadow-lg"
+                    >
+                      <Minus className="h-4 w-4 text-white" />
+                    </button>
                   )}
+                  <div className={isEditing ? "opacity-80" : ""}>
+                    <PhotoLocationCard
+                      location={location}
+                      index={index}
+                      onViewDetails={handleViewDetails}
+                      showRealTimeSiqs={true}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
