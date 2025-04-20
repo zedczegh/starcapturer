@@ -23,14 +23,12 @@ const LocationView: React.FC<LocationViewProps> = ({
   emptyDescription
 }) => {
   const { t } = useLanguage();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalLocations, setTotalLocations] = useState(0);
-  const locationsPerPage = 5; // Fixed at 5 locations per page
+  const [visibleLocations, setVisibleLocations] = useState<SharedAstroSpot[]>([]);
+  const locationsPerPage = 5; // Fixed at 5 locations
   
+  // Update visible locations when main locations list changes
   useEffect(() => {
-    console.log(`LocationView received ${locations.length} locations`);
-    setTotalLocations(locations.length);
-    setCurrentPage(1);
+    setVisibleLocations(locations.slice(0, locationsPerPage));
   }, [locations]);
   
   if (loading && initialLoad) {
@@ -56,46 +54,34 @@ const LocationView: React.FC<LocationViewProps> = ({
     );
   }
   
-  // Calculate pagination values
-  const indexOfLastLocation = currentPage * locationsPerPage;
-  const indexOfFirstLocation = indexOfLastLocation - locationsPerPage;
-  
-  // Get current page locations
-  const currentLocations = locations.slice(0, indexOfLastLocation);
-  
-  const loadMore = () => {
-    setCurrentPage(prev => prev + 1);
-  };
-  
   return (
     <div className="space-y-6">
-      <div className="text-sm text-muted-foreground mb-4 flex flex-wrap justify-between items-center">
+      <div className="text-sm text-muted-foreground mb-4 flex justify-between items-center">
         <span>
           {t(
-            "Showing {{start}}-{{end}} of {{total}} locations",
-            "显示 {{start}}-{{end}}，共 {{total}} 个位置"
+            "Showing {{shown}} of {{total}} locations",
+            "显示 {{shown}}/{{total}} 个位置"
           )
-            .replace('{{start}}', String(1))
-            .replace('{{end}}', String(Math.min(indexOfLastLocation, locations.length)))
-            .replace('{{total}}', String(totalLocations))}
+            .replace('{{shown}}', String(Math.min(locationsPerPage, locations.length)))
+            .replace('{{total}}', String(locations.length))}
         </span>
       </div>
       
       <LocationsList 
-        locations={currentLocations}
+        locations={visibleLocations}
         loading={loading}
         initialLoad={initialLoad}
         showRealTimeSiqs={true}
       />
       
-      {indexOfLastLocation < locations.length && (
+      {locations.length > locationsPerPage && (
         <div className="flex justify-center mt-6">
           <Button 
             variant="outline"
-            onClick={loadMore}
-            className="w-full max-w-xs"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="w-full max-w-xs bg-gradient-to-r from-blue-500/10 to-green-500/10 hover:from-blue-500/20 hover:to-green-500/20"
           >
-            {t("Load More Locations", "加载更多位置")}
+            {t("View More Locations", "查看更多位置")}
           </Button>
         </div>
       )}
