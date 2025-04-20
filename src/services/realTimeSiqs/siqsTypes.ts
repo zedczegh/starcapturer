@@ -19,6 +19,7 @@ export interface SiqsResult {
       lightPollution: boolean;
       terrainCorrected?: boolean;
       climate?: boolean;
+      singleHourSampling?: boolean; // Add this field to fix error #2
     };
     reliability?: {
       score: number;
@@ -43,7 +44,7 @@ export interface WeatherDataWithClearSky {
   nighttimeCloudData?: {
     average: number;
     timeRange: string;
-    sourceType: 'forecast' | 'calculated' | 'historical';
+    sourceType: 'forecast' | 'calculated' | 'historical' | 'optimized'; // Add 'optimized' to fix error #1
   };
 }
 
