@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { NavLink } from "./NavButtons";
@@ -6,6 +5,7 @@ import LanguageSwitcher from "../LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Map } from "lucide-react";
 import LocationPinButton from "./LocationPinButton";
+import ProfileButton from "./ProfileButton";
 
 interface DesktopNavProps {
   location: ReturnType<typeof useLocation>;
@@ -47,6 +47,7 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
       <div className="hidden md:flex items-center space-x-2">
         <LocationPinButton />
         <LanguageSwitcher />
+        <ProfileButton />
       </div>
     </>
   );

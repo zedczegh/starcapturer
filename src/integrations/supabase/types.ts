@@ -9,7 +9,72 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id: string
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      saved_locations: {
+        Row: {
+          bortlescale: number | null
+          certification: string | null
+          created_at: string
+          id: string
+          isdarkskyreserve: boolean | null
+          latitude: number
+          longitude: number
+          name: string
+          siqs: number | null
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          bortlescale?: number | null
+          certification?: string | null
+          created_at?: string
+          id?: string
+          isdarkskyreserve?: boolean | null
+          latitude: number
+          longitude: number
+          name: string
+          siqs?: number | null
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          bortlescale?: number | null
+          certification?: string | null
+          created_at?: string
+          id?: string
+          isdarkskyreserve?: boolean | null
+          latitude?: number
+          longitude?: number
+          name?: string
+          siqs?: number | null
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

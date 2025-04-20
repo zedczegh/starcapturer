@@ -1,0 +1,61 @@
+
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+
+interface LoginFormProps {
+  onSuccess: () => void;
+}
+
+const LoginForm = ({ onSuccess }: LoginFormProps) => {
+  const { signIn } = useAuth();
+  const { t } = useLanguage();
+  const form = useForm();
+
+  const onSubmit = async (data: any) => {
+    await signIn(data.email, data.password);
+    onSuccess();
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("Email", "电子邮箱")}</FormLabel>
+              <FormControl>
+                <Input {...field} type="email" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("Password", "密码")}</FormLabel>
+              <FormControl>
+                <Input {...field} type="password" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full">
+          {t("Login", "登录")}
+        </Button>
+      </form>
+    </Form>
+  );
+};
+
+export default LoginForm;
