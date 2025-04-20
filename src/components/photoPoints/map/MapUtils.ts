@@ -1,7 +1,9 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
 import { isWaterLocation } from "@/utils/validation";
 import { filterMapLocations } from '@/utils/mapFilters';
+import { optimizeLocationsForMobile } from '@/utils/filterUtils';
 
 /**
  * Filter locations based on map view parameters
@@ -29,45 +31,24 @@ export function optimizeLocationsForMobile(
   isMobile: boolean, 
   activeView: string
 ): SharedAstroSpot[] {
-  if (!isMobile) {
-    // For desktop, still limit total locations for performance but keep more
-    const certifiedLocations = locations.filter(loc => 
-      Boolean(loc.certification || loc.isDarkSkyReserve)
-    );
-    
-    if (activeView === 'certified') {
-      return certifiedLocations;
+  return optimizeLocationsForMobile(locations, isMobile, activeView);
+}
+
+/**
+ * Create a spatial index of locations to improve lookup performance
+ * Helps with faster filtering and hover detection
+ */
+export function createLocationSpatialIndex(locations: SharedAstroSpot[]): Map<string, SharedAstroSpot> {
+  const locationMap = new Map<string, SharedAstroSpot>();
+  
+  if (!locations || !Array.isArray(locations)) return locationMap;
+  
+  for (const location of locations) {
+    if (location.latitude && location.longitude) {
+      const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+      locationMap.set(key, location);
     }
-    
-    const calculatedLocations = locations.filter(loc => 
-      !loc.certification && !loc.isDarkSkyReserve
-    );
-    
-    // Higher limit for desktop
-    const desktopCalculatedLimit = 100;
-    const limitedCalculated = calculatedLocations.slice(0, desktopCalculatedLimit);
-    
-    return [...certifiedLocations, ...limitedCalculated];
   }
   
-  // For mobile devices
-  const certifiedLocations = locations.filter(loc => 
-    Boolean(loc.certification || loc.isDarkSkyReserve)
-  );
-  
-  if (activeView === 'certified') {
-    return certifiedLocations;
-  }
-  
-  // For calculated view on mobile, use more locations but still limit for performance
-  const calculatedLocations = locations.filter(loc => 
-    !loc.certification && !loc.isDarkSkyReserve
-  );
-  
-  // Increase limit for mobile to prevent emptiness but maintain performance
-  const mobileCalculatedLimit = 30;
-  const limitedCalculated = calculatedLocations.slice(0, mobileCalculatedLimit);
-  
-  // Return all certified locations plus the limited calculated ones
-  return [...certifiedLocations, ...limitedCalculated];
+  return locationMap;
 }

@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/utils/geoUtils";
 import { isWaterLocation } from "@/utils/validation";
@@ -20,9 +19,6 @@ export function filterMapLocations(
   const certifiedLocations: SharedAstroSpot[] = [];
   const certifiedCoordinates = new Set<string>();
   
-  // Use performance-optimized approach
-  const processStart = performance.now();
-  
   // First pass: collect all certified locations
   for (let i = 0; i < locations.length; i++) {
     const loc = locations[i];
@@ -41,18 +37,26 @@ export function filterMapLocations(
     return certifiedLocations;
   }
   
-  // For calculated view, add filtered non-certified locations in batches
-  const calculatedMax = 50; // Limit number of calculated locations for performance
+  // For calculated view, add filtered non-certified locations
+  // Increased limit for calculated locations to make them more visible
+  const calculatedMax = 100; // Increased from 50 to show more calculated spots
   let calculatedCount = 0;
   
-  // Process non-certified locations in smaller chunks to prevent UI freezing
-  for (let i = 0; i < locations.length && calculatedCount < calculatedMax; i++) {
-    const loc = locations[i];
-    // Skip certified locations (already processed)
-    if (loc.certification || loc.isDarkSkyReserve) continue;
-    
-    // Skip invalid locations
-    if (!loc.latitude || !loc.longitude) continue;
+  // Sort non-certified locations by quality first (higher SIQS first)
+  const nonCertifiedLocations = locations
+    .filter(loc => !(loc.certification || loc.isDarkSkyReserve))
+    .filter(loc => loc.latitude && loc.longitude) // Ensure valid coordinates
+    .sort((a, b) => {
+      // Get SIQS scores
+      const scoreA = typeof a.siqs === 'object' ? a.siqs.score : (a.siqs || 0);
+      const scoreB = typeof b.siqs === 'object' ? b.siqs.score : (b.siqs || 0);
+      
+      return scoreB - scoreA; // Higher scores first
+    });
+  
+  // Process sorted non-certified locations
+  for (let i = 0; i < nonCertifiedLocations.length && calculatedCount < calculatedMax; i++) {
+    const loc = nonCertifiedLocations[i];
     
     // Skip water locations
     if (isWaterLocation(loc.latitude, loc.longitude)) continue;
@@ -77,9 +81,57 @@ export function filterMapLocations(
     }
   }
   
-  const results = Array.from(locationMap.values());
-  const processEnd = performance.now();
-  console.log(`Location filtering completed in ${(processEnd - processStart).toFixed(2)}ms for ${locations.length} locations. Returned ${results.length}.`);
+  // Return combined results
+  return Array.from(locationMap.values());
+}
+
+/**
+ * Optimize locations for different device types
+ */
+export function optimizeLocationsForMobile(
+  locations: SharedAstroSpot[],
+  isMobile: boolean, 
+  activeView: string
+): SharedAstroSpot[] {
+  if (!isMobile) {
+    // For desktop, still limit total locations for performance but keep more
+    const certifiedLocations = locations.filter(loc => 
+      Boolean(loc.certification || loc.isDarkSkyReserve)
+    );
+    
+    if (activeView === 'certified') {
+      return certifiedLocations;
+    }
+    
+    const calculatedLocations = locations.filter(loc => 
+      !loc.certification && !loc.isDarkSkyReserve
+    );
+    
+    // Higher limit for desktop
+    const desktopCalculatedLimit = 150; // Increased from 100 to show more spots
+    const limitedCalculated = calculatedLocations.slice(0, desktopCalculatedLimit);
+    
+    return [...certifiedLocations, ...limitedCalculated];
+  }
   
-  return results;
+  // For mobile devices
+  const certifiedLocations = locations.filter(loc => 
+    Boolean(loc.certification || loc.isDarkSkyReserve)
+  );
+  
+  if (activeView === 'certified') {
+    return certifiedLocations;
+  }
+  
+  // For calculated view on mobile, use more locations but still limit for performance
+  const calculatedLocations = locations.filter(loc => 
+    !loc.certification && !loc.isDarkSkyReserve
+  );
+  
+  // Increase limit for mobile
+  const mobileCalculatedLimit = 50; // Increased from 30 to show more spots
+  const limitedCalculated = calculatedLocations.slice(0, mobileCalculatedLimit);
+  
+  // Return all certified locations plus the limited calculated ones
+  return [...certifiedLocations, ...limitedCalculated];
 }

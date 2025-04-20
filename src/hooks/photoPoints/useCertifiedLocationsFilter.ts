@@ -1,5 +1,5 @@
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { CertificationType } from '@/components/photoPoints/filters/CertificationFilter';
 
@@ -12,49 +12,34 @@ export function useCertifiedLocationsFilter(
   locations: SharedAstroSpot[], 
   selectedType: CertificationType
 ) {
-  // Debug logging for certified locations
-  useEffect(() => {
-    console.log(`Received ${locations.length} certified locations for filtering`);
-    
-    if (locations.length > 0) {
-      // Count by certification type for debugging
-      const certTypes = {
-        reserve: 0,
-        park: 0,
-        community: 0,
-        urban: 0,
-        lodging: 0,
-        other: 0
-      };
-      
-      locations.forEach(loc => {
-        const cert = (loc.certification || '').toLowerCase();
-        if (cert.includes('reserve') || Boolean(loc.isDarkSkyReserve)) {
-          certTypes.reserve++;
-        } else if (cert.includes('park')) {
-          certTypes.park++;
-        } else if (cert.includes('community')) {
-          certTypes.community++;
-        } else if (cert.includes('urban') || cert.includes('night sky place')) {
-          certTypes.urban++;
-        } else if (cert.includes('lodging')) {
-          certTypes.lodging++;
-        } else {
-          certTypes.other++;
-        }
-      });
-      
-      console.log("Certification type counts:", certTypes);
-    }
-  }, [locations]);
+  // Reference to previous locations to prevent re-filtering for same data
+  const prevLocationsRef = useRef<SharedAstroSpot[]>([]);
+  const prevSelectedTypeRef = useRef<CertificationType>(selectedType);
+  const filteredLocationsRef = useRef<SharedAstroSpot[]>([]);
   
   // Filter locations based on certification type ONLY - no distance limits applied
   const filteredLocations = useMemo(() => {
+    // Skip filtering if inputs haven't changed
+    if (
+      prevLocationsRef.current === locations &&
+      prevSelectedTypeRef.current === selectedType &&
+      filteredLocationsRef.current.length > 0
+    ) {
+      return filteredLocationsRef.current;
+    }
+    
+    // Update refs to track current inputs
+    prevLocationsRef.current = locations;
+    prevSelectedTypeRef.current = selectedType;
+    
+    // Return all locations if "all" is selected 
     if (selectedType === 'all') {
+      filteredLocationsRef.current = locations;
       return locations;
     }
     
-    return locations.filter(location => {
+    // Perform filtering in a performant way
+    const filteredResults = locations.filter(location => {
       // Skip locations without any certification
       if (!location.certification && !location.isDarkSkyReserve) {
         return false;
@@ -81,12 +66,10 @@ export function useCertifiedLocationsFilter(
           return true;
       }
     });
+    
+    filteredLocationsRef.current = filteredResults;
+    return filteredResults;
   }, [locations, selectedType]);
-  
-  // Log filtered results for debugging
-  useEffect(() => {
-    console.log(`Filtered to ${filteredLocations.length} ${selectedType} locations`);
-  }, [filteredLocations, selectedType]);
 
   return { filteredLocations };
 }

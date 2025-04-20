@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 
 interface UseSiqsStateProps {
   realTimeSiqs: number | null;
@@ -12,17 +12,24 @@ export function useSiqsState({ realTimeSiqs, locationSiqs }: UseSiqsStateProps) 
   const [updateTime, setUpdateTime] = useState<number>(Date.now());
   const updateTimeoutRef = useRef<number | null>(null);
   
+  // Track previous values to prevent unnecessary updates
+  const prevRealTimeSiqs = useRef<number | null>(null);
+  const prevLocationSiqs = useRef<number | null>(null);
+  
   // Always prioritize existing SIQS data if available to prevent flickering
   useEffect(() => {
-    if (locationSiqs && locationSiqs > 0) {
+    if (locationSiqs && locationSiqs > 0 && prevLocationSiqs.current !== locationSiqs) {
+      prevLocationSiqs.current = locationSiqs;
       setDisplaySiqs(locationSiqs);
       setStableSiqs(locationSiqs);
     }
   }, [locationSiqs]);
   
-  // Update stable SIQS when real-time data is available, with debounce
+  // Update stable SIQS when real-time data is available, with improved debounce
   useEffect(() => {
-    if (realTimeSiqs !== null && realTimeSiqs > 0) {
+    if (realTimeSiqs !== null && realTimeSiqs > 0 && prevRealTimeSiqs.current !== realTimeSiqs) {
+      prevRealTimeSiqs.current = realTimeSiqs;
+      
       // Always update stable SIQS (used during loading)
       setStableSiqs(realTimeSiqs);
       
@@ -40,7 +47,7 @@ export function useSiqsState({ realTimeSiqs, locationSiqs }: UseSiqsStateProps) 
           setDisplaySiqs(realTimeSiqs);
           setUpdateTime(Date.now());
           updateTimeoutRef.current = null;
-        }, 300); // Short delay to batch updates
+        }, 500); // Increased delay to further reduce flickering
       }
     }
     
@@ -52,8 +59,11 @@ export function useSiqsState({ realTimeSiqs, locationSiqs }: UseSiqsStateProps) 
     };
   }, [realTimeSiqs, displaySiqs, updateTime]);
 
-  return {
+  // Memoize the final values to prevent unnecessary renders
+  const memoizedResult = useMemo(() => ({
     stableSiqs,
     displaySiqs
-  };
+  }), [stableSiqs, displaySiqs]);
+
+  return memoizedResult;
 }
