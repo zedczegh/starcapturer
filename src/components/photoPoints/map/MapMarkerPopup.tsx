@@ -1,13 +1,15 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Star, MapPin, Navigation } from 'lucide-react';
+import { Star, MapPin, Navigation, RefreshCw } from 'lucide-react';
 import { formatDistance } from '@/utils/geoUtils';
 import { useDisplayName } from '../cards/DisplayNameResolver';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { getSiqsScore } from '@/utils/siqsHelpers';
+import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
+import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 
 interface MapMarkerPopupProps {
   location: SharedAstroSpot;
@@ -21,6 +23,10 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
   onViewDetails 
 }) => {
   const { language, t } = useLanguage();
+  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
+  const [siqsLoading, setSiqsLoading] = useState(false);
+  const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
+  const [forceUpdate, setForceUpdate] = useState(false);
   
   const { displayName, showOriginalName, nearestTownInfo } = useDisplayName({
     location,
@@ -29,7 +35,6 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
   });
   
   // Determine if this is a certified location of any type
-  // Handle the potentially undefined type property safely
   const isCertified = Boolean(
     location.isDarkSkyReserve || 
     (location.certification && location.certification !== '') || 
@@ -42,26 +47,51 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
     (location.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜天空保护区") : 
       (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
   
-  // Extract SIQS score from any format using our helper function
-  const siqsScore = getSiqsScore(location);
-  // Always show SIQS badge for certified locations, with a minimum score
-  const hasSiqs = siqsScore > 0 || isCertified;
-  // For certified locations without SIQS, use a default good score
-  const displaySiqs = siqsScore > 0 ? siqsScore : (isCertified ? 6.5 : 0);
+  // Use our unified display SIQS function - no default scores for certified locations
+  const staticSiqs = getSiqsScore(location);
+  const displaySiqs = getDisplaySiqs({
+    realTimeSiqs,
+    staticSiqs,
+    isCertified,
+    isDarkSkyReserve: Boolean(location.isDarkSkyReserve)
+  });
+  
+  const handleSiqsCalculated = (siqs: number | null, loading: boolean, confidence?: number) => {
+    setRealTimeSiqs(siqs);
+    setSiqsLoading(loading);
+    if (confidence) setSiqsConfidence(confidence);
+  };
+  
+  const handleRefreshSiqs = () => {
+    setForceUpdate(true);
+    setTimeout(() => setForceUpdate(false), 100);
+  };
   
   return (
-    <div className="p-3 min-w-[200px] max-w-[280px]">
+    <div className="p-3 min-w-[220px] max-w-[280px]">
       <div className="flex justify-between items-center mb-2">
         <h4 className="font-semibold text-sm line-clamp-1">{displayName}</h4>
-        
-        {/* Always show SIQS badge for certified locations */}
-        {hasSiqs && (
+      </div>
+      
+      {/* Show SIQS with more detailed info - no default scores for certified locations */}
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center">
           <SiqsScoreBadge 
             score={displaySiqs} 
-            compact={true} 
-            forceCertified={isCertified && siqsScore <= 0}
+            compact={false} 
+            loading={siqsLoading}
+            isCertified={isCertified}
+            forceCertified={false} // Don't force certified default scores
           />
-        )}
+        </div>
+        <button 
+          onClick={handleRefreshSiqs} 
+          className="text-muted-foreground hover:text-primary p-1 rounded-full"
+          disabled={siqsLoading}
+          title={t("Refresh SIQS", "刷新SIQS")}
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${siqsLoading ? "animate-spin" : ""}`} />
+        </button>
       </div>
       
       {/* Show certification for all certified location types */}
@@ -124,6 +154,19 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
           {t("Details", "详情")}
         </Button>
       </div>
+      
+      {/* Real-time SIQS provider - hidden component */}
+      <RealTimeSiqsProvider
+        isVisible={true}
+        latitude={location.latitude}
+        longitude={location.longitude}
+        bortleScale={location.bortleScale}
+        isCertified={isCertified}
+        isDarkSkyReserve={location.isDarkSkyReserve}
+        existingSiqs={location.siqs}
+        onSiqsCalculated={handleSiqsCalculated}
+        forceUpdate={forceUpdate}
+      />
     </div>
   );
 };

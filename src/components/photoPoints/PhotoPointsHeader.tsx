@@ -1,9 +1,8 @@
 
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { MapPin, List, Map } from 'lucide-react';
+import { MapPin, List, Map, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import BackButton from '@/components/navigation/BackButton';
 import { motion } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -59,9 +58,15 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
       animate="visible"
       variants={headerVariants}
     >
-      {/* Back Button and Map Toggle */}
-      <div className="flex justify-between items-center mb-6">
-        <BackButton destination="/" />
+      {/* Map Toggle and Location Status */}
+      <div className="flex justify-end items-center mb-6">
+        {/* Show loading indicator when getting location */}
+        {locationLoading && (
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+            {t("Getting location...", "正在获取位置...")}
+          </div>
+        )}
         
         {showMapToggle && toggleMapView && (
           <Button 
@@ -105,24 +110,6 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
           )}
         </motion.p>
       </div>
-      
-      {/* User location section */}
-      {!userLocation && (
-        <div className="flex justify-center mb-8">
-          <Button
-            onClick={getPosition}
-            className="flex items-center gap-2"
-            disabled={locationLoading}
-          >
-            {locationLoading ? (
-              <span className="animate-pulse">•••</span>
-            ) : (
-              <MapPin className="h-4 w-4" />
-            )}
-            {t("Use My Location", "使用我的位置")}
-          </Button>
-        </div>
-      )}
     </motion.div>
   );
 };

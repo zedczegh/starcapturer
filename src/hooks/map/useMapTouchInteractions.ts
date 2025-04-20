@@ -1,56 +1,74 @@
-import { useCallback } from 'react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useCallback, useRef } from 'react';
 
-export const useMapTouchInteractions = (handleHover: (id: string | null) => void) => {
-  const isMobile = useIsMobile();
+type HoverHandler = (id: string | null) => void;
+
+export const useMapTouchInteractions = (onHover: HoverHandler) => {
+  const touchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchMoveCount = useRef(0);
   
-  /**
-   * Handle touch start event for better touch interaction
-   */
   const handleTouchStart = useCallback((e: React.TouchEvent, id: string) => {
-    if (!isMobile) return;
+    // Clear existing timer if any
+    if (touchTimer.current) {
+      clearTimeout(touchTimer.current);
+    }
     
-    // Prevent default to avoid double-firing issues on some mobile browsers
-    e.stopPropagation();
+    // Reset move counter
+    touchMoveCount.current = 0;
     
-    // Immediately show hover state on touch start
-    handleHover(id);
-  }, [isMobile, handleHover]);
+    // Set hover after a small delay to prevent flickering during scrolling
+    touchTimer.current = setTimeout(() => {
+      onHover(id);
+      touchTimer.current = null;
+    }, 100);
+  }, [onHover]);
   
-  /**
-   * Handle touch end event for better touch interaction
-   */
   const handleTouchEnd = useCallback((e: React.TouchEvent, id: string | null) => {
-    if (!isMobile) return;
+    // If user has moved a lot, don't trigger hover
+    if (touchMoveCount.current > 5) {
+      if (touchTimer.current) {
+        clearTimeout(touchTimer.current);
+        touchTimer.current = null;
+      }
+      onHover(null);
+      return;
+    }
     
-    // Prevent default behaviors
-    e.stopPropagation();
-    
-    // Keep hover state visible significantly longer on mobile
-    setTimeout(() => {
-      handleHover(null);
-    }, 5000); // 5 seconds for better interaction time
-  }, [isMobile, handleHover]);
+    // Keep hover state for a bit, then clear it
+    if (id !== null) {
+      setTimeout(() => {
+        onHover(null);
+      }, 2000);
+    } else {
+      onHover(null);
+    }
+  }, [onHover]);
   
-  /**
-   * Handle touch move to detect dragging vs tapping
-   */
-  const handleTouchMove = useCallback((e: React.TouchEvent, touchStartPos: {x: number, y: number} | null) => {
-    if (!isMobile || !touchStartPos) return null;
+  const handleTouchMove = useCallback((e: React.TouchEvent, startPos: {x: number, y: number} | null) => {
+    touchMoveCount.current += 1;
     
-    if (e.touches && e.touches[0]) {
-      const moveX = Math.abs(e.touches[0].clientX - touchStartPos.x);
-      const moveY = Math.abs(e.touches[0].clientY - touchStartPos.y);
+    // If moved more than a threshold, cancel hover
+    if (touchMoveCount.current > 3 && touchTimer.current) {
+      clearTimeout(touchTimer.current);
+      touchTimer.current = null;
+      onHover(null);
+    }
+    
+    // Calculate and return new position
+    if (e.touches && e.touches[0] && startPos) {
+      const xDiff = Math.abs(e.touches[0].clientX - startPos.x);
+      const yDiff = Math.abs(e.touches[0].clientY - startPos.y);
       
-      // If moved more than threshold, consider it a drag and clear hover
-      if (moveX > 20 || moveY > 20) {
-        handleHover(null);
-        return null;
+      // If moved significantly, update position
+      if (xDiff > 10 || yDiff > 10) {
+        return {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY
+        };
       }
     }
     
-    return touchStartPos;
-  }, [isMobile, handleHover]);
+    return startPos;
+  }, [onHover]);
   
   return {
     handleTouchStart,
@@ -58,3 +76,5 @@ export const useMapTouchInteractions = (handleHover: (id: string | null) => void
     handleTouchMove
   };
 };
+
+export default useMapTouchInteractions;

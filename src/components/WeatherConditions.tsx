@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import PrimaryConditions from "@/components/weather/PrimaryConditions";
 import SecondaryConditions from "@/components/weather/SecondaryConditions";
-import { getSeeingConditionInChinese, getMoonPhaseInChinese, getWeatherConditionInChinese } from "@/utils/weatherUtils";
+import { getSeeingConditionInChinese } from "@/utils/weatherUtils";
 import { motion } from "framer-motion";
-import { extractNightForecasts, calculateAverageCloudCover } from "@/components/forecast/NightForecastUtils";
-import NighttimeCloudInfo from "@/components/weather/NighttimeCloudInfo";
 import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
-import { normalizeMoonPhase } from "@/utils/weather/moonPhaseUtils";
+import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
+import { calculateTonightCloudCover } from "@/utils/nighttimeSIQS";
+import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
+import { Cloud, Loader2 } from "lucide-react";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -27,6 +28,8 @@ interface WeatherConditionsProps {
   bortleScale: number | null;
   seeingConditions: string;
   forecastData?: any;
+  latitude?: number;
+  longitude?: number;
 }
 
 const WeatherConditions: React.FC<WeatherConditionsProps> = ({
@@ -34,59 +37,71 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   moonPhase,
   bortleScale,
   seeingConditions,
-  forecastData
+  forecastData,
+  latitude = 0,
+  longitude = 0
 }) => {
   const { language, t } = useLanguage();
   const [stableWeatherData, setStableWeatherData] = useState(weatherData);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Set loading state based on weather data completeness
+  useEffect(() => {
+    // Check if we have valid weather data
+    const hasValidWeatherData = 
+      weatherData && 
+      weatherData.temperature !== undefined && 
+      weatherData.humidity !== undefined && 
+      weatherData.cloudCover !== undefined &&
+      weatherData.windSpeed !== undefined;
+      
+    setIsLoading(!hasValidWeatherData);
+    
+    // If we have data, update the stable state
+    if (hasValidWeatherData) {
+      setStableWeatherData(weatherData);
+    }
+    
+    // Auto-hide loading state after 3 seconds even if data is missing
+    const timer = setTimeout(() => {
+      if (isLoading) setIsLoading(false);
+    }, 3000);
+    
+    return () => clearTimeout(timer);
+  }, [weatherData]);
   
   const nighttimeCloudData = useMemo(() => {
     if (!forecastData || !forecastData.hourly) return null;
     
     try {
-      const nightForecasts = extractNightForecasts(forecastData.hourly);
+      // Get astronomical night times for the location
+      const { start, end } = calculateAstronomicalNight(latitude, longitude);
+      const nightTimeStr = `${formatTime(start)}-${formatTime(end)}`;
       
-      if (nightForecasts.length === 0) return null;
+      // Calculate tonight's cloud cover using astronomical night hours
+      const tonightCloudCover = calculateTonightCloudCover(
+        forecastData.hourly,
+        latitude,
+        longitude
+      );
       
-      const eveningForecasts = nightForecasts.filter(forecast => {
-        const hour = new Date(forecast.time).getHours();
-        return hour >= 18 && hour <= 23;
-      });
-      
-      const morningForecasts = nightForecasts.filter(forecast => {
-        const hour = new Date(forecast.time).getHours();
-        return hour >= 0 && hour < 8;
-      });
-      
-      const eveningCloudCover = calculateAverageCloudCover(eveningForecasts);
-      const morningCloudCover = calculateAverageCloudCover(morningForecasts);
-      
-      const totalHours = eveningForecasts.length + morningForecasts.length;
-      
-      let avgNightCloudCover;
-      if (eveningForecasts.length === 0 && morningForecasts.length === 0) {
-        avgNightCloudCover = null;
-      } else if (eveningForecasts.length === 0) {
-        avgNightCloudCover = morningCloudCover;
-      } else if (morningForecasts.length === 0) {
-        avgNightCloudCover = eveningCloudCover;
-      } else {
-        avgNightCloudCover = (
-          (eveningCloudCover * eveningForecasts.length) + 
-          (morningCloudCover * morningForecasts.length)
-        ) / totalHours;
+      if (tonightCloudCover === 0 && !forecastData.hourly.cloud_cover) {
+        return null;
       }
       
       return {
-        average: avgNightCloudCover,
-        evening: eveningCloudCover,
-        morning: morningCloudCover
+        average: tonightCloudCover,
+        timeRange: nightTimeStr,
+        description: t ? 
+          t("Astronomical Night Cloud Cover", "天文夜云量") : 
+          "Astronomical Night Cloud Cover"
       };
     } catch (error) {
       console.error("Error calculating nighttime cloud cover:", error);
       return null;
     }
-  }, [forecastData]);
+  }, [forecastData, latitude, longitude, t]);
   
   useEffect(() => {
     if (forecastData && validateWeatherData(weatherData)) {
@@ -118,23 +133,17 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     }
   }, [weatherData, forecastData, toast, t]);
   
+  const { name: calculatedMoonPhaseName } = getMoonInfo();
+  
   const translatedData = useMemo(() => {
-    const normalizedMoonPhase = normalizeMoonPhase(moonPhase);
-    
     return {
       seeingConditions: language === 'zh' 
         ? getSeeingConditionInChinese(seeingConditions)
         : seeingConditions,
-      moonPhase: language === 'zh'
-        ? getMoonPhaseInChinese(normalizedMoonPhase)
-        : normalizedMoonPhase,
-      weatherCondition: language === 'zh' && stableWeatherData.condition
-        ? getWeatherConditionInChinese(stableWeatherData.condition)
-        : stableWeatherData.condition
+      moonPhase: calculatedMoonPhaseName,
     };
-  }, [language, seeingConditions, moonPhase, stableWeatherData.condition]);
+  }, [language, seeingConditions, calculatedMoonPhaseName]);
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
@@ -157,36 +166,44 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     >
       <Card className="backdrop-blur-sm border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden hover:shadow-cosmic-600/10">
         <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-          <CardTitle className="text-xl text-gradient-blue">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Cloud className="w-5 h-5 text-blue-400" />
             {t("Current Conditions", "当前状况")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <motion.div variants={itemVariants}>
-              <PrimaryConditions
-                temperature={stableWeatherData.temperature}
-                humidity={stableWeatherData.humidity}
-                windSpeed={stableWeatherData.windSpeed}
-                seeingConditions={translatedData.seeingConditions}
-              />
-            </motion.div>
-            
-            <motion.div variants={itemVariants}>
-              <SecondaryConditions
-                cloudCover={stableWeatherData.cloudCover}
-                moonPhase={translatedData.moonPhase}
-                bortleScale={bortleScale}
-                aqi={stableWeatherData.aqi}
-                nighttimeCloudData={nighttimeCloudData}
-              />
-            </motion.div>
-          </div>
-          
-          {nighttimeCloudData && nighttimeCloudData.average !== null && (
-            <motion.div variants={itemVariants} className="mt-4">
-              <NighttimeCloudInfo nighttimeCloudData={nighttimeCloudData} />
-            </motion.div>
+          {isLoading ? (
+            <div className="min-h-[200px] flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-cosmic-400" />
+              <span className="ml-2 text-cosmic-300">{t("Loading weather data...", "加载天气数据中...")}</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <motion.div variants={itemVariants}>
+                <h3 className="text-lg font-semibold mb-4 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
+                  {t("Observing Conditions", "观测条件")}
+                </h3>
+                <PrimaryConditions
+                  temperature={stableWeatherData.temperature}
+                  humidity={stableWeatherData.humidity}
+                  windSpeed={stableWeatherData.windSpeed}
+                  seeingConditions={translatedData.seeingConditions}
+                />
+              </motion.div>
+              
+              <motion.div variants={itemVariants}>
+                <h3 className="text-lg font-semibold mb-4 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
+                  {t("Sky Conditions", "天空状况")}
+                </h3>
+                <SecondaryConditions
+                  cloudCover={stableWeatherData.cloudCover}
+                  moonPhase={translatedData.moonPhase}
+                  bortleScale={bortleScale}
+                  aqi={stableWeatherData.aqi}
+                  nighttimeCloudData={nighttimeCloudData}
+                />
+              </motion.div>
+            </div>
           )}
         </CardContent>
       </Card>

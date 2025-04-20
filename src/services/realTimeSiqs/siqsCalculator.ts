@@ -11,11 +11,47 @@ import {
 import { calculateMoonPhase } from "./moonPhaseCalculator";
 import { applyIntelligentAdjustments } from "./siqsAdjustments";
 import { WeatherDataWithClearSky, SiqsResult } from "./siqsTypes";
+import { findClimateRegion, getClimateAdjustmentFactor } from "./climateRegions";
+import { findClosestEnhancedLocation } from "./enhancedLocationData";
+import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
 
-/**
- * Calculate real-time SIQS for a given location with enhanced accuracy
- * using state-of-the-art algorithms and multiple data sources
- */
+function improveCalculatedLocationSIQS(initialScore: number, location: any): number {
+  if (initialScore < 0.5) {
+    console.log(`Improving low SIQS score for calculated location: ${initialScore}`);
+    
+    const boostFactors = [
+      location.isDarkSkyReserve ? 1.5 : 1,
+      location.bortleScale ? (9 - location.bortleScale) * 0.5 : 0,
+      location.type === 'remote' ? 1.2 : 1
+    ];
+    
+    const boostFactor = Math.min(
+      2, 
+      1 + boostFactors.reduce((acc, factor) => acc * factor, 1) - boostFactors.length
+    );
+    
+    const improvedScore = Math.min(9.5, initialScore * boostFactor);
+    
+    console.log(`Boosted SIQS from ${initialScore} to ${improvedScore}`);
+    
+    return improvedScore;
+  }
+  
+  return initialScore;
+}
+
+function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { average: number; timeRange: string; sourceType?: string }) {
+  if (!nighttimeData) return cloudCover;
+  
+  const difference = Math.abs(cloudCover - nighttimeData.average);
+  if (difference > 20) {
+    console.log(`Using nighttime cloud cover ${nighttimeData.average}% instead of current ${cloudCover}%`);
+    return nighttimeData.average;
+  }
+  
+  return (nighttimeData.average * 0.7) + (cloudCover * 0.3);
+}
+
 export async function calculateRealTimeSiqs(
   latitude: number, 
   longitude: number, 
@@ -26,66 +62,82 @@ export async function calculateRealTimeSiqs(
     return { siqs: 0, isViable: false };
   }
   
-  // Use shorter caching duration for greater accuracy
-  const CACHE_DURATION_MINS = 30;
+  const CACHE_DURATION_MINS = 15;
   
-  // Check cache first with shorter duration for more frequent updates
   if (hasCachedSiqs(latitude, longitude)) {
     const cachedData = getCachedSiqs(latitude, longitude);
-    if (cachedData) {
-      console.log(`Using cached SIQS data for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}, score: ${cachedData.siqs.toFixed(1)}`);
+    if (cachedData && 
+        (Date.now() - new Date(cachedData.metadata?.calculatedAt || 0).getTime()) < CACHE_DURATION_MINS * 60 * 1000) {
       return cachedData;
     }
   }
   
-  console.log(`Calculating real-time SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-  
   try {
-    // Parallel data fetching with all available data sources for efficiency
-    const [weatherData, forecastData, clearSkyData, extraData] = await Promise.all([
+    const enhancedLocation = await findClosestEnhancedLocation(latitude, longitude);
+    const climateRegion = findClimateRegion(latitude, longitude);
+    
+    const [weatherData, forecastData, clearSkyData, pollutionData] = await Promise.all([
       fetchWeatherData({ latitude, longitude }),
       fetchForecastData({ latitude, longitude, days: 2 }),
       fetchClearSkyRate(latitude, longitude),
-      Promise.all([
-        fetchLightPollutionData(latitude, longitude)
-      ]).catch(() => [null])
+      fetchLightPollutionData(latitude, longitude)
     ]);
     
     if (!weatherData) {
       return { siqs: 0, isViable: false };
     }
     
-    // Enhanced Bortle scale handling with more sophisticated logic
     let finalBortleScale = bortleScale;
-    if (!finalBortleScale || finalBortleScale <= 0 || finalBortleScale > 9) {
-      const [pollutionData] = extraData;
-      // Use light pollution data or default to medium value
-      finalBortleScale = pollutionData?.bortleScale || 5;
+    const terrainCorrectedScale = await getTerrainCorrectedBortleScale(latitude, longitude);
+    if (terrainCorrectedScale !== null) {
+      finalBortleScale = terrainCorrectedScale;
     }
     
-    // Prepare comprehensive weather data with all available sources
-    const weatherDataWithClearSky: WeatherDataWithClearSky = { 
+    const weatherDataWithClearSky: WeatherDataWithClearSky = {
       ...weatherData,
-      clearSkyRate: clearSkyData?.annualRate
+      clearSkyRate: clearSkyData?.annualRate || enhancedLocation?.clearSkyRate,
+      latitude,
+      longitude,
+      _forecast: forecastData
     };
     
-    // Get current moon phase
+    // Type-safe handling of nighttimeCloudData
+    if (weatherData && 'nighttimeCloudData' in weatherData) {
+      const nighttimeData = weatherData.nighttimeCloudData as { 
+        average?: number; 
+        timeRange?: string; 
+        sourceType?: string; 
+      } | undefined;
+      
+      weatherDataWithClearSky.nighttimeCloudData = {
+        average: nighttimeData?.average || 0,
+        timeRange: nighttimeData?.timeRange || "18:00-06:00",
+        sourceType: (nighttimeData?.sourceType as "forecast" | "calculated" | "historical") || 'calculated'
+      };
+    }
+    
+    let finalCloudCover = weatherDataWithClearSky.cloudCover;
+    if (weatherDataWithClearSky.nighttimeCloudData) {
+      finalCloudCover = validateNighttimeCloudData(
+        finalCloudCover,
+        weatherDataWithClearSky.nighttimeCloudData
+      );
+    }
+    
     const moonPhase = calculateMoonPhase();
+    const seeingConditions = enhancedLocation?.averageVisibility === 'excellent' ? 2 : 3;
     
-    // Default seeing conditions (1-5 scale, lower is better)
-    const seeingConditions = 3;
-    
-    // Enhanced SIQS calculation with machine learning-inspired weighting
-    // that adjusts based on local conditions
     const siqsResult = await calculateSIQSWithWeatherData(
-      weatherDataWithClearSky,
+      {
+        ...weatherDataWithClearSky,
+        cloudCover: finalCloudCover
+      },
       finalBortleScale,
       seeingConditions,
       moonPhase,
       forecastData
     );
     
-    // Apply intelligent adjustments based on multiple factors
     let adjustedScore = applyIntelligentAdjustments(
       siqsResult.score,
       weatherDataWithClearSky,
@@ -93,37 +145,48 @@ export async function calculateRealTimeSiqs(
       finalBortleScale
     );
     
-    // Cap the score at realistic values
-    adjustedScore = Math.min(9.5, adjustedScore); // Never allow perfect 10
-    adjustedScore = Math.max(0, adjustedScore); // Never allow negative
+    if (climateRegion) {
+      const month = new Date().getMonth();
+      const climateAdjustment = getClimateAdjustmentFactor(latitude, longitude, month);
+      adjustedScore *= climateAdjustment;
+    }
     
-    // Round to 1 decimal for consistency
+    adjustedScore = Math.min(9.5, Math.max(0, adjustedScore));
     const finalScore = Math.round(adjustedScore * 10) / 10;
     
-    const result = {
+    const result: SiqsResult = {
       siqs: finalScore,
-      isViable: finalScore >= 2.0,
-      factors: siqsResult.factors
-    };
-    
-    // Store in cache with metadata
-    setSiqsCache(latitude, longitude, {
-      ...result,
+      isViable: finalScore >= 3.0,
+      weatherData: weatherDataWithClearSky,
+      forecastData,
+      factors: siqsResult.factors,
       metadata: {
         calculatedAt: new Date().toISOString(),
         sources: {
           weather: true,
           forecast: !!forecastData,
           clearSky: !!clearSkyData,
-          lightPollution: !!extraData[0]
+          lightPollution: !!pollutionData,
+          terrainCorrected: !!terrainCorrectedScale,
+          climate: !!climateRegion
         }
       }
-    });
+    };
+    
+    setSiqsCache(latitude, longitude, result);
     
     return result;
     
   } catch (error) {
     console.error("Error calculating real-time SIQS:", error);
-    return { siqs: 0, isViable: false };
+    return { 
+      siqs: 0,
+      isViable: false,
+      factors: [{
+        name: 'Error',
+        score: 0,
+        description: 'Failed to calculate SIQS'
+      }]
+    };
   }
 }

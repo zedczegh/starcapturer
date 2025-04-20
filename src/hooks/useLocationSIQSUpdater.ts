@@ -1,12 +1,12 @@
 
 import { useEffect, useRef, useCallback } from 'react';
-import { calculateNighttimeSIQS } from '@/utils/nighttimeSIQS';
-import { toast } from 'sonner';
+import { calculateNighttimeSIQS, calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 import { validateCloudCover } from '@/lib/siqs/utils';
+import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
 
 /**
  * Hook to update SIQS score based on forecast data, ensuring consistency
- * throughout the application
+ * throughout the application using astronomical night calculations
  */
 export const useLocationSIQSUpdater = (
   locationData: any, 
@@ -65,7 +65,17 @@ export const useLocationSIQSUpdater = (
       forceUpdateRef.current = false;
       
       try {
-        // Calculate new SIQS based on nighttime conditions
+        // Extract coordinates for astronomical night calculations
+        const latitude = locationData.latitude || 0;
+        const longitude = locationData.longitude || 0;
+        
+        // Get astronomical night times
+        const { start, end } = calculateAstronomicalNight(latitude, longitude);
+        const nightTimeStr = `${formatTime(start)}-${formatTime(end)}`;
+        
+        console.log(`Astronomical night for location: ${nightTimeStr}`);
+        
+        // Calculate new SIQS based on astronomical nighttime conditions
         const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
         
         if (freshSIQSResult) {
@@ -78,9 +88,48 @@ export const useLocationSIQSUpdater = (
           });
           
           updateAttemptedRef.current = true;
+        } else if (forecastData?.hourly?.cloud_cover && locationData.weatherData) {
+          // If we couldn't calculate nighttime SIQS but have forecast data,
+          // use our improved astronomical night cloud cover calculation
+          
+          // Calculate cloud cover for the astronomical night
+          const tonightCloudCover = calculateTonightCloudCover(
+            forecastData.hourly,
+            latitude,
+            longitude
+          );
+          
+          // Convert to SIQS score
+          const estimatedScore = Math.max(0, Math.min(10, 10 - (tonightCloudCover * 0.25)));
+          
+          console.log(`Using calculated tonight's cloud cover for SIQS (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}% -> ${estimatedScore}`);
+          
+          setLocationData({
+            ...locationData,
+            siqsResult: {
+              score: estimatedScore,
+              isViable: tonightCloudCover < 40,
+              factors: [
+                {
+                  name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
+                  score: (100 - tonightCloudCover * 2.5) / 10,
+                  description: t 
+                    ? t(`Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`, 
+                      `今晚云量${tonightCloudCover.toFixed(1)}%影响成像质量`) 
+                    : `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`,
+                  nighttimeData: {
+                    average: tonightCloudCover,
+                    timeRange: nightTimeStr
+                  }
+                }
+              ]
+            }
+          });
+          
+          updateAttemptedRef.current = true;
         } else if (locationData.weatherData?.cloudCover !== undefined) {
-          // Fallback to current weather if nighttime forecast is unavailable
-          console.log("Using fallback SIQS calculation based on current weather");
+          // Last fallback to current weather if forecast is unavailable
+          console.log("Using current weather as fallback (no forecast data available)");
           const currentCloudCover = validateCloudCover(locationData.weatherData.cloudCover);
           
           // Special handling for 0% cloud cover - should be score 10
@@ -110,11 +159,12 @@ export const useLocationSIQSUpdater = (
           updateAttemptedRef.current = true;
         }
       } catch (error) {
-        console.error("Error updating SIQS with forecast data:", error);
-        toast.error(t ? t("Error updating SIQS score", "更新SIQS评分时出错") : "Error updating SIQS score");
+        console.error("Error updating SIQS:", error);
       }
     }
-  }, [forecastData, locationData, setLocationData, t, resetUpdateState]);
+  }, [locationData, forecastData, t, setLocationData, resetUpdateState]);
   
-  return { resetUpdateState };
+  return {
+    resetUpdateState,
+  };
 };

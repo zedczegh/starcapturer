@@ -1,153 +1,275 @@
-// Cache management system for SIQS calculations
-
-// Create a cache to avoid redundant API calls with improved invalidation strategy
-const siqsCache = new Map<string, {
-  siqs: number;
-  timestamp: number;
-  isViable: boolean;
-  factors?: any[];
-}>();
-
-// Invalidate cache entries older than 30 minutes for nighttime, 15 minutes for daytime
-const NIGHT_CACHE_DURATION = 20 * 60 * 1000; // 20 minutes at night
-const DAY_CACHE_DURATION = 10 * 60 * 1000;  // 10 minutes during day
 
 /**
- * Determine if it's nighttime for cache duration purposes
+ * Enhanced SIQS caching system
+ * 
+ * This module provides in-memory and persistent caching for SIQS calculations
+ * to improve performance and reduce API calls.
  */
-export const isNighttime = () => {
-  const hour = new Date().getHours();
-  return hour >= 18 || hour < 8; // 6 PM to 8 AM
-};
+
+import { SiqsResult } from './siqsTypes';
+import { getLocationKey, getCacheDuration, AUTO_CLEANUP_INTERVAL } from './cacheConfig';
+
+// In-memory cache storage
+const siqsCache = new Map<string, SiqsResult & { timestamp: number }>();
+
+// Auto cleanup interval reference
+let cleanupInterval: number | null = null;
 
 /**
- * Get the appropriate cache duration based on time of day
+ * Check if SIQS is cached for a specific location
  */
-export const getCacheDuration = () => {
-  return isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
-};
-
-/**
- * Check if a cached entry exists and is valid
- * @param latitude Latitude of the location
- * @param longitude Longitude of the location
- */
-export const hasCachedSiqs = (latitude: number, longitude: number): boolean => {
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-  const cachedData = siqsCache.get(cacheKey);
+export function hasCachedSiqs(latitude: number, longitude: number): boolean {
+  const key = getLocationKey(latitude, longitude);
   
-  if (cachedData && (Date.now() - cachedData.timestamp) < getCacheDuration()) {
-    return true;
+  if (siqsCache.has(key)) {
+    const cached = siqsCache.get(key);
+    if (cached) {
+      const now = Date.now();
+      const age = now - cached.timestamp;
+      
+      // Check if cache is still valid
+      if (age < getCacheDuration()) {
+        return true;
+      }
+      
+      // If expired, remove from cache
+      siqsCache.delete(key);
+    }
   }
   
   return false;
-};
+}
 
 /**
- * Get a cached SIQS calculation
- * @param latitude Latitude of the location
- * @param longitude Longitude of the location
+ * Get cached SIQS for a specific location
  */
-export const getCachedSiqs = (latitude: number, longitude: number) => {
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-  const cachedData = siqsCache.get(cacheKey);
+export function getCachedSiqs(latitude: number, longitude: number): SiqsResult | null {
+  const key = getLocationKey(latitude, longitude);
   
-  if (cachedData && (Date.now() - cachedData.timestamp) < getCacheDuration()) {
-    return {
-      siqs: cachedData.siqs,
-      isViable: cachedData.isViable,
-      factors: cachedData.factors
-    };
+  if (siqsCache.has(key)) {
+    const cached = siqsCache.get(key);
+    if (cached) {
+      const now = Date.now();
+      const age = now - cached.timestamp;
+      
+      // Check if cache is still valid
+      if (age < getCacheDuration()) {
+        return cached;
+      }
+      
+      // If expired, remove from cache
+      siqsCache.delete(key);
+    }
   }
   
   return null;
-};
+}
 
 /**
- * Set a SIQS calculation in the cache
- * @param latitude Latitude of the location
- * @param longitude Longitude of the location
- * @param data SIQS calculation data
+ * Store SIQS in cache
  */
-export const setSiqsCache = (
-  latitude: number,
-  longitude: number,
-  data: { 
-    siqs: number; 
-    isViable: boolean; 
-    factors?: any[];
-    metadata?: {
-      calculatedAt: string;
-      sources: {
-        weather: boolean;
-        forecast: boolean;
-        clearSky: boolean;
-        lightPollution: boolean;
-      };
-    };
-  }
-) => {
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+export function setSiqsCache(latitude: number, longitude: number, result: SiqsResult): void {
+  const key = getLocationKey(latitude, longitude);
   
-  siqsCache.set(cacheKey, {
-    ...data,
+  // Store result with timestamp
+  siqsCache.set(key, {
+    ...result,
     timestamp: Date.now()
   });
   
-  // Also store in sessionStorage for persistence between page loads
+  // Start cleanup interval if not already running
+  if (!cleanupInterval) {
+    startCleanupInterval();
+  }
+  
+  // Store in local storage for persistence
   try {
-    sessionStorage.setItem(`siqs_${cacheKey}`, JSON.stringify({
-      data,
+    const storageKey = `siqs_${key}`;
+    const storageValue = JSON.stringify({
+      result,
       timestamp: Date.now()
-    }));
+    });
+    localStorage.setItem(storageKey, storageValue);
   } catch (error) {
-    console.error("Failed to store SIQS in sessionStorage:", error);
+    console.error("Error saving SIQS to local storage:", error);
   }
-};
+}
 
 /**
- * Clear the entire SIQS cache
+ * Clear SIQS cache for a specific location
  */
-export const clearSiqsCache = (): number => {
-  const size = siqsCache.size;
-  siqsCache.clear();
-  return size;
-};
-
-/**
- * Clear specific location from the SIQS cache
- */
-export const clearLocationSiqsCache = (latitude: number, longitude: number): boolean => {
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-  if (siqsCache.has(cacheKey)) {
-    siqsCache.delete(cacheKey);
-    return true;
+export function clearSiqsCache(latitude?: number, longitude?: number): void {
+  if (latitude !== undefined && longitude !== undefined) {
+    // Clear specific location
+    const key = getLocationKey(latitude, longitude);
+    siqsCache.delete(key);
+    
+    try {
+      const storageKey = `siqs_${key}`;
+      localStorage.removeItem(storageKey);
+    } catch (error) {
+      console.error("Error removing SIQS from local storage:", error);
+    }
+  } else {
+    // Clear all cache
+    siqsCache.clear();
+    
+    // Clear all SIQS entries from localStorage
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('siqs_')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (error) {
+      console.error("Error clearing SIQS from local storage:", error);
+    }
   }
-  return false;
-};
+}
 
 /**
- * Clean up expired cache entries to free memory
+ * Clear location-specific SIQS cache
  */
-export const cleanupExpiredCache = (): number => {
+export function clearLocationSiqsCache(locationId: string): void {
+  try {
+    // Clear from in-memory cache
+    for (const key of siqsCache.keys()) {
+      if (key.includes(locationId)) {
+        siqsCache.delete(key);
+      }
+    }
+    
+    // Clear from localStorage
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(`siqs_`) && key.includes(locationId)) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (error) {
+    console.error("Error clearing location SIQS from cache:", error);
+  }
+}
+
+/**
+ * Clean up expired cache entries
+ */
+export function cleanupExpiredCache(): number {
   const now = Date.now();
   let expiredCount = 0;
   
-  for (const [key, data] of siqsCache.entries()) {
-    const cacheDuration = isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
-    
-    if (now - data.timestamp > cacheDuration) {
+  // Find and remove expired entries
+  for (const [key, value] of siqsCache.entries()) {
+    const age = now - value.timestamp;
+    if (age > getCacheDuration()) {
       siqsCache.delete(key);
       expiredCount++;
+      
+      try {
+        const storageKey = `siqs_${key}`;
+        localStorage.removeItem(storageKey);
+      } catch (error) {
+        // Ignore storage errors during cleanup
+      }
     }
   }
   
   return expiredCount;
-};
+}
 
 /**
- * Get the current SIQS cache size
+ * Get current size of SIQS cache
  */
-export const getSiqsCacheSize = (): number => {
+export function getSiqsCacheSize(): number {
   return siqsCache.size;
-};
+}
+
+/**
+ * Initialize cache from local storage on app start
+ */
+export function initSiqsCache(): void {
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('siqs_')) {
+        const cached = localStorage.getItem(key);
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            const now = Date.now();
+            const age = now - parsed.timestamp;
+            
+            // Only load if not expired
+            if (age < getCacheDuration()) {
+              const locationKey = key.replace('siqs_', '');
+              siqsCache.set(locationKey, {
+                ...parsed.result,
+                timestamp: parsed.timestamp
+              });
+            } else {
+              // Remove expired entries
+              localStorage.removeItem(key);
+            }
+          } catch (e) {
+            // Invalid entry, remove it
+            localStorage.removeItem(key);
+          }
+        }
+      }
+    });
+    
+    // Start cleanup interval
+    startCleanupInterval();
+  } catch (error) {
+    console.error("Error initializing SIQS cache from local storage:", error);
+  }
+}
+
+/**
+ * Start the auto cleanup interval
+ */
+function startCleanupInterval(): void {
+  if (cleanupInterval) {
+    return;
+  }
+  
+  cleanupInterval = window.setInterval(() => {
+    const now = Date.now();
+    const keysToDelete: string[] = [];
+    
+    // Find expired entries
+    siqsCache.forEach((value, key) => {
+      const age = now - value.timestamp;
+      if (age > getCacheDuration()) {
+        keysToDelete.push(key);
+      }
+    });
+    
+    // Delete expired entries
+    keysToDelete.forEach(key => {
+      siqsCache.delete(key);
+      
+      try {
+        const storageKey = `siqs_${key}`;
+        localStorage.removeItem(storageKey);
+      } catch (error) {
+        // Ignore storage errors during cleanup
+      }
+    });
+    
+    // If cache is empty, stop the interval
+    if (siqsCache.size === 0) {
+      if (cleanupInterval !== null) {
+        window.clearInterval(cleanupInterval);
+        cleanupInterval = null;
+      }
+    }
+  }, AUTO_CLEANUP_INTERVAL);
+}
+
+// Initialize cache on module load
+// (if this is called in the browser environment)
+if (typeof window !== 'undefined') {
+  initSiqsCache();
+}
+
+// Export cache for debugging
+export const _debugCache = siqsCache;

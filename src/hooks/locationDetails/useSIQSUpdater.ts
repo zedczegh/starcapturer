@@ -1,6 +1,7 @@
 
 import { useCallback, useRef } from 'react';
-import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
+import { calculateNighttimeSIQS, calculateTonightCloudCover } from "@/lib/siqs/utils";
+import { calculateAstronomicalNight, formatTime } from "@/lib/siqs/utils";
 
 export const useSIQSUpdater = () => {
   const siqsUpdatedRef = useRef<boolean>(false);
@@ -17,6 +18,14 @@ export const useSIQSUpdater = () => {
       console.log("Updating SIQS score with fresh forecast data");
       
       try {
+        // Extract coordinates for astronomical night calculations
+        const latitude = locationData.latitude || 0;
+        const longitude = locationData.longitude || 0;
+        
+        // Get astronomical night times for display
+        const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
+        const nightTimeStr = `${formatTime(nightStart)}-${formatTime(nightEnd)}`;
+        
         const updatedSIQS = calculateNighttimeSIQS(locationData, forecastData, null);
         
         if (updatedSIQS) {
@@ -30,32 +39,39 @@ export const useSIQSUpdater = () => {
           
           siqsUpdatedRef.current = true;
           return true;
-        } else if (locationData.weatherData) {
-          // If cloud cover is low but we couldn't calculate nighttime SIQS,
-          // update with a fallback calculation
-          const cloudCover = locationData.weatherData.cloudCover;
-          if (cloudCover < 40) {
-            const estimatedScore = Math.max(0, Math.min(10, 10 - (cloudCover * 0.25)));
-            console.log("Using fallback SIQS based on current cloud cover:", estimatedScore);
-            
-            setLocationData({
-              ...locationData,
-              siqsResult: {
-                score: estimatedScore,
-                isViable: true,
-                factors: [
-                  {
-                    name: "Cloud Cover",
-                    score: (100 - cloudCover * 2.5),
-                    description: `Cloud cover of ${cloudCover}% is good for imaging`
+        } else if (forecastData?.hourly?.cloud_cover && locationData.weatherData) {
+          // If we couldn't calculate nighttime SIQS but have forecast data,
+          // use our improved astronomical night cloud cover calculation
+          
+          // Calculate cloud cover for the astronomical night
+          const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly, latitude, longitude);
+          
+          // Convert to SIQS score
+          const estimatedScore = Math.max(0, Math.min(10, 10 - (tonightCloudCover * 0.25)));
+          
+          console.log(`Using calculated tonight's cloud cover for SIQS (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}% -> ${estimatedScore}`);
+          
+          setLocationData({
+            ...locationData,
+            siqsResult: {
+              score: estimatedScore,
+              isViable: tonightCloudCover < 40,
+              factors: [
+                {
+                  name: "Cloud Cover",
+                  score: (100 - tonightCloudCover * 2.5) / 10,
+                  description: `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`,
+                  nighttimeData: {
+                    average: tonightCloudCover,
+                    timeRange: nightTimeStr
                   }
-                ]
-              }
-            });
-            
-            siqsUpdatedRef.current = true;
-            return true;
-          }
+                }
+              ]
+            }
+          });
+          
+          siqsUpdatedRef.current = true;
+          return true;
         }
       } catch (error) {
         console.error("Error updating SIQS with forecast data:", error);

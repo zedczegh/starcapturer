@@ -1,11 +1,13 @@
 
-export type Language = 'en' | 'zh';
+export type Language = "en" | "zh";
 
 export interface Location {
   name: string;
   latitude: number;
   longitude: number;
   placeDetails?: string;
+  bortleScale?: number;
+  formattedName?: string;
 }
 
 export interface CityAlternative {
@@ -36,6 +38,3 @@ export interface GeocodeResponse {
   results: Location[];
   error?: string;
 }
-
-// Add the MatchScore interface to consolidate types
-export type { MatchScore, PinyinVariation, PinyinVariationsMap } from './matching/types';

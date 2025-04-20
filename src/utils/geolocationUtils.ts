@@ -23,6 +23,9 @@ export function toStandardGeolocationOptions(options: ExtendedGeolocationOptions
   };
 }
 
+// Keep track of ongoing geolocation requests to prevent duplicates
+const pendingRequests: Record<string, boolean> = {};
+
 /**
  * Enhanced getCurrentPosition with better mobile support
  * and handling of common mobile browser issues
@@ -43,12 +46,24 @@ export function getCurrentPosition(
     return;
   }
   
+  // Create a request key based on the options
+  const requestKey = JSON.stringify(options || {});
+  
+  // Check if there's already a pending request with these options
+  if (pendingRequests[requestKey]) {
+    console.log("Geolocation request already in progress, skipping duplicate");
+    return;
+  }
+  
+  // Mark this request as pending
+  pendingRequests[requestKey] = true;
+  
   // Use shorter timeout for faster feedback
-  const defaultTimeout = 6000; // 6 seconds instead of 10
+  const defaultTimeout = 5000; // 5 seconds instead of 6
   const opts = {
     enableHighAccuracy: true,
     timeout: defaultTimeout,
-    maximumAge: 60000, // Cache for 1 minute
+    maximumAge: 0, // Reduced from 60000 to 0 to always get fresh position
     ...options
   };
   
@@ -68,39 +83,44 @@ export function getCurrentPosition(
           error.code = 1; // Permission denied
           errorCallback(error);
         }
+        pendingRequests[requestKey] = false; // Clear pending flag
         return;
       }
     }
     
-    // Use cached position if available and not expired
-    const cachedPosition = localStorage.getItem('last_position');
-    const cachedTimestamp = parseInt(localStorage.getItem('last_position_timestamp') || '0', 10);
-    
-    if (cachedPosition && Date.now() - cachedTimestamp < opts.maximumAge) {
-      try {
-        const position = JSON.parse(cachedPosition);
-        // Return cached position in next event loop to maintain async behavior
-        setTimeout(() => successCallback(position), 0);
-        
-        // Still try to get fresh position in the background
-        navigator.geolocation.getCurrentPosition(
-          (freshPosition) => {
-            // Update cache with fresh position
-            try {
-              localStorage.setItem('last_position', JSON.stringify(freshPosition));
-              localStorage.setItem('last_position_timestamp', Date.now().toString());
-            } catch (e) {
-              console.warn('Could not cache position:', e);
-            }
-          },
-          () => {}, // Ignore errors since we already have cached position
-          { enableHighAccuracy: opts.enableHighAccuracy, timeout: 10000 }
-        );
-        
-        return;
-      } catch (e) {
-        console.warn('Could not parse cached position:', e);
-        // Continue to get fresh position
+    // Check if we need the most recent position or can use cached
+    if (opts.maximumAge > 0) {
+      // Use cached position if available and not expired
+      const cachedPosition = localStorage.getItem('last_position');
+      const cachedTimestamp = parseInt(localStorage.getItem('last_position_timestamp') || '0', 10);
+      
+      if (cachedPosition && Date.now() - cachedTimestamp < opts.maximumAge) {
+        try {
+          const position = JSON.parse(cachedPosition);
+          // Return cached position immediately for faster response
+          successCallback(position);
+          pendingRequests[requestKey] = false; // Clear pending flag
+          
+          // Still try to get fresh position in the background
+          navigator.geolocation.getCurrentPosition(
+            (freshPosition) => {
+              // Update cache with fresh position
+              try {
+                localStorage.setItem('last_position', JSON.stringify(freshPosition));
+                localStorage.setItem('last_position_timestamp', Date.now().toString());
+              } catch (e) {
+                console.warn('Could not cache position:', e);
+              }
+            },
+            () => {}, // Ignore errors since we already have cached position
+            { enableHighAccuracy: opts.enableHighAccuracy, timeout: 10000 }
+          );
+          
+          return;
+        } catch (e) {
+          console.warn('Could not parse cached position:', e);
+          // Continue to get fresh position
+        }
       }
     }
   } catch (err) {
@@ -120,6 +140,7 @@ export function getCurrentPosition(
         error.code = 3; // Timeout
         errorCallback(error);
       }
+      pendingRequests[requestKey] = false; // Clear pending flag on timeout
     }, timeoutDuration + 1000); // Add 1 second buffer to browser's internal timeout
   }
   
@@ -141,6 +162,7 @@ export function getCurrentPosition(
     }
     
     successCallback(position);
+    pendingRequests[requestKey] = false; // Clear pending flag on success
   };
   
   const errorWrapper: PositionErrorCallback = (error) => {
@@ -161,6 +183,8 @@ export function getCurrentPosition(
     if (errorCallback) {
       errorCallback(error);
     }
+    
+    pendingRequests[requestKey] = false; // Clear pending flag on error
   };
   
   // Use standard options

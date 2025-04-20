@@ -1,14 +1,9 @@
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import React, { useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import useMapMarkers from '@/hooks/photoPoints/useMapMarkers';
-import { useIsMobile } from '@/hooks/use-mobile';
-import LazyMapContainer from './LazyMapContainer';
-import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
+import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
+import MapContainer from './MapContainer';
 import PageLoader from '@/components/loaders/PageLoader';
-import MapLegend from './MapLegend';
-import CenteringPinpointButton from './CenteringPinpointButton';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -33,199 +28,144 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     onLocationUpdate
   } = props;
   
-  const { t } = useLanguage();
-  const isMobile = useIsMobile();
-  const [mapContainerHeight, setMapContainerHeight] = useState('450px');
-  const [legendOpen, setLegendOpen] = useState(false);
-  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
+  console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
   
-  const { 
-    hoveredLocationId, 
+  const {
+    mapContainerHeight,
+    mapReady,
+    handleMapReady,
+    optimizedLocations,
+    mapCenter,
+    initialZoom,
+    hoveredLocationId,
     handleHover,
     handleTouchStart,
     handleTouchEnd,
-    handleTouchMove
-  } = useMapMarkers();
-  
-  console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
-  
-  // Determine which locations to display based on active view
-  const locationsToShow = useMemo(() => {
-    if (activeView === 'certified') {
-      return certifiedLocations;
-    } else {
-      // For calculated view, include both certified and calculated locations
-      return [...calculatedLocations, ...(activeView === 'calculated' ? [] : certifiedLocations)];
-    }
-  }, [activeView, certifiedLocations, calculatedLocations]);
-  
-  // Pass all locations to the hook, but let it handle filtering based on activeView
-  const { 
-    mapReady,
-    handleMapReady,
-    handleLocationClick,
-    validLocations,
-    mapCenter,
-    initialZoom,
-    certifiedLocationsLoaded,
-    certifiedLocationsLoading
-  } = usePhotoPointsMap({
+    handleTouchMove,
+    handleMapClick,
+    handleLocationClicked,
+    handleGetLocation,
+    handleLegendToggle,
+    isMobile
+  } = usePhotoPointsMapContainer({
     userLocation,
-    locations: locationsToShow,
+    locations,
+    certifiedLocations,
+    calculatedLocations,
+    activeView,
     searchRadius,
-    activeView
+    onLocationClick,
+    onLocationUpdate
   });
   
-  console.log(`PhotoPointsMap: validLocations=${validLocations?.length || 0}, mapReady=${mapReady}`);
-  
-  // Filter out some locations on mobile for better performance
-  const optimizedLocations = useMemo(() => {
-    // If no valid locations available, return empty array
-    if (!validLocations || validLocations.length === 0) {
-      console.log("No valid locations to display");
-      return [];
-    }
-
-    if (!isMobile) {
-      console.log(`Displaying all ${validLocations.length} locations (desktop)`);
-      return validLocations;
-    }
-    
-    // For mobile, limit the number of displayed locations
-    if (validLocations.length <= 30) {
-      console.log(`Displaying all ${validLocations.length} locations (mobile, under limit)`);
-      return validLocations;
-    }
-    
-    // Always keep certified locations
-    const certified = validLocations.filter(loc => 
-      loc.isDarkSkyReserve || loc.certification
-    );
-    
-    // For non-certified locations, if we have too many, sample them
-    const nonCertified = validLocations
-      .filter(loc => !loc.isDarkSkyReserve && !loc.certification)
-      .filter((_, index) => index % (activeView === 'certified' ? 4 : 2) === 0)
-      .slice(0, 50); // Hard limit for performance
-    
-    console.log(`Optimized for mobile: ${certified.length} certified + ${nonCertified.length} calculated locations`);
-    return [...certified, ...nonCertified];
-  }, [validLocations, isMobile, activeView]);
-  
+  // Add persistent storage for locations
   useEffect(() => {
-    const adjustHeight = () => {
-      if (isMobile) {
-        setMapContainerHeight('calc(70vh - 200px)');
-      } else {
-        setMapContainerHeight('450px');
+    if (locations && locations.length > 0) {
+      try {
+        // Store ALL locations in session storage for persistence
+        const storageKey = activeView === 'certified' ? 
+          'persistent_certified_locations' : 
+          'persistent_calculated_locations';
+        
+        // Load existing locations first to avoid overwriting 
+        const existingData = sessionStorage.getItem(storageKey);
+        
+        // Only store the most important fields to reduce storage size
+        const simplifiedLocations = locations.map(loc => ({
+          id: loc.id || `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`,
+          name: loc.name || 'Unknown Location',
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          siqs: loc.siqs,
+          isDarkSkyReserve: loc.isDarkSkyReserve,
+          certification: loc.certification,
+          distance: loc.distance
+        }));
+        
+        let combinedLocations = simplifiedLocations;
+        
+        if (existingData) {
+          try {
+            const existingLocations = JSON.parse(existingData);
+            
+            // Create a map to deduplicate by coordinates
+            const locationMap = new Map();
+            
+            // Add existing locations first
+            if (Array.isArray(existingLocations)) {
+              existingLocations.forEach(loc => {
+                if (loc && loc.latitude && loc.longitude) {
+                  const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+                  locationMap.set(key, loc);
+                }
+              });
+            }
+            
+            // Add new locations, overwriting existing ones if they have the same coordinates
+            simplifiedLocations.forEach(loc => {
+              if (loc && loc.latitude && loc.longitude) {
+                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+                locationMap.set(key, loc);
+              }
+            });
+            
+            // Convert back to array
+            combinedLocations = Array.from(locationMap.values());
+          } catch (err) {
+            console.error('Error parsing existing locations:', err);
+          }
+        }
+        
+        // Store the merged locations
+        sessionStorage.setItem(storageKey, JSON.stringify(combinedLocations));
+        console.log(`Stored ${combinedLocations.length} ${activeView} locations to session storage`);
+      } catch (err) {
+        console.error('Error storing locations in session storage:', err);
       }
-    };
-    
-    adjustHeight();
-    window.addEventListener('resize', adjustHeight);
-    return () => window.removeEventListener('resize', adjustHeight);
-  }, [isMobile]);
-  
-  // Debounced map click handler to prevent rapid location changes
-  const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (onLocationUpdate && !isUpdatingLocation) {
-      setIsUpdatingLocation(true);
-      console.log("Setting new location from map click:", lat, lng);
-      
-      // Call the location update and reset the updating state after a delay
-      onLocationUpdate(lat, lng);
-      
-      // Prevent multiple updates in quick succession
-      setTimeout(() => {
-        setIsUpdatingLocation(false);
-      }, 1000);
     }
-  }, [onLocationUpdate, isUpdatingLocation]);
+  }, [locations, activeView]);
   
-  const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
-    if (onLocationClick) {
-      onLocationClick(location);
-    } else {
-      handleLocationClick(location);
-    }
-  }, [onLocationClick, handleLocationClick]);
-  
-  const handleGetLocation = useCallback(() => {
-    if (onLocationUpdate && navigator.geolocation && !isUpdatingLocation) {
-      setIsUpdatingLocation(true);
+  // Load persisted locations on component mount
+  useEffect(() => {
+    try {
+      const storageKey = activeView === 'certified' ? 
+        'persistent_certified_locations' : 
+        'persistent_calculated_locations';
+        
+      const storedData = sessionStorage.getItem(storageKey);
       
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          onLocationUpdate(latitude, longitude);
-          console.log("Got user position:", latitude, longitude);
-          
-          // Reset updating state after delay
-          setTimeout(() => {
-            setIsUpdatingLocation(false);
-          }, 1000);
-        },
-        (error) => {
-          console.error("Error getting location:", error.message);
-          setIsUpdatingLocation(false);
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
+      if (storedData) {
+        console.log(`Found ${storageKey} in session storage, available for fallback`);
+      }
+    } catch (err) {
+      console.error('Error checking session storage:', err);
     }
-  }, [onLocationUpdate, isUpdatingLocation]);
+  }, [activeView]);
   
-  const handleLegendToggle = useCallback((isOpen: boolean) => {
-    setLegendOpen(isOpen);
-  }, []);
+  console.log(`PhotoPointsMap: optimizedLocations=${optimizedLocations?.length || 0}, mapReady=${mapReady}`);
   
   return (
-    <div 
-      style={{ height: mapContainerHeight }} 
-      className="w-full relative rounded-md overflow-hidden transition-all duration-300 mb-4 mt-2"
-    >
-      {!mapReady && (
-        <div className="absolute inset-0 z-20">
-          <PageLoader />
-        </div>
-      )}
-      
-      <LazyMapContainer
-        center={mapCenter}
-        userLocation={userLocation}
-        locations={optimizedLocations}
-        searchRadius={searchRadius}
-        activeView={activeView}
-        onMapReady={handleMapReady}
-        onLocationClick={handleLocationClicked}
-        onMapClick={handleMapClick}
-        zoom={initialZoom}
-        hoveredLocationId={hoveredLocationId}
-        onMarkerHover={handleHover}
-        handleTouchStart={handleTouchStart}
-        handleTouchEnd={handleTouchEnd}
-        handleTouchMove={handleTouchMove}
-        isMobile={isMobile}
-        useMobileMapFixer={false}
-        showRadiusCircles={activeView === 'calculated' && !isMobile}
-      />
-      
-      {!isMobile && (
-        <MapLegend 
-          activeView={activeView} 
-          showStarLegend={activeView === 'certified'}
-          showCircleLegend={activeView === 'calculated'}
-          onToggle={handleLegendToggle}
-          className="absolute top-4 right-4 z-[999]"
-        />
-      )}
-      
-      {/* Position the pinpoint button at bottom-right corner of the map */}
-      <CenteringPinpointButton
-        onGetLocation={handleGetLocation}
-        userLocation={userLocation}
-        className="absolute bottom-4 right-4 z-[999]"
-      />
-    </div>
+    <MapContainer
+      userLocation={userLocation}
+      locations={optimizedLocations}
+      searchRadius={searchRadius}
+      activeView={activeView}
+      mapReady={mapReady}
+      handleMapReady={handleMapReady}
+      handleLocationClicked={handleLocationClicked}
+      handleMapClick={handleMapClick}
+      mapCenter={mapCenter}
+      initialZoom={initialZoom}
+      mapContainerHeight={mapContainerHeight}
+      isMobile={isMobile}
+      hoveredLocationId={hoveredLocationId}
+      handleHover={handleHover}
+      handleTouchStart={handleTouchStart}
+      handleTouchEnd={handleTouchEnd}
+      handleTouchMove={handleTouchMove}
+      handleGetLocation={handleGetLocation}
+      onLegendToggle={handleLegendToggle}
+    />
   );
 };
 

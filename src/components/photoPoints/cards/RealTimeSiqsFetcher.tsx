@@ -1,6 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqsService';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
+import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
+import { hasCachedSiqs, getCachedSiqs } from '@/services/realTimeSiqs/siqsCache';
+import { detectAndFixAnomalies, assessDataReliability } from '@/services/realTimeSiqs/siqsAnomalyDetector';
+import { WeatherDataWithClearSky } from '@/services/realTimeSiqs/siqsTypes';
 
 interface RealTimeSiqsFetcherProps {
   isVisible: boolean;
@@ -21,52 +25,73 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
-  const CACHE_DURATION = 5 * 60 * 1000; // Reduced to 5 minutes for fresher data
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for fresher data
   
   useEffect(() => {
     if (showRealTimeSiqs && isVisible && latitude && longitude) {
       const now = Date.now();
+      
+      // Check enhanced cache system first
+      if (hasCachedSiqs(latitude, longitude)) {
+        const cachedData = getCachedSiqs(latitude, longitude);
+        if (cachedData) {
+          onSiqsCalculated(cachedData.siqs, false);
+          return;
+        }
+      }
+      
       const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION;
       
       if (shouldFetch) {
         console.log(`Fetching real-time SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        
         const fetchSiqs = async () => {
           setLoading(true);
           onSiqsCalculated(null, true);
           
           try {
-            const effectiveBortleScale = bortleScale || 
-              (showRealTimeSiqs ? 3 : 5);
+            const effectiveBortleScale = bortleScale || (showRealTimeSiqs ? 3 : 5);
             
-            // Try to get cached data from sessionStorage first
-            const cacheKey = `siqs_${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-            const cachedData = sessionStorage.getItem(cacheKey);
+            // Calculate astronomical night for this location
+            const { start, end } = calculateAstronomicalNight(latitude, longitude);
+            console.log(`Astronomical night: ${formatTime(start)}-${formatTime(end)}`);
             
-            if (cachedData) {
-              const { data, timestamp } = JSON.parse(cachedData);
-              const age = now - timestamp;
-              
-              if (age < CACHE_DURATION) {
-                console.log("Using cached SIQS from session storage");
-                onSiqsCalculated(data.siqs, false);
-                setLastFetchTimestamp(timestamp);
-                setLoading(false);
-                return;
-              }
-            }
-            
-            const result = await calculateRealTimeSiqs(
-              latitude,
-              longitude,
-              effectiveBortleScale
-            );
+            // Calculate SIQS
+            const result = await calculateRealTimeSiqs(latitude, longitude, effectiveBortleScale);
             
             if (result && result.siqs > 0) {
-              console.log(`Calculated SIQS for ${latitude.toFixed(4)}, ${longitude.toFixed(4)}: ${result.siqs}`);
-              onSiqsCalculated(result.siqs, false);
+              // Get weather data from result or fallback to empty object
+              const weatherData = result.weatherData || { 
+                cloudCover: 0, 
+                precipitation: 0,
+                latitude, 
+                longitude,
+                temperature: 0,
+                humidity: 0,
+                windSpeed: 0
+              } as WeatherDataWithClearSky;
+              
+              // Apply anomaly detection and correction
+              const correctedResult = detectAndFixAnomalies(
+                result,
+                weatherData,
+                { latitude, longitude }
+              );
+              
+              // Assess data reliability
+              const reliability = assessDataReliability(weatherData, result.forecastData);
+              
+              if (reliability.reliable) {
+                console.log(`Calculated SIQS (corrected): ${correctedResult.siqs}`);
+                onSiqsCalculated(correctedResult.siqs, false);
+              } else {
+                console.warn(`Low reliability SIQS calculation:`, reliability.issues);
+                onSiqsCalculated(correctedResult.siqs * (reliability.confidenceScore / 10), false);
+              }
             } else {
               onSiqsCalculated(0, false);
             }
+            
             setLastFetchTimestamp(now);
           } catch (error) {
             console.error("Error fetching real-time SIQS:", error);

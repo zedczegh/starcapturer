@@ -1,66 +1,77 @@
 
-/**
- * Type definitions for the enhanced real-time SIQS system
- */
-
-import { WeatherData } from '@/lib/api/weather';
-
-// Extended weather data with clear sky rate
-export interface WeatherDataWithClearSky extends WeatherData {
-  clearSkyRate?: number;
-}
-
-// SIQS calculation result
+// Define types for SIQS calculation
 export interface SiqsResult {
   siqs: number;
   isViable: boolean;
-  factors?: SiqsFactor[];
-  metadata?: SiqsMetadata;
-}
-
-// Individual factor in SIQS calculation
-export interface SiqsFactor {
-  name: string;
-  score: number;
-  description: string; // Changed from optional to required
-  nighttimeData?: any;
-}
-
-// Metadata about SIQS calculation
-export interface SiqsMetadata {
-  calculatedAt: string; // This is required
-  sources: {
-    weather: boolean;
-    forecast: boolean;
-    clearSky: boolean;
-    lightPollution: boolean;
-  };
-  reliability?: {
+  weatherData?: WeatherDataWithClearSky;
+  forecastData?: any;
+  factors?: {
+    name: string;
     score: number;
-    issues?: string[];
+    description: string;
+  }[];
+  metadata?: {
+    calculatedAt: string;
+    sources: {
+      weather: boolean;
+      forecast: boolean;
+      clearSky: boolean;
+      lightPollution: boolean;
+      terrainCorrected?: boolean;
+      climate?: boolean;
+    };
+    reliability?: {
+      score: number;
+      issues: string[];
+    };
   };
 }
 
-// Terrain information for advanced calculations
-export interface TerrainData {
-  elevation: number;
-  slope?: number;
-  aspect?: number;
-  nearestPeakDistance?: number;
-  surroundingElevationProfile?: number[];
+export interface WeatherDataWithClearSky {
+  temperature: number;
+  humidity: number;
+  cloudCover: number;
+  windSpeed: number;
+  precipitation: number;
+  clearSkyRate?: number;
+  latitude: number;
+  longitude: number;
+  time?: string;
+  condition?: string;
+  aqi?: number;
+  _forecast?: any;
+  nighttimeCloudData?: {
+    average: number;
+    timeRange: string;
+    sourceType: 'forecast' | 'calculated' | 'historical';
+  };
 }
 
-// Cache control options
-export interface SiqsCacheOptions {
-  maxAge?: number; // Maximum age in minutes
-  bypassCache?: boolean; // Force recalculation
-  storeResult?: boolean; // Whether to store the result in cache
+export interface MoonlessNightInfo {
+  duration: number; // in hours
+  startTime: string;
+  endTime: string;
+  moonrise: Date | string;
+  moonset: Date | string;
+  nextNewMoon: string;
+  daysUntilNewMoon: number;
+  astronomicalNightStart: string;
+  astronomicalNightEnd: string;
+  astronomicalNightDuration: number;
 }
 
-// SIQS calculation options
-export interface SiqsCalculationOptions extends SiqsCacheOptions {
-  includeFactors?: boolean; // Whether to include factor details
-  includeMetadata?: boolean; // Whether to include metadata
-  prioritizeAccuracy?: boolean; // Whether to prioritize accuracy over speed
-  anomalyDetection?: boolean; // Whether to enable anomaly detection
+export interface MoonPhaseInfo {
+  phase: number; // 0-1 normalized value
+  name: string;
+  illumination: number; // percentage 0-100
+  isGoodForAstronomy: boolean;
+}
+
+// Add SiqsCalculationOptions interface
+export interface SiqsCalculationOptions {
+  anomalyDetection?: boolean;
+  includeMetadata?: boolean;
+  includeForecast?: boolean;
+  reliability?: boolean;
+  adjustForLatitude?: boolean;
 }

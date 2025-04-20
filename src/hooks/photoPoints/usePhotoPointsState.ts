@@ -3,9 +3,10 @@ import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
+import { getCurrentPosition } from '@/utils/geolocationUtils';
 
 export const usePhotoPointsState = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const location = useLocation();
   
   // Changed initial view to 'calculated'
@@ -16,10 +17,15 @@ export const usePhotoPointsState = () => {
   
   // For initializing states
   const [initialLoad, setInitialLoad] = useState(true);
+  const [autoLocationRequested, setAutoLocationRequested] = useState(false);
   
   // For location tracking
   const [effectiveLocation, setEffectiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const { coords: currentPosition, loading: locationLoading, getPosition } = useGeolocation();
+  const { 
+    coords: currentPosition, 
+    loading: locationLoading, 
+    getPosition: requestGeolocation
+  } = useGeolocation();
   
   // Update effective location when current position changes
   useEffect(() => {
@@ -28,8 +34,33 @@ export const usePhotoPointsState = () => {
         latitude: currentPosition.latitude,
         longitude: currentPosition.longitude
       });
+      
+      console.log(`Location updated from geolocation: ${currentPosition.latitude}, ${currentPosition.longitude}`);
     }
   }, [currentPosition]);
+
+  // Auto-request location when the component mounts
+  useEffect(() => {
+    if (!effectiveLocation && !autoLocationRequested && initialLoad) {
+      setAutoLocationRequested(true);
+      
+      getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setEffectiveLocation({
+            latitude,
+            longitude
+          });
+          console.log("Auto-located user at:", latitude, longitude);
+        },
+        (error) => {
+          console.error("Error auto-locating user:", error);
+          // Silent failure - we don't want to show an error toast for auto-location
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
+  }, [effectiveLocation, autoLocationRequested, initialLoad]);
 
   // Default calculated search radius set to 500km exactly as requested
   const [calculatedSearchRadius, setCalculatedSearchRadius] = useState(500);
@@ -57,10 +88,46 @@ export const usePhotoPointsState = () => {
     console.log(`Location updated to: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
   }, [t]);
   
-  // Reset location to user's current position
+  // Reset location to user's current position with improved reliability
   const handleResetLocation = useCallback(() => {
-    getPosition();
-  }, [getPosition]);
+    // First set a loading state if needed
+    // Then use our enhanced getCurrentPosition utility
+    getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setEffectiveLocation({
+          latitude,
+          longitude
+        });
+        
+        console.log(`Location reset to current position: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        
+        // Try to center map if it exists
+        try {
+          const leafletMap = (window as any).leafletMap;
+          if (leafletMap) {
+            leafletMap.setView([latitude, longitude], 12, { 
+              animate: true,
+              duration: 1.5 
+            });
+            console.log("Map centered on reset location");
+          }
+        } catch (e) {
+          console.error("Could not center map:", e);
+        }
+      },
+      (error) => {
+        console.error("Error resetting location:", error);
+        toast.error(t("Unable to get your location", "无法获取您的位置"));
+      },
+      { 
+        enableHighAccuracy: true, 
+        timeout: 10000, 
+        maximumAge: 0,
+        language
+      }
+    );
+  }, [t, language]);
   
   // Toggle between certified and calculated views
   const handleViewChange = useCallback((view: 'certified' | 'calculated') => {

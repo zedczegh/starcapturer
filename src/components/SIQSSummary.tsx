@@ -1,14 +1,12 @@
 
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Gauge, Info } from "lucide-react";
+import { Gauge, Info, Star, Clock } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Progress } from "@/components/ui/progress";
 import { getProgressColorClass } from "@/components/siqs/utils/progressColor";
 import { motion } from "framer-motion";
-import SIQSFactorsList from "@/components/siqs/SIQSFactorsList";
 import { formatSIQSScore, getSIQSLevel } from "@/lib/siqs/utils";
-import { getTranslatedDescription } from "@/components/siqs/utils/translations/descriptionTranslator";
 import { validateSIQSData } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -42,70 +40,24 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
     );
   }, [siqsScore, t]);
   
-  // Always define translatedFactors with a safe default
-  const translatedFactors = useMemo(() => {
-    if (!validatedSiqs || !validatedSiqs.factors || !Array.isArray(validatedSiqs.factors)) {
-      return [];
-    }
-    
-    const factors = [...validatedSiqs.factors];
-    const hasClearSkyFactor = factors.some(factor => 
-      factor.name === 'Clear Sky Rate' || factor.name === '晴空率');
-    
-    if (!hasClearSkyFactor && weatherData?.clearSkyRate) {
-      const clearSkyRate = weatherData.clearSkyRate;
-      const clearSkyScore = Math.min(10, clearSkyRate / 10);
-      
-      factors.push({
-        name: 'Clear Sky Rate',
-        score: clearSkyScore,
-        description: `Annual clear sky rate (${clearSkyRate}%), favorable for astrophotography`,
-      });
-    }
-    
-    factors.sort((a, b) => {
-      const order = [
-        'Cloud Cover', '云层覆盖',
-        'Light Pollution', '光污染',
-        'Seeing Conditions', '视宁度',
-        'Wind Speed', '风速',
-        'Humidity', '湿度',
-        'Moon Phase', '月相',
-        'Air Quality', '空气质量',
-        'Clear Sky Rate', '晴空率'
-      ];
-      
-      const indexA = order.indexOf(a.name);
-      const indexB = order.indexOf(b.name);
-      
-      if (indexA !== -1 && indexB !== -1) {
-        return indexA - indexB;
+  // Calculate timestamp from when SIQS was calculated
+  const siqsCalculationTime = useMemo(() => {
+    if (locationData && locationData.timestamp) {
+      try {
+        const timestamp = new Date(locationData.timestamp);
+        if (!isNaN(timestamp.getTime())) {
+          return timestamp.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: language !== 'zh'
+          });
+        }
+      } catch (e) {
+        console.error("Error formatting timestamp", e);
       }
-      
-      if (indexA !== -1) return -1;
-      if (indexB !== -1) return 1;
-      
-      return 0;
-    });
-    
-    return factors.map(factor => ({
-      ...factor,
-      description: language === 'zh' ? 
-        getTranslatedDescription(factor.description, 'zh') : 
-        factor.description,
-      name: language === 'zh' ? 
-        (factor.name === 'Cloud Cover' ? '云层覆盖' :
-         factor.name === 'Light Pollution' ? '光污染' :
-         factor.name === 'Moon Phase' ? '月相' :
-         factor.name === 'Humidity' ? '湿度' :
-         factor.name === 'Wind Speed' ? '风速' :
-         factor.name === 'Seeing Conditions' ? '视宁度' :
-         factor.name === 'Air Quality' ? '空气质量' :
-         factor.name === 'Clear Sky Rate' ? '晴空率' :
-         factor.name) : 
-        factor.name
-    }));
-  }, [validatedSiqs, weatherData, language]);
+    }
+    return null;
+  }, [locationData, language]);
   
   useEffect(() => {
     const isValid = validateSIQSData(siqsResult);
@@ -152,22 +104,27 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
   }
   
   return (
-    <Card className="glassmorphism-strong">
-      <CardHeader>
+    <Card className="glassmorphism-strong overflow-hidden">
+      <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
         <CardTitle className="flex items-center gap-2">
           <Gauge className="w-5 h-5 text-primary" />
-          {t("SIQS Summary", "天文观测质量评分摘要")}
+          {t("Sky Imaging Quality Score", "天文观测质量评分")}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
+      <CardContent className="space-y-6 p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
+        <div className="space-y-3">
+          {/* Main SIQS Score */}
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">{t("Overall Score", "总分")}</h3>
-            <span className={`text-xl font-bold px-2 py-1 rounded ${scoreColorClass.replace('bg-', 'text-')}`}>
-              {formatSIQSScore(siqsScore)}
-            </span>
+            <div className="flex items-center gap-1">
+              <Star className="h-5 w-5 text-yellow-400" fill="#facc15" />
+              <span className={`text-2xl font-bold px-2 py-1 rounded ${scoreColorClass.replace('bg-', 'text-')}`}>
+                {formatSIQSScore(siqsScore)}
+              </span>
+            </div>
           </div>
           
+          {/* Progress Bar */}
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: "100%" }}
@@ -180,6 +137,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
             />
           </motion.div>
           
+          {/* Scale and interpretation */}
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">{t("Poor", "较差")}</span>
             <span className={`font-medium ${scoreColorClass.replace('bg-', 'text-')}`}>
@@ -188,46 +146,59 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
             <span className="text-muted-foreground">{t("Excellent", "优秀")}</span>
           </div>
           
-          <p className="text-sm text-muted-foreground mt-2">
-            {getSIQSDescription(siqsScore, t)}
-          </p>
+          {/* Description */}
+          <div className="mt-2">
+            <p className="text-sm text-muted-foreground">
+              {getSIQSDescription(siqsScore, t)}
+            </p>
+          </div>
         </div>
         
-        {translatedFactors.length > 0 && (
-          <div className="mt-4 space-y-4">
-            <h4 className="text-sm font-medium">{t("Factors Affecting SIQS", "影响天文观测质量的因素")}</h4>
-            <SIQSFactorsList factors={translatedFactors} />
-          </div>
-        )}
-        
-        {weatherData?.clearSkyRate && !translatedFactors.some(f => 
-          f.name === 'Clear Sky Rate' || f.name === '晴空率'
-        ) && (
-          <div className="mt-6 pt-4 border-t border-border/30">
-            <h4 className="text-sm font-medium mb-3">{t("Clear Sky Rate", "晴空率")}</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">{t("Annual Rate", "年平均率")}</span>
-                <span className="font-medium">{weatherData.clearSkyRate}%</span>
-              </div>
-              <Progress 
-                value={weatherData.clearSkyRate} 
-                className="h-2"
-                colorClass="bg-blue-500/80"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {language === 'en' 
-                  ? `Historical clear sky average for this location`
-                  : `此位置的历史晴空平均值`}
-              </p>
+        {/* Clear Sky Rate (if available) */}
+        {weatherData?.clearSkyRate && (
+          <div className="pt-4 border-t border-border/30">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-medium flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-blue-400" />
+                {t("Clear Sky Rate", "晴空率")}
+              </h4>
+              <span className="font-semibold text-blue-400">{weatherData.clearSkyRate}%</span>
             </div>
+            <Progress 
+              value={weatherData.clearSkyRate} 
+              className="h-2"
+              colorClass="bg-blue-500/80"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {language === 'en' 
+                ? `Historical clear sky average for this location`
+                : `此位置的历史晴空平均值`}
+            </p>
           </div>
         )}
+
+        {/* Disclaimer and timestamp */}
+        <div className="mt-6 space-y-2">
+          {siqsCalculationTime && (
+            <div className="flex items-center justify-center text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5 mr-1.5" />
+              {t("Calculated at", "计算于")}: {siqsCalculationTime}
+            </div>
+          )}
+          
+          <div className="p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30">
+            <p className="text-xs text-center text-cosmic-300">
+              {t("This SIQS score is calculated based on all conditions displayed above including nighttime forecasts.", 
+                 "此SIQS评分是根据上方显示的所有条件（包括夜间预报）计算得出的。")}
+            </p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
 };
 
+// Helper function for SIQS descriptions
 const getSIQSDescription = (score: number, t: any) => {
   if (score >= 9) {
     return t("Exceptional conditions for astrophotography.", "天文摄影的绝佳条件。");

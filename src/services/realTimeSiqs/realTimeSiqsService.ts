@@ -2,11 +2,11 @@
 import { calculateRealTimeSiqs } from './siqsCalculator';
 import { detectAndFixAnomalies, assessDataReliability } from './siqsAnomalyDetector';
 import { clearSiqsCache, cleanupExpiredCache, clearLocationSiqsCache } from './siqsCache';
-import { SiqsResult, SiqsCalculationOptions } from './siqsTypes';
+import { SiqsResult, SiqsCalculationOptions, WeatherDataWithClearSky } from './siqsTypes';
 import { fetchWeatherData } from '@/lib/api';
 
 // Export functions from siqsCache for external use
-export { clearSiqsCache, clearLocationSiqsCache };
+export { clearSiqsCache, clearLocationSiqsCache, cleanupExpiredCache };
 
 /**
  * Enhanced real-time SIQS calculation with built-in anomaly detection
@@ -38,16 +38,23 @@ export async function calculateEnhancedRealTimeSiqs(
       const weatherData = await fetchWeatherData({ latitude, longitude });
       
       if (weatherData && siqsResult.siqs > 0) {
+        // Add required properties to match WeatherDataWithClearSky
+        const weatherDataWithCoords: WeatherDataWithClearSky = {
+          ...weatherData,
+          latitude,
+          longitude
+        };
+        
         // Detect and fix anomalies
         const correctedResult = detectAndFixAnomalies(
           siqsResult,
-          weatherData,
+          weatherDataWithCoords,
           { latitude, longitude }
         );
         
         // Assess data reliability
         const reliability = assessDataReliability(
-          weatherData,
+          weatherDataWithCoords,
           null // We don't have forecast data here
         );
         
@@ -56,16 +63,17 @@ export async function calculateEnhancedRealTimeSiqs(
           return {
             ...correctedResult,
             metadata: {
+              ...correctedResult.metadata,
               calculatedAt: new Date().toISOString(), // Ensure calculatedAt is present
-              reliability: {
-                score: reliability.confidenceScore,
-                issues: reliability.issues
-              },
               sources: correctedResult.metadata?.sources || {
                 weather: true,
                 forecast: false,
                 clearSky: false,
                 lightPollution: false
+              },
+              reliability: {
+                score: reliability.confidenceScore,
+                issues: reliability.issues
               }
             }
           };
