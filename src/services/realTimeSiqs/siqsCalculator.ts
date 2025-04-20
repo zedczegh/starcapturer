@@ -1,4 +1,3 @@
-
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -7,7 +6,7 @@ import { findClimateRegion, getClimateAdjustmentFactor } from "./climateRegions"
 import { findClosestEnhancedLocation } from "./enhancedLocationData";
 import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
 import { extractSingleHourCloudCover } from "@/utils/weather/hourlyCloudCoverExtractor";
-import { SiqsResult, SiqsCalculationOptions } from './siqsTypes';
+import { SiqsResult, SiqsCalculationOptions, WeatherDataWithClearSky } from './siqsTypes';
 import { 
   getMemoizedResult, 
   setMemoizedResult, 
@@ -101,12 +100,17 @@ export async function calculateRealTimeSiqs(
       console.warn("Could not get terrain-corrected Bortle scale:", e);
     }
     
-    const weatherDataWithClearSky = {
+    const weatherDataWithClearSky: WeatherDataWithClearSky = {
       ...weatherData,
       clearSkyRate: clearSkyData?.annualRate || enhancedLocation?.clearSkyRate,
       latitude,
       longitude,
-      _forecast: forecastData
+      _forecast: forecastData,
+      nighttimeCloudData: weatherData.nighttimeCloudData || {
+        average: weatherData.cloudCover,
+        timeRange: 'default',
+        sourceType: 'calculated'
+      }
     };
     
     if (useSingleHourSampling && forecastData?.hourly) {
