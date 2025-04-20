@@ -74,7 +74,7 @@ const Collections = () => {
             {locations.map((location) => (
               <PhotoPointCard
                 key={location.id}
-                location={{
+                point={{
                   id: location.id,
                   name: location.name,
                   latitude: Number(location.latitude),
@@ -84,8 +84,9 @@ const Collections = () => {
                   isDarkSkyReserve: location.isdarkskyreserve,
                   certification: location.certification
                 }}
-                onClick={() => navigate(`/location/${location.id}`)}
-                className="h-full"
+                onSelect={() => {}}
+                onViewDetails={() => navigate(`/location/${location.id}`)}
+                userLocation={null}
               />
             ))}
           </div>
