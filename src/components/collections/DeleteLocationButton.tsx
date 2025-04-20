@@ -20,7 +20,11 @@ interface DeleteLocationButtonProps {
 const DeleteLocationButton = ({ locationId, userId, onDelete }: DeleteLocationButtonProps) => {
   const { t } = useLanguage();
   
-  const handleDelete = async () => {
+  const handleDelete = async (e: React.MouseEvent) => {
+    // Ensure event doesn't bubble up and prevent default behavior
+    e.preventDefault();
+    e.stopPropagation();
+    
     try {
       const { error } = await supabase
         .from('saved_locations')
@@ -49,7 +53,7 @@ const DeleteLocationButton = ({ locationId, userId, onDelete }: DeleteLocationBu
           variant="destructive" 
           size="sm" 
           onClick={handleDelete}
-          className="bg-destructive/90 hover:bg-destructive"
+          className="bg-destructive/90 hover:bg-destructive z-20"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
