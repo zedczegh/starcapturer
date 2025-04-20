@@ -40,6 +40,10 @@ export interface SiqsResult {
       climate?: boolean;
       singleHourSampling?: boolean;
     };
+    reliability?: {
+      score: number;
+      issues: string[];
+    };
   };
 }
 
@@ -49,4 +53,41 @@ export interface SiqsCalculationOptions {
   cacheDurationMins?: number;
   skipApiCalls?: boolean;
   maxConcurrent?: number;
+  anomalyDetection?: boolean;
+  includeMetadata?: boolean;
+}
+
+// Add the SiqsDisplayOptions interface that's needed by RealTimeSiqsProvider
+export interface SiqsDisplayOptions {
+  latitude: number;
+  longitude: number;
+  bortleScale?: number;
+  isCertified?: boolean;
+  isDarkSkyReserve?: boolean;
+  existingSiqs?: number | any;
+  skipCache?: boolean;
+  useSingleHourSampling?: boolean;
+  targetHour?: number;
+}
+
+// Add MoonPhaseInfo interface needed by moonPhaseCalculator
+export interface MoonPhaseInfo {
+  phase: number;
+  name: string;
+  illumination: number;
+  isGoodForAstronomy: boolean;
+}
+
+// Add MoonlessNightInfo interface needed by moonUtils
+export interface MoonlessNightInfo {
+  duration: number;
+  startTime: string;
+  endTime: string;
+  moonrise: string;
+  moonset: string;
+  nextNewMoon: string;
+  daysUntilNewMoon: number;
+  astronomicalNightStart: string;
+  astronomicalNightEnd: string;
+  astronomicalNightDuration: number;
 }
