@@ -46,11 +46,14 @@ const Profile = () => {
       }
 
       if (data) {
-        setProfile({
+        // Create a profile object that matches our interface
+        const profileData: Profile = {
           username: data.username || '',
           avatar_url: data.avatar_url,
-          date_of_birth: data.date_of_birth
-        });
+          date_of_birth: data.date_of_birth || null
+        };
+        
+        setProfile(profileData);
         setUsername(data.username || '');
         setDateOfBirth(data.date_of_birth || '');
         setAvatarUrl(data.avatar_url);
