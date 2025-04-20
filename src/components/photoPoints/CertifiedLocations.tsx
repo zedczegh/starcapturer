@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoLocationCard from './PhotoLocationCard';
 import { Button } from '../ui/button';
@@ -32,10 +31,10 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   const { t } = useLanguage();
   const [selectedType, setSelectedType] = useState<CertificationType>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayLimit, setDisplayLimit] = useState(25); // Show more initially
+  const [displayLimit, setDisplayLimit] = useState(5); // Reduced from 25 to 5
   
-  // Get all certified locations directly from the service
-  const allCertifiedLocations = React.useMemo(() => getAllCertifiedLocations(), []);
+  // Get all certified locations directly from the service - use useMemo to prevent excessive recalculations
+  const allCertifiedLocations = useMemo(() => getAllCertifiedLocations(), []);
   
   // Use our specialized hook to ensure we get ALL certified locations
   const {
@@ -44,56 +43,44 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
     refreshLocations
   } = useCertifiedLocationsLoader(true);
   
-  // Combine all locations sources to ensure we have all certified locations
-  const combinedLocations = React.useMemo(() => {
+  // Combine all locations sources to ensure we have all certified locations - with useMemo for performance
+  const combinedLocations = useMemo(() => {
+    console.log("Recalculating combined locations");
+    
     // Create a map to store unique locations by coordinates
     const locationMap = new Map<string, SharedAstroSpot>();
     
-    // First add all the locations passed in props
-    if (locations && locations.length > 0) {
-      locations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          locationMap.set(key, loc);
-        }
-      });
-      console.log(`Added ${locations.length} locations from props`);
-    }
+    // Process all location sources
+    const processLocations = (locationsArray: SharedAstroSpot[], source: string) => {
+      if (locationsArray && locationsArray.length > 0) {
+        let added = 0;
+        locationsArray.forEach(loc => {
+          if (loc.latitude && loc.longitude) {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            // Only add if we don't already have this location
+            if (!locationMap.has(key)) {
+              locationMap.set(key, loc);
+              added++;
+            }
+          }
+        });
+        console.log(`Added ${added} locations from ${source}`);
+      }
+    };
     
-    // Then add all certified locations from our service
-    if (allCertifiedLocations && allCertifiedLocations.length > 0) {
-      allCertifiedLocations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          locationMap.set(key, loc);
-        }
-      });
-      console.log(`Added ${allCertifiedLocations.length} locations from certified service`);
-    }
+    // Add locations from props first
+    processLocations(locations, 'props');
     
-    // Then add all certified locations from our hook
-    if (hookCertifiedLocations && hookCertifiedLocations.length > 0) {
-      hookCertifiedLocations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          locationMap.set(key, loc);
-        }
-      });
-      console.log(`Added ${hookCertifiedLocations.length} locations from certified hook`);
-    }
+    // Then add locations from our service
+    processLocations(allCertifiedLocations, 'certified service');
+    
+    // Then add locations from our hook
+    processLocations(hookCertifiedLocations, 'certified hook');
     
     // Try to add any additional locations from session storage
     try {
       const sessionLocations = JSON.parse(sessionStorage.getItem('persistent_certified_locations') || '[]');
-      if (sessionLocations && sessionLocations.length > 0) {
-        sessionLocations.forEach((loc: SharedAstroSpot) => {
-          if (loc.latitude && loc.longitude) {
-            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-            locationMap.set(key, loc);
-          }
-        });
-        console.log(`Added ${sessionLocations.length} locations from session storage`);
-      }
+      processLocations(sessionLocations, 'session storage');
     } catch (e) {
       console.error("Error parsing session locations:", e);
     }
@@ -104,16 +91,8 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
     return combined;
   }, [locations, allCertifiedLocations, hookCertifiedLocations]);
   
+  // If we got more than 5 locations, use a higher display limit
   useEffect(() => {
-    // Log the total number of combined locations
-    console.log(`CertifiedLocations: Total combined locations: ${combinedLocations.length}`);
-    
-    // For debug: log the first 5 locations
-    if (combinedLocations.length > 0) {
-      console.log('First 5 locations:', combinedLocations.slice(0, 5).map(loc => loc.name || 'Unnamed'));
-    }
-    
-    // If we got more than 5 locations, use a higher display limit
     if (combinedLocations.length > 10 && displayLimit <= 5) {
       setDisplayLimit(30);
     }
@@ -127,8 +106,10 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
     refreshLocations();
   };
   
-  // Filter locations based on certification type and search query
-  const filteredLocations = React.useMemo(() => {
+  // Filter locations based on certification type and search query - with useMemo for performance
+  const filteredLocations = useMemo(() => {
+    console.log("Filtering locations based on:", { selectedType, searchQuery });
+    
     return combinedLocations.filter(location => {
       // First filter by certification type
       if (selectedType !== 'all') {
@@ -137,49 +118,53 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
         
         switch (selectedType) {
           case 'reserve':
-            return certification.includes('reserve') || location.isDarkSkyReserve || type === 'reserve';
+            if (!(certification.includes('reserve') || location.isDarkSkyReserve || type === 'reserve')) {
+              return false;
+            }
+            break;
           case 'park':
-            return certification.includes('park') || type === 'park';
+            if (!(certification.includes('park') || type === 'park')) {
+              return false;
+            }
+            break;
           case 'community':
-            return certification.includes('community') || type === 'community';
+            if (!(certification.includes('community') || type === 'community')) {
+              return false;
+            }
+            break;
           case 'urban':
-            return certification.includes('urban') || type === 'urban';
+            if (!(certification.includes('urban') || type === 'urban')) {
+              return false;
+            }
+            break;
           case 'lodging':
-            return certification.includes('lodging') || type === 'lodging';
-          default:
-            return true;
+            if (!(certification.includes('lodging') || type === 'lodging')) {
+              return false;
+            }
+            break;
         }
       }
       
       // Then filter by search query if present
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        return (
-          (location.name?.toLowerCase().includes(query) || false) ||
-          (location.chineseName?.toLowerCase().includes(query) || false) ||
-          (location.certification?.toLowerCase().includes(query) || false)
-        );
+        const nameMatch = location.name?.toLowerCase().includes(query) || false;
+        const chineseNameMatch = location.chineseName?.toLowerCase().includes(query) || false;
+        const certificationMatch = location.certification?.toLowerCase().includes(query) || false;
+        
+        return nameMatch || chineseNameMatch || certificationMatch;
       }
       
       return true;
     });
   }, [combinedLocations, selectedType, searchQuery]);
   
-  // Handle load more
-  const handleLoadMore = () => {
-    setDisplayLimit(prev => prev + 25); // Load more items each time
-  };
+  // Get the locations to display based on the current limit - with useMemo for performance
+  const locationsToDisplay = useMemo(() => {
+    return filteredLocations.slice(0, displayLimit);
+  }, [filteredLocations, displayLimit]);
   
-  // Get the locations to display based on the current limit
-  const locationsToDisplay = filteredLocations.slice(0, displayLimit);
   const hasMoreToShow = displayLimit < filteredLocations.length;
-  
-  // Log locations for debugging
-  useEffect(() => {
-    console.log(`CertifiedLocations: Total certified locations: ${combinedLocations.length}`);
-    console.log(`CertifiedLocations: Filtered locations: ${filteredLocations.length}`);
-    console.log(`CertifiedLocations: Locations to display: ${locationsToDisplay.length}`);
-  }, [combinedLocations.length, filteredLocations.length, locationsToDisplay.length]);
   
   const isLoadingLocations = initialLoad && (loading || certifiedLoading);
   
@@ -209,6 +194,10 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
       </div>
     );
   }
+  
+  const handleLoadMore = () => {
+    setDisplayLimit(prevLimit => prevLimit + 5);
+  };
   
   return (
     <div>

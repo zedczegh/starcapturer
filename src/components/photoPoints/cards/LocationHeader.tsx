@@ -18,9 +18,7 @@ const LocationHeader: React.FC<LocationHeaderProps> = ({
 }) => {
   return (
     <div>
-      <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
-      
-      {/* Show original location name if different from displayed name */}
+      {/* Location details first (with certification or dark sky info) */}
       {showOriginalName && (
         <div className="mt-1.5 mb-2 flex items-center">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
@@ -29,8 +27,12 @@ const LocationHeader: React.FC<LocationHeaderProps> = ({
           </span>
         </div>
       )}
+      
+      {/* Display name (location name) second */}
+      <h3 className="font-semibold text-lg line-clamp-1">{displayName}</h3>
     </div>
   );
 };
 
 export default LocationHeader;
+

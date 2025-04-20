@@ -48,7 +48,7 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
   
   const certification = (location.certification || '').toLowerCase();
   
-  // IMPORTANT: Match colors with the legend
+  // IMPORTANT: Match colors with the legend - these must match exactly
   if (certification.includes('community')) {
     return '#FFA500'; // Gold/Orange for Dark Sky Community
   } else if (certification.includes('reserve') || certification.includes('sanctuary') || location.isDarkSkyReserve) {
@@ -63,6 +63,9 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
     return '#9b87f5'; // Default to reserve color
   }
 };
+
+// Cache for markers to improve performance
+const markerCache = new Map<string, L.DivIcon>();
 
 /**
  * Determine if a location should be shown based on the active view
@@ -98,17 +101,18 @@ export const getLocationColor = (location: SharedAstroSpot): string => {
   if (location.isDarkSkyReserve || location.certification) {
     return getCertificationColor(location);
   } else {
-    // Match SIQS score colors with the legend
+    // Match SIQS score colors with the legend - these must match exactly
     const siqsScore = getSiqsScore(location);
-    if (siqsScore >= 7.5) return '#22c55e'; // Excellent - match legend
-    if (siqsScore >= 5.5) return '#eab308'; // Good - match legend
-    if (siqsScore >= 4.0) return '#f97316'; // Average - match legend
-    return '#ef4444'; // Below Average - match legend
+    if (siqsScore >= 7.5) return '#22c55e'; // Excellent - match legend exactly
+    if (siqsScore >= 5.5) return '#eab308'; // Good - match legend exactly
+    if (siqsScore >= 4.0) return '#f97316'; // Average - match legend exactly
+    return '#ef4444'; // Below Average - match legend exactly
   }
 };
 
 /**
  * Creates a custom marker for the map based on location properties
+ * with improved performance through caching
  * @param location The location data
  * @param isCertified Whether the location is certified
  * @param isHovered Whether the marker is currently hovered
@@ -129,8 +133,16 @@ export const getLocationMarker = (
     (isHovered ? 22 : 16) : // Mobile sizes
     (isHovered ? 28 : 24);  // Desktop sizes
   
+  // Create a cache key based on the parameters
+  const cacheKey = `${color}-${isCertified ? 1 : 0}-${isHovered ? 1 : 0}-${size}`;
+  
+  // Check if we have this marker in the cache
+  if (markerCache.has(cacheKey)) {
+    return markerCache.get(cacheKey)!;
+  }
+  
   // Create a marker with a custom HTML representation
-  return L.divIcon({
+  const marker = L.divIcon({
     className: 'custom-div-icon',
     html: `
       <div 
@@ -156,6 +168,16 @@ export const getLocationMarker = (
     iconSize: [size, size],
     iconAnchor: [size/2, size/2]
   });
+  
+  // Store in the cache for future use (limit cache size)
+  if (markerCache.size > 1000) {
+    // Clear part of the cache if it gets too large
+    const keysToDelete = Array.from(markerCache.keys()).slice(0, 200);
+    keysToDelete.forEach(key => markerCache.delete(key));
+  }
+  markerCache.set(cacheKey, marker);
+  
+  return marker;
 };
 
 /**

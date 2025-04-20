@@ -9,18 +9,33 @@ interface ViewToggleProps {
   activeFilter: LocationListFilter;
   onFilterChange: (filter: LocationListFilter) => void;
   loading?: boolean;
+  showMap?: boolean;
 }
 
 const ViewToggle: React.FC<ViewToggleProps> = ({ 
   activeFilter, 
   onFilterChange,
-  loading = false
+  loading = false,
+  showMap = false
 }) => {
   const { t } = useLanguage();
 
   const handleValueChange = (value: string) => {
-    onFilterChange(value as LocationListFilter);
-    console.log(`ViewToggle: Switching to ${value} filter`);
+    console.log(`ViewToggle: Switching to ${value} filter (showMap: ${showMap})`);
+    
+    // Add a small delay for UI updates when switching to certified view in list mode
+    // This prevents freezing by allowing the UI to update before heavy data processing
+    if (value === 'certified' && !showMap) {
+      // Show loading state immediately
+      onFilterChange('all');
+      
+      // Small timeout to allow UI to update before switching to certified
+      setTimeout(() => {
+        onFilterChange(value as LocationListFilter);
+      }, 50);
+    } else {
+      onFilterChange(value as LocationListFilter);
+    }
   };
 
   return (
