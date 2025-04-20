@@ -1,11 +1,12 @@
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import useMapMarkers from '@/hooks/map/useMapMarkers';
 import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
-import { useMapState } from './map/useMapState';
 import { useLocationManagement } from './map/useLocationManagement';
 import { useLocationsPersistence } from './map/useLocationsPersistence';
+import { useMapEffects } from './map/useMapEffects';
+import { useMapDimensions } from './map/useMapDimensions';
 
 interface UsePhotoPointsMapContainerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -30,13 +31,8 @@ export const usePhotoPointsMapContainer = ({
 }: UsePhotoPointsMapContainerProps) => {
   const [mapReady, setMapReady] = useState(false);
   
-  const { 
-    mapContainerHeight,
-    legendOpen,
-    isUpdatingLocation,
-    handleLegendToggle,
-    isMobile
-  } = useMapState();
+  const { mapContainerHeight, isMobile } = useMapDimensions();
+  const { legendOpen, handleLegendToggle } = useMapEffects();
   
   const {
     handleMapClick,
@@ -66,7 +62,6 @@ export const usePhotoPointsMapContainer = ({
     activeView
   });
   
-  // Use locations persistence hook
   useLocationsPersistence(locations, activeView);
   
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
@@ -97,3 +92,4 @@ export const usePhotoPointsMapContainer = ({
     certifiedLocationsLoading
   };
 };
+

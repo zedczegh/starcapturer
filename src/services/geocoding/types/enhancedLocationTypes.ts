@@ -5,6 +5,7 @@
 export interface EnhancedLocationDetails {
   name: string;
   formattedName: string;
+  chineseName?: string;  // Add Chinese name property
   streetName?: string;
   townName?: string;
   cityName?: string;
@@ -32,4 +33,5 @@ export interface GeocodingResult {
   countryName?: string;
   postalCode?: string;
   formattedName?: string;
+  chineseName?: string;  // Add Chinese name property for raw results too
 }

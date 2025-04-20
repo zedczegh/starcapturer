@@ -10,6 +10,7 @@ interface UseLocationNameEnhancerProps {
 
 export function useLocationNameEnhancer({ latitude, longitude, language }: UseLocationNameEnhancerProps) {
   const [enhancedName, setEnhancedName] = useState<string | null>(null);
+  const [chineseName, setChineseName] = useState<string | null>(null);
   const [locationDetails, setLocationDetails] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -48,6 +49,26 @@ export function useLocationNameEnhancer({ latitude, longitude, language }: UseLo
           // Set the enhanced name based on available data
           if (enhancedNameParts.length > 0) {
             setEnhancedName(enhancedNameParts.join(', '));
+            
+            // If language is Chinese, set Chinese name as the enhanced name
+            if (language === 'zh') {
+              setChineseName(enhancedNameParts.join(', '));
+            }
+          }
+          
+          // If we have Chinese data specifically
+          if (data.localityInfo && data.localityInfo.administrative) {
+            // Try to extract Chinese names from administrative data
+            const chineseNameParts = [];
+            for (const admin of data.localityInfo.administrative) {
+              if (admin.name && admin.order <= 3) { // Only use higher-level administrative divisions
+                chineseNameParts.push(admin.name);
+              }
+            }
+            
+            if (chineseNameParts.length > 0 && language === 'zh') {
+              setChineseName(chineseNameParts.join(', '));
+            }
           }
         }
       } catch (error) {
@@ -60,5 +81,5 @@ export function useLocationNameEnhancer({ latitude, longitude, language }: UseLo
     fetchLocationInfo();
   }, [latitude, longitude, language]);
   
-  return { enhancedName, locationDetails, isLoading };
+  return { enhancedName, chineseName, locationDetails, isLoading };
 }
