@@ -8,6 +8,8 @@ import NavBar from "@/components/NavBar";
 import { Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PhotoPointCard from "@/components/photoPoints/PhotoPointCard";
+import DeleteLocationButton from "@/components/collections/DeleteLocationButton";
+import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 
 const Collections = () => {
   const { user } = useAuth();
@@ -16,8 +18,11 @@ const Collections = () => {
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Add state for real-time SIQS scores
+  const [siqsScores, setSiqsScores] = useState<Record<string, number>>({});
+  const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
-    // Redirect to login if user is not authenticated
     if (!user) {
       navigate('/photo-points');
       toast.error(t("Please sign in to view your collections", "请登录以查看您的收藏"));
@@ -44,7 +49,36 @@ const Collections = () => {
     };
 
     fetchCollections();
+
+    // Subscribe to real-time updates for deleted locations
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'saved_locations',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchCollections(); // Refresh the list when a location is deleted
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, navigate, t]);
+
+  // Handler for SIQS updates
+  const handleSiqsUpdate = (locationId: string, siqs: number | null, loading: boolean) => {
+    if (siqs !== null) {
+      setSiqsScores(prev => ({ ...prev, [locationId]: siqs }));
+    }
+    setLoadingSiqs(prev => ({ ...prev, [locationId]: loading }));
+  };
 
   return (
     <div className="min-h-screen">
@@ -72,23 +106,33 @@ const Collections = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {locations.map((location) => (
-              <PhotoPointCard
-                key={location.id}
-                point={{
-                  id: location.id,
-                  name: location.name,
-                  latitude: Number(location.latitude),
-                  longitude: Number(location.longitude),
-                  bortleScale: location.bortlescale,
-                  siqs: location.siqs,
-                  isDarkSkyReserve: location.isdarkskyreserve,
-                  certification: location.certification,
-                  timestamp: location.timestamp || location.created_at // Add the missing timestamp property
-                }}
-                onSelect={() => {}}
-                onViewDetails={() => navigate(`/location/${location.id}`)}
-                userLocation={null}
-              />
+              <div key={location.id} className="relative">
+                <PhotoPointCard
+                  point={{
+                    id: location.id,
+                    name: location.name,
+                    latitude: Number(location.latitude),
+                    longitude: Number(location.longitude),
+                    bortleScale: location.bortlescale,
+                    siqs: siqsScores[location.id] || location.siqs,
+                    isDarkSkyReserve: location.isdarkskyreserve,
+                    certification: location.certification,
+                    timestamp: location.timestamp || location.created_at
+                  }}
+                  onSelect={() => {}}
+                  onViewDetails={() => navigate(`/location/${location.id}`)}
+                  userLocation={null}
+                />
+                <DeleteLocationButton locationId={location.id} userId={user.id} />
+                <RealTimeSiqsProvider
+                  isVisible={true}
+                  showRealTimeSiqs={true}
+                  latitude={Number(location.latitude)}
+                  longitude={Number(location.longitude)}
+                  bortleScale={location.bortlescale}
+                  onSiqsCalculated={(siqs, loading) => handleSiqsUpdate(location.id, siqs, loading)}
+                />
+              </div>
             ))}
           </div>
         )}
