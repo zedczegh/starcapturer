@@ -24,12 +24,31 @@ const LocationView: React.FC<LocationViewProps> = ({
 }) => {
   const { t } = useLanguage();
   const [visibleLocations, setVisibleLocations] = useState<SharedAstroSpot[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
   const locationsPerPage = 5; // Fixed at 5 locations
   
-  // Update visible locations when main locations list changes
+  // Update visible locations when main locations list changes or page changes
   useEffect(() => {
-    setVisibleLocations(locations.slice(0, locationsPerPage));
-  }, [locations]);
+    const startIndex = currentPage * locationsPerPage;
+    const endIndex = startIndex + locationsPerPage;
+    setVisibleLocations(locations.slice(startIndex, endIndex));
+  }, [locations, currentPage]);
+  
+  const totalPages = Math.ceil(locations.length / locationsPerPage);
+  
+  const handleNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(prev => prev + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+  
+  const handlePrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(prev => prev - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
   
   if (loading && initialLoad) {
     return (
@@ -62,8 +81,16 @@ const LocationView: React.FC<LocationViewProps> = ({
             "Showing {{shown}} of {{total}} locations",
             "显示 {{shown}}/{{total}} 个位置"
           )
-            .replace('{{shown}}', String(Math.min(locationsPerPage, locations.length)))
+            .replace('{{shown}}', String(Math.min(locationsPerPage, visibleLocations.length)))
             .replace('{{total}}', String(locations.length))}
+        </span>
+        <span>
+          {t(
+            "Page {{current}}/{{total}}",
+            "页码 {{current}}/{{total}}"
+          )
+            .replace('{{current}}', String(currentPage + 1))
+            .replace('{{total}}', String(totalPages))}
         </span>
       </div>
       
@@ -74,14 +101,24 @@ const LocationView: React.FC<LocationViewProps> = ({
         showRealTimeSiqs={true}
       />
       
-      {locations.length > locationsPerPage && (
-        <div className="flex justify-center mt-6">
+      {totalPages > 1 && (
+        <div className="flex justify-between mt-6 gap-4">
           <Button 
             variant="outline"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="w-full max-w-xs bg-gradient-to-r from-blue-500/10 to-green-500/10 hover:from-blue-500/20 hover:to-green-500/20"
+            onClick={handlePrevPage}
+            disabled={currentPage === 0}
+            className="flex-1 bg-gradient-to-r from-blue-500/10 to-green-500/10 hover:from-blue-500/20 hover:to-green-500/20"
           >
-            {t("View More Locations", "查看更多位置")}
+            {t("Previous", "上一页")}
+          </Button>
+          
+          <Button 
+            variant="outline"
+            onClick={handleNextPage}
+            disabled={currentPage >= totalPages - 1}
+            className="flex-1 bg-gradient-to-r from-blue-500/10 to-green-500/10 hover:from-blue-500/20 hover:to-green-500/20"
+          >
+            {t("Next", "下一页")}
           </Button>
         </div>
       )}

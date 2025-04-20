@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore } from '@/utils/siqsHelpers';
@@ -33,8 +34,32 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   const showLoading = loading || (isCertified && numericScore <= 0) || forceCertified;
   
   useEffect(() => {
+    // Always update the display score when we have a valid numeric score,
+    // but skip transitions for small changes
     if (numericScore > 0) {
       stableScoreRef.current = numericScore;
+      
+      if (displayedScore === null) {
+        setDisplayedScore(numericScore);
+        previousScore.current = numericScore;
+        setLoadingState(false);
+      } else if (Math.abs((displayedScore || 0) - numericScore) < 0.2) {
+        setDisplayedScore(numericScore);
+        previousScore.current = numericScore;
+        setLoadingState(false);
+      } else if (Math.abs((displayedScore || 0) - numericScore) >= 0.2) {
+        setIsTransitioning(true);
+        previousScore.current = displayedScore;
+        
+        const timer = setTimeout(() => {
+          setDisplayedScore(numericScore);
+          setIsTransitioning(false);
+          setLoadingState(false);
+        }, 300);
+        
+        return () => clearTimeout(timer);
+      }
+      return;
     }
     
     if (showLoading) {
@@ -47,6 +72,9 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       loadingTimeoutRef.current = window.setTimeout(() => {
         if (numericScore > 0) {
           setDisplayedScore(numericScore);
+          setLoadingState(false);
+        } else if (stableScoreRef.current && stableScoreRef.current > 0 && isCertified) {
+          setDisplayedScore(stableScoreRef.current);
           setLoadingState(false);
         } else {
           setDisplayedScore(null);
@@ -62,59 +90,24 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       };
     }
     
-    if (numericScore <= 0) {
-      if (stableScoreRef.current && stableScoreRef.current > 0 && isCertified) {
-        setDisplayedScore(stableScoreRef.current);
-      } else {
-        setDisplayedScore(null);
-      }
-      setLoadingState(false);
-      return;
+    // Handle case where numericScore <= 0
+    if (stableScoreRef.current && stableScoreRef.current > 0 && isCertified) {
+      setDisplayedScore(stableScoreRef.current);
+    } else if (isCertified || forceCertified) {
+      // For certified locations, we should show a placeholder score if we don't have one
+      setDisplayedScore(7.5); // Default placeholder score for certified locations
+    } else {
+      setDisplayedScore(null);
     }
-    
-    if (displayedScore === null) {
-      setDisplayedScore(numericScore);
-      previousScore.current = numericScore;
-      setLoadingState(false);
-      return;
-    }
-    
-    if (Math.abs((displayedScore || 0) - numericScore) < 0.2) {
-      setDisplayedScore(numericScore);
-      previousScore.current = numericScore;
-      setLoadingState(false);
-      return;
-    }
-    
-    if (Math.abs((displayedScore || 0) - numericScore) >= 0.2) {
-      setIsTransitioning(true);
-      
-      previousScore.current = displayedScore;
-      
-      const timer = setTimeout(() => {
-        setDisplayedScore(numericScore);
-        setIsTransitioning(false);
-        setLoadingState(false);
-      }, 300);
-      
-      return () => clearTimeout(timer);
-    }
-    
     setLoadingState(false);
-  }, [numericScore, showLoading, displayedScore, isCertified]);
+    
+  }, [numericScore, showLoading, displayedScore, isCertified, forceCertified]);
   
   useEffect(() => {
     if (loading && !loadingState) {
       setLoadingState(true);
-      if (isCertified) {
-        if (!displayedScore) {
-          setDisplayedScore(null);
-        }
-      } else {
-        setDisplayedScore(null);
-      }
     }
-  }, [loading, isCertified]);
+  }, [loading, loadingState]);
   
   useEffect(() => {
     return () => {
@@ -124,7 +117,10 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     };
   }, []);
   
-  if (numericScore <= 0 && !loadingState && !forceCertified && !isCertified) {
+  // We'll always show the badge for certified locations
+  const shouldDisplayBadge = displayedScore !== null || loadingState || isCertified || forceCertified;
+  
+  if (!shouldDisplayBadge) {
     return null;
   }
   
@@ -157,10 +153,6 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       </motion.div>
     );
   }
-  
-  if (!displayedScore || displayedScore <= 0) {
-    return null;
-  }
 
   return (
     <AnimatePresence>
@@ -176,7 +168,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
           fill="#facc15" 
         />
         <span className={`${compact ? 'text-sm' : 'text-base'} font-medium tracking-wide`}>
-          {formattedScore}
+          {isCertified && !displayedScore ? "7.5+" : formattedScore}
         </span>
       </motion.div>
     </AnimatePresence>
