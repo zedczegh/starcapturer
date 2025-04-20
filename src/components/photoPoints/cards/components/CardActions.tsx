@@ -16,7 +16,7 @@ const CardActions: React.FC<CardActionsProps> = ({ onViewDetails }) => {
         variant="ghost"
         size="sm"
         onClick={onViewDetails}
-        className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-sm"
+        className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-sm z-10"
       >
         {t("View Details", "查看详情")}
       </Button>
