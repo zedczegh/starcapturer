@@ -5,12 +5,14 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import LazyMapContainer from './LazyMapContainer';
 import MapLegend from './MapLegend';
 import PinpointButton from './PinpointButton';
+import { LocationListFilter } from '../ViewToggle';
 
 interface MapContainerProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   searchRadius: number;
   activeView: 'certified' | 'calculated';
+  activeFilter: LocationListFilter;
   mapReady: boolean;
   handleMapReady: () => void;
   handleLocationClicked: (location: SharedAstroSpot) => void;
@@ -33,6 +35,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
   locations,
   searchRadius,
   activeView,
+  activeFilter,
   mapReady,
   handleMapReady,
   handleLocationClicked,
@@ -70,6 +73,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
         locations={locations}
         searchRadius={searchRadius}
         activeView={activeView}
+        activeFilter={activeFilter}
         onMapReady={handleMapReady}
         onLocationClick={handleLocationClicked}
         onMapClick={handleMapClick}

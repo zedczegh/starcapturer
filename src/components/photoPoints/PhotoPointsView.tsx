@@ -64,6 +64,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
             onLocationClick={onLocationClick}
             onLocationUpdate={handleMapLocationUpdate}
             searchRadius={searchRadius}
+            activeFilter={activeFilter} // Pass the active filter to the map
           />
         </div>
       )}

@@ -1,8 +1,9 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
 import MapContainer from './MapContainer';
+import { LocationListFilter } from '../ViewToggle';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -10,6 +11,7 @@ interface PhotoPointsMapProps {
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
+  activeFilter: LocationListFilter;
 }
 
 const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => { 
@@ -18,12 +20,20 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     locations,
     searchRadius,
     onLocationClick,
-    onLocationUpdate
+    onLocationUpdate,
+    activeFilter
   } = props;
   
   // Split locations into certified and calculated for the hook
-  const certifiedLocations = locations.filter(loc => loc.isDarkSkyReserve || loc.certification);
-  const calculatedLocations = locations.filter(loc => !loc.isDarkSkyReserve && !loc.certification);
+  const certifiedLocations = useMemo(() => 
+    locations.filter(loc => loc.isDarkSkyReserve || loc.certification),
+    [locations]
+  );
+  
+  const calculatedLocations = useMemo(() => 
+    locations.filter(loc => !loc.isDarkSkyReserve && !loc.certification),
+    [locations]
+  );
   
   const {
     mapContainerHeight,
@@ -47,8 +57,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     locations,
     certifiedLocations,
     calculatedLocations,
-    // Always use calculated view for the map, simplifying the implementation
-    activeView: 'calculated',
+    activeFilter, // Pass the active filter
     searchRadius,
     onLocationClick,
     onLocationUpdate
@@ -98,6 +107,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       handleGetLocation={handleGetLocation}
       onLegendToggle={handleLegendToggle}
       activeView="calculated"
+      activeFilter={activeFilter}
     />
   );
 };

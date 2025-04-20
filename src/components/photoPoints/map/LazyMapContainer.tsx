@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
@@ -7,6 +8,7 @@ import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
 import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import MapContent from './components/MapContent';
+import { LocationListFilter } from '../ViewToggle';
 
 configureLeaflet();
 
@@ -16,6 +18,7 @@ interface LazyMapContainerProps {
   locations: SharedAstroSpot[];
   searchRadius: number;
   activeView: 'certified' | 'calculated';
+  activeFilter: LocationListFilter;
   onMapReady?: () => void;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onMapClick?: (lat: number, lng: number) => void;
@@ -36,6 +39,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   locations,
   searchRadius,
   activeView,
+  activeFilter,
   onMapReady,
   onLocationClick,
   onMapClick,
@@ -56,7 +60,17 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const isMountedRef = useRef(true);
   const previousLocations = useRef<SharedAstroSpot[]>([]);
   
-  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}`);
+  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}, activeFilter: ${activeFilter}`);
+  
+  // Filter locations based on the active filter
+  const filteredLocations = useMemo(() => {
+    if (activeFilter === 'all') return locations;
+    
+    return locations.filter(loc => {
+      const isCertified = Boolean(loc.isDarkSkyReserve || loc.certification);
+      return activeFilter === 'certified' ? isCertified : !isCertified;
+    });
+  }, [locations, activeFilter]);
   
   const handleUserLocationSiqs = useCallback((siqs: number | null, loading: boolean) => {
     if (!loading && siqs !== null) {
@@ -72,8 +86,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   }, []);
   
   useEffect(() => {
-    if (locations && locations.length > 0) {
-      const locationIds = new Set(locations.map(loc => 
+    if (filteredLocations && filteredLocations.length > 0) {
+      const locationIds = new Set(filteredLocations.map(loc => 
         `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
       ));
       
@@ -82,22 +96,19 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         return !locationIds.has(locId);
       });
       
-      const combinedLocations = activeView === 'calculated' 
-        ? [...locations, ...previousToKeep] 
-        : locations;
-      
+      const combinedLocations = [...filteredLocations, ...previousToKeep];
       previousLocations.current = combinedLocations;
     }
-  }, [locations, activeView]);
+  }, [filteredLocations]);
   
-  const filteredLocations = useCallback(() => {
+  const displayLocations = useCallback(() => {
     if (!previousLocations.current || previousLocations.current.length === 0) {
-      return locations || [];
+      return filteredLocations || [];
     }
     
     const filtered = filterLocations(previousLocations.current, userLocation, searchRadius, activeView);
     return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
-  }, [locations, userLocation, searchRadius, activeView, isMobile]);
+  }, [filteredLocations, userLocation, searchRadius, activeView, isMobile]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -140,7 +151,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     }
   }, [mapRef.current]);
 
-  const displayLocations = filteredLocations();
+  const locationsToShow = displayLocations();
   
   const handleMapReady = useCallback(() => {
     setMapReady(true);
@@ -163,7 +174,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         center={center}
         userLocation={userLocation}
         zoom={zoom}
-        displayLocations={displayLocations}
+        displayLocations={locationsToShow}
         isMobile={Boolean(isMobile)}
         activeView={activeView}
         searchRadius={searchRadius}

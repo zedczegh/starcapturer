@@ -1,9 +1,9 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
 import { filterVisibleLocations } from '@/utils/filterUtils';
 import { useDevice } from '@/hooks/useDevice';
+import { LocationListFilter } from '@/components/photoPoints/ViewToggle';
 
 interface UsePhotoPointsMapContainerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -11,6 +11,7 @@ interface UsePhotoPointsMapContainerProps {
   certifiedLocations: SharedAstroSpot[];
   calculatedLocations: SharedAstroSpot[];
   activeView: 'certified' | 'calculated';
+  activeFilter: LocationListFilter;
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
@@ -22,6 +23,7 @@ export const usePhotoPointsMapContainer = ({
   certifiedLocations,
   calculatedLocations,
   activeView,
+  activeFilter,
   searchRadius,
   onLocationClick,
   onLocationUpdate
@@ -48,15 +50,34 @@ export const usePhotoPointsMapContainer = ({
     return certifiedLimit + calculatedLimit;
   }, [isMobile]);
 
-  // Optimize locations for the map view - always include all certified locations
-  const optimizedLocations = useCallback(() => {
-    // Always include all certified locations, regardless of distance
-    const allCertified = certifiedLocations;
+  // Filter locations based on the active filter
+  const filterLocationsByActiveFilter = useCallback(() => {
+    // If showing all, return all locations
+    if (activeFilter === 'all') {
+      return [...certifiedLocations, ...calculatedLocations];
+    }
     
-    // Filter calculated locations by distance
-    const filteredCalculated = userLocation 
-      ? calculatedLocations.filter(loc => {
-          if (!loc.latitude || !loc.longitude) return false;
+    // If showing certified only
+    if (activeFilter === 'certified') {
+      return [...certifiedLocations];
+    }
+    
+    // If showing calculated only
+    return [...calculatedLocations];
+  }, [certifiedLocations, calculatedLocations, activeFilter]);
+
+  // Optimize locations for the map view
+  const optimizedLocations = useCallback(() => {
+    // First filter by the active filter selection
+    const filteredByType = filterLocationsByActiveFilter();
+    
+    // Then filter by distance for non-certified locations
+    const filteredByDistance = userLocation 
+      ? filteredByType.map(loc => {
+          if (!loc.latitude || !loc.longitude) return loc;
+          
+          // Skip distance filtering for certified locations
+          if (loc.isDarkSkyReserve || loc.certification) return loc;
           
           // Calculate distance if not already set
           const distance = loc.distance || calculateDistance(
@@ -66,23 +87,25 @@ export const usePhotoPointsMapContainer = ({
             loc.longitude
           );
           
-          // Only include locations within current radius
-          return distance <= searchRadius;
+          // Store the distance for later use
+          return { ...loc, distance };
+        }).filter(loc => {
+          // Always keep certified locations regardless of distance
+          if (loc.isDarkSkyReserve || loc.certification) return true;
+          
+          // Only include calculated locations within current radius
+          return (loc.distance || Infinity) <= searchRadius;
         })
-      : calculatedLocations;
+      : filteredByType;
 
-    // Combine certified and filtered calculated locations
-    const combined = [...allCertified, ...filteredCalculated];
-    
     // Use filterVisibleLocations to optimize for the map
     return filterVisibleLocations(
-      combined, 
+      filteredByDistance, 
       userLocation,
       getMaxLocations()
     );
   }, [
-    certifiedLocations, 
-    calculatedLocations, 
+    filterLocationsByActiveFilter,
     userLocation, 
     searchRadius,
     getMaxLocations
@@ -160,7 +183,8 @@ export const usePhotoPointsMapContainer = ({
       
       // Only process as click if it was a short tap and didn't move
       if (touchDuration < 500 && !touchStateRef.current.touchMoved && id) {
-        const location = optimizedLocations().find(loc => {
+        const filteredLocations = filterLocationsByActiveFilter();
+        const location = filteredLocations.find(loc => {
           const locId = loc.id || `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`;
           return locId === id;
         });
@@ -172,7 +196,7 @@ export const usePhotoPointsMapContainer = ({
       
       setHoveredLocationId(null);
     },
-    [optimizedLocations, onLocationClick]
+    [filterLocationsByActiveFilter, onLocationClick]
   );
 
   const handleGetLocation = useCallback(() => {
