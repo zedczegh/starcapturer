@@ -4,11 +4,12 @@ import { calculateRealTimeSiqs } from '../realTimeSiqs/siqsCalculator';
 import { isWaterLocation } from '@/utils/validation';
 import { getEnhancedLocationDetails } from '../geocoding/enhancedReverseGeocoding';
 import { getLocationTimeInfo } from '@/utils/timezone/timeZoneCalculator';
-import { SiqsCalculationOptions } from '../realTimeSiqs/siqsTypes';
+import { SiqsCalculationOptions, SiqsResult } from '../realTimeSiqs/siqsTypes';
 
 export const createSpotFromPoint = async (
   point: { latitude: number; longitude: number; distance: number },
-  minQuality: number = 5
+  minQuality: number = 5,
+  precalculatedSiqs?: SiqsResult
 ): Promise<SharedAstroSpot | null> => {
   try {
     if (isWaterLocation(point.latitude, point.longitude)) {
@@ -27,18 +28,25 @@ export const createSpotFromPoint = async (
     const timeInfo = getLocationTimeInfo(point.latitude, point.longitude);
     const defaultBortleScale = 4;
     
-    const options: SiqsCalculationOptions = {
-      useSingleHourSampling: true,
-      targetHour: 1, // Use 1 AM for optimal viewing conditions
-      cacheDurationMins: 30
-    };
+    let siqsResult: SiqsResult;
+    
+    // Use precalculated SIQS if available to reduce API calls
+    if (precalculatedSiqs) {
+      siqsResult = precalculatedSiqs;
+    } else {
+      const options: SiqsCalculationOptions = {
+        useSingleHourSampling: true,
+        targetHour: 1, // Use 1 AM for optimal viewing conditions
+        cacheDurationMins: 30
+      };
 
-    const siqsResult = await calculateRealTimeSiqs(
-      point.latitude,
-      point.longitude,
-      defaultBortleScale,
-      options
-    );
+      siqsResult = await calculateRealTimeSiqs(
+        point.latitude,
+        point.longitude,
+        defaultBortleScale,
+        options
+      );
+    }
     
     if (siqsResult && siqsResult.siqs >= minQuality) {
       return {

@@ -1,5 +1,11 @@
 
-import { ForecastData } from '@/types/weather';
+// Import the correct type definition instead of ForecastData
+interface ForecastData {
+  hourly?: {
+    time?: string[];
+    cloudcover?: number[];
+  };
+}
 
 /**
  * Extract cloud cover percentage for a specific hour of the day
@@ -112,4 +118,52 @@ export function calculateNighttimeCloudCover(
     average,
     timeRange: "19:00-06:00"
   };
+}
+
+/**
+ * Gets the best astronomical hour for observation based on cloud cover
+ * 
+ * @param forecastData The forecast data object
+ * @returns The hour with lowest cloud cover (0-23) or null if not available
+ */
+export function getBestAstronomicalHour(forecastData: ForecastData | null): number | null {
+  if (!forecastData?.hourly?.time || !forecastData.hourly.cloudcover) {
+    return null;
+  }
+  
+  // Define night hours for astronomy (typically 8pm to 5am)
+  const nightHours = [20, 21, 22, 23, 0, 1, 2, 3, 4, 5];
+  
+  // Get today and tomorrow date strings
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const tomorrow = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
+  
+  // Map of hours to their cloud cover values
+  const hourlyCloudCover: { hour: number; cloudCover: number }[] = [];
+  
+  forecastData.hourly.time.forEach((time, index) => {
+    const date = new Date(time);
+    const hour = date.getHours();
+    const dateStr = time.split('T')[0];
+    
+    // Only include night hours for today or tomorrow
+    if (nightHours.includes(hour) && (dateStr === today || dateStr === tomorrow)) {
+      hourlyCloudCover.push({
+        hour,
+        cloudCover: forecastData.hourly.cloudcover[index]
+      });
+    }
+  });
+  
+  if (hourlyCloudCover.length === 0) {
+    return null;
+  }
+  
+  // Find the hour with the lowest cloud cover
+  const bestHour = hourlyCloudCover.reduce((best, current) => 
+    current.cloudCover < best.cloudCover ? current : best
+  );
+  
+  return bestHour.hour;
 }

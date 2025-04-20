@@ -2,6 +2,14 @@
 import { generateRandomPoint } from '@/services/locationFilters';
 import { isWaterLocation } from '@/utils/validation';
 
+// Define the proper interface for points
+interface Point {
+  latitude: number; 
+  longitude: number; 
+  distance: number;
+  region?: string;
+}
+
 self.onmessage = (e: MessageEvent) => {
   const { centerLat, centerLng, radius, count, regions } = e.data;
   
@@ -21,8 +29,8 @@ function generateDistributedPoints(
   radius: number, 
   count: number,
   regions: any[] = []
-): Array<{latitude: number, longitude: number, distance: number, region?: string}> {
-  const points = [];
+): Array<Point> {
+  const points: Point[] = [];
   const regionMap = new Map();
   
   // If regions were provided, use them to distribute points more evenly
@@ -36,7 +44,7 @@ function generateDistributedPoints(
     
     // Generate points for each region
     for (const [regionId, region] of regionMap.entries()) {
-      const regionPoints = [];
+      const regionPoints: Point[] = [];
       const attempts = region.pointCount * 3; // Try more times to ensure we get enough valid points
       
       for (let i = 0; i < attempts && regionPoints.length < region.pointCount; i++) {
@@ -72,7 +80,7 @@ function generateDistributedPoints(
     const pointsPerQuadrant = Math.ceil(count / 4);
     
     quadrants.forEach(quadrant => {
-      const quadrantPoints = [];
+      const quadrantPoints: Point[] = [];
       const attempts = pointsPerQuadrant * 3;
       
       for (let i = 0; i < attempts && quadrantPoints.length < pointsPerQuadrant; i++) {
@@ -111,7 +119,7 @@ function generateRandomPointInQuadrant(
   radiusKm: number,
   latSign: number,
   lngSign: number
-): {latitude: number, longitude: number, distance: number} {
+): Point {
   // Convert radius from kilometers to degrees
   const radiusInDegrees = radiusKm / 111.32;
   
@@ -155,7 +163,7 @@ function generateRandomPointInRegion(
   centerLat: number, 
   centerLng: number, 
   radiusKm: number
-): {latitude: number, longitude: number, distance: number} {
+): Point {
   // Convert radius from kilometers to degrees
   const radiusInDegrees = radiusKm / 111.32;
   

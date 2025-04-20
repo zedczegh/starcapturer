@@ -1,4 +1,5 @@
 
+// Fixing only the problem section around line 193
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -190,6 +191,13 @@ export async function calculateRealTimeSiqs(
       metadata: {
         calculatedAt: new Date().toISOString(),
         sources: {
+          weather: false,
+          forecast: false,
+          clearSky: false,
+          lightPollution: false,
+          terrainCorrected: false,
+          climate: false,
+          singleHourSampling: false,
           estimated: true
         }
       }
