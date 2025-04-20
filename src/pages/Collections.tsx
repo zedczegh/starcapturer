@@ -16,6 +16,7 @@ import { MapPin, Navigation, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatSiqsScore } from "@/utils/siqsHelpers";
 import { getCertificationInfo, getLocalizedCertText } from "@/components/photoPoints/utils/certificationUtils";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 
 const Collections = () => {
   const { user } = useAuth();
@@ -109,10 +110,19 @@ const Collections = () => {
       displayName = locationDetails?.formattedName || location.name;
     }
 
-    const certInfo = getCertificationInfo({
+    // Create a complete SharedAstroSpot object for the getCertificationInfo function
+    const locationForCertInfo: SharedAstroSpot = {
+      id: location.id,
+      name: location.name,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      bortleScale: location.bortlescale,
+      timestamp: location.created_at || location.timestamp,
       certification: location.certification,
       isDarkSkyReserve: location.isdarkskyreserve
-    });
+    };
+
+    const certInfo = getCertificationInfo(locationForCertInfo);
 
     return (
       <Card 
