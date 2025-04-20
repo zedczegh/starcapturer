@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import SiqsBadge from '@/components/siqs/SiqsBadge';
+import SiqsScoreBadge from '@/components/photoPoints/cards/SiqsScoreBadge';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SiqsDisplayProps {
@@ -52,10 +53,10 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
         {isCertified ? (
           <div className="flex items-center">
             <Loader2 className="h-3 w-3 animate-spin text-muted-foreground mr-1" />
-            <SiqsBadge score={stableSiqs} confidence={siqsConfidence} />
+            <SiqsScoreBadge score={stableSiqs} confidenceScore={siqsConfidence} />
           </div>
         ) : (
-          <SiqsBadge score={stableSiqs} confidence={siqsConfidence} />
+          <SiqsScoreBadge score={stableSiqs} confidenceScore={siqsConfidence} />
         )}
       </div>
     );
@@ -63,7 +64,7 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
   
   // If we have real-time data or stable data, show it
   if (displaySiqs) {
-    return <SiqsBadge score={displaySiqs} confidence={siqsConfidence} />;
+    return <SiqsScoreBadge score={displaySiqs} confidenceScore={siqsConfidence} />;
   }
   
   // If we're loading and don't have previous data
