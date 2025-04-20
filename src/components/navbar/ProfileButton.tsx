@@ -12,11 +12,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { BookmarkPlus, UserRound } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const ProfileButton = () => {
   const { user, signOut } = useAuth();
   const { t } = useLanguage();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/photo-points');
+  };
 
   if (!user) {
     return (
@@ -49,7 +56,7 @@ const ProfileButton = () => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => signOut()}>
+        <DropdownMenuItem onClick={handleSignOut}>
           {t("Sign Out", "登出")}
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

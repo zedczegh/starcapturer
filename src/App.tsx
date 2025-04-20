@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -32,8 +33,8 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <LanguageProvider>
-            <AuthProvider>
-              <Router>
+            <Router>
+              <AuthProvider>
                 <Routes>
                   {/* Redirect root to photo-points */}
                   <Route path="/" element={<Navigate to="/photo-points" replace />} />
@@ -47,8 +48,8 @@ function App() {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <Toaster />
-              </Router>
-            </AuthProvider>
+              </AuthProvider>
+            </Router>
           </LanguageProvider>
         </ThemeProvider>
       </QueryClientProvider>

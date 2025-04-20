@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useNavigate } from 'react-router-dom';
 
 interface SignUpFormProps {
   onSuccess: () => void;
@@ -15,10 +16,12 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
   const { signUp } = useAuth();
   const { t } = useLanguage();
   const form = useForm();
+  const navigate = useNavigate();
 
   const onSubmit = async (data: any) => {
     await signUp(data.email, data.password);
     onSuccess();
+    navigate('/photo-points');
   };
 
   return (
