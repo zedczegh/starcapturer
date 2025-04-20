@@ -1,34 +1,79 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
 import MapContainer from './MapContainer';
-import PageLoader from '@/components/loaders/PageLoader';
+import { LocationListFilter } from '../ViewToggle';
+import { getAllCertifiedLocations } from '@/services/certifiedLocationsService';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
-  certifiedLocations: SharedAstroSpot[];
-  calculatedLocations: SharedAstroSpot[];
-  activeView: 'certified' | 'calculated';
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
+  activeFilter: LocationListFilter;
 }
 
 const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => { 
   const { 
     userLocation,
     locations,
-    certifiedLocations,
-    calculatedLocations,
-    activeView,
     searchRadius,
     onLocationClick,
-    onLocationUpdate
+    onLocationUpdate,
+    activeFilter
   } = props;
   
-  console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
+  // Get all available certified locations from the service
+  const allCertifiedLocations = useMemo(() => getAllCertifiedLocations(), []);
+  
+  // Combine passed locations with all certified locations when needed
+  const combinedLocations = useMemo(() => {
+    // For certified or all filters, ensure we include all certified locations
+    if (activeFilter === 'certified' || activeFilter === 'all') {
+      // Create a map to avoid duplicates
+      const locationMap = new Map<string, SharedAstroSpot>();
+      
+      // Add passed locations first
+      locations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locationMap.set(key, loc);
+        }
+      });
+      
+      // Then add all certified locations
+      allCertifiedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          locationMap.set(key, loc);
+        }
+      });
+      
+      console.log(`PhotoPointsMap: Combined ${locations.length} passed locations with ${allCertifiedLocations.length} certified locations for a total of ${locationMap.size} unique locations`);
+      return Array.from(locationMap.values());
+    } 
+    
+    // For calculated filter, just use the passed locations
+    return locations;
+  }, [locations, allCertifiedLocations, activeFilter]);
+  
+  // Split locations into certified and calculated for the hook
+  const certifiedLocations = useMemo(() => 
+    combinedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification),
+    [combinedLocations]
+  );
+  
+  const calculatedLocations = useMemo(() => 
+    combinedLocations.filter(loc => !loc.isDarkSkyReserve && !loc.certification),
+    [combinedLocations]
+  );
+  
+  // Log the counts for debugging
+  useEffect(() => {
+    console.log(`PhotoPointsMap: Using ${combinedLocations.length} total locations (${certifiedLocations.length} certified, ${calculatedLocations.length} calculated)`);
+  }, [combinedLocations.length, certifiedLocations.length, calculatedLocations.length]);
   
   const {
     mapContainerHeight,
@@ -49,29 +94,21 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     isMobile
   } = usePhotoPointsMapContainer({
     userLocation,
-    locations,
+    locations: combinedLocations,
     certifiedLocations,
     calculatedLocations,
-    activeView,
+    activeFilter,
     searchRadius,
     onLocationClick,
-    onLocationUpdate
+    onLocationUpdate,
+    activeView: activeFilter === 'calculated' ? 'calculated' : 'certified'
   });
   
-  // Add persistent storage for locations
+  // Store locations in session storage for persistence
   useEffect(() => {
-    if (locations && locations.length > 0) {
+    if (combinedLocations && combinedLocations.length > 0) {
       try {
-        // Store ALL locations in session storage for persistence
-        const storageKey = activeView === 'certified' ? 
-          'persistent_certified_locations' : 
-          'persistent_calculated_locations';
-        
-        // Load existing locations first to avoid overwriting 
-        const existingData = sessionStorage.getItem(storageKey);
-        
-        // Only store the most important fields to reduce storage size
-        const simplifiedLocations = locations.map(loc => ({
+        const simplifiedLocations = combinedLocations.map(loc => ({
           id: loc.id || `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`,
           name: loc.name || 'Unknown Location',
           latitude: loc.latitude,
@@ -79,77 +116,33 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
           siqs: loc.siqs,
           isDarkSkyReserve: loc.isDarkSkyReserve,
           certification: loc.certification,
-          distance: loc.distance
+          distance: loc.distance,
+          type: loc.type
         }));
         
-        let combinedLocations = simplifiedLocations;
+        sessionStorage.setItem('persistent_locations', JSON.stringify(simplifiedLocations));
+        console.log(`Stored ${simplifiedLocations.length} locations to session storage`);
         
-        if (existingData) {
-          try {
-            const existingLocations = JSON.parse(existingData);
-            
-            // Create a map to deduplicate by coordinates
-            const locationMap = new Map();
-            
-            // Add existing locations first
-            if (Array.isArray(existingLocations)) {
-              existingLocations.forEach(loc => {
-                if (loc && loc.latitude && loc.longitude) {
-                  const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-                  locationMap.set(key, loc);
-                }
-              });
-            }
-            
-            // Add new locations, overwriting existing ones if they have the same coordinates
-            simplifiedLocations.forEach(loc => {
-              if (loc && loc.latitude && loc.longitude) {
-                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-                locationMap.set(key, loc);
-              }
-            });
-            
-            // Convert back to array
-            combinedLocations = Array.from(locationMap.values());
-          } catch (err) {
-            console.error('Error parsing existing locations:', err);
-          }
+        // Store certified locations separately for better access
+        const certifiedOnly = simplifiedLocations.filter(loc => 
+          loc.isDarkSkyReserve || loc.certification
+        );
+        
+        if (certifiedOnly.length > 0) {
+          sessionStorage.setItem('persistent_certified_locations', JSON.stringify(certifiedOnly));
+          console.log(`Stored ${certifiedOnly.length} certified locations to session storage`);
         }
-        
-        // Store the merged locations
-        sessionStorage.setItem(storageKey, JSON.stringify(combinedLocations));
-        console.log(`Stored ${combinedLocations.length} ${activeView} locations to session storage`);
       } catch (err) {
         console.error('Error storing locations in session storage:', err);
       }
     }
-  }, [locations, activeView]);
-  
-  // Load persisted locations on component mount
-  useEffect(() => {
-    try {
-      const storageKey = activeView === 'certified' ? 
-        'persistent_certified_locations' : 
-        'persistent_calculated_locations';
-        
-      const storedData = sessionStorage.getItem(storageKey);
-      
-      if (storedData) {
-        console.log(`Found ${storageKey} in session storage, available for fallback`);
-      }
-    } catch (err) {
-      console.error('Error checking session storage:', err);
-    }
-  }, [activeView]);
-  
-  console.log(`PhotoPointsMap: optimizedLocations=${optimizedLocations?.length || 0}, mapReady=${mapReady}`);
+  }, [combinedLocations]);
   
   return (
     <MapContainer
       userLocation={userLocation}
       locations={optimizedLocations}
       searchRadius={searchRadius}
-      activeView={activeView}
       mapReady={mapReady}
       handleMapReady={handleMapReady}
       handleLocationClicked={handleLocationClicked}
@@ -165,6 +158,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       handleTouchMove={handleTouchMove}
       handleGetLocation={handleGetLocation}
       onLegendToggle={handleLegendToggle}
+      activeView={activeFilter === 'calculated' ? 'calculated' : 'certified'}
+      activeFilter={activeFilter}
     />
   );
 };

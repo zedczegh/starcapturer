@@ -28,48 +28,27 @@ const DarkSkyLocations: React.FC<DarkSkyLocationsProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [allLocations, setAllLocations] = useState<SharedAstroSpot[]>([]);
   
-  // Ensure we load all IDA locations from our certified locations service
+  // Force load ALL certified locations regardless of what was passed in
   useEffect(() => {
     const loadAllCertifiedLocations = async () => {
       try {
+        setIsRefreshing(true);
         const certifiedLocations = await preloadCertifiedLocations();
         console.log(`Loaded ${certifiedLocations.length} certified locations from the service`);
         
-        // Combine with any locations passed from props, avoiding duplicates
-        const locationMap = new Map<string, SharedAstroSpot>();
-        
-        // First add the manually passed locations
-        if (Array.isArray(locations)) {
-          locations.forEach(location => {
-            if (location.latitude && location.longitude) {
-              const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-              locationMap.set(key, location);
-            }
-          });
-        }
-        
-        // Then add all certified locations, potentially overriding with more complete data
-        certifiedLocations.forEach(location => {
-          if (location.latitude && location.longitude) {
-            const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-            locationMap.set(key, location);
-          }
-        });
-        
-        // Convert back to array
-        const combinedLocations = Array.from(locationMap.values());
-        console.log(`Total combined certified locations: ${combinedLocations.length}`);
-        setAllLocations(combinedLocations);
-        
+        // Always use certified locations from the service, regardless of what was passed in
+        setAllLocations(certifiedLocations);
+        setIsRefreshing(false);
       } catch (error) {
         console.error("Failed to load certified locations:", error);
         // Fallback to provided locations
         setAllLocations(locations || []);
+        setIsRefreshing(false);
       }
     };
     
     loadAllCertifiedLocations();
-  }, [locations]);
+  }, []);
   
   // Handle manual refresh
   const handleRefreshLocations = async () => {

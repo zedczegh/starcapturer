@@ -90,7 +90,7 @@ const MapContent: React.FC<MapContentProps> = ({
         maxZoom={isMobile ? tileOptions.maxZoom - 2 : tileOptions.maxZoom}
       />
       
-      {showRadiusCircles && userLocation && !isMobile && (
+      {showRadiusCircles && userLocation && (
         <Circle
           center={[userLocation.latitude, userLocation.longitude]}
           pathOptions={{

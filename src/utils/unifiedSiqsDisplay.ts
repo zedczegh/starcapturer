@@ -1,4 +1,3 @@
-
 /**
  * Unified SIQS Display Utility
  * 
@@ -10,19 +9,10 @@ import { getSiqsScore } from './siqsHelpers';
 import { formatMapSiqs, getSiqsColorClass } from './mapSiqsDisplay';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeSiqs/siqsCache';
+import { SiqsDisplayOptions } from '@/services/realTimeSiqs/siqsTypes';
 
 // No default SIQS values, show loading state or nothing instead
 export const DEFAULT_SIQS = 0;
-
-interface SiqsDisplayOptions {
-  latitude: number;
-  longitude: number;
-  bortleScale?: number;
-  isCertified?: boolean;
-  isDarkSkyReserve?: boolean;
-  existingSiqs?: number | any;
-  skipCache?: boolean;
-}
 
 interface SiqsResult {
   siqs: number;
