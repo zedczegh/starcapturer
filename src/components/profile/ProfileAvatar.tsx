@@ -23,24 +23,33 @@ const ProfileAvatar = ({
 }: ProfileAvatarProps) => {
   const { t } = useLanguage();
   const [isHovered, setIsHovered] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error(t("Image too large (max 5MB)", "图片太大（最大5MB）"));
       return;
     }
     
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error(t("File must be an image", "文件必须是图像"));
       return;
     }
     
     onAvatarChange(e);
+  };
+
+  const handleClickUpload = () => {
+    // If there's already an avatar, open it in a new tab
+    if (avatarUrl) {
+      window.open(avatarUrl, '_blank');
+    } else {
+      // If no avatar, trigger file input
+      fileInputRef.current?.click();
+    }
   };
 
   return (
@@ -57,9 +66,10 @@ const ProfileAvatar = ({
                 src={avatarUrl}
                 alt="Profile"
                 className={cn(
-                  "w-full h-full rounded-full object-cover border-2 border-primary shadow-glow transition-all duration-300",
+                  "w-full h-full rounded-full object-cover border-2 border-primary shadow-glow transition-all duration-300 cursor-pointer",
                   isHovered && "brightness-75"
                 )}
+                onClick={() => window.open(avatarUrl, '_blank')}
               />
               <div 
                 className={cn(
@@ -99,6 +109,7 @@ const ProfileAvatar = ({
                   "absolute -bottom-1 -right-1 text-white p-2 rounded-full cursor-pointer shadow-md transition-all",
                   uploadingAvatar ? "bg-gray-500" : "bg-primary hover:bg-primary/90"
                 )}
+                onClick={handleClickUpload}
               >
                 {uploadingAvatar ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -106,6 +117,7 @@ const ProfileAvatar = ({
                   <Camera className="w-5 h-5" />
                 )}
                 <Input
+                  ref={fileInputRef}
                   id="avatar-upload"
                   type="file"
                   accept="image/*"
@@ -116,7 +128,10 @@ const ProfileAvatar = ({
               </label>
             </TooltipTrigger>
             <TooltipContent>
-              {t("Upload avatar", "上传头像")}
+              {avatarUrl 
+                ? t("View full image", "查看完整图片")
+                : t("Upload avatar", "上传头像")
+              }
             </TooltipContent>
           </Tooltip>
         </div>
@@ -124,7 +139,7 @@ const ProfileAvatar = ({
           {uploadingAvatar 
             ? t("Uploading...", "上传中...") 
             : avatarUrl 
-              ? t("Click to change or remove", "点击更改或删除") 
+              ? t("Click to view or remove", "点击查看或删除") 
               : t("Click to add photo", "点击添加照片")
           }
         </p>
