@@ -35,22 +35,26 @@ export function useLocationManagement(
           if (leafletMap) {
             console.log("Centering map on user location:", latitude, longitude);
             
-            // First pan to the location
+            // Set a higher zoom level for better visibility
+            const zoomLevel = 12;
+            
+            // Ensure animation is smooth by using panTo first
             leafletMap.panTo([latitude, longitude], {
               animate: true,
-              duration: 1
+              duration: 0.8
             });
             
-            // Then after a short delay, set the zoom and view
+            // Then after a short delay, set the zoom level
             setTimeout(() => {
-              leafletMap.setView([latitude, longitude], 12, { 
+              leafletMap.setView([latitude, longitude], zoomLevel, { 
                 animate: true,
-                duration: 1 
+                duration: 0.5 
               });
               console.log("Map centered successfully");
             }, 100);
           } else {
             console.warn("Leaflet map instance not available");
+            toast.error(t("Could not center map: map not initialized", "无法居中地图：地图未初始化"));
           }
         } catch (e) {
           console.error("Could not center map:", e);

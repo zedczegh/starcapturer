@@ -30,12 +30,12 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
     stopPropagation(e);
     setIsClicking(true);
     
+    console.log("PinpointButton clicked, getting location");
+    
     // Call the location handler directly
     onGetLocation();
     
-    // Don't try to center the map here - the onGetLocation handler will do that
-    // This was causing issues with the map not properly centering on the user location
-    
+    // Visual feedback animation
     setTimeout(() => setIsClicking(false), 1000);
   }, [onGetLocation]);
 
@@ -69,6 +69,7 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
         className={`flex items-center justify-center p-0.5 bg-gradient-to-br from-purple-500/70 via-blue-500/60 to-blue-400/70
                   rounded-full shadow-lg border border-blue-300/30 backdrop-blur-sm transition-all relative`}
         style={{ boxShadow: '0 0 15px rgba(139, 92, 246, 0.5)' }}
+        title={t("Center on my location", "定位到我的位置")}
       >
         <div className="w-9 h-9 flex items-center justify-center rounded-full bg-gradient-to-br from-purple-600/80 to-blue-500/80">
           <MapPin className="h-5 w-5 text-white/90" strokeWidth={2.2} />
