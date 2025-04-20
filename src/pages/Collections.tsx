@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import PhotoPointCard from "@/components/photoPoints/PhotoPointCard";
 import DeleteLocationButton from "@/components/collections/DeleteLocationButton";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const Collections = () => {
   const { user } = useAuth();
@@ -93,71 +94,73 @@ const Collections = () => {
     <div className="min-h-screen">
       <NavBar />
       
-      <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
-        <h1 className="text-2xl font-bold mb-6">{t("My Collections", "我的收藏")}</h1>
-        
-        {loading ? (
-          <div className="flex justify-center items-center h-40">
-            <Loader className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : locations.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="mb-4 text-muted-foreground">
-              {t("You haven't saved any locations yet.", "您还没有保存任何位置。")}
+      <TooltipProvider>
+        <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
+          <h1 className="text-2xl font-bold mb-6">{t("My Collections", "我的收藏")}</h1>
+          
+          {loading ? (
+            <div className="flex justify-center items-center h-40">
+              <Loader className="h-8 w-8 animate-spin text-primary" />
             </div>
-            <button 
-              onClick={() => navigate('/photo-points')}
-              className="text-primary hover:underline"
-            >
-              {t("Browse Photo Points", "浏览摄影点")}
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {locations.map((location) => (
-              <div 
-                key={location.id} 
-                className={`relative rounded-lg overflow-hidden ${
-                  location.certification || location.isDarkSkyReserve 
-                    ? 'border-2 border-primary/50 bg-primary/5' 
-                    : 'border border-border'
-                }`}
+          ) : locations.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="mb-4 text-muted-foreground">
+                {t("You haven't saved any locations yet.", "您还没有保存任何位置。")}
+              </div>
+              <button 
+                onClick={() => navigate('/photo-points')}
+                className="text-primary hover:underline"
               >
-                <PhotoPointCard
-                  point={{
-                    id: location.id,
-                    name: location.name,
-                    latitude: Number(location.latitude),
-                    longitude: Number(location.longitude),
-                    bortleScale: location.bortlescale,
-                    siqs: siqsScores[location.id] || location.siqs,
-                    isDarkSkyReserve: location.isdarkskyreserve,
-                    certification: location.certification,
-                    timestamp: location.timestamp || location.created_at
-                  }}
-                  onSelect={() => {}}
-                  onViewDetails={() => navigate(`/location/${location.id}`)}
-                  userLocation={null}
-                />
-                <div className="absolute bottom-3 left-3">
-                  <DeleteLocationButton 
-                    locationId={location.id} 
-                    userId={user.id} 
-                    onDelete={handleLocationDelete}
+                {t("Browse Photo Points", "浏览摄影点")}
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {locations.map((location) => (
+                <div 
+                  key={location.id} 
+                  className={`relative rounded-lg overflow-hidden ${
+                    location.certification || location.isDarkSkyReserve 
+                      ? 'border-2 border-primary/50 bg-primary/5' 
+                      : 'border border-border'
+                  }`}
+                >
+                  <PhotoPointCard
+                    point={{
+                      id: location.id,
+                      name: location.name,
+                      latitude: Number(location.latitude),
+                      longitude: Number(location.longitude),
+                      bortleScale: location.bortlescale,
+                      siqs: siqsScores[location.id] || location.siqs,
+                      isDarkSkyReserve: location.isdarkskyreserve,
+                      certification: location.certification,
+                      timestamp: location.timestamp || location.created_at
+                    }}
+                    onSelect={() => {}}
+                    onViewDetails={() => navigate(`/location/${location.id}`)}
+                    userLocation={null}
+                  />
+                  <div className="absolute bottom-3 left-3">
+                    <DeleteLocationButton 
+                      locationId={location.id} 
+                      userId={user.id} 
+                      onDelete={handleLocationDelete}
+                    />
+                  </div>
+                  <RealTimeSiqsProvider
+                    isVisible={true}
+                    latitude={Number(location.latitude)}
+                    longitude={Number(location.longitude)}
+                    bortleScale={location.bortlescale}
+                    onSiqsCalculated={(siqs, loading) => handleSiqsUpdate(location.id, siqs, loading)}
                   />
                 </div>
-                <RealTimeSiqsProvider
-                  isVisible={true}
-                  latitude={Number(location.latitude)}
-                  longitude={Number(location.longitude)}
-                  bortleScale={location.bortlescale}
-                  onSiqsCalculated={(siqs, loading) => handleSiqsUpdate(location.id, siqs, loading)}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </TooltipProvider>
     </div>
   );
 };
