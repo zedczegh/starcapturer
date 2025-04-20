@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,7 +11,7 @@ import DeleteLocationButton from "@/components/collections/DeleteLocationButton"
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import useEnhancedLocation from "@/hooks/useEnhancedLocation";
-import { MapPin, Navigation, Star } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatSiqsScore } from "@/utils/siqsHelpers";
 import { getCertificationInfo, getLocalizedCertText } from "@/components/photoPoints/utils/certificationUtils";
@@ -90,12 +89,6 @@ const Collections = () => {
     );
   };
 
-  // Navigate to location details page
-  const handleViewDetails = (locationId: string) => {
-    navigate(`/location/${locationId}`);
-  };
-
-  // LocationCard component
   const LocationCard = ({ location }: { location: any }) => {
     const { locationDetails } = useEnhancedLocation({
       latitude: location.latitude,
@@ -110,7 +103,6 @@ const Collections = () => {
       displayName = locationDetails?.formattedName || location.name;
     }
 
-    // Create a complete SharedAstroSpot object for the getCertificationInfo function
     const locationForCertInfo: SharedAstroSpot = {
       id: location.id,
       name: location.name,
@@ -124,6 +116,18 @@ const Collections = () => {
 
     const certInfo = getCertificationInfo(locationForCertInfo);
 
+    const handleCardClick = (e: React.MouseEvent) => {
+      if ((e.target as HTMLElement).closest('button')) {
+        return; // Don't navigate if clicking on a button
+      }
+      navigate(`/location/${location.id}`);
+    };
+
+    const handleViewDetails = (e: React.MouseEvent) => {
+      e.stopPropagation(); // Prevent card click
+      navigate(`/location/${location.id}`);
+    };
+
     return (
       <Card 
         className={`relative cursor-pointer border ${
@@ -131,10 +135,9 @@ const Collections = () => {
             ? 'border-2 border-primary/50 bg-primary/5' 
             : 'border-border'
         }`}
-        onClick={() => navigate(`/location/${location.id}`)}
+        onClick={handleCardClick}
       >
         <CardContent className="p-4 relative">
-          {/* Header with name and SIQS score */}
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-medium text-base line-clamp-1">{displayName}</h3>
             
@@ -146,7 +149,6 @@ const Collections = () => {
             </div>
           </div>
           
-          {/* Certification badge if applicable */}
           {certInfo && (
             <div className="my-2">
               <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${certInfo.color}`}>
@@ -156,13 +158,11 @@ const Collections = () => {
             </div>
           )}
           
-          {/* Location coordinates */}
           <div className="mt-2 flex items-center text-muted-foreground text-xs">
             <MapPin className="h-3.5 w-3.5 mr-1.5" />
             <span>{location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</span>
           </div>
           
-          {/* Bottom action buttons */}
           <div className="mt-4 flex justify-between items-center">
             <DeleteLocationButton 
               locationId={location.id} 
@@ -173,18 +173,13 @@ const Collections = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent event bubbling
-                e.preventDefault(); // Prevent default behavior
-                handleViewDetails(location.id);
-              }}
+              onClick={handleViewDetails}
               className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300 text-sm"
             >
               {t("View Details", "查看详情")}
             </Button>
           </div>
           
-          {/* Real-time SIQS provider */}
           <RealTimeSiqsProvider
             isVisible={true}
             latitude={Number(location.latitude)}
