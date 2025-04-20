@@ -22,12 +22,6 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 // Track pending calculations to prevent duplicate requests
 const pendingCalculations = new Map<string, Promise<any>>();
 
-// Static counters and limits for API calls, shared across all instances
-let activeApiCalls = 0;
-const MAX_CONCURRENT_CALLS = 5;
-
-const loadingTimeoutRef = { current: null as number | null };
-
 const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   isVisible,
   latitude,
@@ -47,9 +41,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   const fetchTimeoutRef = useRef<number | null>(null);
   const positionKey = useRef<string>('');
   
-  // Increase cache duration for certified locations to reduce flashing
-  const CACHE_DURATION_CERTIFIED = isCertified ? 30 * 60 * 1000 : 5 * 60 * 1000; // 30 mins for certified, 5 mins for others
-  
   const REFRESH_INTERVAL = isCertified ? 30 * 1000 : 5 * 60 * 1000;
   
   const existingSiqsNumber = typeof existingSiqs === 'number' ? existingSiqs : 
@@ -67,22 +58,11 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     const cacheKey = getCacheKey();
     if (cacheKey && !forceUpdate) {
       const cached = resultCache.get(cacheKey);
-      if (cached && (Date.now() - cached.timestamp < CACHE_DURATION_CERTIFIED)) {
+      if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
         onSiqsCalculated(cached.data.siqs, false, cached.data.source === 'realtime' ? 9 : 7);
         setFetchAttempted(true);
         console.log(`Using cached SIQS result for ${latitude},${longitude}`);
         return;
-      }
-    }
-    
-    // For certified locations, use cached value first to prevent flashing
-    if (cacheKey && isCertified) {
-      const cached = resultCache.get(cacheKey);
-      if (cached && cached.data && cached.data.siqs > 0) {
-        onSiqsCalculated(cached.data.siqs, false, cached.data.source === 'realtime' ? 9 : 7);
-        if (Date.now() - cached.timestamp < CACHE_DURATION_CERTIFIED && !forceUpdate) {
-          return; // Use cache if still valid
-        }
       }
     }
     
@@ -125,14 +105,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   
   const fetchSiqs = useCallback(async () => {
     if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) return;
-    
-    // Check if we're already at the maximum concurrent calls
-    if (activeApiCalls >= MAX_CONCURRENT_CALLS) {
-      console.log("Maximum concurrent SIQS API calls reached, waiting...");
-      return;
-    }
-    
-    activeApiCalls++;
     
     try {
       // Check for pending calculation with same parameters
@@ -215,7 +187,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         onSiqsCalculated(null, false);
       }
     } finally {
-      activeApiCalls--;
       if (isMounted.current) {
         setLoading(false);
         setIsInitialFetch(false);

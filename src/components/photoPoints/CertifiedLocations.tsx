@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoLocationCard from './PhotoLocationCard';
@@ -31,7 +32,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   const { t } = useLanguage();
   const [selectedType, setSelectedType] = useState<CertificationType>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayLimit, setDisplayLimit] = useState(5); // Reduced from 25 to 5
+  const [displayLimit, setDisplayLimit] = useState(25); // Show more initially
   
   // Get all certified locations directly from the service - use useMemo to prevent excessive recalculations
   const allCertifiedLocations = useMemo(() => getAllCertifiedLocations(), []);
@@ -158,6 +159,11 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
       return true;
     });
   }, [combinedLocations, selectedType, searchQuery]);
+  
+  // Handle load more
+  const handleLoadMore = () => {
+    setDisplayLimit(prev => prev + 25); // Load more items each time
+  };
   
   // Get the locations to display based on the current limit - with useMemo for performance
   const locationsToDisplay = useMemo(() => {
