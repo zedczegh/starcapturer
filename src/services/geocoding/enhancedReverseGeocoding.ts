@@ -40,7 +40,6 @@ export async function getEnhancedLocationDetails(
       const waterLocation = {
         name: language === 'en' ? 'Water Location' : '水域位置',
         formattedName: language === 'en' ? 'Water Location' : '水域位置',
-        chineseName: '水域位置', // Add Chinese name for water locations
         latitude: normalizedLat,
         longitude: normalizedLng,
         isWater: true
@@ -56,7 +55,6 @@ export async function getEnhancedLocationDetails(
     const result: EnhancedLocationDetails = {
       name: nearestTownInfo.townName,
       formattedName: nearestTownInfo.detailedName || nearestTownInfo.townName,
-      chineseName: language === 'zh' ? nearestTownInfo.townName : undefined, // Set Chinese name if language is Chinese
       townName: nearestTownInfo.townName,
       cityName: nearestTownInfo.city,
       countyName: nearestTownInfo.county,
@@ -87,11 +85,6 @@ export async function getEnhancedLocationDetails(
           if (geocodingResult.formattedName) {
             result.formattedName = geocodingResult.formattedName;
           }
-          
-          // Set Chinese name if available
-          if (geocodingResult.chineseName) {
-            result.chineseName = geocodingResult.chineseName;
-          }
         }
       } catch (error) {
         console.warn("Error enhancing location with Nominatim API:", error);
@@ -102,7 +95,6 @@ export async function getEnhancedLocationDetails(
       result.formattedName = language === 'en' ? 
         `Water location near ${result.formattedName}` : 
         `水域位置 靠近 ${result.formattedName}`;
-      result.chineseName = `水域位置 靠近 ${result.chineseName || result.formattedName}`; // Set Chinese water name
     }
     
     // Cache the result
@@ -118,7 +110,6 @@ export async function getEnhancedLocationDetails(
       formattedName: language === 'en' ? 
         `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}` : 
         `位置 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-      chineseName: `位置 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, // Include Chinese name for error case
       latitude,
       longitude,
       isWater: isWaterLocation(latitude, longitude)

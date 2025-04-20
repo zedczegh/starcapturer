@@ -1,5 +1,5 @@
-
 import React, { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
@@ -11,13 +11,12 @@ import DeleteLocationButton from "@/components/collections/DeleteLocationButton"
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import useEnhancedLocation from "@/hooks/useEnhancedLocation";
-import { userCollectionsService, SavedLocation } from "@/services/collections/userCollectionsService";
 
 const Collections = () => {
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
-  const [locations, setLocations] = useState<SavedLocation[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [siqsScores, setSiqsScores] = useState<Record<string, number>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
@@ -32,8 +31,14 @@ const Collections = () => {
     const fetchCollections = async () => {
       try {
         setLoading(true);
-        const data = await userCollectionsService.getUserLocations(user.id);
-        setLocations(data);
+        const { data, error } = await supabase
+          .from('saved_locations')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setLocations(data || []);
       } catch (error: any) {
         console.error('Error fetching collections:', error);
         toast.error(t("Failed to load your collections", "无法加载您的收藏"));
@@ -54,7 +59,8 @@ const Collections = () => {
           table: 'saved_locations',
           filter: `user_id=eq.${user.id}`
         },
-        () => {
+        (payload) => {
+          console.log('Location deleted via real-time:', payload);
           fetchCollections();
         }
       )
@@ -72,31 +78,18 @@ const Collections = () => {
     setLoadingSiqs(prev => ({ ...prev, [locationId]: loading }));
   };
 
-  const handleLocationDelete = async (deletedLocationId: string) => {
-    try {
-      if (!user) return;
-      await userCollectionsService.deleteLocation(deletedLocationId, user.id);
-      setLocations(prevLocations => 
-        prevLocations.filter(location => location.id !== deletedLocationId)
-      );
-      toast.success(t("Location removed from collection", "位置已从收藏中删除"));
-    } catch (error) {
-      console.error('Error deleting location:', error);
-      toast.error(t("Failed to delete location", "删除位置失败"));
-    }
+  const handleLocationDelete = (deletedLocationId: string) => {
+    setLocations(prevLocations => 
+      prevLocations.filter(location => location.id !== deletedLocationId)
+    );
   };
 
-  const LocationCard = ({ location }: { location: SavedLocation }) => {
+  const LocationCard = ({ location }: { location: any }) => {
     const { locationDetails } = useEnhancedLocation({
       latitude: location.latitude,
       longitude: location.longitude,
       skip: false
     });
-
-    const handleViewDetails = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      navigate(`/location/${location.id}`);
-    };
 
     let enhancedName;
     if (language === 'zh') {
@@ -112,7 +105,6 @@ const Collections = () => {
             ? 'border-2 border-primary/50 bg-primary/5' 
             : 'border border-border'
         }`}
-        onClick={handleViewDetails}
       >
         <PhotoPointCard
           point={{
@@ -128,13 +120,13 @@ const Collections = () => {
             timestamp: location.timestamp || location.created_at
           }}
           onSelect={() => {}}
-          onViewDetails={handleViewDetails}
+          onViewDetails={() => navigate(`/location/${location.id}`)}
           userLocation={null}
         />
-        <div className="absolute bottom-3 left-3 z-10" onClick={e => e.stopPropagation()}>
+        <div className="absolute bottom-3 left-3">
           <DeleteLocationButton 
             locationId={location.id} 
-            userId={user!.id} 
+            userId={user.id} 
             onDelete={handleLocationDelete}
           />
         </div>

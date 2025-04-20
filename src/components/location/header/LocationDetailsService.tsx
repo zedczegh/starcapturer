@@ -13,7 +13,7 @@ export function useLocationDetailsService({
   language 
 }: UseLocationDetailsServiceProps) {
   // Use our refactored hook to get enhanced location names
-  const { enhancedName, chineseName, locationDetails, isLoading } = useLocationNameEnhancer({
+  const { enhancedName, locationDetails } = useLocationNameEnhancer({
     latitude,
     longitude,
     language
@@ -26,8 +26,6 @@ export function useLocationDetailsService({
 
   return {
     enhancedName,
-    chineseName,
-    locationDetails,
-    isLoading
+    locationDetails
   };
 }
