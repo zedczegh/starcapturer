@@ -32,7 +32,10 @@ const DeleteLocationButton = ({ locationId, userId, onDelete }: DeleteLocationBu
         .eq('id', locationId)
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase delete error:', error);
+        throw error;
+      }
       
       toast.success(t("Location removed from collection", "位置已从收藏中删除"));
       
@@ -53,7 +56,7 @@ const DeleteLocationButton = ({ locationId, userId, onDelete }: DeleteLocationBu
           variant="destructive" 
           size="sm" 
           onClick={handleDelete}
-          className="bg-destructive/90 hover:bg-destructive"
+          className="bg-destructive/90 hover:bg-destructive z-10"
         >
           <Trash2 className="h-4 w-4" />
         </Button>

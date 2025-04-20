@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -116,15 +117,20 @@ const Collections = () => {
 
     const certInfo = getCertificationInfo(locationForCertInfo);
 
+    // This function handles card clicks but ignores button clicks
     const handleCardClick = (e: React.MouseEvent) => {
-      if ((e.target as HTMLElement).closest('button')) {
-        return; // Don't navigate if clicking on a button
+      const target = e.target as HTMLElement;
+      // Check if the click is on a button or inside a button
+      if (target.tagName === 'BUTTON' || 
+          target.closest('button') ||
+          target.getAttribute('role') === 'button') {
+        return; // Don't navigate if clicking on or inside a button
       }
       navigate(`/location/${location.id}`);
     };
 
-    const handleViewDetails = (e: React.MouseEvent) => {
-      e.stopPropagation(); // Prevent card click
+    // Don't use this function inside buttons - use direct inline functions instead
+    const navigateToDetails = () => {
       navigate(`/location/${location.id}`);
     };
 
@@ -164,20 +170,28 @@ const Collections = () => {
           </div>
           
           <div className="mt-4 flex justify-between items-center">
-            <DeleteLocationButton 
-              locationId={location.id} 
-              userId={user.id} 
-              onDelete={handleLocationDelete}
-            />
+            {/* Using a wrapper div to prevent event bubbling */}
+            <div onClick={(e) => e.stopPropagation()}>
+              <DeleteLocationButton 
+                locationId={location.id} 
+                userId={user.id} 
+                onDelete={handleLocationDelete}
+              />
+            </div>
             
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleViewDetails}
-              className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300 text-sm"
-            >
-              {t("View Details", "查看详情")}
-            </Button>
+            {/* Using a wrapper div to prevent event bubbling */}
+            <div onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  navigate(`/location/${location.id}`);
+                }}
+                className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300 text-sm"
+              >
+                {t("View Details", "查看详情")}
+              </Button>
+            </div>
           </div>
           
           <RealTimeSiqsProvider
