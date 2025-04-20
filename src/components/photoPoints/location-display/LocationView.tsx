@@ -23,32 +23,15 @@ const LocationView: React.FC<LocationViewProps> = ({
   emptyDescription
 }) => {
   const { t } = useLanguage();
-  const [visibleLocations, setVisibleLocations] = useState<SharedAstroSpot[]>([]);
-  const [currentPage, setCurrentPage] = useState(0);
-  const locationsPerPage = 5; // Fixed at 5 locations
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalLocations, setTotalLocations] = useState(0);
+  const locationsPerPage = 5; // Fixed at 5 locations per page
   
-  // Update visible locations when main locations list changes or page changes
   useEffect(() => {
-    const startIndex = currentPage * locationsPerPage;
-    const endIndex = startIndex + locationsPerPage;
-    setVisibleLocations(locations.slice(startIndex, endIndex));
-  }, [locations, currentPage]);
-  
-  const totalPages = Math.ceil(locations.length / locationsPerPage);
-  
-  const handleNextPage = () => {
-    if (currentPage < totalPages - 1) {
-      setCurrentPage(prev => prev + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-  
-  const handlePrevPage = () => {
-    if (currentPage > 0) {
-      setCurrentPage(prev => prev - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
+    console.log(`LocationView received ${locations.length} locations`);
+    setTotalLocations(locations.length);
+    setCurrentPage(1);
+  }, [locations]);
   
   if (loading && initialLoad) {
     return (
@@ -73,52 +56,46 @@ const LocationView: React.FC<LocationViewProps> = ({
     );
   }
   
+  // Calculate pagination values
+  const indexOfLastLocation = currentPage * locationsPerPage;
+  const indexOfFirstLocation = indexOfLastLocation - locationsPerPage;
+  
+  // Get current page locations
+  const currentLocations = locations.slice(0, indexOfLastLocation);
+  
+  const loadMore = () => {
+    setCurrentPage(prev => prev + 1);
+  };
+  
   return (
     <div className="space-y-6">
-      <div className="text-sm text-muted-foreground mb-4 flex justify-between items-center">
+      <div className="text-sm text-muted-foreground mb-4 flex flex-wrap justify-between items-center">
         <span>
           {t(
-            "Showing {{shown}} of {{total}} locations",
-            "显示 {{shown}}/{{total}} 个位置"
+            "Showing {{start}}-{{end}} of {{total}} locations",
+            "显示 {{start}}-{{end}}，共 {{total}} 个位置"
           )
-            .replace('{{shown}}', String(Math.min(locationsPerPage, visibleLocations.length)))
-            .replace('{{total}}', String(locations.length))}
-        </span>
-        <span>
-          {t(
-            "Page {{current}}/{{total}}",
-            "页码 {{current}}/{{total}}"
-          )
-            .replace('{{current}}', String(currentPage + 1))
-            .replace('{{total}}', String(totalPages))}
+            .replace('{{start}}', String(1))
+            .replace('{{end}}', String(Math.min(indexOfLastLocation, locations.length)))
+            .replace('{{total}}', String(totalLocations))}
         </span>
       </div>
       
       <LocationsList 
-        locations={visibleLocations}
+        locations={currentLocations}
         loading={loading}
         initialLoad={initialLoad}
         showRealTimeSiqs={true}
       />
       
-      {totalPages > 1 && (
-        <div className="flex justify-between mt-6 gap-4">
+      {indexOfLastLocation < locations.length && (
+        <div className="flex justify-center mt-6">
           <Button 
             variant="outline"
-            onClick={handlePrevPage}
-            disabled={currentPage === 0}
-            className="flex-1 bg-gradient-to-r from-blue-500/10 to-green-500/10 hover:from-blue-500/20 hover:to-green-500/20"
+            onClick={loadMore}
+            className="w-full max-w-xs"
           >
-            {t("Previous", "上一页")}
-          </Button>
-          
-          <Button 
-            variant="outline"
-            onClick={handleNextPage}
-            disabled={currentPage >= totalPages - 1}
-            className="flex-1 bg-gradient-to-r from-blue-500/10 to-green-500/10 hover:from-blue-500/20 hover:to-green-500/20"
-          >
-            {t("Next", "下一页")}
+            {t("Load More Locations", "加载更多位置")}
           </Button>
         </div>
       )}
