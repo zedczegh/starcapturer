@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isWaterLocation } from '@/utils/validation';
 import { generateDistributedPoints } from './location/pointGenerationService';
@@ -16,7 +17,7 @@ export async function generateQualitySpots(
   minQuality: number = 5
 ): Promise<SharedAstroSpot[]> {
   // Check cache first
-  const cachedSpots = getCachedSpots(centerLat, centerLng, radius);
+  const cachedSpots = getCachedSpots(centerLat, centerLng, radius, minQuality);
   if (cachedSpots) {
     return cachedSpots;
   }
@@ -83,7 +84,7 @@ export async function generateQualitySpots(
     const sortedSpots = sortByQualityAndDistance(validSpots)
       .slice(0, effectiveLimit);
     
-    cacheSpots(centerLat, centerLng, radius, sortedSpots);
+    cacheSpots(centerLat, centerLng, radius, minQuality, sortedSpots);
     
     console.log(`Generated ${sortedSpots.length} quality spots`);
     return sortedSpots;

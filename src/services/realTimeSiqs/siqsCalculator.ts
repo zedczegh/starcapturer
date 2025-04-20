@@ -1,5 +1,3 @@
-
-// Fixing only the problem section around line 193
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -17,11 +15,9 @@ import { findClosestEnhancedLocation } from "./enhancedLocationData";
 import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
 import { extractSingleHourCloudCover } from "@/utils/weather/hourlyCloudCoverExtractor";
 
-// Performance optimization: Reduce duplicate calculations with memoization
 const memoizedResults = new Map<string, {result: SiqsResult, timestamp: number}>();
 const MEMO_EXPIRY = 5 * 60 * 1000; // 5 minutes
 
-// Spatial memoization to reduce API calls for nearby locations
 const spatialCache = new Map<string, {result: SiqsResult, timestamp: number}>();
 const SPATIAL_PRECISION = 0.05; // About 5km spatial precision 
 const SPATIAL_EXPIRY = 30 * 60 * 1000; // 30 minutes
@@ -197,8 +193,7 @@ export async function calculateRealTimeSiqs(
           lightPollution: false,
           terrainCorrected: false,
           climate: false,
-          singleHourSampling: false,
-          estimated: true
+          singleHourSampling: false
         }
       }
     };

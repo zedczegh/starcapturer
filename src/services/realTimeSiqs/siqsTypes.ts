@@ -1,15 +1,34 @@
 
-// Define types for SIQS calculation
+// Add this if the file doesn't exist or update it if it does
+
+export interface WeatherDataWithClearSky {
+  temperature?: number;
+  humidity?: number;
+  windSpeed?: number;
+  cloudCover: number;
+  precipitation?: number;
+  aqi?: number;
+  clearSkyRate?: number;
+  latitude: number;
+  longitude: number;
+  _forecast?: any;
+  nighttimeCloudData?: {
+    average: number;
+    timeRange: string;
+    sourceType?: string;
+  };
+}
+
 export interface SiqsResult {
   siqs: number;
   isViable: boolean;
   weatherData?: WeatherDataWithClearSky;
   forecastData?: any;
-  factors?: {
+  factors?: Array<{
     name: string;
     score: number;
     description: string;
-  }[];
+  }>;
   metadata?: {
     calculatedAt: string;
     sources: {
@@ -21,68 +40,13 @@ export interface SiqsResult {
       climate?: boolean;
       singleHourSampling?: boolean;
     };
-    reliability?: {
-      score: number;
-      issues: string[];
-    };
   };
 }
 
-export interface WeatherDataWithClearSky {
-  temperature: number;
-  humidity: number;
-  cloudCover: number;
-  windSpeed: number;
-  precipitation: number;
-  clearSkyRate?: number;
-  latitude: number;
-  longitude: number;
-  time?: string;
-  condition?: string;
-  aqi?: number;
-  _forecast?: any;
-  nighttimeCloudData?: {
-    average: number;
-    timeRange: string;
-    sourceType: 'forecast' | 'calculated' | 'historical' | 'optimized';
-  };
-}
-
-export interface MoonlessNightInfo {
-  duration: number; // in hours
-  startTime: string;
-  endTime: string;
-  moonrise: Date | string;
-  moonset: Date | string;
-  nextNewMoon: string;
-  daysUntilNewMoon: number;
-  astronomicalNightStart: string;
-  astronomicalNightEnd: string;
-  astronomicalNightDuration: number;
-}
-
-export interface MoonPhaseInfo {
-  phase: number; // 0-1 normalized value
-  name: string;
-  illumination: number; // percentage 0-100
-  isGoodForAstronomy: boolean;
-}
-
-// Add SiqsCalculationOptions interface
 export interface SiqsCalculationOptions {
-  anomalyDetection?: boolean;
-  includeMetadata?: boolean;
-  includeForecast?: boolean;
-  reliability?: boolean;
-  adjustForLatitude?: boolean;
   useSingleHourSampling?: boolean;
   targetHour?: number;
   cacheDurationMins?: number;
-}
-
-// Add interface for display options
-export interface SiqsDisplayOptions {
-  skipCache?: boolean;
-  useSingleHourSampling?: boolean;
-  targetHour?: number;
+  skipApiCalls?: boolean;
+  maxConcurrent?: number;
 }
