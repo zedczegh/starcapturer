@@ -1,7 +1,8 @@
-
 /**
  * Utility functions for SIQS (Stellar Imaging Quality Score) calculation
  */
+
+import { extractSingleHourCloudCover, getBestAstronomicalHour } from "@/utils/weather/hourlyCloudCoverExtractor";
 
 /**
  * Calculate SIQS using weather data
@@ -33,8 +34,7 @@ export async function calculateSIQSWithWeatherData(
 
   // If we have forecast data, attempt to use single hour sampling
   if (forecastData && forecastData.hourly) {
-    const hourlyExtractor = require("@/utils/weather/hourlyCloudCoverExtractor");
-    const singleHourCloudCover = hourlyExtractor.extractSingleHourCloudCover(forecastData, 1); // Use 1 AM by default
+    const singleHourCloudCover = extractSingleHourCloudCover(forecastData, 1); // Use 1 AM by default
     
     if (singleHourCloudCover !== null) {
       console.log(`Using 1AM cloud cover for SIQS calculation: ${singleHourCloudCover.toFixed(1)}%`);
@@ -112,47 +112,11 @@ export async function calculateSIQSWithWeatherData(
 }
 
 /**
- * Get the best hour for astronomical viewing based on cloud cover
- */
-export function getBestAstronomicalHour(forecastData: any): number | null {
-  if (!forecastData || !forecastData.hourly) {
-    return null;
-  }
-  
-  try {
-    const hourlyData = forecastData.hourly;
-    let bestHour = 1; // Default to 1 AM
-    let lowestCloudCover = 100;
-    
-    // Check hours between 10 PM and 4 AM (common dark sky hours)
-    for (let hour = 22; hour <= 23; hour++) {
-      const hourlyExtractor = require("@/utils/weather/hourlyCloudCoverExtractor");
-      const cloudCover = hourlyExtractor.extractSingleHourCloudCover(forecastData, hour);
-      if (cloudCover !== null && cloudCover < lowestCloudCover) {
-        lowestCloudCover = cloudCover;
-        bestHour = hour;
-      }
-    }
-    
-    for (let hour = 0; hour <= 4; hour++) {
-      const hourlyExtractor = require("@/utils/weather/hourlyCloudCoverExtractor");
-      const cloudCover = hourlyExtractor.extractSingleHourCloudCover(forecastData, hour);
-      if (cloudCover !== null && cloudCover < lowestCloudCover) {
-        lowestCloudCover = cloudCover;
-        bestHour = hour;
-      }
-    }
-    
-    return bestHour;
-  } catch (error) {
-    console.warn("Error finding best astronomical hour:", error);
-    return 1; // Default to 1 AM
-  }
-}
-
-/**
  * Normalize a score to ensure it's in the 0-10 range
  */
 export function normalizeScore(score: number): number {
   return Math.max(0, Math.min(10, score));
 }
+
+// Export the functions from hourlyCloudCoverExtractor for backward compatibility
+export { extractSingleHourCloudCover, getBestAstronomicalHour };

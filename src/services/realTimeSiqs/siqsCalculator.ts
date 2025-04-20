@@ -1,6 +1,5 @@
-
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
-import { calculateSIQSWithWeatherData, extractSingleHourCloudCover } from "@/hooks/siqs/siqsCalculationUtils";
+import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
 import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
 import {
@@ -14,6 +13,7 @@ import { WeatherDataWithClearSky, SiqsResult } from "./siqsTypes";
 import { findClimateRegion, getClimateAdjustmentFactor } from "./climateRegions";
 import { findClosestEnhancedLocation } from "./enhancedLocationData";
 import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
+import { extractSingleHourCloudCover } from "@/utils/weather/hourlyCloudCoverExtractor";
 
 function improveCalculatedLocationSIQS(initialScore: number, location: any): number {
   if (initialScore < 0.5) {
