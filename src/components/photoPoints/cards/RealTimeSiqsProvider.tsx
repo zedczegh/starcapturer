@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getCompleteSiqsDisplay } from '@/utils/unifiedSiqsDisplay';
 import { SiqsDisplayOptions } from '@/services/realTimeSiqs/siqsTypes';
@@ -21,6 +22,12 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 // Track pending calculations to prevent duplicate requests
 const pendingCalculations = new Map<string, Promise<any>>();
 
+// Static counters and limits for API calls, shared across all instances
+let activeApiCalls = 0;
+const MAX_CONCURRENT_CALLS = 5;
+
+const loadingTimeoutRef = { current: null as number | null };
+
 const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   isVisible,
   latitude,
@@ -42,10 +49,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   
   // Increase cache duration for certified locations to reduce flashing
   const CACHE_DURATION_CERTIFIED = isCertified ? 30 * 60 * 1000 : 5 * 60 * 1000; // 30 mins for certified, 5 mins for others
-  
-  // Static counter for active API calls, shared across all instances
-  static activeApiCalls = 0;
-  static readonly MAX_CONCURRENT_CALLS = 5;
   
   const REFRESH_INTERVAL = isCertified ? 30 * 1000 : 5 * 60 * 1000;
   
@@ -124,12 +127,12 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) return;
     
     // Check if we're already at the maximum concurrent calls
-    if (RealTimeSiqsProvider.activeApiCalls >= RealTimeSiqsProvider.MAX_CONCURRENT_CALLS) {
+    if (activeApiCalls >= MAX_CONCURRENT_CALLS) {
       console.log("Maximum concurrent SIQS API calls reached, waiting...");
       return;
     }
     
-    RealTimeSiqsProvider.activeApiCalls++;
+    activeApiCalls++;
     
     try {
       // Check for pending calculation with same parameters
@@ -212,7 +215,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         onSiqsCalculated(null, false);
       }
     } finally {
-      RealTimeSiqsProvider.activeApiCalls--;
+      activeApiCalls--;
       if (isMounted.current) {
         setLoading(false);
         setIsInitialFetch(false);
