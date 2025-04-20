@@ -64,18 +64,18 @@ const ProfileForm = ({ loading, profile }: ProfileFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 animate-fade-in">
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div>
-            <Label htmlFor="username" className="text-white mb-2 block">
+            <Label htmlFor="username" className="text-cosmic-100 mb-2 block font-medium">
               {t("Username", "用户名")}
             </Label>
             <div className="relative">
               <Input
                 id="username"
                 {...register('username', { required: true, minLength: 3 })}
-                className="pl-10 bg-cosmic-800 border-cosmic-700 text-white focus:border-primary"
+                className="pl-10 bg-cosmic-800/50 border-cosmic-700/50 text-white focus:border-primary hover:border-cosmic-600/50 transition-colors"
                 disabled={loading || isSubmitting}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-cosmic-400">
@@ -91,7 +91,7 @@ const ProfileForm = ({ loading, profile }: ProfileFormProps) => {
           </div>
 
           <div>
-            <Label htmlFor="date_of_birth" className="text-white mb-2 block">
+            <Label htmlFor="date_of_birth" className="text-cosmic-100 mb-2 block font-medium">
               {t("Date of Birth", "出生日期")}
             </Label>
             <div className="relative">
@@ -99,7 +99,7 @@ const ProfileForm = ({ loading, profile }: ProfileFormProps) => {
                 id="date_of_birth"
                 type="date"
                 {...register('date_of_birth')}
-                className="pl-10 bg-cosmic-800 border-cosmic-700 text-white focus:border-primary"
+                className="pl-10 bg-cosmic-800/50 border-cosmic-700/50 text-white focus:border-primary hover:border-cosmic-600/50 transition-colors"
                 disabled={loading || isSubmitting}
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-cosmic-400">
@@ -115,7 +115,7 @@ const ProfileForm = ({ loading, profile }: ProfileFormProps) => {
       <div className="flex justify-end">
         <Button 
           type="submit" 
-          className="bg-gradient-to-r from-primary to-[#8A6FD6] hover:opacity-90 text-white px-6"
+          className="bg-gradient-to-r from-primary to-[#8A6FD6] hover:opacity-90 text-white px-8 py-2.5 rounded-lg shadow-lg hover:shadow-primary/25 transition-all duration-300 disabled:opacity-50"
           disabled={loading || isSubmitting}
         >
           {isSubmitting ? t("Updating...", "更新中...") : t("Save Changes", "保存更改")}
