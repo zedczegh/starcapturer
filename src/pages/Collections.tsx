@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +10,7 @@ import PhotoPointCard from "@/components/photoPoints/PhotoPointCard";
 import DeleteLocationButton from "@/components/collections/DeleteLocationButton";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import useEnhancedLocation from "@/hooks/useEnhancedLocation";
 
 const Collections = () => {
   const { user } = useAuth();
@@ -18,8 +18,6 @@ const Collections = () => {
   const navigate = useNavigate();
   const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Add state for real-time SIQS scores
   const [siqsScores, setSiqsScores] = useState<Record<string, number>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
 
@@ -51,7 +49,6 @@ const Collections = () => {
 
     fetchCollections();
 
-    // Subscribe to real-time updates for deleted locations
     const channel = supabase
       .channel('schema-db-changes')
       .on(
@@ -64,8 +61,7 @@ const Collections = () => {
         },
         (payload) => {
           console.log('Location deleted via real-time:', payload);
-          // This is a backup mechanism, but we'll handle deletion directly in the UI
-          fetchCollections(); 
+          fetchCollections();
         }
       )
       .subscribe();
@@ -75,7 +71,6 @@ const Collections = () => {
     };
   }, [user, navigate, t]);
 
-  // Handler for SIQS updates
   const handleSiqsUpdate = (locationId: string, siqs: number | null, loading: boolean) => {
     if (siqs !== null) {
       setSiqsScores(prev => ({ ...prev, [locationId]: siqs }));
@@ -83,10 +78,60 @@ const Collections = () => {
     setLoadingSiqs(prev => ({ ...prev, [locationId]: loading }));
   };
 
-  // Handle immediate deletion in the UI
   const handleLocationDelete = (deletedLocationId: string) => {
     setLocations(prevLocations => 
       prevLocations.filter(location => location.id !== deletedLocationId)
+    );
+  };
+
+  const LocationCard = ({ location }: { location: any }) => {
+    const { locationDetails } = useEnhancedLocation({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      skip: false
+    });
+
+    const enhancedName = locationDetails?.formattedName || location.name;
+
+    return (
+      <div 
+        className={`relative rounded-lg overflow-hidden ${
+          location.certification || location.isdarkskyreserve 
+            ? 'border-2 border-primary/50 bg-primary/5' 
+            : 'border border-border'
+        }`}
+      >
+        <PhotoPointCard
+          point={{
+            id: location.id,
+            name: enhancedName,
+            latitude: Number(location.latitude),
+            longitude: Number(location.longitude),
+            bortleScale: location.bortlescale,
+            siqs: siqsScores[location.id] || location.siqs,
+            isDarkSkyReserve: location.isdarkskyreserve,
+            certification: location.certification,
+            timestamp: location.timestamp || location.created_at
+          }}
+          onSelect={() => {}}
+          onViewDetails={() => navigate(`/location/${location.id}`)}
+          userLocation={null}
+        />
+        <div className="absolute bottom-3 left-3">
+          <DeleteLocationButton 
+            locationId={location.id} 
+            userId={user.id} 
+            onDelete={handleLocationDelete}
+          />
+        </div>
+        <RealTimeSiqsProvider
+          isVisible={true}
+          latitude={Number(location.latitude)}
+          longitude={Number(location.longitude)}
+          bortleScale={location.bortlescale}
+          onSiqsCalculated={(siqs, loading) => handleSiqsUpdate(location.id, siqs, loading)}
+        />
+      </div>
     );
   };
 
@@ -117,45 +162,7 @@ const Collections = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {locations.map((location) => (
-                <div 
-                  key={location.id} 
-                  className={`relative rounded-lg overflow-hidden ${
-                    location.certification || location.isDarkSkyReserve 
-                      ? 'border-2 border-primary/50 bg-primary/5' 
-                      : 'border border-border'
-                  }`}
-                >
-                  <PhotoPointCard
-                    point={{
-                      id: location.id,
-                      name: location.name,
-                      latitude: Number(location.latitude),
-                      longitude: Number(location.longitude),
-                      bortleScale: location.bortlescale,
-                      siqs: siqsScores[location.id] || location.siqs,
-                      isDarkSkyReserve: location.isdarkskyreserve,
-                      certification: location.certification,
-                      timestamp: location.timestamp || location.created_at
-                    }}
-                    onSelect={() => {}}
-                    onViewDetails={() => navigate(`/location/${location.id}`)}
-                    userLocation={null}
-                  />
-                  <div className="absolute bottom-3 left-3">
-                    <DeleteLocationButton 
-                      locationId={location.id} 
-                      userId={user.id} 
-                      onDelete={handleLocationDelete}
-                    />
-                  </div>
-                  <RealTimeSiqsProvider
-                    isVisible={true}
-                    latitude={Number(location.latitude)}
-                    longitude={Number(location.longitude)}
-                    bortleScale={location.bortlescale}
-                    onSiqsCalculated={(siqs, loading) => handleSiqsUpdate(location.id, siqs, loading)}
-                  />
-                </div>
+                <LocationCard key={location.id} location={location} />
               ))}
             </div>
           )}
