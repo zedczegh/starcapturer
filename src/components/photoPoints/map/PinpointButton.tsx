@@ -30,33 +30,14 @@ const PinpointButton: React.FC<PinpointButtonProps> = ({
     stopPropagation(e);
     setIsClicking(true);
     
-    // Call the location handler
+    // Call the location handler directly
     onGetLocation();
     
-    // Try to center the map on user location
-    if (shouldCenter) {
-      try {
-        const leafletMap = (window as any).leafletMap;
-        if (leafletMap) {
-          setTimeout(() => {
-            leafletMap.setView(
-              [leafletMap.getCenter().lat, leafletMap.getCenter().lng],
-              12,
-              { 
-                animate: true,
-                duration: 1 
-              }
-            );
-          }, 300); // Small delay to allow location update
-        }
-      } catch (error) {
-        console.error("Error centering map:", error);
-        toast.error(t("Could not center map", "无法将地图居中"));
-      }
-    }
+    // Don't try to center the map here - the onGetLocation handler will do that
+    // This was causing issues with the map not properly centering on the user location
     
     setTimeout(() => setIsClicking(false), 1000);
-  }, [onGetLocation, shouldCenter, t]);
+  }, [onGetLocation]);
 
   return (
     <div 

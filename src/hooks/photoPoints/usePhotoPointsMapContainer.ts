@@ -19,6 +19,10 @@ interface UsePhotoPointsMapContainerProps {
   onLocationUpdate?: (latitude: number, longitude: number) => void;
 }
 
+// Cache for expensive operations
+const locationCache = new Map<string, SharedAstroSpot[]>();
+const MAX_CACHE_SIZE = 10; // Cache only the last 10 location sets
+
 export const usePhotoPointsMapContainer = ({
   userLocation,
   locations,
@@ -40,10 +44,21 @@ export const usePhotoPointsMapContainer = ({
     touchMoved: false
   });
   
-  // Get all certified locations to ensure we have all 80+ locations
+  // Get all certified locations - memoized with useCallback
   const allCertifiedLocations = useCallback(() => {
+    // Check cache first
+    const cacheKey = 'all-certified-locations';
+    const cached = locationCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    
+    // If not in cache, load and cache
     const loaded = getAllCertifiedLocations();
     console.log(`usePhotoPointsMapContainer: Got ${loaded.length} certified locations from service`);
+    
+    // Cache the result
+    locationCache.set(cacheKey, loaded);
     return loaded;
   }, []);
   
@@ -55,15 +70,14 @@ export const usePhotoPointsMapContainer = ({
     
     // If we don't have many certified locations, load more from the full dataset
     if (certifiedLocations.length < 20 && activeFilter !== 'calculated') {
-      const allCertified = allCertifiedLocations();
-      console.log(`Additionally loaded ${allCertified.length} certified locations from service`);
+      allCertifiedLocations();
     }
   }, [certifiedLocations.length, calculatedLocations.length, activeFilter, allCertifiedLocations]);
   
   // Determine how many locations to display based on device and view
   const getMaxLocations = useCallback(() => {
     // For certified locations, always show all of them (hundreds)
-    const certifiedLimit = activeFilter === 'certified' ? 500 : 200;
+    const certifiedLimit = 500;
     
     // For calculated locations, limit based on device
     const calculatedLimit = isMobile ? 30 : 50;
@@ -72,12 +86,26 @@ export const usePhotoPointsMapContainer = ({
     return activeFilter === 'calculated' ? calculatedLimit : certifiedLimit;
   }, [isMobile, activeFilter]);
 
-  // Filter locations based on the active filter
+  // Filter locations based on the active filter with memoization
   const filterLocationsByActiveFilter = useCallback(() => {
+    // Generate cache key based on inputs
+    const locationsLength = locations.length;
+    const certifiedLocationsLength = certifiedLocations.length;
+    const calculatedLocationsLength = calculatedLocations.length;
+    const cacheKey = `filter-${activeFilter}-${locationsLength}-${certifiedLocationsLength}-${calculatedLocationsLength}`;
+    
+    // Check cache first
+    const cached = locationCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    
     // Start with the full set of certified locations
     const allCertified = activeFilter !== 'calculated' ? allCertifiedLocations() : certifiedLocations;
     
     // If showing all, return all locations
+    let result: SharedAstroSpot[] = [];
+    
     if (activeFilter === 'all') {
       // Create a map to avoid duplicates
       const locationMap = new Map<string, SharedAstroSpot>();
@@ -98,30 +126,53 @@ export const usePhotoPointsMapContainer = ({
         }
       });
       
-      const combined = Array.from(locationMap.values());
-      console.log(`Filter 'all': Combined ${allCertified.length} certified and ${calculatedLocations.length} calculated for ${combined.length} locations`);
-      return combined;
-    }
-    
+      result = Array.from(locationMap.values());
+      console.log(`Filter 'all': Combined ${allCertified.length} certified and ${calculatedLocations.length} calculated for ${result.length} locations`);
+    } 
     // If showing certified only
-    if (activeFilter === 'certified') {
+    else if (activeFilter === 'certified') {
       console.log(`Filter 'certified': Showing ${allCertified.length} certified locations`);
-      return allCertified;
+      result = allCertified;
+    }
+    // If showing calculated only
+    else {
+      console.log(`Filter 'calculated': Showing ${calculatedLocations.length} calculated locations`);
+      result = calculatedLocations;
     }
     
-    // If showing calculated only
-    console.log(`Filter 'calculated': Showing ${calculatedLocations.length} calculated locations`);
-    return calculatedLocations;
-  }, [certifiedLocations, calculatedLocations, activeFilter, allCertifiedLocations]);
+    // Cache the result
+    if (locationCache.size >= MAX_CACHE_SIZE) {
+      // Clear oldest entry if cache is full
+      const oldestKey = locationCache.keys().next().value;
+      locationCache.delete(oldestKey);
+    }
+    locationCache.set(cacheKey, result);
+    
+    return result;
+  }, [locations.length, certifiedLocations.length, calculatedLocations.length, activeFilter, allCertifiedLocations]);
 
-  // Optimize locations for the map view
+  // Optimize locations for the map view with performance improvements
   const optimizedLocations = useCallback(() => {
+    // Create a cache key for this specific operation
+    const latLng = userLocation ? `${userLocation.latitude.toFixed(4)}-${userLocation.longitude.toFixed(4)}` : 'no-location';
+    const cacheKey = `optimized-${latLng}-${searchRadius}-${activeFilter}-${activeView}`;
+    
+    // Check cache first
+    const cached = locationCache.get(cacheKey);
+    if (cached) {
+      console.log(`Using cached optimized locations for ${cacheKey}`);
+      return cached;
+    }
+    
     // First filter by the active filter selection
+    console.time('filterByType');
     const filteredByType = filterLocationsByActiveFilter();
+    console.timeEnd('filterByType');
     
     console.log(`Filtered by type: ${filteredByType.length} locations`);
     
     // Then filter by distance for non-certified locations if we're not in certified view
+    console.time('filterByDistance');
     const filteredByDistance = userLocation && activeFilter !== 'certified'
       ? filteredByType.map(loc => {
           if (!loc.latitude || !loc.longitude) return loc;
@@ -147,6 +198,7 @@ export const usePhotoPointsMapContainer = ({
           return (loc.distance || Infinity) <= searchRadius;
         })
       : filteredByType;
+    console.timeEnd('filterByDistance');
 
     console.log(`Filtered by distance: ${filteredByDistance.length} locations`);
 
@@ -157,24 +209,43 @@ export const usePhotoPointsMapContainer = ({
     // For certified locations, don't use optimization to show all of them
     if (activeFilter === 'certified') {
       console.log(`Returning all ${filteredByDistance.length} certified locations without optimization`);
+      
+      // Cache the result before returning
+      if (locationCache.size >= MAX_CACHE_SIZE) {
+        const oldestKey = locationCache.keys().next().value;
+        locationCache.delete(oldestKey);
+      }
+      locationCache.set(cacheKey, filteredByDistance);
+      
       return filteredByDistance;
     }
     
     // Use filterVisibleLocations to optimize for the map
+    console.time('optimization');
     const optimized = filterVisibleLocations(
       filteredByDistance, 
       userLocation,
       maxLocationsToShow
     );
+    console.timeEnd('optimization');
 
     console.log(`After optimization: ${optimized.length} locations`);
+    
+    // Cache the result before returning
+    if (locationCache.size >= MAX_CACHE_SIZE) {
+      const oldestKey = locationCache.keys().next().value;
+      locationCache.delete(oldestKey);
+    }
+    locationCache.set(cacheKey, optimized);
+    
     return optimized;
   }, [
     filterLocationsByActiveFilter,
     userLocation, 
     searchRadius,
     getMaxLocations,
-    activeFilter
+    activeFilter,
+    activeView
   ]);
 
   // Calculate map center coordinates 
@@ -217,6 +288,13 @@ export const usePhotoPointsMapContainer = ({
 
   const handleMapReady = useCallback(() => {
     setMapReady(true);
+    
+    // Store map reference in window for global access
+    const leafletMap = mapRef.current?.leafletElement;
+    if (leafletMap) {
+      (window as any).leafletMap = leafletMap;
+      console.log("Stored leaflet map reference in window.leafletMap");
+    }
   }, []);
 
   const handleLocationClicked = useCallback(

@@ -19,22 +19,42 @@ export function useLocationManagement(
   const handleGetLocation = useCallback(() => {
     if (!onLocationUpdate) return;
     
+    console.log("Getting current user location for centering");
+    
     getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
+        
+        // First update the location state
         onLocationUpdate(latitude, longitude);
         console.log("Got user position:", latitude, longitude);
         
         try {
+          // Access the leaflet map instance from the window object
           const leafletMap = (window as any).leafletMap;
           if (leafletMap) {
-            leafletMap.setView([latitude, longitude], 12, { 
+            console.log("Centering map on user location:", latitude, longitude);
+            
+            // First pan to the location
+            leafletMap.panTo([latitude, longitude], {
               animate: true,
-              duration: 1.5 
+              duration: 1
             });
+            
+            // Then after a short delay, set the zoom and view
+            setTimeout(() => {
+              leafletMap.setView([latitude, longitude], 12, { 
+                animate: true,
+                duration: 1 
+              });
+              console.log("Map centered successfully");
+            }, 100);
+          } else {
+            console.warn("Leaflet map instance not available");
           }
         } catch (e) {
           console.error("Could not center map:", e);
+          toast.error(t("Could not center map on your location", "无法将地图居中到您的位置"));
         }
       },
       (error) => {

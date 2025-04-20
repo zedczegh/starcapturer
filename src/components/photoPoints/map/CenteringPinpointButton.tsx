@@ -19,6 +19,7 @@ const CenteringPinpointButton: React.FC<CenteringPinpointButtonProps> = ({
   // Create a handler that will be called when the button is clicked
   const handlePinpointClick = () => {
     console.log("Pinpoint button clicked, getting user location");
+    // Direct call to ensure location is fetched
     onGetLocation();
   };
   
