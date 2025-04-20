@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { darkSkyLocations } from '@/data/regions/darkSkyLocations';
 
@@ -12,54 +11,27 @@ const CACHE_LIFETIME = 3600000; // 1 hour
  * This is called on app initialization and ensures we have all certified locations available
  */
 export async function preloadCertifiedLocations(): Promise<SharedAstroSpot[]> {
-  console.log("Preloading ALL certified locations globally");
+  console.log("Preloading initial batch of certified locations");
   
   // Check if we have a recent cache
   if (certifiedLocationsCache.length > 0 && (Date.now() - lastCacheUpdate < CACHE_LIFETIME)) {
-    console.log(`Using ${certifiedLocationsCache.length} cached certified locations`);
-    return certifiedLocationsCache;
+    // Return only first 5 locations initially
+    console.log(`Using first 5 locations from cache of ${certifiedLocationsCache.length} locations`);
+    return certifiedLocationsCache.slice(0, 5);
   }
   
   try {
-    // Get locations from our database first
+    // Get locations from database first
     const databaseLocations = loadLocationsFromDatabase();
-    console.log(`Loaded ${databaseLocations.length} certified locations from database`);
     
-    // Then generate additional locations for demo
-    const generatedLocations = await generateAdditionalCertifiedLocations();
-    console.log(`Generated ${generatedLocations.length} additional certified locations`);
-    
-    // Combine both sources
-    const allCertifiedLocations = [...databaseLocations, ...generatedLocations];
-    
-    // Update cache
-    certifiedLocationsCache = allCertifiedLocations;
+    // Update cache with all locations
+    certifiedLocationsCache = databaseLocations;
     lastCacheUpdate = Date.now();
     
-    console.log(`Loaded total of ${allCertifiedLocations.length} certified locations globally`);
-    
-    // Store in localStorage for persistence
-    try {
-      localStorage.setItem('cachedCertifiedLocations', JSON.stringify(allCertifiedLocations));
-    } catch (e) {
-      console.error("Error caching to localStorage:", e);
-    }
-    
-    return allCertifiedLocations;
+    // Return only first 5 locations
+    return databaseLocations.slice(0, 5);
   } catch (error) {
     console.error("Error loading certified locations:", error);
-    
-    // Try to load from localStorage as fallback
-    try {
-      const cachedLocations = JSON.parse(localStorage.getItem('cachedCertifiedLocations') || '[]');
-      if (Array.isArray(cachedLocations) && cachedLocations.length > 0) {
-        console.log(`Using ${cachedLocations.length} locations from localStorage as fallback`);
-        return cachedLocations;
-      }
-    } catch (e) {
-      console.error("Error loading from localStorage:", e);
-    }
-    
     return [];
   }
 }
