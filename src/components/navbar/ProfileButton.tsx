@@ -56,14 +56,12 @@ const ProfileButton = () => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => navigate('/collections')}>
+          <BookmarkPlus className="mr-2 h-4 w-4" />
+          {t("My Collections", "我的收藏")}
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={handleSignOut}>
           {t("Sign Out", "登出")}
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <a href="/collections">
-            <BookmarkPlus className="mr-2 h-4 w-4" />
-            {t("My Collections", "我的收藏")}
-          </a>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

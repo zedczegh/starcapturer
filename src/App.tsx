@@ -15,6 +15,7 @@ import About from './pages/About';
 import LocationDetails from './pages/LocationDetails';
 import UsefulLinks from './pages/UsefulLinks';
 import ShareLocation from './pages/ShareLocation';
+import Collections from './pages/Collections';
 import './App.css';
 
 // Create React Query client
@@ -45,6 +46,7 @@ function App() {
                   <Route path="/links" element={<UsefulLinks />} />
                   <Route path="/useful-links" element={<UsefulLinks />} />
                   <Route path="/share" element={<ShareLocation />} />
+                  <Route path="/collections" element={<Collections />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <Toaster />

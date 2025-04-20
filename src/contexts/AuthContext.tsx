@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { toast } from "sonner";
 
 interface AuthContextType {
   user: User | null;
@@ -17,7 +18,7 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const { toast } = useToast();
+  const { toast: shadcnToast } = useToast();
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -39,18 +40,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
-      toast({
-        title: "Check your email",
-        description: "We've sent you a verification link to complete your registration.",
-      });
+      
+      // Show user confirmation message about email verification
+      if (data.user && !data.user.confirmed_at) {
+        toast.success("Verification email sent! Please check your inbox and confirm your email.", {
+          duration: 6000,
+          description: "You will need to verify your email before logging in."
+        });
+      }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error(error.message);
     }
   };
 
@@ -58,13 +59,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      // Success - no navigation here, will be handled by the component
+      toast.success("Signed in successfully!");
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error.message.includes("Email not confirmed")) {
+        toast.error("Please confirm your email before signing in.", {
+          description: "Check your inbox for the verification email."
+        });
+      } else {
+        toast.error("Sign in failed", {
+          description: error.message
+        });
+      }
     }
   };
 
@@ -72,12 +77,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      // Success - no navigation here, will be handled by the component
+      toast.success("Signed out successfully");
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
+      toast.error("Sign out failed", {
+        description: error.message
       });
     }
   };
