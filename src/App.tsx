@@ -16,7 +16,6 @@ import LocationDetails from './pages/LocationDetails';
 import UsefulLinks from './pages/UsefulLinks';
 import ShareLocation from './pages/ShareLocation';
 import Collections from './pages/Collections';
-import Profile from './pages/Profile';
 import './App.css';
 
 // Create React Query client
@@ -44,12 +43,10 @@ function App() {
                   <Route path="/about-siqs" element={<AboutSIQS />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/location/:id" element={<LocationDetails />} />
-                  <Route path="/location/siqs-calculator" element={<LocationDetails />} />
                   <Route path="/links" element={<UsefulLinks />} />
                   <Route path="/useful-links" element={<UsefulLinks />} />
                   <Route path="/share" element={<ShareLocation />} />
                   <Route path="/collections" element={<Collections />} />
-                  <Route path="/profile" element={<Profile />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <Toaster />

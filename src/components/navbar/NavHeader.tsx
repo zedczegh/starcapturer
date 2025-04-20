@@ -35,7 +35,7 @@ const NavHeader: React.FC<NavHeaderProps> = ({
         
         {children}
         
-        <div className="flex md:hidden items-center space-x-3">
+        <div className="flex md:hidden items-center space-x-2">
           <LocationPinButton />
           <LanguageSwitcher />
         </div>

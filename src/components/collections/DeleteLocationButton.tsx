@@ -20,11 +20,7 @@ interface DeleteLocationButtonProps {
 const DeleteLocationButton = ({ locationId, userId, onDelete }: DeleteLocationButtonProps) => {
   const { t } = useLanguage();
   
-  const handleDelete = async (e: React.MouseEvent) => {
-    // Ensure event doesn't bubble up and prevent default behavior
-    e.preventDefault();
-    e.stopPropagation();
-    
+  const handleDelete = async () => {
     try {
       const { error } = await supabase
         .from('saved_locations')
@@ -32,10 +28,7 @@ const DeleteLocationButton = ({ locationId, userId, onDelete }: DeleteLocationBu
         .eq('id', locationId)
         .eq('user_id', userId);
 
-      if (error) {
-        console.error('Supabase delete error:', error);
-        throw error;
-      }
+      if (error) throw error;
       
       toast.success(t("Location removed from collection", "位置已从收藏中删除"));
       
@@ -56,7 +49,7 @@ const DeleteLocationButton = ({ locationId, userId, onDelete }: DeleteLocationBu
           variant="destructive" 
           size="sm" 
           onClick={handleDelete}
-          className="bg-destructive/90 hover:bg-destructive z-10"
+          className="bg-destructive/90 hover:bg-destructive"
         >
           <Trash2 className="h-4 w-4" />
         </Button>

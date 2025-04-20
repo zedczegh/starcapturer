@@ -1,14 +1,12 @@
 
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -19,25 +17,11 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const { t } = useLanguage();
   const form = useForm();
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
 
   const onSubmit = async (data: any) => {
-    try {
-      setIsLoading(true);
-      await signIn(data.email, data.password);
-      onSuccess();
-      navigate('/photo-points');
-      toast.success(t("Welcome back!", "欢迎回来！"));
-    } catch (error: any) {
-      if (error.message.includes("Invalid")) {
-        toast.error(t("Invalid email or password", "邮箱或密码错误"));
-      } else {
-        toast.error(error.message);
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    await signIn(data.email, data.password);
+    onSuccess();
+    navigate('/photo-points');
   };
 
   return (
@@ -48,65 +32,29 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <div className="relative">
-                <FormControl>
-                  <Input 
-                    {...field} 
-                    type="email" 
-                    placeholder={t("Email", "电子邮箱")}
-                    className="pl-10" 
-                    disabled={isLoading}
-                  />
-                </FormControl>
-                <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-              </div>
+              <FormLabel>{t("Email", "电子邮箱")}</FormLabel>
+              <FormControl>
+                <Input {...field} type="email" />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="password"
           render={({ field }) => (
             <FormItem>
-              <div className="relative">
-                <FormControl>
-                  <Input 
-                    {...field} 
-                    type={showPassword ? "text" : "password"}
-                    placeholder={t("Password", "密码")}
-                    className="pl-10 pr-10"
-                    disabled={isLoading}
-                  />
-                </FormControl>
-                <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </Button>
-              </div>
+              <FormLabel>{t("Password", "密码")}</FormLabel>
+              <FormControl>
+                <Input {...field} type="password" />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
-        <Button 
-          type="submit" 
-          className="w-full"
-          disabled={isLoading}
-        >
-          {isLoading ? t("Signing in...", "登录中...") : t("Sign In", "登录")}
+        <Button type="submit" className="w-full">
+          {t("Login", "登录")}
         </Button>
       </form>
     </Form>
