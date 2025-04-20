@@ -43,24 +43,24 @@ export const isWaterSpot = (location: SharedAstroSpot): boolean => {
  */
 export const getCertificationColor = (location: SharedAstroSpot): string => {
   if (!location.isDarkSkyReserve && !location.certification) {
-    return 'rgba(74, 222, 128, 0.85)'; // Default green with transparency
+    return '#4ADE80'; // Default green for non-certified
   }
   
   const certification = (location.certification || '').toLowerCase();
   
-  // IMPORTANT: Ensure communities use gold/yellow color
+  // IMPORTANT: Match colors with the legend
   if (certification.includes('community')) {
-    return 'rgba(255, 215, 0, 0.85)'; // Gold for Dark Sky Community #FFD700
+    return '#FFA500'; // Gold/Orange for Dark Sky Community
   } else if (certification.includes('reserve') || certification.includes('sanctuary') || location.isDarkSkyReserve) {
-    return 'rgba(155, 135, 245, 0.85)'; // Purple for reserves #9b87f5
+    return '#9b87f5'; // Purple for reserves #9b87f5
   } else if (certification.includes('park')) {
-    return 'rgba(74, 222, 128, 0.85)'; // Green for Dark Sky Park #4ADE80
+    return '#4ADE80'; // Green for Dark Sky Park #4ADE80
   } else if (certification.includes('urban') || certification.includes('night sky place')) {
-    return 'rgba(30, 174, 219, 0.85)'; // Blue for Urban Night Sky #1EAEDB
+    return '#0EA5E9'; // Blue for Urban Night Sky #0EA5E9
   } else if (certification.includes('lodging')) {
-    return 'rgba(0, 0, 128, 0.85)'; // Navy blue for Dark Sky Lodging
+    return '#1e3a8a'; // Dark blue for Dark Sky Lodging
   } else {
-    return 'rgba(155, 135, 245, 0.85)'; // Default to reserve color
+    return '#9b87f5'; // Default to reserve color
   }
 };
 
@@ -98,10 +98,12 @@ export const getLocationColor = (location: SharedAstroSpot): string => {
   if (location.isDarkSkyReserve || location.certification) {
     return getCertificationColor(location);
   } else {
-    const defaultColor = '#4ADE80'; // Bright green fallback
-    // Use our centralized getSiqsScore helper
+    // Match SIQS score colors with the legend
     const siqsScore = getSiqsScore(location);
-    return siqsScore > 0 ? getProgressColor(siqsScore) : defaultColor;
+    if (siqsScore >= 7.5) return '#22c55e'; // Excellent - match legend
+    if (siqsScore >= 5.5) return '#eab308'; // Good - match legend
+    if (siqsScore >= 4.0) return '#f97316'; // Average - match legend
+    return '#ef4444'; // Below Average - match legend
   }
 };
 
