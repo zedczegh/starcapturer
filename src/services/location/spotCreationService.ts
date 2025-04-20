@@ -104,7 +104,8 @@ export const createSpotFromPoint = async (
         useSingleHourSampling: true,
         targetHour: 1, // Use 1 AM for optimal viewing conditions
         cacheDurationMins: 30,
-        quickMode: true // Enable quick mode for faster calculations
+        maxConcurrent: 2, // Limit concurrent requests to avoid rate limiting
+        anomalyDetection: true // Enable anomaly detection for better results
       };
 
       siqsResult = await calculateRealTimeSiqs(
