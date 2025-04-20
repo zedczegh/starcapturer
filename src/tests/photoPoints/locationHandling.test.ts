@@ -6,7 +6,8 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
  * Ensures consistent handling of certified and calculated locations
  */
 
-interface TestLocation extends SharedAstroSpot {
+// Make TestLocation with appropriate properties, making id optional but including required SharedAstroSpot fields
+interface TestLocation extends Omit<SharedAstroSpot, 'id'> {
   id?: string;
   name: string;
   latitude: number;
@@ -24,20 +25,26 @@ function testLocationHandling() {
       latitude: 45,
       longitude: 120,
       isDarkSkyReserve: true,
-      siqs: 7.5
+      siqs: 7.5,
+      bortleScale: 3, // Adding required property
+      timestamp: new Date().toISOString() // Adding required property
     },
     {
       name: "Regular Location",
       latitude: 46,
       longitude: 121,
-      siqs: 6.0
+      siqs: 6.0,
+      bortleScale: 4, // Adding required property
+      timestamp: new Date().toISOString() // Adding required property
     },
     {
       name: "Certified Site",
       latitude: 47,
       longitude: 122,
       certification: "dark-sky-park",
-      siqs: 8.0
+      siqs: 8.0,
+      bortleScale: 2, // Adding required property
+      timestamp: new Date().toISOString() // Adding required property
     }
   ];
   
