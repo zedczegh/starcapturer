@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -44,7 +43,6 @@ function App() {
                   <Route path="/about-siqs" element={<AboutSIQS />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/location/:id" element={<LocationDetails />} />
-                  <Route path="/location/siqs-calculator" element={<LocationDetails />} />
                   <Route path="/links" element={<UsefulLinks />} />
                   <Route path="/useful-links" element={<UsefulLinks />} />
                   <Route path="/share" element={<ShareLocation />} />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -14,7 +13,7 @@ import { useDisplayName } from "./cards/DisplayNameResolver";
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
   onSelect?: (point: SharedAstroSpot) => void;
-  onViewDetails: (e: React.MouseEvent) => void;
+  onViewDetails: (point: SharedAstroSpot) => void;
   userLocation: { latitude: number; longitude: number } | null;
 }
 
@@ -50,11 +49,31 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     return point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
   };
 
-  // Modified to use the passed onViewDetails function
-  const handleCardClick = (e: React.MouseEvent) => {
-    if (onSelect) {
-      onSelect(point);
-    }
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!point || !point.latitude || !point.longitude) return;
+    
+    const locationId = getLocationId();
+    if (!locationId) return;
+    
+    navigate(`/location/${locationId}`, {
+      state: {
+        id: locationId,
+        name: point.name || '',
+        chineseName: point.chineseName || '',
+        latitude: point.latitude,
+        longitude: point.longitude,
+        bortleScale: point.bortleScale || 4,
+        siqsResult: {
+          score: point.siqs || 0
+        },
+        certification: point.certification || '',
+        isDarkSkyReserve: !!point.isDarkSkyReserve,
+        timestamp: new Date().toISOString(),
+        fromPhotoPoints: true
+      }
+    });
   };
 
   const primaryName = language === 'zh' && point.chineseName ? point.chineseName : (point.name || t("Unnamed Location", "未命名位置"));
@@ -63,7 +82,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   return (
     <div 
       className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
-      onClick={handleCardClick}
+      onClick={() => onSelect?.(point)}
     >
       <div className="flex items-center justify-between mb-1.5">
         <h4 className="font-medium text-sm line-clamp-1">
@@ -116,8 +135,8 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         <Button 
           variant="ghost"
           size="sm"
-          onClick={onViewDetails} 
-          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300 text-sm z-10"
+          onClick={handleViewDetails}
+          className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300 text-sm"
         >
           {t("View Details", "查看详情")}
         </Button>
