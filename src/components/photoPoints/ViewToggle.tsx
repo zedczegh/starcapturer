@@ -3,7 +3,6 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { BadgeCheck, MapPin } from 'lucide-react';
-import { useViewToggle } from '@/hooks/photoPoints/useViewToggle';
 
 export type PhotoPointsViewMode = 'certified' | 'calculated';
 
@@ -19,16 +18,14 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   loading = false
 }) => {
   const { t } = useLanguage();
-  const { 
-    isTransitioning,
-    handleViewChange,
-    certifiedDisabled,
-    calculatedDisabled
-  } = useViewToggle({
-    activeView,
-    onViewChange,
-    loading
-  });
+  
+  // Consistent function to handle view changes
+  const handleViewChange = (view: PhotoPointsViewMode) => {
+    if (view !== activeView && !loading) {
+      console.log(`ViewToggle: Switching to ${view} view`);
+      onViewChange(view);
+    }
+  };
   
   return (
     <div className="flex justify-center mb-6 px-4">
@@ -38,7 +35,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           variant={activeView === 'certified' ? "default" : "ghost"}
           size="lg"
           onClick={() => handleViewChange('certified')}
-          disabled={certifiedDisabled}
+          disabled={loading || activeView === 'certified'}
           className={`relative w-full min-w-[160px] group ${
             activeView === 'certified'
               ? 'bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700'
@@ -59,7 +56,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           variant={activeView === 'calculated' ? "default" : "ghost"}
           size="lg"
           onClick={() => handleViewChange('calculated')}
-          disabled={calculatedDisabled}
+          disabled={loading || activeView === 'calculated'}
           className={`relative w-full min-w-[160px] group ${
             activeView === 'calculated'
               ? 'bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700'
@@ -79,4 +76,4 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   );
 };
 
-export default React.memo(ViewToggle);
+export default ViewToggle;

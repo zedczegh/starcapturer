@@ -17,7 +17,7 @@ interface RealTimeSiqsProviderProps {
 
 // In-memory cache across all provider instances with improved structure
 const resultCache = new Map<string, {data: any, timestamp: number}>();
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes to reduce flickering
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Track pending calculations to prevent duplicate requests
 const pendingCalculations = new Map<string, Promise<any>>();
@@ -41,32 +41,18 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   const fetchTimeoutRef = useRef<number | null>(null);
   const positionKey = useRef<string>('');
   
-  // Increase refresh interval to prevent flickering
-  const REFRESH_INTERVAL = isCertified ? 5 * 60 * 1000 : 15 * 60 * 1000;
+  const REFRESH_INTERVAL = isCertified ? 30 * 1000 : 5 * 60 * 1000;
   
-  // Extract SIQS from existingSiqs which can be in different formats
-  const existingSiqsNumber = useCallback(() => {
-    if (typeof existingSiqs === 'number') return existingSiqs;
-    if (typeof existingSiqs === 'object' && existingSiqs) {
-      if ('score' in existingSiqs) return existingSiqs.score;
-      if ('siqs' in existingSiqs) return existingSiqs.siqs;
-    }
-    return 0;
-  }, [existingSiqs])();
+  const existingSiqsNumber = typeof existingSiqs === 'number' ? existingSiqs : 
+    (typeof existingSiqs === 'object' && existingSiqs && 'score' in existingSiqs) ? existingSiqs.score : 0;
   
   const getCacheKey = useCallback(() => {
     if (!latitude || !longitude) return null;
     return `siqs-${latitude.toFixed(5)}-${longitude.toFixed(5)}-${bortleScale}`;
   }, [latitude, longitude, bortleScale]);
   
-  // Initial setup effect
   useEffect(() => {
     isMounted.current = true;
-    
-    // Always start with existing SIQS to prevent flickering
-    if (existingSiqsNumber > 0) {
-      onSiqsCalculated(existingSiqsNumber, false, 8);
-    }
     
     // Check for cached results first
     const cacheKey = getCacheKey();
@@ -95,7 +81,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     };
   }, []);
 
-  // Handle position changes
   useEffect(() => {
     if (latitude && longitude) {
       const newPositionKey = `${latitude.toFixed(5)}-${longitude.toFixed(5)}`;
@@ -110,37 +95,24 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     }
   }, [latitude, longitude]);
   
-  // Handle initial fetch for certified locations
   useEffect(() => {
     if (isInitialFetch && isCertified) {
-      // For certified locations, send existing SIQS first to prevent flickering
-      if (existingSiqsNumber > 0) {
-        onSiqsCalculated(existingSiqsNumber, false, 7);
-      } else {
-        onSiqsCalculated(null, true);
-      }
+      onSiqsCalculated(null, true);
       setIsInitialFetch(false);
       fetchSiqs();
     }
-  }, [isInitialFetch, isCertified, existingSiqsNumber]);
+  }, [isInitialFetch, isCertified]);
   
-  // Main fetch logic
   const fetchSiqs = useCallback(async () => {
     if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) return;
     
     try {
-      // Always use existing SIQS while loading to prevent flickering
-      if (existingSiqsNumber > 0) {
-        onSiqsCalculated(existingSiqsNumber, true, 7);
-      } else {
-        onSiqsCalculated(null, true);
-      }
-      
       // Check for pending calculation with same parameters
       const cacheKey = getCacheKey();
       if (cacheKey && pendingCalculations.has(cacheKey) && !forceUpdate) {
         console.log("Using already pending SIQS calculation");
         setLoading(true);
+        onSiqsCalculated(null, true);
         
         try {
           const result = await pendingCalculations.get(cacheKey);
@@ -150,7 +122,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         } catch (error) {
           console.error("Error in pending SIQS calculation:", error);
           if (isMounted.current) {
-            // Fall back to existing SIQS to prevent flickering
             onSiqsCalculated(existingSiqsNumber > 0 ? existingSiqsNumber : null, false);
           }
         } finally {
@@ -163,6 +134,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       
       setLoading(true);
       setFetchAttempted(true);
+      onSiqsCalculated(null, true);
       
       // First create the complete options object with all required properties
       const options: SiqsDisplayOptions = {
@@ -191,21 +163,15 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       
       if (!isMounted.current) return;
       
-      // Only update if the new SIQS is valid
-      if (result && typeof result.siqs === 'number' && result.siqs > 0) {
-        onSiqsCalculated(result.siqs, false, result.source === 'realtime' ? 9 : 7);
-        setLastFetchTimestamp(Date.now());
-        
-        // Update the cache
-        if (cacheKey) {
-          resultCache.set(cacheKey, {
-            data: result,
-            timestamp: Date.now()
-          });
-        }
-      } else if (existingSiqsNumber > 0) {
-        // Fall back to existing SIQS if new result is invalid
-        onSiqsCalculated(existingSiqsNumber, false, 6);
+      onSiqsCalculated(result.siqs, false, result.source === 'realtime' ? 9 : 7);
+      setLastFetchTimestamp(Date.now());
+      
+      // Update the cache
+      if (cacheKey) {
+        resultCache.set(cacheKey, {
+          data: result,
+          timestamp: Date.now()
+        });
       }
       
     } catch (error) {
@@ -213,8 +179,9 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       
       if (!isMounted.current) return;
       
-      // Always fall back to existing SIQS to prevent flickering
-      if (existingSiqsNumber > 0) {
+      if (isCertified) {
+        onSiqsCalculated(null, false);
+      } else if (existingSiqsNumber > 0) {
         onSiqsCalculated(existingSiqsNumber, false, 6);
       } else {
         onSiqsCalculated(null, false);
@@ -233,7 +200,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     }
   }, [latitude, longitude, bortleScale, isCertified, isDarkSkyReserve, existingSiqsNumber, onSiqsCalculated, forceUpdate, getCacheKey]);
   
-  // Handle visibility and refresh timing
   useEffect(() => {
     if (fetchTimeoutRef.current) {
       window.clearTimeout(fetchTimeoutRef.current);
@@ -255,9 +221,9 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     
     if (shouldFetch) {
       // Use a staggered delay to prevent all components from fetching at once
-      // Increase delay for better performance and less flickering
+      // Reduce delay for better performance
       const delay = isCertified ? 
-        Math.random() * 300 + (Math.abs(latitude) + Math.abs(longitude)) % 500 : 500;
+        Math.random() * 200 + (Math.abs(latitude) + Math.abs(longitude)) % 500 : 0;
       
       fetchTimeoutRef.current = window.setTimeout(() => {
         fetchSiqs();

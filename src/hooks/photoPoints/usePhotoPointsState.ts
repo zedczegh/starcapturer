@@ -1,5 +1,4 @@
-
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -10,10 +9,7 @@ export const usePhotoPointsState = () => {
   const { t, language } = useLanguage();
   const location = useLocation();
   
-  // Add isTransitioning state to prevent multiple rapid clicks
   const [activeView, setActiveView] = useState<'certified' | 'calculated'>('calculated');
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const transitionTimeoutRef = useRef<number | null>(null);
   const [showMap, setShowMap] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
   const [autoLocationRequested, setAutoLocationRequested] = useState(false);
@@ -129,51 +125,12 @@ export const usePhotoPointsState = () => {
     );
   }, [t, language]);
   
-  // Improved view change handler with transition state management
   const handleViewChange = useCallback((view: 'certified' | 'calculated') => {
-    // Prevent rapid transitions
-    if (isTransitioning) {
-      console.log("View change prevented during transition");
-      return;
-    }
-    
-    // Don't do anything if it's the same view
-    if (view === activeView) {
-      return;
-    }
-    
-    console.log(`Switching view from ${activeView} to ${view}`);
-    
-    // Set transitioning state to prevent multiple clicks
-    setIsTransitioning(true);
-    
-    // Update the view
     setActiveView(view);
-    
-    // Clear any existing timeout
-    if (transitionTimeoutRef.current) {
-      window.clearTimeout(transitionTimeoutRef.current);
-    }
-    
-    // Reset transition state after a delay
-    transitionTimeoutRef.current = window.setTimeout(() => {
-      setIsTransitioning(false);
-    }, 1000); // 1 second delay to prevent rapid changes
-  }, [activeView, isTransitioning]);
-  
-  // Optimized map toggle with debounce
-  const toggleMapView = useCallback(() => {
-    // Switch to map view with a small delay to allow React to process state updates
-    setShowMap(prev => !prev);
   }, []);
   
-  // Clean up any timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (transitionTimeoutRef.current) {
-        window.clearTimeout(transitionTimeoutRef.current);
-      }
-    };
+  const toggleMapView = useCallback(() => {
+    setShowMap(prev => !prev);
   }, []);
   
   useEffect(() => {
@@ -192,7 +149,6 @@ export const usePhotoPointsState = () => {
     locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
-    isTransitioning,
     handleRadiusChange,
     handleViewChange,
     handleLocationUpdate,

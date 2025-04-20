@@ -1,8 +1,7 @@
-import React, { useMemo } from 'react';
-import { Loader2 } from 'lucide-react';
-import SiqsScoreBadge from '@/components/photoPoints/cards/SiqsScoreBadge';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useSiqsState } from '@/hooks/photoPoints/useSiqsState';
+
+import React from 'react';
+import { useMemo } from 'react';
+import SiqsScoreBadge from '../SiqsScoreBadge';
 
 interface SiqsDisplayProps {
   realTimeSiqs: number | null;
@@ -11,7 +10,7 @@ interface SiqsDisplayProps {
   isVisible: boolean;
   isCertified: boolean;
   siqsConfidence: number;
-  locationSiqs: number | null;
+  locationSiqs?: number;
 }
 
 const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
@@ -23,74 +22,30 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
   siqsConfidence,
   locationSiqs
 }) => {
-  const isMobile = useIsMobile();
-  const { displaySiqs, stableSiqs } = useSiqsState({
-    realTimeSiqs,
-    locationSiqs
-  });
+  const showLoadingState = useMemo(() => {
+    if (!hasAttemptedLoad && isCertified && isVisible) {
+      return true;
+    }
+    return loadingSiqs;
+  }, [isCertified, loadingSiqs, hasAttemptedLoad, isVisible]);
   
-  // Memoize the score to display to prevent unnecessary re-renders
-  const scoreToShow = useMemo(() => {
-    // First priority: use location's saved SIQS if available (most stable)
-    if (locationSiqs && !loadingSiqs) {
-      return locationSiqs;
+  const displayScore = useMemo(() => {
+    if (realTimeSiqs !== null && realTimeSiqs > 0) {
+      return realTimeSiqs;
     }
-    
-    // Second priority: if loading but we have stable data, use that
-    if (loadingSiqs && stableSiqs) {
-      return stableSiqs;
-    }
-    
-    // Third priority: use current display score
-    if (displaySiqs) {
-      return displaySiqs;
-    }
-    
-    // No score to show
-    return null;
-  }, [loadingSiqs, stableSiqs, displaySiqs, locationSiqs]);
-  
-  // Memoized rendering based on state
-  return useMemo(() => {
-    // If we're loading and have previous stable data, keep showing it
-    if (loadingSiqs && stableSiqs) {
-      return (
-        <div className="flex items-center">
-          {isCertified ? (
-            <div className="flex items-center">
-              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground mr-1" />
-              <SiqsScoreBadge score={stableSiqs} confidenceScore={siqsConfidence} />
-            </div>
-          ) : (
-            <SiqsScoreBadge score={stableSiqs} confidenceScore={siqsConfidence} />
-          )}
-        </div>
-      );
-    }
-    
-    // If we have real-time data or stable data, show it
-    if (scoreToShow) {
-      return <SiqsScoreBadge score={scoreToShow} confidenceScore={siqsConfidence} />;
-    }
-    
-    // If we're loading and don't have previous data
-    if (loadingSiqs) {
-      return (
-        <div className="flex items-center">
-          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground mr-1" />
-          <span className="text-xs text-muted-foreground">SIQS</span>
-        </div>
-      );
-    }
-    
-    // If we've attempted to load but got no data
-    if (hasAttemptedLoad && isVisible) {
-      return <span className="text-xs text-muted-foreground">No SIQS data</span>;
-    }
-    
-    // Default state - not loaded yet
-    return <span className="text-xs text-muted-foreground">SIQS</span>;
-  }, [scoreToShow, loadingSiqs, stableSiqs, hasAttemptedLoad, isVisible, isCertified, siqsConfidence]);
+    return locationSiqs && locationSiqs > 0 ? locationSiqs : null;
+  }, [realTimeSiqs, locationSiqs]);
+
+  return (
+    <SiqsScoreBadge 
+      score={displayScore}
+      compact={true}
+      isCertified={isCertified}
+      loading={showLoadingState}
+      forceCertified={false}
+      confidenceScore={siqsConfidence}
+    />
+  );
 };
 
 export default React.memo(SiqsDisplay);

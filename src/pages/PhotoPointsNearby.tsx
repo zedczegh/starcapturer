@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -17,7 +17,6 @@ import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const [isViewTransitioning, setIsViewTransitioning] = useState(false);
   
   const {
     activeView,
@@ -28,26 +27,12 @@ const PhotoPointsNearby: React.FC = () => {
     locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
-    isTransitioning,
     handleRadiusChange,
     handleViewChange,
     handleLocationUpdate,
     handleResetLocation,
     toggleMapView
   } = usePhotoPointsState();
-
-  // Add a debounced view change handler
-  const handleSafeViewChange = useCallback((view: 'certified' | 'calculated') => {
-    if (isViewTransitioning) return;
-    
-    setIsViewTransitioning(true);
-    handleViewChange(view);
-    
-    // Reset transition flag after a delay
-    setTimeout(() => {
-      setIsViewTransitioning(false);
-    }, 800);
-  }, [handleViewChange, isViewTransitioning]);
 
   const {
     searchRadius,
@@ -73,33 +58,21 @@ const PhotoPointsNearby: React.FC = () => {
     calculatedLocations 
   } = useCertifiedLocations(locations);
 
-  // Update search radius when view changes
   useEffect(() => {
     if (locationInitialized && effectiveLocation) {
       setSearchRadius(currentSearchRadius);
+      refreshSiqsData();
     }
-  }, [locationInitialized, effectiveLocation, currentSearchRadius, setSearchRadius]);
+  }, [locationInitialized, effectiveLocation, currentSearchRadius, setSearchRadius, refreshSiqsData]);
   
-  // Refresh SIQS data when location is initialized
-  useEffect(() => {
-    if (locationInitialized && effectiveLocation) {
-      // Use a timeout to prevent immediate refresh which could cause freezing
-      const timeoutId = setTimeout(() => {
-        refreshSiqsData();
-      }, 500);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [locationInitialized, effectiveLocation, refreshSiqsData]);
-  
-  // Debug logging for locations
-  useEffect(() => {
+  React.useEffect(() => {
     if (locations.length > 0) {
-      console.log(`Total locations: ${locations.length}, certified: ${certifiedLocations.length}, calculated: ${calculatedLocations.length}`);
+      console.log(`Total locations before filtering: ${locations.length}`);
+      const validLocations = locations.filter(loc => isSiqsGreaterThan(loc.siqs, 0) || loc.isDarkSkyReserve || loc.certification);
+      console.log(`Valid locations after SIQS filtering: ${validLocations.length}`);
     }
-  }, [locations, certifiedLocations, calculatedLocations]);
-
-  // Safe handler for location click with debounce
+  }, [locations]);
+  
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (!location) return;
     
@@ -130,8 +103,8 @@ const PhotoPointsNearby: React.FC = () => {
       
       <ViewToggle
         activeView={activeView}
-        onViewChange={handleSafeViewChange}
-        loading={loading || locationLoading || isViewTransitioning}
+        onViewChange={handleViewChange}
+        loading={loading && !locationLoading}
       />
       
       {activeView === 'calculated' && (
@@ -142,7 +115,7 @@ const PhotoPointsNearby: React.FC = () => {
             minValue={100}
             maxValue={1000}
             stepValue={100}
-            loading={loading || locationLoading}
+            loading={loading && !locationLoading}
             loadingComplete={!loading && !locationLoading}
           />
         </div>
@@ -166,7 +139,7 @@ const PhotoPointsNearby: React.FC = () => {
         calculatedLocations={calculatedLocations}
         searchRadius={currentSearchRadius}
         calculatedSearchRadius={calculatedSearchRadius}
-        loading={loading || locationLoading}
+        loading={loading && !locationLoading}
         hasMore={hasMore}
         loadMore={loadMore}
         refreshSiqs={refreshSiqsData}

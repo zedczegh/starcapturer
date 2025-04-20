@@ -84,12 +84,7 @@ export const shouldShowLocationMarker = (
   isCertified: boolean,
   activeView: 'certified' | 'calculated'
 ): boolean => {
-  // ALWAYS show certified locations, regardless of the active view
-  if (isCertified) {
-    return true;
-  }
-  
-  // Only show calculated locations in calculated view
+  // IMPORTANT: Skip rendering calculated locations in certified view
   if (activeView === 'certified' && !isCertified) {
     return false;
   }

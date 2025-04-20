@@ -1,54 +1,80 @@
-
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { calculateDistance } from "@/utils/geoUtils";
-import { isWaterLocation } from "@/utils/validation";
-import { filterMapLocations } from '@/utils/mapFilters';
-import { optimizeLocationsForMobile as optimizeForMobile } from '@/utils/filterUtils';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { calculateDistance } from '@/utils/geoUtils';
+import { isWaterLocation } from '@/utils/validation';
 
 /**
- * Filter locations based on map view parameters
- * Optimized to prioritize performance and prevent freezing
+ * Filter locations based on various criteria
  */
-export function filterLocations(
+export const filterLocations = (
   locations: SharedAstroSpot[],
   userLocation: { latitude: number; longitude: number } | null,
   searchRadius: number,
   activeView: 'certified' | 'calculated'
-): SharedAstroSpot[] {
-  if (!locations || !Array.isArray(locations) || locations.length === 0) {
+): SharedAstroSpot[] => {
+  // Basic validation
+  if (!locations || locations.length === 0) {
     return [];
   }
-  
-  return filterMapLocations(locations, userLocation, searchRadius, activeView);
-}
 
-/**
- * Optimize locations for mobile display to prevent performance issues
- * Ensures certified locations are always included
- */
-export function optimizeLocationsForMobile(
-  locations: SharedAstroSpot[],
-  isMobile: boolean, 
-  activeView: string
-): SharedAstroSpot[] {
-  return optimizeForMobile(locations, isMobile, activeView);
-}
+  // First separate certified and non-certified locations
+  const certifiedLocations = locations.filter(
+    loc => loc.isDarkSkyReserve || loc.certification
+  );
+  
+  let nonCertifiedLocations = locations.filter(
+    loc => !loc.isDarkSkyReserve && !loc.certification
+  );
 
-/**
- * Create a spatial index of locations to improve lookup performance
- * Helps with faster filtering and hover detection
- */
-export function createLocationSpatialIndex(locations: SharedAstroSpot[]): Map<string, SharedAstroSpot> {
-  const locationMap = new Map<string, SharedAstroSpot>();
-  
-  if (!locations || !Array.isArray(locations)) return locationMap;
-  
-  for (const location of locations) {
-    if (location.latitude && location.longitude) {
-      const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-      locationMap.set(key, location);
-    }
+  // For the calculated view, filter non-certified locations by distance
+  if (activeView === 'calculated' && userLocation) {
+    nonCertifiedLocations = nonCertifiedLocations.filter(loc => {
+      // Skip invalid locations
+      if (!loc.latitude || !loc.longitude) return false;
+      
+      // Calculate distance from user
+      const distance = calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        loc.latitude,
+        loc.longitude
+      );
+      
+      // Keep locations within search radius that aren't in water
+      return distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false);
+    });
+  }
+
+  // For certified view, only return certified locations
+  if (activeView === 'certified') {
+    return certifiedLocations;
   }
   
-  return locationMap;
-}
+  // For calculated view, return both filtered non-certified and all certified
+  return [...certifiedLocations, ...nonCertifiedLocations];
+};
+
+/**
+ * Optimize locations for mobile display
+ */
+export const optimizeLocationsForMobile = (
+  locations: SharedAstroSpot[],
+  isMobile: boolean,
+  activeView: 'certified' | 'calculated'
+): SharedAstroSpot[] => {
+  if (!isMobile || locations.length <= 30) {
+    return locations;
+  }
+
+  // Always keep certified locations
+  const certified = locations.filter(loc => 
+    loc.isDarkSkyReserve || loc.certification
+  );
+  
+  // Reduce the number of non-certified locations on mobile
+  const nonCertified = locations
+    .filter(loc => !loc.isDarkSkyReserve && !loc.certification)
+    .filter((_, index) => index % (activeView === 'certified' ? 4 : 2) === 0)
+    .slice(0, 50); // Hard limit for better performance
+  
+  return [...certified, ...nonCertified];
+};

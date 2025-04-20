@@ -49,22 +49,22 @@ export const usePhotoPointsMapContainer = ({
 
   // Optimize locations for the map view
   const optimizedLocations = useCallback(() => {
-    // Always include ALL certified locations regardless of active view
+    // For certified view, show ALL certified locations worldwide
+    if (activeView === 'certified') {
+      return certifiedLocations;
+    }
+    
+    // For calculated view, show a mix of certified and calculated locations
+    const locsToShow = calculatedLocations;
+
+    // Always include certified locations, regardless of distance
     const certifiedToInclude = certifiedLocations.filter(loc => 
       loc.isDarkSkyReserve || loc.certification
     );
     
-    // For certified view, only show certified locations
-    if (activeView === 'certified') {
-      return certifiedToInclude;
-    }
-    
-    // For calculated view, show a mix of certified and calculated locations
-    const calculatedLocsToShow = calculatedLocations;
-
     // Filter calculated locations by distance
     const filteredCalculated = userLocation 
-      ? calculatedLocsToShow.filter(loc => {
+      ? locsToShow.filter(loc => {
           if (!loc.latitude || !loc.longitude) return false;
           
           // Calculate distance if not already set
@@ -78,10 +78,9 @@ export const usePhotoPointsMapContainer = ({
           // Only include locations within current radius
           return distance <= searchRadius;
         })
-      : calculatedLocsToShow;
+      : locsToShow;
 
     // Combine certified and filtered calculated locations
-    // IMPORTANT: Always include certified locations first to ensure they're never filtered out
     const combined = [...certifiedToInclude, ...filteredCalculated];
     
     // Ensure we don't exceed the maximum number of locations for performance
