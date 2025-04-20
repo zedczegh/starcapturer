@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore } from '@/utils/siqsHelpers';
@@ -26,6 +27,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   const [loadingState, setLoadingState] = useState(loading);
   const previousScore = useRef<number | null>(null);
   const stableScoreRef = useRef<number | null>(null);
+  const loadingTimeoutRef = useRef<number | null>(null);
   
   const numericScore = score === null ? 0 : getSiqsScore(score);
   

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getCompleteSiqsDisplay } from '@/utils/unifiedSiqsDisplay';
 import { SiqsDisplayOptions } from '@/services/realTimeSiqs/siqsTypes';
@@ -26,7 +25,8 @@ const pendingCalculations = new Map<string, Promise<any>>();
 let activeApiCalls = 0;
 const MAX_CONCURRENT_CALLS = 5;
 
-const loadingTimeoutRef = { current: null as number | null };
+// Create a static loadingTimeoutRef using React.useRef pattern
+const loadingTimeoutRef = React.useRef<number | null>(null);
 
 const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   isVisible,

@@ -1,3 +1,4 @@
+
 // Add this if the file doesn't exist or update it if it does
 
 export interface WeatherDataWithClearSky {
