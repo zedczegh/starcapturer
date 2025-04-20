@@ -7,11 +7,15 @@ import { toast } from "sonner";
 import NavBar from "@/components/NavBar";
 import { Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import PhotoPointCard from "@/components/photoPoints/PhotoPointCard";
+import { Card, CardContent } from "@/components/ui/card";
 import DeleteLocationButton from "@/components/collections/DeleteLocationButton";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import useEnhancedLocation from "@/hooks/useEnhancedLocation";
+import { MapPin, Navigation, Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { formatSiqsScore } from "@/utils/siqsHelpers";
+import { getCertificationInfo, getLocalizedCertText } from "@/components/photoPoints/utils/certificationUtils";
 
 const Collections = () => {
   const { user } = useAuth();
@@ -90,7 +94,7 @@ const Collections = () => {
     navigate(`/location/${locationId}`);
   };
 
-  // LocationCard component with fixed event handling
+  // LocationCard component
   const LocationCard = ({ location }: { location: any }) => {
     const { locationDetails } = useEnhancedLocation({
       latitude: location.latitude,
@@ -98,58 +102,88 @@ const Collections = () => {
       skip: false
     });
 
-    let enhancedName;
+    let displayName;
     if (language === 'zh') {
-      enhancedName = locationDetails?.chineseName || locationDetails?.formattedName || location.name;
+      displayName = locationDetails?.chineseName || locationDetails?.formattedName || location.name;
     } else {
-      enhancedName = locationDetails?.formattedName || location.name;
+      displayName = locationDetails?.formattedName || location.name;
     }
 
+    const certInfo = getCertificationInfo({
+      certification: location.certification,
+      isDarkSkyReserve: location.isdarkskyreserve
+    });
+
     return (
-      <div 
-        className={`relative rounded-lg overflow-hidden cursor-pointer ${
+      <Card 
+        className={`relative cursor-pointer border ${
           location.certification || location.isdarkskyreserve 
             ? 'border-2 border-primary/50 bg-primary/5' 
-            : 'border border-border'
+            : 'border-border'
         }`}
         onClick={() => navigate(`/location/${location.id}`)}
       >
-        <PhotoPointCard
-          point={{
-            id: location.id,
-            name: enhancedName,
-            chineseName: locationDetails?.chineseName,
-            latitude: Number(location.latitude),
-            longitude: Number(location.longitude),
-            bortleScale: location.bortlescale,
-            siqs: siqsScores[location.id] || location.siqs,
-            isDarkSkyReserve: location.isdarkskyreserve,
-            certification: location.certification,
-            timestamp: location.timestamp || location.created_at
-          }}
-          onSelect={() => {}}
-          onViewDetails={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleViewDetails(location.id);
-          }}
-          userLocation={null}
-        />
-        <div className="absolute bottom-3 left-3 z-30">
-          <DeleteLocationButton 
-            locationId={location.id} 
-            userId={user.id} 
-            onDelete={handleLocationDelete}
+        <CardContent className="p-4 relative">
+          {/* Header with name and SIQS score */}
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-medium text-base line-clamp-1">{displayName}</h3>
+            
+            <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
+              <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
+              <span className="text-xs font-medium">
+                {formatSiqsScore(siqsScores[location.id] || location.siqs)}
+              </span>
+            </div>
+          </div>
+          
+          {/* Certification badge if applicable */}
+          {certInfo && (
+            <div className="my-2">
+              <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${certInfo.color}`}>
+                {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
+                <span>{getLocalizedCertText(certInfo, language)}</span>
+              </div>
+            </div>
+          )}
+          
+          {/* Location coordinates */}
+          <div className="mt-2 flex items-center text-muted-foreground text-xs">
+            <MapPin className="h-3.5 w-3.5 mr-1.5" />
+            <span>{location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</span>
+          </div>
+          
+          {/* Bottom action buttons */}
+          <div className="mt-4 flex justify-between items-center">
+            <DeleteLocationButton 
+              locationId={location.id} 
+              userId={user.id} 
+              onDelete={handleLocationDelete}
+            />
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent event bubbling
+                e.preventDefault(); // Prevent default behavior
+                handleViewDetails(location.id);
+              }}
+              className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 transition-all duration-300 text-sm"
+            >
+              {t("View Details", "查看详情")}
+            </Button>
+          </div>
+          
+          {/* Real-time SIQS provider */}
+          <RealTimeSiqsProvider
+            isVisible={true}
+            latitude={Number(location.latitude)}
+            longitude={Number(location.longitude)}
+            bortleScale={location.bortlescale}
+            onSiqsCalculated={(siqs, loading) => handleSiqsUpdate(location.id, siqs, loading)}
           />
-        </div>
-        <RealTimeSiqsProvider
-          isVisible={true}
-          latitude={Number(location.latitude)}
-          longitude={Number(location.longitude)}
-          bortleScale={location.bortlescale}
-          onSiqsCalculated={(siqs, loading) => handleSiqsUpdate(location.id, siqs, loading)}
-        />
-      </div>
+        </CardContent>
+      </Card>
     );
   };
 

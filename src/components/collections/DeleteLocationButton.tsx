@@ -53,7 +53,7 @@ const DeleteLocationButton = ({ locationId, userId, onDelete }: DeleteLocationBu
           variant="destructive" 
           size="sm" 
           onClick={handleDelete}
-          className="bg-destructive/90 hover:bg-destructive z-30"
+          className="bg-destructive/90 hover:bg-destructive"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
