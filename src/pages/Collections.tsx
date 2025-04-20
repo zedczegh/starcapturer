@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -84,6 +85,7 @@ const Collections = () => {
     );
   };
 
+  // Fixed version of LocationCard component with proper event stopping
   const LocationCard = ({ location }: { location: any }) => {
     const { locationDetails } = useEnhancedLocation({
       latitude: location.latitude,
@@ -97,6 +99,11 @@ const Collections = () => {
     } else {
       enhancedName = locationDetails?.formattedName || location.name;
     }
+
+    const handleViewDetails = (e: React.MouseEvent) => {
+      e.stopPropagation(); // Prevent event propagation
+      navigate(`/location/${location.id}`);
+    };
 
     return (
       <div 
@@ -120,10 +127,10 @@ const Collections = () => {
             timestamp: location.timestamp || location.created_at
           }}
           onSelect={() => {}}
-          onViewDetails={() => navigate(`/location/${location.id}`)}
+          onViewDetails={handleViewDetails}
           userLocation={null}
         />
-        <div className="absolute bottom-3 left-3">
+        <div className="absolute bottom-3 left-3 z-10">
           <DeleteLocationButton 
             locationId={location.id} 
             userId={user.id} 
