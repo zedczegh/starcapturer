@@ -1,9 +1,8 @@
-
 /**
  * Utility functions for SIQS (Stellar Imaging Quality Score) calculation
  */
 
-import { extractSingleHourCloudCover } from "@/utils/weather/hourlyCloudCoverExtractor";
+import { extractSingleHourCloudCover, getBestAstronomicalHour } from "@/utils/weather/hourlyCloudCoverExtractor";
 
 /**
  * Calculate SIQS using weather data
@@ -119,5 +118,5 @@ export function normalizeScore(score: number): number {
   return Math.max(0, Math.min(10, score));
 }
 
-// Export the functions from hourlyCloudCoverExtractor directly
-export { extractSingleHourCloudCover };
+// Export the functions from hourlyCloudCoverExtractor for backward compatibility
+export { extractSingleHourCloudCover, getBestAstronomicalHour };

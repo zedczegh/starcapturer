@@ -1,3 +1,4 @@
+
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -15,12 +16,9 @@ import { findClosestEnhancedLocation } from "./enhancedLocationData";
 import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
 import { extractSingleHourCloudCover } from "@/utils/weather/hourlyCloudCoverExtractor";
 
+// Performance optimization: Reduce duplicate calculations with memoization
 const memoizedResults = new Map<string, {result: SiqsResult, timestamp: number}>();
 const MEMO_EXPIRY = 5 * 60 * 1000; // 5 minutes
-
-const spatialCache = new Map<string, {result: SiqsResult, timestamp: number}>();
-const SPATIAL_PRECISION = 0.05; // About 5km spatial precision 
-const SPATIAL_EXPIRY = 30 * 60 * 1000; // 30 minutes
 
 function improveCalculatedLocationSIQS(initialScore: number, location: any): number {
   if (initialScore < 0.5) {
@@ -60,64 +58,6 @@ function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { averag
 }
 
 /**
- * Checks if two locations are close enough to share weather/siqs data
- * This helps reduce API calls for nearby locations
- */
-function areLocationsNearby(lat1: number, lon1: number, lat2: number, lon2: number, thresholdKm: number = 5): boolean {
-  const R = 6371; // Earth's radius in kilometers
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  const distance = R * c;
-  
-  return distance <= thresholdKm;
-}
-
-/**
- * Get the spatial cache key for a location, rounded to reduce precision
- * This allows reusing data for nearby locations
- */
-function getSpatialCacheKey(latitude: number, longitude: number): string {
-  const roundedLat = Math.round(latitude / SPATIAL_PRECISION) * SPATIAL_PRECISION;
-  const roundedLng = Math.round(longitude / SPATIAL_PRECISION) * SPATIAL_PRECISION;
-  return `spatial-${roundedLat.toFixed(4)}-${roundedLng.toFixed(4)}`;
-}
-
-/**
- * Check if there's a valid result in the spatial cache for a location
- */
-function checkSpatialCache(latitude: number, longitude: number): SiqsResult | null {
-  const spatialKey = getSpatialCacheKey(latitude, longitude);
-  const cachedData = spatialCache.get(spatialKey);
-  
-  if (cachedData && (Date.now() - cachedData.timestamp) < SPATIAL_EXPIRY) {
-    return cachedData.result;
-  }
-  
-  // Also check nearby keys
-  for (const [key, data] of spatialCache.entries()) {
-    if ((Date.now() - data.timestamp) < SPATIAL_EXPIRY) {
-      const [, latStr, lngStr] = key.split('-');
-      const cachedLat = parseFloat(latStr);
-      const cachedLng = parseFloat(lngStr);
-      
-      if (areLocationsNearby(latitude, longitude, cachedLat, cachedLng)) {
-        console.log(`Using nearby spatial cache (${cachedLat}, ${cachedLng}) for (${latitude}, ${longitude})`);
-        return data.result;
-      }
-    }
-  }
-  
-  return null;
-}
-
-/**
  * Optimized real-time SIQS calculation with single-hour sampling option
  */
 export async function calculateRealTimeSiqs(
@@ -128,7 +68,6 @@ export async function calculateRealTimeSiqs(
     useSingleHourSampling?: boolean;
     targetHour?: number;
     cacheDurationMins?: number;
-    skipApiCalls?: boolean;
   } = {}
 ): Promise<SiqsResult> {
   if (!isFinite(latitude) || !isFinite(longitude)) {
@@ -140,8 +79,7 @@ export async function calculateRealTimeSiqs(
   const {
     useSingleHourSampling = true,
     targetHour = 1, // Default to 1 AM for best astronomical viewing
-    cacheDurationMins = 15,
-    skipApiCalls = false
+    cacheDurationMins = 15
   } = options;
   
   // Generate a cache key
@@ -166,39 +104,6 @@ export async function calculateRealTimeSiqs(
       });
       return cachedData;
     }
-  }
-  
-  // Check spatial cache for nearby locations
-  const spatialResult = checkSpatialCache(latitude, longitude);
-  if (spatialResult) {
-    // Store in memory cache for this exact location too
-    memoizedResults.set(cacheKey, {
-      result: spatialResult,
-      timestamp: Date.now()
-    });
-    return spatialResult;
-  }
-  
-  // If we're in skipApiCalls mode, return a reasonable default
-  if (skipApiCalls) {
-    const defaultResult: SiqsResult = {
-      siqs: 10 - bortleScale, // Simple estimate based on Bortle scale
-      isViable: 10 - bortleScale >= 3.0,
-      metadata: {
-        calculatedAt: new Date().toISOString(),
-        sources: {
-          weather: false,
-          forecast: false,
-          clearSky: false,
-          lightPollution: false,
-          terrainCorrected: false,
-          climate: false,
-          singleHourSampling: false
-        }
-      }
-    };
-    
-    return defaultResult;
   }
   
   try {
@@ -339,13 +244,6 @@ export async function calculateRealTimeSiqs(
       timestamp: Date.now()
     });
     
-    // Add to spatial cache for nearby reuse
-    const spatialKey = getSpatialCacheKey(latitude, longitude);
-    spatialCache.set(spatialKey, {
-      result,
-      timestamp: Date.now()
-    });
-    
     return result;
     
   } catch (error) {
@@ -360,119 +258,4 @@ export async function calculateRealTimeSiqs(
       }]
     };
   }
-}
-
-/**
- * Batch calculate SIQS for multiple locations
- * Much more efficient than calling calculateRealTimeSiqs multiple times
- */
-export async function batchCalculateSiqs(
-  locations: Array<{latitude: number, longitude: number, bortleScale: number}>,
-  options: {
-    useSingleHourSampling?: boolean;
-    targetHour?: number;
-    maxConcurrent?: number;
-  } = {}
-): Promise<{[key: string]: SiqsResult}> {
-  const { maxConcurrent = 3 } = options;
-  const results: {[key: string]: SiqsResult} = {};
-  
-  if (locations.length === 0) return results;
-  
-  // Group nearby locations to reduce API calls
-  const locationGroups = groupNearbyLocations(locations);
-  console.log(`Grouped ${locations.length} locations into ${locationGroups.length} batches for SIQS calculation`);
-  
-  // Process groups in batches to limit concurrent API calls
-  for (let i = 0; i < locationGroups.length; i += maxConcurrent) {
-    const batch = locationGroups.slice(i, i + maxConcurrent);
-    const batchPromises = batch.map(async (group) => {
-      // Calculate SIQS for the representative location
-      const representative = group.locations[0];
-      const representativeSiqs = await calculateRealTimeSiqs(
-        representative.latitude,
-        representative.longitude,
-        representative.bortleScale,
-        options
-      );
-      
-      // Apply the result to all locations in the group with small adjustments
-      group.locations.forEach(location => {
-        const locationKey = `${location.latitude.toFixed(4)},${location.longitude.toFixed(4)}`;
-        
-        // Apply minor variations to prevent all locations in group from having identical scores
-        // but maintain consistency since they're close to each other
-        const variation = location === representative ? 0 : (Math.random() * 0.4 - 0.2);
-        
-        results[locationKey] = {
-          ...representativeSiqs,
-          siqs: Math.max(0, Math.min(10, representativeSiqs.siqs + variation))
-        };
-      });
-    });
-    
-    // Wait for this batch to complete before starting the next
-    await Promise.all(batchPromises);
-  }
-  
-  return results;
-}
-
-/**
- * Group nearby locations to reduce API calls
- * Locations within 5km of each other will share weather/SIQS data
- */
-function groupNearbyLocations(
-  locations: Array<{latitude: number, longitude: number, bortleScale: number}>,
-  proximityThresholdKm: number = 5
-): Array<{
-  representative: {latitude: number, longitude: number, bortleScale: number},
-  locations: Array<{latitude: number, longitude: number, bortleScale: number}>
-}> {
-  const groups: Array<{
-    representative: {latitude: number, longitude: number, bortleScale: number},
-    locations: Array<{latitude: number, longitude: number, bortleScale: number}>
-  }> = [];
-  
-  const unprocessed = [...locations];
-  
-  while (unprocessed.length > 0) {
-    const representative = unprocessed.shift()!;
-    const group = {
-      representative,
-      locations: [representative]
-    };
-    
-    // Find all locations close to this representative
-    let i = 0;
-    while (i < unprocessed.length) {
-      const location = unprocessed[i];
-      
-      if (areLocationsNearby(
-        representative.latitude,
-        representative.longitude,
-        location.latitude,
-        location.longitude,
-        proximityThresholdKm
-      )) {
-        group.locations.push(location);
-        unprocessed.splice(i, 1);
-      } else {
-        i++;
-      }
-    }
-    
-    groups.push(group);
-  }
-  
-  return groups;
-}
-
-/**
- * Clear all SIQs caches
- */
-export function clearSiqsCaches(): void {
-  memoizedResults.clear();
-  spatialCache.clear();
-  console.log("All SIQS caches cleared");
 }
