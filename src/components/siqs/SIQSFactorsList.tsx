@@ -33,62 +33,37 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
     return <EmptyFactors />;
   }
   
-  // Give strong priority to nighttime cloud cover data
+  // Give priority to nighttime cloud cover data
   const finalFactors = normalizedFactors.map(factor => {
-    // Prioritize nighttime cloud factors
-    if ((factor.name === "Cloud Cover" || factor.name === "云层覆盖") ||
-        (factor.name === "Nighttime Cloud Cover" || factor.name === "夜间云层覆盖")) {
+    // If it's the cloud cover factor
+    if ((factor.name === "Cloud Cover" || factor.name === "云层覆盖")) {
       // If we have nighttime data available
       if (factor.nighttimeData && factor.nighttimeData.average !== undefined) {
         // Prioritize the nighttime average for the score and update the name
         const nighttimeValue = factor.nighttimeData.average;
         
         // Adjust the factor name to indicate nighttime
-        const nighttimeName = language === 'zh' ? '天文夜间云层覆盖' : 'Astronomical Night Cloud Cover';
+        const nighttimeName = language === 'zh' ? '夜间云层覆盖' : 'Nighttime Cloud Cover';
         
-        // Calculate score based on nighttime cloud cover
-        // Clear sky (0-10%) should have a high score (9-10)
-        // Heavy cloud (>40%) should have a low score (0-4)
-        let nighttimeScore = 10;
-        
-        if (nighttimeValue > 0) {
-          // Exponential decay for score as cloud cover increases
-          nighttimeScore = Math.max(0, Math.min(10, 10 * Math.exp(-0.05 * nighttimeValue)));
-        }
-        
-        // If nighttime cloud cover is 0-10%, ensure score is excellent (9-10)
-        if (nighttimeValue <= 10) {
-          nighttimeScore = Math.max(9, nighttimeScore);
+        // If nighttime cloud cover is 0%, ensure score is 10
+        if (nighttimeValue === 0) {
           return { 
             ...factor, 
             name: nighttimeName,
-            score: nighttimeScore,
+            score: 10,
             description: language === 'zh' 
-              ? `天文夜间云层覆盖率为${nighttimeValue.toFixed(1)}%，极佳的成像条件`
-              : `Astronomical night cloud cover of ${nighttimeValue.toFixed(1)}%, excellent for imaging`
+              ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%，非常适合成像`
+              : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%, excellent for imaging`
           };
         }
         
-        // For moderate cloud cover (10-30%)
-        if (nighttimeValue <= 30) {
-          return { 
-            ...factor, 
-            name: nighttimeName,
-            score: nighttimeScore,
-            description: language === 'zh' 
-              ? `天文夜间云层覆盖率为${nighttimeValue.toFixed(1)}%，良好的成像条件`
-              : `Astronomical night cloud cover of ${nighttimeValue.toFixed(1)}%, good for imaging`
-          };
-        }
-        
-        // For higher cloud cover
         return { 
           ...factor, 
           name: nighttimeName,
-          score: nighttimeScore,
+          // Leave score as is but update the description to show the nighttime value
           description: language === 'zh' 
-            ? `天文夜间云层覆盖率为${nighttimeValue.toFixed(1)}%，可能影响成像质量`
-            : `Astronomical night cloud cover of ${nighttimeValue.toFixed(1)}%, may affect imaging quality`
+            ? `夜间云层覆盖率为${nighttimeValue.toFixed(1)}%` + (factor.description.includes('影响') ? '，可能影响成像质量' : '')
+            : `Nighttime cloud cover of ${nighttimeValue.toFixed(1)}%` + (factor.description.includes('quality') ? ', may affect imaging quality' : '')
         };
       }
       
@@ -96,13 +71,19 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
       if (factor.description.includes("0%")) {
         return { ...factor, score: 10 };
       }
+      
+      // For high cloud cover, ensure we show the actual score (could be very low)
+      if (factor.description.includes("over 50%") || 
+          factor.description.includes("超过50%") ||
+          factor.description.includes("Heavy cloud") ||
+          factor.description.includes("重度云层")) {
+        return factor;
+      }
     }
     
     // For Chinese UI, ensure factor names are translated
     if (language === 'zh') {
       if (factor.name === 'Cloud Cover') return { ...factor, name: '云层覆盖' };
-      if (factor.name === 'Nighttime Cloud Cover') return { ...factor, name: '夜间云层覆盖' };
-      if (factor.name === 'Astronomical Night Cloud Cover') return { ...factor, name: '天文夜间云层覆盖' };
       if (factor.name === 'Light Pollution') return { ...factor, name: '光污染' };
       if (factor.name === 'Moon Phase') return { ...factor, name: '月相' };
       if (factor.name === 'Humidity') return { ...factor, name: '湿度' };
@@ -115,11 +96,10 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
     return factor;
   });
   
-  // Sort factors to ensure consistent order with nighttime cloud cover at top
+  // Sort factors to ensure Clear Sky Rate appears after Air Quality
   const sortedFactors = [...finalFactors].sort((a, b) => {
     // Define the order of factors
     const order = [
-      'Astronomical Night Cloud Cover', '天文夜间云层覆盖',
       'Nighttime Cloud Cover', '夜间云层覆盖',
       'Cloud Cover', '云层覆盖',
       'Light Pollution', '光污染',
@@ -134,24 +114,27 @@ const SIQSFactorsList: React.FC<SIQSFactorsListProps> = ({ factors = [] }) => {
     const indexA = order.indexOf(a.name);
     const indexB = order.indexOf(b.name);
     
-    // If both factors are in the order list, sort by that
-    if (indexA >= 0 && indexB >= 0) {
+    // If both factors are in the order array, sort by index
+    if (indexA !== -1 && indexB !== -1) {
       return indexA - indexB;
     }
     
-    // If only one is in the list, prioritize it
-    if (indexA >= 0) return -1;
-    if (indexB >= 0) return 1;
+    // If only one factor is in the order array, prioritize it
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
     
-    // Sort alphabetically otherwise
-    return a.name.localeCompare(b.name);
+    // Otherwise, keep original order
+    return 0;
   });
   
-  // Render the factors
   return (
-    <div className="my-6 space-y-4">
+    <div className="space-y-4 mt-2">
       {sortedFactors.map((factor, index) => (
-        <FactorItem key={index} factor={factor} />
+        <FactorItem 
+          key={`factor-${factor.name}-${index}`}
+          factor={factor}
+          index={index}
+        />
       ))}
     </div>
   );

@@ -1,25 +1,11 @@
 
 // This file serves as an index for all dynamic weather icons
-// Import directly from icon files to avoid circular dependencies
-import DynamicMoonIcon from './icons/DynamicMoonIcon';
-import DynamicSunIcon from './icons/DynamicSunIcon';
-import DynamicCloudCoverIcon from './icons/DynamicCloudCoverIcon';
-import DynamicLightbulbIcon from './icons/DynamicLightbulbIcon';
-import DynamicHumidityIcon from './icons/DynamicHumidityIcon';
-import DynamicWindIcon from './icons/DynamicWindIcon';
-import DynamicTemperatureIcon from './icons/DynamicTemperatureIcon';
-import DynamicSeeingIcon from './icons/DynamicSeeingIcon';
-import DynamicPrecipitationIcon from './icons/DynamicPrecipitationIcon';
-
-// Re-export all components
-export {
-  DynamicMoonIcon,
-  DynamicSunIcon,
-  DynamicCloudCoverIcon,
-  DynamicLightbulbIcon,
-  DynamicHumidityIcon,
-  DynamicWindIcon,
-  DynamicTemperatureIcon,
-  DynamicSeeingIcon,
-  DynamicPrecipitationIcon
-};
+export { default as DynamicMoonIcon } from './icons/DynamicMoonIcon';
+export { default as DynamicSunIcon } from './icons/DynamicSunIcon';
+export { default as DynamicCloudCoverIcon } from './icons/DynamicCloudCoverIcon';
+export { default as DynamicLightbulbIcon } from './icons/DynamicLightbulbIcon';
+export { default as DynamicHumidityIcon } from './icons/DynamicHumidityIcon';
+export { default as DynamicWindIcon } from './icons/DynamicWindIcon';
+export { default as DynamicTemperatureIcon } from './icons/DynamicTemperatureIcon';
+export { default as DynamicSeeingIcon } from './icons/DynamicSeeingIcon';
+export { default as DynamicPrecipitationIcon } from './icons/DynamicPrecipitationIcon';

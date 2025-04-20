@@ -1,121 +1,157 @@
 
-import React, { useCallback, useMemo } from 'react';
+import React, { lazy, Suspense, useCallback, useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import PhotoPointsMap from './map/PhotoPointsMap';
-import CalculatedLocations from './CalculatedLocations';
-import { LocationListFilter } from './ViewToggle';
-import CertifiedLocations from './CertifiedLocations';
+import { PhotoPointsViewMode } from './ViewToggle';
+import PageLoader from '@/components/loaders/PageLoader';
+import { calculateDistance } from '@/utils/geoUtils';
+
+// Lazy load components to improve performance
+const DarkSkyLocations = lazy(() => import('@/components/photoPoints/DarkSkyLocations'));
+const CalculatedLocations = lazy(() => import('@/components/photoPoints/CalculatedLocations'));
+const PhotoPointsMap = lazy(() => import('@/components/photoPoints/map/PhotoPointsMap'));
 
 interface PhotoPointsViewProps {
   showMap: boolean;
-  activeFilter: LocationListFilter;
+  activeView: PhotoPointsViewMode;
   initialLoad: boolean;
   effectiveLocation: { latitude: number; longitude: number } | null;
-  locations: SharedAstroSpot[];
+  certifiedLocations: SharedAstroSpot[];
+  calculatedLocations: SharedAstroSpot[];
   searchRadius: number;
+  calculatedSearchRadius: number;
   loading: boolean;
   hasMore: boolean;
   loadMore: () => void;
-  refreshSiqs?: () => void;
+  refreshSiqs: () => void;
   onLocationClick: (location: SharedAstroSpot) => void;
-  onLocationUpdate: (lat: number, lng: number) => void;
-  canLoadMore?: boolean;
-  loadMoreClickCount?: number;
-  maxLoadMoreClicks?: number;
+  onLocationUpdate: (latitude: number, longitude: number) => void;
+  canLoadMoreCalculated: boolean;
+  loadMoreCalculated: () => void;
+  loadMoreClickCount: number;
+  maxLoadMoreClicks: number;
 }
 
-const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
-  showMap,
-  activeFilter,
-  initialLoad,
-  effectiveLocation,
-  locations,
-  searchRadius,
-  loading,
-  hasMore,
-  loadMore,
-  refreshSiqs,
-  onLocationClick,
-  onLocationUpdate,
-  canLoadMore = false,
-  loadMoreClickCount = 0,
-  maxLoadMoreClicks = 2
-}) => {
-  const handleMapLocationUpdate = useCallback((lat: number, lng: number) => {
-    onLocationUpdate(lat, lng);
-  }, [onLocationUpdate]);
-
-  // Filter locations based on the active filter
-  const filteredLocations = useMemo(() => {
-    if (activeFilter === 'all') return locations;
+const PhotoPointsView: React.FC<PhotoPointsViewProps> = (props) => {
+  const {
+    showMap,
+    activeView,
+    initialLoad,
+    effectiveLocation,
+    certifiedLocations,
+    calculatedLocations,
+    searchRadius,
+    calculatedSearchRadius,
+    loading,
+    hasMore,
+    loadMore,
+    refreshSiqs,
+    onLocationClick,
+    onLocationUpdate,
+    canLoadMoreCalculated,
+    loadMoreCalculated,
+    loadMoreClickCount,
+    maxLoadMoreClicks
+  } = props;
+  
+  const [loaderVisible, setLoaderVisible] = useState(initialLoad || loading);
+  
+  const filteredCalculatedLocations = React.useMemo(() => {
+    if (!effectiveLocation) return calculatedLocations;
     
-    return locations.filter(loc => {
-      const isCertified = Boolean(loc.isDarkSkyReserve || loc.certification);
-      return activeFilter === 'certified' ? isCertified : !isCertified;
+    return calculatedLocations.filter(loc => {
+      if (!loc.latitude || !loc.longitude) return false;
+      
+      const distance = loc.distance || calculateDistance(
+        effectiveLocation.latitude,
+        effectiveLocation.longitude,
+        loc.latitude,
+        loc.longitude
+      );
+      
+      return distance <= calculatedSearchRadius;
     });
-  }, [locations, activeFilter]);
-
-  // Separate certified and calculated locations for mapping
-  const certifiedLocations = useMemo(() => 
-    locations.filter(loc => loc.isDarkSkyReserve || loc.certification),
-    [locations]
-  );
+  }, [calculatedLocations, effectiveLocation, calculatedSearchRadius]);
   
-  const calculatedLocations = useMemo(() => 
-    locations.filter(loc => !loc.isDarkSkyReserve && !loc.certification),
-    [locations]
-  );
+  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
+    if (location && onLocationClick) {
+      const safeLocation = {
+        ...location,
+        id: location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`,
+        name: location.name || 'Unknown Location',
+        latitude: location.latitude,
+        longitude: location.longitude
+      };
+      
+      onLocationClick(safeLocation);
+    }
+  }, [onLocationClick]);
   
-  // Debug count of locations
-  React.useEffect(() => {
-    console.log(`PhotoPointsView: locations=${locations.length}, filtered=${filteredLocations.length}, certified=${certifiedLocations.length}, calculated=${calculatedLocations.length}`);
-  }, [locations, filteredLocations, certifiedLocations, calculatedLocations]);
-
-  return (
-    <div className="mt-4">
-      {showMap && (
-        <div className="mb-6 relative max-w-xl mx-auto">
-          <PhotoPointsMap
+  // Effect to handle loader visibility
+  useEffect(() => {
+    setLoaderVisible(initialLoad || loading);
+    const timer = setTimeout(() => {
+      setLoaderVisible(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [initialLoad, loading, activeView]);
+  
+  // If loader should be shown, always render the same loading UI
+  if (loaderVisible) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <PageLoader />
+      </div>
+    );
+  }
+  
+  // For map view
+  if (showMap) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <div className="h-auto w-full rounded-lg overflow-hidden border border-border shadow-lg">
+          <PhotoPointsMap 
             userLocation={effectiveLocation}
-            locations={locations}
+            locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
+            certifiedLocations={certifiedLocations}
+            calculatedLocations={calculatedLocations}
+            activeView={activeView}
             searchRadius={searchRadius}
-            onLocationClick={onLocationClick}
-            onLocationUpdate={handleMapLocationUpdate}
-            activeFilter={activeFilter}
+            onLocationClick={handleLocationClick}
+            onLocationUpdate={onLocationUpdate}
           />
         </div>
-      )}
-
-      {!showMap && activeFilter === 'certified' && (
-        <CertifiedLocations
-          locations={certifiedLocations}
-          loading={loading}
-          hasMore={hasMore}
-          onLoadMore={loadMore}
-          onViewDetails={onLocationClick}
-          onRefresh={refreshSiqs}
-          initialLoad={initialLoad}
-        />
-      )}
-
-      {!showMap && activeFilter !== 'certified' && (
-        <CalculatedLocations
-          locations={activeFilter === 'calculated' ? calculatedLocations : filteredLocations}
-          loading={loading}
-          hasMore={hasMore}
-          onLoadMore={loadMore}
-          onRefresh={refreshSiqs}
-          searchRadius={searchRadius}
-          initialLoad={initialLoad}
-          canLoadMoreCalculated={canLoadMore}
-          onLoadMoreCalculated={loadMore}
-          loadMoreClickCount={loadMoreClickCount}
-          maxLoadMoreClicks={maxLoadMoreClicks}
-          onViewDetails={onLocationClick}
-        />
-      )}
-    </div>
+      </Suspense>
+    );
+  }
+  
+  // For list view
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <div className="min-h-[300px]">
+        {activeView === 'certified' ? (
+          <DarkSkyLocations
+            locations={certifiedLocations}
+            loading={loading}
+            initialLoad={initialLoad}
+          />
+        ) : (
+          <CalculatedLocations
+            locations={filteredCalculatedLocations}
+            loading={loading}
+            initialLoad={initialLoad}
+            hasMore={hasMore}
+            onLoadMore={loadMore}
+            onRefresh={refreshSiqs}
+            searchRadius={calculatedSearchRadius}
+            canLoadMoreCalculated={canLoadMoreCalculated}
+            onLoadMoreCalculated={loadMoreCalculated}
+            loadMoreClickCount={loadMoreClickCount}
+            maxLoadMoreClicks={maxLoadMoreClicks}
+          />
+        )}
+      </div>
+    </Suspense>
   );
 };
 
-export default React.memo(PhotoPointsView);
+export default PhotoPointsView;

@@ -1,123 +1,197 @@
 
+import { calculateSIQS } from "@/lib/calculateSIQS";
+import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
+import { extractNightForecasts, calculateAverageCloudCover, formatNighttimeHoursRange } from "@/components/forecast/NightForecastUtils";
+import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
+
 /**
- * Utility functions for SIQS (Stellar Imaging Quality Score) calculation
+ * Ensure SIQS value is always on a 0-10 scale
+ * Optimized for better precision
  */
-
-import { extractSingleHourCloudCover } from "@/utils/weather/hourlyCloudCoverExtractor";
+export const normalizeScore = (score: number): number => {
+  if (score < 0) return 0;
+  if (score <= 10) return Math.max(0, Math.min(10, score)); // Ensure it's within 0-10 range
+  return Math.round((score / 10) * 10) / 10; // Round to 1 decimal place if it's over 10
+};
 
 /**
- * Calculate SIQS using weather data
+ * Optimized function to calculate SIQS with weather data
+ * Now includes clear sky rate as a factor (10% weight)
  */
 export async function calculateSIQSWithWeatherData(
-  weatherData: any, 
-  bortleScale: number, 
+  weatherData: any,
+  bortleScale: number,
   seeingConditions: number,
-  moonPhase: number = 0,
-  forecastData?: any
-): Promise<{
-  score: number;
-  isViable: boolean;
-  factors: any[];
-  level: string;
-  nighttimeCloudData?: any;
-}> {
-  if (!weatherData) {
-    console.warn("No weather data provided for SIQS calculation");
-    return { score: 0, isViable: false, factors: [], level: 'bad' };
+  moonPhase: number,
+  forecastData: any | null
+): Promise<any> {
+  // First try to fetch clear sky rate data if not already provided
+  let clearSkyRate: number | undefined = weatherData.clearSkyRate;
+  
+  if (clearSkyRate === undefined && weatherData.latitude && weatherData.longitude) {
+    try {
+      const clearSkyData = await fetchClearSkyRate(weatherData.latitude, weatherData.longitude);
+      if (clearSkyData && typeof clearSkyData.annualRate === 'number') {
+        clearSkyRate = clearSkyData.annualRate;
+        console.log(`Retrieved clear sky rate for location: ${clearSkyRate}%`);
+      }
+    } catch (error) {
+      console.error("Error fetching clear sky rate:", error);
+    }
   }
-  
-  const temperatureScore = 10 - Math.abs(weatherData.temperature - 15) / 5;
-  const humidityScore = 10 - weatherData.humidity / 10;
-  const windSpeedScore = 10 - weatherData.windSpeed / 5;
-  let cloudCoverScore = 10 - weatherData.cloudCover / 10;
-  
-  let effectiveCloudCover = weatherData.cloudCover;
 
-  // If we have forecast data, attempt to use single hour sampling
+  // First try to calculate SIQS using nighttime forecast data
   if (forecastData && forecastData.hourly) {
-    const singleHourCloudCover = extractSingleHourCloudCover(forecastData, 1); // Use 1 AM by default
-    
-    if (singleHourCloudCover !== null) {
-      console.log(`Using 1AM cloud cover for SIQS calculation: ${singleHourCloudCover.toFixed(1)}%`);
-      effectiveCloudCover = singleHourCloudCover;
+    try {
+      const locationWithWeather = {
+        weatherData: {
+          ...weatherData,
+          clearSkyRate
+        },
+        bortleScale,
+        seeingConditions,
+        moonPhase
+      };
+      
+      const nighttimeSIQS = calculateNighttimeSIQS(locationWithWeather, forecastData, null);
+      if (nighttimeSIQS) {
+        console.log("Using nighttime forecast for SIQS calculation:", nighttimeSIQS.score);
+        
+        // Make sure score is never exaggerated
+        if (nighttimeSIQS.score > 8.5) {
+          nighttimeSIQS.score = 8.5; // Cap at 8.5 to avoid over-promising
+        }
+        
+        return nighttimeSIQS;
+      }
+    } catch (error) {
+      console.error("Error calculating nighttime SIQS:", error);
     }
   }
   
-  cloudCoverScore = 10 - effectiveCloudCover / 10;
+  // Fall back to standard calculation if nighttime calculation failed
+  console.log("Falling back to standard SIQS calculation");
+  const result = calculateSIQS({
+    cloudCover: weatherData.cloudCover,
+    bortleScale,
+    seeingConditions,
+    windSpeed: weatherData.windSpeed,
+    humidity: weatherData.humidity,
+    moonPhase,
+    precipitation: weatherData.precipitation,
+    weatherCondition: weatherData.weatherCondition,
+    aqi: weatherData.aqi,
+    clearSkyRate
+  });
   
-  const bortleScaleScore = 10 - bortleScale;
-  const seeingConditionsScore = 10 - seeingConditions;
-  
-  let moonPhaseScore = 10;
-  if (moonPhase) {
-    moonPhaseScore = 10 - moonPhase * 5;
+  // Cap standard result score too
+  if (result.score > 8.5) {
+    result.score = 8.5;
   }
   
-  let precipitationScore = 10;
-  if (weatherData.precipitation > 0) {
-    precipitationScore = 0;
+  // If we have hourly forecast data, extract nighttime info for the cloud cover factor
+  if (forecastData && forecastData.hourly) {
+    try {
+      // Extract nighttime forecasts
+      const nightForecasts = extractNightForecasts(forecastData.hourly);
+      
+      if (nightForecasts.length > 0) {
+        // Calculate average cloud cover
+        const avgNightCloudCover = calculateAverageCloudCover(nightForecasts);
+        
+        // Add nighttime data to the cloud cover factor
+        result.factors = result.factors.map((factor: any) => {
+          if (factor.name === "Cloud Cover") {
+            return {
+              ...factor,
+              nighttimeData: {
+                average: avgNightCloudCover,
+                timeRange: formatNighttimeHoursRange()
+              }
+            };
+          }
+          return factor;
+        });
+      }
+    } catch (error) {
+      console.error("Error adding nighttime data to factors:", error);
+    }
   }
   
-  let aqiScore = 10;
-  if (weatherData.aqi) {
-    aqiScore = 10 - weatherData.aqi / 50;
+  // Add Clear Sky Rate factor if it's available but not already in factors
+  if (clearSkyRate !== undefined && !result.factors.some((f: any) => f.name === "Clear Sky Rate")) {
+    const clearSkyFactor = {
+      name: "Clear Sky Rate",
+      score: Math.min(10, clearSkyRate / 10), 
+      description: `Annual clear sky rate (${clearSkyRate}%), favorable for astrophotography`
+    };
+    
+    result.factors.push(clearSkyFactor);
+    
+    // Adjust overall score to include clear sky rate (10% weight)
+    const clearSkyScoreContribution = (clearSkyRate / 100) * 10 * 0.1;
+    result.score = Math.min(10, result.score * 0.9 + clearSkyScoreContribution);
+    console.log(`Added clear sky rate (${clearSkyRate}%) to SIQS calculation, adjusted score: ${result.score.toFixed(2)}`);
   }
   
-  let clearSkyRateScore = 5;
-  if (weatherData.clearSkyRate) {
-    clearSkyRateScore = weatherData.clearSkyRate / 20;
-  }
-  
-  const rawScore = (
-    temperatureScore +
-    humidityScore +
-    windSpeedScore +
-    cloudCoverScore +
-    bortleScaleScore +
-    seeingConditionsScore +
-    moonPhaseScore +
-    precipitationScore +
-    aqiScore +
-    clearSkyRateScore
-  ) / 10;
-  
-  const score = Math.max(0, Math.min(10, rawScore));
-  const isViable = score >= 3.0;
-  
-  const factors = [
-    { name: 'Temperature', score: temperatureScore, description: `Temperature: ${weatherData.temperature}°C` },
-    { name: 'Humidity', score: humidityScore, description: `Humidity: ${weatherData.humidity}%` },
-    { name: 'Wind Speed', score: windSpeedScore, description: `Wind Speed: ${weatherData.windSpeed} km/h` },
-    { name: 'Cloud Cover', score: cloudCoverScore, description: `Cloud Cover: ${effectiveCloudCover}%` },
-    { name: 'Bortle Scale', score: bortleScaleScore, description: `Bortle Scale: ${bortleScale}` },
-    { name: 'Seeing Conditions', score: seeingConditionsScore, description: `Seeing Conditions: ${seeingConditions}` },
-    { name: 'Moon Phase', score: moonPhaseScore, description: `Moon Phase: ${moonPhase}` },
-    { name: 'Precipitation', score: precipitationScore, description: `Precipitation: ${weatherData.precipitation} mm` },
-    { name: 'Air Quality Index', score: aqiScore, description: `Air Quality Index: ${weatherData.aqi}` },
-    { name: 'Clear Sky Rate', score: clearSkyRateScore, description: `Clear Sky Rate: ${weatherData.clearSkyRate}%` }
-  ];
-  
-  let level = 'bad';
-  if (score >= 8) level = 'excellent';
-  else if (score >= 6) level = 'good';
-  else if (score >= 4) level = 'average';
-  else if (score >= 2) level = 'poor';
-  
-  return {
-    score,
-    isViable,
-    factors,
-    level,
-    nighttimeCloudData: weatherData.nighttimeCloudData || null
-  };
+  return result;
 }
 
 /**
- * Normalize a score to ensure it's in the 0-10 range
+ * Get descriptive text for SIQS value
  */
-export function normalizeScore(score: number): number {
-  return Math.max(0, Math.min(10, score));
+export function getSIQSDescription(value: number): string {
+  if (value >= 8) return "Excellent";
+  if (value >= 6) return "Good";  
+  if (value >= 5) return "Above Average";
+  if (value >= 4) return "Average";
+  if (value >= 2) return "Poor";
+  return "Bad";
 }
 
-// Export the functions from hourlyCloudCoverExtractor directly
-export { extractSingleHourCloudCover };
+/**
+ * Get translated SIQS description
+ */
+export function getTranslatedSIQSDescription(value: number, language: 'en' | 'zh' = 'en'): string {
+  if (language === 'en') {
+    return getSIQSDescription(value);
+  }
+  
+  // Chinese translations
+  if (value >= 8) return "极佳";
+  if (value >= 6) return "良好";  
+  if (value >= 5) return "较好";
+  if (value >= 4) return "一般";
+  if (value >= 2) return "较差";
+  return "糟糕";
+}
+
+/**
+ * Get CSS color class for SIQS value
+ */
+export function getSIQSColorClass(value: number): string {
+  if (value >= 8) return "bg-green-500/80 border-green-400/50";
+  if (value >= 6) return "bg-blue-500/80 border-blue-400/50";
+  if (value >= 5) return "bg-olive-500/80 border-olive-400/50"; // Olive for scores over 5
+  if (value >= 4) return "bg-yellow-500/80 border-yellow-400/50";
+  if (value >= 2) return "bg-orange-500/80 border-orange-400/50";
+  return "bg-red-500/80 border-red-400/50";
+}
+
+/**
+ * Determine if viewing conditions are good for astrophotography
+ */
+export function isGoodViewingCondition(value: number): boolean {
+  return value >= 5.0; // Threshold is 5.0
+}
+
+/**
+ * Format SIQS value for display with consistent decimal places
+ */
+export function formatSIQSScoreForDisplay(value: number): string {
+  // Handle undefined or null
+  if (value === undefined || value === null) return "0.0";
+  
+  // Always show one decimal place
+  return value.toFixed(1);
+}

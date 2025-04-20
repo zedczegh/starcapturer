@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -25,7 +26,12 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
       const updateWithSiqs = async () => {
         try {
           // Update all locations regardless of type
-          const updated = await updateLocationsWithRealTimeSiqs(locations);
+          const updated = await updateLocationsWithRealTimeSiqs(
+            locations,
+            null,
+            100000,
+            'certified' // Treat all as certified to ensure they get updated
+          );
           setEnhancedLocations(updated);
         } catch (err) {
           console.error("Error updating grid locations with real-time SIQS:", err);

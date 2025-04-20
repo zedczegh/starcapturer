@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
@@ -10,8 +9,6 @@ import {
   type LocationCacheService
 } from "./map/LocationNameService";
 import { Star, Info } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile"; 
-import { getSiqsScore } from "@/utils/siqsHelpers";
 
 interface LocationMapProps {
   latitude: number;
@@ -22,7 +19,6 @@ interface LocationMapProps {
   showInfoPanel?: boolean;
   isDarkSkyReserve?: boolean;
   certification?: string;
-  siqs?: number | { score: number; isViable: boolean } | any;
 }
 
 const LocationMap: React.FC<LocationMapProps> = ({ 
@@ -33,11 +29,9 @@ const LocationMap: React.FC<LocationMapProps> = ({
   editable = false,
   showInfoPanel = false,
   isDarkSkyReserve = false,
-  certification = "",
-  siqs
+  certification = ""
 }) => {
   const { language, t } = useLanguage();
-  const isMobile = useIsMobile();
   const [position, setPosition] = useState<[number, number]>([
     isFinite(latitude) ? latitude : 0, 
     isFinite(longitude) ? longitude : 0
@@ -56,9 +50,6 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const validLatitude = isFinite(latitude) ? latitude : 0;
   const validLongitude = isFinite(longitude) ? longitude : 0;
   const validName = name || t("Unknown Location", "未知位置");
-  
-  // Extract SIQS score
-  const siqsScore = getSiqsScore(siqs);
 
   useEffect(() => {
     if (isFinite(latitude) && isFinite(longitude) && 
@@ -73,11 +64,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
   }, []);
 
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
-    // Always allow map clicks on mobile, regardless of editable state
-    if (!editable && !isMobile) return;
-    if (!onLocationUpdate) return;
-    
-    console.log("Map clicked at:", lat, lng);
+    if (!editable || !onLocationUpdate) return;
     
     const validLat = Math.max(-90, Math.min(90, lat));
     const validLng = normalizeLongitude(lng);
@@ -112,7 +99,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
     } finally {
       setLocationLoading(false);
     }
-  }, [editable, onLocationUpdate, language, cacheService, t, updateRetries, isMobile]);
+  }, [editable, onLocationUpdate, language, cacheService, t, updateRetries]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -158,13 +145,12 @@ const LocationMap: React.FC<LocationMapProps> = ({
         <MapDisplay
           position={position}
           locationName={validName}
-          editable={editable || isMobile} // Enable editable for mobile
+          editable={editable}
           onMapReady={handleMapReady}
           onMapClick={handleMapClick}
           showInfoPanel={showInfoPanel}
           isDarkSkyReserve={isDarkSkyReserve}
           certification={certification}
-          siqs={siqsScore}
         />
       </div>
       

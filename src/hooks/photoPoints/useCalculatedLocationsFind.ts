@@ -3,7 +3,6 @@ import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { findCalculatedLocations } from "@/services/locationSearchService";
-import { isSiqsAtLeast } from "@/utils/siqsHelpers";
 
 export const useCalculatedLocationsFind = () => {
   const { t } = useLanguage();
@@ -50,7 +49,7 @@ export const useCalculatedLocationsFind = () => {
           // Filter out locations with SIQS below 5
           const qualityFilteredLocations = uniqueNewLocations.filter(loc => {
             // If siqs is null/undefined or >= 5, keep the location
-            return loc.siqs === undefined || loc.siqs === null || isSiqsAtLeast(loc.siqs, 5);
+            return loc.siqs === undefined || loc.siqs === null || loc.siqs >= 5;
           });
           
           // Combine previous and new locations
@@ -61,7 +60,7 @@ export const useCalculatedLocationsFind = () => {
         // Filter new locations by quality
         const qualityFilteredLocations = newLocations.filter(loc => {
           // If siqs is null/undefined or >= 5, keep the location
-          return loc.siqs === undefined || loc.siqs === null || isSiqsAtLeast(loc.siqs, 5);
+          return loc.siqs === undefined || loc.siqs === null || loc.siqs >= 5;
         });
         
         return qualityFilteredLocations;

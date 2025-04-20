@@ -1,3 +1,4 @@
+
 /**
  * Service for efficiently retrieving Dark Sky locations
  * Provides optimized access to the dark sky locations database
@@ -6,7 +7,7 @@
 import { locationDatabase, LocationEntry } from '@/data/locationDatabase';
 import { calculateDistance } from '@/lib/api/coordinates';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { isWaterLocation } from '@/utils/validation';
+import { isWaterLocation } from '@/utils/locationValidator';
 
 // Cache of dark sky locations for quick access
 let cachedDarkSkyLocations: LocationEntry[] | null = null;
@@ -115,12 +116,11 @@ export function convertToSharedAstroSpot(
       siqs: Math.max(1, 10 - entry.bortleScale),
       bortleScale: entry.bortleScale,
       isDarkSkyReserve: true,
-      certification: (entry as any).certification || 'International Dark Sky Association',
+      certification: 'International Dark Sky Association',
       description: `${entry.name} is a certified dark sky location with excellent viewing conditions (Bortle scale ${entry.bortleScale}).`,
       distance: distance,
       cloudCover: 0, // Will be calculated by SIQS service
-      timestamp: new Date().toISOString(),
-      chineseName: entry.chineseName
+      timestamp: new Date().toISOString()
     };
   } catch (error) {
     console.error(`Error converting location entry to AstroSpot: ${entry.name}`, error);
@@ -133,8 +133,7 @@ export function convertToSharedAstroSpot(
       longitude: entry.coordinates[1],
       bortleScale: entry.bortleScale || 5, // Provide a default value
       siqs: 0, // Default SIQS
-      timestamp: new Date().toISOString(),
-      chineseName: entry.chineseName
+      timestamp: new Date().toISOString()
     };
   }
 }

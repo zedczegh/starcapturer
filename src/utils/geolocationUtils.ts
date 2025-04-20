@@ -23,13 +23,9 @@ export function toStandardGeolocationOptions(options: ExtendedGeolocationOptions
   };
 }
 
-// Keep track of ongoing geolocation requests to prevent duplicates
-const pendingRequests: Record<string, boolean> = {};
-
 /**
  * Enhanced getCurrentPosition with better mobile support
  * and handling of common mobile browser issues
- * Improved for faster performance and better error handling
  */
 export function getCurrentPosition(
   successCallback: PositionCallback,
@@ -41,31 +37,11 @@ export function getCurrentPosition(
     if (errorCallback) {
       const error = new Error("Geolocation is not supported by this browser.") as any;
       error.code = 0;
+      error.PERMISSION_DENIED = 1;
       errorCallback(error);
     }
     return;
   }
-  
-  // Create a request key based on the options
-  const requestKey = JSON.stringify(options || {});
-  
-  // Check if there's already a pending request with these options
-  if (pendingRequests[requestKey]) {
-    console.log("Geolocation request already in progress, skipping duplicate");
-    return;
-  }
-  
-  // Mark this request as pending
-  pendingRequests[requestKey] = true;
-  
-  // Use shorter timeout for faster feedback
-  const defaultTimeout = 5000; // 5 seconds instead of 6
-  const opts = {
-    enableHighAccuracy: true,
-    timeout: defaultTimeout,
-    maximumAge: 0, // Reduced from 60000 to 0 to always get fresh position
-    ...options
-  };
   
   // Check for saved permissions to avoid repeated prompts
   // This helps with some mobile browsers that repeatedly request permission
@@ -83,44 +59,7 @@ export function getCurrentPosition(
           error.code = 1; // Permission denied
           errorCallback(error);
         }
-        pendingRequests[requestKey] = false; // Clear pending flag
         return;
-      }
-    }
-    
-    // Check if we need the most recent position or can use cached
-    if (opts.maximumAge > 0) {
-      // Use cached position if available and not expired
-      const cachedPosition = localStorage.getItem('last_position');
-      const cachedTimestamp = parseInt(localStorage.getItem('last_position_timestamp') || '0', 10);
-      
-      if (cachedPosition && Date.now() - cachedTimestamp < opts.maximumAge) {
-        try {
-          const position = JSON.parse(cachedPosition);
-          // Return cached position immediately for faster response
-          successCallback(position);
-          pendingRequests[requestKey] = false; // Clear pending flag
-          
-          // Still try to get fresh position in the background
-          navigator.geolocation.getCurrentPosition(
-            (freshPosition) => {
-              // Update cache with fresh position
-              try {
-                localStorage.setItem('last_position', JSON.stringify(freshPosition));
-                localStorage.setItem('last_position_timestamp', Date.now().toString());
-              } catch (e) {
-                console.warn('Could not cache position:', e);
-              }
-            },
-            () => {}, // Ignore errors since we already have cached position
-            { enableHighAccuracy: opts.enableHighAccuracy, timeout: 10000 }
-          );
-          
-          return;
-        } catch (e) {
-          console.warn('Could not parse cached position:', e);
-          // Continue to get fresh position
-        }
       }
     }
   } catch (err) {
@@ -131,7 +70,7 @@ export function getCurrentPosition(
   // On iOS, sometimes timeout doesn't work as expected
   // Set up our own additional timeout just in case
   let timeoutId: number | null = null;
-  const timeoutDuration = opts.timeout || defaultTimeout;
+  const timeoutDuration = options?.timeout || 10000;
   
   if (timeoutDuration > 0) {
     timeoutId = window.setTimeout(() => {
@@ -140,8 +79,7 @@ export function getCurrentPosition(
         error.code = 3; // Timeout
         errorCallback(error);
       }
-      pendingRequests[requestKey] = false; // Clear pending flag on timeout
-    }, timeoutDuration + 1000); // Add 1 second buffer to browser's internal timeout
+    }, timeoutDuration + 2000); // Add 2 seconds buffer to browser's internal timeout
   }
   
   // Create wrapper callbacks to clear our manual timeout
@@ -153,16 +91,11 @@ export function getCurrentPosition(
     try {
       // Save successful permission state
       localStorage.setItem('geolocation_permission', 'granted');
-      
-      // Cache the position for future use
-      localStorage.setItem('last_position', JSON.stringify(position));
-      localStorage.setItem('last_position_timestamp', Date.now().toString());
     } catch (err) {
-      console.error("Error saving position data:", err);
+      console.error("Error saving permission state:", err);
     }
     
     successCallback(position);
-    pendingRequests[requestKey] = false; // Clear pending flag on success
   };
   
   const errorWrapper: PositionErrorCallback = (error) => {
@@ -183,12 +116,10 @@ export function getCurrentPosition(
     if (errorCallback) {
       errorCallback(error);
     }
-    
-    pendingRequests[requestKey] = false; // Clear pending flag on error
   };
   
   // Use standard options
-  const standardOptions = toStandardGeolocationOptions(opts);
+  const standardOptions = options ? toStandardGeolocationOptions(options) : undefined;
   
   // Finally make the actual geolocation request
   navigator.geolocation.getCurrentPosition(successWrapper, errorWrapper, standardOptions);

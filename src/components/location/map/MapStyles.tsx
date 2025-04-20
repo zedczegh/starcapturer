@@ -13,11 +13,13 @@ export function MapStyles() {
       }
       
       .leaflet-control-attribution {
-        display: none !important;
-        visibility: hidden !important;
-        height: 0 !important;
-        width: 0 !important;
-        opacity: 0 !important;
+        font-size: 10px;
+        background-color: rgba(0, 0, 0, 0.5) !important;
+        color: rgba(255, 255, 255, 0.7) !important;
+      }
+      
+      .leaflet-control-attribution a {
+        color: rgba(255, 255, 255, 0.9) !important;
       }
       
       .leaflet-popup-content-wrapper, .leaflet-popup-tip {

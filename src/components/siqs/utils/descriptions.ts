@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for creating enhanced descriptions for SIQS factors
  */
@@ -65,9 +66,9 @@ export function getChineseCloudDescription(
   
   if (difference > 15) {
     if (detail) {
-      return `当前云层覆盖率为${cloudCover}%。今夜云量显示平均为${nighttimeAverage.toFixed(1)}%（晚上：${detail.evening.toFixed(1)}%，早晨：${detail.morning.toFixed(1)}%）`;
+      return `当前云层覆盖率为${cloudCover}%。夜间预报显示平均为${nighttimeAverage.toFixed(1)}%（晚上：${detail.evening.toFixed(1)}%，早晨：${detail.morning.toFixed(1)}%）`;
     }
-    return `当前云层覆盖率为${cloudCover}%。今夜云量显示平均为${nighttimeAverage.toFixed(1)}%`;
+    return `当前云层覆盖率为${cloudCover}%。夜间预报显示平均为${nighttimeAverage.toFixed(1)}%`;
   }
   
   return getBasicChineseCloudDescription(nighttimeAverage);

@@ -117,8 +117,9 @@ const DynamicLightbulbIcon: React.FC<DynamicLightbulbIconProps> = ({
           />
         </>
       )}
+      <span className="sr-only">Light pollution level: {validBortleScale.toFixed(1)}</span>
     </div>
   );
 };
 
-export default DynamicLightbulbIcon;
+export default React.memo(DynamicLightbulbIcon);

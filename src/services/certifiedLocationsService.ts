@@ -1,329 +1,205 @@
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { darkSkyLocations } from '@/data/regions/darkSkyLocations';
-
-// In-memory cache for certified locations
-let certifiedLocationsCache: SharedAstroSpot[] = [];
+// Cache for certified locations to avoid repeated API calls
+let cachedCertifiedLocations: SharedAstroSpot[] | null = null;
 let lastCacheUpdate = 0;
-const CACHE_LIFETIME = 3600000; // 1 hour
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 /**
- * Preload all certified locations globally to ensure we have a comprehensive dataset
- * This is called on app initialization and ensures we have all certified locations available
+ * Pre-load all certified dark sky locations globally
+ * This is called early in the application lifecycle
  */
 export async function preloadCertifiedLocations(): Promise<SharedAstroSpot[]> {
-  console.log("Preloading ALL certified locations globally");
-  
-  // Check if we have a recent cache
-  if (certifiedLocationsCache.length > 0 && (Date.now() - lastCacheUpdate < CACHE_LIFETIME)) {
-    console.log(`Using ${certifiedLocationsCache.length} cached certified locations`);
-    return certifiedLocationsCache;
-  }
-  
   try {
-    // Get locations from our database first
-    const databaseLocations = loadLocationsFromDatabase();
-    console.log(`Loaded ${databaseLocations.length} certified locations from database`);
-    
-    // Then generate additional locations for demo
-    const generatedLocations = await generateAdditionalCertifiedLocations();
-    console.log(`Generated ${generatedLocations.length} additional certified locations`);
-    
-    // Combine both sources
-    const allCertifiedLocations = [...databaseLocations, ...generatedLocations];
-    
-    // Update cache
-    certifiedLocationsCache = allCertifiedLocations;
-    lastCacheUpdate = Date.now();
-    
-    console.log(`Loaded total of ${allCertifiedLocations.length} certified locations globally`);
-    
-    // Store in localStorage for persistence
-    try {
-      localStorage.setItem('cachedCertifiedLocations', JSON.stringify(allCertifiedLocations));
-    } catch (e) {
-      console.error("Error caching to localStorage:", e);
-    }
-    
-    return allCertifiedLocations;
-  } catch (error) {
-    console.error("Error loading certified locations:", error);
-    
-    // Try to load from localStorage as fallback
-    try {
-      const cachedLocations = JSON.parse(localStorage.getItem('cachedCertifiedLocations') || '[]');
-      if (Array.isArray(cachedLocations) && cachedLocations.length > 0) {
-        console.log(`Using ${cachedLocations.length} locations from localStorage as fallback`);
-        return cachedLocations;
+    // Check local storage cache first for instant rendering
+    const storedLocations = localStorage.getItem('cachedCertifiedLocations');
+    if (storedLocations) {
+      try {
+        const parsed = JSON.parse(storedLocations);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedCertifiedLocations = parsed;
+          console.log(`Using ${parsed.length} cached certified locations from storage`);
+          
+          // Return immediately while still refreshing in background
+          setTimeout(() => refreshCertifiedLocationsCache(), 1000);
+          return parsed;
+        }
+      } catch (error) {
+        console.error("Error parsing cached certified locations:", error);
       }
-    } catch (e) {
-      console.error("Error loading from localStorage:", e);
     }
     
+    return refreshCertifiedLocationsCache();
+  } catch (error) {
+    console.error("Error preloading certified locations:", error);
     return [];
   }
 }
 
 /**
- * Load certified locations from our database (darkSkyLocations)
+ * Get all certified locations, using cache if available
  */
-function loadLocationsFromDatabase(): SharedAstroSpot[] {
-  console.log(`Loading from database, found ${darkSkyLocations.length} dark sky locations`);
+export async function getAllCertifiedLocations(): Promise<SharedAstroSpot[]> {
+  // If we have fresh cached data, use it
+  if (cachedCertifiedLocations && 
+      (Date.now() - lastCacheUpdate < CACHE_TTL)) {
+    return cachedCertifiedLocations;
+  }
   
-  // Convert darkSkyLocations to SharedAstroSpot format
-  return darkSkyLocations.map((loc, index) => ({
-    id: `db-dark-sky-${index}`,
-    name: loc.name,
-    chineseName: loc.chineseName,
-    latitude: loc.coordinates[0],
-    longitude: loc.coordinates[1],
-    bortleScale: loc.bortleScale,
-    siqs: 10 - loc.bortleScale, // Estimate SIQS based on Bortle scale
-    isViable: true,
-    description: `A certified dark sky location with Bortle scale ${loc.bortleScale}`,
-    timestamp: new Date().toISOString(),
-    isDarkSkyReserve: loc.type === 'dark-site',
-    certification: loc.type === 'dark-site' 
-      ? 'International Dark Sky Reserve' 
-      : loc.type === 'urban'
-        ? 'Urban Night Sky Place'
-        : 'International Dark Sky Park',
-    type: loc.type === 'dark-site' ? 'reserve' : loc.type
-  }));
+  // Otherwise refresh the cache
+  return preloadCertifiedLocations();
 }
 
 /**
- * Force refresh of all certified locations, bypassing the cache
+ * Refresh the certified locations cache from API
  */
-export async function forceCertifiedLocationsRefresh(): Promise<SharedAstroSpot[]> {
-  console.log("Force refreshing ALL certified locations");
-  
+async function refreshCertifiedLocationsCache(): Promise<SharedAstroSpot[]> {
   try {
-    // Get locations from our database first
-    const databaseLocations = loadLocationsFromDatabase();
+    // Import dynamically to avoid circular dependencies
+    const { findCertifiedLocations } = await import('./locationSearchService');
     
-    // Then generate additional locations for demo
-    const generatedLocations = await generateAdditionalCertifiedLocations();
+    // Use a default location just as a center point, since we'll get ALL global locations
+    const defaultLocation = { latitude: 39.9042, longitude: 116.4074 };
     
-    // Combine both sources
-    const allCertifiedLocations = [...databaseLocations, ...generatedLocations];
+    // Get all certified locations globally
+    const certifiedResults = await findCertifiedLocations(
+      defaultLocation.latitude,
+      defaultLocation.longitude,
+      100000, // Global radius to get ALL locations
+      1000    // Increased limit to ensure we get ALL certified locations
+    );
     
-    // Update cache
-    certifiedLocationsCache = allCertifiedLocations;
-    lastCacheUpdate = Date.now();
-    
-    // Also update localStorage cache
-    try {
-      localStorage.setItem('cachedCertifiedLocations', JSON.stringify(allCertifiedLocations));
-    } catch (e) {
-      console.error("Error updating localStorage cache:", e);
+    if (certifiedResults.length > 0) {
+      console.log(`Fetched ${certifiedResults.length} certified dark sky locations globally`);
+      
+      // Add the East Asian certified locations if they might be missing
+      const combinedResults = addEastAsianLocations(certifiedResults);
+      
+      // Update cache and timestamp
+      cachedCertifiedLocations = combinedResults;
+      lastCacheUpdate = Date.now();
+      
+      // Save to localStorage for future quick loads
+      try {
+        localStorage.setItem('cachedCertifiedLocations', JSON.stringify(combinedResults));
+      } catch (error) {
+        console.error("Error saving certified locations to cache:", error);
+      }
+      
+      return combinedResults;
     }
     
-    console.log(`Refreshed ${allCertifiedLocations.length} certified locations`);
-    return allCertifiedLocations;
+    return certifiedResults;
   } catch (error) {
-    console.error("Error refreshing certified locations:", error);
-    throw error;
+    console.error("Error refreshing certified locations cache:", error);
+    // Return cached data if available, otherwise empty array
+    return cachedCertifiedLocations || [];
   }
 }
 
 /**
- * Get all cached certified locations without making a new request
+ * Add East Asian dark sky locations that might be missing from the API
  */
-export function getAllCertifiedLocations(): SharedAstroSpot[] {
-  // First try the in-memory cache
-  if (certifiedLocationsCache.length > 0) {
-    console.log(`Returning ${certifiedLocationsCache.length} certified locations from memory cache`);
-    return certifiedLocationsCache;
-  }
+function addEastAsianLocations(existingLocations: SharedAstroSpot[]): SharedAstroSpot[] {
+  // Create a map of existing locations by coordinates
+  const locationMap = new Map<string, SharedAstroSpot>();
   
-  // If no cache, load from database directly
-  const databaseLocations = loadLocationsFromDatabase();
-  if (databaseLocations.length > 0) {
-    certifiedLocationsCache = databaseLocations;
-    console.log(`Loaded ${databaseLocations.length} certified locations from database`);
-    return databaseLocations;
-  }
+  existingLocations.forEach(loc => {
+    if (!loc.latitude || !loc.longitude) return;
+    const key = `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`;
+    locationMap.set(key, loc);
+  });
   
-  // Try to load from localStorage as fallback
-  try {
-    const cachedLocations = JSON.parse(localStorage.getItem('cachedCertifiedLocations') || '[]');
-    if (Array.isArray(cachedLocations) && cachedLocations.length > 0) {
-      certifiedLocationsCache = cachedLocations;
-      console.log(`Loaded ${cachedLocations.length} certified locations from localStorage`);
-      return cachedLocations;
+  // List of known East Asian dark sky locations to ensure they're included
+  const eastAsianLocations = [
+    // Shenzhen Xichong Dark Sky Community
+    {
+      id: 'shenzhen-xichong',
+      name: 'Shenzhen Xichong Dark Sky Community',
+      latitude: 22.5808,
+      longitude: 114.5034,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Community - International Dark Sky Association',
+      timestamp: new Date().toISOString()
+    },
+    // Yeongyang Firefly Dark Sky Park
+    {
+      id: 'yeongyang-firefly',
+      name: 'Yeongyang Firefly Eco Park Dark Sky Park',
+      latitude: 36.6552,
+      longitude: 129.1122,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Park - International Dark Sky Association',
+      timestamp: new Date().toISOString()
+    },
+    // Jindo Dark Sky Park
+    {
+      id: 'jindo-dark-sky',
+      name: 'Jindo Dark Sky Park',
+      latitude: 34.4763,
+      longitude: 126.2631,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Park - International Dark Sky Association',
+      timestamp: new Date().toISOString()
+    },
+    // Yaeyama Islands Dark Sky Reserve
+    {
+      id: 'yaeyama-dark-sky',
+      name: 'Yaeyama Islands International Dark Sky Reserve',
+      latitude: 24.4667,
+      longitude: 124.2167,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Reserve - International Dark Sky Association',
+      timestamp: new Date().toISOString()
+    },
+    // Iriomote-Ishigaki Dark Sky Reserve
+    {
+      id: 'iriomote-ishigaki',
+      name: 'Iriomote-Ishigaki National Park Dark Sky Reserve',
+      latitude: 24.3423,
+      longitude: 124.1546,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Reserve - International Dark Sky Association',
+      timestamp: new Date().toISOString()
+    },
+    // Himawari Farm Dark Sky Park
+    {
+      id: 'himawari-farm',
+      name: 'Himawari Farm Dark Sky Park',
+      latitude: 42.9824,
+      longitude: 140.9946,
+      isDarkSkyReserve: true,
+      certification: 'Dark Sky Park - International Dark Sky Association',
+      timestamp: new Date().toISOString()
     }
-  } catch (e) {
-    console.error("Error loading from localStorage:", e);
-  }
-  
-  // If still no locations, try session storage
-  try {
-    const sessionLocations = JSON.parse(sessionStorage.getItem('persistent_certified_locations') || '[]');
-    if (Array.isArray(sessionLocations) && sessionLocations.length > 0) {
-      certifiedLocationsCache = sessionLocations;
-      console.log(`Loaded ${sessionLocations.length} certified locations from session storage`);
-      return sessionLocations;
-    }
-  } catch (e) {
-    console.error("Error loading from session storage:", e);
-  }
-  
-  console.log("No certified locations available, returning empty array");
-  return [];
-}
-
-/**
- * Generate additional certified dark sky locations
- * This creates a realistic dataset of certified locations
- */
-async function generateAdditionalCertifiedLocations(): Promise<SharedAstroSpot[]> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  const locations: SharedAstroSpot[] = [];
-  
-  // Generate realistic certified locations worldwide
-  // Using a comprehensive list of actual International Dark Sky Places
-  
-  const darkSkyLocations = [
-    // North America - Reserves
-    { name: "Central Idaho Dark Sky Reserve", lat: 44.221, lng: -114.9318, type: "reserve" },
-    { name: "Boundary Waters Canoe Area", lat: 47.9504, lng: -91.4153, type: "reserve" },
-    { name: "Mont-Mégantic International Dark Sky Reserve", lat: 45.4555, lng: -71.1526, type: "reserve" },
-    { name: "Headlands International Dark Sky Park", lat: 45.7755, lng: -84.9081, type: "park" },
-    { name: "Death Valley National Park", lat: 36.5323, lng: -116.9325, type: "park" },
-    { name: "Grand Canyon National Park", lat: 36.1069, lng: -112.1129, type: "park" },
-    { name: "Joshua Tree National Park", lat: 33.8734, lng: -115.9010, type: "park" },
-    { name: "Big Bend National Park", lat: 29.2498, lng: -103.2502, type: "park" },
-    { name: "Natural Bridges National Monument", lat: 37.6051, lng: -110.0023, type: "park" },
-    { name: "Cherry Springs State Park", lat: 41.6646, lng: -77.8125, type: "park" },
-    { name: "Clayton Lake State Park", lat: 36.5597, lng: -103.3184, type: "park" },
-    { name: "Copper Breaks State Park", lat: 34.1125, lng: -99.7505, type: "park" },
-    { name: "Enchanted Rock State Natural Area", lat: 30.5055, lng: -98.8194, type: "park" },
-    
-    // Europe
-    { name: "Exmoor National Park", lat: 51.1187, lng: -3.6135, type: "reserve" },
-    { name: "Kerry International Dark Sky Reserve", lat: 51.9477, lng: -9.8585, type: "reserve" },
-    { name: "Pic du Midi International Dark Sky Reserve", lat: 42.9361, lng: 0.1432, type: "reserve" },
-    { name: "Alqueva Dark Sky Reserve", lat: 38.3744, lng: -7.3403, type: "reserve" },
-    { name: "Northumberland National Park", lat: 55.2835, lng: -2.1133, type: "park" },
-    { name: "Zselic National Landscape Protection Area", lat: 46.2381, lng: 17.7660, type: "park" },
-    { name: "Hortobágy National Park", lat: 47.5833, lng: 21.1500, type: "park" },
-    { name: "Bükk National Park", lat: 48.0667, lng: 20.5167, type: "park" },
-    
-    // Oceania
-    { name: "Aoraki Mackenzie International Dark Sky Reserve", lat: -43.9856, lng: 170.4639, type: "reserve" },
-    { name: "Great Barrier Island", lat: -36.2058, lng: 175.4831, type: "sanctuary" },
-    { name: "Waiheke Island", lat: -36.8010, lng: 175.1087, type: "sanctuary" },
-    { name: "River Murray International Dark Sky Reserve", lat: -34.4704, lng: 139.2359, type: "reserve" },
-    
-    // Asia
-    { name: "Yeongyang Firefly Eco Park", lat: 36.6601, lng: 129.1121, type: "park" },
-    { name: "Yaeyama Islands", lat: 24.3448, lng: 124.1571, type: "sanctuary" },
-    { name: "Iriomote-Ishigaki National Park", lat: 24.3339, lng: 123.7752, type: "park" },
-    
-    // Africa
-    { name: "NamibRand Nature Reserve", lat: -24.9374, lng: 15.9830, type: "reserve" },
-    { name: "!Ae!Hai Kalahari Heritage Park", lat: -26.1536, lng: 20.9771, type: "park" },
-    
-    // Additional North American locations
-    { name: "Waterton-Glacier International Peace Park", lat: 48.9935, lng: -113.9081, type: "park" },
-    { name: "Jasper National Park", lat: 52.8730, lng: -117.9535, type: "park" },
-    { name: "Zion National Park", lat: 37.2982, lng: -113.0263, type: "park" },
-    { name: "Canyonlands National Park", lat: 38.3269, lng: -109.8783, type: "park" },
-    { name: "Capitol Reef National Park", lat: 38.3670, lng: -111.2615, type: "park" },
-    { name: "Bryce Canyon National Park", lat: 37.5930, lng: -112.1871, type: "park" },
-    { name: "Chaco Culture National Historical Park", lat: 36.0531, lng: -107.9567, type: "park" },
-    
-    // Additional communities and reserves
-    { name: "Flagstaff, Arizona", lat: 35.1983, lng: -111.6513, type: "community" },
-    { name: "Sedona, Arizona", lat: 34.8697, lng: -111.7610, type: "community" },
-    { name: "Borrego Springs, California", lat: 33.2587, lng: -116.3746, type: "community" },
-    { name: "Beverly Shores, Indiana", lat: 41.6877, lng: -87.0045, type: "community" },
-    { name: "Homer Glen, Illinois", lat: 41.6103, lng: -87.9522, type: "community" },
-    { name: "Dripping Springs, Texas", lat: 30.1902, lng: -98.0866, type: "community" },
-    { name: "Wimberley Valley, Texas", lat: 30.0005, lng: -98.0997, type: "community" },
-    { name: "Fountain Hills, Arizona", lat: 33.6042, lng: -111.7257, type: "community" },
-    { name: "Torrey, Utah", lat: 38.2997, lng: -111.4194, type: "community" },
-    { name: "Thunder Mountain Pootsee Nightsky", lat: 36.7350, lng: -108.1734, type: "sanctuary" },
-    
-    // Additional European locations
-    { name: "Bodmin Moor Dark Sky Landscape", lat: 50.5023, lng: -4.6628, type: "park" },
-    { name: "Elan Valley Estate", lat: 52.2647, lng: -3.5771, type: "park" },
-    { name: "Galloway Forest Park", lat: 55.1000, lng: -4.3000, type: "park" },
-    { name: "Westhavelland Nature Park", lat: 52.7272, lng: 12.3850, type: "park" },
-    { name: "Eifel National Park", lat: 50.5810, lng: 6.4263, type: "park" },
-    { name: "Ramon Crater", lat: 30.5833, lng: 34.8000, type: "park" }
   ];
   
-  // Create locations with appropriate certification types
-  for (let i = 0; i < darkSkyLocations.length; i++) {
-    const loc = darkSkyLocations[i];
-    const isDarkSkyReserve = loc.type === "reserve";
-    
-    let certification = "";
-    switch (loc.type) {
-      case "reserve":
-        certification = "International Dark Sky Reserve";
-        break;
-      case "park":
-        certification = "International Dark Sky Park";
-        break;
-      case "sanctuary":
-        certification = "International Dark Sky Sanctuary";
-        break;
-      case "community":
-        certification = "International Dark Sky Community";
-        break;
-      case "urban":
-        certification = "Urban Night Sky Place";
-        break;
-      case "lodging":
-        certification = "Dark Sky Friendly Lodging";
-        break;
+  // Add missing East Asian locations
+  eastAsianLocations.forEach(loc => {
+    const key = `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`;
+    if (!locationMap.has(key)) {
+      locationMap.set(key, loc as SharedAstroSpot);
     }
-    
-    // Calculate a realistic SIQS score based on type
-    let siqs;
-    if (loc.type === "reserve" || loc.type === "sanctuary") {
-      siqs = 7.5 + (Math.random() * 2.5); // 7.5 to 10
-    } else if (loc.type === "park") {
-      siqs = 6.5 + (Math.random() * 3); // 6.5 to 9.5
-    } else if (loc.type === "community") {
-      siqs = 5.5 + (Math.random() * 2.5); // 5.5 to 8
-    } else {
-      siqs = 4 + (Math.random() * 4); // 4 to 8
-    }
-    
-    // Create location with Chinese name
-    locations.push({
-      id: `certified-${i}-${Date.now()}`,
-      name: loc.name,
-      chineseName: `暗空${loc.type === "reserve" ? "保护区" : loc.type === "park" ? "公园" : loc.type === "sanctuary" ? "保护区" : loc.type === "community" ? "社区" : "地点"} ${loc.name}`,
-      latitude: loc.lat,
-      longitude: loc.lng,
-      bortleScale: Math.floor(Math.random() * 3) + 1, // 1-3 for certified locations
-      siqs: siqs,
-      isViable: true,
-      description: `An officially certified dark sky ${loc.type} with excellent stargazing conditions.`,
-      timestamp: new Date().toISOString(),
-      isDarkSkyReserve: isDarkSkyReserve,
-      certification: certification,
-      type: loc.type
-    });
-  }
+  });
   
-  // Log for debugging
-  console.log(`Generated ${locations.length} additional certified locations`);
+  return Array.from(locationMap.values());
+}
+
+/**
+ * Force refresh the certified locations
+ * Used when user explicitly requests a refresh
+ */
+export async function forceCertifiedLocationsRefresh(): Promise<SharedAstroSpot[]> {
+  // Clear cache and fetch fresh data
+  cachedCertifiedLocations = null;
+  lastCacheUpdate = 0;
   
-  // Save to session storage for persistence
+  // Clear localStorage cache
   try {
-    sessionStorage.setItem('persistent_certified_locations', JSON.stringify(locations));
-    console.log(`Saved generated locations to session storage`);
-  } catch (e) {
-    console.error("Error saving to session storage:", e);
+    localStorage.removeItem('cachedCertifiedLocations');
+  } catch (error) {
+    console.error("Error clearing cached certified locations:", error);
   }
   
-  return locations;
+  return preloadCertifiedLocations();
 }

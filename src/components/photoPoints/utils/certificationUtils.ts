@@ -3,18 +3,12 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { Globe, Trees, Building2, ShieldCheck } from "lucide-react";
 import { Language } from "@/contexts/LanguageContext";
 
-export type CertificationInfo = {
-  icon: React.ElementType;
-  text: string;
-  color: string;
-};
-
 /**
  * Get certification information for a location
  * @param point AstroSpot location data
  * @returns Certification information object or null if not certified
  */
-export function getCertificationInfo(point: SharedAstroSpot): CertificationInfo | null {
+export function getCertificationInfo(point: SharedAstroSpot) {
   if (!point.certification && !point.isDarkSkyReserve) {
     return null;
   }
@@ -60,7 +54,7 @@ export function getCertificationInfo(point: SharedAstroSpot): CertificationInfo 
  * @param language Current language
  * @returns Localized certification text
  */
-export function getLocalizedCertText(certInfo: CertificationInfo, language: Language): string {
+export function getLocalizedCertText(certInfo: { text: string }, language: Language): string {
   if (!certInfo) return '';
   
   const certText = certInfo.text;

@@ -1,110 +1,112 @@
 
-import React, { useState, useCallback, useMemo } from "react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { useNavigate } from "react-router-dom";
-import { useDisplayName } from "./cards/DisplayNameResolver";
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { saveLocationFromPhotoPoints } from '@/utils/locationStorage';
+import LightPollutionIndicator from '@/components/location/LightPollutionIndicator';
+import SiqsScoreBadge from './cards/SiqsScoreBadge';
+import CertificationBadge from './cards/CertificationBadge';
+import LocationMetadata from './cards/LocationMetadata';
 import VisibilityObserver from './cards/VisibilityObserver';
-import RealTimeSiqsProvider from './cards/RealTimeSiqsProvider';
+import RealTimeSiqsFetcher from './cards/RealTimeSiqsFetcher';
 import LocationHeader from './cards/LocationHeader';
-import { getCertificationInfo } from './utils/certificationUtils';
-import CardContainer from './cards/components/CardContainer';
-import LocationInfo from './cards/components/LocationInfo';
-import CardActions from './cards/components/CardActions';
-import SiqsDisplay from './cards/components/SiqsDisplay';
-import { getSiqsScore } from '@/utils/siqsHelpers';
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useDisplayName } from './cards/DisplayNameResolver';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
   index: number;
   showRealTimeSiqs?: boolean;
-  onSelect?: (location: SharedAstroSpot) => void;
-  onViewDetails: (location: SharedAstroSpot) => void;
-  userLocation?: { latitude: number; longitude: number } | null;
+  isMobile?: boolean;
 }
 
 const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({ 
   location, 
-  index = 0,
-  onViewDetails,
-  showRealTimeSiqs = true
+  index, 
+  showRealTimeSiqs = false,
+  isMobile = false 
 }) => {
-  const { language } = useLanguage();
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const certInfo = useMemo(() => getCertificationInfo(location), [location]);
-  
-  const { displayName, showOriginalName } = useDisplayName({
-    location,
-    language,
-    locationCounter: null
-  });
-
-  const getLocationId = useCallback(() => {
-    if (!location || !location.latitude || !location.longitude) return null;
-    return location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-  }, [location]);
-
-  const handleViewDetails = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    const locationId = getLocationId();
-    if (!locationId) return;
-    
-    navigate(`/location/${locationId}`, {
-      state: {
-        id: locationId,
-        name: location.name || '',
-        chineseName: location.chineseName || '',
-        latitude: location.latitude,
-        longitude: location.longitude,
-        bortleScale: location.bortleScale || 4,
-        siqsResult: {
-          score: getSiqsScore(location.siqs) || 0
-        },
-        certification: location.certification || '',
-        isDarkSkyReserve: !!location.isDarkSkyReserve,
-        timestamp: new Date().toISOString(),
-        fromPhotoPoints: true
-      }
-    });
-  }, [location, navigate, getLocationId]);
-
+  const { language, t } = useLanguage();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
-  const [siqsConfidence, setSiqsConfidence] = useState<number>(8);
   
-  const isCertified = useMemo(() => 
-    Boolean(location.certification || location.isDarkSkyReserve || location.type === 'dark-site'),
-    [location]
-  );
-  
-  const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
-    if (loading) {
-      setLoadingSiqs(true);
-      return;
+  const [locationCounter] = useState(() => {
+    if (!location.id && !location.certification && !location.isDarkSkyReserve) {
+      const storedCounter = parseInt(localStorage.getItem('potentialDarkSiteCounter') || '0');
+      const newCounter = storedCounter + 1;
+      localStorage.setItem('potentialDarkSiteCounter', newCounter.toString());
+      return newCounter;
     }
+    return null;
+  });
+  
+  // Use the extracted display name logic
+  const { displayName, showOriginalName } = useDisplayName({
+    location,
+    language,
+    locationCounter
+  });
+  
+  // Handle SIQS calculation results
+  const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
+    setRealTimeSiqs(siqs);
+    setLoadingSiqs(loading);
+  };
+  
+  if (realTimeSiqs === 0) {
+    return null;
+  }
+  
+  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (location.siqs || 0);
+  
+  if (displaySiqs === 0 && !loadingSiqs) {
+    return null;
+  }
+  
+  const handleViewDetails = () => {
+    const locationData = {
+      id: location.id || `calc-loc-${Date.now()}`,
+      name: location.name,
+      chineseName: location.chineseName,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      bortleScale: location.bortleScale,
+      timestamp: new Date().toISOString(),
+      fromPhotoPoints: true,
+      isDarkSkyReserve: location.isDarkSkyReserve,
+      certification: location.certification
+    };
     
-    setLoadingSiqs(false);
-    setHasAttemptedLoad(true);
+    saveLocationFromPhotoPoints(locationData);
     
-    if (siqs !== null && siqs > 0) {
-      setRealTimeSiqs(siqs);
-      if (confidence) {
-        setSiqsConfidence(confidence);
+    navigate(`/location/${locationData.id}`, { state: { fromPhotoPoints: true, ...locationData } });
+  };
+  
+  const cardVariants = {
+    hidden: { opacity: 0, y: isMobile ? 10 : 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: isMobile ? 0.2 : 0.4,
+        delay: isMobile ? Math.min(index * 0.05, 0.3) : Math.min(index * 0.1, 0.5)
       }
     }
-  }, []);
-  
-  // Force visibility for certified locations
-  const effectiveIsVisible = isCertified || isVisible;
+  };
   
   return (
     <VisibilityObserver onVisibilityChange={setIsVisible}>
-      <CardContainer index={index} isVisible={effectiveIsVisible} isMobile={isMobile}>
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate={isVisible ? "visible" : "hidden"}
+        className={`glassmorphism p-4 rounded-lg hover:bg-cosmic-800/30 transition-colors duration-300 border border-cosmic-600/30 ${isMobile ? 'will-change-transform backface-visibility-hidden' : ''}`}
+        layout={!isMobile}
+      >
         <div className="flex justify-between items-start mb-2">
           <LocationHeader
             displayName={displayName}
@@ -113,42 +115,53 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             language={language}
           />
           
-          <SiqsDisplay
-            realTimeSiqs={realTimeSiqs}
-            loadingSiqs={loadingSiqs}
-            hasAttemptedLoad={hasAttemptedLoad}
-            isVisible={effectiveIsVisible}
-            isCertified={isCertified}
-            siqsConfidence={siqsConfidence}
-            locationSiqs={getSiqsScore(location.siqs)}
+          <SiqsScoreBadge score={displaySiqs} loading={loadingSiqs} />
+        </div>
+        
+        <CertificationBadge 
+          certification={location.certification} 
+          isDarkSkyReserve={location.isDarkSkyReserve} 
+        />
+        
+        <div className="mb-4 mt-2">
+          <LightPollutionIndicator 
+            bortleScale={location.bortleScale || 5} 
+            size="md"
+            showBortleNumber={true}
+            className="text-base"
           />
         </div>
         
-        <LocationInfo
-          location={location}
-          certInfo={certInfo}
-          displayName={displayName}
-          language={language}
+        <LocationMetadata 
+          distance={location.distance} 
+          date={location.date}
+          latitude={location.latitude}
+          longitude={location.longitude}
+          locationName={displayName}
         />
         
-        <CardActions onViewDetails={handleViewDetails} />
+        <div className="mt-4 flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleViewDetails}
+            className="text-primary hover:text-primary-focus hover:bg-cosmic-800/50 sci-fi-btn transition-all duration-300 text-sm"
+          >
+            {t("View Details", "查看详情")}
+          </Button>
+        </div>
         
-        {showRealTimeSiqs && (
-          <RealTimeSiqsProvider
-            isVisible={effectiveIsVisible}
-            latitude={location.latitude}
-            longitude={location.longitude}
-            bortleScale={location.bortleScale}
-            isCertified={isCertified}
-            isDarkSkyReserve={location.isDarkSkyReserve}
-            existingSiqs={location.siqs}
-            onSiqsCalculated={handleSiqsCalculated}
-            forceUpdate={isCertified} // Force update for certified locations
-          />
-        )}
-      </CardContainer>
+        <RealTimeSiqsFetcher
+          isVisible={isVisible}
+          showRealTimeSiqs={showRealTimeSiqs}
+          latitude={location.latitude}
+          longitude={location.longitude}
+          bortleScale={location.bortleScale}
+          onSiqsCalculated={handleSiqsCalculated}
+        />
+      </motion.div>
     </VisibilityObserver>
   );
 };
 
-export default React.memo(PhotoLocationCard);
+export default PhotoLocationCard;

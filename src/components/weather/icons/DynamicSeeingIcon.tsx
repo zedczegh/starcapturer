@@ -3,52 +3,49 @@ import React from "react";
 import { Eye } from "lucide-react";
 
 interface DynamicSeeingIconProps {
-  seeingConditions: string | number;
+  seeingConditions: string;
   className?: string;
 }
 
 const DynamicSeeingIcon: React.FC<DynamicSeeingIconProps> = ({ seeingConditions, className }) => {
-  // Calculate fill based on seeing quality
-  let fillColor = "rgba(96, 165, 250, 0.5)"; // Default blue for average seeing
+  // Extract numeric part from seeing conditions string if possible
+  let seeingValue = 3; // Default middle value
   
-  if (typeof seeingConditions === "string") {
-    const seeingLower = seeingConditions.toLowerCase();
-    
-    if (seeingLower.includes("excellent") || seeingLower.includes("very good")) {
-      fillColor = "rgba(34, 197, 94, 0.7)"; // Green for excellent seeing
-    } else if (seeingLower.includes("good")) {
-      fillColor = "rgba(59, 130, 246, 0.7)"; // Blue for good seeing
-    } else if (seeingLower.includes("poor") || seeingLower.includes("bad")) {
-      fillColor = "rgba(249, 115, 22, 0.7)"; // Orange for poor seeing
-    } else if (seeingLower.includes("terrible")) {
-      fillColor = "rgba(239, 68, 68, 0.7)"; // Red for terrible seeing
-    }
-  } else if (typeof seeingConditions === "number") {
-    // Numeric scale (typically 1-5 or 1-10)
-    // Normalize to a 1-5 scale if it seems to be on a different scale
-    const normalizedValue = seeingConditions > 10 ? seeingConditions / 20 : 
-                          seeingConditions > 5 ? seeingConditions / 2 : 
-                          seeingConditions;
-    
-    if (normalizedValue >= 4.5) {
-      fillColor = "rgba(34, 197, 94, 0.7)"; // Green for excellent seeing (4.5-5)
-    } else if (normalizedValue >= 3.5) {
-      fillColor = "rgba(59, 130, 246, 0.7)"; // Blue for good seeing (3.5-4.4)
-    } else if (normalizedValue >= 2.5) {
-      fillColor = "rgba(234, 179, 8, 0.7)"; // Yellow for average seeing (2.5-3.4)
-    } else if (normalizedValue >= 1.5) {
-      fillColor = "rgba(249, 115, 22, 0.7)"; // Orange for poor seeing (1.5-2.4)
-    } else {
-      fillColor = "rgba(239, 68, 68, 0.7)"; // Red for terrible seeing (<1.5)
+  if (typeof seeingConditions === 'string') {
+    // Try to extract a number from the string
+    const match = seeingConditions.match(/([1-5](\.[0-9])?)/);
+    if (match) {
+      seeingValue = parseFloat(match[0]);
+    } else if (seeingConditions.includes("Perfect") || seeingConditions.includes("完美")) {
+      seeingValue = 1;
+    } else if (seeingConditions.includes("Excellent") || seeingConditions.includes("极佳")) {
+      seeingValue = 1.5;
+    } else if (seeingConditions.includes("Good") || seeingConditions.includes("良好")) {
+      seeingValue = 2;
+    } else if (seeingConditions.includes("Fair") || seeingConditions.includes("尚可")) {
+      seeingValue = 3;
+    } else if (seeingConditions.includes("Poor") || seeingConditions.includes("较差")) {
+      seeingValue = 4;
+    } else if (seeingConditions.includes("Terrible") || seeingConditions.includes("极差")) {
+      seeingValue = 5;
     }
   }
+  
+  // Invert scale (1 is best seeing, 5 is worst)
+  // For color: good seeing (low number) = blue, bad seeing (high number) = red
+  const invertedValue = 6 - seeingValue; // 5 to 1 scale
+  const blueValue = Math.round((invertedValue / 5) * 255);
+  const redValue = Math.round(((5 - invertedValue) / 5) * 255);
+  
+  // Calculate opacity based on seeing (better seeing = more transparent)
+  const fillOpacity = (seeingValue - 1) / 4; // Scale 1-5 to 0-1
   
   return (
     <div className={`relative ${className || ''}`}>
       <Eye 
         className="h-4 w-4 text-primary" 
         style={{
-          fill: fillColor,
+          fill: `rgba(${redValue}, ${Math.min(blueValue, 150)}, ${blueValue}, ${fillOpacity})`,
           stroke: "currentColor"
         }}
       />

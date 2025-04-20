@@ -11,13 +11,13 @@ export const useCertificationColors = () => {
    */
   const getCertificationColor = (location: SharedAstroSpot): string => {
     if (!location.isDarkSkyReserve && !location.certification) {
-      return '#FFD700'; // Default gold for non-certified
+      return '#FFD700'; // Default gold
     }
     
     const certification = (location.certification || '').toLowerCase();
     
     // Different colors for different certification types
-    if (certification.includes('reserve') || certification.includes('sanctuary') || location.isDarkSkyReserve) {
+    if (certification.includes('reserve') || certification.includes('sanctuary')) {
       return '#9b87f5'; // Purple for reserves
     } else if (certification.includes('park')) {
       return '#4ADE80'; // Green for parks
@@ -25,8 +25,8 @@ export const useCertificationColors = () => {
       return '#FFA500'; // Orange for communities
     } else if (certification.includes('urban')) {
       return '#0EA5E9'; // Blue for urban night skies
-    } else if (certification.includes('lodging')) {
-      return '#F43F5E'; // Red/Pink for lodging
+    } else if (location.isDarkSkyReserve) {
+      return '#9b87f5'; // Purple for reserves
     } else {
       return '#FFD700'; // Gold for generic certified locations
     }

@@ -79,106 +79,21 @@ export const getSavedLocation = (): SIQSLocation | null => {
 
 // Save location with flag to indicate it came from PhotoPoints page
 export const saveLocationFromPhotoPoints = (locationData: any): void => {
-  if (!locationData?.id) {
-    console.error("Cannot save location without ID", locationData);
-    return;
-  }
+  if (!locationData?.id) return;
   
   try {
     // Make sure we add the fromPhotoPoints flag
     const dataToSave = {
       ...locationData,
       fromPhotoPoints: true,
-      timestamp: locationData.timestamp || new Date().toISOString()
+      timestamp: new Date().toISOString()
     };
     
-    // Create a backup of the data in case localStorage limit is reached
-    const backupKey = `backup_location_${locationData.id}`;
-    try {
-      localStorage.setItem(backupKey, JSON.stringify({
-        name: dataToSave.name,
-        latitude: dataToSave.latitude,
-        longitude: dataToSave.longitude,
-        bortleScale: dataToSave.bortleScale || 4,
-        siqs: dataToSave.siqs,
-        timestamp: dataToSave.timestamp,
-        fromPhotoPoints: true
-      }));
-    } catch (e) {
-      console.warn("Failed to save location backup", e);
-    }
-    
-    // Try to save the full data
-    try {
-      localStorage.setItem(`location_${locationData.id}`, JSON.stringify(dataToSave));
-      console.log(`Location saved to storage with ID: ${locationData.id}`);
-    } catch (storageError) {
-      // If storage is full, try to save a minimal version
-      console.warn("Storage error, falling back to minimal location data", storageError);
-      
-      // Clear non-essential data from localStorage to make space
-      try {
-        clearOldLocationData();
-        
-        // Try again with minimal data
-        const minimalData = {
-          id: dataToSave.id,
-          name: dataToSave.name,
-          latitude: dataToSave.latitude,
-          longitude: dataToSave.longitude,
-          bortleScale: dataToSave.bortleScale || 4,
-          fromPhotoPoints: true,
-          timestamp: dataToSave.timestamp
-        };
-        
-        localStorage.setItem(`location_${locationData.id}`, JSON.stringify(minimalData));
-      } catch (e) {
-        console.error("Failed to save even minimal location data", e);
-      }
-    }
+    localStorage.setItem(`location_${locationData.id}`, JSON.stringify(dataToSave));
   } catch (error) {
     console.error('Error saving location with PhotoPoints flag:', error);
   }
 };
-
-// Helper function to clear old location data when storage is full
-function clearOldLocationData(): void {
-  try {
-    // Find keys that start with 'location_' but aren't the most recent ones
-    const keysToRemove: string[] = [];
-    
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('location_') && !key.includes('latest')) {
-        keysToRemove.push(key);
-      }
-    }
-    
-    // Sort by timestamp if available
-    const keyTimestamps = keysToRemove.map(key => {
-      try {
-        const data = JSON.parse(localStorage.getItem(key) || '{}');
-        return {
-          key,
-          timestamp: data.timestamp ? new Date(data.timestamp).getTime() : 0
-        };
-      } catch (e) {
-        return { key, timestamp: 0 };
-      }
-    });
-    
-    // Keep only the 5 most recent items
-    keyTimestamps.sort((a, b) => b.timestamp - a.timestamp);
-    const keysToKeep = keyTimestamps.slice(0, 5).map(item => item.key);
-    
-    // Remove old items
-    keysToRemove
-      .filter(key => !keysToKeep.includes(key))
-      .forEach(key => localStorage.removeItem(key));
-  } catch (e) {
-    console.error("Error cleaning up old location data", e);
-  }
-}
 
 // Save last refresh time for a location
 export const saveRefreshTimestamp = (locationId: string): boolean => {
@@ -257,16 +172,7 @@ export const getLocationDetailsById = (id: string): any | null => {
     const key = `location_${id}`;
     const storedData = localStorage.getItem(key);
     
-    if (!storedData) {
-      // Try to load from backup
-      const backupKey = `backup_location_${id}`;
-      const backupData = localStorage.getItem(backupKey);
-      if (backupData) {
-        console.log("Using backup location data for ID:", id);
-        return JSON.parse(backupData);
-      }
-      return null;
-    }
+    if (!storedData) return null;
     
     return JSON.parse(storedData);
   } catch (error) {

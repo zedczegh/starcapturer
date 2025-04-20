@@ -1,160 +1,194 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { toast } from 'sonner';
-import { useLanguage } from '@/contexts/LanguageContext';
+
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { PhotoPointsViewMode } from '@/components/photoPoints/ViewToggle';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
-import { getCurrentPosition } from '@/utils/geolocationUtils';
+import { clearLocationCache } from '@/services/realTimeSiqsService/locationUpdateService';
 
-export const usePhotoPointsState = () => {
-  const { t, language } = useLanguage();
-  const location = useLocation();
-  
-  const [activeView, setActiveView] = useState<'certified' | 'calculated'>('calculated');
-  const [showMap, setShowMap] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
-  const [autoLocationRequested, setAutoLocationRequested] = useState(false);
-  const [effectiveLocation, setEffectiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+// Default radius constants
+const DEFAULT_CALCULATED_RADIUS = 100; // 100km default radius for calculated locations
+const DEFAULT_CERTIFIED_RADIUS = 100000; // 100000km for certified locations (effectively global)
+
+export function usePhotoPointsState() {
+  // Get geolocation data
   const { 
-    coords: currentPosition, 
     loading: locationLoading, 
-    getPosition: requestGeolocation
-  } = useGeolocation();
+    coords, 
+    getPosition, 
+    error: locationError 
+  } = useGeolocation({
+    enableHighAccuracy: true,
+    maximumAge: 60000, // Use cached position for 1 minute
+    timeout: 10000 // Timeout after 10 seconds
+  });
   
-  const [locationInitialized, setLocationInitialized] = useState(false);
-  const [locationAttempted, setLocationAttempted] = useState(false);
+  // Core state
+  const [activeView, setActiveView] = useState<PhotoPointsViewMode>('certified');
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [showMap, setShowMap] = useState(true);
+  const [locationLoadAttempts, setLocationLoadAttempts] = useState(0);
+  const [manualLocationOverride, setManualLocationOverride] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [calculatedSearchRadius, setCalculatedSearchRadius] = useState<number>(DEFAULT_CALCULATED_RADIUS);
   
+  // Refs for handling view changes
+  const isViewChangeInProgress = useRef(false);
+  const viewChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Try to get position on mount
   useEffect(() => {
-    if (currentPosition) {
-      setEffectiveLocation({
-        latitude: currentPosition.latitude,
-        longitude: currentPosition.longitude
-      });
-      setLocationInitialized(true);
-      console.log(`Location updated from geolocation: ${currentPosition.latitude}, ${currentPosition.longitude}`);
-    }
-  }, [currentPosition]);
-
-  useEffect(() => {
-    if (!effectiveLocation && !locationAttempted) {
-      setLocationAttempted(true);
+    if (!coords && locationLoadAttempts < 3) {
+      console.log("Getting user position, attempt:", locationLoadAttempts + 1);
+      const timeoutId = setTimeout(() => {
+        getPosition();
+        setLocationLoadAttempts(prev => prev + 1);
+      }, locationLoadAttempts * 1000);
       
-      getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setEffectiveLocation({
-            latitude,
-            longitude
-          });
-          setLocationInitialized(true);
-          console.log("Auto-located user at:", latitude, longitude);
-        },
-        (error) => {
-          console.warn("Error auto-locating user:", error);
-          const defaultLocation = {
-            latitude: 35.8617,
-            longitude: 104.1954
-          };
-          setEffectiveLocation(defaultLocation);
-          setLocationInitialized(true);
-          console.log("Using fallback location:", defaultLocation);
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
+      return () => clearTimeout(timeoutId);
     }
-  }, [effectiveLocation, locationAttempted]);
+  }, [getPosition, coords, locationLoadAttempts]);
+  
+  // Update user location when coordinates are available
+  useEffect(() => {
+    if (coords && !manualLocationOverride) {
+      const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
+      setUserLocation(newLocation);
+      
+      try {
+        localStorage.setItem('userLocation', JSON.stringify(newLocation));
+        console.log("Updated user location from geolocation:", newLocation);
+      } catch (err) {
+        console.error("Error saving location to localStorage:", err);
+      }
+    }
+  }, [coords, manualLocationOverride]);
+  
+  // Fallback to saved location if needed
+  useEffect(() => {
+    if ((locationError || locationLoadAttempts >= 3) && !userLocation && !manualLocationOverride) {
+      try {
+        const savedLocation = localStorage.getItem('userLocation');
+        if (savedLocation) {
+          const parsedLocation = JSON.parse(savedLocation);
+          if (parsedLocation && typeof parsedLocation.latitude === 'number' && typeof parsedLocation.longitude === 'number') {
+            setUserLocation(parsedLocation);
+            console.log("Using saved location from localStorage as fallback:", parsedLocation);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading saved location:", err);
+      }
+    }
+  }, [locationError, userLocation, locationLoadAttempts, manualLocationOverride]);
 
-  const [calculatedSearchRadius, setCalculatedSearchRadius] = useState(500);
-  
-  const currentSearchRadius = activeView === 'certified' ? 20000 : calculatedSearchRadius;
-  
-  const handleRadiusChange = useCallback((value: number) => {
-    setCalculatedSearchRadius(value);
+  // Complete initial load after a delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setInitialLoad(false);
+    }, 1000);
+    return () => clearTimeout(timer);
   }, []);
   
-  const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
-    if (!isFinite(latitude) || !isFinite(longitude)) {
-      toast.error(t("Invalid location coordinates", "无效的位置坐标"));
-      return;
-    }
-    
-    const newLocation = {
-      latitude,
-      longitude
-    };
-    
-    setEffectiveLocation(newLocation);
-    setLocationInitialized(true);
-    
-    console.log(`Location manually updated to: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-  }, [t]);
-  
-  const handleResetLocation = useCallback(() => {
-    getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setEffectiveLocation({
-          latitude,
-          longitude
-        });
-        
-        console.log(`Location reset to current position: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-        
-        try {
-          const leafletMap = (window as any).leafletMap;
-          if (leafletMap) {
-            leafletMap.setView([latitude, longitude], 12, { 
-              animate: true,
-              duration: 1.5 
-            });
-            console.log("Map centered on reset location");
-          }
-        } catch (e) {
-          console.error("Could not center map:", e);
-        }
-      },
-      (error) => {
-        console.error("Error resetting location:", error);
-        toast.error(t("Unable to get your location", "无法获取您的位置"));
-      },
-      { 
-        enableHighAccuracy: true, 
-        timeout: 10000, 
-        maximumAge: 0,
-        language
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (viewChangeTimeoutRef.current) {
+        clearTimeout(viewChangeTimeoutRef.current);
       }
-    );
-  }, [t, language]);
-  
-  const handleViewChange = useCallback((view: 'certified' | 'calculated') => {
-    setActiveView(view);
+    };
+  }, []);
+
+  // Compute derived state
+  const effectiveLocation = manualLocationOverride || userLocation;
+  const currentSearchRadius = activeView === 'certified' ? DEFAULT_CERTIFIED_RADIUS : calculatedSearchRadius;
+
+  // Handler functions
+  const handleRadiusChange = useCallback((value: number) => {
+    setCalculatedSearchRadius(value);
   }, []);
   
   const toggleMapView = useCallback(() => {
     setShowMap(prev => !prev);
   }, []);
   
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInitialLoad(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+  const handleViewChange = useCallback((view: PhotoPointsViewMode) => {
+    // Skip if same view or change in progress
+    if (view === activeView || isViewChangeInProgress.current) {
+      return;
+    }
+    
+    console.log(`View change requested: ${activeView} -> ${view}`);
+    isViewChangeInProgress.current = true;
+    
+    // Clear any existing timeout
+    if (viewChangeTimeoutRef.current) {
+      clearTimeout(viewChangeTimeoutRef.current);
+    }
+    
+    // Update state with delay to prevent race conditions
+    viewChangeTimeoutRef.current = setTimeout(() => {
+      try {
+        clearLocationCache();
+        setActiveView(view);
+        console.log(`View changed to: ${view}`);
+        
+        // Reset the flag after a short delay
+        setTimeout(() => {
+          isViewChangeInProgress.current = false;
+        }, 500);
+      } catch (error) {
+        console.error("Error during view change:", error);
+        isViewChangeInProgress.current = false;
+      }
+    }, 50);
+  }, [activeView]);
   
+  const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
+    const newLocation = { latitude, longitude };
+    
+    setManualLocationOverride(newLocation);
+    setUserLocation(newLocation);
+    
+    try {
+      localStorage.setItem('userLocation', JSON.stringify(newLocation));
+      clearLocationCache();
+      console.log("Updated user location from map click:", newLocation);
+    } catch (err) {
+      console.error("Error handling location update:", err);
+    }
+  }, []);
+
+  const handleResetLocation = useCallback(() => {
+    setManualLocationOverride(null);
+    if (coords) {
+      const newLocation = { latitude: coords.latitude, longitude: coords.longitude };
+      setUserLocation(newLocation);
+      try {
+        localStorage.setItem('userLocation', JSON.stringify(newLocation));
+      } catch (err) {
+        console.error("Error saving reset location:", err);
+      }
+    } else {
+      getPosition();
+    }
+  }, [coords, getPosition]);
+
   return {
     activeView,
     showMap,
     initialLoad,
     locationLoading,
     effectiveLocation,
-    locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
+    
+    setActiveView,
+    toggleMapView,
     handleRadiusChange,
     handleViewChange,
     handleLocationUpdate,
     handleResetLocation,
-    toggleMapView
+    
+    DEFAULT_CALCULATED_RADIUS,
+    DEFAULT_CERTIFIED_RADIUS
   };
-};
-
-export default usePhotoPointsState;
+}

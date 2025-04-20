@@ -1,77 +1,56 @@
 
 import { useCallback } from 'react';
-import { SharedAstroSpot } from '@/types/weather';
 import { useNavigate } from 'react-router-dom';
-import { prepareLocationForNavigation } from '@/utils/locationNavigation';
+import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 export const useMapUtils = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
-  const getZoomLevel = useCallback((radius: number): number => {
-    // Adjust zoom level based on search radius
-    if (radius <= 10) return 12;
+  /**
+   * Get appropriate zoom level based on search radius
+   */
+  const getZoomLevel = useCallback((radius: number) => {
     if (radius <= 50) return 10;
     if (radius <= 100) return 9;
-    if (radius <= 300) return 8;
+    if (radius <= 200) return 8;
     if (radius <= 500) return 7;
-    return 6;
+    if (radius <= 1000) return 6;
+    if (radius <= 5000) return 4;
+    return 3;
   }, []);
 
+  /**
+   * Handle clicking on a location marker
+   */
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
-    if (!location) return;
+    const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
     
-    try {
-      const navigationData = prepareLocationForNavigation(location);
-      
-      if (navigationData) {
-        navigate(`/location/${navigationData.locationId}`, { 
-          state: navigationData.locationState 
-        });
-        console.log("Opening location details", navigationData.locationId);
-      }
-    } catch (error) {
-      console.error("Error navigating to location details:", error, location);
+    if (location && location.latitude && location.longitude) {
+      navigate(`/location/${locationId}`, { 
+        state: {
+          id: locationId,
+          name: location.name,
+          chineseName: location.chineseName,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          bortleScale: location.bortleScale || 4,
+          siqs: location.siqs,
+          siqsResult: location.siqs ? { score: location.siqs } : undefined,
+          certification: location.certification,
+          isDarkSkyReserve: location.isDarkSkyReserve,
+          timestamp: new Date().toISOString(),
+          fromPhotoPoints: true
+        } 
+      });
+      toast.info(t("Opening location details", "正在打开位置详情"));
     }
-  }, [navigate]);
+  }, [navigate, t]);
 
   return {
     getZoomLevel,
     handleLocationClick
-  };
-};
-
-export const useMapLocations = ({
-  userLocation,
-  locations,
-  searchRadius,
-  activeView,
-  mapReady
-}: {
-  userLocation: { latitude: number; longitude: number } | null;
-  locations: SharedAstroSpot[];
-  searchRadius: number;
-  activeView: 'certified' | 'calculated';
-  mapReady: boolean;
-}) => {
-  // Ensure locations is always an array even if it's undefined or null
-  const safeLocations = Array.isArray(locations) ? locations : [];
-  
-  // Log counts of locations by type for debugging
-  const certifiedCount = safeLocations.filter(loc => 
-    Boolean(loc?.isDarkSkyReserve || loc?.certification)
-  ).length;
-  
-  const calculatedCount = safeLocations.length - certifiedCount;
-  
-  console.log(`Location counts - certified: ${certifiedCount}, calculated: ${calculatedCount}, total: ${safeLocations.length}`);
-  
-  // Apply basic filtering to remove invalid locations
-  const validLocations = safeLocations.filter(loc => 
-    loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
-  );
-  
-  return {
-    // Return all valid locations without further filtering
-    processedLocations: validLocations
   };
 };

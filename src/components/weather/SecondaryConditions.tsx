@@ -1,12 +1,14 @@
 
-import React from "react";
+import React, { memo } from "react";
+import { Gauge } from "lucide-react";
+import ConditionItem from "./ConditionItem";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import CloudCoverItem from "./components/CloudCoverItem";
-import NighttimeCloudItem from "./components/NighttimeCloudItem";
-import MoonPhaseItem from "./components/MoonPhaseItem";
-import BortleScaleItem from "./components/BortleScaleItem";
-import AirQualityItem from "./components/AirQualityItem";
+import { formatBortleScale, getAQIColor, getAQIDescription } from "@/utils/weatherUtils";
+import { 
+  DynamicMoonIcon, 
+  DynamicLightbulbIcon,
+  DynamicCloudCoverIcon
+} from "./DynamicIcons";
 
 interface SecondaryConditionsProps {
   cloudCover: number;
@@ -14,42 +16,95 @@ interface SecondaryConditionsProps {
   bortleScale: number | null;
   aqi?: number;
   nighttimeCloudData?: {
-    average: number;
-    description?: string;
-    timeRange?: string;
-    evening?: number;
-    morning?: number;
+    average: number | null;
+    evening: number;
+    morning: number;
   } | null;
 }
 
-const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
+const SecondaryConditions = memo<SecondaryConditionsProps>(({
   cloudCover,
   moonPhase,
   bortleScale,
   aqi,
   nighttimeCloudData
 }) => {
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
+  
+  // Determine which cloud cover to display - prefer nighttime average if available
+  const displayCloudCover = nighttimeCloudData?.average !== null && nighttimeCloudData?.average !== undefined 
+    ? nighttimeCloudData.average 
+    : cloudCover;
+    
+  // Create nighttime cloud cover tooltip if data is available
+  const cloudCoverTooltip = nighttimeCloudData 
+    ? (language === 'en'
+      ? `Current: ${cloudCover}% | Night avg: ${nighttimeCloudData.average?.toFixed(1)}% (Evening: ${nighttimeCloudData.evening.toFixed(1)}%, Morning: ${nighttimeCloudData.morning.toFixed(1)}%)`
+      : `当前: ${cloudCover}% | 夜间平均: ${nighttimeCloudData.average?.toFixed(1)}% (晚上: ${nighttimeCloudData.evening.toFixed(1)}%, 早晨: ${nighttimeCloudData.morning.toFixed(1)}%)`)
+    : undefined;
+  
+  // AQI display with conditional rendering and enhanced sizing
+  const aqiValue = aqi !== undefined ? (
+    <>
+      <span className={`${getAQIColor(aqi)} text-base font-medium`}>
+        {aqi} 
+      </span> 
+      <span className="text-sm ml-1.5">({getAQIDescription(aqi, language)})</span>
+    </>
+  ) : '--';
+  
+  // Bortle scale value - now properly handles unknown values with improved confidence indicator
+  const bortleValue = formatBortleScale(bortleScale, language);
+  
+  // Add confidence indicator for Bortle scale value (high confidence when directly measured)
+  const hasHighConfidence = bortleScale !== null && 
+    Number.isInteger(bortleScale) && 
+    bortleScale >= 1 && 
+    bortleScale <= 9;
+  
+  // Create label for cloud cover that indicates it's nighttime data
+  const cloudCoverLabel = nighttimeCloudData?.average !== null && nighttimeCloudData?.average !== undefined
+    ? (language === 'en' ? "Night Cloud Cover" : "夜间云层覆盖")
+    : (language === 'en' ? "Cloud Cover" : "云层覆盖");
+  
+  const bortleTooltip = bortleScale === null 
+    ? (language === 'en' ? "Bortle scale could not be determined for this location" : "无法确定此位置的光污染等级") 
+    : undefined;
   
   return (
-    <div className="grid grid-cols-1 gap-4 text-cosmic-100">
-      <TooltipProvider>
-        <CloudCoverItem cloudCover={cloudCover} />
-        
-        {nighttimeCloudData && (
-          <NighttimeCloudItem nighttimeCloudData={nighttimeCloudData} />
-        )}
-        
-        <MoonPhaseItem moonPhase={moonPhase} language={language as 'en' | 'zh'} />
-        
-        <BortleScaleItem bortleScale={bortleScale} />
-        
-        {aqi !== undefined && (
-          <AirQualityItem aqi={aqi} />
-        )}
-      </TooltipProvider>
+    <div className="space-y-7">
+      <ConditionItem
+        icon={<DynamicCloudCoverIcon cloudCover={displayCloudCover} />}
+        label={cloudCoverLabel}
+        value={<span className="text-lg font-medium">{Math.round(displayCloudCover)}%</span>}
+        tooltip={cloudCoverTooltip}
+        badgeText={nighttimeCloudData?.average !== null && nighttimeCloudData?.average !== undefined ? (language === 'en' ? "Night" : "夜间") : undefined}
+      />
+      
+      <ConditionItem
+        icon={<DynamicMoonIcon phase={moonPhase} />}
+        label={language === 'en' ? "Moon Phase" : "月相"}
+        value={<span className="text-lg font-medium">{moonPhase}</span>}
+      />
+      
+      {aqi !== undefined && (
+        <ConditionItem
+          icon={<Gauge className="h-5 w-5 text-primary" />}
+          label={language === 'en' ? "Air Quality" : "空气质量"}
+          value={aqiValue}
+        />
+      )}
+      
+      <ConditionItem
+        icon={<DynamicLightbulbIcon bortleScale={bortleScale} animated={hasHighConfidence} />}
+        label={language === 'en' ? "Bortle Scale" : "光污染等级"}
+        value={<span className="text-lg font-medium">{bortleValue}</span>}
+        tooltip={bortleTooltip}
+      />
     </div>
   );
-};
+});
+
+SecondaryConditions.displayName = 'SecondaryConditions';
 
 export default SecondaryConditions;

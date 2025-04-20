@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import EmptyLocationDisplay from '../EmptyLocationDisplay';
 import LocationsList from '../LocationsList';
 import { Loader2 } from 'lucide-react';
-import { Button } from "@/components/ui/button";
+import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
 
 interface LocationViewProps {
   locations: SharedAstroSpot[];
@@ -23,16 +25,36 @@ const LocationView: React.FC<LocationViewProps> = ({
   emptyDescription
 }) => {
   const { t } = useLanguage();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalLocations, setTotalLocations] = useState(0);
-  const locationsPerPage = 5; // Fixed at 5 locations per page
+  const navigate = useNavigate();
+  const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   
+  // Update locations with real-time SIQS on initial load
   useEffect(() => {
-    console.log(`LocationView received ${locations.length} locations`);
-    setTotalLocations(locations.length);
-    setCurrentPage(1);
+    if (locations.length > 0) {
+      const updateWithSiqs = async () => {
+        try {
+          // Apply real-time SIQS to all locations including certified ones
+          const updated = await updateLocationsWithRealTimeSiqs(
+            locations,
+            null, // No user location needed for certified locations
+            100000, // Large radius to include all locations
+            'certified' // Treat all as certified to ensure they get updated
+          );
+          setEnhancedLocations(updated);
+        } catch (err) {
+          console.error("Error updating location view with real-time SIQS:", err);
+          // Fallback to original locations
+          setEnhancedLocations(locations);
+        }
+      };
+      
+      updateWithSiqs();
+    } else {
+      setEnhancedLocations([]);
+    }
   }, [locations]);
   
+  // If loading or initial load, show loading indicator
   if (loading && initialLoad) {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -44,6 +66,7 @@ const LocationView: React.FC<LocationViewProps> = ({
     );
   }
   
+  // If no locations available, show empty state
   if (locations.length === 0) {
     return (
       <EmptyLocationDisplay 
@@ -56,50 +79,30 @@ const LocationView: React.FC<LocationViewProps> = ({
     );
   }
   
-  // Calculate pagination values
-  const indexOfLastLocation = currentPage * locationsPerPage;
-  const indexOfFirstLocation = indexOfLastLocation - locationsPerPage;
-  
-  // Get current page locations
-  const currentLocations = locations.slice(0, indexOfLastLocation);
-  
-  const loadMore = () => {
-    setCurrentPage(prev => prev + 1);
+  const handleViewLocation = (point: SharedAstroSpot) => {
+    const locationId = `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+    
+    // Navigate to location details page
+    navigate(`/location/${locationId}`, {
+      state: {
+        ...point,
+        id: locationId,
+        timestamp: new Date().toISOString()
+      }
+    });
   };
   
+  // Display the locations - use enhanced locations if available
+  const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : locations;
+  
+  // Display the locations
   return (
-    <div className="space-y-6">
-      <div className="text-sm text-muted-foreground mb-4 flex flex-wrap justify-between items-center">
-        <span>
-          {t(
-            "Showing {{start}}-{{end}} of {{total}} locations",
-            "显示 {{start}}-{{end}}，共 {{total}} 个位置"
-          )
-            .replace('{{start}}', String(1))
-            .replace('{{end}}', String(Math.min(indexOfLastLocation, locations.length)))
-            .replace('{{total}}', String(totalLocations))}
-        </span>
-      </div>
-      
-      <LocationsList 
-        locations={currentLocations}
-        loading={loading}
-        initialLoad={initialLoad}
-        showRealTimeSiqs={true}
-      />
-      
-      {indexOfLastLocation < locations.length && (
-        <div className="flex justify-center mt-6">
-          <Button 
-            variant="outline"
-            onClick={loadMore}
-            className="w-full max-w-xs"
-          >
-            {t("Load More Locations", "加载更多位置")}
-          </Button>
-        </div>
-      )}
-    </div>
+    <LocationsList 
+      locations={locationsToDisplay}
+      loading={loading}
+      initialLoad={initialLoad}
+      onViewDetails={handleViewLocation}
+    />
   );
 };
 

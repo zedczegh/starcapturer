@@ -1,14 +1,14 @@
 
-import React, { useMemo } from "react";
+import React, { useMemo, lazy, Suspense } from "react";
 import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions from "@/components/WeatherConditions";
 import { normalizeMoonPhase } from "@/utils/weather/moonPhaseUtils";
 import LocationUpdater from "@/components/location/LocationUpdater";
 import { determineWeatherCondition } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
-import ClearSkyRateDisplay from "./ClearSkyRateDisplay";
-import MoonlessNightDisplay from "./MoonlessNightDisplay";
-import ForecastTabs from "./ForecastTabs";
+
+// Lazy load the forecast tabs to improve initial load time
+const ForecastTabs = lazy(() => import("@/components/location/ForecastTabs"));
 
 interface LocationContentGridProps {
   locationData: any;
@@ -39,6 +39,7 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
 }) => {
   const { language } = useLanguage();
   
+  // Memoize the weather data to prevent unnecessary re-calculations
   const weatherData = useMemo(() => ({
     temperature: locationData?.weatherData?.temperature || 0,
     humidity: locationData?.weatherData?.humidity || 0,
@@ -51,10 +52,12 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     aqi: locationData?.weatherData?.aqi
   }), [locationData?.weatherData]);
 
+  // Format the moon phase as a human-readable string
   const moonPhaseString = useMemo(() => {
     return normalizeMoonPhase(locationData.moonPhase || 0);
   }, [locationData.moonPhase]);
 
+  // Format the seeing conditions as a human-readable string
   const seeingConditionsString = useMemo(() => {
     const value = locationData.seeingConditions;
     if (typeof value !== 'number') return "Average";
@@ -66,6 +69,7 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     return "Very Poor";
   }, [locationData.seeingConditions]);
 
+  // Get the Bortle scale, pass null for unknown values
   const bortleScale = useMemo(() => {
     const value = locationData.bortleScale;
     if (value === undefined || value === null || value < 1 || value > 9) {
@@ -74,24 +78,10 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     return value;
   }, [locationData.bortleScale]);
 
+  // Loading indicator text based on language
   const loadingText = useMemo(() => {
     return language === 'en' ? "Loading..." : "加载中...";
   }, [language]);
-
-  // Get clear sky rate from location data
-  const clearSkyRate = useMemo(() => {
-    return locationData?.clearSkyData?.annualRate || 60;
-  }, [locationData?.clearSkyData]);
-
-  // Get monthly rates from location data
-  const monthlyRates = useMemo(() => {
-    return locationData?.clearSkyData?.monthlyRates || {};
-  }, [locationData?.clearSkyData]);
-
-  // Get clearest months from historical data
-  const clearestMonths = useMemo(() => {
-    return locationData?.historicalData?.clearestMonths || [];
-  }, [locationData?.historicalData]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 transition-all">
@@ -103,20 +93,6 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
           seeingConditions={seeingConditionsString}
           forecastData={forecastData}
         />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ClearSkyRateDisplay 
-            latitude={locationData.latitude} 
-            longitude={locationData.longitude}
-            clearSkyRate={clearSkyRate}
-            monthlyRates={monthlyRates}
-            clearestMonths={clearestMonths}
-          />
-          <MoonlessNightDisplay
-            latitude={locationData.latitude}
-            longitude={locationData.longitude}
-          />
-        </div>
         
         <SIQSSummary
           siqsResult={locationData.siqsResult || null}
@@ -136,14 +112,20 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
           />
         </div>
         
-        <ForecastTabs
-          forecastData={forecastData}
-          longRangeForecast={longRangeForecast}
-          forecastLoading={forecastLoading}
-          longRangeLoading={longRangeLoading}
-          onRefreshForecast={onRefreshForecast}
-          onRefreshLongRange={onRefreshLongRange}
-        />
+        <Suspense fallback={
+          <div className="animate-pulse h-64 bg-slate-800/20 rounded-lg flex items-center justify-center">
+            <span className="text-muted-foreground">{loadingText}</span>
+          </div>
+        }>
+          <ForecastTabs
+            forecastData={forecastData}
+            longRangeForecast={longRangeForecast}
+            forecastLoading={forecastLoading}
+            longRangeLoading={longRangeLoading}
+            onRefreshForecast={onRefreshForecast}
+            onRefreshLongRange={onRefreshLongRange}
+          />
+        </Suspense>
       </div>
     </div>
   );

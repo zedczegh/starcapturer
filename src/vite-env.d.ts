@@ -17,8 +17,6 @@ declare module 'react-leaflet' {
     className?: string;
     children?: React.ReactNode;
     minZoom?: number;
-    worldCopyJump?: boolean;
-    // Note: doubleClickZoom is not included here as we now handle it in MapController
   }
 
   export interface TileLayerProps extends L.TileLayerOptions {
@@ -28,7 +26,6 @@ declare module 'react-leaflet' {
     opacity?: number;
     zIndex?: number;
     children?: React.ReactNode;
-    maxZoom?: number;
   }
 
   export interface MarkerProps extends L.MarkerOptions {
@@ -41,8 +38,6 @@ declare module 'react-leaflet' {
   export interface PopupProps extends L.PopupOptions {
     autoClose?: boolean;
     closeOnClick?: boolean;
-    offset?: L.PointExpression;
-    direction?: string;
     children?: React.ReactNode;
   }
   

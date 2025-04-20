@@ -1,98 +1,68 @@
 
-import { useState, useCallback, useRef } from "react";
-import { useLocationInit } from "./useLocationInit";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useLocationUpdate } from "@/hooks/useLocationUpdate";
+import { useLocationInit } from "./useLocationInit";
+import { NavigateFunction } from "react-router-dom";
 import { saveLocationDetails } from "@/utils/locationStorage";
 
-/**
- * Centralized hook for managing location data with performance optimizations
- */
-export function useLocationDataManager({ id, initialState, navigate: externalNavigate, noRedirect = false }) {
-  const navigate = externalNavigate || useNavigate();
-  const { t } = useLanguage();
-  const { toast } = useToast();
+interface UseLocationDataManagerProps {
+  id: string | undefined;
+  initialState: any;
+  navigate: NavigateFunction;
+}
+
+export const useLocationDataManager = ({ 
+  id, 
+  initialState, 
+  navigate 
+}: UseLocationDataManagerProps) => {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [messageType, setMessageType] = useState<"info" | "error" | "success" | null>(null);
-  const updatingRef = useRef(false);
-  const pendingUpdateRef = useRef<any>(null);
+  const [messageType, setMessageType] = useState<'info' | 'success' | 'error' | null>('info');
   
-  // Use the locationInit hook with optimized loading
-  const { locationData, setLocationData, isLoading } = useLocationInit(
-    id,
-    initialState,
-    navigate,
-    noRedirect
-  );
+  const { t } = useLanguage();
   
-  // Debounced update handler to prevent excessive re-renders
-  const handleUpdateLocation = useCallback(async (updatedData: any) => {
-    if (updatingRef.current) {
-      // Store the most recent update request
-      pendingUpdateRef.current = updatedData;
-      return;
-    }
+  const { 
+    locationData, 
+    setLocationData, 
+    isLoading 
+  } = useLocationInit(id, initialState, navigate);
+  
+  const { loading, handleLocationUpdate } = useLocationUpdate(locationData, setLocationData);
+
+  // Wrapped setLocationData to ensure persistence
+  const updateLocationData = useCallback((newData: any) => {
+    setLocationData(newData);
     
-    updatingRef.current = true;
-    try {
-      // Update location data
-      const newLocationData = {
-        ...locationData,
-        ...updatedData,
-        timestamp: updatedData.timestamp || new Date().toISOString()
-      };
-      
-      // Maintain any existing IDs
-      if (id && !newLocationData.id) {
-        newLocationData.id = id;
-      }
-      
-      // Only save to storage if we have an ID
-      if (newLocationData.id) {
-        await saveLocationDetails(newLocationData.id, newLocationData);
-      }
-      
-      setLocationData(newLocationData);
-      setStatusMessage(t("Location updated", "位置已更新"));
-      setMessageType("success");
-      
-      // Auto-clear success message after 2 seconds
-      setTimeout(() => {
-        if (statusMessage === t("Location updated", "位置已更新")) {
-          setStatusMessage(null);
-        }
-      }, 2000);
-      
-    } catch (error) {
-      console.error("Error updating location:", error);
-      setStatusMessage(t("Failed to update location", "更新位置失败"));
-      setMessageType("error");
-      toast({
-        title: t("Error", "错误"),
-        description: t("Failed to update location data", "更新位置数据失败"),
-        variant: "destructive",
-      });
-    } finally {
-      updatingRef.current = false;
-      
-      // Process any pending updates
-      if (pendingUpdateRef.current) {
-        const pendingUpdate = pendingUpdateRef.current;
-        pendingUpdateRef.current = null;
-        handleUpdateLocation(pendingUpdate);
-      }
+    // Also save to localStorage for persistence
+    if (id && newData) {
+      saveLocationDetails(id, newData);
     }
-  }, [locationData, setLocationData, id, t, statusMessage, toast]);
-  
+  }, [id, setLocationData]);
+
+  const handleUpdateLocation = useCallback(async (newLocation: { name: string; latitude: number; longitude: number }) => {
+    try {
+      await handleLocationUpdate(newLocation);
+      setStatusMessage(t("SIQS score has been recalculated for the new location.", 
+                   "已为新位置重新计算SIQS评分。"));
+      setMessageType('success');
+      setTimeout(() => setStatusMessage(null), 3000);
+      return Promise.resolve();
+    } catch (error) {
+      setStatusMessage(t("Failed to update location and recalculate SIQS score. Please try again.", 
+                   "无法更新位置并重新计算SIQS评分。请重试。"));
+      setMessageType('error');
+      return Promise.reject(error);                   
+    }
+  }, [handleLocationUpdate, t]);
+
   return {
     locationData,
-    setLocationData,
+    setLocationData: updateLocationData,
     statusMessage,
-    setStatusMessage,
     messageType,
-    setMessageType,
+    setStatusMessage,
     handleUpdateLocation,
     isLoading
   };
-}
+};

@@ -26,20 +26,3 @@ export const normalizeMoonPhase = (phase: string | number): string => {
   
   return phase;
 };
-
-/**
- * Extended MoonlessNightInfo type to include astronomical night information
- * This is compatible with src/services/realTimeSiqs/siqsTypes.ts MoonlessNightInfo interface
- */
-export interface ExtendedMoonlessNightInfo {
-  duration: number;
-  startTime: string;
-  endTime: string;
-  moonrise: Date | string;
-  moonset: Date | string;
-  nextNewMoon: string;
-  daysUntilNewMoon: number;
-  astronomicalNightStart: string;
-  astronomicalNightEnd: string;
-  astronomicalNightDuration: number;
-}

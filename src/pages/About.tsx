@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ArrowLeft, Star } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import NavBar from "@/components/NavBar";
 
 // Import all the necessary components
 import AboutHeader from "@/components/about/AboutHeader";
@@ -29,7 +28,6 @@ const About = () => {
   
   return (
     <div className="min-h-screen bg-cosmic-950 text-cosmic-50 pb-16 relative overflow-hidden">
-      <NavBar />
       {/* Background elements with reduced quantity for cleaner look */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Subtle stars - reduced quantity */}
@@ -79,7 +77,7 @@ const About = () => {
         />
       </div>
 
-      <div className="container max-w-4xl mx-auto px-5 py-8 md:py-10 relative z-10 pt-20">
+      <div className="container max-w-4xl mx-auto px-5 py-8 md:py-10 relative z-10">
         {/* Header with back button */}
         <div className="flex items-center mb-6">
           <Link to="/">

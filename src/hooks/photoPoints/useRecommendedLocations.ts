@@ -1,11 +1,12 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLocationFind } from './useLocationFind';
 import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
-import { isWaterLocation } from '@/utils/validation';
-import { toast } from '@/components/ui/use-toast';
+import { isWaterLocation } from '@/utils/locationValidator';
+import { toast } from '@/components/ui/use-toast'; // Fix import path
 
 interface Location {
   latitude: number;

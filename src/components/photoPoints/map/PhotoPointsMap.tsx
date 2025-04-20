@@ -1,166 +1,175 @@
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
-import MapContainer from './MapContainer';
-import { LocationListFilter } from '../ViewToggle';
-import { getAllCertifiedLocations } from '@/services/certifiedLocationsService';
+import useMapMarkers from '@/hooks/photoPoints/useMapMarkers';
+import { useIsMobile } from '@/hooks/use-mobile';
+import LazyMapContainer from './LazyMapContainer';
+import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
+import PageLoader from '@/components/loaders/PageLoader';
+import MapLegend from './MapLegend';
+import PinpointButton from './PinpointButton';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
+  certifiedLocations: SharedAstroSpot[];
+  calculatedLocations: SharedAstroSpot[];
+  activeView: 'certified' | 'calculated';
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
-  activeFilter: LocationListFilter;
 }
 
 const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => { 
   const { 
     userLocation,
     locations,
+    certifiedLocations,
+    calculatedLocations,
+    activeView,
     searchRadius,
     onLocationClick,
-    onLocationUpdate,
-    activeFilter
+    onLocationUpdate
   } = props;
   
-  // Get all available certified locations from the service
-  const allCertifiedLocations = useMemo(() => getAllCertifiedLocations(), []);
+  const { t } = useLanguage();
+  const isMobile = useIsMobile();
+  const [mapContainerHeight, setMapContainerHeight] = useState('500px');
+  const [legendOpen, setLegendOpen] = useState(false);
   
-  // Combine passed locations with all certified locations when needed
-  const combinedLocations = useMemo(() => {
-    // For certified or all filters, ensure we include all certified locations
-    if (activeFilter === 'certified' || activeFilter === 'all') {
-      // Create a map to avoid duplicates
-      const locationMap = new Map<string, SharedAstroSpot>();
-      
-      // Add passed locations first
-      locations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          locationMap.set(key, loc);
-        }
-      });
-      
-      // Then add all certified locations
-      allCertifiedLocations.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          locationMap.set(key, loc);
-        }
-      });
-      
-      console.log(`PhotoPointsMap: Combined ${locations.length} passed locations with ${allCertifiedLocations.length} certified locations for a total of ${locationMap.size} unique locations`);
-      return Array.from(locationMap.values());
-    } 
-    
-    // For calculated filter, just use the passed locations
-    return locations;
-  }, [locations, allCertifiedLocations, activeFilter]);
-  
-  // Split locations into certified and calculated for the hook
-  const certifiedLocations = useMemo(() => 
-    combinedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification),
-    [combinedLocations]
-  );
-  
-  const calculatedLocations = useMemo(() => 
-    combinedLocations.filter(loc => !loc.isDarkSkyReserve && !loc.certification),
-    [combinedLocations]
-  );
-  
-  // Log the counts for debugging
-  useEffect(() => {
-    console.log(`PhotoPointsMap: Using ${combinedLocations.length} total locations (${certifiedLocations.length} certified, ${calculatedLocations.length} calculated)`);
-  }, [combinedLocations.length, certifiedLocations.length, calculatedLocations.length]);
-  
-  const {
-    mapContainerHeight,
-    mapReady,
-    handleMapReady,
-    optimizedLocations,
-    mapCenter,
-    initialZoom,
-    hoveredLocationId,
+  // Use marker hook for tracking hover states
+  const { 
+    hoveredLocationId, 
     handleHover,
     handleTouchStart,
     handleTouchEnd,
-    handleTouchMove,
-    handleMapClick,
-    handleLocationClicked,
-    handleGetLocation,
-    handleLegendToggle,
-    isMobile
-  } = usePhotoPointsMapContainer({
+    handleTouchMove
+  } = useMapMarkers();
+  
+  // Use map hook for core functionality
+  const { 
+    mapReady,
+    handleMapReady,
+    handleLocationClick,
+    validLocations,
+    mapCenter,
+    initialZoom,
+    certifiedLocationsLoaded,
+    certifiedLocationsLoading
+  } = usePhotoPointsMap({
     userLocation,
-    locations: combinedLocations,
-    certifiedLocations,
-    calculatedLocations,
-    activeFilter,
+    locations,
     searchRadius,
-    onLocationClick,
-    onLocationUpdate,
-    activeView: activeFilter === 'calculated' ? 'calculated' : 'certified'
+    activeView
   });
   
-  // Store locations in session storage for persistence
+  // Adjust height based on device
   useEffect(() => {
-    if (combinedLocations && combinedLocations.length > 0) {
-      try {
-        const simplifiedLocations = combinedLocations.map(loc => ({
-          id: loc.id || `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`,
-          name: loc.name || 'Unknown Location',
-          latitude: loc.latitude,
-          longitude: loc.longitude,
-          siqs: loc.siqs,
-          isDarkSkyReserve: loc.isDarkSkyReserve,
-          certification: loc.certification,
-          distance: loc.distance,
-          type: loc.type
-        }));
-        
-        sessionStorage.setItem('persistent_locations', JSON.stringify(simplifiedLocations));
-        console.log(`Stored ${simplifiedLocations.length} locations to session storage`);
-        
-        // Store certified locations separately for better access
-        const certifiedOnly = simplifiedLocations.filter(loc => 
-          loc.isDarkSkyReserve || loc.certification
-        );
-        
-        if (certifiedOnly.length > 0) {
-          sessionStorage.setItem('persistent_certified_locations', JSON.stringify(certifiedOnly));
-          console.log(`Stored ${certifiedOnly.length} certified locations to session storage`);
-        }
-      } catch (err) {
-        console.error('Error storing locations in session storage:', err);
+    const adjustHeight = () => {
+      if (isMobile) {
+        setMapContainerHeight(window.innerHeight >= 700 
+          ? 'calc(70vh - 180px)'
+          : 'calc(80vh - 160px)');
+      } else {
+        setMapContainerHeight('500px');
       }
-    }
-  }, [combinedLocations]);
+    };
+    
+    adjustHeight();
+    window.addEventListener('resize', adjustHeight);
+    return () => window.removeEventListener('resize', adjustHeight);
+  }, [isMobile]);
   
+  // Handler functions
+  const handleMapClick = useCallback((lat: number, lng: number) => {
+    if (onLocationUpdate) {
+      onLocationUpdate(lat, lng);
+      console.log("Setting new location from map click:", lat, lng);
+    }
+  }, [onLocationUpdate]);
+  
+  const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
+    if (onLocationClick) {
+      onLocationClick(location);
+    } else {
+      handleLocationClick(location);
+    }
+  }, [onLocationClick, handleLocationClick]);
+  
+  const handleGetLocation = useCallback(() => {
+    if (onLocationUpdate && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          onLocationUpdate(latitude, longitude);
+          console.log("Got user position:", latitude, longitude);
+        },
+        (error) => {
+          console.error("Error getting location:", error.message);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
+  }, [onLocationUpdate]);
+  
+  const handleLegendToggle = useCallback((isOpen: boolean) => {
+    setLegendOpen(isOpen);
+  }, []);
+  
+  // Render map container
   return (
-    <MapContainer
-      userLocation={userLocation}
-      locations={optimizedLocations}
-      searchRadius={searchRadius}
-      mapReady={mapReady}
-      handleMapReady={handleMapReady}
-      handleLocationClicked={handleLocationClicked}
-      handleMapClick={handleMapClick}
-      mapCenter={mapCenter}
-      initialZoom={initialZoom}
-      mapContainerHeight={mapContainerHeight}
-      isMobile={isMobile}
-      hoveredLocationId={hoveredLocationId}
-      handleHover={handleHover}
-      handleTouchStart={handleTouchStart}
-      handleTouchEnd={handleTouchEnd}
-      handleTouchMove={handleTouchMove}
-      handleGetLocation={handleGetLocation}
-      onLegendToggle={handleLegendToggle}
-      activeView={activeFilter === 'calculated' ? 'calculated' : 'certified'}
-      activeFilter={activeFilter}
-    />
+    <div 
+      style={{ height: mapContainerHeight }} 
+      className="w-full relative rounded-md overflow-hidden transition-all duration-300 mb-4 mt-2"
+    >
+      {!mapReady && (
+        <div className="absolute inset-0 z-20">
+          <PageLoader />
+        </div>
+      )}
+      
+      {certifiedLocationsLoading && !certifiedLocationsLoaded && (
+        <div className="absolute top-4 left-0 right-0 mx-auto w-auto max-w-xs z-30 bg-background/80 backdrop-blur-sm px-4 py-2 rounded-md text-center text-sm text-muted-foreground">
+          {t("Loading certified locations...", "正在加载认证地点...")}
+        </div>
+      )}
+      
+      <LazyMapContainer
+        center={mapCenter}
+        userLocation={userLocation}
+        locations={validLocations}
+        searchRadius={searchRadius}
+        activeView={activeView}
+        onMapReady={handleMapReady}
+        onLocationClick={handleLocationClicked}
+        onMapClick={handleMapClick}
+        zoom={initialZoom}
+        hoveredLocationId={hoveredLocationId}
+        onMarkerHover={handleHover}
+        handleTouchStart={handleTouchStart}
+        handleTouchEnd={handleTouchEnd}
+        handleTouchMove={handleTouchMove}
+        isMobile={isMobile}
+        useMobileMapFixer={true}
+        showRadiusCircles={activeView === 'calculated'}
+      />
+      
+      <MapLegend 
+        activeView={activeView} 
+        showStarLegend={activeView === 'certified'}
+        showCircleLegend={activeView === 'calculated'}
+        onToggle={handleLegendToggle}
+        className="absolute bottom-4 right-4"
+      />
+      
+      {!legendOpen && (
+        <PinpointButton 
+          onGetLocation={handleGetLocation} 
+          className="absolute top-4 right-4"
+        />
+      )}
+    </div>
   );
 };
 

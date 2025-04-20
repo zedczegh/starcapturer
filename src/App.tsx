@@ -1,57 +1,124 @@
 
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { HelmetProvider } from 'react-helmet-async';
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
-import { LanguageProvider } from './contexts/LanguageContext';
-import { ThemeProvider } from './contexts/ThemeContext';
-import IndexPage from './pages/Index';
-import PhotoPointsNearby from './pages/PhotoPointsNearby';
-import NotFound from './pages/NotFound';
-import AboutSIQS from './pages/AboutSIQS';
-import About from './pages/About';
-import LocationDetails from './pages/LocationDetails';
-import UsefulLinks from './pages/UsefulLinks';
-import ShareLocation from './pages/ShareLocation';
-import './App.css';
+import { AnimatePresence, motion } from "framer-motion";
+import { lazy, Suspense, useMemo } from "react";
 
-// Create React Query client
+// Improve performance by prefetching popular locations
+import { prefetchPopularLocations } from "./lib/queryPrefetcher";
+// Improved loading component
+import PageLoader from "./components/loaders/PageLoader";
+
+// Lazily load pages with improved chunking for faster initial load
+const Index = lazy(() => import(/* webpackChunkName: "index-page" */ "./pages/Index"));
+const LocationDetails = lazy(() => import(/* webpackChunkName: "location-details" */ "./pages/LocationDetails"));
+const NotFound = lazy(() => import(/* webpackChunkName: "not-found" */ "./pages/NotFound"));
+const ShareLocation = lazy(() => import(/* webpackChunkName: "share-location" */ "./pages/ShareLocation"));
+const PhotoPointsNearby = lazy(() => import(/* webpackChunkName: "photo-points" */ "./pages/PhotoPointsNearby"));
+const AboutSIQS = lazy(() => import(/* webpackChunkName: "about-siqs" */ "./pages/AboutSIQS"));
+const About = lazy(() => import(/* webpackChunkName: "about" */ "./pages/About"));
+const UsefulLinks = lazy(() => import(/* webpackChunkName: "useful-links" */ "./pages/UsefulLinks"));
+
+// Create a new QueryClient instance with optimized settings
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      retry: 1,
       refetchOnWindowFocus: false,
-      retry: false
+      staleTime: 15 * 60 * 1000, // Increased to 15 minutes for better caching
+      gcTime: 30 * 60 * 1000,    // Increased to 30 minutes
     },
   },
 });
 
-function App() {
+// Prefetch data for popular locations
+prefetchPopularLocations(queryClient);
+
+// Optimized animated page transitions with shorter durations
+const PageTransition = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  
+  // Use key based on pathname without query parameters for smoother transitions
+  const pathnameBase = location.pathname.split('?')[0];
+  
   return (
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <LanguageProvider>
-            <Router>
-              <Routes>
-                {/* Redirect root to photo-points */}
-                <Route path="/" element={<Navigate to="/photo-points" replace />} />
-                <Route path="/photo-points" element={<PhotoPointsNearby />} />
-                <Route path="/about-siqs" element={<AboutSIQS />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/location/:id" element={<LocationDetails />} />
-                <Route path="/links" element={<UsefulLinks />} />
-                <Route path="/useful-links" element={<UsefulLinks />} />
-                <Route path="/share" element={<ShareLocation />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <Toaster />
-            </Router>
-          </LanguageProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </HelmetProvider>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={pathnameBase}
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.1 }} // Faster transitions
+        className="min-h-screen"
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
   );
-}
+};
+
+// Create helmet context once to prevent re-creation
+const helmetContext = {};
+
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <BrowserRouter>
+          <div className="sci-fi-scrollbar">
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={
+                  <PageTransition>
+                    <Index />
+                  </PageTransition>
+                } />
+                <Route path="/location/:id" element={
+                  <PageTransition>
+                    <LocationDetails />
+                  </PageTransition>
+                } />
+                <Route path="/share" element={
+                  <PageTransition>
+                    <ShareLocation />
+                  </PageTransition>
+                } />
+                <Route path="/photo-points" element={
+                  <PageTransition>
+                    <PhotoPointsNearby />
+                  </PageTransition>
+                } />
+                <Route path="/siqs" element={
+                  <PageTransition>
+                    <AboutSIQS />
+                  </PageTransition>
+                } />
+                <Route path="/about" element={
+                  <PageTransition>
+                    <About />
+                  </PageTransition>
+                } />
+                <Route path="/useful-links" element={
+                  <PageTransition>
+                    <UsefulLinks />
+                  </PageTransition>
+                } />
+                {/* Catch-all route */}
+                <Route path="*" element={
+                  <PageTransition>
+                    <NotFound />
+                  </PageTransition>
+                } />
+              </Routes>
+            </Suspense>
+          </div>
+          <Toaster />
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

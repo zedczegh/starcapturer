@@ -10,7 +10,6 @@ import { useExpandSearchRadius } from '@/hooks/photoPoints/useExpandSearchRadius
 import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -24,7 +23,6 @@ interface CalculatedLocationsProps {
   canLoadMoreCalculated?: boolean;
   loadMoreClickCount?: number;
   maxLoadMoreClicks?: number;
-  onViewDetails?: (location: SharedAstroSpot) => void;
 }
 
 const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
@@ -38,8 +36,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   onLoadMoreCalculated,
   canLoadMoreCalculated = false,
   loadMoreClickCount = 0,
-  maxLoadMoreClicks = 2,
-  onViewDetails
+  maxLoadMoreClicks = 2
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
@@ -49,7 +46,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   useExpandSearchRadius({ onRefresh });
   
   // Filter out locations with SIQS score of 0
-  const validLocations = locations.filter(loc => loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0));
+  const validLocations = locations.filter(loc => loc.siqs !== undefined && loc.siqs > 0);
   
   // Sort locations by distance (closest first)
   const sortedLocations = [...validLocations].sort((a, b) => 
@@ -76,11 +73,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   }
   
   const handleViewLocation = (point: SharedAstroSpot) => {
-    if (onViewDetails) {
-      onViewDetails(point);
-      return;
-    }
-    
     const locationId = `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
     
     // Navigate to location details page

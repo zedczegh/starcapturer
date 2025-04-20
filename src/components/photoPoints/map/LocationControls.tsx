@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { MapPin, Loader2, Check } from 'lucide-react';
+import { MapPin, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface LocationControlsProps {
@@ -9,7 +9,6 @@ interface LocationControlsProps {
   onClearCache: () => void;
   loading: boolean;
   cacheCleared: boolean;
-  userLocation?: { latitude: number; longitude: number } | null;
 }
 
 /**
@@ -19,8 +18,7 @@ const LocationControls: React.FC<LocationControlsProps> = ({
   onGetLocation, 
   onClearCache, 
   loading, 
-  cacheCleared,
-  userLocation
+  cacheCleared 
 }) => {
   const { t } = useLanguage();
   
@@ -29,7 +27,7 @@ const LocationControls: React.FC<LocationControlsProps> = ({
       <Button 
         size="sm" 
         variant="secondary"
-        className="bg-cosmic-800/90 hover:bg-cosmic-700/90 shadow-md border border-cosmic-700/30 font-medium relative"
+        className="bg-cosmic-800/90 hover:bg-cosmic-700/90 shadow-md border border-cosmic-700/30 font-medium"
         onClick={onGetLocation}
         disabled={loading}
       >
@@ -39,13 +37,6 @@ const LocationControls: React.FC<LocationControlsProps> = ({
           <MapPin className="h-4 w-4 mr-1" />
         )}
         {t("My Location", "我的位置")}
-        
-        {/* Show checkmark if location found */}
-        {userLocation && (
-          <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5 border border-background shadow-sm">
-            <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
-          </div>
-        )}
       </Button>
       
       <Button

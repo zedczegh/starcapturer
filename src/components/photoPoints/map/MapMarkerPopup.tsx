@@ -1,15 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Star, MapPin, Navigation, RefreshCw } from 'lucide-react';
-import { formatDistance } from '@/utils/geoUtils';
+import { Star, Award, Shield, MapPin, Navigation } from 'lucide-react';
+import { formatSIQSScore } from '@/utils/geoUtils';
 import { useDisplayName } from '../cards/DisplayNameResolver';
-import SiqsScoreBadge from '../cards/SiqsScoreBadge';
-import { getSiqsScore } from '@/utils/siqsHelpers';
-import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
-import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
+import { findNearestTown } from '@/utils/nearestTownCalculator';
+import { formatDistance } from '@/utils/location/formatDistance';
 
 interface MapMarkerPopupProps {
   location: SharedAstroSpot;
@@ -17,104 +15,66 @@ interface MapMarkerPopupProps {
   onViewDetails: (location: SharedAstroSpot) => void;
 }
 
-const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ 
-  location, 
-  onClose, 
-  onViewDetails 
-}) => {
+const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ location, onClose, onViewDetails }) => {
   const { language, t } = useLanguage();
-  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
-  const [siqsLoading, setSiqsLoading] = useState(false);
-  const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
-  const [forceUpdate, setForceUpdate] = useState(false);
   
+  // Use the shared display name resolver
   const { displayName, showOriginalName, nearestTownInfo } = useDisplayName({
     location,
     language,
     locationCounter: null
   });
   
-  // Determine if this is a certified location of any type
-  const isCertified = Boolean(
-    location.isDarkSkyReserve || 
-    (location.certification && location.certification !== '') || 
-    (location.type === 'lodging') || 
-    (location.type === 'dark-site')
-  );
+  // Get certification info if available
+  const hasCertification = location.certification || location.isDarkSkyReserve;
   
-  // Get certification text safely
-  const certificationText = location.certification || 
-    (location.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜天空保护区") : 
-      (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
-  
-  // Use our unified display SIQS function - no default scores for certified locations
-  const staticSiqs = getSiqsScore(location);
-  const displaySiqs = getDisplaySiqs({
-    realTimeSiqs,
-    staticSiqs,
-    isCertified,
-    isDarkSkyReserve: Boolean(location.isDarkSkyReserve)
-  });
-  
-  const handleSiqsCalculated = (siqs: number | null, loading: boolean, confidence?: number) => {
-    setRealTimeSiqs(siqs);
-    setSiqsLoading(loading);
-    if (confidence) setSiqsConfidence(confidence);
-  };
-  
-  const handleRefreshSiqs = () => {
-    setForceUpdate(true);
-    setTimeout(() => setForceUpdate(false), 100);
+  // Get certification type display text
+  const getCertificationText = () => {
+    if (location.isDarkSkyReserve) {
+      return language === 'en' ? 'Dark Sky Reserve' : '暗夜保护区';
+    }
+    if (location.certification) {
+      return location.certification;
+    }
+    return '';
   };
   
   return (
-    <div className="p-3 min-w-[220px] max-w-[280px]">
+    <div className="p-3 min-w-[200px] max-w-[280px]">
       <div className="flex justify-between items-center mb-2">
         <h4 className="font-semibold text-sm line-clamp-1">{displayName}</h4>
+        
+        {location.siqs > 0 && (
+          <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full border border-yellow-500/40">
+            <Star className="h-3 w-3 text-yellow-400 mr-1" fill="#facc15" />
+            <span className="text-xs font-medium">{formatSIQSScore(location.siqs)}</span>
+          </div>
+        )}
       </div>
       
-      {/* Show SIQS with more detailed info - no default scores for certified locations */}
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center">
-          <SiqsScoreBadge 
-            score={displaySiqs} 
-            compact={false} 
-            loading={siqsLoading}
-            isCertified={isCertified}
-            forceCertified={false} // Don't force certified default scores
-          />
-        </div>
-        <button 
-          onClick={handleRefreshSiqs} 
-          className="text-muted-foreground hover:text-primary p-1 rounded-full"
-          disabled={siqsLoading}
-          title={t("Refresh SIQS", "刷新SIQS")}
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${siqsLoading ? "animate-spin" : ""}`} />
-        </button>
-      </div>
-      
-      {/* Show certification for all certified location types */}
-      {isCertified && certificationText && (
+      {hasCertification && (
         <div className="flex items-center mb-2 mt-1">
-          <div className="flex items-center text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-            <Star className="h-3.5 w-3.5 mr-1" />
-            <span>{certificationText}</span>
+          <div className="flex items-center text-xs">
+            {location.isDarkSkyReserve ? 
+              <Award className="h-3.5 w-3.5 mr-1 text-blue-400" /> : 
+              <Shield className="h-3.5 w-3.5 mr-1 text-green-400" />
+            }
+            <span>{getCertificationText()}</span>
           </div>
         </div>
       )}
-
-      {/* Show original name if different */}
+      
+      {/* Show original location name if different from nearest town name */}
       {showOriginalName && (
         <div className="flex items-center mb-2">
           <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
           <span className="text-xs text-muted-foreground line-clamp-1">
-            {language === 'zh' ? location.name : location.chineseName}
+            {language === 'en' ? location.name : (location.chineseName || location.name)}
           </span>
         </div>
       )}
       
-      {/* Show nearest town info */}
+      {/* Display detailed location information from nearestTownInfo */}
       {nearestTownInfo && nearestTownInfo.detailedName && (
         <div className="flex items-center mb-2">
           <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
@@ -129,7 +89,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
         <div className="flex items-center mb-2">
           <Navigation className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">
-            {formatDistance(location.distance)}
+            {formatDistance(location.distance, language)}
           </span>
         </div>
       )}
@@ -154,19 +114,6 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
           {t("Details", "详情")}
         </Button>
       </div>
-      
-      {/* Real-time SIQS provider - hidden component */}
-      <RealTimeSiqsProvider
-        isVisible={true}
-        latitude={location.latitude}
-        longitude={location.longitude}
-        bortleScale={location.bortleScale}
-        isCertified={isCertified}
-        isDarkSkyReserve={location.isDarkSkyReserve}
-        existingSiqs={location.siqs}
-        onSiqsCalculated={handleSiqsCalculated}
-        forceUpdate={forceUpdate}
-      />
     </div>
   );
 };

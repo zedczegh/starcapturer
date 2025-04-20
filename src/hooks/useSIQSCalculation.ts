@@ -11,8 +11,11 @@ import { fetchForecastData } from "@/lib/api";
 // Extract forecast fetching logic
 import { fetchForecastForLocation } from "./siqs/forecastFetcher";
 
-// Extract scoring and calculation logic
-import { calculateSIQSWithWeatherData, normalizeScore } from "./siqs/siqsCalculationUtils";
+// Extract scoring and normalization logic
+import { 
+  normalizeScore, 
+  calculateSIQSWithWeatherData 
+} from "./siqs/siqsCalculationUtils";
 
 export const useSIQSCalculation = (
   setCachedData: (key: string, data: any) => void,
@@ -95,7 +98,7 @@ export const useSIQSCalculation = (
       // We need to recalculate moon phase to ensure it's fresh
       const freshMoonPhase = calculateMoonPhase();
       
-      // Calculate SIQS score using utility function with optional forecast data
+      // Calculate SIQS score using utility function
       const siqsResult = await calculateSIQSWithWeatherData(
         data,
         validBortleScale,

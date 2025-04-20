@@ -42,7 +42,7 @@ const LightPollutionIndicator: React.FC<LightPollutionIndicatorProps> = ({
   
   // Format Bortle scale for display (keep one decimal place if needed)
   const formatBortleScale = (value: number) => {
-    return Number(value.toFixed(1));
+    return Number.isInteger(value) ? value.toString() : value.toFixed(1);
   };
 
   // Compact mode for sidebar widgets - with larger font

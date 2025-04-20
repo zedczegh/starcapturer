@@ -1,45 +1,56 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
-
-interface EventMap {
-  mouseover?: () => void;
-  mouseout?: () => void;
-  touchstart?: (e: any) => void;
-  touchend?: (e: any) => void;
-  touchmove?: (e: any) => void;
-}
 
 interface MarkerEventHandlerProps {
   marker: L.Marker | null;
-  eventMap: EventMap;
+  eventMap: {
+    click?: () => void;
+    mouseover?: () => void;
+    mouseout?: () => void;
+    touchstart?: (e: TouchEvent) => void;
+    touchend?: (e: TouchEvent) => void;
+    touchmove?: (e: TouchEvent) => void;
+  };
 }
 
+/**
+ * Helper component to attach event handlers to Leaflet markers
+ * Works around TypeScript limitations with react-leaflet
+ */
 const MarkerEventHandler: React.FC<MarkerEventHandlerProps> = ({ marker, eventMap }) => {
+  const handlers = useRef<any[]>([]);
+  
   useEffect(() => {
     if (!marker) return;
-
-    // Get the element from the marker
-    const el = marker.getElement();
-    if (!el) return;
-
-    // Add all event listeners
-    Object.entries(eventMap).forEach(([event, handler]) => {
-      if (handler) {
-        el.addEventListener(event, handler);
+    
+    // Clean up any existing handlers
+    handlers.current.forEach(h => {
+      if (h.event && h.handler) {
+        marker.off(h.event, h.handler);
       }
     });
-
-    // Clean up event listeners
+    
+    handlers.current = [];
+    
+    // Attach new handlers
+    Object.entries(eventMap).forEach(([event, handler]) => {
+      if (handler) {
+        marker.on(event, handler);
+        handlers.current.push({ event, handler });
+      }
+    });
+    
+    // Cleanup on unmount
     return () => {
-      Object.entries(eventMap).forEach(([event, handler]) => {
-        if (handler) {
-          el.removeEventListener(event, handler);
+      handlers.current.forEach(h => {
+        if (h.event && h.handler && marker) {
+          marker.off(h.event, h.handler);
         }
       });
     };
   }, [marker, eventMap]);
-
+  
   return null;
 };
 

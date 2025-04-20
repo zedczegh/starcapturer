@@ -1,71 +1,95 @@
 
-import React, { useEffect } from "react";
-import { useMap } from "react-leaflet";
-import L from "leaflet";
+import React, { useEffect, useRef } from 'react';
+import { useMap } from 'react-leaflet';
+import L from 'leaflet';
 
-/**
- * Component to manage map bounds - simplified for better mobile performance
- */
-export function WorldBoundsController() {
+interface MapEffectsControllerProps {
+  onMapClick: (lat: number, lng: number) => void;
+}
+
+// Prevent infinite scrolling beyond world bounds
+export const WorldBoundsController: React.FC = () => {
   const map = useMap();
+  const initialized = useRef(false);
   
   useEffect(() => {
-    if (!map) return;
+    if (!map || initialized.current) return;
+    initialized.current = true;
     
-    // Set max bounds with padding to prevent users from panning too far
-    const southWest = L.latLng(-85, -180);
-    const northEast = L.latLng(85, 180);
-    const bounds = L.latLngBounds(southWest, northEast);
+    // Set max bounds to prevent scrolling beyond the world
+    const worldBounds = new L.LatLngBounds(
+      new L.LatLng(-85.06, -180), // Southwest corner
+      new L.LatLng(85.06, 180)    // Northeast corner
+    );
     
-    // Set bounds with some padding
-    map.setMaxBounds(bounds);
+    map.setMaxBounds(worldBounds);
     
-    // Set minimum zoom level to prevent zooming out too far
-    map.setMinZoom(2);
+    const handleDrag = () => {
+      map.panInsideBounds(worldBounds, { animate: false });
+    };
     
-    // Disable animations for better mobile performance
-    map.options.zoomAnimation = false;
+    map.on('drag', handleDrag);
     
-    // Improve scroll sensitivity
-    if (map.scrollWheelZoom) {
-      // @ts-ignore - Internal Leaflet property
-      map.scrollWheelZoom.options.wheelDebounceTime = 100;
+    // Ensure better touch handling for mobile Safari
+    if (map.dragging && map.dragging.enable) {
+      map.dragging.enable();
+    }
+    
+    if (map.touchZoom && map.touchZoom.enable) {
+      map.touchZoom.enable();
+    }
+    
+    // Set lower inertia for smoother mobile dragging
+    if (map.dragging && map.dragging._draggable) {
+      try {
+        // Safely set inertia properties
+        const draggable = map.dragging._draggable;
+        if (draggable._inertia) {
+          draggable._inertia.threshold = 20; // Lower value helps with Safari
+          draggable._inertia.deceleration = 3000; // Higher value reduces drift
+        }
+      } catch (error) {
+        console.error("Error optimizing map dragging:", error);
+      }
     }
     
     return () => {
-      try {
-        map.setMaxBounds(undefined);
-      } catch (e) {
-        // Ignore errors when cleaning up
-      }
+      map.off('drag', handleDrag);
     };
   }, [map]);
   
   return null;
-}
+};
 
-/**
- * Component to handle map click events - simplified for better performance
- */
-export function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+export const MapEvents: React.FC<MapEffectsControllerProps> = ({ onMapClick }) => {
   const map = useMap();
-  
+  const clickHandlerRef = useRef<((e: L.LeafletMouseEvent) => void) | null>(null);
+
+  // Set up map click event handler with proper cleanup
   useEffect(() => {
     if (!map) return;
     
-    const handleMapClick = (e: any) => {
+    // Remove any existing handler to prevent duplicates
+    if (clickHandlerRef.current) {
+      map.off('click', clickHandlerRef.current);
+    }
+
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
       onMapClick(e.latlng.lat, e.latlng.lng);
     };
     
+    // Store reference to handler for cleanup
+    clickHandlerRef.current = handleMapClick;
     map.on('click', handleMapClick);
-    
+
     return () => {
-      map.off('click', handleMapClick);
+      if (clickHandlerRef.current) {
+        map.off('click', clickHandlerRef.current);
+      }
     };
   }, [map, onMapClick]);
-  
-  return null;
-}
 
-// Export L for TypeScript
-export { L };
+  return null;
+};
+
+export default MapEvents;

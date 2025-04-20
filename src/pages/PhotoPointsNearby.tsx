@@ -1,30 +1,28 @@
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
 import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
-import ViewToggle, { LocationListFilter } from '@/components/photoPoints/ViewToggle';
+import ViewToggle from '@/components/photoPoints/ViewToggle';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
 import PhotoPointsView from '@/components/photoPoints/PhotoPointsView';
 import { usePhotoPointsState } from '@/hooks/photoPoints/usePhotoPointsState';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
-import { prepareLocationForNavigation } from '@/utils/locationNavigation';
-import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
 
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
   
+  // Get state from custom hook
   const {
     activeView,
     showMap,
     initialLoad,
     locationLoading,
     effectiveLocation,
-    locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
     handleRadiusChange,
@@ -34,6 +32,7 @@ const PhotoPointsNearby: React.FC = () => {
     toggleMapView
   } = usePhotoPointsState();
 
+  // Fetch locations data
   const {
     searchRadius,
     setSearchRadius,
@@ -51,41 +50,50 @@ const PhotoPointsNearby: React.FC = () => {
     effectiveLocation, 
     currentSearchRadius
   );
-  
-  const { 
-    certifiedLocations, 
-    calculatedLocations 
+
+  // Process locations
+  const {
+    certifiedLocations,
+    calculatedLocations,
+    certifiedCount,
+    calculatedCount
   } = useCertifiedLocations(locations);
 
-  const [activeFilter, setActiveFilter] = useState<LocationListFilter>('all');
-
-  useEffect(() => {
-    if (locationInitialized && effectiveLocation) {
-      setSearchRadius(currentSearchRadius);
-      refreshSiqsData();
-    }
-  }, [locationInitialized, effectiveLocation, currentSearchRadius, setSearchRadius, refreshSiqsData]);
-  
+  // Update search radius when view changes
   React.useEffect(() => {
-    if (locations.length > 0) {
-      console.log(`Total locations before filtering: ${locations.length}`);
-      const validLocations = locations.filter(loc => isSiqsGreaterThan(loc.siqs, 0) || loc.isDarkSkyReserve || loc.certification);
-      console.log(`Valid locations after SIQS filtering: ${validLocations.length}`);
-    }
-  }, [locations]);
+    setSearchRadius(currentSearchRadius);
+  }, [currentSearchRadius, setSearchRadius]);
   
+  // Handle location click to navigate to details with improved error handling
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (!location) return;
     
     try {
-      const navigationData = prepareLocationForNavigation(location);
+      // Create a robust location ID that won't cause navigation issues
+      const locationId = location.id || 
+        (location.latitude && location.longitude 
+          ? `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`
+          : `unnamed-location-${Date.now()}`);
       
-      if (navigationData) {
-        navigate(`/location/${navigationData.locationId}`, { 
-          state: navigationData.locationState 
-        });
-        console.log("Opening location details", navigationData.locationId);
-      }
+      // Create a safe state object with all required properties
+      const safeLocationState = {
+        id: locationId,
+        name: location.name || 'Unnamed Location',
+        chineseName: location.chineseName || '',
+        latitude: location.latitude,
+        longitude: location.longitude,
+        bortleScale: location.bortleScale || 4,
+        siqs: location.siqs || null,
+        siqsResult: location.siqs ? { score: location.siqs } : undefined,
+        certification: location.certification || '',
+        isDarkSkyReserve: !!location.isDarkSkyReserve,
+        timestamp: new Date().toISOString(),
+        fromPhotoPoints: true
+      };
+      
+      // Navigate with the safe state object
+      navigate(`/location/${locationId}`, { state: safeLocationState });
+      console.log("Opening location details", locationId);
     } catch (error) {
       console.error("Error navigating to location details:", error, location);
     }
@@ -103,12 +111,12 @@ const PhotoPointsNearby: React.FC = () => {
       />
       
       <ViewToggle
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
+        activeView={activeView}
+        onViewChange={handleViewChange}
         loading={loading && !locationLoading}
       />
       
-      {activeFilter === 'calculated' && (
+      {activeView === 'calculated' && (
         <div className="max-w-xl mx-auto mb-6">
           <DistanceRangeSlider
             currentValue={calculatedSearchRadius}
@@ -116,8 +124,6 @@ const PhotoPointsNearby: React.FC = () => {
             minValue={100}
             maxValue={1000}
             stepValue={100}
-            loading={loading && !locationLoading}
-            loadingComplete={!loading && !locationLoading}
           />
         </div>
       )}
@@ -125,26 +131,29 @@ const PhotoPointsNearby: React.FC = () => {
       {showMap && (
         <div className="mb-4 text-center text-sm text-muted-foreground">
           {t(
-            "Click anywhere on the map to update your search location!",
-            "点击地图上的任意位置以更新搜索位置！"
+            "Click anywhere on the map to select that location. The map will center on your current location if available.",
+            "点击地图上的任意位置以选择该位置。如果可用，地图将以您当前位置为中心。"
           )}
         </div>
       )}
       
       <PhotoPointsView
         showMap={showMap}
-        activeFilter={activeFilter}
+        activeView={activeView}
         initialLoad={initialLoad}
         effectiveLocation={effectiveLocation}
-        locations={locations}
+        certifiedLocations={certifiedLocations}
+        calculatedLocations={calculatedLocations}
         searchRadius={currentSearchRadius}
+        calculatedSearchRadius={calculatedSearchRadius}
         loading={loading && !locationLoading}
         hasMore={hasMore}
         loadMore={loadMore}
         refreshSiqs={refreshSiqsData}
         onLocationClick={handleLocationClick}
         onLocationUpdate={handleLocationUpdate}
-        canLoadMore={canLoadMoreCalculated}
+        canLoadMoreCalculated={canLoadMoreCalculated}
+        loadMoreCalculated={loadMoreCalculatedLocations}
         loadMoreClickCount={loadMoreClickCount}
         maxLoadMoreClicks={maxLoadMoreClicks}
       />

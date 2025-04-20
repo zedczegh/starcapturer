@@ -1,9 +1,7 @@
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { findLocationsWithinRadius } from "./locationSearchService";
-import { batchCalculateSiqs } from "./realTimeSiqs/batchProcessor";
-import { clearSiqsCache } from "./realTimeSiqs/siqsCache";
-import { isSiqsGreaterThan, getSiqsScore } from "@/utils/siqsHelpers";
+import { batchCalculateSiqs, clearSiqsCache } from "./realTimeSiqsService";
 
 const locationCache = new Map<string, {
   locations: SharedAstroSpot[];
@@ -107,8 +105,8 @@ export async function findBestViewingLocations(
     
     // Sort by SIQS (highest first) and limit to requested number
     const sortedLocations = locationsWithSiqs
-      .filter(loc => isSiqsGreaterThan(loc.siqs, 0))
-      .sort((a, b) => (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0))
+      .filter(loc => loc.siqs > 0)
+      .sort((a, b) => (b.siqs || 0) - (a.siqs || 0))
       .slice(0, limit);
     
     // Update cache

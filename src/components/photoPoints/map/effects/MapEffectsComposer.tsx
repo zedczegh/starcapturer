@@ -1,45 +1,65 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
-import * as L from 'leaflet';
+import { WorldBoundsController } from '../MapEffectsController';
+import SiqsEffectsController from './SiqsEffectsController';
 
 interface MapEffectsComposerProps {
-  effects?: ('leaflet-fullscreen' | 'zoom-controls')[];  // Removed 'scale' from this array
+  center?: [number, number];
+  zoom?: number;
   userLocation?: { latitude: number; longitude: number } | null;
   activeView?: 'certified' | 'calculated';
   searchRadius?: number;
+  onSiqsCalculated?: (siqs: number) => void;
 }
 
 const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
-  effects = [],
+  center,
+  zoom,
   userLocation,
-  activeView,
-  searchRadius
+  activeView = 'certified',
+  searchRadius = 100,
+  onSiqsCalculated
 }) => {
   const map = useMap();
   
-  React.useEffect(() => {
-    // Apply various map effects based on props
-    if (effects.includes('zoom-controls')) {
-      // Add zoom controls if not already added
-      if (!map.zoomControl) {
-        map.addControl(L.control.zoom({ position: 'bottomright' }));
+  // Set view when center changes
+  useEffect(() => {
+    if (!map || !center) return;
+    
+    // Use a small delay to prevent race conditions with other map operations
+    const timeoutId = setTimeout(() => {
+      if (map && map.setView) {
+        try {
+          map.setView(center, zoom || map.getZoom(), {
+            animate: true,
+            duration: 0.5 // Faster animation
+          });
+        } catch (error) {
+          console.error("Error setting map view:", error);
+        }
       }
-    }
+    }, 50);
     
-    // Removed scale control - we no longer add it
-    
-    // If we have user location and view mode, we could add additional effects here
-    if (userLocation && activeView) {
-      console.log(`Map effects applied for ${activeView} view with radius ${searchRadius}km`);
-    }
-    
-    return () => {
-      // Clean up effects if needed (no need to clean up scale control anymore)
-    };
-  }, [map, effects, userLocation, activeView, searchRadius]);
+    return () => clearTimeout(timeoutId);
+  }, [map, center, zoom]);
   
-  return null; // This component doesn't render anything visible
+  return (
+    <>
+      {/* Apply world bounds limit */}
+      <WorldBoundsController />
+      
+      {/* Apply SIQS-specific effects only when userLocation is available */}
+      {userLocation && (
+        <SiqsEffectsController 
+          userLocation={userLocation}
+          activeView={activeView}
+          searchRadius={searchRadius}
+          onSiqsCalculated={onSiqsCalculated}
+        />
+      )}
+    </>
+  );
 };
 
 export default MapEffectsComposer;
