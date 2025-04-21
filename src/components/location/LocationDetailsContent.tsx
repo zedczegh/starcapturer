@@ -1,4 +1,6 @@
 
+// File refactored into smaller components with mobile hiding for BackButton and CopyLocationButton
+
 import React, { memo, Suspense } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import LocationContentLoader from "./LocationContentLoader";
@@ -6,9 +8,10 @@ import LocationFaultedMessage from "./LocationFaultedMessage";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const LocationContentGrid = React.lazy(() => import("./LocationContentGrid"));
+import { useIsMobile } from "@/hooks/use-mobile";
+import LocationContentGridLazy from "./LocationContentGridLazy";
 import { useLocationContentManager } from "./useLocationContentManager";
+import LocationControlsSection from "./LocationControlsSection";
 
 interface LocationDetailsContentProps {
   locationData: any;
@@ -24,6 +27,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   showFaultedMessage = false
 }) => {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
 
   const {
     containerRef,
@@ -47,7 +51,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   } = useLocationContentManager(locationData, setLocationData, onLocationUpdate);
 
   // Fix for cases where SIQS is unavailable – show manual refresh button when loaded but no SIQS
-  const shouldShowManualRefresh = 
+  const shouldShowManualRefresh =
     memoizedLocationData &&
     !loading &&
     contentLoaded &&
@@ -76,9 +80,9 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
 
   return (
     <div className="transition-all duration-300 animate-fade-in" ref={containerRef}>
-      <StatusMessage 
-        message={statusMessage} 
-        onClear={() => setStatusMessage(null)} 
+      <StatusMessage
+        message={statusMessage}
+        onClear={() => setStatusMessage(null)}
       />
 
       {shouldShowManualRefresh && (
@@ -93,7 +97,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         <LocationContentLoader />
       ) : (
         <Suspense fallback={<LocationContentLoader />}>
-          <LocationContentGrid 
+          <LocationContentGridLazy
             locationData={memoizedLocationData}
             forecastData={forecastData}
             longRangeForecast={longRangeForecast}
@@ -113,9 +117,16 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
                 handleRefreshLongRangeForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
               }
             }}
+            isMobile={isMobile}
           />
         </Suspense>
       )}
+
+      {/* LocationControlsSection handles back button and copy button with mobile display control */}
+      <LocationControlsSection 
+        locationData={memoizedLocationData} 
+        isMobile={isMobile} 
+      />
     </div>
   );
 });
@@ -123,3 +134,4 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
 LocationDetailsContent.displayName = 'LocationDetailsContent';
 
 export default LocationDetailsContent;
+
