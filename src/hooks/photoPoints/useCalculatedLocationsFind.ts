@@ -78,6 +78,7 @@ export const useCalculatedLocationsFind = () => {
               latitude: point.lat,
               longitude: point.lng,
               name: `${t("Calculated Point", "计算点")} (${point.lat.toFixed(4)}, ${point.lng.toFixed(4)})`,
+              bortleScale: Math.round(lightPollution) || 4, // Add the missing bortleScale property
               siqs: siqs,
               distance: distance,
               timestamp: new Date().toISOString(),
