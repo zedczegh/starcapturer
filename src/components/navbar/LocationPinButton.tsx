@@ -1,49 +1,40 @@
 
-import React, { useState, useEffect } from 'react';
-import { MapPin, Check } from 'lucide-react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useSiqsNavigation } from '@/hooks/navigation/useSiqsNavigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from "@/hooks/use-toast";
 
 const LocationPinButton: React.FC = () => {
   const { t } = useLanguage();
-  const { getPosition } = useSiqsNavigation();
-  const [locationFound, setLocationFound] = useState(false);
-  
-  useEffect(() => {
-    const checkForExistingLocation = () => {
-      try {
-        const keys = Object.keys(localStorage);
-        const locationKeys = keys.filter(key => key.startsWith('location_'));
-        setLocationFound(locationKeys.length > 0);
-      } catch (e) {
-        console.error("Error checking localStorage:", e);
-      }
-    };
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-    checkForExistingLocation();
-    window.addEventListener('storage', checkForExistingLocation);
-    
-    return () => {
-      window.removeEventListener('storage', checkForExistingLocation);
-    };
-  }, []);
-  
-  const handleGetLocation = () => {
-    getPosition();
-    setLocationFound(true);
+  const handleCollectionsShortcut = () => {
+    if (!user) {
+      toast({
+        title: t("Sign up required", "需要注册"),
+        description: t("Please sign up to use our collected locations service.", "请注册以使用我们的收藏位置服务。"),
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+    navigate('/collections');
   };
 
   return (
-    <Button 
-      variant="ghost" 
-      size="icon" 
-      onClick={handleGetLocation} 
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleCollectionsShortcut}
       className="relative transition-all duration-300 hover:bg-primary/20"
-      title={t("Update to your current location", "更新到您的当前位置")}
+      title={t('Go to My Collections', '前往我的收藏')}
+      aria-label={t('Go to My Collections', '前往我的收藏')}
     >
-      <MapPin className="h-5 w-5" />
-      {/* Removed the green checkmark (locationFound) indicator per user request */}
+      <Pin className="h-5 w-5 text-primary" />
     </Button>
   );
 };

@@ -18,7 +18,6 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  // Use a default location ID for when there isn't one
   const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
   
   return (
