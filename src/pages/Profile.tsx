@@ -13,7 +13,6 @@ import { useProfile } from '@/hooks/profile/useProfile';
 
 interface ProfileFormValues {
   username: string;
-  date_of_birth: string;
 }
 
 const Profile = () => {
@@ -39,8 +38,7 @@ const Profile = () => {
 
   const { register, handleSubmit, setValue } = useForm<ProfileFormValues>({
     defaultValues: {
-      username: '',
-      date_of_birth: ''
+      username: ''
     }
   });
 
@@ -60,7 +58,7 @@ const Profile = () => {
       } catch (error) {
         setProfile({
           username: null,
-          avatar_url: null, 
+          avatar_url: null,
           date_of_birth: null
         });
       } finally {
@@ -122,17 +120,39 @@ const Profile = () => {
         setUploadingAvatar(false);
       }
 
-      const { error: updateError } = await supabase
+      // Check if profile exists first
+      const { data: existingProfile } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          username: formData.username,
-          date_of_birth: formData.date_of_birth || null,
-          avatar_url: newAvatarUrl,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'id' });
-      if (updateError) throw updateError;
+        .select('id')
+        .eq('id', user.id)
+        .single();
 
+      if (existingProfile) {
+        // Update existing profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            username: formData.username,
+            avatar_url: newAvatarUrl,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+        
+        if (updateError) throw updateError;
+      } else {
+        // Create new profile
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            username: formData.username,
+            avatar_url: newAvatarUrl,
+            updated_at: new Date().toISOString()
+          });
+        
+        if (insertError) throw insertError;
+      }
+      
       toast.success(t("Profile updated successfully", "个人资料更新成功"));
     } catch (error: any) {
       toast.error(t("Update failed", "更新失败"), { description: error.message });

@@ -23,3 +23,6 @@ enabled = true
 
 [storage.buckets]
 avatars = { public = true }
+
+[auth]
+enabled = true

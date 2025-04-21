@@ -6,7 +6,7 @@ import { getRandomAstronomyTip } from '@/utils/astronomyTips';
 interface Profile {
   username: string | null;
   avatar_url: string | null;
-  date_of_birth: string | null;
+  date_of_birth: string | null; // Keeping this in the interface for backward compatibility
 }
 
 export function useProfile() {
@@ -20,17 +20,17 @@ export function useProfile() {
   const fetchProfile = useCallback(async (userId: string, setValue: any) => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('username, avatar_url, date_of_birth')
+      .select('username, avatar_url')
       .eq('id', userId)
       .maybeSingle();
+      
     if (!error && data) {
       setProfile({
         username: data.username || '',
         avatar_url: data.avatar_url,
-        date_of_birth: data.date_of_birth || null,
+        date_of_birth: null, // No longer used but kept for interface compatibility
       });
       setValue('username', data.username || '');
-      setValue('date_of_birth', data.date_of_birth || '');
       setAvatarUrl(data.avatar_url);
     }
     return { data, error };
