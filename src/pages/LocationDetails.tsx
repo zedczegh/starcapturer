@@ -15,6 +15,7 @@ import { getCurrentPosition } from "@/utils/geolocationUtils";
 import { toast } from "sonner";
 import LocationError from "@/components/location/LocationError";
 import LocationDetailsViewport from "@/components/location/LocationDetailsViewport";
+import { findClosestLocation, getLocationInfo } from "@/data/locationDatabase";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -73,20 +74,21 @@ const LocationDetails = () => {
     getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        
-        // Create a minimal location object
+
+        // Use our project location database to get the best estimate for this point
+        const locationInfo = getLocationInfo(latitude, longitude);
+
+        // Generate an accurate name and bortleScale directly from our DB
         const locationId = `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
-        
-        // Generate location data with basic information
         const locationData = {
           id: locationId,
-          name: t("Current Location", "当前位置"),
+          name: locationInfo.formattedName || t("Current Location", "当前位置"),
           latitude,
           longitude,
+          bortleScale: locationInfo.bortleScale,
           timestamp: new Date().toISOString()
         };
-        
-        // Navigate to the generated location
+
         navigate(`/location/${locationId}`, { 
           state: locationData,
           replace: true 
@@ -210,6 +212,26 @@ const LocationDetails = () => {
       siqsUpdateRequiredRef.current = false;
     }
   }, [locationData, resetUpdateState]);
+
+  // Whenever the page loads with only coordinates but no name, we replace with our best DB estimate:
+  useEffect(() => {
+    if (
+      locationData &&
+      (locationData.name === t("Current Location", "当前位置") || !locationData.name) &&
+      typeof locationData.latitude === "number" &&
+      typeof locationData.longitude === "number"
+    ) {
+      // Get internal DB estimate for the coordinates, prefer user language
+      const locationInfo = getLocationInfo(locationData.latitude, locationData.longitude);
+      if (locationInfo && locationInfo.name) {
+        setLocationData({
+          ...locationData,
+          name: locationInfo.formattedName,
+          bortleScale: locationInfo.bortleScale
+        });
+      }
+    }
+  }, [locationData, t, setLocationData]);
 
   if (isLoading) {
     return (
