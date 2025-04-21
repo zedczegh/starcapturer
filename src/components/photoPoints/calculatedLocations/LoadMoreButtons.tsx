@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Calculator, Loader2 } from "lucide-react";
@@ -10,62 +10,34 @@ interface LoadMoreButtonsProps {
   onLoadMore: () => void;
   canLoadMoreCalculated?: boolean;
   onLoadMoreCalculated?: () => void;
-  loadMoreClickCount?: number;
-  maxLoadMoreClicks?: number;
 }
 
 const LoadMoreButtons: React.FC<LoadMoreButtonsProps> = ({
   hasMore,
   onLoadMore,
   canLoadMoreCalculated = false,
-  onLoadMoreCalculated,
-  loadMoreClickCount = 0,
-  maxLoadMoreClicks = 2
+  onLoadMoreCalculated
 }) => {
   const { t } = useLanguage();
-  const [showLoadMoreCalc, setShowLoadMoreCalc] = useState(false);
   const [loadingCalculated, setLoadingCalculated] = useState(false);
-  
-  // Determine whether to show the calculated load more button
-  useEffect(() => {
-    if (onLoadMoreCalculated && canLoadMoreCalculated && loadMoreClickCount < maxLoadMoreClicks) {
-      setShowLoadMoreCalc(true);
-    } else {
-      setShowLoadMoreCalc(false);
-    }
-  }, [onLoadMoreCalculated, canLoadMoreCalculated, loadMoreClickCount, maxLoadMoreClicks]);
-  
+
   // Handle load more calculated locations
   const handleLoadMoreCalculated = async () => {
     if (onLoadMoreCalculated) {
       setLoadingCalculated(true);
-      
       try {
         await onLoadMoreCalculated();
-        
-        // Show progress to the user
-        const remainingClicks = maxLoadMoreClicks - loadMoreClickCount - 1;
-        if (remainingClicks > 0) {
-          toast.info(t(
-            `Loading more locations... (${remainingClicks} more loads available)`,
-            `正在加载更多位置...（还可以加载${remainingClicks}次）`
-          ));
-        } else {
-          toast.info(t(
-            "Loading final batch of locations...",
-            "正在加载最后一批位置..."
-          ));
-        }
+        toast.info(t("Loading more locations...", "正在加载更多位置..."));
       } finally {
         setLoadingCalculated(false);
       }
     }
   };
-  
+
   return (
     <div className="mt-8 space-y-4">
-      {/* Enhanced Load More Calculated Locations button */}
-      {showLoadMoreCalc && (
+      {/* Load More Calculated Locations button - always visible if enabled */}
+      {onLoadMoreCalculated && canLoadMoreCalculated && (
         <div className="flex justify-center">
           <Button 
             variant="default" 

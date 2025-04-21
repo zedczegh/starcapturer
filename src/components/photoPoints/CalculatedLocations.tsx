@@ -22,8 +22,6 @@ interface CalculatedLocationsProps {
   initialLoad?: boolean;
   onLoadMoreCalculated?: () => void;
   canLoadMoreCalculated?: boolean;
-  loadMoreClickCount?: number;
-  maxLoadMoreClicks?: number;
 }
 
 const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
@@ -35,9 +33,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   searchRadius = 0,
   initialLoad = false,
   onLoadMoreCalculated,
-  canLoadMoreCalculated = false,
-  loadMoreClickCount = 0,
-  maxLoadMoreClicks = 2
+  canLoadMoreCalculated = false
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
@@ -101,8 +97,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         onLoadMore={onLoadMore}
         canLoadMoreCalculated={canLoadMoreCalculated}
         onLoadMoreCalculated={onLoadMoreCalculated}
-        loadMoreClickCount={loadMoreClickCount}
-        maxLoadMoreClicks={maxLoadMoreClicks}
       />
     </>
   );
