@@ -15,6 +15,7 @@ import { sortLocationsBySiqs } from "./collections/sortLocationsBySiqs";
 import PageLoader from "@/components/loaders/PageLoader";
 import LocationStatusMessage from "@/components/location/LocationStatusMessage";
 import MiniRemoveButton from "@/components/collections/MiniRemoveButton";
+import AboutFooter from '@/components/about/AboutFooter';
 
 const Collections = () => {
   const { user } = useAuth();
@@ -155,11 +156,10 @@ const Collections = () => {
   const sortedLocations = sortLocationsBySiqs(locations);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <NavBar />
-
       <TooltipProvider>
-        <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
+        <main className="container mx-auto px-4 py-8 pt-16 md:pt-20 flex-grow">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-foreground">
               {t("My Collections", "我的收藏")}
@@ -213,8 +213,9 @@ const Collections = () => {
               ))}
             </div>
           )}
-        </div>
+        </main>
       </TooltipProvider>
+      <AboutFooter />
     </div>
   );
 };

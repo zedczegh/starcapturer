@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import ProfileLoader from '@/components/profile/ProfileLoader';
 import ProfileMain from '@/components/profile/ProfileMain';
 import { useProfile } from '@/hooks/profile/useProfile';
+import AboutFooter from '@/components/about/AboutFooter';
 
 interface ProfileFormValues {
   username: string;
@@ -172,20 +172,23 @@ const Profile = () => {
   const displayUsername = profile?.username || t("Stargazer", "星空观察者");
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900">
+    <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex flex-col">
       <NavBar />
-      <ProfileMain
-        displayUsername={displayUsername}
-        avatarUrl={avatarUrl}
-        onAvatarChange={handleAvatarChange}
-        onRemoveAvatar={removeAvatar}
-        uploadingAvatar={uploadingAvatar}
-        astronomyTip={randomTip}
-        register={register}
-        saving={saving}
-        handleSubmit={handleSubmit}
-        onSubmit={onSubmit}
-      />
+      <main className="flex-grow">
+        <ProfileMain
+          displayUsername={displayUsername}
+          avatarUrl={avatarUrl}
+          onAvatarChange={handleAvatarChange}
+          onRemoveAvatar={removeAvatar}
+          uploadingAvatar={uploadingAvatar}
+          astronomyTip={randomTip}
+          register={register}
+          saving={saving}
+          handleSubmit={handleSubmit}
+          onSubmit={onSubmit}
+        />
+      </main>
+      <AboutFooter />
     </div>
   );
 };
