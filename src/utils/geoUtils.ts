@@ -146,3 +146,37 @@ export function calculateBoundingBox(
     maxLng: lon + lngDelta
   };
 }
+
+/**
+ * Format distance for display
+ * @param distance Distance in kilometers
+ * @returns Formatted distance string (e.g., "12.3 km" or "450 m")
+ */
+export function formatDistance(distance: number): string {
+  if (distance < 1) {
+    return `${Math.round(distance * 1000)} m`;
+  }
+  return `${distance.toFixed(1)} km`;
+}
+
+/**
+ * Format SIQS score for display with proper decimal places
+ * @param siqs SIQS score
+ * @param decimals Number of decimal places (default: 1)
+ * @returns Formatted SIQS score string
+ */
+export function formatSIQSScore(siqs: number | null): string {
+  if (siqs === null) return 'N/A';
+  return siqs.toFixed(1);
+}
+
+/**
+ * Get a safe numeric score from various SIQS formats
+ * @param siqs SIQS value which could be a number or object
+ * @returns Numeric SIQS score
+ */
+export function getSafeScore(siqs?: number | { score: number; isViable: boolean }): number {
+  if (siqs === undefined) return 0;
+  if (typeof siqs === 'number') return siqs;
+  return siqs.score;
+}
