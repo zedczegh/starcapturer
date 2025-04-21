@@ -337,14 +337,14 @@ const BortleNow: React.FC = () => {
         aria-hidden="true"
         style={{
           background: "url('/lovable-uploads/bae4bb9f-d2ce-4f1b-9eae-e0e022866a36.png') center center / cover no-repeat",
-          filter: 'blur(3px) brightness(0.52) saturate(1.11)'
+          filter: 'blur(1.5px) brightness(0.80) saturate(1.15)'
         }}
       />
       <div
         className="fixed inset-0 z-0 pointer-events-none"
         aria-hidden="true"
         style={{
-          background: 'linear-gradient(130deg, rgba(10,17,34,0.98) 0%, rgba(45,20,43,0.81) 100%)',
+          background: 'linear-gradient(130deg, rgba(10,17,34,0.80) 0%, rgba(45,20,43,0.60) 100%)',
         }}
       />
       <NavBar />

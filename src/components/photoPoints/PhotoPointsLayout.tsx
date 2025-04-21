@@ -27,21 +27,21 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
   // Background image layer (nebula/starfield)
   return (
     <div className="relative min-h-screen bg-cosmic-950 overflow-x-hidden">
-      {/* Nebula/Starfield Background */}
+      {/* Background Image */}
       <div
         className="fixed inset-0 z-0 pointer-events-none select-none"
         aria-hidden="true"
         style={{
           background: "url('/lovable-uploads/bae4bb9f-d2ce-4f1b-9eae-e0e022866a36.png') center center / cover no-repeat",
-          filter: 'blur(2.5px) brightness(0.55) saturate(1.10)',
+          filter: 'blur(1.5px) brightness(0.80) saturate(1.15)',
         }}
       />
-      {/* Overlay for darkness/gradient */}
+      {/* Overlay for darkness/gradient to maintain text readability */}
       <div
         className="fixed inset-0 z-0 pointer-events-none"
         aria-hidden="true"
         style={{
-          background: 'linear-gradient(120deg, rgba(10,17,34,0.94) 0%, rgba(40,22,44,0.81) 100%)',
+          background: 'linear-gradient(120deg, rgba(10,17,34,0.80) 0%, rgba(40,22,44,0.60) 100%)',
         }}
       />
       <Helmet>
