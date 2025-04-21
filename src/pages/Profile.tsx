@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { useForm } from 'react-hook-form';
 import ProfileAvatar from '@/components/profile/ProfileAvatar';
 import ProfileForm from '@/components/profile/ProfileForm';
+import { Loader2 } from 'lucide-react';
 
 interface Profile {
   username: string | null;
@@ -27,7 +28,8 @@ const Profile = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -41,21 +43,33 @@ const Profile = () => {
   });
 
   useEffect(() => {
-    if (!user) {
-      navigate('/photo-points');
-      return;
-    }
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error(t("Authentication required", "需要认证"), {
+          description: t("Please sign in to view your profile", "请登录以查看您的个人资料")
+        });
+        navigate('/photo-points');
+        return;
+      }
+      
+      fetchProfile(session.user.id);
+    };
 
-    const fetchProfile = async () => {
+    checkSession();
+  }, [navigate, t]);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
         .select('username, avatar_url, date_of_birth')
-        .eq('id', user.id)
-        .single();
+        .eq('id', userId)
+        .maybeSingle();
 
-      if (error) {
-        toast.error(t("Failed to load profile", "加载个人资料失败"));
-        return;
+      if (error && error.code !== 'PGRST116') {
+        throw error;
       }
 
       if (data) {
@@ -69,11 +83,30 @@ const Profile = () => {
         setValue('username', data.username || '');
         setValue('date_of_birth', data.date_of_birth || '');
         setAvatarUrl(data.avatar_url);
+      } else {
+        // Create profile if it doesn't exist
+        await supabase.from('profiles').insert({
+          id: userId,
+          username: null,
+          avatar_url: null,
+          date_of_birth: null
+        });
+        
+        setProfile({
+          username: null,
+          avatar_url: null,
+          date_of_birth: null
+        });
       }
-    };
-
-    fetchProfile();
-  }, [user, navigate, t, setValue]);
+    } catch (error: any) {
+      toast.error(t("Failed to load profile", "加载个人资料失败"), {
+        description: error.message
+      });
+      console.error("Profile fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -85,57 +118,86 @@ const Profile = () => {
   };
 
   const onSubmit = async (formData: ProfileFormValues) => {
-    if (!user) return;
+    if (!user) {
+      toast.error(t("Authentication required", "需要认证"));
+      return;
+    }
 
     try {
-      setLoading(true);
+      setSaving(true);
 
       let newAvatarUrl = avatarUrl;
       if (avatarFile) {
         setUploadingAvatar(true);
-        const fileExt = avatarFile.name.split('.').pop();
-        const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, avatarFile);
-
-        if (uploadError) {
-          if (uploadError.message.includes('Bucket not found')) {
-            toast.error(t("Avatar upload failed: Storage bucket not configured", "头像上传失败：存储桶未配置"));
-          } else {
-            toast.error(uploadError.message);
-          }
+        
+        // First, check if the avatars bucket exists
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        
+        if (bucketsError) {
+          toast.error(t("Storage error", "存储错误"), {
+            description: bucketsError.message
+          });
           setUploadingAvatar(false);
-          setLoading(false);
+          setSaving(false);
           return;
         }
+        
+        // If avatars bucket doesn't exist, handle gracefully
+        const avatarsBucketExists = buckets.some(bucket => bucket.name === 'avatars');
+        
+        if (!avatarsBucketExists) {
+          toast.error(t("Avatar upload not available", "头像上传功能不可用"), {
+            description: t("Storage not configured. Profile saved without avatar.", "存储未配置。个人资料已保存，但未包含头像。")
+          });
+        } else {
+          // Proceed with upload
+          const fileExt = avatarFile.name.split('.').pop();
+          const fileName = `${user.id}-${Math.random()}.${fileExt}`;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(fileName);
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, avatarFile);
 
-        newAvatarUrl = publicUrl;
+          if (uploadError) {
+            if (uploadError.message.includes('Bucket not found')) {
+              toast.error(t("Avatar upload failed: Storage bucket not configured", "头像上传失败：存储桶未配置"));
+            } else {
+              toast.error(uploadError.message);
+            }
+            setUploadingAvatar(false);
+            setSaving(false);
+            return;
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(fileName);
+
+          newAvatarUrl = publicUrl;
+        }
         setUploadingAvatar(false);
       }
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: user.id,
           username: formData.username,
           date_of_birth: formData.date_of_birth || null,
           avatar_url: newAvatarUrl,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
+        }, { onConflict: 'id' });
 
       if (updateError) throw updateError;
 
       toast.success(t("Profile updated successfully", "个人资料更新成功"));
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(t("Update failed", "更新失败"), {
+        description: error.message
+      });
+      console.error("Profile update error:", error);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -144,7 +206,19 @@ const Profile = () => {
     setAvatarFile(null);
   };
 
-  if (!user || !profile) return null;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900">
+        <NavBar />
+        <div className="container mx-auto px-4 py-8 pt-24 flex justify-center items-center">
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
+            <p className="text-cosmic-300">{t("Loading profile...", "正在加载个人资料...")}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900">
@@ -175,7 +249,7 @@ const Profile = () => {
             
             <ProfileForm 
               register={register}
-              loading={loading}
+              loading={saving}
               onSubmit={handleSubmit(onSubmit)}
             />
           </div>
