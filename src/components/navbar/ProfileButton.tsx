@@ -13,7 +13,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, UserRound, LogOut, User } from 'lucide-react';
+import { BookmarkPlus, UserRound, LogOut, User, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -70,7 +70,7 @@ const ProfileButton = () => {
   return (
     <DropdownMenu modal>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative rounded-full p-0 border border-accent/40 hover:border-primary shadow focus:ring-2 focus:ring-primary group" aria-label="Profile">
+        <Button variant="ghost" size="sm" className="relative rounded-full p-0 border border-accent/40 hover:border-primary shadow-glow focus:ring-2 focus:ring-primary group" aria-label="Profile">
           <Avatar className="h-8 w-8">
             {avatarUrl ? (
               <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
@@ -82,24 +82,26 @@ const ProfileButton = () => {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="z-[130] min-w-[200px] bg-popover/95 shadow-xl border border-accent/60">
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-0.5">
-            <span className="font-semibold text-base text-primary">{profile && profile.username ? profile.username : t("Account", "账户")}</span>
-            <span className="text-xs text-muted-foreground truncate">{user.email}</span>
-          </div>
+      <DropdownMenuContent align="end" className="z-[200] min-w-[220px] rounded-xl shadow-2xl cosmic-dropdown">
+        <DropdownMenuLabel className="glass-dropdown-label px-3 pt-3 pb-2 flex flex-col space-y-0.5 border-none">
+          <span className="font-bold text-lg text-primary/90">{profile && profile.username ? profile.username : t("Account", "账户")}</span>
+          <span className="text-xs text-cosmic-400 truncate">{user.email}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate('/profile')}>
-          <User className="mr-2 h-4 w-4" />
+        <DropdownMenuItem onClick={() => navigate('/profile')} className="hover:!bg-primary/10 hover:text-primary interactive-button px-3 py-2 rounded-lg">
+          <User className="mr-2 h-4 w-4 text-primary" />
           {t("Profile", "个人资料")}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/collections')}>
-          <BookmarkPlus className="mr-2 h-4 w-4" />
+        <DropdownMenuItem onClick={() => navigate('/collections')} className="hover:!bg-primary/10 hover:text-primary interactive-button px-3 py-2 rounded-lg">
+          <BookmarkPlus className="mr-2 h-4 w-4 text-primary" />
           {t("My Collections", "我的收藏")}
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/settings')} className="hover:!bg-primary/10 hover:text-primary interactive-button px-3 py-2 rounded-lg">
+          <Settings className="mr-2 h-4 w-4 text-primary" />
+          {t("Settings", "设置")}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+        <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive hover:!bg-destructive/10 hover:text-destructive interactive-button px-3 py-2 rounded-lg">
           <LogOut className="mr-2 h-4 w-4" />
           {t("Sign Out", "登出")}
         </DropdownMenuItem>
@@ -109,3 +111,4 @@ const ProfileButton = () => {
 };
 
 export default ProfileButton;
+
