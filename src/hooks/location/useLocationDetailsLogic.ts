@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
 import { useLocationDataCache } from "@/hooks/useLocationData";
@@ -5,7 +6,9 @@ import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
 import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 import { useQueryClient } from "@tanstack/react-query";
 import { getCurrentPosition } from "@/utils/geolocationUtils";
-import { getLocationInfo, isInChina } from "@/data/locationDatabase";
+import { getLocationInfo } from "@/data/locationDatabase";
+import { isInChina } from "@/utils/chinaBortleData"; // Import isInChina from the correct location
+import { prefetchLocationData } from "@/lib/queryPrefetcher"; // Import prefetchLocationData
 
 export function useLocationDetailsLogic({ id, location, navigate, t, setCachedData, getCachedData }) {
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);

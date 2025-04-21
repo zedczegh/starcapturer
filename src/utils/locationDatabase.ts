@@ -4,6 +4,7 @@ import { findClosestLocationImpl, getLocationInfoImpl } from './locationFinder';
 import { calculateDistance, degToRad } from '@/utils/geoUtils';
 import { getBortleScaleDescription, getBortleScaleColor } from '@/data/utils/bortleScaleUtils';
 import { quickLocationDatabase } from './quickLocationDatabase';
+import { isInChina } from '@/utils/chinaBortleData'; // Import isInChina for re-export
 
 /**
  * Find the closest location to given coordinates
@@ -47,4 +48,4 @@ export function getLocationInfo(latitude: number, longitude: number): {
 }
 
 // Re-export utility functions
-export { calculateDistance, degToRad, getBortleScaleDescription, getBortleScaleColor };
+export { calculateDistance, degToRad, getBortleScaleDescription, getBortleScaleColor, isInChina };
