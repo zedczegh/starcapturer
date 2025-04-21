@@ -49,7 +49,7 @@ const PhotoPointsNearby: React.FC = () => {
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks,
-    error: locationsError
+    error
   } = useRecommendedLocations(
     effectiveLocation, 
     currentSearchRadius
@@ -64,15 +64,15 @@ const PhotoPointsNearby: React.FC = () => {
   
   // Handle errors from location hooks
   useEffect(() => {
-    if (locationsError) {
-      console.error("Error loading locations:", locationsError);
+    if (error) {
+      console.error("Error loading locations:", error);
       toast.error(t("Failed to load locations. Please try again.", "无法加载位置。请重试。"));
     }
     
     if (certifiedLocationsError) {
       console.error("Error processing certified locations:", certifiedLocationsError);
     }
-  }, [locationsError, certifiedLocationsError, t]);
+  }, [error, certifiedLocationsError, t]);
 
   // Update search radius when view changes, but avoid unnecessary refreshes
   useEffect(() => {

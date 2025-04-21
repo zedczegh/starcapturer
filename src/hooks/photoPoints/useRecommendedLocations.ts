@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLocationFind } from './useLocationFind';
@@ -31,6 +32,7 @@ export const useRecommendedLocations = (
   const prevRadiusRef = useRef<number>(searchRadius);
   const prevLocationRef = useRef<Location | null>(userLocation);
   const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
+  const [error, setError] = useState<Error | null>(null);
   
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
   const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
@@ -47,6 +49,7 @@ export const useRecommendedLocations = (
     
     try {
       setLoading(true);
+      setError(null);
       
       const isRadiusIncrease = searchRadius > prevRadiusRef.current && 
                                prevLocationRef.current && 
@@ -96,8 +99,10 @@ export const useRecommendedLocations = (
       }
       
       setPage(1);
-    } catch (error) {
-      console.error("Error loading recommended locations:", error);
+    } catch (err) {
+      console.error("Error loading recommended locations:", err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+      
       toast({
         variant: "destructive",
         title: t(
@@ -124,6 +129,7 @@ export const useRecommendedLocations = (
     
     try {
       setLoading(true);
+      setError(null);
       const nextPage = page + 1;
       
       const results = await findLocationsWithinRadius(
@@ -150,8 +156,10 @@ export const useRecommendedLocations = (
       } else {
         setHasMore(false);
       }
-    } catch (error) {
-      console.error("Error loading more locations:", error);
+    } catch (err) {
+      console.error("Error loading more locations:", err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+      
       toast({
         variant: "destructive",
         title: t(
@@ -175,6 +183,7 @@ export const useRecommendedLocations = (
     
     try {
       setSearching(true);
+      setError(null);
       console.log(`Loading more calculated locations, click ${loadMoreClickCount + 1} of ${MAX_LOAD_MORE_CLICKS}`);
       
       const calculatedResults = await findCalculatedLocations(
@@ -226,8 +235,10 @@ export const useRecommendedLocations = (
         
         setCanLoadMoreCalculated(false);
       }
-    } catch (error) {
-      console.error("Error loading more calculated locations:", error);
+    } catch (err) {
+      console.error("Error loading more calculated locations:", err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+      
       toast({
         variant: "destructive",
         title: t(
@@ -247,10 +258,13 @@ export const useRecommendedLocations = (
     
     try {
       setLoading(true);
+      setError(null);
       
       await loadLocations();
-    } catch (error) {
-      console.error("Error refreshing SIQS data:", error);
+    } catch (err) {
+      console.error("Error refreshing SIQS data:", err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+      
       toast({
         variant: "destructive",
         title: t(
@@ -290,6 +304,7 @@ export const useRecommendedLocations = (
     loadMoreCalculatedLocations,
     loadMoreClickCount,
     maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS,
-    currentSiqs
+    currentSiqs,
+    error
   };
 };
