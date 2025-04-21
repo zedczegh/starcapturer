@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +10,7 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { prepareLocationForNavigation } from "@/utils/locationNavigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
+import { transformSavedLocations } from "./collections/transformLocations";
 
 const Collections = () => {
   const { user } = useAuth();
@@ -37,18 +37,8 @@ const Collections = () => {
 
         if (error) throw error;
 
-        // Transform the data to match SharedAstroSpot type with property name corrections
-        const transformedLocations: SharedAstroSpot[] = (data || []).map(loc => ({
-          id: loc.id,
-          name: loc.name,
-          latitude: loc.latitude,
-          longitude: loc.longitude,
-          bortleScale: loc.bortlescale || 4, // Correct property name from bortlescale to bortleScale
-          siqs: loc.siqs,
-          certification: loc.certification || null,
-          isDarkSkyReserve: loc.isdarkskyreserve || false, // Correct property name from isdarkskyreserve to isDarkSkyReserve
-          timestamp: loc.timestamp || new Date().toISOString(),
-        }));
+        // Use the shared, safely testable transformation function
+        const transformedLocations = transformSavedLocations(data);
 
         setLocations(transformedLocations);
       } catch (error: any) {
