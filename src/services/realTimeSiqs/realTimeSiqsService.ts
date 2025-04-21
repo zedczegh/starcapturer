@@ -1,4 +1,3 @@
-
 import { calculateRealTimeSiqs } from './siqsCalculator';
 import { detectAndFixAnomalies, assessDataReliability } from './siqsAnomalyDetector';
 import { clearSiqsCache, cleanupExpiredCache, clearLocationSiqsCache } from './siqsCache';
@@ -112,43 +111,83 @@ initializeSiqsCacheCleanup();
 
 /**
  * Calculate real-time SIQS for multiple locations in parallel
- * with intelligent batch processing to avoid rate limits
+ * with intelligent, adaptive batch processing to avoid rate limits
  */
 export async function batchCalculateRealTimeSiqs(
   locations: Array<{ latitude: number; longitude: number; bortleScale?: number }>,
-  concurrency: number = 3
+  initialConcurrency: number = 3
 ): Promise<SiqsResult[]> {
   if (!locations || !locations.length) {
     return [];
   }
-  
-  console.log(`Batch calculating SIQS for ${locations.length} locations with concurrency ${concurrency}`);
-  
-  const results: SiqsResult[] = [];
-  
-  // Process in batches to prevent overwhelming APIs
-  for (let i = 0; i < locations.length; i += concurrency) {
-    const batch = locations.slice(i, i + concurrency);
-    
-    const batchPromises = batch.map(loc => 
-      calculateRealTimeSiqs(
-        loc.latitude, 
-        loc.longitude, 
-        loc.bortleScale || 5
-      ).catch(err => {
-        console.error(`Error calculating SIQS for location ${loc.latitude},${loc.longitude}:`, err);
-        return { siqs: 0, isViable: false };
-      })
-    );
-    
-    const batchResults = await Promise.all(batchPromises);
-    results.push(...batchResults);
-    
-    // Pause between batches if we have more to process
-    if (i + concurrency < locations.length) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+
+  let concurrency = initialConcurrency;
+  const minConcurrency = 1;
+  const maxConcurrency = 8;
+  const results: SiqsResult[] = new Array(locations.length);
+  let current = 0;
+  let inFlight = 0;
+  let lastError = 0;
+  let adaptDelay = 0;
+  let lastBatchDuration = 0;
+  let batchesCount = 0;
+
+  const startTimes: number[] = [];
+
+  function nextIdx() {
+    while (current < locations.length && typeof results[current] !== "undefined") {
+      current++;
     }
+    return current < locations.length ? current++ : null;
   }
-  
-  return results;
+
+  return new Promise((resolve) => {
+    const tryNext = async () => {
+      const idx = nextIdx();
+      if (idx === null) {
+        if (inFlight === 0) {
+          resolve(results);
+        }
+        return;
+      }
+      const loc = locations[idx];
+      inFlight++;
+      startTimes[idx] = Date.now();
+      try {
+        const result = await calculateRealTimeSiqs(
+          loc.latitude,
+          loc.longitude,
+          loc.bortleScale || 5
+        );
+        lastBatchDuration = Date.now() - startTimes[idx];
+        results[idx] = result;
+        // If recent batch was fast and there were no errors, accelerate
+        if (lastError === 0 && lastBatchDuration < 700) {
+          concurrency = Math.min(maxConcurrency, concurrency + 1);
+        }
+      } catch (err) {
+        lastError++;
+        results[idx] = { siqs: 0, isViable: false };
+        // Slow down on errors
+        concurrency = Math.max(minConcurrency, concurrency - 1);
+      } finally {
+        inFlight--;
+        setTimeout(() => {
+          // Adaptive delay: if average batch was slow or had errors, wait a bit
+          const delay = lastError > 0 || lastBatchDuration > 1100 ? 400 : 80;
+          batchesCount++;
+          adaptDelay = delay;
+          // Try to saturate up to concurrency slots
+          while (inFlight < concurrency) {
+            tryNext();
+          }
+        }, adaptDelay);
+      }
+    };
+
+    // Start up to initial concurrency workers
+    while (inFlight < concurrency && current < locations.length) {
+      tryNext();
+    }
+  });
 }
