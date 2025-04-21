@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLocationFind } from './useLocationFind';
@@ -6,13 +7,15 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
 import { isWaterLocation } from '@/utils/validation';
 import { toast } from '@/components/ui/use-toast';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface Location {
   latitude: number;
   longitude: number;
 }
 
-const MAX_LOAD_MORE_CLICKS = 2;
+// Maximum locations to display regardless of radius
+const MAX_LOCATIONS = 20;
 
 const DEFAULT_CALCULATED_RADIUS = 100;
 const DEFAULT_CERTIFIED_RADIUS = 10000;
@@ -28,17 +31,20 @@ export const useRecommendedLocations = (
   const [searching, setSearching] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(false);
   const [page, setPage] = useState<number>(1);
+  const [error, setError] = useState<Error | null>(null);
   const prevRadiusRef = useRef<number>(searchRadius);
   const prevLocationRef = useRef<Location | null>(userLocation);
   const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
   
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
-  const [loadMoreClickCount, setLoadMoreClickCount] = useState<number>(0);
   
   const currentSiqs = currentSiqsStore.getValue();
   
   const { findLocationsWithinRadius, sortLocationsByQuality } = useLocationFind();
   const { findCalculatedLocations } = useCalculatedLocationsFind();
+  
+  // Debounce radius changes to prevent excessive API calls
+  const debouncedRadius = useDebounce(searchRadius, 500);
   
   const loadLocations = useCallback(async () => {
     if (!userLocation) {
@@ -47,6 +53,7 @@ export const useRecommendedLocations = (
     
     try {
       setLoading(true);
+      setError(null);
       
       const isRadiusIncrease = searchRadius > prevRadiusRef.current && 
                                prevLocationRef.current && 
@@ -62,21 +69,30 @@ export const useRecommendedLocations = (
       
       console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}, preserving: ${isRadiusIncrease && !locationChanged}`);
       
+      // Always get certified locations - these are typically pre-calculated and fewer in number
       const certifiedResults = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
         DEFAULT_CERTIFIED_RADIUS
       );
       
+      // For calculated locations, we implement intelligent sampling based on radius
+      // Larger radius = more sparse sampling to avoid overloading
+      const samplingDensity = Math.max(1, Math.floor(searchRadius / 100));
+      const calculatedLimit = Math.ceil(MAX_LOCATIONS / samplingDensity);
+      
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius
+        searchRadius,
+        true, // allow expansion
+        calculatedLimit // limit proportional to radius
       );
       
-      const filteredCalculatedResults = calculatedResults.filter(loc => 
-        !isWaterLocation(loc.latitude, loc.longitude)
-      );
+      const filteredCalculatedResults = calculatedResults
+        .filter(loc => !isWaterLocation(loc.latitude, loc.longitude))
+        // Take at most MAX_LOCATIONS minus the number of certified locations
+        .slice(0, Math.max(0, MAX_LOCATIONS - certifiedResults.length));
       
       const combinedResults = [...certifiedResults, ...filteredCalculatedResults];
       
@@ -90,14 +106,14 @@ export const useRecommendedLocations = (
         const sortedResults = sortLocationsByQuality(combinedResults);
         setLocations(sortedResults);
         previousLocationsRef.current = sortedResults;
-        setHasMore(sortedResults.length >= 20);
-        setCanLoadMoreCalculated(true);
-        setLoadMoreClickCount(0);
+        setHasMore(sortedResults.length >= MAX_LOCATIONS);
+        setCanLoadMoreCalculated(filteredCalculatedResults.length > 0);
       }
       
       setPage(1);
     } catch (error) {
       console.error("Error loading recommended locations:", error);
+      setError(error instanceof Error ? error : new Error("Failed to load locations"));
       toast({
         variant: "destructive",
         title: t(
@@ -124,12 +140,15 @@ export const useRecommendedLocations = (
     
     try {
       setLoading(true);
+      setError(null);
       const nextPage = page + 1;
       
+      // When loading more, get another batch with appropriate limits
       const results = await findLocationsWithinRadius(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius
+        searchRadius,
+        MAX_LOCATIONS
       );
       
       const filteredResults = results.filter(loc => 
@@ -140,18 +159,20 @@ export const useRecommendedLocations = (
       const newResults = filteredResults.filter(loc => !existingIds.has(loc.id));
       
       if (newResults.length > 0) {
-        const allLocations = [...locations, ...newResults];
+        // Limit total to MAX_LOCATIONS
+        const allLocations = [...locations, ...newResults].slice(0, MAX_LOCATIONS);
         const sortedResults = sortLocationsByQuality(allLocations);
         
         setLocations(sortedResults);
         previousLocationsRef.current = sortedResults;
-        setHasMore(newResults.length >= 10);
+        setHasMore(newResults.length >= 5 && sortedResults.length < MAX_LOCATIONS);
         setPage(nextPage);
       } else {
         setHasMore(false);
       }
     } catch (error) {
       console.error("Error loading more locations:", error);
+      setError(error instanceof Error ? error : new Error("Failed to load more locations"));
       toast({
         variant: "destructive",
         title: t(
@@ -169,18 +190,25 @@ export const useRecommendedLocations = (
   }, [hasMore, locations, page, searchRadius, userLocation, t, findLocationsWithinRadius, sortLocationsByQuality]);
   
   const loadMoreCalculatedLocations = useCallback(async () => {
-    if (!userLocation || loadMoreClickCount >= MAX_LOAD_MORE_CLICKS) {
+    if (!userLocation) {
       return;
     }
     
     try {
       setSearching(true);
-      console.log(`Loading more calculated locations, click ${loadMoreClickCount + 1} of ${MAX_LOAD_MORE_CLICKS}`);
+      setError(null);
+      console.log(`Loading more calculated locations`);
+      
+      // For calculated locations, we use intelligent sampling based on radius
+      const samplingDensity = Math.max(1, Math.floor(searchRadius / 100));
+      const calculatedLimit = Math.ceil(MAX_LOCATIONS / samplingDensity);
       
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius
+        searchRadius,
+        true, // allow expansion
+        calculatedLimit // limit based on radius
       );
       
       const filteredResults = calculatedResults.filter(loc => 
@@ -197,18 +225,12 @@ export const useRecommendedLocations = (
       });
       
       if (newResults.length > 0) {
-        const allLocations = [...locations, ...newResults];
+        // Limit total combined results to MAX_LOCATIONS
+        const allLocations = [...locations, ...newResults].slice(0, MAX_LOCATIONS);
         const sortedResults = sortLocationsByQuality(allLocations);
         
         setLocations(sortedResults);
         previousLocationsRef.current = sortedResults;
-        
-        const newClickCount = loadMoreClickCount + 1;
-        setLoadMoreClickCount(newClickCount);
-        
-        if (newClickCount >= MAX_LOAD_MORE_CLICKS) {
-          setCanLoadMoreCalculated(false);
-        }
         
         toast({
           title: t(
@@ -216,6 +238,9 @@ export const useRecommendedLocations = (
             `添加了${newResults.length}个更多位置`
           )
         });
+        
+        // Can load more if we didn't reach the maximum locations
+        setCanLoadMoreCalculated(sortedResults.length < MAX_LOCATIONS);
       } else {
         toast({
           title: t(
@@ -228,6 +253,7 @@ export const useRecommendedLocations = (
       }
     } catch (error) {
       console.error("Error loading more calculated locations:", error);
+      setError(error instanceof Error ? error : new Error("Failed to load more calculated locations"));
       toast({
         variant: "destructive",
         title: t(
@@ -238,7 +264,7 @@ export const useRecommendedLocations = (
     } finally {
       setSearching(false);
     }
-  }, [loadMoreClickCount, locations, searchRadius, t, userLocation, findCalculatedLocations, sortLocationsByQuality]);
+  }, [locations, searchRadius, t, userLocation, findCalculatedLocations, sortLocationsByQuality]);
   
   const refreshSiqsData = useCallback(async () => {
     if (!userLocation) {
@@ -247,10 +273,12 @@ export const useRecommendedLocations = (
     
     try {
       setLoading(true);
+      setError(null);
       
       await loadLocations();
     } catch (error) {
       console.error("Error refreshing SIQS data:", error);
+      setError(error instanceof Error ? error : new Error("Failed to refresh data"));
       toast({
         variant: "destructive",
         title: t(
@@ -263,8 +291,9 @@ export const useRecommendedLocations = (
     }
   }, [loadLocations, userLocation, t]);
   
+  // Use debounced radius to prevent excessive API calls
   useEffect(() => {
-    const radiusChanged = searchRadius !== prevRadiusRef.current;
+    const radiusChanged = debouncedRadius !== prevRadiusRef.current;
     const locationChanged = 
       (userLocation && !prevLocationRef.current) ||
       (!userLocation && prevLocationRef.current) ||
@@ -275,7 +304,7 @@ export const useRecommendedLocations = (
     if (userLocation && (radiusChanged || locationChanged)) {
       loadLocations();
     }
-  }, [loadLocations, searchRadius, userLocation]);
+  }, [debouncedRadius, userLocation, loadLocations]);
   
   return {
     searchRadius,
@@ -288,8 +317,7 @@ export const useRecommendedLocations = (
     refreshSiqsData,
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
-    loadMoreClickCount,
-    maxLoadMoreClicks: MAX_LOAD_MORE_CLICKS,
+    error,
     currentSiqs
   };
 };

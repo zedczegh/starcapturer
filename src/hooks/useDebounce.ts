@@ -1,21 +1,26 @@
 
-import useEnhancedDebounce from './useEnhancedDebounce';
+import { useState, useEffect } from 'react';
 
 /**
- * A hook that debounces a value by delaying updates until after a specific delay
- * This helps reduce the number of calculations, API calls, and renders
- * 
+ * A hook that debounces a value
  * @param value The value to debounce
  * @param delay The delay in milliseconds
  * @returns The debounced value
  */
-function useDebounce<T>(value: T, delay: number = 500): T {
-  return useEnhancedDebounce(value, delay, {
-    shortDelay: 10,
-    mediumDelay: 20,
-    longDelay: 80,
-    inputBasedTiming: true
-  });
-}
+export function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
-export default useDebounce;
+  useEffect(() => {
+    // Set timeout to update debounced value after delay
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    // Cleanup on unmount/value change
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}

@@ -13,6 +13,8 @@ import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocat
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
@@ -45,8 +47,7 @@ const PhotoPointsNearby: React.FC = () => {
     refreshSiqsData,
     canLoadMoreCalculated,
     loadMoreCalculatedLocations,
-    loadMoreClickCount,
-    maxLoadMoreClicks
+    error
   } = useRecommendedLocations(
     effectiveLocation, 
     currentSearchRadius
@@ -108,6 +109,18 @@ const PhotoPointsNearby: React.FC = () => {
         loading={false} // Remove loading dependency for instant switching
       />
       
+      {error && !loading && (
+        <Alert variant="destructive" className="mb-4 mx-auto max-w-xl">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            {t(
+              "Error loading locations. Please try again.",
+              "加载位置时出错。请重试。"
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {activeView === 'calculated' && (
         <div className="max-w-xl mx-auto mb-6">
           <DistanceRangeSlider
@@ -148,8 +161,7 @@ const PhotoPointsNearby: React.FC = () => {
         onLocationUpdate={handleLocationUpdate}
         canLoadMoreCalculated={canLoadMoreCalculated}
         loadMoreCalculated={loadMoreCalculatedLocations}
-        loadMoreClickCount={loadMoreClickCount}
-        maxLoadMoreClicks={maxLoadMoreClicks}
+        error={error}
       />
     </PhotoPointsLayout>
   );

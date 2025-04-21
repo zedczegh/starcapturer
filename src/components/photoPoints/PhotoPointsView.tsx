@@ -1,10 +1,9 @@
+
 import React, { useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
 import CalculatedLocations from './CalculatedLocations';
 import CertifiedLocations from './CertifiedLocations';
-
-// Note: Changed from lazy loading to regular import to fix "Failed to fetch" error
 
 interface PhotoPointsViewProps {
   showMap: boolean;
@@ -23,8 +22,7 @@ interface PhotoPointsViewProps {
   onLocationUpdate: (lat: number, lng: number) => void;
   canLoadMoreCalculated?: boolean;
   loadMoreCalculated?: () => void;
-  loadMoreClickCount?: number;
-  maxLoadMoreClicks?: number;
+  error?: Error | null;
 }
 
 const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
@@ -44,8 +42,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   onLocationUpdate,
   canLoadMoreCalculated = false,
   loadMoreCalculated,
-  loadMoreClickCount = 0,
-  maxLoadMoreClicks = 2
+  error
 }) => {
   const handleMapLocationUpdate = useCallback((lat: number, lng: number) => {
     onLocationUpdate(lat, lng);
@@ -77,6 +74,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           onViewDetails={onLocationClick}
           onRefresh={refreshSiqs}
           initialLoad={initialLoad}
+          error={error}
         />
       )}
 
@@ -91,8 +89,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           initialLoad={initialLoad}
           canLoadMoreCalculated={canLoadMoreCalculated}
           onLoadMoreCalculated={loadMoreCalculated}
-          loadMoreClickCount={loadMoreClickCount}
-          maxLoadMoreClicks={maxLoadMoreClicks}
+          error={error}
         />
       )}
     </div>
