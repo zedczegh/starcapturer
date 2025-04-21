@@ -332,14 +332,27 @@ const BortleNow: React.FC = () => {
 
   return (
     <>
+      <div
+        className="fixed inset-0 z-0 pointer-events-none select-none"
+        aria-hidden="true"
+        style={{
+          background: "url('/lovable-uploads/bae4bb9f-d2ce-4f1b-9eae-e0e022866a36.png') center center / cover no-repeat",
+          filter: 'blur(3px) brightness(0.52) saturate(1.11)'
+        }}
+      />
+      <div
+        className="fixed inset-0 z-0 pointer-events-none"
+        aria-hidden="true"
+        style={{
+          background: 'linear-gradient(130deg, rgba(10,17,34,0.98) 0%, rgba(45,20,43,0.81) 100%)',
+        }}
+      />
       <NavBar />
-      <div className="container mx-auto p-4 pt-20 pb-24 max-w-2xl">
+      <div className="container mx-auto p-4 pt-20 pb-24 max-w-2xl relative z-10">
         <div className="mb-6">
           <BackButton destination="/photo-points" />
         </div>
-        
         <BortleNowHeader />
-        
         {error && (
           <div className="text-red-500 mb-4 p-3 bg-red-500/10 rounded-lg border border-red-500/30 text-center">
             <div className="flex items-center justify-center gap-2">
@@ -347,14 +360,11 @@ const BortleNow: React.FC = () => {
             </div>
           </div>
         )}
-        
         <CountdownOverlay countdown={countdown} cameraMode={cameraMode} />
-        
         <CameraPermissionDialog 
           open={showCameraPermissionDialog}
           onPermissionResponse={handlePermissionResponse}
         />
-        
         <div className="space-y-6">
           <AnimatePresence>
             {bortleScale && (
@@ -367,7 +377,6 @@ const BortleNow: React.FC = () => {
               />
             )}
           </AnimatePresence>
-          
           <LocationSection
             latitude={latitude}
             longitude={longitude}
@@ -376,7 +385,6 @@ const BortleNow: React.FC = () => {
             setLatitude={setLatitude}
             setLongitude={setLongitude}
           />
-          
           <CameraMeasurementSection
             isProcessingImage={isProcessingImage}
             isMeasuringRealtime={isMeasuringRealtime}

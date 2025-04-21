@@ -20,19 +20,35 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
 }) => {
   const { t } = useLanguage();
   const { handleSIQSClick } = useSiqsNavigation(); // Re-enabled to use for location acquisition
-  
+
   // Default page title
   const title = pageTitle || t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
-  
+
+  // Background image layer (nebula/starfield)
   return (
-    <div className="min-h-screen bg-cosmic-950">
+    <div className="relative min-h-screen bg-cosmic-950 overflow-x-hidden">
+      {/* Nebula/Starfield Background */}
+      <div
+        className="fixed inset-0 z-0 pointer-events-none select-none"
+        aria-hidden="true"
+        style={{
+          background: "url('/lovable-uploads/bae4bb9f-d2ce-4f1b-9eae-e0e022866a36.png') center center / cover no-repeat",
+          filter: 'blur(2.5px) brightness(0.55) saturate(1.10)',
+        }}
+      />
+      {/* Overlay for darkness/gradient */}
+      <div
+        className="fixed inset-0 z-0 pointer-events-none"
+        aria-hidden="true"
+        style={{
+          background: 'linear-gradient(120deg, rgba(10,17,34,0.94) 0%, rgba(40,22,44,0.81) 100%)',
+        }}
+      />
       <Helmet>
         <title>{title}</title>
       </Helmet>
-      
       <NavBar />
-      
-      <div className="pt-20 md:pt-28 pb-20 will-change-transform">
+      <div className="relative pt-20 md:pt-28 pb-20 will-change-transform z-10">
         <div className="container mx-auto px-4">
           {children}
           
@@ -60,7 +76,6 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </motion.h3>
-            
             <motion.div 
               className="flex flex-wrap gap-4 justify-center"
               variants={{
@@ -74,7 +89,6 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
                   {t("Return to Home", "返回首页")}
                 </Button>
               </Link>
-              
               <Link to="/share">
                 <Button 
                   variant="outline" 
@@ -84,7 +98,6 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
                   {t("Measure Sky Brightness", "测量夜空亮度")}
                 </Button>
               </Link>
-              
               <Link to="/location/default">
                 <Button 
                   variant="outline" 
@@ -95,7 +108,6 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
                 </Button>
               </Link>
             </motion.div>
-            
             <motion.div 
               className="mt-8"
               variants={{
@@ -114,7 +126,6 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
                   <BookOpen size={20} />
                 </a>
               </div>
-              
               <div 
                 className="text-xs text-cosmic-400 mt-6 pt-4 border-t border-cosmic-700/20"
               >
