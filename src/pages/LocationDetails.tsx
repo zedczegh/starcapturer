@@ -13,6 +13,7 @@ import LocationDetailsMain from "@/components/location/LocationDetailsMain";
 import { useLocationDetailsLogic } from "@/hooks/location/useLocationDetailsLogic";
 import { toast } from "sonner";
 import { getRandomAstronomyTip } from "@/utils/astronomyTips"; 
+import NavBar from "@/components/NavBar";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -73,24 +74,25 @@ const LocationDetails = () => {
     return <LocationDetailsLoading />;
   }
 
-  if (!locationData) {
-    return (
-      <LocationErrorSection 
-        onUseCurrentLocation={() => {}}
-        isLoading={loadingCurrentLocation}
-      />
-    );
-  }
-
   return (
-    <LocationDetailsMain
-      locationData={locationData}
-      setLocationData={setLocationData}
-      statusMessage={statusMessage}
-      messageType={messageType}
-      setStatusMessage={setStatusMessage}
-      handleUpdateLocation={handleUpdateLocation}
-    />
+    <>
+      <NavBar />
+      {!locationData ? (
+        <LocationErrorSection 
+          onUseCurrentLocation={() => {}}
+          isLoading={loadingCurrentLocation}
+        />
+      ) : (
+        <LocationDetailsMain
+          locationData={locationData}
+          setLocationData={setLocationData}
+          statusMessage={statusMessage}
+          messageType={messageType}
+          setStatusMessage={setStatusMessage}
+          handleUpdateLocation={handleUpdateLocation}
+        />
+      )}
+    </>
   );
 };
 
