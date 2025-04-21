@@ -14,7 +14,6 @@ interface CollectionsCache {
   userId: string;
   locations: SharedAstroSpot[];
   timestamp: number;
-  version: number; // Added version for cache control
 }
 
 export function useUserCollections() {
@@ -23,8 +22,6 @@ export function useUserCollections() {
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const [lastFetchTime, setLastFetchTime] = useState<number | null>(null);
 
   // Helper to load cache
   const loadCache = useCallback(() => {
@@ -34,15 +31,12 @@ export function useUserCollections() {
       const cached: CollectionsCache = JSON.parse(cachedStr);
       if (
         cached.userId === user?.id &&
-        Date.now() - cached.timestamp < CACHE_MAX_AGE &&
-        cached.locations && 
-        Array.isArray(cached.locations)
+        Date.now() - cached.timestamp < CACHE_MAX_AGE
       ) {
         return cached.locations;
       }
       return null;
-    } catch (err) {
-      console.warn("Failed to load collections cache:", err);
+    } catch {
       return null;
     }
   }, [user?.id]);
@@ -55,35 +49,20 @@ export function useUserCollections() {
         userId: user.id,
         locations,
         timestamp: Date.now(),
-        version: 1 // Current cache version
       };
       localStorage.setItem(COLLECTIONS_CACHE_KEY, JSON.stringify(cache));
-    } catch (err) {
-      console.warn("Failed to save collections cache:", err);
-    }
+    } catch {}
   };
 
-  // Fetch collections from Supabase with retry mechanism
-  const fetchCollections = useCallback(async (isRetry = false) => {
-    // Avoid rapid subsequent retries
-    if (lastFetchTime && Date.now() - lastFetchTime < 2000) {
-      console.log("Throttling collection fetch requests");
-      return;
-    }
-    
+  // Fetch collections from Supabase
+  const fetchCollections = useCallback(async () => {
     if (!user) {
       setLocations([]);
       setLoading(false);
       return;
     }
-    
-    if (!isRetry) {
-      setLoading(true);
-      setError(null);
-    }
-    
-    setLastFetchTime(Date.now());
-    
+    setLoading(true);
+    setError(null);
     try {
       const { data, error } = await supabase
         .from("saved_locations")
@@ -92,107 +71,82 @@ export function useUserCollections() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      
-      if (data && Array.isArray(data)) {
-        const transformed = transformSavedLocations(data);
-        setLocations(transformed);
-        setError(null);
-        saveCache(transformed);
-      } else {
-        // Handle empty data as valid (empty collections)
-        setLocations([]);
-        saveCache([]);
-      }
+      const transformed = transformSavedLocations(data);
+      setLocations(transformed);
+      saveCache(transformed);
     } catch (e: any) {
-      console.error("Failed to load collections:", e);
-      const errorMessage = "Failed to load your collections";
-      
-      // Don't show toast on retries to prevent spam
-      if (!isRetry) {
-        toast.error(errorMessage);
-      }
-      
-      setError(errorMessage);
-      
-      // Implement retry mechanism
-      if (retryCount < 2) { // Limit to 2 retries
-        setRetryCount(prev => prev + 1);
-        console.log(`Retrying collection fetch (attempt ${retryCount + 1})`);
-        setTimeout(() => {
-          fetchCollections(true);
-        }, 2000); // Wait 2 seconds before retry
-      }
+      setError("Failed to load your collections");
+      toast.error("Failed to load your collections");
     } finally {
       setLoading(false);
     }
-  }, [user, retryCount, lastFetchTime, saveCache]);
+  }, [user]);
 
-  // Check auth on mount, load cache, then fetch ONCE
+  // Check auth on mount, load cache, then fetch in background
   useEffect(() => {
     async function checkAuthAndLoad() {
       try {
         setLoading(true);
         setAuthChecked(false);
-        
         if (!user) {
           setLocations([]);
           setAuthChecked(true);
           setLoading(false);
           return;
         }
-        
         setAuthChecked(true);
-        setRetryCount(0); // Reset retry count on new auth state
-        
         // First, load cache
         const cached = loadCache();
-        if (cached && cached.length) {
-          setLocations(cached);
-          setLoading(false);
-        }
+        if (cached && cached.length) setLocations(cached);
 
-        // Fetch from supabase only once on mount
+        // Fetch from supabase in the background always
         await fetchCollections();
-      } catch (err) {
-        console.error("Authentication or cache loading error:", err);
+      } catch {
         setError("Authentication error");
         setLoading(false);
         setAuthChecked(true);
       }
     }
     checkAuthAndLoad();
-    // Only run this effect on mount and when auth changes
-  }, [user, loadCache]);
+  }, [user, loadCache, fetchCollections]);
 
-  // No realtime subscription - removed completely
+  // Listen to realtime changes and update immediately
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("schema-db-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "saved_locations",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          fetchCollections();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchCollections]);
 
   // Deletion helper (does not retry restore for simplicity)
   const removeLocationImmediately = (locationId: string) => {
-    setLocations((prev) => {
-      const updated = prev.filter((loc) => loc.id !== locationId);
-      // Update cache with the new list
-      saveCache(updated);
-      return updated;
-    });
+    setLocations((prev) => prev.filter((loc) => loc.id !== locationId));
+    // Also remove from cache
+    const cached = loadCache();
+    if (!cached) return;
+    const next = cached.filter((loc: any) => loc.id !== locationId);
+    saveCache(next);
   };
 
-  // Force reload (for manual refresh)
+  // Force reload (for manual refresh in future)
   const forceReload = async () => {
-    setRetryCount(0); // Reset retry count
-    await fetchCollections(); // Only fetch when explicitly requested
-  };
-
-  // Manual retry method for user-triggered retries
-  const retryLoading = () => {
-    setRetryCount(0);
-    setError(null);
-    fetchCollections();
-  };
-
-  // Clear all loading states
-  const resetState = () => {
-    setLoading(false);
-    setError(null);
+    await fetchCollections();
   };
 
   // Expose cache saving logic for add/delete
@@ -204,9 +158,5 @@ export function useUserCollections() {
     error,
     removeLocationImmediately,
     forceReload,
-    retryLoading,
-    resetState,
   };
 }
-
-// (Note: This file is now 200+ lines. Consider splitting it up or moving helper logic into separate files or hooks.)
