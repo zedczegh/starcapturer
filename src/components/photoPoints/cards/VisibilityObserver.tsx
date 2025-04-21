@@ -1,36 +1,51 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
-interface VisibilityObserverProps {
-  onVisibilityChange: (isVisible: boolean) => void;
+export interface VisibilityObserverProps {
   children: React.ReactNode;
+  onVisibilityChange: (isVisible: boolean) => void;
+  forceVisible?: boolean;
 }
 
-const VisibilityObserver: React.FC<VisibilityObserverProps> = ({
+const VisibilityObserver: React.FC<VisibilityObserverProps> = ({ 
+  children, 
   onVisibilityChange,
-  children
+  forceVisible = false
 }) => {
-  const ref = useRef<HTMLDivElement | null>(null);
-  
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          onVisibilityChange(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const elementRef = useRef<HTMLDivElement>(null);
 
-    if (ref.current) {
-      observer.observe(ref.current);
+  useEffect(() => {
+    // If forceVisible is true, just call onVisibilityChange with true
+    if (forceVisible) {
+      onVisibilityChange(true);
+      return;
     }
 
-    return () => observer.disconnect();
-  }, [onVisibilityChange]);
-  
-  return <div ref={ref}>{children}</div>;
+    const options = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.1
+    };
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      const [entry] = entries;
+      onVisibilityChange(entry.isIntersecting);
+    }, options);
+
+    const currentElement = elementRef.current;
+    if (currentElement) {
+      observerRef.current.observe(currentElement);
+    }
+
+    return () => {
+      if (currentElement && observerRef.current) {
+        observerRef.current.unobserve(currentElement);
+      }
+    };
+  }, [onVisibilityChange, forceVisible]);
+
+  return <div ref={elementRef}>{children}</div>;
 };
 
 export default VisibilityObserver;
