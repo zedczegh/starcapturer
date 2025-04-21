@@ -37,16 +37,16 @@ const Collections = () => {
 
         if (error) throw error;
 
-        // Transform the data to match SharedAstroSpot type
+        // Transform the data to match SharedAstroSpot type with property name corrections
         const transformedLocations: SharedAstroSpot[] = (data || []).map(loc => ({
           id: loc.id,
           name: loc.name,
           latitude: loc.latitude,
           longitude: loc.longitude,
-          bortleScale: loc.bortleScale,
+          bortleScale: loc.bortlescale || 4, // Correct property name from bortlescale to bortleScale
           siqs: loc.siqs,
           certification: loc.certification || null,
-          isDarkSkyReserve: loc.isDarkSkyReserve || false,
+          isDarkSkyReserve: loc.isdarkskyreserve || false, // Correct property name from isdarkskyreserve to isDarkSkyReserve
           timestamp: loc.timestamp || new Date().toISOString(),
         }));
 
