@@ -300,3 +300,14 @@ function estimateBortleScaleFromGeography(latitude: number, longitude: number): 
   // Default middle-range value
   return 4;
 }
+
+/**
+ * Get light pollution value for a given location
+ * @param latitude Latitude
+ * @param longitude Longitude
+ * @returns Light pollution value (Bortle scale)
+ */
+export const getLightPollution = async (latitude: number, longitude: number): Promise<number> => {
+  // Use interpolated Bortle scale as light pollution value
+  return interpolateBortleScale(latitude, longitude);
+};

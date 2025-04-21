@@ -190,10 +190,7 @@ export const useRecommendedLocations = (
       setError(null);
       console.log(`Loading more calculated locations`);
       
-      // For calculated locations, we use intelligent sampling based on radius
-      const samplingDensity = Math.max(1, Math.floor(searchRadius / 100));
-      const calculatedLimit = Math.ceil(MAX_LOCATIONS / samplingDensity);
-      
+      // Get the next batch of calculated locations
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,

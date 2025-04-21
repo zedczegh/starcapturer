@@ -81,7 +81,9 @@ export const useCalculatedLocationsFind = () => {
               siqs: siqs,
               distance: distance,
               timestamp: new Date().toISOString(),
-              isCalculated: true
+              // Add a custom property to distinguish these as calculated points
+              certification: null,
+              isDarkSkyReserve: false
             };
             
             calculatedLocations.push(location);
