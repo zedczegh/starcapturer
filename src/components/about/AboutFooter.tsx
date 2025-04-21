@@ -75,7 +75,7 @@ const AboutFooter = () => {
         
         <Link to="/bortle-now">
           <Button variant="outline" className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors">
-            <Ruler className="mr-2 h-4 w-4 text-purple-400" />
+            <Ruler className="mr-2 h-3 w-3 text-purple-400" />
             {t("Measure Sky Brightness", "测量夜空亮度")}
           </Button>
         </Link>
