@@ -142,3 +142,4 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({
 };
 
 export default NavigationButtons;
+

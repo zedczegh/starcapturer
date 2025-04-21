@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationDetailsContent from "./LocationDetailsContent";
@@ -12,6 +11,7 @@ import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import LocationSearch from "./LocationSearch";
+import NavigationButtons from "./navigation/NavigationButtons";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -66,7 +66,17 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       data-refresh-trigger="true"
     >
       <div className="flex justify-between items-center mb-6">
-        <BackButton destination="/photo-points" />
+        <div className="flex items-center gap-2">
+          {/* Navigation app picker button */}
+          {locationData?.latitude && locationData?.longitude && (
+            <NavigationButtons 
+              latitude={locationData.latitude}
+              longitude={locationData.longitude}
+              locationName={locationData?.name || ""}
+            />
+          )}
+          <BackButton destination="/photo-points" />
+        </div>
         <Button 
           variant="outline" 
           onClick={() => setSearchDialogOpen(true)}
