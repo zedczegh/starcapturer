@@ -20,39 +20,18 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
 }) => {
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   
-  // Update locations with real-time SIQS in batches to avoid UI freezing
+  // Update locations with real-time SIQS
   useEffect(() => {
     if (locations.length > 0) {
-      // First, just use the original locations to prevent UI freezing
-      setEnhancedLocations(locations);
-      
-      // Then update with real-time SIQS in the background
       const updateWithSiqs = async () => {
         try {
-          // Process in small batches to prevent UI freezing
-          const BATCH_SIZE = 5;
-          let updatedLocations = [...locations];
-          
-          for (let i = 0; i < locations.length; i += BATCH_SIZE) {
-            const batch = locations.slice(i, i + BATCH_SIZE);
-            const updatedBatch = await updateLocationsWithRealTimeSiqs(batch);
-            
-            // Update this batch in the overall array
-            updatedBatch.forEach((updated, index) => {
-              updatedLocations[i + index] = updated;
-            });
-            
-            // Update state after each batch to show progress
-            setEnhancedLocations([...updatedLocations]);
-            
-            // Small timeout to allow UI to breathe
-            if (i + BATCH_SIZE < locations.length) {
-              await new Promise(resolve => setTimeout(resolve, 100));
-            }
-          }
+          // Update all locations regardless of type
+          const updated = await updateLocationsWithRealTimeSiqs(locations);
+          setEnhancedLocations(updated);
         } catch (err) {
           console.error("Error updating grid locations with real-time SIQS:", err);
-          // We already have the original locations as fallback
+          // Fallback to original locations
+          setEnhancedLocations(locations);
         }
       };
       
@@ -65,9 +44,10 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
   const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : locations;
   
   // Create a handler function that wraps the onViewDetails callback
+  // to match the expected function signature
   const handleViewDetails = (location: SharedAstroSpot) => (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onViewDetails && location) {
+    e.stopPropagation(); // Prevent event bubbling
+    if (onViewDetails) {
       onViewDetails(location);
     }
   };
@@ -76,10 +56,10 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
     <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2'} gap-4 mb-6`}>
       {locationsToDisplay.map((location, index) => (
         <motion.div
-          key={location.id || `${location.latitude}-${location.longitude}-${index}`}
+          key={location.id || `${location.latitude}-${location.longitude}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: Math.min(0.05 * index, 0.5) }} // Cap the delay for better performance
+          transition={{ duration: 0.3, delay: index * 0.05 }}
         >
           <PhotoPointCard
             point={location}

@@ -11,8 +11,6 @@ import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -24,7 +22,8 @@ interface CalculatedLocationsProps {
   initialLoad?: boolean;
   onLoadMoreCalculated?: () => void;
   canLoadMoreCalculated?: boolean;
-  error?: Error | null;
+  loadMoreClickCount?: number;
+  maxLoadMoreClicks?: number;
 }
 
 const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
@@ -37,7 +36,8 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   initialLoad = false,
   onLoadMoreCalculated,
   canLoadMoreCalculated = false,
-  error
+  loadMoreClickCount = 0,
+  maxLoadMoreClicks = 2
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
@@ -63,21 +63,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     );
   }
   
-  // Show error state if there's an error
-  if (error && !loading) {
-    return (
-      <Alert variant="destructive" className="mb-6">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          {t(
-            "Error loading locations. Please try again.",
-            "加载位置时出错。请重试。"
-          )}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-  
   // Show empty state if no locations available
   if (sortedLocations.length === 0) {
     return (
@@ -89,8 +74,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   }
   
   const handleViewLocation = (point: SharedAstroSpot) => {
-    if (!point) return;
-    
     const locationId = `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
     
     // Navigate to location details page
@@ -106,13 +89,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   
   return (
     <>
-      <div className="mb-3 text-sm text-muted-foreground text-center">
-        {t(
-          `Showing ${sortedLocations.length} calculated locations`, 
-          `显示 ${sortedLocations.length} 个计算位置`
-        )}
-      </div>
-      
       <LocationsGrid 
         locations={sortedLocations}
         initialLoad={initialLoad}
@@ -125,7 +101,8 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         onLoadMore={onLoadMore}
         canLoadMoreCalculated={canLoadMoreCalculated}
         onLoadMoreCalculated={onLoadMoreCalculated}
-        loading={loading}
+        loadMoreClickCount={loadMoreClickCount}
+        maxLoadMoreClicks={maxLoadMoreClicks}
       />
     </>
   );

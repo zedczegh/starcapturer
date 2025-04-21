@@ -1,3 +1,4 @@
+
 import { validateCoordinates } from './coordinates';
 
 export interface WeatherResponse {
@@ -142,23 +143,5 @@ export async function fetchWeatherData(
   } catch (error) {
     console.error("Error fetching weather data:", error);
     return null;
-  }
-}
-
-/**
- * Gets weather data for a location - simplified function for SIQS calculation
- * @param latitude Latitude
- * @param longitude Longitude
- * @returns Weather data with focus on cloud cover
- */
-export async function getWeatherData(latitude: number, longitude: number): Promise<{ cloudCover: number }> {
-  try {
-    const data = await fetchWeatherData({ latitude, longitude });
-    return {
-      cloudCover: data?.cloudCover ?? 0
-    };
-  } catch (error) {
-    console.error("Error getting weather data:", error);
-    return { cloudCover: 0 };
   }
 }
