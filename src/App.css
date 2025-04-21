@@ -1,4 +1,4 @@
 
-// Import all CSS from the new split files.
+/* Import all CSS from the new split files. */
 @import "./styles/global/index.css";
 @import "./styles/animation/index.css";
