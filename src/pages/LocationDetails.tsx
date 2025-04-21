@@ -1,5 +1,4 @@
-
-import React, { Suspense, lazy, useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
 import { useLocationDataCache } from "@/hooks/useLocationData";
@@ -14,10 +13,8 @@ import PageLoader from "@/components/loaders/PageLoader";
 import NavBar from "@/components/NavBar";
 import { getCurrentPosition } from "@/utils/geolocationUtils";
 import { toast } from "sonner";
-
-// Lazy-loaded components for better performance
-const LocationError = lazy(() => import("@/components/location/LocationError"));
-const LocationDetailsViewport = lazy(() => import("@/components/location/LocationDetailsViewport"));
+import LocationError from "@/components/location/LocationError";
+import LocationDetailsViewport from "@/components/location/LocationDetailsViewport";
 
 const LocationDetails = () => {
   const { id } = useParams();
