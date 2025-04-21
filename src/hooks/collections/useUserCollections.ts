@@ -163,30 +163,7 @@ export function useUserCollections() {
     checkAuthAndLoad();
   }, [user, loadCache, fetchCollections]);
 
-  // Listen to realtime changes and update immediately
-  useEffect(() => {
-    if (!user) return;
-    
-    const channel = supabase
-      .channel("schema-db-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "saved_locations",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          fetchCollections();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, fetchCollections]);
+  // (Removed: Listen to realtime changes for auto-refresh)
 
   // Deletion helper (does not retry restore for simplicity)
   const removeLocationImmediately = (locationId: string) => {
@@ -230,3 +207,5 @@ export function useUserCollections() {
     resetState,
   };
 }
+
+// (Note: This file is now 200+ lines. Consider splitting it up or moving helper logic into separate files or hooks.)

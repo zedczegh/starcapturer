@@ -7,7 +7,7 @@ import NavBar from "@/components/NavBar";
 import { Loader, RefreshCw } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { prepareLocationForNavigation } from "@/utils/locationNavigation";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
 import { sortLocationsBySiqs } from "./collections/sortLocationsBySiqs";
 import PageLoader from "@/components/loaders/PageLoader";
@@ -33,7 +33,8 @@ const Collections = () => {
     error,
     removeLocationImmediately,
     retryLoading,
-    resetState
+    resetState,
+    forceReload
   } = useUserCollections();
 
   // Ensure we reset state on unmount to prevent stale state
@@ -108,6 +109,26 @@ const Collections = () => {
             </h1>
             {sortedLocations.length > 0 && !loading && (
               <div className="flex space-x-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="rounded-full px-3 py-1 flex items-center justify-center"
+                      onClick={() => forceReload()}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <Loader className="h-4 w-4 animate-spin mr-1" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-1" />
+                      )}
+                      {t("Refresh", "刷新")}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {t("Refresh collections list", "刷新收藏列表")}
+                  </TooltipContent>
+                </Tooltip>
                 <Button
                   className="bg-cosmic-800 text-white rounded-full px-4 py-1 text-sm font-medium border border-cosmic-600 shadow hover:bg-cosmic-700 transition"
                   onClick={() => setEditMode((v) => !v)}
@@ -176,3 +197,4 @@ const Collections = () => {
 };
 
 export default Collections;
+
