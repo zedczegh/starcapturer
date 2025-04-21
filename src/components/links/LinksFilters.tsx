@@ -6,7 +6,7 @@ import { Layers, LineChart, CirclePlus, CircleMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLinksFilters } from "@/hooks/useLinksFilters";
-import { translateType } from "@/utils/linkTranslations";
+import { translateType, translateCategory } from "@/utils/linkTranslations";
 
 interface LinksFiltersProps {
   searchQuery: string;
