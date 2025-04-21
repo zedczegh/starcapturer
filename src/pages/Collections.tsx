@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +11,7 @@ import { prepareLocationForNavigation } from "@/utils/locationNavigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
 import { transformSavedLocations } from "./collections/transformLocations";
+import { sortLocationsBySiqs } from "./collections/sortLocationsBySiqs";
 import PageLoader from "@/components/loaders/PageLoader";
 import LocationStatusMessage from "@/components/location/LocationStatusMessage";
 
@@ -25,7 +25,6 @@ const Collections = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check auth first
     const checkAuth = async () => {
       try {
         const { data } = await supabase.auth.getSession();
@@ -64,7 +63,6 @@ const Collections = () => {
 
         if (error) throw error;
 
-        // Use the shared, safely testable transformation function
         const transformedLocations = transformSavedLocations(data);
 
         setLocations(transformedLocations);
@@ -78,7 +76,6 @@ const Collections = () => {
 
     checkAuth();
 
-    // Only set up real-time subscription if we have a user
     if (user) {
       const channel = supabase
         .channel('schema-db-changes')
@@ -109,12 +106,10 @@ const Collections = () => {
     }
   };
 
-  // Show loading state when checking auth
   if (!authChecked) {
     return <PageLoader />;
   }
 
-  // If user isn't authenticated, show minimal UI with an error
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
@@ -128,6 +123,8 @@ const Collections = () => {
       </div>
     );
   }
+
+  const sortedLocations = sortLocationsBySiqs(locations);
 
   return (
     <div className="min-h-screen bg-background">
@@ -145,7 +142,7 @@ const Collections = () => {
             <div className="flex justify-center items-center h-40">
               <Loader className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : locations.length === 0 ? (
+          ) : sortedLocations.length === 0 ? (
             <div className="text-center py-12 bg-cosmic-800/50 rounded-lg border border-cosmic-700/50">
               <div className="mb-4 text-muted-foreground">
                 {t("You haven't saved any locations yet.", "您还没有保存任何位置。")}
@@ -159,7 +156,7 @@ const Collections = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {locations.map((location, index) => (
+              {sortedLocations.map((location, index) => (
                 <PhotoLocationCard
                   key={location.id}
                   location={location}
