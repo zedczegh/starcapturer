@@ -1,7 +1,5 @@
 
 import React, { useEffect } from "react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { AlertCircle, CheckCircle, Info, X } from "lucide-react";
 
 interface StatusMessageProps {
   message: string | null;
@@ -14,10 +12,8 @@ const StatusMessage: React.FC<StatusMessageProps> = ({
   message, 
   type = 'info',
   onClear,
-  autoHideDuration = 3000
+  autoHideDuration = 0
 }) => {
-  const { t } = useLanguage();
-  
   useEffect(() => {
     if (message && onClear && autoHideDuration > 0) {
       const timer = setTimeout(() => {
@@ -30,31 +26,20 @@ const StatusMessage: React.FC<StatusMessageProps> = ({
   
   if (!message) return null;
   
-  const bgClass = type === 'error' 
-    ? 'bg-destructive/15 text-destructive border-destructive/30' 
-    : type === 'success'
-      ? 'bg-green-500/15 text-green-400 border-green-500/30'
-      : 'bg-primary/15 text-primary-foreground/90 border-primary/30';
-  
-  const Icon = type === 'error' 
-    ? AlertCircle 
-    : type === 'success'
-      ? CheckCircle
-      : Info;
+  const getTypeClasses = () => {
+    switch (type) {
+      case 'success':
+        return 'bg-green-950/40 border-green-500/30 text-green-100';
+      case 'error':
+        return 'bg-red-950/40 border-red-500/30 text-red-100';
+      default:
+        return 'bg-cosmic-800/50 border-primary/20 text-primary-foreground/90';
+    }
+  };
   
   return (
-    <div className={`mb-4 p-3 rounded-md flex items-start ${bgClass} border shadow-lg animate-fade-in`}>
-      <Icon className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-      <div className="flex-1">{message}</div>
-      {onClear && (
-        <button 
-          onClick={onClear} 
-          className="ml-2 text-current opacity-70 hover:opacity-100 transition-opacity"
-          aria-label={t("Clear message", "清除消息")}
-        >
-          <X className="h-4 w-4" />
-        </button>
-      )}
+    <div className={`mb-4 p-3 border rounded-md text-sm shadow-lg animate-fade-in ${getTypeClasses()}`}>
+      {message}
     </div>
   );
 };

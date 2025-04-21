@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +12,7 @@ import ProfileForm from '@/components/profile/ProfileForm';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import { Loader2 } from 'lucide-react';
 import { getRandomAstronomyTip } from '@/utils/astronomyTips';
+import PageLoader from '@/components/loaders/PageLoader';
 
 interface Profile {
   username: string | null;
@@ -30,6 +30,7 @@ const Profile = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -51,16 +52,30 @@ const Profile = () => {
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error(t("Authentication required", "需要认证"), {
-          description: t("Please sign in to view your profile", "请登录以查看您的个人资料")
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          toast.error(t("Authentication required", "需要认证"), {
+            description: t("Please sign in to view your profile", "请登录以查看您的个人资料")
+          });
+          navigate('/photo-points');
+          return;
+        }
+        
+        await fetchProfile(session.user.id);
+      } catch (error) {
+        console.error("Auth check error:", error);
+        // Create a default profile state even on error
+        setProfile({
+          username: null,
+          avatar_url: null, 
+          date_of_birth: null
         });
-        navigate('/photo-points');
-        return;
+      } finally {
+        setAuthChecked(true);
+        setLoading(false);
       }
-      
-      fetchProfile(session.user.id);
     };
 
     checkSession();
@@ -92,12 +107,16 @@ const Profile = () => {
         setAvatarUrl(data.avatar_url);
       } else {
         // Create profile if it doesn't exist
-        await supabase.from('profiles').insert({
-          id: userId,
-          username: null,
-          avatar_url: null,
-          date_of_birth: null
-        });
+        try {
+          await supabase.from('profiles').insert({
+            id: userId,
+            username: null,
+            avatar_url: null,
+            date_of_birth: null
+          });
+        } catch (insertError) {
+          console.error("Profile creation error:", insertError);
+        }
         
         setProfile({
           username: null,
@@ -106,10 +125,13 @@ const Profile = () => {
         });
       }
     } catch (error: any) {
-      toast.error(t("Failed to load profile", "加载个人资料失败"), {
-        description: error.message
-      });
       console.error("Profile fetch error:", error);
+      // Still set a default profile on error
+      setProfile({
+        username: null,
+        avatar_url: null,
+        date_of_birth: null
+      });
     } finally {
       setLoading(false);
     }
@@ -213,18 +235,12 @@ const Profile = () => {
     setAvatarFile(null);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900">
-        <NavBar />
-        <div className="container mx-auto px-4 py-8 pt-24 flex justify-center items-center">
-          <div className="flex flex-col items-center space-y-4">
-            <Loader2 className="h-8 w-8 text-primary animate-spin" />
-            <p className="text-cosmic-300">{t("Loading profile...", "正在加载个人资料...")}</p>
-          </div>
-        </div>
-      </div>
-    );
+  if (!authChecked || loading) {
+    return <PageLoader />;
+  }
+
+  if (!user) {
+    return <PageLoader />;
   }
 
   const displayUsername = profile?.username || t("Stargazer", "星空观察者");

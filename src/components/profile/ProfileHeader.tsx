@@ -31,11 +31,6 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <Star className="w-7 h-7 text-primary mr-2 animate-pulse" />
           {username}
         </h1>
-        <div className="mt-2 text-cosmic-300 text-base md:text-lg flex items-center">
-          <span>
-            {t("Welcome! Update your personal information below.", "欢迎！在下方更新您的个人信息。")}
-          </span>
-        </div>
         <AstronomyTip tip={astronomyTip} />
       </div>
       {/* Avatar on right */}

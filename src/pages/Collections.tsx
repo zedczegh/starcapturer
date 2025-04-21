@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +12,8 @@ import { prepareLocationForNavigation } from "@/utils/locationNavigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
 import { transformSavedLocations } from "./collections/transformLocations";
+import PageLoader from "@/components/loaders/PageLoader";
+import LocationStatusMessage from "@/components/location/LocationStatusMessage";
 
 const Collections = () => {
   const { user } = useAuth();
@@ -18,17 +21,41 @@ const Collections = () => {
   const navigate = useNavigate();
   const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/photo-points');
-      toast.error(t("Please sign in to view your collections", "请登录以查看您的收藏"));
-      return;
-    }
+    // Check auth first
+    const checkAuth = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          toast.error(t("Please sign in to view your collections", "请登录以查看您的收藏"));
+          navigate('/photo-points');
+          return;
+        }
+        
+        setAuthChecked(true);
+        fetchCollections();
+      } catch (err) {
+        console.error("Auth check error:", err);
+        setAuthChecked(true);
+        setLoading(false);
+        setError(t("Authentication error", "认证错误"));
+      }
+    };
 
     const fetchCollections = async () => {
       try {
         setLoading(true);
+        setError(null);
+        
+        if (!user) {
+          setLocations([]);
+          setLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase
           .from('saved_locations')
           .select('*')
@@ -43,33 +70,36 @@ const Collections = () => {
         setLocations(transformedLocations);
       } catch (error: any) {
         console.error('Error fetching collections:', error);
-        toast.error(t("Failed to load your collections", "无法加载您的收藏"));
+        setError(t("Failed to load your collections", "无法加载您的收藏"));
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCollections();
+    checkAuth();
 
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'saved_locations',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => {
-          fetchCollections();
-        }
-      )
-      .subscribe();
+    // Only set up real-time subscription if we have a user
+    if (user) {
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'saved_locations',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            fetchCollections();
+          }
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user, navigate, t]);
 
   const handleViewDetails = (location: SharedAstroSpot) => {
@@ -78,6 +108,26 @@ const Collections = () => {
       navigate(`/location/${locationId}`, { state: locationState });
     }
   };
+
+  // Show loading state when checking auth
+  if (!authChecked) {
+    return <PageLoader />;
+  }
+
+  // If user isn't authenticated, show minimal UI with an error
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <NavBar />
+        <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
+          <LocationStatusMessage 
+            message={t("Please sign in to view your collections", "请登录以查看您的收藏")} 
+            type="error" 
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -88,6 +138,8 @@ const Collections = () => {
           <h1 className="text-2xl font-bold mb-6 text-foreground">
             {t("My Collections", "我的收藏")}
           </h1>
+          
+          {error && <LocationStatusMessage message={error} type="error" />}
           
           {loading ? (
             <div className="flex justify-center items-center h-40">
