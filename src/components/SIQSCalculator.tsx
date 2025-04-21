@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
@@ -11,6 +10,7 @@ import StatusMessage from "./siqs/StatusMessage";
 import { motion } from "framer-motion";
 import { useLocationHandlers } from "./siqs/hooks/useLocationHandlers";
 import { currentSiqsStore } from "./index/CalculatorSection";
+import { logSiqsCalculation } from "@/services/siqs/siqsLogger";
 
 interface SIQSCalculatorProps {
   className?: string;
@@ -27,7 +27,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
 }) => {
   const { language } = useLanguage();
   
-  // Use our custom hooks for state management
   const {
     loading,
     statusMessage,
@@ -44,7 +43,6 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     onSiqsCalculated
   });
   
-  // Location handling
   const {
     userLocation,
     locationName,
@@ -60,33 +58,25 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     calculateSIQSForLocation,
     setStatusMessage,
     language,
-    seeingConditions: 2.5 // Default value before we get actual seeing conditions
+    seeingConditions: 2.5
   });
   
-  // Parse latitude and longitude for SIQS settings
   const parsedLatitude = parseFloat(latitude || "0") || 0;
   const parsedLongitude = parseFloat(longitude || "0") || 0;
   
-  // Get advanced settings
   const { seeingConditions } = useSIQSAdvancedSettings(parsedLatitude, parsedLongitude);
   
-  // When location changes, update the metadata
   useEffect(() => {
     if (locationName && parsedLatitude !== 0 && parsedLongitude !== 0) {
-      // Update metadata in global store
       currentSiqsStore.metadata.setMetadata(locationName, parsedLatitude, parsedLongitude);
       
-      // If we have a Bortle scale, update the SIQS value in the global store
       if (localBortleScale && !calculationInProgress) {
         setLoading(true);
         
-        // Simulate loading to ensure state updates properly
         setTimeout(() => {
           if (siqsScore !== null) {
-            // Update the SIQS score in the global store
             currentSiqsStore.setValue(siqsScore);
             
-            // Notify through provided callback
             if (onSiqsCalculated) {
               onSiqsCalculated(siqsScore);
             }
@@ -97,7 +87,43 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   }, [locationName, parsedLatitude, parsedLongitude, localBortleScale, onSiqsCalculated, calculationInProgress, setLoading, siqsScore]);
   
-  // Animation variants
+  useEffect(() => {
+    if (siqsScore !== null && !loading && !calculationInProgress && parsedLatitude && parsedLongitude) {
+      let astroNightCloudCover: number | null = null;
+
+      if (typeof locationSelectorProps?.weatherData?.nighttimeCloudData?.average === 'number') {
+        astroNightCloudCover = locationSelectorProps.weatherData.nighttimeCloudData.average;
+      } else if (typeof locationSelectorProps?.forecastData?.astro_night_cloud_cover === 'number') {
+        astroNightCloudCover = locationSelectorProps.forecastData.astro_night_cloud_cover;
+      } else if (typeof locationSelectorProps?.weatherData?.cloudCover === 'number') {
+        astroNightCloudCover = locationSelectorProps.weatherData.cloudCover;
+      } else {
+        astroNightCloudCover = null;
+      }
+
+      logSiqsCalculation({
+        latitude: parsedLatitude,
+        longitude: parsedLongitude,
+        locationName: locationName || "Unknown",
+        siqsScore: siqsScore,
+        astroNightCloudCover,
+        additionalMetadata: {
+          language,
+          source: "SIQSCalculator"
+        }
+      });
+    }
+  }, [
+    siqsScore,
+    loading,
+    calculationInProgress,
+    parsedLatitude,
+    parsedLongitude,
+    locationName,
+    locationSelectorProps,
+    language
+  ]);
+
   const animationVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
@@ -111,9 +137,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     }
   };
 
-  // Determine whether to show recommendations (prevent flickering by ensuring statusMessage is null)
   const showRecommendations = !hideRecommendedPoints && !loading && !calculationInProgress && (!statusMessage || statusMessage === '');
-  
+
   return (
     <motion.div 
       className={`glassmorphism-strong rounded-xl p-6 ${className} shadow-lg hover:shadow-xl transition-all duration-300 bg-cosmic-800/60 backdrop-blur-sm`}

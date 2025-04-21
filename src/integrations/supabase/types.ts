@@ -78,6 +78,42 @@ export type Database = {
         }
         Relationships: []
       }
+      siqs_calculation_entries: {
+        Row: {
+          additional_metadata: Json | null
+          astro_night_cloud_cover: number | null
+          calculated_at: string | null
+          id: string
+          latitude: number | null
+          location_name: string | null
+          longitude: number | null
+          siqs_score: number | null
+          user_id: string | null
+        }
+        Insert: {
+          additional_metadata?: Json | null
+          astro_night_cloud_cover?: number | null
+          calculated_at?: string | null
+          id?: string
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          siqs_score?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          additional_metadata?: Json | null
+          astro_night_cloud_cover?: number | null
+          calculated_at?: string | null
+          id?: string
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          siqs_score?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
