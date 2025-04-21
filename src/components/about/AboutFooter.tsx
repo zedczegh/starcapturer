@@ -4,7 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, MapPin, ArrowRight, Github, Twitter, BookOpen, Info } from "lucide-react";
+import { Home, Ruler, ArrowRight, Github, Twitter, BookOpen, Info } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const AboutFooter = () => {
@@ -73,9 +73,9 @@ const AboutFooter = () => {
           </Button>
         </Link>
         
-        <Link to="/share">
+        <Link to="/bortle-now">
           <Button variant="outline" className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors">
-            <MapPin className="mr-2 h-4 w-4 text-purple-400" />
+            <Ruler className="mr-2 h-4 w-4 text-purple-400" />
             {t("Measure Sky Brightness", "测量夜空亮度")}
           </Button>
         </Link>
@@ -132,3 +132,4 @@ const AboutFooter = () => {
 };
 
 export default AboutFooter;
+
