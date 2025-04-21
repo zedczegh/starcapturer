@@ -45,7 +45,7 @@ export * from "./table";
 export * from "./tabs";
 export * from "./textarea";
 export * from "./toast";
-export * from "./toaster";
+// Remove export from "./toaster"; as it doesn't exist
 export * from "./toggle-group";
 export * from "./toggle";
 export * from "./tooltip";
