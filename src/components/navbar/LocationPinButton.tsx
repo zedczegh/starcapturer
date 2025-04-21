@@ -43,12 +43,7 @@ const LocationPinButton: React.FC = () => {
       title={t("Update to your current location", "更新到您的当前位置")}
     >
       <MapPin className="h-5 w-5" />
-      
-      {locationFound && (
-        <div className="absolute -top-1 -right-1 bg-green-500/35 rounded-full p-0.5">
-          <Check className="h-2 w-2 text-white" strokeWidth={2} />
-        </div>
-      )}
+      {/* Removed the green checkmark (locationFound) indicator per user request */}
     </Button>
   );
 };

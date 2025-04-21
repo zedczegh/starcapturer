@@ -48,44 +48,8 @@ const CopyLocationButton: React.FC<CopyLocationButtonProps> = ({
       });
   };
 
-  // For icon only button
-  if (size === "icon") {
-    return (
-      <Button
-        variant={variant}
-        size={size}
-        onClick={handleCopyLocation}
-        className={`${className} transition-all duration-300`}
-        disabled={copied}
-        title={t("Copy Location", "复制位置")}
-      >
-        {copied ? (
-          <Check className="h-3.5 w-3.5 text-green-400" />
-        ) : (
-          <Copy className="h-3.5 w-3.5" />
-        )}
-      </Button>
-    );
-  }
-
-  return (
-    <Button
-      variant={variant}
-      size={size}
-      onClick={handleCopyLocation}
-      className={`${className} group transition-all duration-300`}
-      disabled={copied}
-    >
-      {copied ? (
-        <Check className="h-4 w-4 mr-2 text-green-400" />
-      ) : (
-        <MapPin className="h-4 w-4 mr-2 group-hover:text-primary transition-colors" />
-      )}
-      {copied
-        ? t("Copied!", "已复制！")
-        : t("Copy Location", "复制位置")}
-    </Button>
-  );
+  // Button is removed on location details page, so return null to disable usage everywhere
+  return null;
 };
 
 export default CopyLocationButton;

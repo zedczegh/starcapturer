@@ -7,7 +7,8 @@ import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
 import WeatherAlerts from "@/components/weather/WeatherAlerts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import LocationDetailsHeader from "./LocationDetailsHeader";
-import BackButton from "@/components/navigation/BackButton";
+// Removed BackButton import since we won't display it
+// import BackButton from "@/components/navigation/BackButton";
 import { Search, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -94,7 +95,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
               locationName={locationData?.name || ""}
             />
           )}
-          <BackButton destination="/photo-points" />
+          {/* Removed BackButton from UI on location details page */}
         </div>
         <div className="flex gap-2">
           <Button 
