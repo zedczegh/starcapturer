@@ -7,13 +7,15 @@ interface CardContainerProps {
   index: number;
   isVisible: boolean;
   isMobile: boolean;
+  onClick?: () => void; // Added optional onClick prop
 }
 
 const CardContainer: React.FC<CardContainerProps> = ({ 
   children, 
   index, 
   isVisible, 
-  isMobile 
+  isMobile,
+  onClick
 }) => {
   return (
     <div 
@@ -23,6 +25,7 @@ const CardContainer: React.FC<CardContainerProps> = ({
         transform: isVisible ? 'translateY(0)' : 'translateY(15px)',
         transition: `opacity 0.5s, transform 0.5s ease ${Math.min(index * 0.1, 0.5)}s`
       }}
+      onClick={onClick}
     >
       {children}
     </div>

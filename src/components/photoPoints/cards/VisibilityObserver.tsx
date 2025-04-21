@@ -4,15 +4,26 @@ import React, { useState, useEffect, useRef } from 'react';
 interface VisibilityObserverProps {
   onVisibilityChange: (isVisible: boolean) => void;
   children: React.ReactNode;
+  forceVisible?: boolean; // Added optional forceVisible prop
 }
 
 const VisibilityObserver: React.FC<VisibilityObserverProps> = ({
   onVisibilityChange,
-  children
+  children,
+  forceVisible = false
 }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   
+  // Handle forced visibility
   useEffect(() => {
+    if (forceVisible) {
+      onVisibilityChange(true);
+    }
+  }, [forceVisible, onVisibilityChange]);
+  
+  useEffect(() => {
+    if (forceVisible) return; // Skip observer if visibility is forced
+    
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -28,7 +39,7 @@ const VisibilityObserver: React.FC<VisibilityObserverProps> = ({
     }
 
     return () => observer.disconnect();
-  }, [onVisibilityChange]);
+  }, [onVisibilityChange, forceVisible]);
   
   return <div ref={ref}>{children}</div>;
 };
