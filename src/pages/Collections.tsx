@@ -11,7 +11,6 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { prepareLocationForNavigation } from "@/utils/locationNavigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
-import DeleteLocationButton from "@/components/collections/DeleteLocationButton";
 
 const Collections = () => {
   const { user } = useAuth();
@@ -38,16 +37,16 @@ const Collections = () => {
 
         if (error) throw error;
 
-        // Transform the data to match SharedAstroSpot type, mapping the database column names correctly
+        // Transform the data to match SharedAstroSpot type
         const transformedLocations: SharedAstroSpot[] = (data || []).map(loc => ({
           id: loc.id,
           name: loc.name,
           latitude: loc.latitude,
           longitude: loc.longitude,
-          bortleScale: loc.bortlescale, // Correct mapping from bortlescale to bortleScale
+          bortleScale: loc.bortleScale,
           siqs: loc.siqs,
           certification: loc.certification || null,
-          isDarkSkyReserve: loc.isdarkskyreserve || false, // Correct mapping from isdarkskyreserve to isDarkSkyReserve
+          isDarkSkyReserve: loc.isDarkSkyReserve || false,
           timestamp: loc.timestamp || new Date().toISOString(),
         }));
 
@@ -62,7 +61,6 @@ const Collections = () => {
 
     fetchCollections();
 
-    // Set up realtime subscription for delete events
     const channel = supabase
       .channel('schema-db-changes')
       .on(
@@ -89,11 +87,6 @@ const Collections = () => {
     if (locationId) {
       navigate(`/location/${locationId}`, { state: locationState });
     }
-  };
-
-  // Function to remove location from local state after deletion
-  const handleLocationDeleted = (locationId: string) => {
-    setLocations(prev => prev.filter(loc => loc.id !== locationId));
   };
 
   return (
@@ -125,23 +118,13 @@ const Collections = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {locations.map((location, index) => (
-                <div key={location.id} className="relative">
-                  <PhotoLocationCard
-                    location={location}
-                    index={index}
-                    onViewDetails={handleViewDetails}
-                    showRealTimeSiqs={true}
-                  />
-                  {user && (
-                    <div className="absolute top-3 right-3 z-20">
-                      <DeleteLocationButton 
-                        locationId={location.id} 
-                        userId={user.id}
-                        onDelete={handleLocationDeleted}
-                      />
-                    </div>
-                  )}
-                </div>
+                <PhotoLocationCard
+                  key={location.id}
+                  location={location}
+                  index={index}
+                  onViewDetails={handleViewDetails}
+                  showRealTimeSiqs={true}
+                />
               ))}
             </div>
           )}
