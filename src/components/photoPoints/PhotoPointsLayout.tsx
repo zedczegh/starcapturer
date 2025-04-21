@@ -1,3 +1,4 @@
+
 import React, { ReactNode } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -18,7 +19,7 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
   pageTitle
 }) => {
   const { t } = useLanguage();
-  const { handleSIQSClick } = useSiqsNavigation();
+  // const { handleSIQSClick } = useSiqsNavigation(); // No longer needed
   
   // Default page title
   const title = pageTitle || t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
@@ -52,7 +53,9 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
               }}
             >
               {t("Ready to explore the night sky?", "准备探索夜空了吗？")}
-              <ArrowRight className="h-4 w-4 text-blue-400" />
+              <Link to="/location/siqs-calculator" className="text-blue-400 hover:text-blue-300 transition-colors">
+                <ArrowRight className="h-4 w-4 cursor-pointer" />
+              </Link>
             </motion.h3>
             
             <motion.div 
@@ -72,11 +75,20 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
               <Button 
                 variant="outline" 
                 className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
-                onClick={handleSIQSClick}
               >
-                <Info className="mr-2 h-4 w-4 text-teal-400" />
-                {t("Calculate SIQS", "计算SIQS")}
+                <MapPin className="mr-2 h-4 w-4 text-purple-400" />
+                {t("Explore Photo Points", "探索摄影点")}
               </Button>
+              
+              <Link to="/location/siqs-calculator">
+                <Button 
+                  variant="outline" 
+                  className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
+                >
+                  <Info className="mr-2 h-4 w-4 text-teal-400" />
+                  {t("Calculate SIQS", "计算SIQS")}
+                </Button>
+              </Link>
             </motion.div>
             
             <motion.div 
@@ -112,3 +124,4 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
 };
 
 export default PhotoPointsLayout;
+

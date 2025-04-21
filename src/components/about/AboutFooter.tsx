@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { useSiqsNavigation } from "@/hooks/navigation/useSiqsNavigation";
 const AboutFooter = () => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
-  const { handleSIQSClick } = useSiqsNavigation();
+  // const { handleSIQSClick } = useSiqsNavigation(); // No longer needed
 
   const buttonVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -53,7 +54,11 @@ const AboutFooter = () => {
         variants={buttonVariants}
       >
         {t("Ready to explore the night sky?", "准备探索夜空了吗？")}
-        {!isMobile && <ArrowRight className="h-4 w-4 text-blue-400" />}
+        {!isMobile && (
+          <Link to="/location/siqs-calculator" className="text-blue-400 hover:text-blue-300 transition-colors">
+            <ArrowRight className="h-4 w-4 cursor-pointer" />
+          </Link>
+        )}
       </motion.h3>
       
       <motion.div 
@@ -101,7 +106,7 @@ const AboutFooter = () => {
         </div>
       </motion.div>
       
-      <motion.div variants={buttonVariants} className="flex justify-center gap-4 pt-4">
+      <motion.div className="flex justify-center gap-4 pt-4">
         <a href="https://github.com/bortle-now" target="_blank" rel="noopener noreferrer" className="text-cosmic-400 hover:text-cosmic-200 transition-colors">
           <Github size={20} />
         </a>
@@ -126,3 +131,4 @@ const AboutFooter = () => {
 };
 
 export default AboutFooter;
+
