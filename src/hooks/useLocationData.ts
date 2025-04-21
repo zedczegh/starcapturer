@@ -1,34 +1,43 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+// Create a module-level variable for the in-memory cache that persists across renders
+// But don't use useState outside of a component/hook context
+const globalCacheMap = new Map<string, { data: any; timestamp: number }>();
+
 /**
  * Optimized location data cache hook with improved memory usage and performance
  */
 export const useLocationDataCache = () => {
-  // Use a global cache for better performance
-  const globalCache = useState<Map<string, { data: any; timestamp: number }>>(
-    () => new Map()
-  )[0];
+  // Use useState within the hook function context
+  const [, setRefreshTrigger] = useState<number>(0);
   
   // Clear expired cache items periodically 
   useEffect(() => {
     const intervalId = setInterval(() => {
       const now = Date.now();
       const expiryTime = 24 * 60 * 60 * 1000; // 24 hours
+      let hasChanges = false;
       
-      for (const [key, item] of globalCache.entries()) {
+      for (const [key, item] of globalCacheMap.entries()) {
         if (now - item.timestamp > expiryTime) {
-          globalCache.delete(key);
+          globalCacheMap.delete(key);
+          hasChanges = true;
         }
+      }
+      
+      // If any items were removed, trigger a re-render
+      if (hasChanges) {
+        setRefreshTrigger(prev => prev + 1);
       }
     }, 60 * 60 * 1000); // Run cleanup hourly
     
     return () => clearInterval(intervalId);
-  }, [globalCache]);
+  }, []);
   
   // Efficient cache retrieval function
   const getCachedData = useCallback((key: string, maxAge: number = 30 * 60 * 1000) => {
-    const cachedItem = globalCache.get(key);
+    const cachedItem = globalCacheMap.get(key);
     
     if (!cachedItem) {
       // Try localStorage as fallback
@@ -37,7 +46,7 @@ export const useLocationDataCache = () => {
         if (storedItem) {
           const parsedData = JSON.parse(storedItem);
           // Add to memory cache for faster future access
-          globalCache.set(key, { data: parsedData, timestamp: Date.now() });
+          globalCacheMap.set(key, { data: parsedData, timestamp: Date.now() });
           return parsedData;
         }
       } catch (e) {
@@ -52,14 +61,14 @@ export const useLocationDataCache = () => {
     }
     
     return cachedItem.data;
-  }, [globalCache]);
+  }, []);
   
   // Cache data with current timestamp
   const setCachedData = useCallback((key: string, data: any) => {
     const timestamp = Date.now();
     
     // Update memory cache
-    globalCache.set(key, { data, timestamp });
+    globalCacheMap.set(key, { data, timestamp });
     
     // Also store in localStorage for persistence
     try {
@@ -67,14 +76,14 @@ export const useLocationDataCache = () => {
     } catch (e) {
       console.error("Error storing in localStorage:", e);
     }
-  }, [globalCache]);
+  }, []);
   
   // Clear cache items
   const clearCache = useCallback((keys?: string[]) => {
     if (keys && Array.isArray(keys)) {
       // Clear specific keys
       for (const key of keys) {
-        globalCache.delete(key);
+        globalCacheMap.delete(key);
         try {
           localStorage.removeItem(key);
         } catch (e) {
@@ -83,7 +92,7 @@ export const useLocationDataCache = () => {
       }
     } else {
       // Clear all cache
-      globalCache.clear();
+      globalCacheMap.clear();
       
       try {
         // Only clear our app-specific keys
@@ -102,7 +111,7 @@ export const useLocationDataCache = () => {
         console.error("Error clearing localStorage:", e);
       }
     }
-  }, [globalCache]);
+  }, []);
   
   return { getCachedData, setCachedData, clearCache };
 };
