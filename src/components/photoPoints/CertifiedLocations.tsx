@@ -17,6 +17,7 @@ interface CertifiedLocationsProps {
   onViewDetails: (location: SharedAstroSpot) => void;
   onRefresh?: () => void;
   initialLoad: boolean;
+  error?: Error | null;
 }
 
 const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
@@ -25,7 +26,8 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   hasMore,
   onLoadMore,
   onViewDetails,
-  initialLoad
+  initialLoad,
+  error
 }) => {
   const { t } = useLanguage();
   const [selectedType, setSelectedType] = useState<CertificationType>('all');
@@ -219,3 +221,4 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
 };
 
 export default CertifiedLocations;
+

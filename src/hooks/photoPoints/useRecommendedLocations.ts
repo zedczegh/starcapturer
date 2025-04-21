@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLocationFind } from './useLocationFind';
@@ -85,8 +84,7 @@ export const useRecommendedLocations = (
         userLocation.latitude,
         userLocation.longitude,
         searchRadius,
-        true, // allow expansion
-        calculatedLimit // limit proportional to radius
+        calculatedLimit // Fix: Remove the extra 'true' parameter
       );
       
       const filteredCalculatedResults = calculatedResults
@@ -207,8 +205,7 @@ export const useRecommendedLocations = (
         userLocation.latitude,
         userLocation.longitude,
         searchRadius,
-        true, // allow expansion
-        calculatedLimit // limit based on radius
+        calculatedLimit // Updated to match the new parameter list
       );
       
       const filteredResults = calculatedResults.filter(loc => 
