@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -45,10 +44,8 @@ const PhotoPointsNearby: React.FC = () => {
     hasMore,
     loadMore,
     refreshSiqsData,
-    canLoadMoreCalculated,
     loadMoreCalculatedLocations,
-    loadMoreClickCount,
-    maxLoadMoreClicks,
+    currentSiqs,
     error
   } = useRecommendedLocations(
     effectiveLocation, 
@@ -171,10 +168,8 @@ const PhotoPointsNearby: React.FC = () => {
         refreshSiqs={refreshSiqsData}
         onLocationClick={handleLocationClick}
         onLocationUpdate={handleLocationUpdate}
-        canLoadMoreCalculated={canLoadMoreCalculated}
+        canLoadMoreCalculated={true}
         loadMoreCalculated={loadMoreCalculatedLocations}
-        loadMoreClickCount={loadMoreClickCount}
-        maxLoadMoreClicks={maxLoadMoreClicks}
       />
     </PhotoPointsLayout>
   );

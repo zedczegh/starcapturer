@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
@@ -24,8 +23,6 @@ interface PhotoPointsViewProps {
   onLocationUpdate: (lat: number, lng: number) => void;
   canLoadMoreCalculated?: boolean;
   loadMoreCalculated?: () => void;
-  loadMoreClickCount?: number;
-  maxLoadMoreClicks?: number;
 }
 
 const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
@@ -44,21 +41,17 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   onLocationClick,
   onLocationUpdate,
   canLoadMoreCalculated = false,
-  loadMoreCalculated,
-  loadMoreClickCount = 0,
-  maxLoadMoreClicks = 2
+  loadMoreCalculated
 }) => {
   const { t } = useLanguage();
   const prevActiveViewRef = useRef(activeView);
   const viewTransitionTimeoutRef = useRef<number | null>(null);
   
-  // Track view changes to handle transitions and prevent errors
   useEffect(() => {
     if (prevActiveViewRef.current !== activeView) {
       console.log(`View changed from ${prevActiveViewRef.current} to ${activeView}`);
       prevActiveViewRef.current = activeView;
       
-      // Clear any pending timeouts to prevent race conditions
       if (viewTransitionTimeoutRef.current) {
         clearTimeout(viewTransitionTimeoutRef.current);
         viewTransitionTimeoutRef.current = null;
@@ -73,14 +66,12 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     };
   }, [activeView]);
   
-  // Safe location update handler with error checking
   const handleMapLocationUpdate = useCallback((lat: number, lng: number) => {
     try {
       if (!isFinite(lat) || !isFinite(lng)) {
         throw new Error('Invalid coordinates');
       }
       
-      // Bound coordinates to valid ranges
       const validLat = Math.max(-90, Math.min(90, lat));
       const validLng = Math.max(-180, Math.min(180, lng));
       
@@ -95,7 +86,6 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     }
   }, [onLocationUpdate, t]);
 
-  // Safely handle location clicks with error boundary
   const handleSafeLocationClick = useCallback((location: SharedAstroSpot) => {
     try {
       if (!location || !location.latitude || !location.longitude) {
@@ -150,8 +140,6 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           initialLoad={initialLoad}
           canLoadMoreCalculated={canLoadMoreCalculated}
           onLoadMoreCalculated={loadMoreCalculated}
-          loadMoreClickCount={loadMoreClickCount}
-          maxLoadMoreClicks={maxLoadMoreClicks}
         />
       )}
     </div>
