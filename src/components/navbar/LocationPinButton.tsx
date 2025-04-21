@@ -18,7 +18,6 @@ const LocationPinButton: React.FC = () => {
     
     if (!user) {
       toast({
-        title: t("Sign up required", "需要注册"),
         description: t("Please sign up to use our collected locations service.", "请注册以使用我们的收藏位置服务。"),
         variant: "destructive",
         duration: 3000,
