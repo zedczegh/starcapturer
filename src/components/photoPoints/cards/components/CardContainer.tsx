@@ -1,13 +1,12 @@
 
 import React from 'react';
-import { motion } from 'framer-motion';
 
 interface CardContainerProps {
   children: React.ReactNode;
   index: number;
   isVisible: boolean;
   isMobile: boolean;
-  onClick?: () => void; // Added onClick prop
+  onClick?: () => void;
 }
 
 const CardContainer: React.FC<CardContainerProps> = ({ 

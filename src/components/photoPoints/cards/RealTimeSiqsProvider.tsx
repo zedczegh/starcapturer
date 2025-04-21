@@ -41,6 +41,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       if (hasCachedSiqs(latitude, longitude) && !forceUpdate) {
         const cachedSiqs = getCachedSiqs(latitude, longitude);
         if (cachedSiqs && cachedSiqs.siqs > 0) {
+          console.log(`Using cached SIQS: ${cachedSiqs.siqs} for ${latitude}, ${longitude}`);
           const confidenceScore = cachedSiqs.metadata?.reliability?.score || 8;
           onSiqsCalculated(cachedSiqs.siqs, false, confidenceScore);
           setHasCalculated(true);
