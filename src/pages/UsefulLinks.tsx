@@ -133,7 +133,10 @@ const UsefulLinks = () => {
         />
         
         {filtersVisible && (
-          <LinksFilters />
+          <LinksFilters 
+            searchQuery={searchQuery}
+            onClearSearch={handleClearSearch}
+          />
         )}
         
         <LinksGrid 

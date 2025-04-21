@@ -8,19 +8,28 @@ import { Badge } from "@/components/ui/badge";
 import { useLinksFilters } from "@/hooks/useLinksFilters";
 import { translateType } from "@/utils/linkTranslations";
 
-const LinksFilters = () => {
+interface LinksFiltersProps {
+  searchQuery: string;
+  onClearSearch: () => void;
+}
+
+const LinksFilters: React.FC<LinksFiltersProps> = ({ searchQuery, onClearSearch }) => {
   const { t, language } = useLanguage();
-  const [searchQuery, setSearchQuery] = useState("");
   
   const { 
+    categories,
     types,
+    selectedCategory,
     selectedType,
+    setSelectedCategory,
     setSelectedType
   } = useLinksFilters(searchQuery, language);
 
   // Clear all filters
   const handleClearAllFilters = () => {
+    setSelectedCategory(null);
     setSelectedType(null);
+    onClearSearch();
   };
 
   return (
@@ -76,9 +85,21 @@ const LinksFilters = () => {
         </div>
         
         {/* Active filters */}
-        {selectedType && (
+        {(selectedCategory || selectedType) && (
           <div className="flex flex-wrap items-center gap-2 p-3 bg-cosmic-900/40 rounded-lg border border-cosmic-700/20 mt-4">
             <span className="text-xs text-cosmic-400 mr-1">{t("Active filters:", "活动筛选器:")}</span>
+            
+            {selectedCategory && (
+              <Badge variant="outline" className="bg-blue-900/30 border-blue-700/30 text-cosmic-200 flex items-center gap-1">
+                {language === 'en' ? selectedCategory : translateCategory(selectedCategory)}
+                <button 
+                  className="ml-1 hover:text-cosmic-100" 
+                  onClick={() => setSelectedCategory(null)}
+                >
+                  <CircleMinus className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
             
             {selectedType && (
               <Badge variant="outline" className="bg-purple-900/30 border-purple-700/30 text-cosmic-200 flex items-center gap-1">
