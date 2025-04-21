@@ -17,18 +17,21 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px] p-0">
+      <DialogContent className="sm:max-w-[400px] p-0 animate-scale-in overflow-hidden outline-none bg-background shadow-2xl border border-accent/60">
         <div className="space-y-8 p-6">
           <DialogHeader className="text-center space-y-4">
             <div className="mx-auto flex items-center justify-center space-x-2">
-              <MoonStar className="h-8 w-8 text-primary" />
+              <MoonStar className="h-8 w-8 text-primary animate-pulse" />
               <span className="text-xl font-bold tracking-tight">
                 Astro<span className="text-primary">SIQS</span>
               </span>
             </div>
             <DialogTitle className="text-xl">
-              {t("Welcome to AstroSIQS", "欢迎使用 AstroSIQS")}
+              {t("Sign in or create account", "登录或注册账户")}
             </DialogTitle>
+            <div className="text-xs text-muted-foreground">
+              {t("Unlock full access to your saved collections, profile, and more.", "登录以解锁收藏夹、个人资料等全部功能。")}
+            </div>
           </DialogHeader>
 
           <Tabs defaultValue="login" className="w-full">

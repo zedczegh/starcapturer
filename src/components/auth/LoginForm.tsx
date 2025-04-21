@@ -30,10 +30,12 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       navigate('/photo-points');
       toast.success(t("Welcome back!", "欢迎回来！"));
     } catch (error: any) {
-      if (error.message.includes("Invalid")) {
+      if (error?.message?.includes("Invalid")) {
         toast.error(t("Invalid email or password", "邮箱或密码错误"));
-      } else {
+      } else if (error?.message) {
         toast.error(error.message);
+      } else {
+        toast.error(t("Sign in failed", "登录失败"));
       }
     } finally {
       setIsLoading(false);
@@ -46,15 +48,27 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
         <FormField
           control={form.control}
           name="email"
+          rules={{
+            required: t("Email is required", "必须填写邮箱"),
+            pattern: {
+              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+              message: t("Please enter a valid email", "请输入有效的邮箱"),
+            },
+          }}
           render={({ field }) => (
             <FormItem>
+              <label htmlFor="login_email" className="block text-sm font-medium mb-1 text-foreground">
+                {t("Email", "电子邮箱")}
+              </label>
               <div className="relative">
                 <FormControl>
                   <Input 
                     {...field} 
+                    id="login_email"
                     type="email" 
-                    placeholder={t("Email", "电子邮箱")}
-                    className="pl-10" 
+                    autoComplete="email"
+                    placeholder={t("name@email.com", "邮箱")}
+                    className="pl-10"
                     disabled={isLoading}
                   />
                 </FormControl>
@@ -68,14 +82,22 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
         <FormField
           control={form.control}
           name="password"
+          rules={{
+            required: t("Password is required", "必须填写密码"),
+          }}
           render={({ field }) => (
             <FormItem>
+              <label htmlFor="login_password" className="block text-sm font-medium mb-1 text-foreground">
+                {t("Password", "密码")}
+              </label>
               <div className="relative">
                 <FormControl>
                   <Input 
                     {...field} 
                     type={showPassword ? "text" : "password"}
-                    placeholder={t("Password", "密码")}
+                    id="login_password"
+                    autoComplete="current-password"
+                    placeholder={t("Your password", "密码")}
                     className="pl-10 pr-10"
                     disabled={isLoading}
                   />
@@ -88,6 +110,8 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
+                  tabIndex={-1}
+                  aria-label={showPassword ? t("Hide password", "隐藏密码") : t("Show password", "显示密码")}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -103,7 +127,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
         <Button 
           type="submit" 
-          className="w-full"
+          className="w-full animate-fade-in"
           disabled={isLoading}
         >
           {isLoading ? t("Signing in...", "登录中...") : t("Sign In", "登录")}

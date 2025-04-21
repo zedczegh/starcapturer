@@ -35,10 +35,12 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
         )
       );
     } catch (error: any) {
-      if (error.message.includes("already registered")) {
+      if (error?.message?.includes("already registered")) {
         toast.error(t("Email already registered", "该邮箱已被注册"));
-      } else {
+      } else if (error?.message) {
         toast.error(error.message);
+      } else {
+        toast.error(t("Sign up failed", "注册失败"));
       }
     } finally {
       setIsLoading(false);
@@ -51,14 +53,26 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
         <FormField
           control={form.control}
           name="email"
+          rules={{
+            required: t("Email is required", "必须填写邮箱"),
+            pattern: {
+              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+              message: t("Please enter a valid email", "请输入有效的邮箱"),
+            },
+          }}
           render={({ field }) => (
             <FormItem>
+              <label htmlFor="signup_email" className="block text-sm font-medium mb-1 text-foreground">
+                {t("Email", "电子邮箱")}
+              </label>
               <div className="relative">
                 <FormControl>
                   <Input 
                     {...field} 
+                    id="signup_email"
                     type="email" 
-                    placeholder={t("Email", "电子邮箱")}
+                    autoComplete="email"
+                    placeholder={t("name@email.com", "邮箱")}
                     className="pl-10"
                     disabled={isLoading}
                   />
@@ -73,14 +87,26 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
         <FormField
           control={form.control}
           name="password"
+          rules={{
+            required: t("Password is required", "必须填写密码"),
+            minLength: {
+              value: 6,
+              message: t("Password must be at least 6 characters", "密码至少6位"),
+            }
+          }}
           render={({ field }) => (
             <FormItem>
+              <label htmlFor="signup_password" className="block text-sm font-medium mb-1 text-foreground">
+                {t("Password", "密码")}
+              </label>
               <div className="relative">
                 <FormControl>
                   <Input 
                     {...field} 
+                    id="signup_password"
                     type={showPassword ? "text" : "password"}
-                    placeholder={t("Password", "密码")}
+                    autoComplete="new-password"
+                    placeholder={t("Create a password", "创建密码")}
                     className="pl-10 pr-10"
                     disabled={isLoading}
                   />
@@ -93,6 +119,8 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
+                  tabIndex={-1}
+                  aria-label={showPassword ? t("Hide password", "隐藏密码") : t("Show password", "显示密码")}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -108,7 +136,7 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
 
         <Button 
           type="submit" 
-          className="w-full"
+          className="w-full animate-fade-in"
           disabled={isLoading}
         >
           {isLoading ? t("Creating account...", "创建帐户中...") : t("Create Account", "创建帐户")}
