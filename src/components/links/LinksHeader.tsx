@@ -20,6 +20,13 @@ const LinksHeader = ({ searchQuery, onSearchChange, onClearSearch, onToggleFilte
   const isMobile = useIsMobile();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Clear search on Escape key
+    if (e.key === 'Escape' && searchQuery) {
+      onClearSearch();
+    }
+  };
+  
   return (
     <motion.div
       className="mb-6"
@@ -65,6 +72,7 @@ const LinksHeader = ({ searchQuery, onSearchChange, onClearSearch, onToggleFilte
           <Input 
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             placeholder={t("Search resources...", "搜索资源...")} 
             className="pl-10 bg-cosmic-900/70 border-cosmic-700/50 text-cosmic-100 placeholder:text-cosmic-500 transition-all focus:bg-cosmic-900/90 focus:border-cosmic-600"
             onFocus={() => setIsSearchFocused(true)}
@@ -109,7 +117,10 @@ const LinksHeader = ({ searchQuery, onSearchChange, onClearSearch, onToggleFilte
                 onClick={onToggleFilters}
               >
                 <Filter className="h-3.5 w-3.5" /> 
-                {t("Show Filters", "显示过滤器")}
+                {filtersVisible ?
+                  t("Hide Filters", "隐藏过滤器") :
+                  t("Show Filters", "显示过滤器")
+                }
                 {filtersVisible ? 
                   <ChevronUp className="h-3.5 w-3.5 ml-1" /> : 
                   <ChevronDown className="h-3.5 w-3.5 ml-1" />

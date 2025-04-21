@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { ExternalLink, LayoutGrid, Layers } from "lucide-react";
+import { ExternalLink, LayoutGrid, Layers, Filter, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LinkData } from "./linksData";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ const LinksGrid: React.FC<LinksGridProps> = ({ searchQuery, onClearSearch }) => 
     filteredLinks,
     selectedCategory,
     selectedType,
+    totalLinks,
     setSelectedCategory,
     setSelectedType
   } = useLinksFilters(searchQuery, language);
@@ -79,36 +80,9 @@ const LinksGrid: React.FC<LinksGridProps> = ({ searchQuery, onClearSearch }) => 
         </div>
 
         <div className="text-sm text-cosmic-400">
-          {filteredLinks.length} {t("resources", "个资源")}
+          {filteredLinks.length} {t("of", "个资源，共")} {totalLinks} {t("resources", "个")}
         </div>
       </div>
-      
-      {/* Active search filter */}
-      {searchQuery && (
-        <div className="flex flex-wrap items-center gap-2 p-3 bg-cosmic-900/40 rounded-lg border border-cosmic-700/20">
-          <span className="text-xs text-cosmic-400 mr-1">{t("Search:", "搜索:")}</span>
-          <Badge variant="outline" className="bg-green-900/30 border-green-700/30 text-cosmic-200 flex items-center gap-1">
-            "{searchQuery}"
-            <button 
-              className="ml-1 hover:text-cosmic-100" 
-              onClick={onClearSearch}
-            >
-              ×
-            </button>
-          </Badge>
-          
-          {(searchQuery && (selectedCategory || selectedType)) && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleClearAllFilters}
-              className="text-xs ml-auto text-cosmic-400 hover:text-cosmic-100"
-            >
-              {t("Clear all", "清除所有")}
-            </Button>
-          )}
-        </div>
-      )}
       
       {/* Links Grid */}
       <AnimatePresence mode="wait">
@@ -125,7 +99,7 @@ const LinksGrid: React.FC<LinksGridProps> = ({ searchQuery, onClearSearch }) => 
         >
           {filteredLinks.map((link, index) => (
             <LinkCard 
-              key={index} 
+              key={`${link.title}-${index}`} 
               link={link} 
               viewMode={viewMode} 
               language={language}

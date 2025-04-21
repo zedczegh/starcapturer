@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { linksData, LinkData } from '@/components/links/linksData';
 
 export type LinkCategory = string | null;
@@ -12,6 +12,7 @@ export interface LinkFilters {
   selectedCategory: LinkCategory;
   selectedType: LinkType;
   filteredLinks: LinkData[];
+  totalLinks: number;
   setSelectedCategory: (category: LinkCategory) => void;
   setSelectedType: (type: LinkType) => void;
 }
@@ -23,12 +24,12 @@ export const useLinksFilters = (searchQuery: string, language: string): LinkFilt
   // Get unique categories and types for filtering
   const categories = useMemo(() => {
     const allCategories = new Set(linksData.map(link => link.category));
-    return Array.from(allCategories);
+    return Array.from(allCategories).sort();
   }, []);
   
   const types = useMemo(() => {
     const allTypes = new Set(linksData.map(link => link.type));
-    return Array.from(allTypes);
+    return Array.from(allTypes).sort();
   }, []);
   
   // Filter links based on selected category, type, and search query
@@ -61,6 +62,17 @@ export const useLinksFilters = (searchQuery: string, language: string): LinkFilt
     
     return filtered;
   }, [selectedCategory, selectedType, searchQuery, language]);
+
+  // Reset type filter if there are no matching results with both filters
+  useEffect(() => {
+    if (selectedCategory && selectedType && filteredLinks.length === 0) {
+      // Check if removing the type filter would yield results
+      const categoryOnlyFiltered = linksData.filter(link => link.category === selectedCategory);
+      if (categoryOnlyFiltered.length > 0) {
+        setSelectedType(null);
+      }
+    }
+  }, [selectedCategory, selectedType, filteredLinks.length]);
   
   return {
     categories,
@@ -68,6 +80,7 @@ export const useLinksFilters = (searchQuery: string, language: string): LinkFilt
     selectedCategory,
     selectedType,
     filteredLinks,
+    totalLinks: linksData.length,
     setSelectedCategory,
     setSelectedType
   };

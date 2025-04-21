@@ -24,7 +24,12 @@ const UsefulLinks = () => {
     
     // Set page title
     document.title = t("Astronomy Resources - AstroSIQS", "天文资源 - AstroSIQS");
-  }, [t]);
+    
+    // Auto-show filters if there's a search query
+    if (searchQuery) {
+      setFiltersVisible(true);
+    }
+  }, [t, searchQuery]);
   
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
