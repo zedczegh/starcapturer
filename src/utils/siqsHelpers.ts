@@ -45,8 +45,10 @@ export function getSiqsScore(siqs?: number | string | { score: number; isViable:
 
 /**
  * Normalize scores to ensure they're on the 1-10 scale
+ * @param score The score to normalize
+ * @returns Normalized score in the 1-10 range
  */
-function normalizeToSiqsScale(score: number): number {
+export function normalizeToSiqsScale(score: number): number {
   // If score is already in 0-10 range, return it
   if (score >= 0 && score <= 10) {
     return score;
@@ -121,23 +123,4 @@ export function formatSiqsForDisplay(score: number | null): string {
   // Normalize score to 1-10 scale if needed
   const normalizedScore = normalizeToSiqsScale(score);
   return normalizedScore.toFixed(1);
-}
-
-/**
- * Normalize scores to ensure they're on the 1-10 scale
- * Exported for use in other components
- */
-export function normalizeToSiqsScale(score: number): number {
-  // If score is already in 0-10 range, return it
-  if (score >= 0 && score <= 10) {
-    return score;
-  }
-  
-  // If score is on a 0-100 scale, convert to 0-10
-  if (score > 10 && score <= 100) {
-    return score / 10;
-  }
-  
-  // For any other range, clamp to 0-10
-  return Math.min(10, Math.max(0, score));
 }
