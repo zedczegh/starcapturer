@@ -28,7 +28,7 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
     if (realTimeSiqs !== null && realTimeSiqs > 0) return false;
     if (locationSiqs && locationSiqs > 0) return false;
     
-    // Show loading when we're fetching data
+    // Show loading when we're fetching data and this location should have a score
     return (isCertified || locationSiqs !== undefined) && isVisible && loadingSiqs;
   }, [isCertified, loadingSiqs, isVisible, realTimeSiqs, locationSiqs]);
   
@@ -46,7 +46,7 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
     return null;
   }, [realTimeSiqs, locationSiqs, isCertified]);
 
-  // Always show badge for locations with locationSiqs defined, even if zero
+  // Always show badge for locations with locationSiqs defined or if certified
   const forceDisplay = locationSiqs !== undefined || isCertified;
 
   return (

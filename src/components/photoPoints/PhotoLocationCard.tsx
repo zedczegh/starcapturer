@@ -78,8 +78,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   }, [location, navigate, getLocationId, onViewDetails]);
 
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
-  const [loadingSiqs, setLoadingSiqs] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  const [loadingSiqs, setLoadingSiqs] = useState(forceRealTimeSiqs);
+  const [isVisible, setIsVisible] = useState(forceRealTimeSiqs);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const [siqsConfidence, setSiqsConfidence] = useState<number>(8);
   const [initialScoreSet, setInitialScoreSet] = useState(false);
@@ -100,7 +100,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
   }, [location.siqs, initialScoreSet]);
   
-  const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
+  const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidenceScore?: number) => {
     if (loading) {
       // Only show loading if we don't already have a score
       if (!realTimeSiqs || realTimeSiqs <= 0) {
@@ -115,8 +115,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     if (siqs !== null && siqs > 0) {
       setRealTimeSiqs(siqs);
       setInitialScoreSet(true);
-      if (confidence) {
-        setSiqsConfidence(confidence);
+      if (confidenceScore) {
+        setSiqsConfidence(confidenceScore);
       }
     } else if (!realTimeSiqs && (isCertified || forceRealTimeSiqs)) {
       // If we still don't have a score but this is a certified location, 
@@ -135,7 +135,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
   }, [onSelect, location]);
   
-  // Force visibility for certified locations and collection view
+  // Force visibility for certified locations and collections view
   const effectiveIsVisible = isCertified || isVisible || forceRealTimeSiqs;
   
   return (
