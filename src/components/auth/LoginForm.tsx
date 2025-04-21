@@ -7,24 +7,23 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
-import { toast } from 'sonner';
+import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
 
 interface LoginFormProps {
   onSuccess: () => void;
 }
 
 const LoginForm = ({ onSuccess }: LoginFormProps) => {
-  const { signIn } = useAuth();
+  const { signIn, isLoading } = useAuth();
   const { t } = useLanguage();
   const form = useForm();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [formSubmitted, setFormSubmitted] = React.useState(false);
 
   const onSubmit = async (data: any) => {
     try {
-      setIsLoading(true);
+      setFormSubmitted(true);
       await signIn(data.email, data.password);
       onSuccess();
       navigate('/photo-points');
@@ -32,9 +31,12 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
     } catch (error: any) {
       // Error handling is done in AuthContext
     } finally {
-      setIsLoading(false);
+      setFormSubmitted(false);
     }
   };
+
+  // Combined loading state
+  const processing = isLoading || formSubmitted;
 
   return (
     <Form {...form}>
@@ -63,7 +65,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
                     autoComplete="email"
                     placeholder={t("name@email.com", "邮箱")}
                     className="pl-10"
-                    disabled={isLoading}
+                    disabled={processing}
                   />
                 </FormControl>
                 <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
@@ -93,7 +95,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
                     autoComplete="current-password"
                     placeholder={t("Your password", "密码")}
                     className="pl-10 pr-10"
-                    disabled={isLoading}
+                    disabled={processing}
                   />
                 </FormControl>
                 <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
@@ -103,7 +105,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
+                  disabled={processing}
                   tabIndex={-1}
                   aria-label={showPassword ? t("Hide password", "隐藏密码") : t("Show password", "显示密码")}
                 >
@@ -122,9 +124,16 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
         <Button 
           type="submit" 
           className="w-full animate-fade-in bg-primary hover:bg-primary/90"
-          disabled={isLoading}
+          disabled={processing}
         >
-          {isLoading ? t("Signing in...", "登录中...") : t("Sign In", "登录")}
+          {processing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              {t("Signing in...", "登录中...")}
+            </>
+          ) : (
+            t("Sign In", "登录")
+          )}
         </Button>
       </form>
     </Form>

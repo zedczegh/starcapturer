@@ -39,6 +39,8 @@ const Toaster = ({ theme = "system", ...props }: ToasterProps & { theme?: string
           paddingBottom: "14px",
           paddingTop: "14px",
           boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
+          border: "1px solid rgba(var(--primary), 0.1)",
+          animation: "slideIn 0.3s ease-out forwards"
         },
       }}
       {...props}

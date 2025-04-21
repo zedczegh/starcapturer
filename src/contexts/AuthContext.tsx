@@ -10,6 +10,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -29,9 +31,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (event === 'SIGNED_IN' && session?.user) {
           // Use setTimeout to avoid potential supabase auth deadlocks
           setTimeout(() => {
-            toast.success(`Welcome back, ${session.user.email?.split('@')[0] || 'explorer'}!`, {
-              description: "Ready to explore the stars?",
-              duration: 3000,
+            const username = session.user.email?.split('@')[0] || 'stargazer';
+            toast.success(`Welcome, ${username}! 🌟`, {
+              description: "Ready for some stargazing? Your sky awaits!",
+              duration: 4000,
               position: "top-center"
             });
           }, 0);
@@ -39,10 +42,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // THEN check for existing session
+    // THEN check for existing session - optimized to be faster
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -50,64 +54,104 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
+      
       if (error) throw error;
       
       // Show user confirmation message about email verification
       if (data.user && !data.user.confirmed_at) {
-        toast.success("Verification email sent!", {
+        toast.success("Almost there! ✨", {
           duration: 6000,
-          description: "Please check your inbox and confirm your email to start your stargazing journey.",
+          description: "Check your email to verify your account and start your cosmic journey!",
           position: "top-center"
         });
       }
     } catch (error: any) {
-      toast.error("Couldn't create account", {
-        description: error.message,
+      toast.error("Account creation paused", {
+        description: error.message || "Please try again with a different email",
         position: "top-center"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      setIsLoading(true);
+      // Add persistent session option for better multi-device experience
+      const { error } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password,
+        options: {
+          persistSession: true
+        }
+      });
+      
+      if (error) {
+        // Try to handle common errors gracefully
+        if (error.message.includes("Email not confirmed")) {
+          // Automatically resend verification email for better UX
+          await supabase.auth.resend({
+            type: 'signup',
+            email: email,
+          });
+          
+          throw new Error("Please verify your email first. We've sent a new verification link!");
+        }
+        throw error;
+      }
       
       // Success toast is shown by the onAuthStateChange listener
     } catch (error: any) {
+      // More user-friendly error messages
+      let errorMessage = "Please double-check your email and password";
+      
       if (error.message.includes("Email not confirmed")) {
-        toast.error("Please confirm your email before signing in", {
-          description: "Check your inbox for the verification email.",
-          position: "top-center"
-        });
-      } else {
-        toast.error("Sign in failed", {
-          description: error.message,
-          position: "top-center"
-        });
+        errorMessage = "Check your inbox for the verification email we just sent!";
+      } else if (error.message.includes("Invalid login")) {
+        errorMessage = "Please double-check your email and password";
+      } else if (error.message.includes("Too many requests")) {
+        errorMessage = "Too many login attempts. Please try again in a few minutes";
       }
+      
+      toast.error("Sign in paused", {
+        description: errorMessage,
+        position: "top-center"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signOut = async () => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      toast.success("Signed out successfully", {
-        description: "Come back soon for more stargazing!",
+      toast.success("See you soon! ✨", {
+        description: "The stars will be waiting for your return",
         position: "top-center"
       });
     } catch (error: any) {
-      toast.error("Sign out failed", {
-        description: error.message,
+      toast.error("Sign out issue", {
+        description: "Please try again in a moment",
         position: "top-center"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, signUp, signIn, signOut, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
