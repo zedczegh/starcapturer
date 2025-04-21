@@ -4,6 +4,7 @@ import NavBar from "@/components/NavBar";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExternalLink, Globe, Star, Moon, CloudRain, Wind, Thermometer, Award, Check, MapPin, Shield } from "lucide-react";
+import AboutSiqsDarkSkyResources from "@/components/about/AboutSiqsDarkSkyResources";
 
 const AboutSIQS = () => {
   const {
@@ -507,7 +508,7 @@ const AboutSIQS = () => {
   }];
 
   return (
-    <div className="min-h-screen bg-cosmic-950">
+    <div className="min-h-screen bg-cosmic-950 text-cosmic-50">
       <NavBar />
       <div className="container mx-auto px-4 py-8 max-w-7xl pt-20">
         <Tabs defaultValue="siqs" className="mb-12">
@@ -779,6 +780,13 @@ const AboutSIQS = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <section className="max-w-3xl mx-auto my-12 px-4">
+        <h2 className="text-xl font-bold mb-4 text-cosmic-300">
+          {t("Explore Trusted Dark Sky Resources", "探索可信赖的暗夜资源")}
+        </h2>
+        <AboutSiqsDarkSkyResources />
+      </section>
     </div>
   );
 };
