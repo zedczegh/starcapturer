@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
 import CalculatedLocations from './CalculatedLocations';
 import CertifiedLocations from './CertifiedLocations';
-import { toast } from 'sonner';
-import { useLanguage } from '@/contexts/LanguageContext';
+
+// Note: Changed from lazy loading to regular import to fix "Failed to fetch" error
 
 interface PhotoPointsViewProps {
   showMap: boolean;
@@ -23,6 +23,8 @@ interface PhotoPointsViewProps {
   onLocationUpdate: (lat: number, lng: number) => void;
   canLoadMoreCalculated?: boolean;
   loadMoreCalculated?: () => void;
+  loadMoreClickCount?: number;
+  maxLoadMoreClicks?: number;
 }
 
 const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
@@ -41,64 +43,13 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   onLocationClick,
   onLocationUpdate,
   canLoadMoreCalculated = false,
-  loadMoreCalculated
+  loadMoreCalculated,
+  loadMoreClickCount = 0,
+  maxLoadMoreClicks = 2
 }) => {
-  const { t } = useLanguage();
-  const prevActiveViewRef = useRef(activeView);
-  const viewTransitionTimeoutRef = useRef<number | null>(null);
-  
-  useEffect(() => {
-    if (prevActiveViewRef.current !== activeView) {
-      console.log(`View changed from ${prevActiveViewRef.current} to ${activeView}`);
-      prevActiveViewRef.current = activeView;
-      
-      if (viewTransitionTimeoutRef.current) {
-        clearTimeout(viewTransitionTimeoutRef.current);
-        viewTransitionTimeoutRef.current = null;
-      }
-    }
-    
-    return () => {
-      if (viewTransitionTimeoutRef.current) {
-        clearTimeout(viewTransitionTimeoutRef.current);
-        viewTransitionTimeoutRef.current = null;
-      }
-    };
-  }, [activeView]);
-  
   const handleMapLocationUpdate = useCallback((lat: number, lng: number) => {
-    try {
-      if (!isFinite(lat) || !isFinite(lng)) {
-        throw new Error('Invalid coordinates');
-      }
-      
-      const validLat = Math.max(-90, Math.min(90, lat));
-      const validLng = Math.max(-180, Math.min(180, lng));
-      
-      if (validLat !== lat || validLng !== lng) {
-        console.warn(`Corrected coordinates from ${lat},${lng} to ${validLat},${validLng}`);
-      }
-      
-      onLocationUpdate(validLat, validLng);
-    } catch (error) {
-      console.error('Error updating location:', error);
-      toast.error(t('Failed to update location', '无法更新位置'));
-    }
-  }, [onLocationUpdate, t]);
-
-  const handleSafeLocationClick = useCallback((location: SharedAstroSpot) => {
-    try {
-      if (!location || !location.latitude || !location.longitude) {
-        console.warn('Attempted to click invalid location', location);
-        return;
-      }
-      
-      onLocationClick(location);
-    } catch (error) {
-      console.error('Error handling location click:', error);
-      toast.error(t('Failed to open location details', '无法打开位置详情'));
-    }
-  }, [onLocationClick, t]);
+    onLocationUpdate(lat, lng);
+  }, [onLocationUpdate]);
 
   return (
     <div className="mt-4">
@@ -107,7 +58,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           <PhotoPointsMap
             userLocation={effectiveLocation}
             locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
-            onLocationClick={handleSafeLocationClick}
+            onLocationClick={onLocationClick}
             onLocationUpdate={handleMapLocationUpdate}
             searchRadius={activeView === 'calculated' ? calculatedSearchRadius : searchRadius}
             certifiedLocations={certifiedLocations}
@@ -123,7 +74,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           loading={loading}
           hasMore={hasMore}
           onLoadMore={loadMore}
-          onViewDetails={handleSafeLocationClick}
+          onViewDetails={onLocationClick}
           onRefresh={refreshSiqs}
           initialLoad={initialLoad}
         />
@@ -140,6 +91,8 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           initialLoad={initialLoad}
           canLoadMoreCalculated={canLoadMoreCalculated}
           onLoadMoreCalculated={loadMoreCalculated}
+          loadMoreClickCount={loadMoreClickCount}
+          maxLoadMoreClicks={maxLoadMoreClicks}
         />
       )}
     </div>

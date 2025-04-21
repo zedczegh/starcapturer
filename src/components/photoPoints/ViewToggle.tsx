@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { BadgeCheck, MapPin } from 'lucide-react';
 
-// Export the type for use in tests and other components
 export type PhotoPointsViewMode = 'certified' | 'calculated';
 
 interface ViewToggleProps {
@@ -20,13 +19,11 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  // Improved view change handler with debounce protection
+  // Simplified view change handler without unnecessary checks
   const handleViewChange = (view: PhotoPointsViewMode) => {
-    if (view !== activeView && !loading) {
+    if (view !== activeView) {
       console.log(`ViewToggle: Switching to ${view} view`);
       onViewChange(view);
-    } else if (loading) {
-      console.log('ViewToggle: Ignoring click while loading');
     }
   };
   
@@ -38,7 +35,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           variant={activeView === 'certified' ? "default" : "ghost"}
           size="lg"
           onClick={() => handleViewChange('certified')}
-          disabled={loading || activeView === 'certified'}
+          disabled={activeView === 'certified'}
           className={`relative w-full min-w-[160px] group ${
             activeView === 'certified'
               ? 'bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700'
@@ -59,7 +56,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           variant={activeView === 'calculated' ? "default" : "ghost"}
           size="lg"
           onClick={() => handleViewChange('calculated')}
-          disabled={loading || activeView === 'calculated'}
+          disabled={activeView === 'calculated'}
           className={`relative w-full min-w-[160px] group ${
             activeView === 'calculated'
               ? 'bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700'
