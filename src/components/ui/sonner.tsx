@@ -1,13 +1,13 @@
 
-import { useTheme } from "next-themes"
+import React from "react"
 import { Toaster as Sonner } from "sonner"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
-const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
-  const isMobile = useIsMobile()
+// Using the props pattern for theming to avoid invalid hook calls
+const Toaster = ({ theme = "system", ...props }: ToasterProps & { theme?: string }) => {
+  const isMobile = useIsMobile();
 
   return (
     <Sonner

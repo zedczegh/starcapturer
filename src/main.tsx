@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { HelmetProvider } from 'react-helmet-async';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { Toaster } from './components/ui/sonner';
 import { initializePreloadServices } from './services/preloadServices';
@@ -25,14 +25,25 @@ const queryClient = new QueryClient({
   },
 });
 
+// Create a wrapper component that uses hooks
+const AppWithProviders = () => {
+  const { theme } = useTheme();
+  
+  return (
+    <>
+      <App />
+      <Toaster theme={theme} />
+    </>
+  );
+};
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
         <ThemeProvider>
           <LanguageProvider>
-            <App />
-            <Toaster />
+            <AppWithProviders />
           </LanguageProvider>
         </ThemeProvider>
       </HelmetProvider>
