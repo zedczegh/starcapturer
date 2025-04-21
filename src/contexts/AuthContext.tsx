@@ -137,13 +137,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     // Improve speed by showing feedback instantly
     setIsLoading(true); // Start loading
-    let toastId: string | null = null;
+    let toastId: string | undefined = undefined; // Fixed type here - using string | undefined instead of string | number
     try {
       // Show instant feedback
       toastId = toast("Signing out...", {
         position: "top-center",
         duration: 1000
-      });
+      }) as string; // Cast to string since toast() can return string
+      
       // Run signout async, finish UI reset fast
       const { error } = await supabase.auth.signOut();
       setUser(null);
