@@ -53,12 +53,12 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
               }}
             >
               {t("Ready to explore the night sky?", "准备探索夜空了吗？")}
-              <span 
-                onClick={handleSIQSClick} 
+              <Link 
+                to="/location/default" 
                 className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
               >
                 <ArrowRight className="h-4 w-4" />
-              </span>
+              </Link>
             </motion.h3>
             
             <motion.div 
@@ -75,7 +75,7 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
                 </Button>
               </Link>
               
-              <Link to="/bortle-now">
+              <Link to="/share">
                 <Button 
                   variant="outline" 
                   className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
@@ -85,14 +85,15 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
                 </Button>
               </Link>
               
-              <Button 
-                variant="outline" 
-                className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
-                onClick={handleSIQSClick}
-              >
-                <Info className="mr-2 h-4 w-4 text-teal-400" />
-                {t("Calculate SIQS", "计算SIQS")}
-              </Button>
+              <Link to="/location/default">
+                <Button 
+                  variant="outline" 
+                  className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
+                >
+                  <Info className="mr-2 h-4 w-4 text-teal-400" />
+                  {t("Calculate SIQS", "计算SIQS")}
+                </Button>
+              </Link>
             </motion.div>
             
             <motion.div 

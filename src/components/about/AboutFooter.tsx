@@ -6,12 +6,10 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Home, MapPin, ArrowRight, Github, Twitter, BookOpen, Info } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useSiqsNavigation } from "@/hooks/navigation/useSiqsNavigation";
 
 const AboutFooter = () => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
-  const { handleSIQSClick } = useSiqsNavigation(); // Re-enabled to use for location acquisition
 
   const buttonVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -55,12 +53,12 @@ const AboutFooter = () => {
       >
         {t("Ready to explore the night sky?", "准备探索夜空了吗？")}
         {!isMobile && (
-          <span 
-            onClick={handleSIQSClick}
+          <Link 
+            to="/location/default"
             className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
           >
             <ArrowRight className="h-4 w-4" />
-          </span>
+          </Link>
         )}
       </motion.h3>
       
@@ -75,21 +73,22 @@ const AboutFooter = () => {
           </Button>
         </Link>
         
-        <Link to="/bortle-now">
+        <Link to="/share">
           <Button variant="outline" className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors">
             <MapPin className="mr-2 h-4 w-4 text-purple-400" />
             {t("Measure Sky Brightness", "测量夜空亮度")}
           </Button>
         </Link>
         
-        <Button 
-          variant="outline" 
-          className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
-          onClick={handleSIQSClick}
-        >
-          <Info className="mr-2 h-4 w-4 text-teal-400" />
-          {t("Calculate SIQS", "计算SIQS")}
-        </Button>
+        <Link to="/location/default">
+          <Button 
+            variant="outline" 
+            className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
+          >
+            <Info className="mr-2 h-4 w-4 text-teal-400" />
+            {t("Calculate SIQS", "计算SIQS")}
+          </Button>
+        </Link>
       </motion.div>
       
       <motion.div variants={buttonVariants} className="mt-8">
