@@ -4,9 +4,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
+export type PhotoPointsViewMode = 'certified' | 'calculated';
+
 interface ViewToggleProps {
-  activeView: 'certified' | 'calculated';
-  onViewChange: (view: 'certified' | 'calculated') => void;
+  activeView: PhotoPointsViewMode;
+  onViewChange: (view: PhotoPointsViewMode) => void;
   loading?: boolean;
   disabled?: boolean;
 }
@@ -76,3 +78,4 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
 };
 
 export default React.memo(ViewToggle);
+
