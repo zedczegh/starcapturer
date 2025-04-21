@@ -12,23 +12,6 @@ import { prepareLocationForNavigation } from "@/utils/locationNavigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
 
-// Helper: uniform transform for db row to SharedAstroSpot (safe)
-function mapSavedLocationToAstroSpot(raw: any): SharedAstroSpot {
-  // console.log("Raw saved location:", raw); // Debug log
-  return {
-    id: raw.id,
-    name: raw.name,
-    chineseName: raw.chinese_name ?? undefined,
-    latitude: raw.latitude,
-    longitude: raw.longitude,
-    bortleScale: undefined, // Bortle removed for collection cards
-    siqs: raw.siqs, // Directly use the siqs value from the database
-    certification: raw.certification ?? null,
-    isDarkSkyReserve: raw.isdarkskyreserve ?? false,
-    timestamp: raw.timestamp || new Date().toISOString(),
-  };
-}
-
 const Collections = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -54,12 +37,18 @@ const Collections = () => {
 
         if (error) throw error;
 
-        // Debug log
-        console.log("Fetched collections data:", data);
-
-        // Transform to uniform format, always with .chineseName and no bortle
-        const transformedLocations: SharedAstroSpot[] = (data || []).map(mapSavedLocationToAstroSpot);
-        console.log("Transformed locations:", transformedLocations);
+        // Transform the data to match SharedAstroSpot type
+        const transformedLocations: SharedAstroSpot[] = (data || []).map(loc => ({
+          id: loc.id,
+          name: loc.name,
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          bortleScale: loc.bortleScale,
+          siqs: loc.siqs,
+          certification: loc.certification || null,
+          isDarkSkyReserve: loc.isDarkSkyReserve || false,
+          timestamp: loc.timestamp || new Date().toISOString(),
+        }));
 
         setLocations(transformedLocations);
       } catch (error: any) {
@@ -103,13 +92,13 @@ const Collections = () => {
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
-
+      
       <TooltipProvider>
         <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
           <h1 className="text-2xl font-bold mb-6 text-foreground">
             {t("My Collections", "我的收藏")}
           </h1>
-
+          
           {loading ? (
             <div className="flex justify-center items-center h-40">
               <Loader className="h-8 w-8 animate-spin text-primary" />
@@ -134,8 +123,7 @@ const Collections = () => {
                   location={location}
                   index={index}
                   onViewDetails={handleViewDetails}
-                  // No real-time siqs, no bortle
-                  showRealTimeSiqs={false}
+                  showRealTimeSiqs={true}
                 />
               ))}
             </div>

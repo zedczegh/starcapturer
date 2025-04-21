@@ -11,9 +11,6 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
  * @returns number value of SIQS or 0 if undefined
  */
 export function getSiqsScore(siqs?: number | string | { score: number; isViable: boolean } | any): number {
-  // Debug log to diagnose type issues
-  // console.log("SIQS input value:", siqs, "with type:", typeof siqs);
-  
   if (siqs === undefined || siqs === null) {
     return 0;
   }
