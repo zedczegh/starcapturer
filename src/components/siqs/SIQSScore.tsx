@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { Progress } from "@/components/ui/progress";
 import { getProgressColor, getProgressColorClass, getProgressTextColorClass } from "./utils/progressColor";
@@ -7,7 +6,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getSiqsScore } from '@/utils/siqsHelpers';
+import { getSiqsScore, normalizeToSiqsScale } from '@/utils/siqsHelpers';
 import { calculateRealTimeSiqs } from "@/services/realTimeSiqs/siqsCalculator";
 
 interface SIQSScoreProps {
@@ -27,8 +26,9 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
 
   // Create memoized values to prevent unnecessary re-renders
   const memoizedValues = useMemo(() => {
-    // Round value to 1 decimal place
-    const displayValue = Math.round(siqsScore * 10) / 10;
+    // Normalize the score to 0-10 scale if necessary and round to 1 decimal place
+    const normalizedScore = normalizeToSiqsScale(siqsScore);
+    const displayValue = Math.round(normalizedScore * 10) / 10;
 
     // Determine value interpretation
     let interpretation;
@@ -101,7 +101,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
         </span>
       </div>
       
-      <Progress value={siqsScore * 10} className="h-3 my-2 bg-cosmic-800/40" style={progressStyle} />
+      <Progress value={memoizedValues.displayValue * 10} className="h-3 my-2 bg-cosmic-800/40" style={progressStyle} />
       
       <div className="flex justify-between items-center mt-2">
         <span className="text-sm text-muted-foreground">

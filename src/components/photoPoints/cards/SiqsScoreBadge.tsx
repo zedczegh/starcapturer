@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
-import { getSiqsScore } from '@/utils/siqsHelpers';
+import { getSiqsScore, normalizeToSiqsScale } from '@/utils/siqsHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatSiqsForDisplay } from '@/utils/siqsHelpers';
 
@@ -29,7 +29,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   const loadingTimeoutRef = useRef<number | null>(null);
   const stableScoreRef = useRef<number | null>(null);
   
-  // Convert score to number using our helper function
+  // Convert score to number using our helper function which now properly normalizes
   const numericScore = score === null ? 0 : getSiqsScore(score);
   
   // For certified locations with no valid score, show loading state only initially

@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Star, CloudRain, Wind, Compass, Zap, AlertTriangle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { formatSIQSScore } from '@/utils/geoUtils';
+import { normalizeToSiqsScale } from '@/utils/siqsHelpers';
 
 interface LocationQualityProps {
   bortleScale: number | null;
@@ -21,24 +20,33 @@ const LocationQuality: React.FC<LocationQualityProps> = ({
 }) => {
   const { t } = useLanguage();
   
+  // Ensure SIQS is normalized to 0-10 scale
+  const normalizedSiqs = siqs !== null ? normalizeToSiqsScale(siqs) : null;
+  
   // Function to get color class based on SIQS score
   const getSiqsColorClass = () => {
-    if (siqs === null) return 'text-blue-400 bg-blue-950/30';
-    if (siqs > 8) return 'text-green-400 bg-green-950/30';
-    if (siqs > 6) return 'text-purple-400 bg-purple-950/30';
-    if (siqs > 4) return 'text-yellow-400 bg-yellow-950/30';
-    if (siqs > 2) return 'text-orange-400 bg-orange-950/30';
+    if (normalizedSiqs === null) return 'text-blue-400 bg-blue-950/30';
+    if (normalizedSiqs > 8) return 'text-green-400 bg-green-950/30';
+    if (normalizedSiqs > 6) return 'text-purple-400 bg-purple-950/30';
+    if (normalizedSiqs > 4) return 'text-yellow-400 bg-yellow-950/30';
+    if (normalizedSiqs > 2) return 'text-orange-400 bg-orange-950/30';
     return 'text-red-400 bg-red-950/30';
   };
   
   // Function to get quality text based on SIQS score
   const getQualityText = () => {
-    if (siqs === null) return t("Checking...", "正在检查...");
-    if (siqs > 8) return t("Excellent", "极佳");
-    if (siqs > 6) return t("Good", "良好");
-    if (siqs > 4) return t("Fair", "一般");
-    if (siqs > 2) return t("Poor", "较差");
+    if (normalizedSiqs === null) return t("Checking...", "正在检查...");
+    if (normalizedSiqs > 8) return t("Excellent", "极佳");
+    if (normalizedSiqs > 6) return t("Good", "良好");
+    if (normalizedSiqs > 4) return t("Fair", "一般");
+    if (normalizedSiqs > 2) return t("Poor", "较差");
     return t("Very Poor", "很差");
+  };
+  
+  // Format SIQS score for display
+  const formatSIQSScore = (score: number | null) => {
+    if (score === null || score <= 0) return 'N/A';
+    return normalizeToSiqsScale(score).toFixed(1);
   };
   
   // Render loading state
@@ -62,7 +70,7 @@ const LocationQuality: React.FC<LocationQualityProps> = ({
     <Card className="p-4 glassmorphism overflow-hidden">
       <h3 className="text-base font-medium mb-3">{t("Location Quality", "位置质量")}</h3>
       
-      {siqs !== null ? (
+      {normalizedSiqs !== null ? (
         <div className="space-y-3">
           <div className="relative flex items-center justify-between">
             <motion.div 
@@ -81,7 +89,7 @@ const LocationQuality: React.FC<LocationQualityProps> = ({
               transition={{ duration: 0.5, delay: 0.2 }}
               className={`px-3 py-1 rounded-full text-sm font-semibold ${getSiqsColorClass()}`}
             >
-              {formatSIQSScore(siqs)}
+              {formatSIQSScore(normalizedSiqs)}
             </motion.div>
           </div>
           
@@ -93,7 +101,7 @@ const LocationQuality: React.FC<LocationQualityProps> = ({
           >
             <div 
               className="h-full rounded-full bg-current opacity-30"
-              style={{ width: `${Math.min(100, (siqs / 10) * 100)}%` }}
+              style={{ width: `${Math.min(100, (normalizedSiqs / 10) * 100)}%` }}
             ></div>
           </motion.div>
           

@@ -1,8 +1,8 @@
-
 import { useEffect, useRef, useCallback } from 'react';
 import { calculateNighttimeSIQS, calculateTonightCloudCover } from '@/utils/nighttimeSIQS';
 import { validateCloudCover } from '@/lib/siqs/utils';
 import { calculateAstronomicalNight, formatTime } from '@/utils/astronomy/nightTimeCalculator';
+import { normalizeToSiqsScale } from '@/utils/siqsHelpers';
 
 /**
  * Hook to update SIQS score based on forecast data, ensuring consistency
@@ -82,12 +82,22 @@ export const useLocationSIQSUpdater = (
         const freshSIQSResult = calculateNighttimeSIQS(locationData, forecastData, t);
         
         if (freshSIQSResult) {
-          console.log(`Updated SIQS score using astronomical night data: ${freshSIQSResult.score.toFixed(2)}`);
+          // Ensure score is normalized to 0-10 scale
+          const normalizedScore = normalizeToSiqsScale(freshSIQSResult.score);
+          
+          console.log(`Updated SIQS score using astronomical night data: ${normalizedScore.toFixed(2)}`);
           
           // Update the SIQS result with the fresh calculation
           setLocationData({
             ...locationData,
-            siqsResult: freshSIQSResult
+            siqsResult: {
+              ...freshSIQSResult,
+              score: normalizedScore,
+              factors: freshSIQSResult.factors.map(factor => ({
+                ...factor,
+                score: factor.score > 10 ? normalizeToSiqsScale(factor.score) : factor.score
+              }))
+            }
           });
           
           updateAttemptedRef.current = true;
@@ -150,6 +160,9 @@ export const useLocationSIQSUpdater = (
               }
             }
             
+            // Ensure the final score is normalized
+            const estimatedScore = normalizeToSiqsScale(cloudScore);
+            
             // Create factors array with nighttime cloud cover as primary factor
             const factors = [
               {
@@ -190,7 +203,7 @@ export const useLocationSIQSUpdater = (
             setLocationData({
               ...locationData,
               siqsResult: {
-                score: cloudScore,
+                score: estimatedScore,
                 isViable: tonightCloudCover < 40,
                 factors: factors
               }
@@ -206,17 +219,20 @@ export const useLocationSIQSUpdater = (
           // Special handling for 0% cloud cover - should be score 10
           const cloudScore = currentCloudCover === 0 ? 10 : Math.max(0, Math.min(10, 10 - (currentCloudCover * 0.1)));
           
-          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${cloudScore.toFixed(2)}`);
+          // Ensure the score is normalized
+          const normalizedScore = normalizeToSiqsScale(cloudScore);
+          
+          console.log(`Using current cloud cover (${currentCloudCover}%) for SIQS: ${normalizedScore.toFixed(2)}`);
           
           setLocationData({
             ...locationData,
             siqsResult: {
-              score: cloudScore,
-              isViable: cloudScore > 2,
+              score: normalizedScore,
+              isViable: normalizedScore > 2,
               factors: [
                 {
                   name: t ? t("Cloud Cover", "云层覆盖") : "Cloud Cover",
-                  score: Math.max(0, Math.min(1, cloudScore / 10)), // Convert to 0-1 scale
+                  score: Math.max(0, Math.min(1, normalizedScore / 10)), // Convert to 0-1 scale
                   description: t 
                     ? t(`Cloud cover of ${currentCloudCover}% affects imaging quality`, 
                       `${currentCloudCover}%的云量影响成像质量`) 

@@ -18,12 +18,12 @@ export function getSiqsScore(siqs?: number | string | { score: number; isViable:
   // Handle string values (parsing to number)
   if (typeof siqs === 'string') {
     const parsed = parseFloat(siqs);
-    return isNaN(parsed) ? 0 : parsed;
+    return isNaN(parsed) ? 0 : normalizeToSiqsScale(parsed);
   }
   
   // Handle numeric values directly
   if (typeof siqs === 'number') {
-    return isNaN(siqs) ? 0 : siqs;
+    return isNaN(siqs) ? 0 : normalizeToSiqsScale(siqs);
   }
   
   // Handle SharedAstroSpot object with siqs property
@@ -35,12 +35,30 @@ export function getSiqsScore(siqs?: number | string | { score: number; isViable:
     
     // Case: { score: number } object
     if ('score' in siqs && typeof siqs.score === 'number') {
-      return isNaN(siqs.score) ? 0 : siqs.score;
+      return isNaN(siqs.score) ? 0 : normalizeToSiqsScale(siqs.score);
     }
   }
   
   // Default fallback
   return 0;
+}
+
+/**
+ * Normalize scores to ensure they're on the 1-10 scale
+ */
+function normalizeToSiqsScale(score: number): number {
+  // If score is already in 0-10 range, return it
+  if (score >= 0 && score <= 10) {
+    return score;
+  }
+  
+  // If score is on a 0-100 scale, convert to 0-10
+  if (score > 10 && score <= 100) {
+    return score / 10;
+  }
+  
+  // For any other range, clamp to 0-10
+  return Math.min(10, Math.max(0, score));
 }
 
 /**
@@ -90,7 +108,7 @@ export function getLocationSiqs(location: SharedAstroSpot | any): number {
  * Format SIQS score for display
  */
 export function formatSiqsScore(siqs: number | any): string {
-  const score = typeof siqs === 'number' ? siqs : getSiqsScore(siqs);
+  const score = typeof siqs === 'number' ? normalizeToSiqsScale(siqs) : getSiqsScore(siqs);
   if (score <= 0) return 'N/A';
   return score.toFixed(1);
 }
@@ -100,5 +118,26 @@ export function formatSiqsScore(siqs: number | any): string {
  */
 export function formatSiqsForDisplay(score: number | null): string {
   if (score === null || score <= 0) return 'N/A';
-  return score.toFixed(1);
+  // Normalize score to 1-10 scale if needed
+  const normalizedScore = normalizeToSiqsScale(score);
+  return normalizedScore.toFixed(1);
+}
+
+/**
+ * Normalize scores to ensure they're on the 1-10 scale
+ * Exported for use in other components
+ */
+export function normalizeToSiqsScale(score: number): number {
+  // If score is already in 0-10 range, return it
+  if (score >= 0 && score <= 10) {
+    return score;
+  }
+  
+  // If score is on a 0-100 scale, convert to 0-10
+  if (score > 10 && score <= 100) {
+    return score / 10;
+  }
+  
+  // For any other range, clamp to 0-10
+  return Math.min(10, Math.max(0, score));
 }

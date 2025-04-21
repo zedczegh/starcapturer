@@ -1,4 +1,3 @@
-
 /**
  * Unified SIQS Display Utility
  * 
@@ -6,7 +5,7 @@
  * consistently across all map markers and popups.
  */
 
-import { getSiqsScore } from './siqsHelpers';
+import { getSiqsScore, normalizeToSiqsScale } from './siqsHelpers';
 import { formatMapSiqs, getSiqsColorClass } from './mapSiqsDisplay';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeSiqs/siqsCache';
@@ -44,14 +43,14 @@ export function getDisplaySiqs(options: {
 }): number {
   const { realTimeSiqs, staticSiqs } = options;
   
-  // Use realtime SIQS if available
+  // Use realtime SIQS if available, ensuring it's on 0-10 scale
   if (realTimeSiqs !== null && realTimeSiqs > 0) {
-    return realTimeSiqs;
+    return normalizeToSiqsScale(realTimeSiqs);
   }
   
-  // Use static SIQS if available
+  // Use static SIQS if available, ensuring it's on 0-10 scale
   if (staticSiqs > 0) {
-    return staticSiqs;
+    return normalizeToSiqsScale(staticSiqs);
   }
   
   // Return 0 for no valid score - will trigger loading state or no display
@@ -92,7 +91,8 @@ export function formatSiqsForDisplay(siqs: number | null): string {
     return "N/A";
   }
   
-  return siqs.toFixed(1);
+  // Normalize before displaying
+  return normalizeToSiqsScale(siqs).toFixed(1);
 }
 
 /**
@@ -102,7 +102,7 @@ export function getCachedRealTimeSiqs(latitude: number, longitude: number, skipC
   if (!skipCache && hasCachedSiqs(latitude, longitude)) {
     const cached = getCachedSiqs(latitude, longitude);
     if (cached && cached.siqs > 0) {
-      return cached.siqs;
+      return normalizeToSiqsScale(cached.siqs);
     }
   }
   return null;
@@ -165,11 +165,13 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     if (!skipCache) {
       const cachedSiqs = getCachedRealTimeSiqs(latitude, longitude);
       if (cachedSiqs !== null) {
+        // Ensure the cached SIQS is on the 0-10 scale
+        const normalizedSiqs = normalizeToSiqsScale(cachedSiqs);
         return {
-          siqs: cachedSiqs,
+          siqs: normalizedSiqs,
           loading: false,
-          formattedSiqs: formatSiqsForDisplay(cachedSiqs),
-          colorClass: getSiqsColorClass(cachedSiqs),
+          formattedSiqs: formatSiqsForDisplay(normalizedSiqs),
+          colorClass: getSiqsColorClass(normalizedSiqs),
           source: 'cached'
         };
       }

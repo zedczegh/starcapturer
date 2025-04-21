@@ -4,7 +4,7 @@ import { Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useEnhancedLocationDetails } from './tooltip/EnhancedLocationDetails';
 import { Language } from '@/services/geocoding/types';
-import { getSiqsScore } from '@/utils/siqsHelpers';
+import { getSiqsScore, normalizeToSiqsScale } from '@/utils/siqsHelpers';
 import SiqsScoreBadge from '@/components/photoPoints/cards/SiqsScoreBadge';
 import RealTimeSiqsProvider from '@/components/photoPoints/cards/RealTimeSiqsProvider';
 import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
@@ -49,19 +49,19 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   // Check if this is a certified location
   const isCertified = Boolean(isDarkSkyReserve || certification);
   
-  // Get SIQS score using helper function
+  // Get normalized SIQS score using helper function
   const initialSiqsScore = getSiqsScore(siqs);
   
   // Use unified SIQS display function - no default scores for certified locations
   const displaySiqs = getDisplaySiqs({
-    realTimeSiqs,
+    realTimeSiqs: realTimeSiqs !== null ? normalizeToSiqsScale(realTimeSiqs) : null,
     staticSiqs: initialSiqsScore,
     isCertified,
     isDarkSkyReserve
   });
   
   const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
-    setRealTimeSiqs(siqs);
+    setRealTimeSiqs(siqs !== null ? normalizeToSiqsScale(siqs) : null);
     setSiqsLoading(loading);
   };
   

@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info, Star, Clock } from "lucide-react";
@@ -9,6 +8,7 @@ import { motion } from "framer-motion";
 import { formatSIQSScore, getSIQSLevel } from "@/lib/siqs/utils";
 import { validateSIQSData } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
+import { normalizeToSiqsScale } from '@/utils/siqsHelpers';
 
 interface SIQSSummaryProps {
   siqsResult: any;
@@ -26,7 +26,8 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
     if (!validatedSiqs || typeof validatedSiqs.score !== 'number') {
       return 0;
     }
-    return Math.round(validatedSiqs.score * 10) / 10;
+    // Normalize to ensure the score is on the 1-10 scale
+    return normalizeToSiqsScale(Math.round(validatedSiqs.score * 10) / 10);
   }, [validatedSiqs]);
     
   const scoreColorClass = getProgressColorClass(siqsScore);
@@ -63,12 +64,22 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
     const isValid = validateSIQSData(siqsResult);
     
     if (isValid) {
-      setValidatedSiqs(siqsResult);
+      // Normalize score if needed
+      if (siqsResult && typeof siqsResult.score === 'number' && siqsResult.score > 10) {
+        const normalizedSiqs = {
+          ...siqsResult,
+          score: normalizeToSiqsScale(siqsResult.score)
+        };
+        setValidatedSiqs(normalizedSiqs);
+      } else {
+        setValidatedSiqs(siqsResult);
+      }
     } else if (siqsResult && typeof siqsResult.score === 'number') {
       console.warn("SIQS data structure is invalid, creating basic object");
+      const normalizedScore = normalizeToSiqsScale(siqsResult.score);
       setValidatedSiqs({
-        score: siqsResult.score,
-        isViable: siqsResult.score >= 2,
+        score: normalizedScore,
+        isViable: normalizedScore >= 2,
         factors: siqsResult.factors || []
       });
     } else {

@@ -97,6 +97,10 @@ export async function calculateRealTimeSiqs(
     const cachedData = getCachedSiqs(latitude, longitude);
     if (cachedData && 
         (Date.now() - new Date(cachedData.metadata?.calculatedAt || 0).getTime()) < cacheDurationMins * 60 * 1000) {
+      // Ensure cached score is normalized to 0-10 scale
+      if (cachedData.siqs > 10) {
+        cachedData.siqs = cachedData.siqs / 10;
+      }
       // Store in memory cache for even faster access next time
       memoizedResults.set(cacheKey, {
         result: cachedData,
@@ -212,7 +216,11 @@ export async function calculateRealTimeSiqs(
       adjustedScore *= climateAdjustment;
     }
     
-    adjustedScore = Math.min(9.5, Math.max(0, adjustedScore));
+    // Ensure score is always normalized to 0-10 scale
+    adjustedScore = Math.min(10, Math.max(0, adjustedScore));
+    if (adjustedScore > 10) {
+      adjustedScore = adjustedScore / 10;
+    }
     const finalScore = Math.round(adjustedScore * 10) / 10;
     
     const result: SiqsResult = {
@@ -220,7 +228,11 @@ export async function calculateRealTimeSiqs(
       isViable: finalScore >= 3.0,
       weatherData: weatherDataWithClearSky,
       forecastData,
-      factors: siqsResult.factors,
+      factors: siqsResult.factors.map(factor => ({
+        ...factor,
+        // Normalize any factor scores as well
+        score: factor.score > 10 ? factor.score / 10 : factor.score
+      })),
       metadata: {
         calculatedAt: new Date().toISOString(),
         sources: {
