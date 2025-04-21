@@ -28,6 +28,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   const containerRef = useRef<HTMLDivElement>(null);
   const [contentLoaded, setContentLoaded] = useState(false);
   const [faulted, setFaulted] = useState(false);
+  const [retryCount, setRetryCount] = useState(0); // Add the missing state variable
 
   const isRedirect = locationData?.fromPhotoPoints || locationData?.fromCalculator;
   const hasRequiredData = Boolean(locationData?.weatherData && locationData?.siqsResult);
