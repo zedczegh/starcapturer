@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -17,7 +17,6 @@ import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const [isViewChanging, setIsViewChanging] = useState(false);
   
   const {
     activeView,
@@ -29,24 +28,12 @@ const PhotoPointsNearby: React.FC = () => {
     calculatedSearchRadius,
     currentSearchRadius,
     handleRadiusChange,
-    handleViewChange: originalHandleViewChange,
+    handleViewChange,
     handleLocationUpdate,
     handleResetLocation,
     toggleMapView
   } = usePhotoPointsState();
 
-  // Add debounced view change handler to prevent rapid state changes
-  const handleViewChange = useCallback((view: 'certified' | 'calculated') => {
-    if (isViewChanging) return; // Prevent multiple rapid view changes
-    
-    setIsViewChanging(true);
-    // Small delay to prevent UI from being blocked during transition
-    setTimeout(() => {
-      originalHandleViewChange(view);
-      setTimeout(() => setIsViewChanging(false), 300);
-    }, 50);
-  }, [originalHandleViewChange, isViewChanging]);
-  
   const {
     searchRadius,
     setSearchRadius,
@@ -70,49 +57,22 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedLocations, 
     calculatedLocations 
   } = useCertifiedLocations(locations);
-  
-  // Only update search radius when necessary to avoid unnecessary API calls
+
+  // Update search radius when view changes, but avoid unnecessary refreshes
   useEffect(() => {
-    if (locationInitialized && effectiveLocation && !isViewChanging) {
+    if (locationInitialized && effectiveLocation) {
       setSearchRadius(currentSearchRadius);
+      refreshSiqsData();
     }
-  }, [locationInitialized, effectiveLocation, currentSearchRadius, setSearchRadius, isViewChanging]);
+  }, [locationInitialized, effectiveLocation, currentSearchRadius, setSearchRadius, refreshSiqsData]);
   
-  // Separate effect for refreshing SIQS data, with a debounce
-  const refreshDebounceRef = React.useRef<NodeJS.Timeout | null>(null);
-  
-  useEffect(() => {
-    if (locationInitialized && effectiveLocation && !isViewChanging && !loading) {
-      if (refreshDebounceRef.current) {
-        clearTimeout(refreshDebounceRef.current);
-      }
-      
-      refreshDebounceRef.current = setTimeout(() => {
-        refreshSiqsData();
-        refreshDebounceRef.current = null;
-      }, 500);
-    }
-    
-    return () => {
-      if (refreshDebounceRef.current) {
-        clearTimeout(refreshDebounceRef.current);
-      }
-    };
-  }, [locationInitialized, effectiveLocation, refreshSiqsData, isViewChanging, loading]);
-  
-  // Memoize logging function to prevent re-renders
-  const logLocationCount = useCallback(() => {
+  React.useEffect(() => {
     if (locations.length > 0) {
       console.log(`Total locations before filtering: ${locations.length}`);
       const validLocations = locations.filter(loc => isSiqsGreaterThan(loc.siqs, 0) || loc.isDarkSkyReserve || loc.certification);
       console.log(`Valid locations after SIQS filtering: ${validLocations.length}`);
     }
   }, [locations]);
-  
-  // Only run logging when locations change
-  useEffect(() => {
-    logLocationCount();
-  }, [logLocationCount]);
   
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (!location) return;
@@ -145,8 +105,7 @@ const PhotoPointsNearby: React.FC = () => {
       <ViewToggle
         activeView={activeView}
         onViewChange={handleViewChange}
-        loading={isViewChanging} // Show loading state during transitions
-        disabled={isViewChanging} // Prevent rapid switches
+        loading={false} // Remove loading dependency for instant switching
       />
       
       {activeView === 'calculated' && (
@@ -181,7 +140,7 @@ const PhotoPointsNearby: React.FC = () => {
         calculatedLocations={calculatedLocations}
         searchRadius={currentSearchRadius}
         calculatedSearchRadius={calculatedSearchRadius}
-        loading={loading && !locationLoading || isViewChanging}
+        loading={loading && !locationLoading}
         hasMore={hasMore}
         loadMore={loadMore}
         refreshSiqs={refreshSiqsData}
