@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, Loader } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface LoginFormProps {
@@ -17,12 +17,7 @@ interface LoginFormProps {
 const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const { signIn } = useAuth();
   const { t } = useLanguage();
-  const form = useForm({
-    defaultValues: {
-      email: '',
-      password: ''
-    }
-  });
+  const form = useForm();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -33,9 +28,13 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       await signIn(data.email, data.password);
       onSuccess();
       navigate('/photo-points');
+      toast.success(t("Welcome back!", "欢迎回来！"));
     } catch (error: any) {
-      // Error handling is done in the AuthContext signIn method
-      console.error('Login error:', error);
+      if (error.message.includes("Invalid")) {
+        toast.error(t("Invalid email or password", "邮箱或密码错误"));
+      } else {
+        toast.error(error.message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -55,9 +54,8 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
                     {...field} 
                     type="email" 
                     placeholder={t("Email", "电子邮箱")}
-                    className="pl-10 bg-cosmic-800/50 border-cosmic-700" 
+                    className="pl-10" 
                     disabled={isLoading}
-                    required
                   />
                 </FormControl>
                 <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
@@ -78,9 +76,8 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
                     {...field} 
                     type={showPassword ? "text" : "password"}
                     placeholder={t("Password", "密码")}
-                    className="pl-10 pr-10 bg-cosmic-800/50 border-cosmic-700"
+                    className="pl-10 pr-10"
                     disabled={isLoading}
-                    required
                   />
                 </FormControl>
                 <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
@@ -106,17 +103,10 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
         <Button 
           type="submit" 
-          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          className="w-full"
           disabled={isLoading}
         >
-          {isLoading ? (
-            <span className="flex items-center">
-              <Loader className="h-4 w-4 mr-2 animate-spin" />
-              {t("Signing in...", "登录中...")}
-            </span>
-          ) : (
-            t("Sign In", "登录")
-          )}
+          {isLoading ? t("Signing in...", "登录中...") : t("Sign In", "登录")}
         </Button>
       </form>
     </Form>

@@ -30,28 +30,13 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
       navigate('/photo-points');
       toast.success(
         t(
-          "Account created successfully!", 
-          "帐户创建成功！"
-        ),
-        {
-          description: t(
-            "Please check your email for a verification link. You'll need to verify your email before signing in.",
-            "请检查您的邮箱以获取验证链接。您需要验证邮箱后才能登录。"
-          ),
-          duration: 6000,
-        }
+          "Welcome! Please check your email to confirm your account.", 
+          "欢迎！请检查您的邮箱以确认您的帐户。"
+        )
       );
     } catch (error: any) {
       if (error.message.includes("already registered")) {
-        toast.error(
-          t("Email already registered", "该邮箱已被注册"),
-          {
-            description: t(
-              "Please try signing in instead, or use a different email address.",
-              "请尝试登录，或使用其他邮箱地址。"
-            )
-          }
-        );
+        toast.error(t("Email already registered", "该邮箱已被注册"));
       } else {
         toast.error(error.message);
       }

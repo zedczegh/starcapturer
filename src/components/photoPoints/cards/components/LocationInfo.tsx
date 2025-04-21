@@ -1,5 +1,6 @@
 
 import React from 'react';
+import LightPollutionIndicator from '@/components/location/LightPollutionIndicator';
 import LocationMetadata from '../LocationMetadata';
 import { getCertificationInfo, getLocalizedCertText } from '@/components/photoPoints/utils/certificationUtils';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -28,6 +29,15 @@ const LocationInfo: React.FC<LocationInfoProps> = ({
           </div>
         </div>
       )}
+
+      <div className="mb-4 mt-2">
+        <LightPollutionIndicator 
+          bortleScale={location.bortleScale || 5} 
+          size="md"
+          showBortleNumber={true}
+          className="text-base"
+        />
+      </div>
 
       <LocationMetadata 
         distance={location.distance} 

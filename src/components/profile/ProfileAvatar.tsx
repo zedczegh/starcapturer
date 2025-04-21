@@ -1,14 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
-import { Camera, X, Loader2 } from 'lucide-react';
+import { Camera, X } from 'lucide-react';
 import { User } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 
 interface ProfileAvatarProps {
   avatarUrl: string | null;
@@ -24,161 +19,49 @@ const ProfileAvatar = ({
   uploadingAvatar 
 }: ProfileAvatarProps) => {
   const { t } = useLanguage();
-  const { user } = useAuth();
-  const [isHovered, setIsHovered] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(avatarUrl);
-
-  // Effect to fetch the user's avatar when component mounts
-  useEffect(() => {
-    if (user) {
-      const fetchAvatar = async () => {
-        try {
-          const { data } = await supabase
-            .from('profiles')
-            .select('avatar_url')
-            .eq('id', user.id)
-            .single();
-          
-          if (data?.avatar_url) {
-            setProfileAvatarUrl(data.avatar_url);
-          }
-        } catch (error) {
-          console.error('Error fetching avatar:', error);
-        }
-      };
-
-      fetchAvatar();
-    }
-  }, [user]);
-
-  // Update profileAvatarUrl whenever avatarUrl prop changes
-  useEffect(() => {
-    if (avatarUrl) {
-      setProfileAvatarUrl(avatarUrl);
-    }
-  }, [avatarUrl]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error(t("Image too large (max 5MB)", "图片太大（最大5MB）"));
-      return;
-    }
-    
-    if (!file.type.startsWith('image/')) {
-      toast.error(t("File must be an image", "文件必须是图像"));
-      return;
-    }
-    
-    onAvatarChange(e);
-  };
-
-  const handleClickUpload = () => {
-    // If there's already an avatar, open it in a new tab
-    if (profileAvatarUrl) {
-      window.open(profileAvatarUrl, '_blank');
-    } else {
-      // If no avatar, trigger file input
-      fileInputRef.current?.click();
-    }
-  };
 
   return (
-    <TooltipProvider>
-      <div className="flex flex-col items-center">
-        <div className="relative w-28 h-28">
-          {profileAvatarUrl ? (
-            <div 
-              className="relative group"
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-            >
-              <img
-                src={profileAvatarUrl}
-                alt="Profile"
-                className={cn(
-                  "w-full h-full rounded-full object-cover border-2 border-primary shadow-glow transition-all duration-300 cursor-pointer",
-                  isHovered && "brightness-75"
-                )}
-                onClick={() => window.open(profileAvatarUrl, '_blank')}
-              />
-              <div 
-                className={cn(
-                  "absolute inset-0 bg-black bg-opacity-40 rounded-full flex items-center justify-center transition-opacity",
-                  isHovered ? "opacity-100" : "opacity-0",
-                  "md:group-hover:opacity-100"
-                )}
+    <div className="flex flex-col items-center">
+      <div className="relative w-28 h-28">
+        {avatarUrl ? (
+          <div className="relative group">
+            <img
+              src={avatarUrl}
+              alt="Profile"
+              className="w-full h-full rounded-full object-cover border-2 border-primary shadow-glow"
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <button 
+                onClick={onRemoveAvatar} 
+                className="text-white p-1 rounded-full hover:text-red-400 transition-colors"
+                type="button"
+                aria-label={t("Remove avatar", "删除头像")}
               >
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button 
-                      onClick={onRemoveAvatar} 
-                      className="text-white p-1 rounded-full hover:text-red-400 transition-colors"
-                      type="button"
-                      aria-label={t("Remove avatar", "删除头像")}
-                    >
-                      <X className="w-6 h-6" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t("Remove avatar", "删除头像")}
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+                <X className="w-6 h-6" />
+              </button>
             </div>
-          ) : (
-            <div className="w-full h-full rounded-full bg-cosmic-800 border-2 border-cosmic-700 shadow-glow flex items-center justify-center">
-              <User className="w-12 h-12 text-cosmic-400" />
-            </div>
-          )}
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <label 
-                htmlFor="avatar-upload" 
-                className={cn(
-                  "absolute -bottom-1 -right-1 text-white p-2 rounded-full cursor-pointer shadow-md transition-all",
-                  uploadingAvatar ? "bg-gray-500" : "bg-primary hover:bg-primary/90"
-                )}
-                onClick={handleClickUpload}
-              >
-                {uploadingAvatar ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Camera className="w-5 h-5" />
-                )}
-                <Input
-                  ref={fileInputRef}
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  disabled={uploadingAvatar}
-                />
-              </label>
-            </TooltipTrigger>
-            <TooltipContent>
-              {profileAvatarUrl 
-                ? t("View full image", "查看完整图片")
-                : t("Upload avatar", "上传头像")
-              }
-            </TooltipContent>
-          </Tooltip>
-        </div>
-        <p className="text-cosmic-400 text-sm mt-2">
-          {uploadingAvatar 
-            ? t("Uploading...", "上传中...") 
-            : profileAvatarUrl 
-              ? t("Click to view or remove", "点击查看或删除") 
-              : t("Click to add photo", "点击添加照片")
-          }
-        </p>
+          </div>
+        ) : (
+          <div className="w-full h-full rounded-full bg-cosmic-800 border-2 border-cosmic-700 shadow-glow flex items-center justify-center">
+            <User className="w-12 h-12 text-cosmic-400" />
+          </div>
+        )}
+        
+        <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 bg-primary text-white p-2 rounded-full cursor-pointer shadow-md hover:bg-primary/90 transition-all">
+          <Camera className="w-5 h-5" />
+          <Input
+            id="avatar-upload"
+            type="file"
+            accept="image/*"
+            onChange={onAvatarChange}
+            className="hidden"
+          />
+        </label>
       </div>
-    </TooltipProvider>
+      <p className="text-cosmic-400 text-sm mt-2">
+        {uploadingAvatar ? t("Uploading...", "上传中...") : t("Click to change", "点击更改")}
+      </p>
+    </div>
   );
 };
 

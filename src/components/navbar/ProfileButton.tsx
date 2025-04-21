@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, UserRound, LogOut } from 'lucide-react';
+import { BookmarkPlus, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -52,10 +52,10 @@ const ProfileButton = () => {
           variant="ghost" 
           size="sm" 
           onClick={() => setShowAuthDialog(true)}
-          className="text-primary hover:text-primary/80 rounded-full flex items-center justify-center transition-colors duration-300"
+          className="text-primary hover:text-primary-focus rounded-full flex items-center justify-center"
           aria-label="Login"
         >
-          <UserRound className="h-5 w-5 hover:scale-110 transition-transform" />
+          <UserRound className="h-5 w-5" />
         </Button>
         <AuthDialog 
           open={showAuthDialog} 
@@ -68,45 +68,28 @@ const ProfileButton = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="relative rounded-full p-0 hover:scale-105 transition-transform duration-300"
-        >
-          <Avatar className="h-8 w-8 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-300">
+        <Button variant="ghost" size="sm" className="relative rounded-full p-0">
+          <Avatar className="h-8 w-8">
             {avatarUrl ? (
               <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
             ) : (
-              <AvatarFallback className="bg-primary/10 text-primary">
+              <AvatarFallback>
                 {user.email?.[0].toUpperCase()}
               </AvatarFallback>
             )}
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        align="end"
-        className="w-48 bg-cosmic-800/80 backdrop-blur-xl border border-cosmic-700/50"
-      >
-        <DropdownMenuItem 
-          onClick={() => navigate('/collections')}
-          className="hover:bg-cosmic-700/50 focus:bg-cosmic-700/50 text-cosmic-100 group"
-        >
-          <BookmarkPlus className="mr-2 h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => navigate('/collections')}>
+          <BookmarkPlus className="mr-2 h-4 w-4" />
           {t("My Collections", "我的收藏")}
         </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => navigate('/profile')}
-          className="hover:bg-cosmic-700/50 focus:bg-cosmic-700/50 text-cosmic-100 group"
-        >
-          <UserRound className="mr-2 h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+        <DropdownMenuItem onClick={() => navigate('/profile')}>
+          <UserRound className="mr-2 h-4 w-4" />
           {t("Profile", "个人资料")}
         </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={handleSignOut}
-          className="hover:bg-cosmic-700/50 focus:bg-cosmic-700/50 text-cosmic-100 group"
-        >
-          <LogOut className="mr-2 h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+        <DropdownMenuItem onClick={handleSignOut}>
           {t("Sign Out", "登出")}
         </DropdownMenuItem>
       </DropdownMenuContent>

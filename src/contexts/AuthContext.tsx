@@ -4,7 +4,6 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from "sonner";
-import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AuthContextType {
   user: User | null;
@@ -12,8 +11,6 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
-  updatePassword: (password: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -22,17 +19,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const { toast: shadcnToast } = useToast();
-  const { t } = useLanguage();
-
-  const refreshProfile = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      setSession(session);
-      setUser(session.user);
-    }
-  };
 
   useEffect(() => {
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
@@ -40,6 +29,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
+    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -53,25 +43,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
       
+      // Show user confirmation message about email verification
       if (data.user && !data.user.confirmed_at) {
-        toast.success(
-          t("Verification email sent!", "验证邮件已发送！"),
-          {
-            description: t(
-              "Please check your inbox and spam folder. Click the verification link to complete your registration.",
-              "请检查收件箱和垃圾邮件文件夹。点击验证链接完成注册。"
-            ),
-            duration: 8000,
-          }
-        );
+        toast.success("Verification email sent! Please check your inbox and confirm your email.", {
+          duration: 6000,
+          description: "You will need to verify your email before logging in."
+        });
       }
     } catch (error: any) {
-      toast.error(
-        t("Sign up failed", "注册失败"),
-        {
-          description: error.message
-        }
-      );
+      toast.error(error.message);
     }
   };
 
@@ -79,34 +59,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-
-      toast.success(
-        t("Signed in successfully!", "登录成功！"),
-        {
-          description: t(
-            "Welcome back to AstroSIQS!", 
-            "欢迎回到 AstroSIQS！"
-          )
-        }
-      );
+      toast.success("Signed in successfully!");
     } catch (error: any) {
       if (error.message.includes("Email not confirmed")) {
-        toast.error(
-          t("Email not verified", "邮箱未验证"),
-          {
-            description: t(
-              "Please check your email and click the verification link to complete registration.",
-              "请检查您的邮箱并点击验证链接完成注册。"
-            )
-          }
-        );
+        toast.error("Please confirm your email before signing in.", {
+          description: "Check your inbox for the verification email."
+        });
       } else {
-        toast.error(
-          t("Sign in failed", "登录失败"),
-          {
-            description: error.message
-          }
-        );
+        toast.error("Sign in failed", {
+          description: error.message
+        });
       }
     }
   };
@@ -115,39 +77,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      toast.success(t("Signed out successfully", "登出成功"));
+      toast.success("Signed out successfully");
     } catch (error: any) {
-      toast.error(t("Sign out failed", "登出失败"), {
+      toast.error("Sign out failed", {
         description: error.message
       });
-    }
-  };
-
-  const updatePassword = async (password: string): Promise<boolean> => {
-    try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
-      
-      toast.success(t("Password updated successfully", "密码更新成功"));
-      return true;
-    } catch (error: any) {
-      toast.error(t("Failed to update password", "更新密码失败"), {
-        description: error.message
-      });
-      return false;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session, 
-      signUp, 
-      signIn, 
-      signOut, 
-      refreshProfile,
-      updatePassword 
-    }}>
+    <AuthContext.Provider value={{ user, session, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,6 +1,5 @@
 
 import * as React from "react"
-import { toast as sonnerToast } from "sonner"
 
 import type {
   ToastActionElement,
@@ -126,54 +125,20 @@ function addToRemoveQueue(toastId: string) {
   toastTimeouts.set(toastId, timeout)
 }
 
-// Function to map shadcn toast style to sonner style
-const mapShadcnToSonnerStyle = (variant?: "default" | "destructive") => {
-  if (variant === "destructive") return "error";
-  return "default";
-};
-
-// Initialize with empty dispatch function
-const defaultDispatch = (action: Action) => {
-  console.warn("Toast context not found, action:", action);
-};
-
-// Export a dispatch function that can be updated later
-let dispatch = defaultDispatch;
-
-// Use the sonner toast library directly with better styling
-function toast({
-  variant = "default",
-  title,
-  description,
-  ...props
-}: Omit<ToasterToast, "id">) {
-  // Map variant to sonner style
-  const style = mapShadcnToSonnerStyle(variant);
-  
-  // Use sonner toast with improved styling
-  return sonnerToast[style === "error" ? "error" : "success"](
-    title,
-    {
-      description,
-      duration: 4000,
-      className: variant === "destructive" ? "bg-red-950/80 text-white" : "bg-cosmic-800/90 text-white",
-      ...props
-    }
-  );
+const dispatch = (action: Action) => {
+  return null
 }
 
 function useToast() {
-  const [state, setState] = React.useState<State>({ toasts: [] });
+  const [state, setState] = React.useState<State>({ toasts: [] })
 
   React.useEffect(() => {
-    dispatch = (action: Action) => {
-      setState((prevState) => reducer(prevState, action));
-    };
-    
-    return () => {
-      dispatch = defaultDispatch;
-    };
-  }, []);
+    const listener = (action: Action) => {
+      setState((prevState) => reducer(prevState, action))
+    }
+
+    return () => {}
+  }, [])
 
   return {
     ...state,
@@ -184,6 +149,34 @@ function useToast() {
         toastId,
       })
     },
+  }
+}
+
+function toast({
+  ...props
+}: Omit<ToasterToast, "id">) {
+  const id = genId()
+
+  dispatch({
+    type: actionTypes.ADD_TOAST,
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: (open) => {
+        if (!open) dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
+      },
+    },
+  })
+
+  return {
+    id: id,
+    dismiss: () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id }),
+    update: (props: ToasterToast) =>
+      dispatch({
+        type: actionTypes.UPDATE_TOAST,
+        toast: { ...props, id },
+      }),
   }
 }
 

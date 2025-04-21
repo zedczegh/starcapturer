@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,12 +38,9 @@ const Collections = () => {
 
         if (error) throw error;
 
-        console.log("Fetched collections data:", data);
-
         const transformedLocations: SharedAstroSpot[] = (data || []).map(loc => ({
           id: loc.id,
           name: loc.name,
-          chineseName: null, // Since chinese_name doesn't exist in the table, initialize as null
           latitude: loc.latitude,
           longitude: loc.longitude,
           bortleScale: loc.bortlescale,
@@ -54,7 +50,6 @@ const Collections = () => {
           timestamp: loc.timestamp || new Date().toISOString(),
         }));
 
-        console.log("Transformed locations:", transformedLocations);
         setLocations(transformedLocations);
       } catch (error: any) {
         console.error('Error fetching collections:', error);
@@ -167,7 +162,6 @@ const Collections = () => {
                       index={index}
                       onViewDetails={handleViewDetails}
                       showRealTimeSiqs={true}
-                      forceRealTimeSiqs={true}
                     />
                   </div>
                 </div>
