@@ -77,6 +77,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
   }, [location, navigate, getLocationId, onViewDetails]);
 
+  // Explicitly set initial states based on forceRealTimeSiqs
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(forceRealTimeSiqs);
   const [isVisible, setIsVisible] = useState(forceRealTimeSiqs);
@@ -113,6 +114,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     setHasAttemptedLoad(true);
     
     if (siqs !== null && siqs > 0) {
+      console.log(`Setting realTimeSiqs to ${siqs} with confidence ${confidenceScore}`);
       setRealTimeSiqs(siqs);
       setInitialScoreSet(true);
       if (confidenceScore) {
@@ -137,6 +139,13 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   
   // Force visibility for certified locations and collections view
   const effectiveIsVisible = isCertified || isVisible || forceRealTimeSiqs;
+  
+  // Debug logging for collections view
+  useEffect(() => {
+    if (forceRealTimeSiqs) {
+      console.log(`[Card ${index}] Rendering with forceRealTimeSiqs=true, effectiveIsVisible=${effectiveIsVisible}`);
+    }
+  }, [forceRealTimeSiqs, effectiveIsVisible, index]);
   
   return (
     <VisibilityObserver onVisibilityChange={setIsVisible} forceVisible={forceRealTimeSiqs}>

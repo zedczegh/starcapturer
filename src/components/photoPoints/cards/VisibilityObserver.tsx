@@ -1,47 +1,51 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
-interface VisibilityObserverProps {
-  onVisibilityChange: (isVisible: boolean) => void;
+export interface VisibilityObserverProps {
   children: React.ReactNode;
-  forceVisible?: boolean; // Added optional forceVisible prop
+  onVisibilityChange: (isVisible: boolean) => void;
+  forceVisible?: boolean;
 }
 
-const VisibilityObserver: React.FC<VisibilityObserverProps> = ({
+const VisibilityObserver: React.FC<VisibilityObserverProps> = ({ 
+  children, 
   onVisibilityChange,
-  children,
   forceVisible = false
 }) => {
-  const ref = useRef<HTMLDivElement | null>(null);
-  
-  // Handle forced visibility
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const elementRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
+    // If forceVisible is true, just call onVisibilityChange with true
     if (forceVisible) {
       onVisibilityChange(true);
-    }
-  }, [forceVisible, onVisibilityChange]);
-  
-  useEffect(() => {
-    if (forceVisible) return; // Skip observer if visibility is forced
-    
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          onVisibilityChange(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (ref.current) {
-      observer.observe(ref.current);
+      return;
     }
 
-    return () => observer.disconnect();
+    const options = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.1
+    };
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      const [entry] = entries;
+      onVisibilityChange(entry.isIntersecting);
+    }, options);
+
+    const currentElement = elementRef.current;
+    if (currentElement) {
+      observerRef.current.observe(currentElement);
+    }
+
+    return () => {
+      if (currentElement && observerRef.current) {
+        observerRef.current.unobserve(currentElement);
+      }
+    };
   }, [onVisibilityChange, forceVisible]);
-  
-  return <div ref={ref}>{children}</div>;
+
+  return <div ref={elementRef}>{children}</div>;
 };
 
 export default VisibilityObserver;

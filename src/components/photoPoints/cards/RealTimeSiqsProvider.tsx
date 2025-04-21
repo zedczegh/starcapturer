@@ -59,7 +59,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   // Calculate real-time SIQS when component becomes visible
   useEffect(() => {
     const calculateSiqs = async () => {
-      if (hasAttemptedRef.current || !isVisible && !forceUpdate) return;
+      if (hasAttemptedRef.current || (!isVisible && !forceUpdate)) return;
       
       if ((isCertified || isDarkSkyReserve || getSiqsScore(existingSiqs) > 0 || forceUpdate) && 
           !hasCalculated && 
@@ -69,12 +69,15 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         setIsCalculating(true);
         
         try {
+          console.log(`Calculating SIQS for ${latitude}, ${longitude} with forceUpdate=${forceUpdate}`);
           const result = await calculateRealTimeSiqs(latitude, longitude, bortleScale);
           
           if (result && result.siqs > 0) {
+            console.log(`SIQS calculated: ${result.siqs}`);
             const confidenceScore = result.metadata?.reliability?.score || 8;
             onSiqsCalculated(result.siqs, false, confidenceScore);
           } else {
+            console.log("SIQS calculation returned no valid result");
             onSiqsCalculated(null, false);
           }
         } catch (error) {
@@ -88,6 +91,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     };
 
     // Wait a bit before calculating to avoid unnecessary calculations for quickly scrolled items
+    // For forceUpdate mode, calculate immediately
     const timeoutId = setTimeout(() => {
       if ((isVisible || forceUpdate) && !hasCalculated) {
         calculateSiqs();

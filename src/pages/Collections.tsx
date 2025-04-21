@@ -42,6 +42,7 @@ const Collections = () => {
         const transformedLocations: SharedAstroSpot[] = (data || []).map(loc => ({
           id: loc.id,
           name: loc.name,
+          chineseName: loc.chinese_name,
           latitude: loc.latitude,
           longitude: loc.longitude,
           bortleScale: loc.bortlescale,
@@ -161,7 +162,7 @@ const Collections = () => {
                     <PhotoLocationCard
                       location={location}
                       index={index}
-                      onViewDetails={() => handleViewDetails(location)}
+                      onViewDetails={handleViewDetails}
                       showRealTimeSiqs={true}
                       forceRealTimeSiqs={true}
                     />

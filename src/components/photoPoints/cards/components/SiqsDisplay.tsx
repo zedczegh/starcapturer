@@ -34,20 +34,33 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
   
   // Use the best available score
   const displayScore = useMemo(() => {
+    // For collections and certified locations, prioritize real-time SIQS
     if (realTimeSiqs !== null && realTimeSiqs > 0) {
       return realTimeSiqs;
     }
+    
+    // Fall back to location SIQS if available
     if (locationSiqs && locationSiqs > 0) {
       return locationSiqs;
     }
+    
+    // If certified or in collections, ensure we show a badge even if we don't have a score yet
     if (isCertified) {
       return locationSiqs && locationSiqs > 0 ? locationSiqs : null;
     }
+    
     return null;
   }, [realTimeSiqs, locationSiqs, isCertified]);
 
   // Always show badge for locations with locationSiqs defined or if certified
   const forceDisplay = locationSiqs !== undefined || isCertified;
+
+  // Debug logging for collections view
+  React.useEffect(() => {
+    if (isCertified) {
+      console.log(`SiqsDisplay: realTimeSiqs=${realTimeSiqs}, locationSiqs=${locationSiqs}, displayScore=${displayScore}, loading=${showLoadingState}`);
+    }
+  }, [realTimeSiqs, locationSiqs, displayScore, showLoadingState, isCertified]);
 
   return (
     <SiqsScoreBadge 
