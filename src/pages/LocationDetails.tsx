@@ -1,6 +1,6 @@
 
 // Refactored to use new hooks and smaller components!
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 import { useLocationNameTranslation } from "@/hooks/location/useLocationNameTranslation";
@@ -21,6 +21,8 @@ const LocationDetails = () => {
   const queryClient = useQueryClient();
   const { setCachedData, getCachedData } = useLocationDataCache();
   const { t, language } = useLanguage();
+  // Add a ref to track if the toast has been shown
+  const toastShownRef = useRef(false);
 
   // New logic hook
   const {
@@ -44,14 +46,20 @@ const LocationDetails = () => {
   });
 
   // Show a random astronomy fact as a toast when this page opens
+  // Use the ref to ensure it only shows once
   useEffect(() => {
+    if (toastShownRef.current) return;
+    
     const tip = getRandomAstronomyTip();
     if (!tip) return;
+    
     const tipText = language === "zh" ? tip[1] : tip[0];
     toast.info(tipText, {
       duration: 6000,
       position: "bottom-right",
     });
+    
+    toastShownRef.current = true;
   }, [language]);
 
   if (isLoading) {
@@ -80,4 +88,3 @@ const LocationDetails = () => {
 };
 
 export default LocationDetails;
-
