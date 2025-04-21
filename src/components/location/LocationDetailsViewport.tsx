@@ -7,8 +7,6 @@ import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
 import WeatherAlerts from "@/components/weather/WeatherAlerts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import LocationDetailsHeader from "./LocationDetailsHeader";
-// Removed BackButton import since we won't display it
-// import BackButton from "@/components/navigation/BackButton";
 import { Search, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -22,6 +20,7 @@ interface LocationDetailsViewportProps {
   messageType: "info" | "error" | "success" | null;
   setStatusMessage: React.Dispatch<React.SetStateAction<string | null>>;
   handleUpdateLocation: (updatedData: any) => Promise<void>;
+  onRefresh?: () => void; // Add this prop for refresh handling
 }
 
 const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
@@ -30,7 +29,8 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   statusMessage,
   messageType,
   setStatusMessage,
-  handleUpdateLocation
+  handleUpdateLocation,
+  onRefresh
 }) => {
   const [gettingUserLocation, setGettingUserLocation] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
@@ -63,21 +63,40 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const paddingTop = isMobile ? 'pt-16' : 'pt-14';
   const weatherAlerts = locationData?.weatherData?.alerts || [];
 
-  // --- Refresh Button Functionality ---
-  // Manual refresh by dispatching the same forceRefresh event as initial redirect
+  // --- Improved Refresh Button Functionality ---
+  // Manual refresh that triggers actual data refresh
   const handleManualRefresh = useCallback(() => {
     if (refreshing) return;
     setRefreshing(true);
+    
+    // Set status message to inform user
+    setStatusMessage(t ? t("Refreshing data...", "正在刷新数据...") : "Refreshing data...");
 
-    // Dispatch custom event to trigger refresh in child panels
+    // First, trigger the onRefresh prop if provided
+    if (onRefresh) {
+      onRefresh();
+    }
+
+    // Also dispatch custom event to trigger refresh in child panels
     setTimeout(() => {
       const dom = detailsContainerRef.current ?? document.querySelector('[data-refresh-trigger]');
       if (dom) {
-        dom.dispatchEvent(new CustomEvent('forceRefresh'));
+        dom.dispatchEvent(new CustomEvent('forceRefresh', {
+          detail: { timestamp: new Date().toISOString() }
+        }));
+        console.log("Force refresh event dispatched with timestamp");
       }
-      setTimeout(() => setRefreshing(false), 1200); // Button spinner minimum duration for feedback
+      
+      // Add minimum duration for button spinner feedback
+      setTimeout(() => {
+        setRefreshing(false);
+        setStatusMessage(t ? t("Data refreshed", "数据已刷新") : "Data refreshed");
+        
+        // Clear status message after a delay
+        setTimeout(() => setStatusMessage(null), 3000);
+      }, 1200);
     }, 120);
-  }, [refreshing]);
+  }, [refreshing, onRefresh, setStatusMessage, t]);
 
   return (
     <div 
@@ -95,7 +114,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
               locationName={locationData?.name || ""}
             />
           )}
-          {/* Removed BackButton from UI on location details page */}
         </div>
         <div className="flex gap-2">
           <Button 

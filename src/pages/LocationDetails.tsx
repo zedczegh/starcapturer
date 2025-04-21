@@ -12,7 +12,7 @@ import LocationErrorSection from "@/components/location/LocationErrorSection";
 import LocationDetailsMain from "@/components/location/LocationDetailsMain";
 import { useLocationDetailsLogic } from "@/hooks/location/useLocationDetailsLogic";
 import { toast } from "sonner";
-import { getRandomAstronomyTip } from "@/utils/astronomyTips"; // import the function
+import { getRandomAstronomyTip } from "@/utils/astronomyTips"; 
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -61,6 +61,13 @@ const LocationDetails = () => {
     
     toastShownRef.current = true;
   }, [language]);
+
+  // Reset the toast shown ref when the page is unmounted and remounted (navigation)
+  useEffect(() => {
+    return () => {
+      toastShownRef.current = false;
+    };
+  }, [id]);
 
   if (isLoading) {
     return <LocationDetailsLoading />;
