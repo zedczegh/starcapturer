@@ -1,12 +1,14 @@
-import React, { memo, useEffect, useRef, useState, useMemo, Suspense } from "react";
+
+import React, { memo, Suspense } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
-import { useLocationDetails } from "@/hooks/useLocationDetails";
+import LocationContentLoader from "./LocationContentLoader";
+import LocationFaultedMessage from "./LocationFaultedMessage";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
-import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
-import { useWeatherAutoRefresh } from "@/hooks/location/useWeatherAutoRefresh";
+import { Button } from "@/components/ui/button";
 
 const LocationContentGrid = React.lazy(() => import("./LocationContentGrid"));
+import { useLocationContentManager } from "./useLocationContentManager";
 
 interface LocationDetailsContentProps {
   locationData: any;
@@ -22,131 +24,42 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   showFaultedMessage = false
 }) => {
   const { t } = useLanguage();
-  const lastLocationRef = useRef<string>('');
-  const refreshTimerRef = useRef<number | null>(null);
-  const autoRefreshAttemptedRef = useRef<boolean>(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [contentLoaded, setContentLoaded] = useState(false);
-  const [faulted, setFaulted] = useState(false);
-  const [retryCount, setRetryCount] = useState(0); // Add the missing state variable
-
-  const isRedirect = locationData?.fromPhotoPoints || locationData?.fromCalculator;
-  const hasRequiredData = Boolean(locationData?.weatherData && locationData?.siqsResult);
 
   const {
+    containerRef,
+    contentLoaded,
+    faulted,
+    setFaulted,
+    statusMessage,
+    setStatusMessage,
+    loading,
+    memoizedLocationData,
     forecastData,
     longRangeForecast,
-    loading,
     forecastLoading,
     longRangeLoading,
     gettingUserLocation,
-    statusMessage,
-    setStatusMessage,
     setGettingUserLocation,
-    handleRefreshAll,
     handleRefreshForecast,
-    handleRefreshLongRangeForecast
-  } = useLocationDetails(locationData, setLocationData);
+    handleRefreshLongRangeForecast,
+    onLocationUpdate: onLocUpdate,
+    resetUpdateState
+  } = useLocationContentManager(locationData, setLocationData, onLocationUpdate);
 
-  const { resetUpdateState } = useLocationSIQSUpdater(
-    locationData, 
-    forecastData, 
-    setLocationData,
-    t
-  );
+  // Fix for cases where SIQS is unavailable – show manual refresh button when loaded but no SIQS
+  const shouldShowManualRefresh = 
+    memoizedLocationData &&
+    !loading &&
+    contentLoaded &&
+    (!memoizedLocationData.siqsResult || typeof memoizedLocationData.siqsResult.score !== "number");
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setContentLoaded(true);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    const handleForceRefresh = () => {
-      console.log("Force refresh request received from parent");
-      try {
-        handleRefreshAll();
-        resetUpdateState();
-      } catch (error) {
-        console.error("Error during force refresh:", error);
-        setRetryCount(prev => prev + 1);
-        if (retryCount >= 3) {
-          console.log("Multiple refresh attempts failed, trying alternative approach");
-          setTimeout(() => {
-            try { 
-              if (locationData?.latitude && locationData?.longitude) {
-                handleRefreshForecast(locationData.latitude, locationData.longitude); 
-              }
-            } catch (e) { 
-              console.error("Forecast refresh failed:", e); 
-            }
-            try { 
-              if (locationData?.latitude && locationData?.longitude) {
-                handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude); 
-              }
-            } catch (e) { 
-              console.error("Long range refresh failed:", e); 
-            }
-          }, 1000);
-        }
-      }
-    };
-    
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('forceRefresh', handleForceRefresh);
+  const handleManualRefresh = () => {
+    resetUpdateState();
+    if (locationData?.latitude && locationData?.longitude) {
+      handleRefreshForecast(locationData.latitude, locationData.longitude);
+      handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
     }
-    
-    return () => {
-      if (container) {
-        container.removeEventListener('forceRefresh', handleForceRefresh);
-      }
-    };
-  }, [handleRefreshAll, resetUpdateState, handleRefreshForecast, handleRefreshLongRangeForecast, retryCount, locationData]);
-
-  useWeatherAutoRefresh({
-    weatherData: locationData?.weatherData,
-    refreshFn: handleRefreshAll,
-    maxRetries: 3,
-    retryDelay: 2500
-  });
-
-  useEffect(() => {
-    const locationSignature = locationData ? `${locationData.latitude}-${locationData.longitude}` : 'none';
-    
-    if ((locationSignature !== lastLocationRef.current || !autoRefreshAttemptedRef.current) && locationData) {
-      lastLocationRef.current = locationSignature;
-      autoRefreshAttemptedRef.current = true;
-      
-      if (refreshTimerRef.current) {
-        window.clearTimeout(refreshTimerRef.current);
-      }
-      
-      refreshTimerRef.current = window.setTimeout(() => {
-        try {
-          handleRefreshAll();
-          resetUpdateState();
-        } catch (error) {
-          console.error("Error during auto-refresh:", error);
-        }
-      }, 500);
-    }
-    
-    return () => {
-      if (refreshTimerRef.current) {
-        window.clearTimeout(refreshTimerRef.current);
-      }
-    };
-  }, [locationData, handleRefreshAll, setLocationData, resetUpdateState, isRedirect, hasRequiredData]);
-
-  const memoizedLocationData = useMemo(() => locationData, [
-    locationData?.latitude,
-    locationData?.longitude,
-    locationData?.name,
-    locationData?.timestamp
-  ]);
+  };
 
   if (!memoizedLocationData) {
     return (
@@ -158,34 +71,8 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   }
 
   if (faulted && showFaultedMessage) {
-    return (
-      <div className="p-8 flex flex-col items-center justify-center max-w-xl mx-auto">
-        <div className="rounded-lg bg-yellow-300/10 border border-yellow-300/30 py-4 px-6 my-3 text-center animate-shake">
-          <p className="text-yellow-800 dark:text-yellow-200 text-sm font-medium mb-1">
-            {t("There was a problem loading conditions at this location.", "加载此位置条件时出现问题。")}
-          </p>
-          <p className="text-yellow-700 dark:text-yellow-300 text-xs">
-            {t("You can try to refresh manually using the button above.", "您可以使用上方的按钮手动刷新。")}
-          </p>
-        </div>
-        <div className="flex justify-center mt-5">
-          <Loader className="h-6 w-6 text-yellow-400/80 animate-spin-slow" />
-        </div>
-      </div>
-    );
+    return <LocationFaultedMessage show />;
   }
-
-  const handleRefreshForecastWithCoords = () => {
-    if (locationData?.latitude && locationData?.longitude) {
-      handleRefreshForecast(locationData.latitude, locationData.longitude);
-    }
-  };
-  
-  const handleRefreshLongRangeForecastWithCoords = () => {
-    if (locationData?.latitude && locationData?.longitude) {
-      handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
-    }
-  };
 
   return (
     <div className="transition-all duration-300 animate-fade-in" ref={containerRef}>
@@ -193,18 +80,19 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
         message={statusMessage} 
         onClear={() => setStatusMessage(null)} 
       />
-      
-      {loading || !contentLoaded ? (
-        <div className="animate-pulse h-96 rounded-lg bg-gradient-to-b from-cosmic-800/20 to-cosmic-900/20 flex items-center justify-center">
-          <div className="text-center space-y-2">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="text-sm text-muted-foreground">{t("Loading content...", "正在加载内容...")}</p>
-          </div>
+
+      {shouldShowManualRefresh && (
+        <div className="flex justify-center mb-4">
+          <Button variant="outline" onClick={handleManualRefresh}>
+            {t("Manually Refresh Data", "手动刷新数据")}
+          </Button>
         </div>
+      )}
+
+      {loading || !contentLoaded ? (
+        <LocationContentLoader />
       ) : (
-        <Suspense fallback={
-          <div className="animate-pulse h-96 rounded-lg bg-gradient-to-b from-cosmic-800/20 to-cosmic-900/20" />
-        }>
+        <Suspense fallback={<LocationContentLoader />}>
           <LocationContentGrid 
             locationData={memoizedLocationData}
             forecastData={forecastData}
@@ -212,11 +100,19 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
             forecastLoading={forecastLoading}
             longRangeLoading={longRangeLoading}
             gettingUserLocation={gettingUserLocation}
-            onLocationUpdate={onLocationUpdate}
+            onLocationUpdate={onLocUpdate}
             setGettingUserLocation={setGettingUserLocation}
             setStatusMessage={setStatusMessage}
-            onRefreshForecast={handleRefreshForecastWithCoords}
-            onRefreshLongRange={handleRefreshLongRangeForecastWithCoords}
+            onRefreshForecast={() => {
+              if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
+                handleRefreshForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
+              }
+            }}
+            onRefreshLongRange={() => {
+              if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
+                handleRefreshLongRangeForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
+              }
+            }}
           />
         </Suspense>
       )}
