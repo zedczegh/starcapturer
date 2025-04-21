@@ -1,5 +1,4 @@
-
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
 import CalculatedLocations from './CalculatedLocations';
@@ -48,50 +47,9 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   loadMoreClickCount = 0,
   maxLoadMoreClicks = 2
 }) => {
-  // Use memoized callback to prevent unnecessary re-renders
   const handleMapLocationUpdate = useCallback((lat: number, lng: number) => {
     onLocationUpdate(lat, lng);
   }, [onLocationUpdate]);
-  
-  // Memoize appropriate locations for current view to prevent recalculations
-  const currentLocations = useMemo(() => 
-    activeView === 'certified' ? certifiedLocations : calculatedLocations,
-  [activeView, certifiedLocations, calculatedLocations]);
-  
-  // Only render the active view, not both
-  const renderActiveList = () => {
-    if (showMap) return null;
-    
-    if (activeView === 'certified') {
-      return (
-        <CertifiedLocations
-          locations={certifiedLocations}
-          loading={loading}
-          hasMore={hasMore}
-          onLoadMore={loadMore}
-          onViewDetails={onLocationClick}
-          onRefresh={refreshSiqs}
-          initialLoad={initialLoad}
-        />
-      );
-    }
-    
-    return (
-      <CalculatedLocations
-        locations={calculatedLocations}
-        loading={loading}
-        hasMore={hasMore}
-        onLoadMore={loadMore}
-        onRefresh={refreshSiqs}
-        searchRadius={calculatedSearchRadius}
-        initialLoad={initialLoad}
-        canLoadMoreCalculated={canLoadMoreCalculated}
-        onLoadMoreCalculated={loadMoreCalculated}
-        loadMoreClickCount={loadMoreClickCount}
-        maxLoadMoreClicks={maxLoadMoreClicks}
-      />
-    );
-  };
 
   return (
     <div className="mt-4">
@@ -99,7 +57,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
         <div className="mb-6 relative max-w-xl mx-auto">
           <PhotoPointsMap
             userLocation={effectiveLocation}
-            locations={currentLocations}
+            locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
             onLocationClick={onLocationClick}
             onLocationUpdate={handleMapLocationUpdate}
             searchRadius={activeView === 'calculated' ? calculatedSearchRadius : searchRadius}
@@ -110,10 +68,35 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
         </div>
       )}
 
-      {renderActiveList()}
+      {!showMap && activeView === 'certified' && (
+        <CertifiedLocations
+          locations={certifiedLocations}
+          loading={loading}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          onViewDetails={onLocationClick}
+          onRefresh={refreshSiqs}
+          initialLoad={initialLoad}
+        />
+      )}
+
+      {!showMap && activeView === 'calculated' && (
+        <CalculatedLocations
+          locations={calculatedLocations}
+          loading={loading}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          onRefresh={refreshSiqs}
+          searchRadius={calculatedSearchRadius}
+          initialLoad={initialLoad}
+          canLoadMoreCalculated={canLoadMoreCalculated}
+          onLoadMoreCalculated={loadMoreCalculated}
+          loadMoreClickCount={loadMoreClickCount}
+          maxLoadMoreClicks={maxLoadMoreClicks}
+        />
+      )}
     </div>
   );
 };
 
-// Add React.memo to prevent unnecessary re-renders
 export default React.memo(PhotoPointsView);
