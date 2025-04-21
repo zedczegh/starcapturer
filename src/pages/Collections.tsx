@@ -1,10 +1,10 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import NavBar from "@/components/NavBar";
-import { Loader } from "lucide-react";
+import { Loader, RefreshCw } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { prepareLocationForNavigation } from "@/utils/locationNavigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,11 +15,14 @@ import LocationStatusMessage from "@/components/location/LocationStatusMessage";
 import MiniRemoveButton from "@/components/collections/MiniRemoveButton";
 import AboutFooter from '@/components/about/AboutFooter';
 import { useUserCollections } from "@/hooks/collections/useUserCollections";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Collections = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
+  const { user } = useAuth();
 
   // Use new efficient collections hook
   const {
@@ -29,7 +32,14 @@ const Collections = () => {
     authChecked,
     error,
     removeLocationImmediately,
+    retryLoading,
+    resetState
   } = useUserCollections();
+
+  // Ensure we reset state on unmount to prevent stale state
+  useEffect(() => {
+    return () => resetState();
+  }, [resetState]);
 
   const handleDelete = async (locationId: string) => {
     // Remove from UI and cache immediately for snappy feel
@@ -60,21 +70,31 @@ const Collections = () => {
 
   if (!authChecked) return <PageLoader />;
 
-  // Auth state managed in useUserCollections, so if no user, just show relevant UI
-  if (locations === null) {
+  // If the user isn't logged in, show sign-in prompt
+  if (!user) {
     return (
       <div className="min-h-screen bg-background">
         <NavBar />
         <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
-          <LocationStatusMessage
-            message={t("Please sign in to view your collections", "请登录以查看您的收藏")}
-            type="error"
-          />
+          <div className="flex flex-col items-center justify-center space-y-4 py-12 bg-cosmic-800/50 rounded-lg border border-cosmic-700/50">
+            <LocationStatusMessage
+              message={t("Please sign in to view your collections", "请登录以查看您的收藏")}
+              type="error"
+            />
+            <Button 
+              variant="default" 
+              onClick={() => navigate('/')} 
+              className="mt-4"
+            >
+              {t("Go to Home", "返回首页")}
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Show sorted locations, even if empty
   const sortedLocations = sortLocationsBySiqs(locations);
 
   return (
@@ -86,21 +106,34 @@ const Collections = () => {
             <h1 className="text-2xl font-bold text-foreground">
               {t("My Collections", "我的收藏")}
             </h1>
-            {sortedLocations.length > 0 && (
-              <button
-                className="bg-cosmic-800 text-white rounded-full px-4 py-1 text-sm font-medium border border-cosmic-600 shadow hover:bg-cosmic-700 transition"
-                onClick={() => setEditMode((v) => !v)}
-              >
-                {editMode ? t("Done", "完成") : t("Edit", "编辑")}
-              </button>
+            {sortedLocations.length > 0 && !loading && (
+              <div className="flex space-x-2">
+                <Button
+                  className="bg-cosmic-800 text-white rounded-full px-4 py-1 text-sm font-medium border border-cosmic-600 shadow hover:bg-cosmic-700 transition"
+                  onClick={() => setEditMode((v) => !v)}
+                >
+                  {editMode ? t("Done", "完成") : t("Edit", "编辑")}
+                </Button>
+              </div>
             )}
           </div>
 
-          {error && <LocationStatusMessage message={error} type="error" />}
-
-          {loading ? (
-            <div className="flex justify-center items-center h-40">
-              <Loader className="h-8 w-8 animate-spin text-primary" />
+          {error ? (
+            <div className="text-center py-12 bg-cosmic-800/50 rounded-lg border border-cosmic-700/50">
+              <LocationStatusMessage message={error} type="error" />
+              <Button 
+                variant="outline" 
+                onClick={retryLoading} 
+                className="mt-4 flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                {t("Retry", "重试")}
+              </Button>
+            </div>
+          ) : loading ? (
+            <div className="flex flex-col justify-center items-center h-40">
+              <Loader className="h-8 w-8 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">{t("Loading your collections...", "正在加载您的收藏...")}</p>
             </div>
           ) : sortedLocations.length === 0 ? (
             <div className="text-center py-12 bg-cosmic-800/50 rounded-lg border border-cosmic-700/50">
@@ -117,7 +150,7 @@ const Collections = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedLocations.map((location, index) => (
-                <div key={location.id} className="relative group">
+                <div key={location.id || `location-${index}`} className="relative group">
                   {editMode && (
                     <MiniRemoveButton onClick={(e) => {
                       e.stopPropagation();
@@ -143,4 +176,3 @@ const Collections = () => {
 };
 
 export default Collections;
-

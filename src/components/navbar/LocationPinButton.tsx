@@ -1,18 +1,21 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const LocationPinButton: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const handleCollectionsShortcut = () => {
+    if (isNavigating) return; // Prevent multiple clicks
+    
     if (!user) {
       toast({
         title: t("Sign up required", "需要注册"),
@@ -22,7 +25,12 @@ const LocationPinButton: React.FC = () => {
       });
       return;
     }
+    
+    setIsNavigating(true);
     navigate('/collections');
+    
+    // Reset navigation state after a delay to prevent double-clicks
+    setTimeout(() => setIsNavigating(false), 1000);
   };
 
   return (
@@ -30,11 +38,12 @@ const LocationPinButton: React.FC = () => {
       variant="ghost"
       size="icon"
       onClick={handleCollectionsShortcut}
-      className="relative transition-all duration-300 hover:bg-primary/20"
+      className={`relative transition-all duration-300 hover:bg-primary/20 ${isNavigating ? 'opacity-70' : ''}`}
       title={t('Go to My Collections', '前往我的收藏')}
       aria-label={t('Go to My Collections', '前往我的收藏')}
+      disabled={isNavigating}
     >
-      <Pin className="h-5 w-5 text-primary" />
+      <Pin className={`h-5 w-5 ${isNavigating ? 'text-muted' : 'text-primary'}`} />
     </Button>
   );
 };
