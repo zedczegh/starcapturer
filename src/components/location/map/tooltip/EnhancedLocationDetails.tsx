@@ -13,6 +13,7 @@ interface EnhancedLocationDetailsProps {
 export interface LocationDetailsResult {
   detailedName: string | null;
   nearestTown: any | null;
+  isWaterLocation: boolean; // Add the missing property
 }
 
 /**
@@ -49,5 +50,8 @@ export const useEnhancedLocationDetails = ({
                        enhancedLocation?.detailedName || 
                        (nearestTownInfo && nearestTownInfo.detailedName);
   
-  return { detailedName, nearestTown: nearestTownInfo };
+  // Check if this is a water location
+  const isWaterLocation = enhancedLocation?.isWater || false;
+  
+  return { detailedName, nearestTown: nearestTownInfo, isWaterLocation };
 };
