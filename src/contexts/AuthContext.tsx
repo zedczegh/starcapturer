@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { toast } from "sonner";
 
 interface AuthContextType {
@@ -18,7 +17,6 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const { toast: shadcnToast } = useToast();
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -26,6 +24,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Show welcome back toast when user logs in from another device/tab
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Use setTimeout to avoid potential supabase auth deadlocks
+          setTimeout(() => {
+            toast.success(`Welcome back, ${session.user.email?.split('@')[0] || 'explorer'}!`, {
+              description: "Ready to explore the stars?",
+              duration: 3000,
+              position: "top-center"
+            });
+          }, 0);
+        }
       }
     );
 
@@ -45,13 +55,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // Show user confirmation message about email verification
       if (data.user && !data.user.confirmed_at) {
-        toast.success("Verification email sent! Please check your inbox and confirm your email.", {
+        toast.success("Verification email sent!", {
           duration: 6000,
-          description: "You will need to verify your email before logging in."
+          description: "Please check your inbox and confirm your email to start your stargazing journey.",
+          position: "top-center"
         });
       }
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error("Couldn't create account", {
+        description: error.message,
+        position: "top-center"
+      });
     }
   };
 
@@ -59,15 +73,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      toast.success("Signed in successfully!");
+      
+      // Success toast is shown by the onAuthStateChange listener
     } catch (error: any) {
       if (error.message.includes("Email not confirmed")) {
-        toast.error("Please confirm your email before signing in.", {
-          description: "Check your inbox for the verification email."
+        toast.error("Please confirm your email before signing in", {
+          description: "Check your inbox for the verification email.",
+          position: "top-center"
         });
       } else {
         toast.error("Sign in failed", {
-          description: error.message
+          description: error.message,
+          position: "top-center"
         });
       }
     }
@@ -77,10 +94,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      toast.success("Signed out successfully");
+      toast.success("Signed out successfully", {
+        description: "Come back soon for more stargazing!",
+        position: "top-center"
+      });
     } catch (error: any) {
       toast.error("Sign out failed", {
-        description: error.message
+        description: error.message,
+        position: "top-center"
       });
     }
   };

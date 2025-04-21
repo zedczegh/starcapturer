@@ -28,15 +28,9 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       await signIn(data.email, data.password);
       onSuccess();
       navigate('/photo-points');
-      toast.success(t("Welcome back!", "欢迎回来！"));
+      // Toast notification is handled in AuthContext for a more consistent experience
     } catch (error: any) {
-      if (error?.message?.includes("Invalid")) {
-        toast.error(t("Invalid email or password", "邮箱或密码错误"));
-      } else if (error?.message) {
-        toast.error(error.message);
-      } else {
-        toast.error(t("Sign in failed", "登录失败"));
-      }
+      // Error handling is done in AuthContext
     } finally {
       setIsLoading(false);
     }
@@ -127,7 +121,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
         <Button 
           type="submit" 
-          className="w-full animate-fade-in"
+          className="w-full animate-fade-in bg-primary hover:bg-primary/90"
           disabled={isLoading}
         >
           {isLoading ? t("Signing in...", "登录中...") : t("Sign In", "登录")}

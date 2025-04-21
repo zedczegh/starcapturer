@@ -28,20 +28,9 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
       await signUp(data.email, data.password);
       onSuccess();
       navigate('/photo-points');
-      toast.success(
-        t(
-          "Welcome! Please check your email to confirm your account.", 
-          "欢迎！请检查您的邮箱以确认您的帐户。"
-        )
-      );
+      // Toast notification is handled in AuthContext for a more consistent experience
     } catch (error: any) {
-      if (error?.message?.includes("already registered")) {
-        toast.error(t("Email already registered", "该邮箱已被注册"));
-      } else if (error?.message) {
-        toast.error(error.message);
-      } else {
-        toast.error(t("Sign up failed", "注册失败"));
-      }
+      // Error handling is done in AuthContext
     } finally {
       setIsLoading(false);
     }
@@ -136,7 +125,7 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
 
         <Button 
           type="submit" 
-          className="w-full animate-fade-in"
+          className="w-full animate-fade-in bg-primary hover:bg-primary/90"
           disabled={isLoading}
         >
           {isLoading ? t("Creating account...", "创建帐户中...") : t("Create Account", "创建帐户")}
