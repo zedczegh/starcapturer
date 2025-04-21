@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
-import { hasCachedSiqs, getCachedSiqs } from '@/services/realTimeSiqs/siqsCache';
+import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeSiqs/siqsCache';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface RealTimeSiqsProviderProps {
@@ -71,18 +71,47 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         
         try {
           console.log(`Calculating SIQS for ${latitude}, ${longitude} with forceUpdate=${forceUpdate}`);
-          const result = await calculateRealTimeSiqs(latitude, longitude, bortleScale);
           
-          if (result && result.siqs > 0) {
-            console.log(`SIQS calculated: ${result.siqs}`);
-            const confidenceScore = result.metadata?.reliability?.score || 8;
-            onSiqsCalculated(result.siqs, false, confidenceScore);
-          } else {
-            console.log("SIQS calculation returned no valid result");
-            onSiqsCalculated(null, false);
+          // Use the static SIQS if calculation fails
+          const staticSiqs = getSiqsScore(existingSiqs);
+          if (staticSiqs > 0) {
+            console.log(`Using static SIQS: ${staticSiqs} as fallback`);
+            onSiqsCalculated(staticSiqs, false, 7);
+            setIsCalculating(false);
+            setHasCalculated(true);
+            return;
+          }
+          
+          // Try to calculate real-time SIQS but catch errors
+          try {
+            const result = await calculateRealTimeSiqs(latitude, longitude, bortleScale);
+            
+            if (result && result.siqs > 0) {
+              console.log(`SIQS calculated: ${result.siqs}`);
+              const confidenceScore = result.metadata?.reliability?.score || 8;
+              onSiqsCalculated(result.siqs, false, confidenceScore);
+              
+              // Save to cache
+              setSiqsCache(latitude, longitude, result);
+            } else {
+              console.log("SIQS calculation returned no valid result, using fallback");
+              if (staticSiqs > 0) {
+                onSiqsCalculated(staticSiqs, false, 7);
+              } else {
+                onSiqsCalculated(null, false);
+              }
+            }
+          } catch (error) {
+            console.error("Error calculating real-time SIQS:", error);
+            if (staticSiqs > 0) {
+              console.log(`Using static SIQS: ${staticSiqs} after calculation error`);
+              onSiqsCalculated(staticSiqs, false, 7);
+            } else {
+              onSiqsCalculated(null, false);
+            }
           }
         } catch (error) {
-          console.error("Error calculating real-time SIQS:", error);
+          console.error("Error in SIQS logic:", error);
           onSiqsCalculated(null, false);
         } finally {
           setIsCalculating(false);

@@ -58,9 +58,9 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
   // Debug logging for collections view
   useEffect(() => {
     if (isCertified) {
-      console.log(`SiqsDisplay: realTimeSiqs=${realTimeSiqs}, locationSiqs=${locationSiqs}, displayScore=${displayScore}, loading=${showLoadingState}`);
+      console.log(`SiqsDisplay: realTimeSiqs=${realTimeSiqs}, locationSiqs=${locationSiqs}, displayScore=${displayScore}, loading=${showLoadingState}, forceDisplay=${forceDisplay}`);
     }
-  }, [realTimeSiqs, locationSiqs, displayScore, showLoadingState, isCertified]);
+  }, [realTimeSiqs, locationSiqs, displayScore, showLoadingState, isCertified, forceDisplay]);
 
   return (
     <SiqsScoreBadge 

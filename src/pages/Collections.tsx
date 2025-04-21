@@ -39,6 +39,8 @@ const Collections = () => {
 
         if (error) throw error;
 
+        console.log("Fetched collections data:", data);
+
         const transformedLocations: SharedAstroSpot[] = (data || []).map(loc => ({
           id: loc.id,
           name: loc.name,
@@ -52,6 +54,7 @@ const Collections = () => {
           timestamp: loc.timestamp || new Date().toISOString(),
         }));
 
+        console.log("Transformed locations:", transformedLocations);
         setLocations(transformedLocations);
       } catch (error: any) {
         console.error('Error fetching collections:', error);

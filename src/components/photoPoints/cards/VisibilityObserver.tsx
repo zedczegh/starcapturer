@@ -15,10 +15,18 @@ const VisibilityObserver: React.FC<VisibilityObserverProps> = ({
   const observerRef = useRef<IntersectionObserver | null>(null);
   const elementRef = useRef<HTMLDivElement>(null);
 
+  // Force visibility if needed
   useEffect(() => {
-    // If forceVisible is true, just call onVisibilityChange with true
     if (forceVisible) {
+      console.log('VisibilityObserver: Forcing visibility to true');
       onVisibilityChange(true);
+    }
+  }, [forceVisible, onVisibilityChange]);
+
+  // Standard visibility observer
+  useEffect(() => {
+    // Skip if forceVisible is set
+    if (forceVisible) {
       return;
     }
 

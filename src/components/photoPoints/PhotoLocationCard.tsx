@@ -95,6 +95,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     if (!initialScoreSet) {
       const staticSiqs = getSiqsScore(location.siqs);
       if (staticSiqs > 0) {
+        console.log(`Setting initial SIQS from static score: ${staticSiqs}`);
         setRealTimeSiqs(staticSiqs);
         setInitialScoreSet(true);
       }
@@ -102,6 +103,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   }, [location.siqs, initialScoreSet]);
   
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidenceScore?: number) => {
+    console.log(`handleSiqsCalculated called with siqs=${siqs}, loading=${loading}, confidence=${confidenceScore}`);
+    
     if (loading) {
       // Only show loading if we don't already have a score
       if (!realTimeSiqs || realTimeSiqs <= 0) {
@@ -121,10 +124,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         setSiqsConfidence(confidenceScore);
       }
     } else if (!realTimeSiqs && (isCertified || forceRealTimeSiqs)) {
-      // If we still don't have a score but this is a certified location, 
+      // If we still don't have a score but this is a certified location or collections view, 
       // use the static score if available
       const staticSiqs = getSiqsScore(location.siqs);
       if (staticSiqs > 0) {
+        console.log(`Using static SIQS as fallback: ${staticSiqs}`);
         setRealTimeSiqs(staticSiqs);
         setInitialScoreSet(true);
       }
