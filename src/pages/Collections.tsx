@@ -42,7 +42,7 @@ const Collections = () => {
         const transformedLocations: SharedAstroSpot[] = (data || []).map(loc => ({
           id: loc.id,
           name: loc.name,
-          chineseName: loc.chinese_name,
+          chineseName: loc.chinese_name || null, // Fix here: Map chinese_name from DB to chineseName
           latitude: loc.latitude,
           longitude: loc.longitude,
           bortleScale: loc.bortlescale,
