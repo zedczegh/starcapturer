@@ -65,7 +65,9 @@ export function useSiqsCalculatorState({
   const {
     isCalculating,
     siqsScore,
-    calculateSIQSForLocation
+    calculateSIQSForLocation,
+    weatherData,
+    forecastData
   } = useSIQSCalculation(setSiqsCachedData, getSiqsCachedData);
   
   useEffect(() => {
@@ -96,6 +98,9 @@ export function useSiqsCalculatorState({
     latitude,
     setLatitude,
     longitude,
-    setLongitude
+    setLongitude,
+    // Add weather and forecast data to returned object
+    weatherData,
+    forecastData
   };
 }

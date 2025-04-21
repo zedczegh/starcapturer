@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import RecommendedPhotoPoints from "./RecommendedPhotoPoints";
@@ -37,7 +38,10 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     siqsScore,
     calculateSIQSForLocation,
     setStatusMessage,
-    setLoading
+    setLoading,
+    // Make sure we have access to weather and forecast data for logging
+    weatherData,
+    forecastData
   } = useSiqsCalculatorState({
     noAutoLocationRequest,
     onSiqsCalculated
@@ -91,14 +95,13 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     if (siqsScore !== null && !loading && !calculationInProgress && parsedLatitude && parsedLongitude) {
       let astroNightCloudCover: number | null = null;
 
-      if (typeof locationSelectorProps?.weatherData?.nighttimeCloudData?.average === 'number') {
-        astroNightCloudCover = locationSelectorProps.weatherData.nighttimeCloudData.average;
-      } else if (typeof locationSelectorProps?.forecastData?.astro_night_cloud_cover === 'number') {
-        astroNightCloudCover = locationSelectorProps.forecastData.astro_night_cloud_cover;
-      } else if (typeof locationSelectorProps?.weatherData?.cloudCover === 'number') {
-        astroNightCloudCover = locationSelectorProps.weatherData.cloudCover;
-      } else {
-        astroNightCloudCover = null;
+      // Get nighttime cloud cover from the appropriate source
+      if (weatherData?.nighttimeCloudData?.average !== undefined) {
+        astroNightCloudCover = weatherData.nighttimeCloudData.average;
+      } else if (forecastData?.astro_night_cloud_cover !== undefined) {
+        astroNightCloudCover = forecastData.astro_night_cloud_cover;
+      } else if (weatherData?.cloudCover !== undefined) {
+        astroNightCloudCover = weatherData.cloudCover;
       }
 
       logSiqsCalculation({
@@ -120,7 +123,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
     parsedLatitude,
     parsedLongitude,
     locationName,
-    locationSelectorProps,
+    weatherData,
+    forecastData,
     language
   ]);
 
