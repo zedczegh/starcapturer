@@ -19,7 +19,7 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
   pageTitle
 }) => {
   const { t } = useLanguage();
-  // const { handleSIQSClick } = useSiqsNavigation(); // No longer needed
+  const { handleSIQSClick } = useSiqsNavigation(); // Re-enabled to use for location acquisition
   
   // Default page title
   const title = pageTitle || t("Photo Points Nearby | Sky Viewer", "附近拍摄点 | 天空观测");
@@ -53,9 +53,12 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
               }}
             >
               {t("Ready to explore the night sky?", "准备探索夜空了吗？")}
-              <Link to="/location/siqs-calculator" className="text-blue-400 hover:text-blue-300 transition-colors">
-                <ArrowRight className="h-4 w-4 cursor-pointer" />
-              </Link>
+              <span 
+                onClick={handleSIQSClick} 
+                className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </span>
             </motion.h3>
             
             <motion.div 
@@ -72,23 +75,24 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
                 </Button>
               </Link>
               
-              <Button 
-                variant="outline" 
-                className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
-              >
-                <MapPin className="mr-2 h-4 w-4 text-purple-400" />
-                {t("Explore Photo Points", "探索摄影点")}
-              </Button>
-              
-              <Link to="/location/siqs-calculator">
+              <Link to="/bortle-now">
                 <Button 
                   variant="outline" 
                   className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
                 >
-                  <Info className="mr-2 h-4 w-4 text-teal-400" />
-                  {t("Calculate SIQS", "计算SIQS")}
+                  <MapPin className="mr-2 h-4 w-4 text-purple-400" />
+                  {t("Measure Sky Brightness", "测量夜空亮度")}
                 </Button>
               </Link>
+              
+              <Button 
+                variant="outline" 
+                className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
+                onClick={handleSIQSClick}
+              >
+                <Info className="mr-2 h-4 w-4 text-teal-400" />
+                {t("Calculate SIQS", "计算SIQS")}
+              </Button>
             </motion.div>
             
             <motion.div 
@@ -124,4 +128,3 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
 };
 
 export default PhotoPointsLayout;
-
