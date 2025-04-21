@@ -26,25 +26,49 @@ const UserLocationMarker = memo(({
   // State for reverse geocoded name
   const [locationName, setLocationName] = useState<string>('');
   const [loadingName, setLoadingName] = useState<boolean>(true);
+  const [isWaterLocation, setIsWaterLocation] = useState<boolean>(false);
 
   useEffect(() => {
     let ignore = false;
     const fetchName = async () => {
       setLoadingName(true);
       try {
-        const details = await getEnhancedLocationDetails(position[0], position[1], language === 'zh' ? 'zh' : 'en');
+        const details = await getEnhancedLocationDetails(
+          position[0], 
+          position[1], 
+          language === 'zh' ? 'zh' : 'en'
+        );
+        
         if (!ignore) {
           setLocationName(details.formattedName || '');
+          setIsWaterLocation(details.isWater || false);
+          
+          // Override water detection for user marker - user's real location
+          // is always considered valid even if algorithm detects water
+          if (details.isWater) {
+            console.log("Location was detected as water but overriding for user marker");
+            if (details.townName || details.cityName) {
+              const nearestPlace = details.townName || details.cityName;
+              setLocationName(language === 'en' 
+                ? `Near ${nearestPlace}`
+                : `靠近 ${nearestPlace}`);
+            } else {
+              setLocationName(t("Your Location", "您的位置"));
+            }
+          }
         }
       } catch (e) {
-        if (!ignore) setLocationName('');
+        if (!ignore) {
+          setLocationName(t("Your Location", "您的位置"));
+          setIsWaterLocation(false);
+        }
       } finally {
         if (!ignore) setLoadingName(false);
       }
     };
     fetchName();
     return () => { ignore = true; };
-  }, [position, language]);
+  }, [position, language, t]);
 
   const handleViewDetails = useCallback(() => {
     navigate(`/location/${position[0].toFixed(6)},${position[1].toFixed(6)}`, {
@@ -53,6 +77,8 @@ const UserLocationMarker = memo(({
         longitude: position[1],
         isUserLocation: true,
         name: locationName || t("Your Location", "您的位置"),
+        // Always mark user location as valid regardless of water detection
+        isWater: false
       }
     });
   }, [navigate, position, locationName, t]);

@@ -5,7 +5,7 @@ import { fetchLocationDetails } from './providers/nominatimGeocodingProvider';
 import { GeocodeCache, addToCache, getFromCache } from './cache/geocodingCache';
 import { normalizeCoordinates } from './utils/coordinateUtils';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
-import { isWaterLocation } from '@/utils/validation';
+import { isWaterLocation } from '@/utils/locationWaterCheck';
 import { formatAddressComponents } from './formatters/addressFormatter';
 import { formatDistance } from '@/utils/location/formatDistance';
 
@@ -28,35 +28,74 @@ export async function getEnhancedLocationDetails(
     if (cachedResult) {
       return {
         ...cachedResult,
-        isWater: isWaterLocation(normalizedLat, normalizedLng)
+        isWater: isWaterLocation(normalizedLat, normalizedLng, false) // Less strict check from cache
       };
     }
     
-    // Check for water location first to avoid unnecessary API calls
-    const isWater = isWaterLocation(normalizedLat, normalizedLng);
+    // First attempt to get location details via API before determining if it's water
+    // This ensures we have the best chance to identify land locations correctly
+    let geocodingResult = null;
+    try {
+      geocodingResult = await fetchLocationDetails(normalizedLat, normalizedLng, language);
+    } catch (error) {
+      console.warn("Error fetching location details from Nominatim API:", error);
+      // Continue with local detection if API fails
+    }
     
-    // For water locations, return immediately with appropriate naming
-    if (isWater) {
-      const waterLocation = {
-        name: language === 'en' ? 'Water Location' : '水域位置',
-        formattedName: language === 'en' ? 'Water Location' : '水域位置',
-        chineseName: '水域位置', // Add Chinese name for water locations
+    // If we have detailed location data that indicates this is not water, trust it
+    if (geocodingResult && 
+        (geocodingResult.townName || 
+         geocodingResult.cityName || 
+         geocodingResult.streetName)) {
+      // Strong evidence this is not a water location
+      const isWater = false;
+      
+      // Get nearest town info for non-water locations
+      const nearestTownInfo = findNearestTown(normalizedLat, normalizedLng, language);
+      
+      // Build our result with the API data and nearest town info
+      const result: EnhancedLocationDetails = {
+        name: geocodingResult.name || nearestTownInfo.townName,
+        formattedName: geocodingResult.formattedName || nearestTownInfo.detailedName || nearestTownInfo.townName,
+        chineseName: language === 'zh' ? (geocodingResult.chineseName || nearestTownInfo.townName) : undefined,
+        townName: geocodingResult.townName || nearestTownInfo.townName,
+        cityName: geocodingResult.cityName || nearestTownInfo.city,
+        countyName: geocodingResult.countyName || nearestTownInfo.county,
+        streetName: geocodingResult.streetName,
+        stateName: geocodingResult.stateName,
+        countryName: geocodingResult.countryName,
+        postalCode: geocodingResult.postalCode,
+        distance: nearestTownInfo.distance,
+        formattedDistance: formatDistance(nearestTownInfo.distance, language),
+        detailedName: geocodingResult.formattedName || nearestTownInfo.detailedName,
         latitude: normalizedLat,
         longitude: normalizedLng,
-        isWater: true
+        isWater: isWater
       };
-      addToCache(cacheKey, waterLocation);
-      return waterLocation;
+      
+      // Cache the result
+      addToCache(cacheKey, result);
+      return result;
     }
     
-    // Get nearest town info for non-water locations
+    // If API couldn't determine land status, use our local water detection
+    // with more strict checking for better accuracy
+    const isWater = isWaterLocation(normalizedLat, normalizedLng, true);
+    
+    // Get nearest town info for context even if it's water
     const nearestTownInfo = findNearestTown(normalizedLat, normalizedLng, language);
     
     // Start building our result with the nearest town info
     const result: EnhancedLocationDetails = {
-      name: nearestTownInfo.townName,
-      formattedName: nearestTownInfo.detailedName || nearestTownInfo.townName,
-      chineseName: language === 'zh' ? nearestTownInfo.townName : undefined, // Set Chinese name if language is Chinese
+      name: isWater ? 
+        (language === 'en' ? 'Water Location' : '水域位置') : 
+        nearestTownInfo.townName,
+      formattedName: isWater ? 
+        (language === 'en' ? `Water Location near ${nearestTownInfo.townName}` : `水域位置 靠近 ${nearestTownInfo.townName}`) : 
+        (nearestTownInfo.detailedName || nearestTownInfo.townName),
+      chineseName: isWater ? 
+        `水域位置 靠近 ${language === 'zh' ? nearestTownInfo.townName : ''}` : 
+        (language === 'zh' ? nearestTownInfo.townName : undefined),
       townName: nearestTownInfo.townName,
       cityName: nearestTownInfo.city,
       countyName: nearestTownInfo.county,
@@ -68,41 +107,34 @@ export async function getEnhancedLocationDetails(
       isWater // Add water flag
     };
     
-    // Only make API call if not a water location
-    if (!isWater) {
-      try {
-        const geocodingResult = await fetchLocationDetails(normalizedLat, normalizedLng, language);
-        
-        if (geocodingResult) {
-          // Update our result with the enhanced data
-          result.streetName = geocodingResult.streetName;
-          result.townName = geocodingResult.townName || result.townName;
-          result.cityName = geocodingResult.cityName || result.cityName;
-          result.countyName = geocodingResult.countyName || result.countyName;
-          result.stateName = geocodingResult.stateName;
-          result.countryName = geocodingResult.countryName;
-          result.postalCode = geocodingResult.postalCode;
-          
-          // Generate a better formatted name with the detailed components
-          if (geocodingResult.formattedName) {
-            result.formattedName = geocodingResult.formattedName;
-          }
-          
-          // Set Chinese name if available
-          if (geocodingResult.chineseName) {
-            result.chineseName = geocodingResult.chineseName;
-          }
+    // If we got geocoding results but didn't have strong evidence of land,
+    // enhance our result with any available data
+    if (geocodingResult) {
+      result.streetName = geocodingResult.streetName || result.streetName;
+      result.townName = geocodingResult.townName || result.townName;
+      result.cityName = geocodingResult.cityName || result.cityName;
+      result.countyName = geocodingResult.countyName || result.countyName;
+      result.stateName = geocodingResult.stateName;
+      result.countryName = geocodingResult.countryName;
+      result.postalCode = geocodingResult.postalCode;
+      
+      if (geocodingResult.formattedName) {
+        // If we're marked as water but have a good formatted name, reconsider
+        if (isWater && geocodingResult.formattedName && 
+            !geocodingResult.formattedName.includes("Water") && 
+            !geocodingResult.formattedName.includes("Ocean") && 
+            !geocodingResult.formattedName.includes("Sea")) {
+          result.isWater = false; // Override water detection if we have a proper place name
+          result.formattedName = geocodingResult.formattedName;
+          result.name = geocodingResult.name || result.name;
+        } else if (!isWater) {
+          result.formattedName = geocodingResult.formattedName;
         }
-      } catch (error) {
-        console.warn("Error enhancing location with Nominatim API:", error);
-        // Continue with what we have from our database
       }
-    } else {
-      // Override name for water locations
-      result.formattedName = language === 'en' ? 
-        `Water location near ${result.formattedName}` : 
-        `水域位置 靠近 ${result.formattedName}`;
-      result.chineseName = `水域位置 靠近 ${result.chineseName || result.formattedName}`; // Set Chinese water name
+      
+      if (geocodingResult.chineseName) {
+        result.chineseName = geocodingResult.chineseName;
+      }
     }
     
     // Cache the result
@@ -121,7 +153,7 @@ export async function getEnhancedLocationDetails(
       chineseName: `位置 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, // Include Chinese name for error case
       latitude,
       longitude,
-      isWater: isWaterLocation(latitude, longitude)
+      isWater: false // Default to not water when error occurs
     };
   }
 }

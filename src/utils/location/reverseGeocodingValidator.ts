@@ -8,6 +8,8 @@ const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
  * Validates if a location is on land (not water) using reverse geocoding
+ * Improved with better water detection and caching
+ * 
  * @param location The location to validate
  * @param language Language preference for results
  * @returns Promise<boolean> - true if location is valid (on land), false if it's water
@@ -37,10 +39,15 @@ export async function validateLocationWithReverseGeocoding(
   }
   
   try {
+    // Get enhanced details with improved water detection
     const details = await getEnhancedLocationDetails(location.latitude, location.longitude, language);
     
-    // Location is invalid if it's water
-    const isValid = !details.isWater;
+    // Location is invalid if it's water or doesn't have proper location data
+    const isValid = !details.isWater && Boolean(
+      details.formattedName && 
+      !details.formattedName.includes("°") && // Not just coordinates
+      (details.townName || details.cityName || details.countyName || details.stateName)
+    );
     
     // Cache the result with timestamp
     VALIDATION_CACHE.set(cacheKey, { 

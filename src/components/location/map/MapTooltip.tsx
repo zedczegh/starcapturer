@@ -40,7 +40,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   const [siqsLoading, setSiqsLoading] = useState(false);
   
   // Get enhanced location details using our custom hook
-  const { detailedName } = useEnhancedLocationDetails({ 
+  const { detailedName, isWaterLocation } = useEnhancedLocationDetails({ 
     latitude, 
     longitude, 
     language: typedLanguage 
@@ -64,6 +64,16 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     setRealTimeSiqs(siqs !== null ? normalizeToSiqsScale(siqs) : null);
     setSiqsLoading(loading);
   };
+
+  // Override water location name if needed
+  const displayedName = isWaterLocation && !isCertified ? 
+    (language === 'zh' ? '水域位置' : 'Water Location') : 
+    name;
+
+  // Determine if we should show the detailed location
+  const shouldShowDetailedName = detailedName && 
+                               detailedName !== name && 
+                               (!isWaterLocation || isCertified);
   
   return (
     <Popup
@@ -71,10 +81,10 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
       autoClose={false}
     >
       <div className={`map-tooltip p-2 leaflet-popup-custom marker-popup-gradient ${className}`}>
-        <div className="font-medium text-sm">{name}</div>
+        <div className="font-medium text-sm">{displayedName}</div>
         
         {/* Display detailed location when available */}
-        {detailedName && detailedName !== name && (
+        {shouldShowDetailedName && (
           <div className="text-xs text-muted-foreground mt-1">
             {detailedName}
           </div>
@@ -101,7 +111,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
         {children}
         
         {/* Real-time SIQS provider - hidden component */}
-        {latitude !== undefined && longitude !== undefined && (
+        {latitude !== undefined && longitude !== undefined && !isWaterLocation && (
           <RealTimeSiqsProvider
             isVisible={true}
             latitude={latitude}
