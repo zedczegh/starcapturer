@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,13 +20,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
-        // Welcome back toast (use setTimeout for async UI update)
         if (event === 'SIGNED_IN' && session?.user) {
           setTimeout(() => {
             const username = session.user.email?.split('@')[0] || 'stargazer';
@@ -41,12 +38,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // THEN check for existing session (optimized & async)
     (async () => {
       const sessionResult = await supabase.auth.getSession();
       setSession(sessionResult.data.session);
       setUser(sessionResult.data.session?.user ?? null);
-      setIsLoading(false); // Only finish loading after check
+      setIsLoading(false);
     })();
 
     return () => subscription.unsubscribe();
@@ -65,7 +61,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error) throw error;
 
-      // Show user confirmation message about email verification
       if (data.user && !data.user.confirmed_at) {
         toast.success("Almost there! ✨", {
           duration: 6000,
@@ -84,11 +79,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signIn = async (email: string, password: string) => {
-    // Immediately set loading then run async for fastest feedback
     setIsLoading(true);
     let signedIn = false;
     try {
-      // Non-blocking flow, set toast first
       toast("Signing in...", {
         description: "Checking your credentials...",
         position: "top-center",
@@ -101,7 +94,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) {
-        // Handle common errors quickly
         let errorMessage = "Please double-check your email and password";
         if (error.message.includes("Email not confirmed")) {
           await supabase.auth.resend({
@@ -121,8 +113,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      signedIn = true; // Successful sign in
-      // Success toast is dispatched by the onAuthStateChange listener
+      signedIn = true;
     } catch (error: any) {
       toast.error("Sign in error", {
         description: "An unknown error occurred. Please try again.",
@@ -130,29 +121,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
     } finally {
       setIsLoading(false);
-      // If fast sign in, UI is unlocked as soon as possible
     }
   };
 
   const signOut = async () => {
-    // Improve speed by showing feedback instantly
-    setIsLoading(true); // Start loading
-    let toastId: string | undefined = undefined; // Fixed type here - using string | undefined instead of string | number
+    setIsLoading(true);
+    let toastId: string | number | undefined = undefined;
     try {
-      // Show instant feedback
       toastId = toast("Signing out...", {
         position: "top-center",
         duration: 1000
-      }) as string; // Cast to string since toast() can return string
-      
-      // Run signout async, finish UI reset fast
+      });
       const { error } = await supabase.auth.signOut();
       setUser(null);
       setSession(null);
 
       if (error) throw error;
 
-      // Quick feedback after actual sign out
       toast.success("See you soon! ✨", {
         description: "The stars will be waiting for your return",
         position: "top-center"
