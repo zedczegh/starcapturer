@@ -1,10 +1,11 @@
-import React, { useCallback } from 'react';
+
+import React, { useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
 import CalculatedLocations from './CalculatedLocations';
 import CertifiedLocations from './CertifiedLocations';
-
-// Note: Changed from lazy loading to regular import to fix "Failed to fetch" error
+import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface PhotoPointsViewProps {
   showMap: boolean;
@@ -47,9 +48,67 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   loadMoreClickCount = 0,
   maxLoadMoreClicks = 2
 }) => {
+  const { t } = useLanguage();
+  const prevActiveViewRef = useRef(activeView);
+  const viewTransitionTimeoutRef = useRef<number | null>(null);
+  
+  // Track view changes to handle transitions and prevent errors
+  useEffect(() => {
+    if (prevActiveViewRef.current !== activeView) {
+      console.log(`View changed from ${prevActiveViewRef.current} to ${activeView}`);
+      prevActiveViewRef.current = activeView;
+      
+      // Clear any pending timeouts to prevent race conditions
+      if (viewTransitionTimeoutRef.current) {
+        clearTimeout(viewTransitionTimeoutRef.current);
+        viewTransitionTimeoutRef.current = null;
+      }
+    }
+    
+    return () => {
+      if (viewTransitionTimeoutRef.current) {
+        clearTimeout(viewTransitionTimeoutRef.current);
+        viewTransitionTimeoutRef.current = null;
+      }
+    };
+  }, [activeView]);
+  
+  // Safe location update handler with error checking
   const handleMapLocationUpdate = useCallback((lat: number, lng: number) => {
-    onLocationUpdate(lat, lng);
-  }, [onLocationUpdate]);
+    try {
+      if (!isFinite(lat) || !isFinite(lng)) {
+        throw new Error('Invalid coordinates');
+      }
+      
+      // Bound coordinates to valid ranges
+      const validLat = Math.max(-90, Math.min(90, lat));
+      const validLng = Math.max(-180, Math.min(180, lng));
+      
+      if (validLat !== lat || validLng !== lng) {
+        console.warn(`Corrected coordinates from ${lat},${lng} to ${validLat},${validLng}`);
+      }
+      
+      onLocationUpdate(validLat, validLng);
+    } catch (error) {
+      console.error('Error updating location:', error);
+      toast.error(t('Failed to update location', '无法更新位置'));
+    }
+  }, [onLocationUpdate, t]);
+
+  // Safely handle location clicks with error boundary
+  const handleSafeLocationClick = useCallback((location: SharedAstroSpot) => {
+    try {
+      if (!location || !location.latitude || !location.longitude) {
+        console.warn('Attempted to click invalid location', location);
+        return;
+      }
+      
+      onLocationClick(location);
+    } catch (error) {
+      console.error('Error handling location click:', error);
+      toast.error(t('Failed to open location details', '无法打开位置详情'));
+    }
+  }, [onLocationClick, t]);
 
   return (
     <div className="mt-4">
@@ -58,7 +117,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           <PhotoPointsMap
             userLocation={effectiveLocation}
             locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
-            onLocationClick={onLocationClick}
+            onLocationClick={handleSafeLocationClick}
             onLocationUpdate={handleMapLocationUpdate}
             searchRadius={activeView === 'calculated' ? calculatedSearchRadius : searchRadius}
             certifiedLocations={certifiedLocations}
@@ -74,7 +133,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           loading={loading}
           hasMore={hasMore}
           onLoadMore={loadMore}
-          onViewDetails={onLocationClick}
+          onViewDetails={handleSafeLocationClick}
           onRefresh={refreshSiqs}
           initialLoad={initialLoad}
         />
