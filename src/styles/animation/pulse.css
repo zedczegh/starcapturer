@@ -1,0 +1,21 @@
+
+@keyframes pulse {
+  0% { opacity: 0.8; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+@keyframes glowPulse {
+  0% { box-shadow: 0 0 3px rgba(139,92,246,0.3);}
+  50% { box-shadow: 0 0 8px rgba(139,92,246,0.5);}
+  100% { box-shadow: 0 0 3px rgba(139,92,246,0.3);}
+}
+@keyframes starTwinkle {
+  0% { opacity: 0.6; transform: scale(0.9);}
+  50% { opacity: 1; transform: scale(1.1);}
+  100% { opacity: 0.6; transform: scale(0.9);}
+}
+
+.animate-pulse { animation: pulse 3s ease-in-out; }
+.animate-glow { animation: glowPulse 3s ease-in-out; }
+.animate-twinkle { animation: starTwinkle 4s ease-in-out; }
+.pulse-glow { animation: glowPulse 3s infinite ease-in-out; }

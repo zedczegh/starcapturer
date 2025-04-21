@@ -1,0 +1,26 @@
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-fade-slide-in,
+  .animate-fade-slide-in-right,
+  .animate-fade-scale {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .animate-pulse,
+  .animate-float,
+  .animate-glow,
+  .animate-twinkle,
+  .animate-radial-breathing,
+  .animate-shimmer,
+  .pulse-glow {
+    animation: none !important;
+  }
+}
+/* Mobile optimization classes */
+.will-change-transform { will-change: transform;}
+.backface-visibility-hidden { backface-visibility: hidden;}
+.will-change-auto { will-change: auto;}
+.content-visibility-auto { content-visibility: auto;}

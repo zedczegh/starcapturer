@@ -1,0 +1,17 @@
+
+/* Enhanced sci-fi scrollbar */
+.sci-fi-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.sci-fi-scrollbar::-webkit-scrollbar-track {
+  background: rgba(10,15,45,0.3);
+  border-radius: 3px;
+}
+.sci-fi-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(104,117,255,0.5);
+  border-radius: 3px;
+}
+.sci-fi-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(104,117,255,0.7);
+}

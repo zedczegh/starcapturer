@@ -1,0 +1,25 @@
+
+/* Card styles */
+.card {
+  padding: 2em;
+  background: rgba(30,41,59,0.5);
+  border: 1px solid rgba(104,117,255,0.2);
+  backdrop-filter: blur(15px);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.card:hover {
+  border-color: rgba(104,117,255,0.4);
+  box-shadow: 0 8px 32px rgba(104,117,255,0.15);
+}
+
+/* Card hover effects */
+.hover-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.hover-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 10px rgba(104,117,255,0.2);
+}

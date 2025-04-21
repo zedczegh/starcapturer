@@ -1,0 +1,25 @@
+
+/* Glassmorphism effect classes */
+.glass-card {
+  @apply bg-cosmic-800/30 backdrop-blur-sm border border-cosmic-700/30 rounded-lg hover:bg-cosmic-700/40 transition-all duration-300;
+}
+
+.glassmorphism {
+  @apply bg-cosmic-800/40 backdrop-blur-sm border border-cosmic-700/30 transition-all duration-300;
+}
+
+.glassmorphism-strong {
+  @apply bg-cosmic-800/60 backdrop-blur-md border border-cosmic-700/40 transition-all duration-300;
+}
+
+.glassmorphism-light {
+  @apply bg-cosmic-800/20 backdrop-blur-sm border border-cosmic-700/20 transition-all duration-300;
+}
+.glassmorphism-enhanced {
+  background: rgba(10, 15, 45, 0.75) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(104, 117, 255, 0.3) !important;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4) !important;
+  border-radius: 16px !important;
+}
