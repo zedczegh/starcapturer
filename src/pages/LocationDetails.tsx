@@ -1,6 +1,6 @@
 
 // Refactored to use new hooks and smaller components!
-import React from "react";
+import React, { useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 import { useLocationNameTranslation } from "@/hooks/location/useLocationNameTranslation";
@@ -12,7 +12,7 @@ import LocationErrorSection from "@/components/location/LocationErrorSection";
 import LocationDetailsMain from "@/components/location/LocationDetailsMain";
 import { useLocationDetailsLogic } from "@/hooks/location/useLocationDetailsLogic";
 import { toast } from "sonner";
-import { getLocationInfo } from "@/data/locationDatabase";
+import { getRandomAstronomyTip } from "@/utils/astronomyTips"; // import the function
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -20,7 +20,7 @@ const LocationDetails = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { setCachedData, getCachedData } = useLocationDataCache();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // New logic hook
   const {
@@ -42,6 +42,17 @@ const LocationDetails = () => {
     setCachedData,
     getCachedData
   });
+
+  // Show a random astronomy fact as a toast when this page opens
+  useEffect(() => {
+    const tip = getRandomAstronomyTip();
+    if (!tip) return;
+    const tipText = language === "zh" ? tip[1] : tip[0];
+    toast.info(tipText, {
+      duration: 6000,
+      position: "bottom-right",
+    });
+  }, [language]);
 
   if (isLoading) {
     return <LocationDetailsLoading />;
@@ -69,3 +80,4 @@ const LocationDetails = () => {
 };
 
 export default LocationDetails;
+
