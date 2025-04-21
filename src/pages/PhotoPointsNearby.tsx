@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { toast } from 'sonner';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
 import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
@@ -17,6 +17,7 @@ import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const [isViewChanging, setIsViewChanging] = useState(false);
   
   const {
     activeView,
@@ -27,14 +28,25 @@ const PhotoPointsNearby: React.FC = () => {
     locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
-    viewSwitchInProgress,
     handleRadiusChange,
-    handleViewChange,
+    handleViewChange: originalHandleViewChange,
     handleLocationUpdate,
     handleResetLocation,
     toggleMapView
   } = usePhotoPointsState();
 
+  // Add debounced view change handler to prevent rapid state changes
+  const handleViewChange = useCallback((view: 'certified' | 'calculated') => {
+    if (isViewChanging) return; // Prevent multiple rapid view changes
+    
+    setIsViewChanging(true);
+    // Small delay to prevent UI from being blocked during transition
+    setTimeout(() => {
+      originalHandleViewChange(view);
+      setTimeout(() => setIsViewChanging(false), 300);
+    }, 50);
+  }, [originalHandleViewChange, isViewChanging]);
+  
   const {
     searchRadius,
     setSearchRadius,
@@ -44,9 +56,10 @@ const PhotoPointsNearby: React.FC = () => {
     hasMore,
     loadMore,
     refreshSiqsData,
+    canLoadMoreCalculated,
     loadMoreCalculatedLocations,
-    currentSiqs,
-    error
+    loadMoreClickCount,
+    maxLoadMoreClicks
   } = useRecommendedLocations(
     effectiveLocation, 
     currentSearchRadius
@@ -55,32 +68,40 @@ const PhotoPointsNearby: React.FC = () => {
   // Get certified and calculated locations from the hook
   const { 
     certifiedLocations, 
-    calculatedLocations,
-    error: certifiedLocationsError
+    calculatedLocations 
   } = useCertifiedLocations(locations);
   
-  // Handle errors from location hooks
+  // Only update search radius when necessary to avoid unnecessary API calls
   useEffect(() => {
-    if (error) {
-      console.error("Error loading locations:", error);
-      toast.error(t("Failed to load locations. Please try again.", "无法加载位置。请重试。"));
+    if (locationInitialized && effectiveLocation && !isViewChanging) {
+      setSearchRadius(currentSearchRadius);
+    }
+  }, [locationInitialized, effectiveLocation, currentSearchRadius, setSearchRadius, isViewChanging]);
+  
+  // Separate effect for refreshing SIQS data, with a debounce
+  const refreshDebounceRef = React.useRef<NodeJS.Timeout | null>(null);
+  
+  useEffect(() => {
+    if (locationInitialized && effectiveLocation && !isViewChanging && !loading) {
+      if (refreshDebounceRef.current) {
+        clearTimeout(refreshDebounceRef.current);
+      }
+      
+      refreshDebounceRef.current = setTimeout(() => {
+        refreshSiqsData();
+        refreshDebounceRef.current = null;
+      }, 500);
     }
     
-    if (certifiedLocationsError) {
-      console.error("Error processing certified locations:", certifiedLocationsError);
-    }
-  }, [error, certifiedLocationsError, t]);
-
-  // Update search radius when view changes, but avoid unnecessary refreshes
-  useEffect(() => {
-    if (locationInitialized && effectiveLocation) {
-      setSearchRadius(currentSearchRadius);
-      refreshSiqsData();
-    }
-  }, [locationInitialized, effectiveLocation, currentSearchRadius, setSearchRadius, refreshSiqsData]);
+    return () => {
+      if (refreshDebounceRef.current) {
+        clearTimeout(refreshDebounceRef.current);
+      }
+    };
+  }, [locationInitialized, effectiveLocation, refreshSiqsData, isViewChanging, loading]);
   
-  // Log locations count for debugging
-  useEffect(() => {
+  // Memoize logging function to prevent re-renders
+  const logLocationCount = useCallback(() => {
     if (locations.length > 0) {
       console.log(`Total locations before filtering: ${locations.length}`);
       const validLocations = locations.filter(loc => isSiqsGreaterThan(loc.siqs, 0) || loc.isDarkSkyReserve || loc.certification);
@@ -88,10 +109,10 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [locations]);
   
-  // Get isLoading state that combines all loading states
-  const isLoading = useMemo(() => {
-    return loading || locationLoading || viewSwitchInProgress;
-  }, [loading, locationLoading, viewSwitchInProgress]);
+  // Only run logging when locations change
+  useEffect(() => {
+    logLocationCount();
+  }, [logLocationCount]);
   
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (!location) return;
@@ -104,14 +125,11 @@ const PhotoPointsNearby: React.FC = () => {
           state: navigationData.locationState 
         });
         console.log("Opening location details", navigationData.locationId);
-      } else {
-        throw new Error("Failed to prepare location data");
       }
     } catch (error) {
       console.error("Error navigating to location details:", error, location);
-      toast.error(t("Could not open location details", "无法打开位置详细信息"));
     }
-  }, [navigate, t]);
+  }, [navigate]);
   
   return (
     <PhotoPointsLayout>
@@ -127,7 +145,8 @@ const PhotoPointsNearby: React.FC = () => {
       <ViewToggle
         activeView={activeView}
         onViewChange={handleViewChange}
-        loading={isLoading} // Pass combined loading state to prevent toggle during transitions
+        loading={isViewChanging} // Show loading state during transitions
+        disabled={isViewChanging} // Prevent rapid switches
       />
       
       {activeView === 'calculated' && (
@@ -138,8 +157,8 @@ const PhotoPointsNearby: React.FC = () => {
             minValue={100}
             maxValue={1000}
             stepValue={100}
-            loading={isLoading}
-            loadingComplete={!isLoading}
+            loading={loading && !locationLoading}
+            loadingComplete={!loading && !locationLoading}
           />
         </div>
       )}
@@ -162,14 +181,16 @@ const PhotoPointsNearby: React.FC = () => {
         calculatedLocations={calculatedLocations}
         searchRadius={currentSearchRadius}
         calculatedSearchRadius={calculatedSearchRadius}
-        loading={isLoading}
+        loading={loading && !locationLoading || isViewChanging}
         hasMore={hasMore}
         loadMore={loadMore}
         refreshSiqs={refreshSiqsData}
         onLocationClick={handleLocationClick}
         onLocationUpdate={handleLocationUpdate}
-        canLoadMoreCalculated={true}
+        canLoadMoreCalculated={canLoadMoreCalculated}
         loadMoreCalculated={loadMoreCalculatedLocations}
+        loadMoreClickCount={loadMoreClickCount}
+        maxLoadMoreClicks={maxLoadMoreClicks}
       />
     </PhotoPointsLayout>
   );

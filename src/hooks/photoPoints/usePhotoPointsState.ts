@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -10,47 +10,19 @@ export const usePhotoPointsState = () => {
   const { t, language } = useLanguage();
   const location = useLocation();
   
-  // Prevent rapid view switching by tracking last switch time
-  const lastViewSwitchTimeRef = useRef<number>(0);
-  const DEBOUNCE_DELAY = 500; // ms
-  
   const [activeView, setActiveView] = useState<'certified' | 'calculated'>('calculated');
   const [showMap, setShowMap] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
   const [autoLocationRequested, setAutoLocationRequested] = useState(false);
   const [effectiveLocation, setEffectiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [viewSwitchInProgress, setViewSwitchInProgress] = useState(false);
-  
   const { 
     coords: currentPosition, 
     loading: locationLoading, 
-    getPosition: requestGeolocation,
-    error: locationError
+    getPosition: requestGeolocation
   } = useGeolocation();
   
   const [locationInitialized, setLocationInitialized] = useState(false);
   const [locationAttempted, setLocationAttempted] = useState(false);
-  
-  // Handle location errors
-  useEffect(() => {
-    if (locationError) {
-      console.warn("Location error:", locationError);
-      
-      // Only show toast if we haven't initialized a location yet
-      if (!locationInitialized) {
-        toast.error(t("Unable to get your location", "无法获取您的位置"));
-        
-        // Use fallback location for China
-        const fallbackLocation = {
-          latitude: 35.8617,
-          longitude: 104.1954
-        };
-        setEffectiveLocation(fallbackLocation);
-        setLocationInitialized(true);
-        console.log("Using fallback location due to error:", fallbackLocation);
-      }
-    }
-  }, [locationError, locationInitialized, t]);
   
   useEffect(() => {
     if (currentPosition) {
@@ -154,31 +126,11 @@ export const usePhotoPointsState = () => {
     );
   }, [t, language]);
   
-  // Improved view change handler with debounce to prevent rapid switching
+  // Simplified view change handler with no delays
   const handleViewChange = useCallback((view: 'certified' | 'calculated') => {
-    const now = Date.now();
-    
-    // Prevent rapid switching which can cause freezing
-    if (view !== activeView && now - lastViewSwitchTimeRef.current > DEBOUNCE_DELAY && !viewSwitchInProgress) {
+    if (view !== activeView) {
       console.log(`Switching to ${view} view mode`);
-      
-      // Set loading state to prevent multiple switches
-      setViewSwitchInProgress(true);
-      lastViewSwitchTimeRef.current = now;
-      
-      // Add slight delay to prevent UI freezing
-      setTimeout(() => {
-        setActiveView(view);
-        
-        // Reset the loading state with delay to ensure UI updates
-        setTimeout(() => {
-          setViewSwitchInProgress(false);
-        }, 300);
-      }, 50);
-    } else if (view === activeView) {
-      console.log(`Already in ${view} view, ignoring`);
-    } else {
-      console.log(`View switch ignored - too soon (${now - lastViewSwitchTimeRef.current}ms)`);
+      setActiveView(view);
     }
   }, [activeView]);
   
@@ -203,7 +155,6 @@ export const usePhotoPointsState = () => {
     locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
-    viewSwitchInProgress,
     handleRadiusChange,
     handleViewChange,
     handleLocationUpdate,
