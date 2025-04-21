@@ -13,6 +13,7 @@ interface CollectionSiqsBadgeProps {
 }
 
 const CollectionSiqsBadge: React.FC<CollectionSiqsBadgeProps> = ({ siqs, loading = false }) => {
+  // Extract numeric value from any SIQS format
   const value = getSiqsScore(siqs);
 
   if (loading) {
@@ -23,6 +24,8 @@ const CollectionSiqsBadge: React.FC<CollectionSiqsBadgeProps> = ({ siqs, loading
       </div>
     );
   }
+  
+  // Only show N/A if value is explicitly 0 or null/undefined
   if (!value || value <= 0) {
     return (
       <div className="flex items-center text-xs bg-cosmic-700/60 border border-cosmic-600/40 rounded-full px-2 py-0.5 text-muted-foreground">

@@ -42,6 +42,13 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     onViewDetails(location);
   };
 
+  // Ensure we have a stable and valid siqs value
+  const siqsValue = useMemo(() => {
+    // Debug log
+    console.log(`Location ${location.id} SIQS value:`, location.siqs);
+    return location.siqs;
+  }, [location.siqs, location.id]);
+
   // No real-time SIQS, only static SIQS badge!
   return (
     <VisibilityObserver onVisibilityChange={() => {}}>
@@ -58,7 +65,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
               <div className="text-xs text-muted-foreground/80">{location.chineseName}</div>
             )}
           </div>
-          <CollectionSiqsBadge siqs={location.siqs} />
+          <CollectionSiqsBadge siqs={siqsValue} />
         </div>
         <LocationInfo location={location} certInfo={null} displayName={displayName} language={language} />
         <CardActions onViewDetails={handleViewDetails} />

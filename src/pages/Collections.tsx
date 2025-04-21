@@ -14,6 +14,7 @@ import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
 
 // Helper: uniform transform for db row to SharedAstroSpot (safe)
 function mapSavedLocationToAstroSpot(raw: any): SharedAstroSpot {
+  // console.log("Raw saved location:", raw); // Debug log
   return {
     id: raw.id,
     name: raw.name,
@@ -21,7 +22,7 @@ function mapSavedLocationToAstroSpot(raw: any): SharedAstroSpot {
     latitude: raw.latitude,
     longitude: raw.longitude,
     bortleScale: undefined, // Bortle removed for collection cards
-    siqs: raw.siqs,
+    siqs: raw.siqs, // Directly use the siqs value from the database
     certification: raw.certification ?? null,
     isDarkSkyReserve: raw.isdarkskyreserve ?? false,
     timestamp: raw.timestamp || new Date().toISOString(),
@@ -53,8 +54,12 @@ const Collections = () => {
 
         if (error) throw error;
 
+        // Debug log
+        console.log("Fetched collections data:", data);
+
         // Transform to uniform format, always with .chineseName and no bortle
         const transformedLocations: SharedAstroSpot[] = (data || []).map(mapSavedLocationToAstroSpot);
+        console.log("Transformed locations:", transformedLocations);
 
         setLocations(transformedLocations);
       } catch (error: any) {
