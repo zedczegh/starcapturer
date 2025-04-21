@@ -13,6 +13,7 @@ import ProfileHeader from '@/components/profile/ProfileHeader';
 import { Loader2 } from 'lucide-react';
 import { getRandomAstronomyTip } from '@/utils/astronomyTips';
 import PageLoader from '@/components/loaders/PageLoader';
+import PasswordChangeForm from '@/components/profile/PasswordChangeForm';
 
 interface Profile {
   username: string | null;
@@ -46,7 +47,6 @@ const Profile = () => {
   });
 
   useEffect(() => {
-    // Pick a random tip/story at mount
     setRandomTip(getRandomAstronomyTip());
   }, []);
 
@@ -66,7 +66,6 @@ const Profile = () => {
         await fetchProfile(session.user.id);
       } catch (error) {
         console.error("Auth check error:", error);
-        // Create a default profile state even on error
         setProfile({
           username: null,
           avatar_url: null, 
@@ -106,7 +105,6 @@ const Profile = () => {
         setValue('date_of_birth', data.date_of_birth || '');
         setAvatarUrl(data.avatar_url);
       } else {
-        // Create profile if it doesn't exist
         try {
           await supabase.from('profiles').insert({
             id: userId,
@@ -126,7 +124,6 @@ const Profile = () => {
       }
     } catch (error: any) {
       console.error("Profile fetch error:", error);
-      // Still set a default profile on error
       setProfile({
         username: null,
         avatar_url: null,
@@ -159,7 +156,6 @@ const Profile = () => {
       if (avatarFile) {
         setUploadingAvatar(true);
         
-        // First, check if the avatars bucket exists
         const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
         
         if (bucketsError) {
@@ -171,7 +167,6 @@ const Profile = () => {
           return;
         }
         
-        // If avatars bucket doesn't exist, handle gracefully
         const avatarsBucketExists = buckets.some(bucket => bucket.name === 'avatars');
         
         if (!avatarsBucketExists) {
@@ -179,7 +174,6 @@ const Profile = () => {
             description: t("Storage not configured. Profile saved without avatar.", "存储未配置。个人资料已保存，但未包含头像。")
           });
         } else {
-          // Proceed with upload
           const fileExt = avatarFile.name.split('.').pop();
           const fileName = `${user.id}-${Math.random()}.${fileExt}`;
 
@@ -260,12 +254,17 @@ const Profile = () => {
               uploadingAvatar={uploadingAvatar}
               astronomyTip={randomTip}
             />
-
             <ProfileForm 
               register={register}
               loading={saving}
               onSubmit={handleSubmit(onSubmit)}
             />
+            <div className="mt-8">
+              <h2 className="font-bold text-xl text-white mb-2">
+                {t("Change Password", "修改密码")}
+              </h2>
+              <PasswordChangeForm />
+            </div>
           </div>
         </Card>
       </div>
