@@ -127,7 +127,7 @@ export function useUserCollections() {
     }
   }, [user, retryCount, lastFetchTime, saveCache]);
 
-  // Check auth on mount, load cache, then fetch in background
+  // Check auth on mount, load cache, then fetch ONCE
   useEffect(() => {
     async function checkAuthAndLoad() {
       try {
@@ -151,7 +151,7 @@ export function useUserCollections() {
           setLoading(false);
         }
 
-        // Fetch from supabase in the background always
+        // Fetch from supabase only once on mount
         await fetchCollections();
       } catch (err) {
         console.error("Authentication or cache loading error:", err);
@@ -161,9 +161,10 @@ export function useUserCollections() {
       }
     }
     checkAuthAndLoad();
-  }, [user, loadCache, fetchCollections]);
+    // Only run this effect on mount and when auth changes
+  }, [user, loadCache]);
 
-  // (Removed: Listen to realtime changes for auto-refresh)
+  // No realtime subscription - removed completely
 
   // Deletion helper (does not retry restore for simplicity)
   const removeLocationImmediately = (locationId: string) => {
@@ -175,10 +176,10 @@ export function useUserCollections() {
     });
   };
 
-  // Force reload (for manual refresh in future)
+  // Force reload (for manual refresh)
   const forceReload = async () => {
     setRetryCount(0); // Reset retry count
-    await fetchCollections();
+    await fetchCollections(); // Only fetch when explicitly requested
   };
 
   // Manual retry method for user-triggered retries

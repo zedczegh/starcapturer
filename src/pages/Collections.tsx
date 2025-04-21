@@ -24,7 +24,7 @@ const Collections = () => {
   const [editMode, setEditMode] = useState(false);
   const { user } = useAuth();
 
-  // Use new efficient collections hook
+  // Use collections hook but ensure it doesn't auto-refresh
   const {
     locations,
     setLocations,
@@ -197,4 +197,3 @@ const Collections = () => {
 };
 
 export default Collections;
-
