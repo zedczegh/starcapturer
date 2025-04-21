@@ -1,16 +1,16 @@
+
 import { useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateSiqsForLocation } from '@/lib/siqs/calculator';
 import { calculateDistance } from '@/utils/geoUtils';
-import { getElevation } from '@/services/elevationService';
-import { getWeatherData } from '@/services/weatherService';
-import { getLightPollution } from '@/services/lightPollutionService';
+import { getLightPollution } from '@/utils/lightPollutionData';
+import { getWeatherData } from '@/lib/api/weather';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 // Grid search parameters
-const GRID_DENSITY = 5; // Points per direction (total points = GRID_DENSITY^2)
-const MAX_POINTS = 100; // Maximum number of points to return
+const GRID_DENSITY = 5; // Points per direction
+const BATCH_SIZE = 5; // Number of locations per load
 
 export const useCalculatedLocationsFind = () => {
   const { t } = useLanguage();
@@ -19,11 +19,10 @@ export const useCalculatedLocationsFind = () => {
     async (
       latitude: number,
       longitude: number,
-      radius: number,
-      limit: number
+      radius: number
     ): Promise<SharedAstroSpot[]> => {
       try {
-        console.log(`Finding calculated locations around ${latitude}, ${longitude} with radius ${radius}km, limit ${limit}`);
+        console.log(`Finding calculated locations around ${latitude}, ${longitude} with radius ${radius}km`);
         
         // Calculate grid step size based on radius
         const gridStep = radius / (GRID_DENSITY - 1);
@@ -48,19 +47,14 @@ export const useCalculatedLocationsFind = () => {
           }
         }
         
-        // Limit the number of points to process
-        const limitedPoints = gridPoints.slice(0, Math.min(gridPoints.length, MAX_POINTS));
-        
-        console.log(`Generated ${limitedPoints.length} grid points within ${radius}km radius`);
-        
-        // Process each point to get SIQS
+        // Process each point to get SIQS in a batch
         const calculatedLocations: SharedAstroSpot[] = [];
         
-        for (const point of limitedPoints) {
+        // Only process BATCH_SIZE points at a time
+        const pointsToProcess = gridPoints.slice(0, BATCH_SIZE);
+        
+        for (const point of pointsToProcess) {
           try {
-            // Get elevation data
-            const elevation = await getElevation(point.lat, point.lng);
-            
             // Get weather data
             const weather = await getWeatherData(point.lat, point.lng);
             
@@ -68,12 +62,11 @@ export const useCalculatedLocationsFind = () => {
             const lightPollution = await getLightPollution(point.lat, point.lng);
             
             // Calculate SIQS
-            const siqs = calculateSiqsForLocation({
+            const siqs = await calculateSiqsForLocation({
               latitude: point.lat,
               longitude: point.lng,
-              elevation: elevation || 0,
               cloudCover: weather?.cloudCover || 0,
-              lightPollution: lightPollution || 0,
+              lightPollution: lightPollution || 0
             });
             
             // Calculate distance from user
@@ -84,7 +77,6 @@ export const useCalculatedLocationsFind = () => {
               id: `calc-${point.lat.toFixed(6)}-${point.lng.toFixed(6)}`,
               latitude: point.lat,
               longitude: point.lng,
-              elevation: elevation || 0,
               name: `${t("Calculated Point", "计算点")} (${point.lat.toFixed(4)}, ${point.lng.toFixed(4)})`,
               siqs: siqs,
               distance: distance,
@@ -100,14 +92,11 @@ export const useCalculatedLocationsFind = () => {
         }
         
         // Sort by SIQS score (highest first)
-        const sortedLocations = calculatedLocations.sort((a, b) => {
+        return calculatedLocations.sort((a, b) => {
           const siqsA = typeof a.siqs === 'number' ? a.siqs : (a.siqs?.score || 0);
           const siqsB = typeof b.siqs === 'number' ? b.siqs : (b.siqs?.score || 0);
           return siqsB - siqsA;
         });
-        
-        // Limit the number of locations returned
-        return sortedLocations.slice(0, limit);
       } catch (error) {
         console.error('Error finding calculated locations:', error);
         toast.error(t("Failed to calculate locations", "无法计算位置"));

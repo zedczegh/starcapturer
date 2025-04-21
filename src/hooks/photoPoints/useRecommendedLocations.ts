@@ -75,22 +75,15 @@ export const useRecommendedLocations = (
         DEFAULT_CERTIFIED_RADIUS
       );
       
-      // For calculated locations, we implement intelligent sampling based on radius
-      // Larger radius = more sparse sampling to avoid overloading
-      const samplingDensity = Math.max(1, Math.floor(searchRadius / 100));
-      const calculatedLimit = Math.ceil(MAX_LOCATIONS / samplingDensity);
-      
+      // For calculated locations, we get only 5 at a time
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius,
-        calculatedLimit // Fix: Remove the extra 'true' parameter
+        searchRadius
       );
       
       const filteredCalculatedResults = calculatedResults
-        .filter(loc => !isWaterLocation(loc.latitude, loc.longitude))
-        // Take at most MAX_LOCATIONS minus the number of certified locations
-        .slice(0, Math.max(0, MAX_LOCATIONS - certifiedResults.length));
+        .filter(loc => !isWaterLocation(loc.latitude, loc.longitude));
       
       const combinedResults = [...certifiedResults, ...filteredCalculatedResults];
       
@@ -104,8 +97,8 @@ export const useRecommendedLocations = (
         const sortedResults = sortLocationsByQuality(combinedResults);
         setLocations(sortedResults);
         previousLocationsRef.current = sortedResults;
-        setHasMore(sortedResults.length >= MAX_LOCATIONS);
-        setCanLoadMoreCalculated(filteredCalculatedResults.length > 0);
+        // We can load more if we got a full batch of calculated locations
+        setCanLoadMoreCalculated(filteredCalculatedResults.length === 5);
       }
       
       setPage(1);
@@ -204,8 +197,7 @@ export const useRecommendedLocations = (
       const calculatedResults = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius,
-        calculatedLimit // Updated to match the new parameter list
+        searchRadius
       );
       
       const filteredResults = calculatedResults.filter(loc => 
