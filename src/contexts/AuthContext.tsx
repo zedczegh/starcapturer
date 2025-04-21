@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -26,10 +26,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
-        // Show welcome back toast when user logs in from another device/tab
+
+        // Welcome back toast (use setTimeout for async UI update)
         if (event === 'SIGNED_IN' && session?.user) {
-          // Use setTimeout to avoid potential supabase auth deadlocks
           setTimeout(() => {
             const username = session.user.email?.split('@')[0] || 'stargazer';
             toast.success(`Welcome, ${username}! 🌟`, {
@@ -42,12 +41,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // THEN check for existing session - optimized to be faster
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
+    // THEN check for existing session (optimized & async)
+    (async () => {
+      const sessionResult = await supabase.auth.getSession();
+      setSession(sessionResult.data.session);
+      setUser(sessionResult.data.session?.user ?? null);
+      setIsLoading(false); // Only finish loading after check
+    })();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -62,9 +62,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           emailRedirectTo: window.location.origin
         }
       });
-      
+
       if (error) throw error;
-      
+
       // Show user confirmation message about email verification
       if (data.user && !data.user.confirmed_at) {
         toast.success("Almost there! ✨", {
@@ -84,55 +84,74 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signIn = async (email: string, password: string) => {
+    // Immediately set loading then run async for fastest feedback
+    setIsLoading(true);
+    let signedIn = false;
     try {
-      setIsLoading(true);
-      // Add persistent session option for better multi-device experience
+      // Non-blocking flow, set toast first
+      toast("Signing in...", {
+        description: "Checking your credentials...",
+        position: "top-center",
+        duration: 1500
+      });
+
       const { error } = await supabase.auth.signInWithPassword({ 
         email, 
         password
       });
-      
+
       if (error) {
-        // Try to handle common errors gracefully
+        // Handle common errors quickly
+        let errorMessage = "Please double-check your email and password";
         if (error.message.includes("Email not confirmed")) {
-          // Automatically resend verification email for better UX
           await supabase.auth.resend({
             type: 'signup',
             email: email,
           });
-          
-          throw new Error("Please verify your email first. We've sent a new verification link!");
+          errorMessage = "Check your inbox for the verification email we just sent!";
+        } else if (error.message.includes("Invalid login")) {
+          errorMessage = "Please double-check your email and password";
+        } else if (error.message.includes("Too many requests")) {
+          errorMessage = "Too many login attempts. Please try again in a few minutes";
         }
-        throw error;
+        toast.error("Sign in paused", {
+          description: errorMessage,
+          position: "top-center"
+        });
+        return;
       }
-      
-      // Success toast is shown by the onAuthStateChange listener
+
+      signedIn = true; // Successful sign in
+      // Success toast is dispatched by the onAuthStateChange listener
     } catch (error: any) {
-      // More user-friendly error messages
-      let errorMessage = "Please double-check your email and password";
-      
-      if (error.message.includes("Email not confirmed")) {
-        errorMessage = "Check your inbox for the verification email we just sent!";
-      } else if (error.message.includes("Invalid login")) {
-        errorMessage = "Please double-check your email and password";
-      } else if (error.message.includes("Too many requests")) {
-        errorMessage = "Too many login attempts. Please try again in a few minutes";
-      }
-      
-      toast.error("Sign in paused", {
-        description: errorMessage,
+      toast.error("Sign in error", {
+        description: "An unknown error occurred. Please try again.",
         position: "top-center"
       });
     } finally {
       setIsLoading(false);
+      // If fast sign in, UI is unlocked as soon as possible
     }
   };
 
   const signOut = async () => {
+    // Improve speed by showing feedback instantly
+    setIsLoading(true); // Start loading
+    let toastId: string | null = null;
     try {
-      setIsLoading(true);
+      // Show instant feedback
+      toastId = toast("Signing out...", {
+        position: "top-center",
+        duration: 1000
+      });
+      // Run signout async, finish UI reset fast
       const { error } = await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+
       if (error) throw error;
+
+      // Quick feedback after actual sign out
       toast.success("See you soon! ✨", {
         description: "The stars will be waiting for your return",
         position: "top-center"
