@@ -1,8 +1,10 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from "sonner";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AuthContextType {
   user: User | null;
@@ -20,6 +22,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const { toast: shadcnToast } = useToast();
+  const { t } = useLanguage();
 
   const refreshProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
