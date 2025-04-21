@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,7 +41,6 @@ const Collections = () => {
         const transformedLocations: SharedAstroSpot[] = (data || []).map(loc => ({
           id: loc.id,
           name: loc.name,
-          chineseName: loc.chinese_name || null, // Fix here: Map chinese_name from DB to chineseName
           latitude: loc.latitude,
           longitude: loc.longitude,
           bortleScale: loc.bortlescale,
@@ -164,7 +162,6 @@ const Collections = () => {
                       index={index}
                       onViewDetails={handleViewDetails}
                       showRealTimeSiqs={true}
-                      forceRealTimeSiqs={true}
                     />
                   </div>
                 </div>

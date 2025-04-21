@@ -1,10 +1,8 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from "sonner";
-import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AuthContextType {
   user: User | null;
@@ -22,7 +20,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const { toast: shadcnToast } = useToast();
-  const { t } = useLanguage();
 
   const refreshProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -115,9 +112,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      toast.success(t("Signed out successfully", "登出成功"));
+      toast.success("Signed out successfully");
     } catch (error: any) {
-      toast.error(t("Sign out failed", "登出失败"), {
+      toast.error("Sign out failed", {
         description: error.message
       });
     }
@@ -128,10 +125,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       
-      toast.success(t("Password updated successfully", "密码更新成功"));
+      toast.success("Password updated successfully");
       return true;
     } catch (error: any) {
-      toast.error(t("Failed to update password", "更新密码失败"), {
+      toast.error("Failed to update password", {
         description: error.message
       });
       return false;

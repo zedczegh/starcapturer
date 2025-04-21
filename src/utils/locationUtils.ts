@@ -1,244 +1,227 @@
 
-/**
- * Enhanced utilities for location-based operations
- * with improved performance and accuracy
- */
 import { calculateDistance } from '@/utils/geoUtils';
-import { environmentalDataCache } from '@/services/environmentalDataService';
-
-// Known location database for quick lookups
-interface KnownLocation {
-  name: string;
-  latitude: number;
-  longitude: number;
-  bortleScale: number;
-  type?: string;
-}
-
-// Database of globally known locations with accurate Bortle scales
-// This supplements the main location database
-const knownLocations: KnownLocation[] = [
-  // Dark sky sites
-  { name: "NamibRand Nature Reserve", latitude: -24.9408, longitude: 16.0676, bortleScale: 1, type: "dark-site" },
-  { name: "Aoraki Mackenzie", latitude: -43.9856, longitude: 170.4640, bortleScale: 1, type: "dark-site" },
-  { name: "Natural Bridges National Monument", latitude: 37.6214, longitude: -109.9763, bortleScale: 1, type: "dark-site" },
-  { name: "Cherry Springs State Park", latitude: 41.6626, longitude: -77.8233, bortleScale: 2, type: "dark-site" },
-  { name: "Pic du Midi", latitude: 42.9372, longitude: 0.1411, bortleScale: 2, type: "dark-site" },
-  
-  // Major cities (high light pollution)
-  { name: "Beijing", latitude: 39.9042, longitude: 116.4074, bortleScale: 8, type: "urban" },
-  { name: "Shanghai", latitude: 31.2304, longitude: 121.4737, bortleScale: 8, type: "urban" },
-  { name: "Tokyo", latitude: 35.6762, longitude: 139.6503, bortleScale: 9, type: "urban" },
-  { name: "New York City", latitude: 40.7128, longitude: -74.0060, bortleScale: 9, type: "urban" },
-  { name: "London", latitude: 51.5074, longitude: -0.1278, bortleScale: 8, type: "urban" },
-  { name: "Paris", latitude: 48.8566, longitude: 2.3522, bortleScale: 8, type: "urban" },
-  { name: "Los Angeles", latitude: 34.0522, longitude: -118.2437, bortleScale: 9, type: "urban" },
-  
-  // Chinese mountain regions
-  { name: "Changbai Mountains", latitude: 42.1041, longitude: 128.1955, bortleScale: 3, type: "mountains" },
-  { name: "Tianshan Mountains", latitude: 43.0000, longitude: 84.0000, bortleScale: 2, type: "mountains" },
-  { name: "Qilian Mountains", latitude: 38.1917, longitude: 99.8201, bortleScale: 2, type: "mountains" },
-  { name: "Wudalianchi Volcanic Field", latitude: 48.7208, longitude: 126.1183, bortleScale: 3, type: "natural" },
-  { name: "Mount Emei", latitude: 29.5333, longitude: 103.3333, bortleScale: 4, type: "mountains" },
-  
-  // Additional international locations
-  { name: "Uluru", latitude: -25.3444, longitude: 131.0369, bortleScale: 2, type: "natural" },
-  { name: "Atacama Desert", latitude: -24.5000, longitude: -69.2500, bortleScale: 1, type: "natural" },
-  { name: "Death Valley", latitude: 36.5323, longitude: -116.9325, bortleScale: 2, type: "natural" },
-  { name: "Lake Baikal", latitude: 53.5000, longitude: 108.0000, bortleScale: 3, type: "natural" },
-  { name: "Sahara Desert", latitude: 23.4162, longitude: 25.6628, bortleScale: 2, type: "natural" }
-];
 
 /**
- * Find the closest known location to the given coordinates
- * with enhanced performance through spatial partitioning
+ * Find the nearest towns to a given location
+ * This is used to get weather forecasts efficiently without making too many API calls
+ * 
+ * @param latitude - Latitude of the location
+ * @param longitude - Longitude of the location
+ * @param limit - Maximum number of towns to return
+ * @returns Array of nearest towns with coordinates
  */
-export function findClosestKnownLocation(latitude: number, longitude: number): {
-  name: string;
-  bortleScale: number;
-  distance: number;
-  type?: string;
-} | null {
-  if (!isFinite(latitude) || !isFinite(longitude)) {
-    return null;
-  }
-  
-  // Check cache first
-  const cacheKey = `nearest-location-${latitude.toFixed(3)}-${longitude.toFixed(3)}`;
-  const cached = environmentalDataCache.getBortleScale(cacheKey, 24 * 60 * 60 * 1000);
-  
-  if (cached && cached.value) {
-    return {
-      name: cached.source,
-      bortleScale: cached.value,
-      distance: 0,
-      type: "cached"
+export const findNearestTowns = async (latitude: number, longitude: number, limit = 2) => {
+  try {
+    // We'll use a small set of known cities/towns to avoid too many API calls
+    // In a real implementation, this would use a more comprehensive database
+    const getTownDatabase = async () => {
+      // This could be loaded from an API or static file in a real implementation
+      return [
+        // This is a simplified list - a real implementation would have many more entries
+        {
+          name: "Beijing",
+          latitude: 39.9042,
+          longitude: 116.4074
+        },
+        {
+          name: "Shanghai",
+          latitude: 31.2304,
+          longitude: 121.4737
+        },
+        {
+          name: "Guangzhou",
+          latitude: 23.1291,
+          longitude: 113.2644
+        },
+        {
+          name: "Shenzhen",
+          latitude: 22.5431,
+          longitude: 114.0579
+        },
+        {
+          name: "Chengdu",
+          latitude: 30.5723,
+          longitude: 104.0665
+        },
+        {
+          name: "Hangzhou",
+          latitude: 30.2741,
+          longitude: 120.1552
+        },
+        {
+          name: "Wuhan",
+          latitude: 30.5928,
+          longitude: 114.3055
+        },
+        {
+          name: "Xi'an",
+          latitude: 34.3416,
+          longitude: 108.9398
+        },
+        {
+          name: "Nanjing",
+          latitude: 32.0603,
+          longitude: 118.7969
+        },
+        {
+          name: "Tianjin",
+          latitude: 39.3434,
+          longitude: 117.3616
+        },
+        {
+          name: "Chongqing",
+          latitude: 29.4316,
+          longitude: 106.9123
+        },
+        {
+          name: "Suzhou",
+          latitude: 31.2990,
+          longitude: 120.5853
+        },
+        {
+          name: "Zhengzhou",
+          latitude: 34.7466,
+          longitude: 113.6253
+        },
+        {
+          name: "Kunming",
+          latitude: 25.0389,
+          longitude: 102.7183
+        },
+        {
+          name: "Dalian",
+          latitude: 38.9140,
+          longitude: 121.6147
+        },
+        {
+          name: "Qingdao",
+          latitude: 36.0671,
+          longitude: 120.3826
+        },
+        {
+          name: "Lhasa",
+          latitude: 29.6500,
+          longitude: 91.1000
+        },
+        {
+          name: "Urumqi",
+          latitude: 43.8256,
+          longitude: 87.6168
+        }
+      ];
     };
-  }
-  
-  let closestLocation: KnownLocation | null = null;
-  let minDistance = Infinity;
-  
-  // Fast first-pass using approximate distance
-  for (const location of knownLocations) {
-    // Quick approximate distance (using squared distance)
-    const latDiff = location.latitude - latitude;
-    const lngDiff = location.longitude - longitude;
-    const approxDistance = latDiff * latDiff + lngDiff * lngDiff;
     
-    if (approxDistance < minDistance) {
-      minDistance = approxDistance;
-      closestLocation = location;
-    }
+    const towns = await getTownDatabase();
+    
+    // Calculate distance to each town
+    const townsWithDistance = towns.map(town => ({
+      ...town,
+      distance: calculateDistance(
+        latitude, longitude, town.latitude, town.longitude
+      )
+    }));
+    
+    // Sort by distance (closest first) and limit results
+    return townsWithDistance.sort((a, b) => a.distance - b.distance).slice(0, limit);
+  } catch (error) {
+    console.error("Error finding nearest towns:", error);
+    return [];
   }
-  
-  if (!closestLocation) {
-    return null;
-  }
-  
-  // Calculate accurate distance for the closest location
-  const distance = calculateDistance(
-    latitude, 
-    longitude, 
-    closestLocation.latitude, 
-    closestLocation.longitude
-  );
-  
-  const result = {
-    name: closestLocation.name,
-    bortleScale: closestLocation.bortleScale,
-    distance,
-    type: closestLocation.type
-  };
-  
-  // Cache the result
-  environmentalDataCache.setBortleScale(cacheKey, closestLocation.bortleScale, closestLocation.name);
-  
-  return result;
-}
+};
 
 /**
- * Estimate Bortle scale based on location name and coordinates
- * Uses linguistic analysis and geographical patterns
+ * Estimate Bortle scale for a location based on its name and coordinates
+ * This is used as a fallback when no direct measurements are available
+ * 
+ * @param locationName - Name of the location
+ * @param latitude - Latitude of the location 
+ * @param longitude - Longitude of the location
+ * @returns Estimated Bortle scale (1-9)
  */
-export function estimateBortleScaleByLocation(
-  locationName: string, 
-  latitude?: number, 
-  longitude?: number
-): number {
-  if (!locationName) return 5; // Default value
-  
+export const estimateBortleScaleByLocation = (locationName: string, latitude: number, longitude: number): number => {
+  // Convert to lowercase for easier matching
   const name = locationName.toLowerCase();
   
-  // Initial estimate based on common terms in the name
-  let estimate = 5; // Default: suburban sky
+  // Check for urban indicators in name
+  const isUrban = [
+    'city', 'town', 'urban', 'metropolis', 'downtown', 'district',
+    '城市', '城区', '市区', '城镇', '郊区', '新区'
+  ].some(term => name.includes(term));
   
-  // Urban areas typically have higher light pollution
-  if (name.includes('city') || 
-      name.includes('urban') || 
-      name.includes('downtown') || 
-      name.includes('metropolitan')) {
-    estimate = 7; // Urban sky
-  }
+  // Check for rural/natural indicators in name
+  const isRural = [
+    'village', 'rural', 'countryside', 'farm', 'hamlet',
+    '村', '乡村', '农村', '庄园', '农场'
+  ].some(term => name.includes(term));
   
-  // Major cities have very high light pollution
-  if (name.includes('beijing') || 
-      name.includes('shanghai') || 
-      name.includes('guangzhou') || 
-      name.includes('shenzhen') || 
-      name.includes('tokyo') || 
-      name.includes('new york') || 
-      name.includes('los angeles')) {
-    estimate = 8; // Large city sky
-  }
+  // Check for natural/dark sky indicators
+  const isNatural = [
+    'mountain', 'forest', 'wilderness', 'reserve', 'park', 'national park', 
+    'peak', 'desert', 'canyon',
+    '山', '林', '森林', '自然保护区', '公园', '国家公园', '峰', '沙漠', '峡谷'
+  ].some(term => name.includes(term));
   
-  // Rural areas typically have lower light pollution
-  if (name.includes('rural') || 
-      name.includes('village') || 
-      name.includes('town') || 
-      name.includes('farm')) {
-    estimate = 4; // Rural sky
-  }
+  // Base estimate starting at Bortle 5 (typical suburban/rural transition)
+  let bortleEstimate = 5;
   
-  // Natural areas typically have very low light pollution
-  if (name.includes('park') || 
-      name.includes('forest') || 
-      name.includes('natural') || 
-      name.includes('wilderness') || 
-      name.includes('reserve')) {
-    estimate = 3; // Rural sky
-  }
+  // Adjust based on indicators in name
+  if (isUrban) bortleEstimate += 2;
+  if (isRural) bortleEstimate -= 1;
+  if (isNatural) bortleEstimate -= 2;
   
-  // Desert and mountain areas typically have excellent dark skies
-  if (name.includes('desert') || 
-      name.includes('mountain') || 
-      name.includes('peak') || 
-      name.includes('summit')) {
-    estimate = 2; // Truly dark sky
-  }
-  
-  // Certified dark sky sites
-  if (name.includes('dark sky')) {
-    estimate = 1; // Excellent dark sky
-  }
-  
-  // Refine estimate based on coordinates if available
-  if (latitude !== undefined && longitude !== undefined) {
-    // Check for coordinates in urban China (higher light pollution)
-    if (latitude > 20 && latitude < 50 && longitude > 100 && longitude < 130) {
-      if (estimate > 4) {
-        estimate += 1; // Increase estimate for urban areas in China
-      }
-    }
-    
-    // Check for coordinates in remote areas (lower light pollution)
-    if ((latitude > 60 || latitude < -60) || // Far north/south
-        (longitude > -170 && longitude < -140 && latitude < 30) || // Remote Pacific
-        (latitude > 30 && latitude < 50 && longitude > 85 && longitude < 110 && 
-         !(latitude > 35 && latitude < 45 && longitude > 100 && longitude < 105))) { // Remote Central Asia
-      if (estimate > 3) {
-        estimate -= 1; // Decrease estimate for remote areas
-      }
-    }
-  }
-  
-  // Ensure estimate is within valid range
-  return Math.max(1, Math.min(9, estimate));
-}
-
-// Additional high-performance terrain database for specific regions in China
-const chinaMountainRegions = [
-  { name: "Tianshan Mountains", minLat: 41.0, maxLat: 45.0, minLng: 80.0, maxLng: 89.0, bortleScale: 2 },
-  { name: "Altai Mountains", minLat: 45.0, maxLat: 49.0, minLng: 85.0, maxLng: 90.0, bortleScale: 2 },
-  { name: "Kunlun Mountains", minLat: 35.0, maxLat: 37.0, minLng: 80.0, maxLng: 100.0, bortleScale: 2 },
-  { name: "Qilian Mountains", minLat: 37.0, maxLat: 40.0, minLng: 95.0, maxLng: 104.0, bortleScale: 3 },
-  { name: "Tibet Plateau", minLat: 29.0, maxLat: 36.0, minLng: 80.0, maxLng: 95.0, bortleScale: 2 },
-  { name: "Hengduan Mountains", minLat: 28.0, maxLat: 32.0, minLng: 97.0, maxLng: 102.0, bortleScale: 3 },
-  { name: "Changbai Mountains", minLat: 41.0, maxLat: 43.0, minLng: 127.0, maxLng: 129.0, bortleScale: 3 },
-  { name: "Qinling Mountains", minLat: 33.0, maxLat: 34.5, minLng: 105.0, maxLng: 110.0, bortleScale: 4 },
-  { name: "Wuyi Mountains", minLat: 26.0, maxLat: 28.0, minLng: 116.0, maxLng: 118.5, bortleScale: 4 },
-  { name: "Great Khingan", minLat: 47.0, maxLat: 53.0, minLng: 121.0, maxLng: 127.0, bortleScale: 3 }
-];
+  // Ensure value is within valid range
+  return Math.max(1, Math.min(9, bortleEstimate));
+};
 
 /**
- * Check if a location is in a known mountain region
- * Used for improved Bortle scale estimation
+ * Find a spot with potentially lower light pollution within a given radius
+ * 
+ * @param latitude - Starting latitude
+ * @param longitude - Starting longitude
+ * @param radius - Search radius in kilometers
+ * @returns Coordinates of a potentially darker spot
  */
-export function isInMountainRegion(latitude: number, longitude: number): { inMountains: boolean; region?: string; bortleScale?: number } {
-  if (!isFinite(latitude) || !isFinite(longitude)) {
-    return { inMountains: false };
+export const findLowerLightPollutionSpot = (
+  latitude: number, 
+  longitude: number, 
+  radius: number, 
+  bortleScale?: number
+): { latitude: number; longitude: number } => {
+  // Simple implementation - move slightly away from populated areas
+  // In a real implementation, this would use actual light pollution data
+  
+  // If we have a low Bortle scale already (1-3), don't move
+  if (bortleScale && bortleScale <= 3) {
+    return { latitude, longitude };
   }
   
-  for (const region of chinaMountainRegions) {
-    if (latitude >= region.minLat && latitude <= region.maxLat && 
-        longitude >= region.minLng && longitude <= region.maxLng) {
-      return { 
-        inMountains: true,
-        region: region.name,
-        bortleScale: region.bortleScale
-      };
-    }
-  }
+  // Generate a random direction (0-360 degrees)
+  const angle = Math.random() * 2 * Math.PI;
   
-  return { inMountains: false };
-}
+  // Move 50-80% of the radius in that direction
+  const distance = (0.5 + Math.random() * 0.3) * radius;
+  
+  // Convert to approximate lat/lng change
+  // This is a simplified calculation that works for relatively small distances
+  const latChange = distance / 111.32 * Math.cos(angle);
+  const lngChange = distance / (111.32 * Math.cos(latitude * Math.PI / 180)) * Math.sin(angle);
+  
+  return {
+    latitude: latitude + latChange,
+    longitude: longitude + lngChange
+  };
+};
+
+/**
+ * Find the closest known location with accurate Bortle scale data
+ */
+export const findClosestKnownLocation = (latitude: number, longitude: number) => {
+  // Simple implementation that could be expanded
+  try {
+    const { findClosestLocationImpl } = require('../data/utils/locationFinder');
+    return findClosestLocationImpl(latitude, longitude, []);
+  } catch (error) {
+    console.warn("Location finder not available:", error);
+    return null;
+  }
+};
