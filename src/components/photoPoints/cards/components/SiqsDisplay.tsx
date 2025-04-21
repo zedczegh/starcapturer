@@ -24,15 +24,12 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
 }) => {
   // Only show loading state when absolutely necessary
   const showLoadingState = useMemo(() => {
-    // Never show loading state if we already have a score
-    if (realTimeSiqs !== null && realTimeSiqs > 0) {
-      return false;
-    }
-    if (locationSiqs && locationSiqs > 0) {
-      return false;
-    }
-    // Only show loading for certified locations when no score is available
-    return isCertified && isVisible && loadingSiqs;
+    // Don't show loading if we already have a score
+    if (realTimeSiqs !== null && realTimeSiqs > 0) return false;
+    if (locationSiqs && locationSiqs > 0) return false;
+    
+    // Show loading when we're fetching data
+    return (isCertified || locationSiqs !== undefined) && isVisible && loadingSiqs;
   }, [isCertified, loadingSiqs, isVisible, realTimeSiqs, locationSiqs]);
   
   // Use the best available score
@@ -49,13 +46,16 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
     return null;
   }, [realTimeSiqs, locationSiqs, isCertified]);
 
+  // Always show badge for locations with locationSiqs defined, even if zero
+  const forceDisplay = locationSiqs !== undefined || isCertified;
+
   return (
     <SiqsScoreBadge 
       score={displayScore}
       compact={true}
       isCertified={isCertified}
       loading={showLoadingState}
-      forceCertified={false}
+      forceCertified={forceDisplay}
       confidenceScore={siqsConfidence}
     />
   );

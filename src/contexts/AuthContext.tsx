@@ -115,9 +115,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      toast.success("Signed out successfully");
+      toast.success(t("Signed out successfully", "登出成功"));
     } catch (error: any) {
-      toast.error("Sign out failed", {
+      toast.error(t("Sign out failed", "登出失败"), {
         description: error.message
       });
     }
@@ -128,10 +128,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       
-      toast.success("Password updated successfully");
+      toast.success(t("Password updated successfully", "密码更新成功"));
       return true;
     } catch (error: any) {
-      toast.error("Failed to update password", {
+      toast.error(t("Failed to update password", "更新密码失败"), {
         description: error.message
       });
       return false;

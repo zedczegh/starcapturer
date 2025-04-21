@@ -19,6 +19,7 @@ interface PhotoLocationCardProps {
   location: SharedAstroSpot;
   index: number;
   showRealTimeSiqs?: boolean;
+  forceRealTimeSiqs?: boolean;
   onSelect?: (location: SharedAstroSpot) => void;
   onViewDetails: (location: SharedAstroSpot) => void;
   userLocation?: { latitude: number; longitude: number } | null;
@@ -28,7 +29,9 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   location, 
   index = 0,
   onViewDetails,
-  showRealTimeSiqs = true
+  showRealTimeSiqs = true,
+  forceRealTimeSiqs = false,
+  onSelect
 }) => {
   const { language } = useLanguage();
   const navigate = useNavigate();
@@ -48,28 +51,31 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
 
   const handleViewDetails = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    const locationId = getLocationId();
-    if (!locationId) return;
-    
-    navigate(`/location/${locationId}`, {
-      state: {
-        id: locationId,
-        name: location.name || '',
-        chineseName: location.chineseName || '',
-        latitude: location.latitude,
-        longitude: location.longitude,
-        bortleScale: location.bortleScale || 4,
-        siqsResult: {
-          score: getSiqsScore(location.siqs) || 0
-        },
-        certification: location.certification || '',
-        isDarkSkyReserve: !!location.isDarkSkyReserve,
-        timestamp: new Date().toISOString(),
-        fromPhotoPoints: true
-      }
-    });
-  }, [location, navigate, getLocationId]);
+    if (onViewDetails) {
+      onViewDetails(location);
+    } else {
+      const locationId = getLocationId();
+      if (!locationId) return;
+      
+      navigate(`/location/${locationId}`, {
+        state: {
+          id: locationId,
+          name: location.name || '',
+          chineseName: location.chineseName || '',
+          latitude: location.latitude,
+          longitude: location.longitude,
+          bortleScale: location.bortleScale || 4,
+          siqsResult: {
+            score: getSiqsScore(location.siqs) || 0
+          },
+          certification: location.certification || '',
+          isDarkSkyReserve: !!location.isDarkSkyReserve,
+          timestamp: new Date().toISOString(),
+          fromPhotoPoints: true
+        }
+      });
+    }
+  }, [location, navigate, getLocationId, onViewDetails]);
 
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
@@ -87,12 +93,12 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   useEffect(() => {
     if (!initialScoreSet) {
       const staticSiqs = getSiqsScore(location.siqs);
-      if (staticSiqs > 0 && isCertified) {
+      if (staticSiqs > 0) {
         setRealTimeSiqs(staticSiqs);
         setInitialScoreSet(true);
       }
     }
-  }, [location.siqs, isCertified, initialScoreSet]);
+  }, [location.siqs, initialScoreSet]);
   
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
     if (loading) {
@@ -112,7 +118,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       if (confidence) {
         setSiqsConfidence(confidence);
       }
-    } else if (!realTimeSiqs && isCertified) {
+    } else if (!realTimeSiqs && (isCertified || forceRealTimeSiqs)) {
       // If we still don't have a score but this is a certified location, 
       // use the static score if available
       const staticSiqs = getSiqsScore(location.siqs);
@@ -121,14 +127,25 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         setInitialScoreSet(true);
       }
     }
-  }, [realTimeSiqs, isCertified, location.siqs]);
+  }, [realTimeSiqs, isCertified, location.siqs, forceRealTimeSiqs]);
   
-  // Force visibility for certified locations
-  const effectiveIsVisible = isCertified || isVisible;
+  const handleCardClick = useCallback(() => {
+    if (onSelect) {
+      onSelect(location);
+    }
+  }, [onSelect, location]);
+  
+  // Force visibility for certified locations and collection view
+  const effectiveIsVisible = isCertified || isVisible || forceRealTimeSiqs;
   
   return (
-    <VisibilityObserver onVisibilityChange={setIsVisible}>
-      <CardContainer index={index} isVisible={effectiveIsVisible} isMobile={isMobile}>
+    <VisibilityObserver onVisibilityChange={setIsVisible} forceVisible={forceRealTimeSiqs}>
+      <CardContainer 
+        index={index} 
+        isVisible={effectiveIsVisible} 
+        isMobile={isMobile}
+        onClick={handleCardClick}
+      >
         <div className="flex justify-between items-start mb-2">
           <LocationHeader
             displayName={displayName}
@@ -142,7 +159,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             loadingSiqs={loadingSiqs}
             hasAttemptedLoad={hasAttemptedLoad || initialScoreSet}
             isVisible={effectiveIsVisible}
-            isCertified={isCertified}
+            isCertified={isCertified || forceRealTimeSiqs}
             siqsConfidence={siqsConfidence}
             locationSiqs={getSiqsScore(location.siqs)}
           />
@@ -157,17 +174,17 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         
         <CardActions onViewDetails={handleViewDetails} />
         
-        {showRealTimeSiqs && (
+        {(showRealTimeSiqs || forceRealTimeSiqs) && (
           <RealTimeSiqsProvider
             isVisible={effectiveIsVisible}
             latitude={location.latitude}
             longitude={location.longitude}
             bortleScale={location.bortleScale}
-            isCertified={isCertified}
+            isCertified={isCertified || forceRealTimeSiqs}
             isDarkSkyReserve={location.isDarkSkyReserve}
             existingSiqs={location.siqs}
             onSiqsCalculated={handleSiqsCalculated}
-            forceUpdate={false} // Don't force update by default
+            forceUpdate={forceRealTimeSiqs} 
           />
         )}
       </CardContainer>
