@@ -17,11 +17,12 @@ const LocationPinButton: React.FC = () => {
     if (isNavigating) return; // Prevent multiple clicks
     
     if (!user) {
-      toast({
-        description: t("Please sign up to use our collected locations service.", "请注册以使用我们的收藏位置服务。"),
-        variant: "destructive",
-        duration: 3000,
-      });
+      toast.error(
+        t("Please sign up to use our collected locations service.", "请注册以使用我们的收藏位置服务。"),
+        {
+          duration: 3000,
+        }
+      );
       return;
     }
     
@@ -48,3 +49,4 @@ const LocationPinButton: React.FC = () => {
 };
 
 export default LocationPinButton;
+
