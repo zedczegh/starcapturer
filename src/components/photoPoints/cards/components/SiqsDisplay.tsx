@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import SiqsScoreBadge from '../SiqsScoreBadge';
 
 interface SiqsDisplayProps {
@@ -56,7 +56,7 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
   const forceDisplay = locationSiqs !== undefined || isCertified;
 
   // Debug logging for collections view
-  React.useEffect(() => {
+  useEffect(() => {
     if (isCertified) {
       console.log(`SiqsDisplay: realTimeSiqs=${realTimeSiqs}, locationSiqs=${locationSiqs}, displayScore=${displayScore}, loading=${showLoadingState}`);
     }
