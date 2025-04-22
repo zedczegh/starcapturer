@@ -9,6 +9,103 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      astro_spot_advantages: {
+        Row: {
+          advantage_name: string
+          id: string
+          spot_id: string
+        }
+        Insert: {
+          advantage_name: string
+          id?: string
+          spot_id: string
+        }
+        Update: {
+          advantage_name?: string
+          id?: string
+          spot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "astro_spot_advantages_spot_id_fkey"
+            columns: ["spot_id"]
+            isOneToOne: false
+            referencedRelation: "user_astro_spots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      astro_spot_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          parent_id: string | null
+          spot_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          spot_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          spot_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "astro_spot_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "astro_spot_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "astro_spot_comments_spot_id_fkey"
+            columns: ["spot_id"]
+            isOneToOne: false
+            referencedRelation: "user_astro_spots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      astro_spot_types: {
+        Row: {
+          id: string
+          spot_id: string
+          type_name: string
+        }
+        Insert: {
+          id?: string
+          spot_id: string
+          type_name: string
+        }
+        Update: {
+          id?: string
+          spot_id?: string
+          type_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "astro_spot_types_spot_id_fkey"
+            columns: ["spot_id"]
+            isOneToOne: false
+            referencedRelation: "user_astro_spots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -114,12 +211,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_astro_spots: {
+        Row: {
+          bortlescale: number | null
+          created_at: string
+          description: string | null
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          siqs: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bortlescale?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+          name: string
+          siqs?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bortlescale?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+          siqs?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_spot_type_color: {
+        Args: { type_name: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

@@ -5,9 +5,10 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, MapPinPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UserLocationMarkerProps {
   position: [number, number];
@@ -27,6 +28,14 @@ const UserLocationMarker = memo(({
   const [locationName, setLocationName] = useState<string>('');
   const [loadingName, setLoadingName] = useState<boolean>(true);
   const [isWaterLocation, setIsWaterLocation] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Check authentication status
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAuthenticated(!!user);
+    });
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -77,11 +86,47 @@ const UserLocationMarker = memo(({
         longitude: position[1],
         isUserLocation: true,
         name: locationName || t("Your Location", "您的位置"),
-        // Always mark user location as valid regardless of water detection
         isWater: false
       }
     });
   }, [navigate, position, locationName, t]);
+
+  const handleCreateAstroSpot = useCallback(async () => {
+    // Default name if none is available
+    const spotName = locationName || t("My Astro Spot", "我的观星点");
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
+        console.error("User not authenticated");
+        return;
+      }
+
+      const { data, error } = await supabase.from('user_astro_spots').insert([
+        {
+          name: spotName,
+          latitude: position[0],
+          longitude: position[1],
+          user_id: user.id,
+          siqs: currentSiqs || null
+        }
+      ]).select().single();
+
+      if (error) {
+        console.error("Error creating astro spot:", error);
+        return;
+      }
+
+      console.log("Successfully created astro spot:", data);
+      navigate('/photo-points', { 
+        state: { 
+          message: t("Successfully created new astro spot!", "成功创建新的观星点！") 
+        } 
+      });
+    } catch (error) {
+      console.error("Error in handleCreateAstroSpot:", error);
+    }
+  }, [navigate, position, locationName, currentSiqs, t]);
 
   return (
     <Marker position={position} icon={userMarkerIcon}>
@@ -104,7 +149,7 @@ const UserLocationMarker = memo(({
               <SiqsScoreBadge score={currentSiqs} compact={true} />
             </div>
           )}
-          <div className="mt-2 text-center">
+          <div className="mt-2 flex flex-col gap-2">
             <button 
               onClick={handleViewDetails}
               className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
@@ -112,6 +157,16 @@ const UserLocationMarker = memo(({
               <ExternalLink className="h-3 w-3 mr-1" />
               {t("View Details", "查看详情")}
             </button>
+            
+            {isAuthenticated && (
+              <button 
+                onClick={handleCreateAstroSpot}
+                className={`text-xs flex items-center justify-center w-full bg-green-500/20 hover:bg-green-500/30 text-green-700 ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
+              >
+                <MapPinPlus className="h-3 w-3 mr-1" />
+                {t("Create My Astro Spot", "创建我的观星点")}
+              </button>
+            )}
           </div>
         </div>
       </Popup>
