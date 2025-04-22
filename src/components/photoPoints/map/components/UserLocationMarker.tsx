@@ -4,10 +4,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ExternalLink, MapPinPlus } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { supabase } from '@/integrations/supabase/client';
+import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 
 interface UserLocationMarkerProps {
   position: [number, number];
@@ -23,14 +24,12 @@ const UserLocationMarker = memo(({
   const navigate = useNavigate();
   const userMarkerIcon = createCustomMarker('#e11d48', 'circle', isMobile ? 1.2 : 1.0);
 
-  // State for reverse geocoded name
   const [locationName, setLocationName] = useState<string>('');
   const [loadingName, setLoadingName] = useState<boolean>(true);
   const [isWaterLocation, setIsWaterLocation] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   useEffect(() => {
-    // Check authentication status
     supabase.auth.getUser().then(({ data: { user } }) => {
       setIsAuthenticated(!!user);
     });
@@ -51,8 +50,6 @@ const UserLocationMarker = memo(({
           setLocationName(details.formattedName || '');
           setIsWaterLocation(details.isWater || false);
           
-          // Override water detection for user marker - user's real location
-          // is always considered valid even if algorithm detects water
           if (details.isWater) {
             console.log("Location was detected as water but overriding for user marker");
             if (details.townName || details.cityName) {
@@ -90,16 +87,6 @@ const UserLocationMarker = memo(({
     });
   }, [navigate, position, locationName, t]);
 
-  const handleCreateAstroSpot = useCallback(() => {
-    navigate('/create-astro-spot', { 
-      state: { 
-        latitude: position[0],
-        longitude: position[1],
-        name: locationName || t("My Astro Spot", "我的观星点")
-      }
-    });
-  }, [navigate, position, locationName, t]);
-
   return (
     <Marker position={position} icon={userMarkerIcon}>
       <Popup
@@ -131,24 +118,29 @@ const UserLocationMarker = memo(({
             </button>
             
             {isAuthenticated && (
-              <button 
-                onClick={handleCreateAstroSpot}
-                className={`
-                  text-xs flex items-center justify-center w-full 
-                  bg-gradient-to-br from-purple-500/80 to-indigo-600/80 
-                  text-white 
-                  ${isMobile ? 'py-3' : 'py-1.5'} 
-                  px-2 rounded-lg 
-                  transition-all duration-300 
-                  hover:scale-[1.02] hover:shadow-lg 
-                  active:scale-[0.98]
-                  shadow-md shadow-purple-500/30
-                  border border-purple-500/20
-                `}
-              >
-                <MapPinPlus className="h-3 w-3 mr-1" />
-                {t("Create My Astro Spot", "创建我的观星点")}
-              </button>
+              <CreateAstroSpotDialog
+                latitude={position[0]}
+                longitude={position[1]}
+                defaultName={locationName || t("My Astro Spot", "我的观星点")}
+                trigger={
+                  <button 
+                    className={`
+                      text-xs flex items-center justify-center w-full 
+                      bg-gradient-to-br from-purple-500/80 to-indigo-600/80 
+                      text-white 
+                      ${isMobile ? 'py-3' : 'py-1.5'} 
+                      px-2 rounded-lg 
+                      transition-all duration-300 
+                      hover:scale-[1.02] hover:shadow-lg 
+                      active:scale-[0.98]
+                      shadow-md shadow-purple-500/30
+                      border border-purple-500/20
+                    `}
+                  >
+                    {t("Create My Astro Spot", "创建我的观星点")}
+                  </button>
+                }
+              />
             )}
           </div>
         </div>
