@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { toast } from "sonner";
 import { ExternalLink, Loader2, MapPin, MessageCircle, Tag, Calendar, Star, ChevronLeft, Image } from "lucide-react";
 import { motion } from "framer-motion";
+import BackButton from "@/components/navigation/BackButton";
 
 const AstroSpotProfile = () => {
   const { id } = useParams();
@@ -27,36 +28,60 @@ const AstroSpotProfile = () => {
       
       console.log("Fetching astro spot with ID:", id);
       
-      const { data, error } = await supabase
+      // First, fetch the main astro spot data
+      const { data: spotData, error: spotError } = await supabase
         .from('user_astro_spots')
-        .select(`
-          *,
-          astro_spot_types (
-            id,
-            type_name
-          ),
-          astro_spot_advantages (
-            id, 
-            advantage_name
-          ),
-          astro_spot_comments (
-            id,
-            content,
-            created_at,
-            user_id,
-            profiles (username, avatar_url)
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .single();
 
-      if (error) {
-        console.error("Error fetching astro spot:", error);
-        throw error;
+      if (spotError) {
+        console.error("Error fetching astro spot:", spotError);
+        throw spotError;
       }
       
-      console.log("Fetched astro spot data:", data);
-      return data;
+      console.log("Fetched astro spot data:", spotData);
+      
+      // Then fetch the spot types separately
+      const { data: typeData, error: typeError } = await supabase
+        .from('astro_spot_types')
+        .select('*')
+        .eq('spot_id', id);
+        
+      if (typeError) {
+        console.error("Error fetching spot types:", typeError);
+      }
+      
+      // Fetch the advantages separately
+      const { data: advantageData, error: advantageError } = await supabase
+        .from('astro_spot_advantages')
+        .select('*')
+        .eq('spot_id', id);
+        
+      if (advantageError) {
+        console.error("Error fetching spot advantages:", advantageError);
+      }
+      
+      // Fetch the comments separately
+      const { data: commentData, error: commentError } = await supabase
+        .from('astro_spot_comments')
+        .select('*, profiles:user_id(username, avatar_url)')
+        .eq('spot_id', id);
+        
+      if (commentError) {
+        console.error("Error fetching spot comments:", commentError);
+        // Continue despite comment errors
+      }
+      
+      // Build the complete spot object
+      const completeSpot = {
+        ...spotData,
+        astro_spot_types: typeData || [],
+        astro_spot_advantages: advantageData || [],
+        astro_spot_comments: commentData || []
+      };
+      
+      return completeSpot;
     },
     retry: 1,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -75,10 +100,6 @@ const AstroSpotProfile = () => {
         }
       });
     }
-  };
-
-  const handleBack = () => {
-    navigate('/manage-astro-spots');
   };
 
   if (isLoading) {
@@ -140,23 +161,26 @@ const AstroSpotProfile = () => {
   }
 
   console.log("Rendering astro spot:", spot);
-  console.log("Types:", spot.astro_spot_types);
-  console.log("Advantages:", spot.astro_spot_advantages);
-  console.log("Comments:", spot.astro_spot_comments);
+
+  // Helper function to safely get username from profiles relation
+  const getUsername = (comment) => {
+    if (!comment || !comment.profiles) return t("Anonymous", "匿名用户");
+    // Handle both possible shapes of the data
+    if (typeof comment.profiles === 'object') {
+      return comment.profiles.username || t("Anonymous", "匿名用户");
+    }
+    return t("Anonymous", "匿名用户");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
       <div className="container max-w-4xl py-8 px-4 md:px-6">
         {/* Back button */}
-        <Button 
-          variant="ghost" 
-          onClick={handleBack}
-          className="flex items-center text-gray-300 mb-6 hover:bg-cosmic-800/50"
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          {t("Back to My AstroSpots", "返回我的观星点")}
-        </Button>
+        <BackButton 
+          destination="/manage-astro-spots" 
+          className="text-gray-300 mb-6 hover:bg-cosmic-800/50"
+        />
         
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -290,7 +314,7 @@ const AstroSpotProfile = () => {
                     >
                       <div className="flex items-center mb-2">
                         <div className="font-medium text-gray-200">
-                          {comment.profiles?.username || t("Anonymous", "匿名用户")}
+                          {getUsername(comment)}
                         </div>
                         <span className="text-gray-500 text-sm ml-2">
                           {new Date(comment.created_at).toLocaleDateString()}
@@ -331,7 +355,7 @@ const AstroSpotProfile = () => {
                 >
                   <div className="flex items-center mb-2">
                     <div className="font-medium text-gray-200">
-                      {comment.profiles?.username || t("Anonymous", "匿名用户")}
+                      {getUsername(comment)}
                     </div>
                     <span className="text-gray-500 text-sm ml-2">
                       {new Date(comment.created_at).toLocaleDateString()}
