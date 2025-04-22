@@ -69,24 +69,6 @@ const AstroSpotProfile = () => {
         // Continue despite comment errors
       }
       
-      // Fetch image URLs for this spot
-      try {
-        const { data: imageData } = await supabase
-          .storage
-          .from('astro_spot_images')
-          .list(id);
-        
-        if (imageData && imageData.length > 0) {
-          const imageUrls = imageData.map(file => {
-            return supabase.storage.from('astro_spot_images').getPublicUrl(`${id}/${file.name}`).data.publicUrl;
-          });
-          setSpotImages(imageUrls);
-        }
-      } catch (imageError) {
-        console.error("Error fetching spot images:", imageError);
-        // Continue despite image errors
-      }
-      
       const completeSpot = {
         ...spotData,
         astro_spot_types: typeData || [],
@@ -101,7 +83,7 @@ const AstroSpotProfile = () => {
     refetchOnWindowFocus: false
   });
 
-  const { data: spotImages, isLoading: loadingImages } = useQuery({
+  const { data: spotImages = [], isLoading: loadingImages } = useQuery({
     queryKey: ['spotImages', id],
     queryFn: async () => {
       if (!id) return [];
