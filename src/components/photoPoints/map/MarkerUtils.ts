@@ -78,6 +78,11 @@ export const shouldShowLocationMarker = (
   isCertified: boolean,
   activeView: 'certified' | 'calculated'
 ): boolean => {
+  // IMPORTANT: Always show user-created AstroSpots in both views
+  if (location.user_id) {
+    return true;
+  }
+  
   // IMPORTANT: Skip rendering calculated locations in certified view
   if (activeView === 'certified' && !isCertified) {
     return false;
@@ -99,7 +104,7 @@ export const shouldShowLocationMarker = (
 export const getLocationColor = (location: SharedAstroSpot): string => {
   if (location.isDarkSkyReserve || location.certification) {
     return getCertificationColor(location);
-  } else if (location.user_id) {  // We're checking for user_id safely
+  } else if (location.user_id) {
     return '#1EAEDB'; // Bright blue for user-created astro spots
   } else {
     const defaultColor = '#4ADE80';
