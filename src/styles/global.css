@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -82,6 +83,18 @@
   .map-legend-container {
     width: 75%;
     max-width: 300px;
+  }
+  
+  /* Glassmorphism effect */
+  .glassmorphism {
+    background: linear-gradient(to bottom right, rgba(43, 35, 70, 0.7), rgba(23, 19, 36, 0.8));
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+  }
+  
+  .shadow-glow {
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.15), 
+                0 0 60px rgba(139, 92, 246, 0.08);
   }
   
   /* Other existing styles */
