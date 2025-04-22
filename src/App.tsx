@@ -16,17 +16,18 @@ import CreateAstroSpot from '@/pages/CreateAstroSpot';
 
 const App = () => {
   return (
-    <Routes>
-      <Route path="/" element={<IndexPage />} />
-      <Route path="/photo-points" element={<PhotoPointsNearby />} />
-      <Route path="/location/:locationId" element={<LocationDetails />} />
-      <Route path="/collections" element={<AuthRequired><Collections /></AuthRequired>} />
-      <Route path="/profile" element={<AuthRequired><ProfilePage /></AuthRequired>} />
-      <Route path="/settings" element={<AuthRequired><SettingsPage /></AuthRequired>} />
-      <Route path="/create-astro-spot" element={<CreateAstroSpot />} />
-    </Routes>
+    <Router>
+      <Routes>
+        <Route path="/" element={<IndexPage />} />
+        <Route path="/photo-points" element={<PhotoPointsNearby />} />
+        <Route path="/location/:locationId" element={<LocationDetails />} />
+        <Route path="/collections" element={<AuthRequired><Collections /></AuthRequired>} />
+        <Route path="/profile" element={<AuthRequired><ProfilePage /></AuthRequired>} />
+        <Route path="/settings" element={<AuthRequired><SettingsPage /></AuthRequired>} />
+        <Route path="/create-astro-spot" element={<CreateAstroSpot />} />
+      </Routes>
+    </Router>
   );
 };
 
 export default App;
-
