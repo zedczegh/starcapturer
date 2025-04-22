@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -9,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { Loader2, Wrench } from 'lucide-react';
+import { Loader2, Pencil } from 'lucide-react';
 import { motion } from "framer-motion";
 import BackButton from "@/components/navigation/BackButton";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
@@ -17,6 +16,7 @@ import SpotHeader from '@/components/astro-spots/profile/SpotHeader';
 import SpotDetails from '@/components/astro-spots/profile/SpotDetails';
 import SpotImages from '@/components/astro-spots/profile/SpotImages';
 import SpotComments from '@/components/astro-spots/profile/SpotComments';
+import LinksFooter from '@/components/links/LinksFooter';
 
 interface CommentProfile {
   username?: string;
@@ -253,12 +253,13 @@ const AstroSpotProfile = () => {
           className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden relative"
         >
           <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 left-1/2 transform -translate-x-1/2 text-gray-300 hover:text-primary hover:bg-cosmic-800/50 z-10"
+            variant="outline"
+            size="sm"
+            className="absolute top-4 right-4 text-primary border-primary hover:bg-primary/10 z-10"
             onClick={() => setShowEditDialog(true)}
           >
-            <Wrench className="h-5 w-5" />
+            <Pencil className="h-4 w-4 mr-2" />
+            {t("Edit", "编辑")}
           </Button>
 
           {spot && <SpotHeader spot={spot} onViewDetails={handleViewDetails} />}
@@ -285,6 +286,8 @@ const AstroSpotProfile = () => {
             )}
           </div>
         </motion.div>
+
+        <LinksFooter />
       </div>
       
       <Dialog open={showPhotosDialog} onOpenChange={setShowPhotosDialog}>

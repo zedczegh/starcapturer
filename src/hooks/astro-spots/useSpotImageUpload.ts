@@ -6,10 +6,12 @@ export const useSpotImageUpload = () => {
     if (!images.length) return;
 
     const imagePromises = images.map(async (image, index) => {
-      const fileName = `${spotId}/${Date.now()}_${index}.${image.name.split('.').pop()}`;
+      const fileName = `${Date.now()}_${index}.${image.name.split('.').pop()}`;
       const { error: uploadError } = await supabase.storage
         .from('astro_spot_images')
-        .upload(fileName, image);
+        .upload(`${spotId}/${fileName}`, image, {
+          upsert: true
+        });
       
       if (uploadError) throw uploadError;
     });
