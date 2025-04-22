@@ -1,17 +1,17 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { Button } from '@/components/ui/button';
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Card } from '@/components/ui/card';
 import NavBar from '@/components/NavBar';
 import LocationMap from '@/components/location/LocationMap';
+import CreateAstroSpotForm from '@/components/astroSpots/CreateAstroSpotForm';
 
 const CreateAstroSpot: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
-  const { latitude, longitude } = location.state || {};
+  const { latitude, longitude, locationName } = location.state || {};
 
   if (!latitude || !longitude) {
     navigate('/photo-points');
@@ -28,11 +28,15 @@ const CreateAstroSpot: React.FC = () => {
             <LocationMap
               latitude={latitude}
               longitude={longitude}
-              name={t("New Astro Spot", "新观星点")}
+              name={locationName || t("New Astro Spot", "新观星点")}
               editable={false}
             />
           </div>
-          {/* Form content will be added in the next iteration */}
+          <CreateAstroSpotForm
+            latitude={latitude}
+            longitude={longitude}
+            locationName={locationName}
+          />
         </Card>
       </main>
     </div>
