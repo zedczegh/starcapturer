@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -28,6 +27,7 @@ interface MapContentProps {
   mapRef: React.RefObject<any>;
   onMapReady: () => void;
   currentSiqs: number | null;
+  children: React.ReactNode; // Add children to allow extra markers
 }
 
 const MapContent: React.FC<MapContentProps> = ({
@@ -49,7 +49,8 @@ const MapContent: React.FC<MapContentProps> = ({
   useMobileMapFixer,
   mapRef,
   onMapReady,
-  currentSiqs
+  currentSiqs,
+  children
 }) => {
   const tileOptions = getTileLayerOptions(Boolean(isMobile));
   
@@ -152,6 +153,8 @@ const MapContent: React.FC<MapContentProps> = ({
       })}
       
       {useMobileMapFixer && isMobile && <MobileMapFixer />}
+      
+      {children}
     </MapContainer>
   );
 };
