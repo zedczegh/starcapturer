@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -215,12 +216,12 @@ const AstroSpotProfile = () => {
           className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden relative"
         >
           <Button
-            variant="ghost"
+            variant="default"
             size="icon"
-            className="absolute top-4 right-4 text-gray-300 hover:text-primary hover:bg-cosmic-800/50 z-10"
+            className="absolute top-4 left-4 z-10 bg-primary/20 hover:bg-primary/30 text-white rounded-full w-12 h-12"
             onClick={() => setShowEditDialog(true)}
           >
-            <Wrench className="h-5 w-5" />
+            <Wrench className="h-6 w-6" />
           </Button>
 
           <div className="bg-gradient-to-r from-cosmic-800/80 to-cosmic-800/40 p-6 border-b border-cosmic-700/30">
