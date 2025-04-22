@@ -17,9 +17,9 @@ import Collections from './pages/Collections';
 import Profile from './pages/Profile';
 import PreferencesPage from './pages/Preferences';
 import CreateAstroSpot from './pages/CreateAstroSpot';
+import ManageAstroSpots from './pages/ManageAstroSpots';
 import './App.css';
 
-// Create React Query client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -38,7 +38,6 @@ const App = () => {
             <Router>
               <AuthProvider>
                 <Routes>
-                  {/* Redirect root to photo-points */}
                   <Route path="/" element={<Navigate to="/photo-points" replace />} />
                   <Route path="/photo-points" element={<PhotoPointsNearby />} />
                   <Route path="/about-siqs" element={<AboutSIQS />} />
@@ -52,6 +51,7 @@ const App = () => {
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/settings" element={<PreferencesPage />} />
                   <Route path="/create-astro-spot" element={<CreateAstroSpot />} />
+                  <Route path="/manage-astro-spots" element={<ManageAstroSpots />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </AuthProvider>
