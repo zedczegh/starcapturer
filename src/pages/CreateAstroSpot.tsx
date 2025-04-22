@@ -2,6 +2,7 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ const LOCATION_ADVANTAGES = [
 
 const CreateAstroSpot: React.FC = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState;
@@ -65,6 +67,12 @@ const CreateAstroSpot: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast.error(t("You must be logged in to create an astro spot", "您必须登录才能创建观星点"));
+      return;
+    }
+    
     if (selectedTypes.length === 0) {
       toast.error(t("Please select at least one location type", "请至少选择一个位置类型"));
       return;
@@ -80,6 +88,7 @@ const CreateAstroSpot: React.FC = () => {
           description,
           latitude: state.latitude,
           longitude: state.longitude,
+          user_id: user.id  // Add the user_id here
         })
         .select()
         .single();
