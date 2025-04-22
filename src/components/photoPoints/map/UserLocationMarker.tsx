@@ -1,10 +1,9 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
-import { MapPin, ExternalLink } from 'lucide-react';
+import { MapPin, ExternalLink, PlusCircle } from 'lucide-react';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { useNavigate } from 'react-router-dom';
@@ -33,7 +32,6 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     setTimeout(() => setForceUpdate(false), 100);
   };
 
-  // Fetch location name when position changes
   useEffect(() => {
     const fetchLocationName = async () => {
       setIsLoadingLocation(true);
@@ -50,18 +48,25 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     fetchLocationName();
   }, [position, language]);
 
-  // Force refresh SIQS data when position changes
   useEffect(() => {
-    // Trigger refresh when position changes
     handleRefreshSiqs();
-    
-    // Also reset the state to ensure we get fresh data
     setSiqsLoading(true);
     setRealTimeSiqs(null);
   }, [position]);
 
   const handleViewDetails = () => {
     navigate(`/location/${position[0].toFixed(6)},${position[1].toFixed(6)}`, {
+      state: {
+        latitude: position[0],
+        longitude: position[1],
+        name: locationName || t("Your Location", "您的位置"),
+        isUserLocation: true
+      }
+    });
+  };
+
+  const handleCreateAstroSpot = () => {
+    navigate(`/create-astro-spot`, {
       state: {
         latitude: position[0],
         longitude: position[1],
@@ -108,20 +113,29 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
               </div>
             </div>
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mt-2">
               <SiqsScoreBadge 
                 score={realTimeSiqs} 
                 compact={true}
                 loading={siqsLoading}
               />
-              <button
-                onClick={handleViewDetails}
-                className="text-xs text-primary hover:text-primary/80 px-2 py-1 flex items-center"
-                disabled={siqsLoading}
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                {t("View Details", "查看详情")}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleViewDetails}
+                  className="text-xs text-primary hover:text-primary/80 px-2 py-1 flex items-center"
+                  disabled={siqsLoading}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  {t("View Details", "查看详情")}
+                </button>
+                <button
+                  onClick={handleCreateAstroSpot}
+                  className="text-xs text-emerald-500 hover:text-emerald-400 px-2 py-1 flex items-center"
+                >
+                  <PlusCircle className="h-3 w-3 mr-1" />
+                  {t("Create my Astro Spot", "创建我的天文点")}
+                </button>
+              </div>
             </div>
           </div>
         </Popup>
