@@ -3,6 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ const LOCATION_ADVANTAGES = [
 const CreateAstroSpot: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { role } = useUserRole();
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState;
@@ -88,35 +90,17 @@ const CreateAstroSpot: React.FC = () => {
           description,
           latitude: state.latitude,
           longitude: state.longitude,
-          user_id: user.id  // Add the user_id here
+          user_id: user.id
         })
         .select()
         .single();
 
       if (spotError) throw spotError;
 
-      // Add types
-      const typePromises = selectedTypes.map(type => 
-        supabase.from('astro_spot_types').insert({
-          spot_id: spot.id,
-          type_name: type
-        })
-      );
-
-      // Add advantages
-      const advantagePromises = selectedAdvantages.map(advantage => 
-        supabase.from('astro_spot_advantages').insert({
-          spot_id: spot.id,
-          advantage_name: advantage
-        })
-      );
-
-      await Promise.all([...typePromises, ...advantagePromises]);
-
-      // Upload images
+      // Upload images with proper folder structure
       if (images.length > 0) {
         const imagePromises = images.map(async (image, index) => {
-          const fileName = `${spot.id}/${Date.now()}_${index}.${image.name.split('.').pop()}`;
+          const fileName = `${user.id}/${spot.id}/${Date.now()}_${index}.${image.name.split('.').pop()}`;
           const { error: uploadError } = await supabase.storage
             .from('astro_spot_images')
             .upload(fileName, image);
@@ -125,6 +109,30 @@ const CreateAstroSpot: React.FC = () => {
         });
 
         await Promise.all(imagePromises);
+      }
+
+      // Add types
+      if (selectedTypes.length > 0) {
+        const { error: typesError } = await supabase
+          .from('astro_spot_types')
+          .insert(selectedTypes.map(type => ({
+            spot_id: spot.id,
+            type_name: type
+          })));
+
+        if (typesError) throw typesError;
+      }
+
+      // Add advantages
+      if (selectedAdvantages.length > 0) {
+        const { error: advantagesError } = await supabase
+          .from('astro_spot_advantages')
+          .insert(selectedAdvantages.map(advantage => ({
+            spot_id: spot.id,
+            advantage_name: advantage
+          })));
+
+        if (advantagesError) throw advantagesError;
       }
 
       toast.success(t("Astro spot created successfully!", "观星点创建成功！"));
