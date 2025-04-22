@@ -5,7 +5,7 @@ import IndexPage from '@/pages/Index';
 import PhotoPointsNearby from '@/pages/PhotoPointsNearby';
 import LocationDetails from '@/pages/LocationDetails';
 import Collections from '@/pages/Collections';
-import { ProfilePage } from '@/pages/Profile';
+import { Profile as ProfilePage } from '@/pages/Profile';
 import { SettingsPage } from '@/pages/Preferences';
 import NavBar from '@/components/NavBar';
 import AuthRequired from '@/components/auth/AuthRequired';
@@ -29,3 +29,4 @@ const App = () => {
 };
 
 export default App;
+
