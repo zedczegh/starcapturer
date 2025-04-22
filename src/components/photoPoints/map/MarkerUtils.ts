@@ -1,9 +1,10 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation } from "@/utils/validation";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
 import { getSiqsScore } from "@/utils/siqsHelpers";
-import L from 'leaflet'; // Add this import for the Leaflet library
+import L from 'leaflet';
+import { Telescope } from 'lucide-react';
+import ReactDOMServer from 'react-dom/server';
 
 /**
  * Get SIQS quality class for styling
@@ -97,9 +98,10 @@ export const shouldShowLocationMarker = (
 export const getLocationColor = (location: SharedAstroSpot): string => {
   if (location.isDarkSkyReserve || location.certification) {
     return getCertificationColor(location);
+  } else if (location.user_id) {
+    return '#1EAEDB'; // Bright blue for user-created astro spots
   } else {
-    const defaultColor = '#4ADE80'; // Bright green fallback
-    // Use our centralized getSiqsScore helper
+    const defaultColor = '#4ADE80';
     const siqsScore = getSiqsScore(location);
     return siqsScore > 0 ? getProgressColor(siqsScore) : defaultColor;
   }
@@ -119,15 +121,45 @@ export const getLocationMarker = (
   isHovered: boolean,
   isMobile: boolean
 ): L.DivIcon => {
-  // Get the marker color based on location properties
   const color = getLocationColor(location);
-  
-  // Determine size based on device and hover state
   const size = isMobile ? 
     (isHovered ? 22 : 16) : // Mobile sizes
     (isHovered ? 28 : 24);  // Desktop sizes
   
-  // Create a marker with a custom HTML representation
+  // For user-created astro spots, create a telescope marker
+  if (location.user_id) {
+    const telescopeIcon = ReactDOMServer.renderToString(
+      <div style={{
+        backgroundColor: color,
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: '50%',
+        border: '2px solid white',
+        boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+      }}>
+        <Telescope
+          size={size * 0.6}
+          color="white"
+          style={{
+            transform: 'rotate(-45deg)',
+          }}
+        />
+      </div>
+    );
+
+    return L.divIcon({
+      className: 'custom-div-icon',
+      html: telescopeIcon,
+      iconSize: [size, size],
+      iconAnchor: [size/2, size/2],
+    });
+  }
+
+  // For other locations, use the existing marker style
   return L.divIcon({
     className: 'custom-div-icon',
     html: `
