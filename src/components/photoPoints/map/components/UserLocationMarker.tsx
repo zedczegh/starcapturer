@@ -1,10 +1,11 @@
+
 import React, { memo, useCallback, useEffect, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
 import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ExternalLink, MapPinPlus } from "lucide-react";
+import { MapPinPlus, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { supabase } from '@/integrations/supabase/client';
@@ -184,7 +185,8 @@ const UserLocationMarker = memo(({
               <MapPinPlus className="h-4 w-4" />
               {t("Create My Astro Spot", "创建我的观星点")}
             </button>
-          )}
+            )} {/* Added the missing closing bracket for the isAuthenticated check */}
+          </div>
         </div>
       </Popup>
     </Marker>
