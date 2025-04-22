@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, memo } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
-import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
 
 interface UserLocationMarkerProps {
   position: [number, number];
@@ -25,6 +24,7 @@ const UserLocationMarker = memo(({
   const userMarkerIcon = createCustomMarker('#e11d48', 'circle', isMobile ? 1.2 : 1.0);
   const { user } = useAuth();
 
+  // State for reverse geocoded name
   const [locationName, setLocationName] = useState<string>('');
   const [loadingName, setLoadingName] = useState<boolean>(true);
   const [isWaterLocation, setIsWaterLocation] = useState<boolean>(false);
@@ -44,6 +44,8 @@ const UserLocationMarker = memo(({
           setLocationName(details.formattedName || '');
           setIsWaterLocation(details.isWater || false);
           
+          // Override water detection for user marker - user's real location
+          // is always considered valid even if algorithm detects water
           if (details.isWater) {
             console.log("Location was detected as water but overriding for user marker");
             if (details.townName || details.cityName) {
