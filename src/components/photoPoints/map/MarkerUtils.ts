@@ -1,10 +1,9 @@
-import { SharedAstroSpot } from '@/lib/api/astroSpots';  // Ensure correct import
+
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation } from "@/utils/validation";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
 import { getSiqsScore } from "@/utils/siqsHelpers";
-import L from 'leaflet';
-import { Telescope } from 'lucide-react';
-import ReactDOMServer from 'react-dom/server';
+import L from 'leaflet'; // Add this import for the Leaflet library
 
 /**
  * Get SIQS quality class for styling
@@ -77,11 +76,6 @@ export const shouldShowLocationMarker = (
   isCertified: boolean,
   activeView: 'certified' | 'calculated'
 ): boolean => {
-  // IMPORTANT: Always show user-created AstroSpots in both views
-  if (location.user_id) {
-    return true;
-  }
-  
   // IMPORTANT: Skip rendering calculated locations in certified view
   if (activeView === 'certified' && !isCertified) {
     return false;
@@ -101,16 +95,12 @@ export const shouldShowLocationMarker = (
  * @returns Hex color string
  */
 export const getLocationColor = (location: SharedAstroSpot): string => {
-  // Special case for user-created spots
-  if (location.user_id) {
-    return '#1EAEDB'; // Bright blue for user-created astro spots
-  }
-  
   if (location.isDarkSkyReserve || location.certification) {
     return getCertificationColor(location);
   } else {
-    const defaultColor = '#4ADE80';
-    const siqsScore = getSiqsScore(location.siqs);
+    const defaultColor = '#4ADE80'; // Bright green fallback
+    // Use our centralized getSiqsScore helper
+    const siqsScore = getSiqsScore(location);
     return siqsScore > 0 ? getProgressColor(siqsScore) : defaultColor;
   }
 };
@@ -129,55 +119,15 @@ export const getLocationMarker = (
   isHovered: boolean,
   isMobile: boolean
 ): L.DivIcon => {
+  // Get the marker color based on location properties
   const color = getLocationColor(location);
+  
+  // Determine size based on device and hover state
   const size = isMobile ? 
     (isHovered ? 22 : 16) : // Mobile sizes
     (isHovered ? 28 : 24);  // Desktop sizes
   
-  // For user-created astro spots, create a telescope marker
-  if (location.user_id) {
-    const telescopeSvg = `
-      <div style="
-        background-color: ${color};
-        width: ${size}px;
-        height: ${size}px;
-        border-radius: 50%;
-        border: 2px solid white;
-        box-shadow: 0 0 4px rgba(0,0,0,0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-      ">
-        <svg 
-          width="${size * 0.6}" 
-          height="${size * 0.6}" 
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="white" 
-          stroke-width="2"
-          stroke-linecap="round" 
-          stroke-linejoin="round"
-          style="transform: rotate(-45deg);"
-        >
-          <path d="M14.27 6.73 21 3l-3.73 6.73L14.27 6.73z"></path>
-          <path d="M4 14v6"></path>
-          <path d="M4 10v2"></path>
-          <path d="M14.5 6.5 6 15"></path>
-          <path d="m4 20 10-9"></path>
-        </svg>
-      </div>
-    `;
-
-    return L.divIcon({
-      className: 'custom-div-icon',
-      html: telescopeSvg,
-      iconSize: [size, size],
-      iconAnchor: [size/2, size/2],
-    });
-  }
-
-  // For other locations, use the existing marker style
+  // Create a marker with a custom HTML representation
   return L.divIcon({
     className: 'custom-div-icon',
     html: `

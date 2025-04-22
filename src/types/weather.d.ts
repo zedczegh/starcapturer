@@ -77,6 +77,5 @@ declare module "@/types/weather" {
       timeUntilDaylight?: number;
     };
     date?: string | Date;
-    user_id?: string; // Added property for user-created AstroSpots
   }
 }

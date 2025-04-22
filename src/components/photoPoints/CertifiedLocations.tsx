@@ -8,8 +8,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import CertificationFilter, { CertificationType } from './filters/CertificationFilter';
 import SearchBar from './filters/SearchBar';
 import { useCertifiedLocationsLoader } from '@/hooks/photoPoints/useCertifiedLocationsLoader';
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 interface CertifiedLocationsProps {
   locations: SharedAstroSpot[];
@@ -33,8 +31,6 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   const [selectedType, setSelectedType] = useState<CertificationType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [displayLimit, setDisplayLimit] = useState(5);
-  const [userAstroSpots, setUserAstroSpots] = useState<SharedAstroSpot[]>([]);
-  const [loadingUserSpots, setLoadingUserSpots] = useState(true);
   
   // Use our specialized hook to ensure we get ALL certified locations
   const {
@@ -43,48 +39,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
     refreshLocations
   } = useCertifiedLocationsLoader(true);
   
-  // Load user-created AstroSpots
-  useEffect(() => {
-    async function loadUserAstroSpots() {
-      try {
-        setLoadingUserSpots(true);
-        const { data, error } = await supabase
-          .from('user_astro_spots')
-          .select('*');
-        
-        if (error) {
-          console.error("Error loading user AstroSpots:", error);
-          return;
-        }
-        
-        if (data && data.length > 0) {
-          // Convert user AstroSpots to SharedAstroSpot format
-          const formattedSpots = data.map(spot => ({
-            id: spot.id,
-            name: spot.name,
-            latitude: typeof spot.latitude === "string" ? Number(spot.latitude) : spot.latitude,
-            longitude: typeof spot.longitude === "string" ? Number(spot.longitude) : spot.longitude,
-            bortleScale: spot.bortlescale || 4, // Map DB 'bortlescale' to camelCase 'bortleScale'
-            description: spot.description,
-            timestamp: spot.created_at,
-            // Set user_id to mark as user-created
-            user_id: spot.user_id
-          })) as SharedAstroSpot[];
-          
-          console.log(`Loaded ${formattedSpots.length} user AstroSpots`);
-          setUserAstroSpots(formattedSpots);
-        }
-      } catch (err) {
-        console.error("Error in user AstroSpots loading:", err);
-      } finally {
-        setLoadingUserSpots(false);
-      }
-    }
-    
-    loadUserAstroSpots();
-  }, []);
-  
-  // Combine the props locations with all certified locations and user spots
+  // Combine the props locations with all certified locations
   const combinedLocations = React.useMemo(() => {
     // Create a map to store unique locations by coordinates
     const locationMap = new Map<string, SharedAstroSpot>();
@@ -109,19 +64,9 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
       });
     }
     
-    // Then add all user-created AstroSpots
-    if (userAstroSpots && userAstroSpots.length > 0) {
-      userAstroSpots.forEach(loc => {
-        if (loc.latitude && loc.longitude) {
-          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-          locationMap.set(key, loc);
-        }
-      });
-    }
-    
     // Convert back to array
     return Array.from(locationMap.values());
-  }, [locations, allCertifiedLocations, userAstroSpots]);
+  }, [locations, allCertifiedLocations]);
   
   useEffect(() => {
     // Log the total number of combined locations
@@ -130,13 +75,6 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
     // For debug: log the first 5 locations
     if (combinedLocations.length > 0) {
       console.log('First 5 locations:', combinedLocations.slice(0, 5).map(loc => loc.name || 'Unnamed'));
-      
-      // Log user-created AstroSpots
-      const userSpots = combinedLocations.filter(loc => loc.user_id);
-      if (userSpots.length > 0) {
-        console.log(`Found ${userSpots.length} user-created AstroSpots:`, 
-          userSpots.map(s => s.name || 'Unnamed'));
-      }
     }
   }, [combinedLocations]);
   
@@ -150,10 +88,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   // Filter locations based on certification type and search query
   const filteredLocations = React.useMemo(() => {
     return combinedLocations.filter(location => {
-      // Always include user-created spots regardless of filter
-      if (location.user_id) return true;
-      
-      // Filter by certification type
+      // First filter by certification type
       if (selectedType !== 'all') {
         const certification = (location.certification || '').toLowerCase();
         switch (selectedType) {
@@ -178,8 +113,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
         return (
           location.name?.toLowerCase().includes(query) ||
           location.chineseName?.toLowerCase().includes(query) ||
-          location.certification?.toLowerCase().includes(query) ||
-          location.description?.toLowerCase().includes(query)
+          location.certification?.toLowerCase().includes(query)
         );
       }
       
@@ -203,7 +137,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
     console.log(`CertifiedLocations: Locations to display: ${locationsToDisplay.length}`);
   }, [combinedLocations.length, filteredLocations.length, locationsToDisplay.length]);
   
-  const isLoadingLocations = initialLoad && (loading || certifiedLoading || loadingUserSpots);
+  const isLoadingLocations = initialLoad && (loading || certifiedLoading);
   
   if (isLoadingLocations) {
     return (

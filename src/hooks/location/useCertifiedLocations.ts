@@ -1,3 +1,4 @@
+
 import { useMemo, useEffect, useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSiqsScore } from '@/utils/siqsHelpers';
@@ -31,13 +32,16 @@ export function useCertifiedLocations(locations: SharedAstroSpot[]) {
       
       const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
       
-      // Determine if location is certified, user-created, or calculated
+      // Determine if location is certified
       const isCertified = 
         location.isDarkSkyReserve === true || 
-        (location.certification && location.certification !== '');
+        (location.certification && location.certification !== '') ||
+        (location.name && location.name.toLowerCase().includes('dark sky') && 
+         (location.name.toLowerCase().includes('reserve') || 
+          location.name.toLowerCase().includes('sanctuary') || 
+          location.name.toLowerCase().includes('park')));
       
-      // User-created spots with user_id property go to certified locations
-      if (isCertified || location.user_id) {
+      if (isCertified) {
         if (!certifiedMap.has(key)) {
           certifiedMap.set(key, location);
         }
@@ -56,15 +60,8 @@ export function useCertifiedLocations(locations: SharedAstroSpot[]) {
     
     // Sort certified locations by name for better discoverability
     const sortedCertified = [...certified].sort((a, b) => {
-      // Always put user-created spots first
-      if (a.user_id && !b.user_id) return -1;
-      if (!a.user_id && b.user_id) return 1;
-      
-      // Then sort by certification type
+      // First prioritize by certification type
       const getTypeOrder = (loc: SharedAstroSpot) => {
-        // User-created AstroSpots take precedence
-        if (loc.user_id) return 0;
-        
         const cert = (loc.certification || '').toLowerCase();
         if (loc.isDarkSkyReserve || cert.includes('reserve')) return 1;
         if (cert.includes('park')) return 2;
