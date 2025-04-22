@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, MapPin, MessageCircle, Tag, Calendar, Star, ChevronLeft } from "lucide-react";
+import { ExternalLink, Loader2, MapPin, MessageCircle, Tag, Calendar, Star, ChevronLeft, Image } from "lucide-react";
 import { motion } from "framer-motion";
 
 const AstroSpotProfile = () => {
@@ -20,17 +20,25 @@ const AstroSpotProfile = () => {
   const [showCommentsSheet, setShowCommentsSheet] = useState(false);
 
   // Query to fetch the astro spot data with all related information
-  const { data: spot, isLoading } = useQuery({
+  const { data: spot, isLoading, error } = useQuery({
     queryKey: ['astroSpot', id],
     queryFn: async () => {
       if (!id) throw new Error("No spot ID provided");
+      
+      console.log("Fetching astro spot with ID:", id);
       
       const { data, error } = await supabase
         .from('user_astro_spots')
         .select(`
           *,
-          astro_spot_types (id, type_name),
-          astro_spot_advantages (id, advantage_name),
+          astro_spot_types (
+            id,
+            type_name
+          ),
+          astro_spot_advantages (
+            id, 
+            advantage_name
+          ),
           astro_spot_comments (
             id,
             content,
@@ -49,7 +57,10 @@ const AstroSpotProfile = () => {
       
       console.log("Fetched astro spot data:", data);
       return data;
-    }
+    },
+    retry: 1,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false
   });
 
   const handleViewDetails = () => {
@@ -81,15 +92,17 @@ const AstroSpotProfile = () => {
     );
   }
 
-  if (!spot) {
+  if (error) {
+    console.error("Error in astro spot query:", error);
     return (
       <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
         <NavBar />
         <div className="container py-12">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-gray-200 mb-2">
-              {t("AstroSpot not found", "未找到观星点")}
+              {t("Error loading AstroSpot", "加载观星点时出错")}
             </h2>
+            <p className="text-gray-400 mb-4">{error.message}</p>
             <Button 
               variant="outline" 
               onClick={() => navigate('/manage-astro-spots')}
@@ -102,6 +115,34 @@ const AstroSpotProfile = () => {
       </div>
     );
   }
+
+  if (!spot) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
+        <NavBar />
+        <div className="container py-12">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-200 mb-2">
+              {t("AstroSpot not found", "未找到观星点")}
+            </h2>
+            <p className="text-gray-400 mb-4">{t("The requested AstroSpot could not be found. It may have been deleted or you may not have access to it.", "找不到请求的观星点。它可能已被删除或您可能无权访问它。")}</p>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/manage-astro-spots')}
+              className="mt-4"
+            >
+              {t("Back to My AstroSpots", "返回我的观星点")}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  console.log("Rendering astro spot:", spot);
+  console.log("Types:", spot.astro_spot_types);
+  console.log("Advantages:", spot.astro_spot_advantages);
+  console.log("Comments:", spot.astro_spot_comments);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
@@ -190,7 +231,7 @@ const AstroSpotProfile = () => {
                   {t("Location Type", "位置类型")}
                 </h2>
                 <div className="flex flex-wrap gap-2">
-                  {spot.astro_spot_types.map((type: { id: string, type_name: string }) => (
+                  {spot.astro_spot_types.map((type) => (
                     <span 
                       key={type.id}
                       className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-700/50 to-indigo-700/50 border border-purple-600/30 text-sm text-gray-200 backdrop-blur-sm"
@@ -210,7 +251,7 @@ const AstroSpotProfile = () => {
                   {t("Advantages", "优势")}
                 </h2>
                 <div className="flex flex-wrap gap-2">
-                  {spot.astro_spot_advantages.map((advantage: { id: string, advantage_name: string }) => (
+                  {spot.astro_spot_advantages.map((advantage) => (
                     <span 
                       key={advantage.id}
                       className="px-3 py-1 rounded-full bg-gradient-to-r from-green-700/50 to-teal-700/50 border border-green-600/30 text-sm text-gray-200 backdrop-blur-sm"
@@ -242,7 +283,7 @@ const AstroSpotProfile = () => {
                 
                 {/* Show just 2 comments in the preview */}
                 <div className="space-y-3">
-                  {spot.astro_spot_comments.slice(0, 2).map((comment: any) => (
+                  {spot.astro_spot_comments.slice(0, 2).map((comment) => (
                     <div 
                       key={comment.id}
                       className="p-3 bg-cosmic-800/20 rounded-lg border border-cosmic-600/20"
@@ -283,7 +324,7 @@ const AstroSpotProfile = () => {
           
           <div className="mt-6 space-y-4 max-h-[calc(85vh-120px)] overflow-y-auto pr-1">
             {spot.astro_spot_comments?.length > 0 ? 
-              spot.astro_spot_comments.map((comment: any) => (
+              spot.astro_spot_comments.map((comment) => (
                 <div 
                   key={comment.id}
                   className="p-4 bg-cosmic-800/30 rounded-lg border border-cosmic-600/20"

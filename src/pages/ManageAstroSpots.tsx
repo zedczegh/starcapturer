@@ -26,12 +26,22 @@ const ManageAstroSpots = () => {
   const { data: spots, isLoading, refetch } = useQuery({
     queryKey: ['userAstroSpots'],
     queryFn: async () => {
+      if (!user) throw new Error("User not authenticated");
+      
+      console.log("Fetching user astro spots");
+      
       const { data, error } = await supabase
         .from('user_astro_spots')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching astro spots:", error);
+        throw error;
+      }
+      
+      console.log("Fetched astro spots:", data);
       
       // Transform the data to match the SharedAstroSpot interface
       return data.map(spot => ({
@@ -46,7 +56,9 @@ const ManageAstroSpots = () => {
         user_id: spot.user_id
       })) as SharedAstroSpot[];
     },
-    enabled: !!user
+    enabled: !!user,
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5 // 5 minutes
   });
 
   const handleDelete = async (spotId: string) => {
@@ -75,6 +87,13 @@ const ManageAstroSpots = () => {
       ...prev,
       [spotId]: loading
     }));
+  };
+
+  const handleSpotClick = (spotId: string) => {
+    if (!editMode) {
+      console.log("Navigating to astro spot profile:", spotId);
+      navigate(`/astro-spot/${spotId}`);
+    }
   };
 
   if (!user) {
@@ -129,7 +148,7 @@ const ManageAstroSpots = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
                 className="relative"
-                onClick={() => !editMode && navigate(`/astro-spot/${spot.id}`)}
+                onClick={() => handleSpotClick(spot.id)}
               >
                 {editMode && (
                   <MiniRemoveButton onClick={(e) => {
