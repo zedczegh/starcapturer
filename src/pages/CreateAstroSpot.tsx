@@ -6,36 +6,54 @@ import { Card } from '@/components/ui/card';
 import NavBar from '@/components/NavBar';
 import LocationMap from '@/components/location/LocationMap';
 import CreateAstroSpotForm from '@/components/astroSpots/CreateAstroSpotForm';
+import { Button } from '@/components/ui/button';
 
 const CreateAstroSpot: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
-  const { latitude, longitude, locationName } = location.state || {};
-
-  if (!latitude || !longitude) {
-    navigate('/photo-points');
-    return null;
-  }
+  
+  // Test location: Mount Tianshan Observatory, Xinjiang, China
+  const testLocation = {
+    latitude: 43.1233,
+    longitude: 87.3152,
+    locationName: "Mount Tianshan Observatory"
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900">
       <NavBar />
       <main className="container mx-auto px-4 py-8">
         <Card className="p-6">
-          <h1 className="text-2xl font-bold mb-6">{t("Create My Astro Spot", "创建我的观星点")}</h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold">{t("Create My Astro Spot", "创建我的观星点")}</h1>
+            <Button 
+              variant="outline"
+              onClick={() => navigate('/create-astro-spot', { 
+                state: { 
+                  latitude: testLocation.latitude, 
+                  longitude: testLocation.longitude, 
+                  locationName: testLocation.locationName 
+                } 
+              })}
+            >
+              {t("Load Test Location", "加载测试位置")}
+            </Button>
+          </div>
+
           <div className="h-[300px] mb-6">
             <LocationMap
-              latitude={latitude}
-              longitude={longitude}
-              name={locationName || t("New Astro Spot", "新观星点")}
+              latitude={location.state?.latitude || testLocation.latitude}
+              longitude={location.state?.longitude || testLocation.longitude}
+              name={location.state?.locationName || testLocation.locationName}
               editable={false}
             />
           </div>
+          
           <CreateAstroSpotForm
-            latitude={latitude}
-            longitude={longitude}
-            locationName={locationName}
+            latitude={location.state?.latitude || testLocation.latitude}
+            longitude={location.state?.longitude || testLocation.longitude}
+            locationName={location.state?.locationName || testLocation.locationName}
           />
         </Card>
       </main>
