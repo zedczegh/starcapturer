@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from '@/lib/api/astroSpots';  // Ensure correct import
 import { isWaterLocation } from "@/utils/validation";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
@@ -102,13 +101,16 @@ export const shouldShowLocationMarker = (
  * @returns Hex color string
  */
 export const getLocationColor = (location: SharedAstroSpot): string => {
+  // Special case for user-created spots
+  if (location.user_id) {
+    return '#1EAEDB'; // Bright blue for user-created astro spots
+  }
+  
   if (location.isDarkSkyReserve || location.certification) {
     return getCertificationColor(location);
-  } else if (location.user_id) {
-    return '#1EAEDB'; // Bright blue for user-created astro spots
   } else {
     const defaultColor = '#4ADE80';
-    const siqsScore = getSiqsScore(location);
+    const siqsScore = getSiqsScore(location.siqs);
     return siqsScore > 0 ? getProgressColor(siqsScore) : defaultColor;
   }
 };

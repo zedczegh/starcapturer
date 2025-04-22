@@ -1,4 +1,3 @@
-
 import { useMemo, useEffect, useState } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSiqsScore } from '@/utils/siqsHelpers';
@@ -32,16 +31,12 @@ export function useCertifiedLocations(locations: SharedAstroSpot[]) {
       
       const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
       
-      // Determine if location is certified or user-created (both go to certified)
+      // Determine if location is certified, user-created, or calculated
       const isCertified = 
         location.isDarkSkyReserve === true || 
-        (location.certification && location.certification !== '') ||
-        (location.name && location.name.toLowerCase().includes('dark sky') && 
-         (location.name.toLowerCase().includes('reserve') || 
-          location.name.toLowerCase().includes('sanctuary') || 
-          location.name.toLowerCase().includes('park')));
+        (location.certification && location.certification !== '');
       
-      // Always add user-created AstroSpots to certified locations
+      // User-created spots with user_id property go to certified locations
       if (isCertified || location.user_id) {
         if (!certifiedMap.has(key)) {
           certifiedMap.set(key, location);

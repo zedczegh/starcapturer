@@ -62,9 +62,9 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
           const formattedSpots = data.map(spot => ({
             id: spot.id,
             name: spot.name,
-            latitude: spot.latitude,
-            longitude: spot.longitude,
-            bortleScale: spot.bortle_scale || 4,
+            latitude: typeof spot.latitude === "string" ? Number(spot.latitude) : spot.latitude,
+            longitude: typeof spot.longitude === "string" ? Number(spot.longitude) : spot.longitude,
+            bortleScale: spot.bortlescale || 4, // Map DB 'bortlescale' to camelCase 'bortleScale'
             description: spot.description,
             timestamp: spot.created_at,
             // Set user_id to mark as user-created
