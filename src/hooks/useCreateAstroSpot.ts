@@ -47,7 +47,6 @@ export const useCreateAstroSpot = (
     const fetchExistingData = async () => {
       if (isEditing && spotId) {
         try {
-          console.log('Fetching existing data for spot:', spotId);
           const { data: typeData, error: typeError } = await supabase
             .from('astro_spot_types')
             .select('*')
@@ -61,9 +60,6 @@ export const useCreateAstroSpot = (
             .eq('spot_id', spotId);
             
           if (advantageError) throw advantageError;
-          
-          console.log('Fetched types:', typeData);
-          console.log('Fetched advantages:', advantageData);
           
           setFormData(prev => ({
             ...prev,
