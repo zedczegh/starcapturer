@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,6 +13,7 @@ import { Loader2, Trash2 } from "lucide-react";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import MiniRemoveButton from "@/components/collections/MiniRemoveButton";
 import { Button } from "@/components/ui/button";
+import AstroFooter from "@/components/index/AstroFooter";
 
 const ManageAstroSpots = () => {
   const { user } = useAuth();
@@ -43,7 +43,6 @@ const ManageAstroSpots = () => {
       
       console.log("Fetched astro spots:", data);
       
-      // Transform the data to match the SharedAstroSpot interface
       return data.map(spot => ({
         id: spot.id,
         name: spot.name,
@@ -110,93 +109,116 @@ const ManageAstroSpots = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
+    <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 relative">
+      <div
+        className="fixed inset-0 z-0 pointer-events-none select-none"
+        aria-hidden="true"
+        style={{
+          background: "url('/lovable-uploads/bae4bb9f-d2ce-4f1b-9eae-e0e022866a36.png') center center / cover no-repeat",
+          filter: 'blur(2.5px) brightness(0.88) saturate(1.14)',
+        }}
+      />
+      <div
+        className="fixed inset-0 z-0 pointer-events-none"
+        aria-hidden="true"
+        style={{
+          background: 'linear-gradient(120deg, rgba(10,17,34,0.87) 0%, rgba(40,22,44,0.80) 100%)',
+        }}
+      />
       <NavBar />
-      <div className="container py-8 px-4 md:px-6">
-        <div className="mb-6 flex justify-between items-center">
+      <div className="relative z-10 container py-10 px-2 md:px-6">
+        <div className="mb-8 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-50 mb-2">
+            <h1 className="text-2xl font-bold text-white tracking-tight drop-shadow-sm mb-1">
               {t("My AstroSpots", "我的观星点")}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-cosmic-300">
               {t("Manage and track your favorite astronomical observation locations", "管理和追踪您最喜欢的天文观测地点")}
             </p>
           </div>
-          
           {spots && spots.length > 0 && (
             <Button
-              variant="outline"
+              variant={editMode ? "default" : "outline"}
               size="sm"
+              className={`
+                font-semibold rounded-full px-5 py-2 shadow 
+                transition-all
+                ${editMode 
+                  ? "bg-gradient-to-r from-purple-600 via-blue-600 to-teal-500 text-white border-0 hover:from-purple-700 hover:to-blue-700"
+                  : "text-primary border-primary hover:bg-primary/10"}
+              `}
               onClick={() => setEditMode(!editMode)}
-              className="text-primary border-primary hover:bg-primary/10"
             >
               {editMode ? t("Done", "完成") : t("Edit", "编辑")}
             </Button>
           )}
         </div>
 
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
-          </div>
-        ) : spots && spots.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {spots.map((spot, index) => (
-              <motion.div
-                key={spot.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="relative"
-                onClick={() => handleSpotClick(spot.id)}
-              >
-                {editMode && (
-                  <MiniRemoveButton onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleDelete(spot.id);
-                  }} />
-                )}
-                
-                <RealTimeSiqsProvider
-                  isVisible={true}
-                  latitude={spot.latitude}
-                  longitude={spot.longitude}
-                  bortleScale={spot.bortleScale}
-                  existingSiqs={spot.siqs}
-                  onSiqsCalculated={(siqs, loading) => handleSiqsCalculated(spot.id, siqs, loading)}
-                />
-                
-                <div className={`cursor-${editMode ? 'default' : 'pointer'}`}>
-                  <LocationCard
-                    id={spot.id}
-                    name={spot.name}
+        <div className="bg-cosmic-900/60 glassmorphism rounded-2xl border border-cosmic-700/40 shadow-glow px-4 py-8 md:py-10">
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+            </div>
+          ) : spots && spots.length > 0 ? (
+            <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {spots.map((spot, index) => (
+                <motion.div
+                  key={spot.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: index * 0.10 }}
+                  className="relative group"
+                  onClick={() => handleSpotClick(spot.id)}
+                >
+                  {editMode && (
+                    <div className="absolute top-3 right-3 z-20">
+                      <MiniRemoveButton onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDelete(spot.id);
+                      }} />
+                    </div>
+                  )}
+                  <RealTimeSiqsProvider
+                    isVisible={true}
                     latitude={spot.latitude}
                     longitude={spot.longitude}
-                    siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
-                    timestamp={spot.timestamp}
-                    isCertified={false}
+                    bortleScale={spot.bortleScale}
+                    existingSiqs={spot.siqs}
+                    onSiqsCalculated={(siqs, loading) => handleSiqsCalculated(spot.id, siqs, loading)}
                   />
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 rounded-lg bg-cosmic-800/30 border border-cosmic-700/30">
-            <Trash2 className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground mb-4">
-              {t("You haven't created any AstroSpots yet.", "您还没有创建任何观星点。")}
-            </p>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/photo-points')}
-              className="mt-2"
-            >
-              {t("Create Your First AstroSpot", "创建您的第一个观星点")}
-            </Button>
-          </div>
-        )}
+                  <div className={`cursor-${editMode ? 'default' : 'pointer'} transition duration-200 hover:scale-[1.025]`}>
+                    <LocationCard
+                      id={spot.id}
+                      name={spot.name}
+                      latitude={spot.latitude}
+                      longitude={spot.longitude}
+                      siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                      timestamp={spot.timestamp}
+                      isCertified={false}
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 rounded-xl bg-cosmic-800/30 border border-cosmic-700/30 shadow-inner mt-4">
+              <Trash2 className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-cosmic-300 mb-4">
+                {t("You haven't created any AstroSpots yet.", "您还没有创建任何观星点。")}
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/photo-points')}
+                className="mt-2"
+              >
+                {t("Create Your First AstroSpot", "创建您的第一个观星点")}
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
+      <AstroFooter />
     </div>
   );
 };
