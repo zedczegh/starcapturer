@@ -1,4 +1,5 @@
 
+
 declare module "@/types/weather" {
   export interface WeatherData {
     temperature: number;
@@ -77,6 +78,7 @@ declare module "@/types/weather" {
       timeUntilDaylight?: number;
     };
     date?: string | Date;
-    user_id?: string; // Add the user_id property as optional
+    user_id?: string; // Make sure this property is properly defined as optional
   }
 }
+
