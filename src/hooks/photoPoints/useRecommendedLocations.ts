@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { findCalculatedLocations } from './useCalculatedLocationsFind';
@@ -20,38 +21,73 @@ export function useRecommendedLocations(
   const [loadMoreClickCount, setLoadMoreClickCount] = useState(0);
   const maxLoadMoreClicks = 2;
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState(true);
+  const [initialSearch, setInitialSearch] = useState(true);
 
   const processNewLocations = useCallback((newLocations: SharedAstroSpot[]) => {
     if (!newLocations || newLocations.length === 0) {
-      setHasMore(false);
-      setCanLoadMoreCalculated(false);
+      console.log("No new locations to process");
+      if (initialSearch) {
+        setHasMore(true); // Keep hasMore true on initial search even if no locations found
+        setCanLoadMoreCalculated(true);
+      } else {
+        setHasMore(false);
+        setCanLoadMoreCalculated(false);
+      }
       return;
     }
 
     setLocations((prevLocations) => {
-      const existingIds = new Set(prevLocations.map((loc) => loc.id));
-      const uniqueNewLocations = newLocations.filter((loc) => !existingIds.has(loc.id));
-      return [...prevLocations, ...uniqueNewLocations];
+      // Create a uniqueness check using coordinate precision
+      const uniqueCheck = new Map();
+      
+      // Add existing locations to uniqueness check
+      prevLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`;
+          uniqueCheck.set(key, loc);
+        }
+      });
+      
+      // Add new locations if they don't already exist
+      newLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`;
+          if (!uniqueCheck.has(key)) {
+            uniqueCheck.set(key, loc);
+          }
+        }
+      });
+      
+      // Convert map back to array
+      return Array.from(uniqueCheck.values());
     });
 
-    if (newLocations.length < 10) {
-      setHasMore(false);
-      setCanLoadMoreCalculated(false);
+    // If we got fewer locations than requested, there may not be more to load
+    if (newLocations.length < 5) {
+      setHasMore(initialSearch); // Keep hasMore true on initial search
+      setCanLoadMoreCalculated(initialSearch);
     } else {
       setHasMore(true);
       setCanLoadMoreCalculated(true);
     }
-  }, []);
+    
+    setInitialSearch(false);
+  }, [initialSearch]);
 
   const loadMoreCalculatedLocations = useCallback(async () => {
     if (!userLocation || !canLoadMoreCalculated) return;
     
     setLoadingMore(true);
     try {
+      console.log("Finding more calculated locations...");
+      // Use a larger batch size when explicitly loading more
+      const batchSize = 10;
+      
       const newLocations = await findCalculatedLocations(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius
+        searchRadius,
+        batchSize
       );
       
       processNewLocations(newLocations);
@@ -75,11 +111,12 @@ export function useRecommendedLocations(
     setCanLoadMoreCalculated(true);
     setLoadMoreClickCount(0);
     setLocations([]);
+    setInitialSearch(true);
 
     findCalculatedLocations(userLocation.latitude, userLocation.longitude, searchRadius)
       .then((newLocations) => {
         setLocations(newLocations);
-        if (newLocations.length < 10) {
+        if (newLocations.length < 5 && !initialSearch) {
           setHasMore(false);
           setCanLoadMoreCalculated(false);
         }
@@ -94,29 +131,22 @@ export function useRecommendedLocations(
       .finally(() => {
         setLoading(false);
         setSearching(false);
+        setInitialSearch(false);
       });
-  }, [userLocation, searchRadius, t]);
+  }, [userLocation, searchRadius, t, initialSearch]);
 
   const loadMore = useCallback(() => {
     if (!userLocation || loadingMore || !hasMore) return;
 
     setLoadingMore(true);
-    findCalculatedLocations(userLocation.latitude, userLocation.longitude, searchRadius)
+    findCalculatedLocations(userLocation.latitude, userLocation.longitude, searchRadius, 10)
       .then((newLocations) => {
         if (newLocations.length === 0) {
           setHasMore(false);
           return;
         }
 
-        setLocations((prevLocations) => {
-          const existingIds = new Set(prevLocations.map((loc) => loc.id));
-          const uniqueNewLocations = newLocations.filter((loc) => !existingIds.has(loc.id));
-          return [...prevLocations, ...uniqueNewLocations];
-        });
-
-        if (newLocations.length < 10) {
-          setHasMore(false);
-        }
+        processNewLocations(newLocations);
       })
       .catch((error) => {
         console.error("Error loading more locations:", error);
@@ -126,8 +156,9 @@ export function useRecommendedLocations(
       .finally(() => {
         setLoadingMore(false);
       });
-  }, [userLocation, loadingMore, hasMore, searchRadius, t]);
+  }, [userLocation, loadingMore, hasMore, searchRadius, t, processNewLocations]);
 
+  // Initial load when userLocation changes
   useEffect(() => {
     if (userLocation) {
       setLoading(true);
@@ -135,14 +166,31 @@ export function useRecommendedLocations(
       setHasMore(true);
       setCanLoadMoreCalculated(true);
       setLoadMoreClickCount(0);
-      setLocations([]);
-
+      setInitialSearch(true);
+      
+      console.log(`Finding locations near ${userLocation.latitude}, ${userLocation.longitude} with radius ${searchRadius}km`);
+      
       findCalculatedLocations(userLocation.latitude, userLocation.longitude, searchRadius)
         .then((newLocations) => {
+          console.log(`Found ${newLocations.length} locations`);
           setLocations(newLocations);
-          if (newLocations.length < 10) {
-            setHasMore(false);
-            setCanLoadMoreCalculated(false);
+          
+          // If we got fewer locations than expected on initial load, try loading more
+          if (newLocations.length < 5) {
+            console.log("Initial load returned few locations, trying to find more...");
+            return findCalculatedLocations(
+              userLocation.latitude, 
+              userLocation.longitude,
+              searchRadius * 1.5, // Try a slightly larger radius
+              15 // Try to get more locations
+            );
+          }
+          return null;
+        })
+        .then((moreLocations) => {
+          if (moreLocations && moreLocations.length > 0) {
+            console.log(`Found ${moreLocations.length} additional locations`);
+            processNewLocations(moreLocations);
           }
         })
         .catch((error) => {
@@ -155,9 +203,10 @@ export function useRecommendedLocations(
         .finally(() => {
           setLoading(false);
           setSearching(false);
+          setInitialSearch(false);
         });
     }
-  }, [userLocation, searchRadius, t]);
+  }, [userLocation, searchRadius, t, processNewLocations]);
 
   return {
     locations,

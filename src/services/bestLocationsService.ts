@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { findLocationsWithinRadius } from "./locationSearchService";
@@ -32,7 +33,7 @@ export async function findBestViewingLocations(
   try {
     console.log(`Finding best viewing locations within ${radius}km radius, certified only: ${certifiedOnly}`);
     
-    // For certified locations, we don't use radius filtering
+    // For certified locations, we use a much larger radius
     const effectiveRadius = certifiedOnly ? 100000 : radius;
     
     const cacheKey = `${userLat.toFixed(2)}-${userLng.toFixed(2)}-${effectiveRadius}-${certifiedOnly}`;
