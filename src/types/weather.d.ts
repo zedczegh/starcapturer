@@ -1,3 +1,4 @@
+
 declare module "@/types/weather" {
   export interface WeatherData {
     temperature: number;
@@ -77,5 +78,6 @@ declare module "@/types/weather" {
     };
     date?: string | Date;
     user_id?: string;
+    isUserAstroSpot?: boolean; // Add this property
   }
 }

@@ -25,7 +25,8 @@ export async function fetchUserAstroSpots(): Promise<SharedAstroSpot[]> {
     siqs: spot.siqs,
     bortleScale: spot.bortlescale || 4, // Convert bortlescale to bortleScale
     timestamp: new Date().toISOString(), // Add required timestamp property
-    isUserAstroSpot: true // Mark as user-created for filtering
+    isUserAstroSpot: true, // Mark as user-created for filtering
+    description: spot.description
   }));
 }
 
