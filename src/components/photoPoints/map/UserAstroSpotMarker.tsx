@@ -48,6 +48,7 @@ const UserAstroSpotMarker: React.FC<UserAstroSpotMarkerProps> = ({ spot, onClick
     <Marker 
       position={[spot.latitude, spot.longitude]} 
       icon={userAstroSpotIcon} 
+      // Fix: Use the proper event handling approach for react-leaflet v4
       eventHandlers={{
         click: handleSpotClick
       }}

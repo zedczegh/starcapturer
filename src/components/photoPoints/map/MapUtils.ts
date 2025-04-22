@@ -46,7 +46,7 @@ export function filterLocations(
 ): SharedAstroSpot[] {
   if (!locations || locations.length === 0) return [];
 
-  // In certified view, only show certified locations
+  // In certified view, only show certified locations and user spots
   if (activeView === 'certified') {
     return locations.filter(loc => loc.isDarkSkyReserve || loc.certification || loc.isUserAstroSpot);
   }

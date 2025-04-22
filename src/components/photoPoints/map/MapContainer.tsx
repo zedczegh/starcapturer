@@ -70,7 +70,6 @@ const MapContainer: React.FC<MapContainerProps> = ({
       useMobileMapFixer={useMobileMapFixer}
       showRadiusCircles={showRadiusCircles}
     >
-      {/* Render user astro spot markers as overlays */}
       {userSpots.map((spot) => (
         <UserAstroSpotMarker key={spot.id} spot={spot} onClick={onLocationClick} />
       ))}
