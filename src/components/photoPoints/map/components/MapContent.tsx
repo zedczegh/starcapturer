@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
+import { LocationMarker, UserLocationMarker, UserAstroSpotMarker } from '../MarkerComponents';
 import { MapEffectsComposer } from '../MapComponents';
 import MapController from '../MapController';
 import MobileMapFixer from '../MobileMapFixer';
@@ -109,7 +108,6 @@ const MapContent: React.FC<MapContentProps> = ({
         activeView={activeView}
         searchRadius={searchRadius}
         effects={['zoom-controls']} 
-        // Removed 'legend' to prevent redundant legend icon
       />
       
       {onMapClick && (
@@ -131,8 +129,18 @@ const MapContent: React.FC<MapContentProps> = ({
         if (!location || !location.latitude || !location.longitude) return null;
         
         const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+        const isUserAstroSpot = location.user_id !== undefined;
         const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
         const isHovered = hoveredLocationId === locationId;
+        
+        if (isUserAstroSpot) {
+          return (
+            <UserAstroSpotMarker
+              key={locationId}
+              spot={location}
+            />
+          );
+        }
         
         return (
           <LocationMarker

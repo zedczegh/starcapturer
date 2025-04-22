@@ -107,6 +107,12 @@ const MapLegend: React.FC<MapLegendProps> = ({
                       label={t("Dark Sky Lodging", "暗夜住宿")} 
                       type="hotel"
                     />
+                    {/* Add new telescope marker to the legend */}
+                    <LegendItem 
+                      color="#60B4F5" 
+                      label={t("User Astro Spot", "用户天文点")} 
+                      type="telescope"
+                    />
                   </div>
                 )}
 
@@ -208,7 +214,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
 interface LegendItemProps {
   color: string;
   label: string;
-  type: 'star' | 'circle' | 'hotel';
+  type: 'star' | 'circle' | 'hotel' | 'telescope';
 }
 
 const LegendItem: React.FC<LegendItemProps> = ({ color, label, type }) => {
@@ -234,6 +240,13 @@ const LegendItem: React.FC<LegendItemProps> = ({ color, label, type }) => {
           <Star className="h-3 w-3" style={{ color, fill: color }} />
         ) : type === 'hotel' ? (
           <Hotel className="h-3 w-3" style={{ color, fill: color }} />
+        ) : type === 'telescope' ? (
+          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="11" fill={`${color}20`}/>
+            <path d="M8 21l5-10M17 6l-8.5 8.5" />
+            <path d="M17 6c1.38 0 2.5-1.12 2.5-2.5S18.38 1 17 1s-2.5 1.12-2.5 2.5S15.62 6 17 6z" />
+            <path d="M13 10l2 2" />
+          </svg>
         ) : (
           <Circle className="h-3 w-3" style={{ color, fill: `${color}30` }} />
         )}

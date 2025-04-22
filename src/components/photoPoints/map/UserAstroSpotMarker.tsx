@@ -2,7 +2,7 @@
 import React from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
-import { telescope, circle } from "lucide-react";
+import { Telescope, Circle } from "lucide-react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useNavigate } from "react-router-dom";
 
@@ -57,8 +57,9 @@ const UserAstroSpotMarker: React.FC<UserAstroSpotMarkerProps> = ({ spot }) => {
     <Marker
       position={[spot.latitude, spot.longitude]}
       icon={createTelescopeCircleIcon()}
+      // Fix: Use the correct event handler format for react-leaflet
       eventHandlers={{
-        click: () => {},
+        click: () => {}
       }}
     >
       <Popup>
@@ -93,4 +94,3 @@ const UserAstroSpotMarker: React.FC<UserAstroSpotMarkerProps> = ({ spot }) => {
 };
 
 export default React.memo(UserAstroSpotMarker);
-
