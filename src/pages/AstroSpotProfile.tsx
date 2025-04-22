@@ -20,7 +20,6 @@ const AstroSpotProfile = () => {
   const [showPhotosDialog, setShowPhotosDialog] = useState(false);
   const [showCommentsSheet, setShowCommentsSheet] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [spotImages, setSpotImages] = useState<string[]>([]);
 
   const { data: spot, isLoading, error, refetch } = useQuery({
     queryKey: ['astroSpot', id],
@@ -100,6 +99,34 @@ const AstroSpotProfile = () => {
     retry: 1,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false
+  });
+
+  const { data: spotImages, isLoading: loadingImages } = useQuery({
+    queryKey: ['spotImages', id],
+    queryFn: async () => {
+      if (!id) return [];
+      
+      console.log("Fetching images for spot:", id);
+      
+      const { data: files, error } = await supabase
+        .storage
+        .from('astro_spot_images')
+        .list(id);
+        
+      if (error) {
+        console.error("Error fetching spot images:", error);
+        return [];
+      }
+
+      return files.map(file => {
+        const { data } = supabase
+          .storage
+          .from('astro_spot_images')
+          .getPublicUrl(`${id}/${file.name}`);
+        return data.publicUrl;
+      });
+    },
+    enabled: !!id
   });
 
   const handleViewDetails = () => {
@@ -207,7 +234,7 @@ const AstroSpotProfile = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 translate-x-0 right-4 text-gray-300 hover:text-primary hover:bg-cosmic-800/50"
+            className="absolute top-1/2 -translate-y-1/2 right-4 text-gray-300 hover:text-primary hover:bg-cosmic-800/50"
             onClick={() => setShowEditDialog(true)}
           >
             <Wrench className="h-5 w-5" />

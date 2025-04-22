@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,12 +43,10 @@ export const useCreateAstroSpot = (
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
-    // Fetch existing spot types and advantages when editing
     const fetchExistingData = async () => {
       if (isEditing && spotId) {
         try {
           console.log('Fetching existing data for spot:', spotId);
-          // Fetch spot types
           const { data: typeData, error: typeError } = await supabase
             .from('astro_spot_types')
             .select('*')
@@ -57,7 +54,6 @@ export const useCreateAstroSpot = (
             
           if (typeError) throw typeError;
           
-          // Fetch spot advantages
           const { data: advantageData, error: advantageError } = await supabase
             .from('astro_spot_advantages')
             .select('*')
@@ -128,6 +124,7 @@ export const useCreateAstroSpot = (
             description: formData.description,
             latitude: formData.latitude,
             longitude: formData.longitude,
+            updated_at: new Date().toISOString()
           })
           .eq('id', spotId);
 
@@ -135,11 +132,12 @@ export const useCreateAstroSpot = (
 
         console.log("Astro spot updated successfully, now updating types");
         
-        // Delete existing types then insert new ones
-        await supabase
+        const { error: deleteTypesError } = await supabase
           .from('astro_spot_types')
           .delete()
           .eq('spot_id', spotId);
+
+        if (deleteTypesError) throw deleteTypesError;
 
         if (formData.selectedTypes.length > 0) {
           const { error: typesError } = await supabase
@@ -154,11 +152,12 @@ export const useCreateAstroSpot = (
 
         console.log("Types updated successfully, now updating advantages");
         
-        // Delete existing advantages then insert new ones
-        await supabase
+        const { error: deleteAdvantagesError } = await supabase
           .from('astro_spot_advantages')
           .delete()
           .eq('spot_id', spotId);
+
+        if (deleteAdvantagesError) throw deleteAdvantagesError;
 
         if (formData.selectedAdvantages.length > 0) {
           const { error: advantagesError } = await supabase
@@ -171,7 +170,19 @@ export const useCreateAstroSpot = (
           if (advantagesError) throw advantagesError;
         }
 
-        // Invalidate the query to force a refresh
+        if (formData.images.length > 0) {
+          const imagePromises = formData.images.map(async (image, index) => {
+            const fileName = `${spotId}/${Date.now()}_${index}.${image.name.split('.').pop()}`;
+            const { error: uploadError } = await supabase.storage
+              .from('astro_spot_images')
+              .upload(fileName, image);
+            
+            if (uploadError) throw uploadError;
+          });
+
+          await Promise.all(imagePromises);
+        }
+
         queryClient.invalidateQueries({queryKey: ['astroSpot', spotId]});
         
         toast.success(t("Astro spot updated successfully!", "观星点更新成功！"));
