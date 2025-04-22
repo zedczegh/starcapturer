@@ -1,45 +1,24 @@
-import React, { useState, useCallback } from 'react';
+
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { MapPin, Image } from "lucide-react";
+import { MapPin } from "lucide-react";
+import LocationTypeSelector from '@/components/astro-spots/LocationTypeSelector';
+import LocationAdvantagesSelector from '@/components/astro-spots/LocationAdvantagesSelector';
+import ImageUploader from '@/components/astro-spots/ImageUploader';
 
 interface LocationState {
   latitude: number;
   longitude: number;
   name?: string;
 }
-
-const LOCATION_TYPES = [
-  { name: "National/Academic Observatory", color: "#9b87f5" },
-  { name: "Personal Observatory", color: "#0EA5E9" },
-  { name: "Personal Favorite Observation Point", color: "#4ADE80" },
-  { name: "Favored Observation Point of local hobby groups", color: "#FFD700" },
-  { name: "Star Party venue", color: "#FFFF00" },
-  { name: "Regular Camping Site", color: "#808000" },
-  { name: "Astro Lodging", color: "#1A1F2C" }
-];
-
-const LOCATION_ADVANTAGES = [
-  "Low Light Pollution Region",
-  "Low Air Pollution Region",
-  "Lodging available",
-  "Stable and Low Wind Gusts",
-  "High Annual Clear Nights Rate(>100 Days a year)",
-  "Far enough away from waters",
-  "Good Viewing Conditions",
-  "Parking available",
-  "Well-paved roads to location",
-  "No local interruptions",
-  "Hard Soil or Concrete floor"
-];
 
 const CreateAstroSpot: React.FC = () => {
   const { t } = useLanguage();
@@ -55,17 +34,6 @@ const CreateAstroSpot: React.FC = () => {
   const [description, setDescription] = useState('');
   const [images, setImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newImages = Array.from(e.target.files);
-      if (images.length + newImages.length > 10) {
-        toast.error(t("Maximum 10 images allowed", "最多允许10张图片"));
-        return;
-      }
-      setImages(prev => [...prev, ...newImages]);
-    }
-  }, [images.length, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,58 +138,15 @@ const CreateAstroSpot: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              {t("Location Types", "位置类型")}
-            </label>
-            <div className="grid gap-4 md:grid-cols-2">
-              {LOCATION_TYPES.map((type) => (
-                <label
-                  key={type.name}
-                  className="flex items-center space-x-2 p-2 rounded border border-border hover:bg-accent/50 transition-colors"
-                  style={{ borderLeft: `4px solid ${type.color}` }}
-                >
-                  <Checkbox
-                    checked={selectedTypes.includes(type.name)}
-                    onCheckedChange={(checked) => {
-                      setSelectedTypes(prev => 
-                        checked 
-                          ? [...prev, type.name]
-                          : prev.filter(t => t !== type.name)
-                      );
-                    }}
-                  />
-                  <span>{t(type.name, type.name)}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+          <LocationTypeSelector 
+            selectedTypes={selectedTypes}
+            onTypesChange={setSelectedTypes}
+          />
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              {t("Location Advantages", "位置优势")}
-            </label>
-            <div className="grid gap-4 md:grid-cols-2">
-              {LOCATION_ADVANTAGES.map((advantage) => (
-                <label
-                  key={advantage}
-                  className="flex items-center space-x-2 p-2 rounded border border-border hover:bg-accent/50 transition-colors"
-                >
-                  <Checkbox
-                    checked={selectedAdvantages.includes(advantage)}
-                    onCheckedChange={(checked) => {
-                      setSelectedAdvantages(prev => 
-                        checked 
-                          ? [...prev, advantage]
-                          : prev.filter(a => a !== advantage)
-                      );
-                    }}
-                  />
-                  <span>{t(advantage, advantage)}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+          <LocationAdvantagesSelector
+            selectedAdvantages={selectedAdvantages}
+            onAdvantagesChange={setSelectedAdvantages}
+          />
 
           <div>
             <label className="text-sm font-medium mb-2 block">
@@ -236,51 +161,10 @@ const CreateAstroSpot: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              {t("Location Images", "位置图片")}
-              <span className="text-xs text-muted-foreground ml-2">
-                ({t("Maximum 10 images", "最多10张图片")})
-              </span>
-            </label>
-            <div className="grid gap-4">
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-accent/50 transition-colors">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Image className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    {t("Click to upload images", "点击上传图片")}
-                  </p>
-                </div>
-                <input
-                  type="file"
-                  className="hidden"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                />
-              </label>
-              {images.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {images.map((image, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={URL.createObjectURL(image)}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setImages(prev => prev.filter((_, i) => i !== index))}
-                        className="absolute top-1 right-1 bg-destructive/90 text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <ImageUploader
+            images={images}
+            onImagesChange={setImages}
+          />
 
           <div className="flex items-center justify-end gap-4">
             <Button
