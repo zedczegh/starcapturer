@@ -2,25 +2,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import NavBar from "@/components/NavBar";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery } from '@tanstack/react-query';
-
-interface AstroSpot {
-  id: string;
-  name: string;
-  description: string | null;
-  latitude: number;
-  longitude: number;
-  created_at: string;
-}
+import { supabase } from "@/integrations/supabase/client";
+import NavBar from "@/components/NavBar";
+import LocationCard from "@/components/LocationCard";
+import { SharedAstroSpot } from "@/types/weather";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 const ManageAstroSpots = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const { data: spots, isLoading, refetch } = useQuery({
@@ -32,7 +26,7 @@ const ManageAstroSpots = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as AstroSpot[];
+      return data as SharedAstroSpot[];
     },
     enabled: !!user
   });
@@ -46,24 +40,12 @@ const ManageAstroSpots = () => {
       
       if (error) throw error;
       
-      toast.success("AstroSpot deleted successfully");
+      toast.success(t("AstroSpot deleted successfully", "观星点删除成功"));
       refetch();
     } catch (error) {
       console.error('Error deleting astro spot:', error);
-      toast.error("Failed to delete AstroSpot");
+      toast.error(t("Failed to delete AstroSpot", "删除观星点失败"));
     }
-  };
-
-  const handleEdit = (spot: AstroSpot) => {
-    navigate('/create-astro-spot', {
-      state: {
-        latitude: spot.latitude,
-        longitude: spot.longitude,
-        name: spot.name,
-        isEditing: true,
-        spotId: spot.id
-      }
-    });
   };
 
   if (!user) {
@@ -71,57 +53,58 @@ const ManageAstroSpots = () => {
       <div className="min-h-screen bg-background">
         <NavBar />
         <div className="container py-8">
-          <p>Please sign in to manage your AstroSpots.</p>
+          <p className="text-muted-foreground">
+            {t("Please sign in to manage your AstroSpots", "请登录以管理您的观星点")}
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
-      <div className="container py-8">
-        <h1 className="text-2xl font-bold mb-6">Manage Your AstroSpots</h1>
+      <div className="container py-8 px-4 md:px-6">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-50 mb-2">
+            {t("My AstroSpots", "我的观星点")}
+          </h1>
+          <p className="text-muted-foreground">
+            {t("Manage and track your favorite astronomical observation locations", "管理和追踪您最喜欢的天文观测地点")}
+          </p>
+        </div>
+
         {isLoading ? (
-          <p>Loading your AstroSpots...</p>
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+          </div>
         ) : spots && spots.length > 0 ? (
-          <div className="grid gap-4">
-            {spots.map((spot) => (
-              <Card key={spot.id} className="p-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold">{spot.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {spot.description || 'No description'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Location: {spot.latitude.toFixed(6)}, {spot.longitude.toFixed(6)}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(spot)}
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Edit</span>
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(spot.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete</span>
-                    </Button>
-                  </div>
-                </div>
-              </Card>
+          <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {spots.map((spot, index) => (
+              <motion.div
+                key={spot.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+              >
+                <LocationCard
+                  id={spot.id}
+                  name={spot.name}
+                  latitude={spot.latitude}
+                  longitude={spot.longitude}
+                  siqs={spot.siqs}
+                  timestamp={spot.created_at}
+                  isCertified={false}
+                />
+              </motion.div>
             ))}
           </div>
         ) : (
-          <p>You haven't created any AstroSpots yet.</p>
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">
+              {t("You haven't created any AstroSpots yet.", "您还没有创建任何观星点。")}
+            </p>
+          </div>
         )}
       </div>
     </div>
@@ -129,3 +112,4 @@ const ManageAstroSpots = () => {
 };
 
 export default ManageAstroSpots;
+
