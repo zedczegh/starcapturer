@@ -122,10 +122,12 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
             />
           </div>
 
-          <ImageUploader
-            images={formData.images}
-            onImagesChange={(images) => setFormData(prev => ({ ...prev, images }))}
-          />
+          {!isEditing && (
+            <ImageUploader
+              images={formData.images}
+              onImagesChange={(images) => setFormData(prev => ({ ...prev, images }))}
+            />
+          )}
 
           <div className="flex justify-end gap-4 pt-4">
             <DialogTrigger asChild>
@@ -134,7 +136,10 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
               </Button>
             </DialogTrigger>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? t("Creating...", "创建中...") : t("Create Astro Spot", "创建观星点")}
+              {isSubmitting 
+                ? (isEditing ? t("Updating...", "更新中...") : t("Creating...", "创建中..."))
+                : (isEditing ? t("Update Information", "更新信息") : t("Create Astro Spot", "创建观星点"))
+              }
             </Button>
           </div>
         </form>
