@@ -23,7 +23,8 @@ const LOCATION_TYPES = [
   { name: "Personal Favorite Observation Point", color: "#4ADE80" },
   { name: "Favored Observation Point of local hobby groups", color: "#FFD700" },
   { name: "Star Party venue", color: "#FFFF00" },
-  { name: "Regular Camping Site", color: "#808000" }
+  { name: "Regular Camping Site", color: "#808000" },
+  { name: "Astro Lodging", color: "#1A1F2C" }
 ];
 
 const LOCATION_ADVANTAGES = [
