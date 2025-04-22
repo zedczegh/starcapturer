@@ -144,12 +144,12 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       onLocationClick={handleLocationClicked}
       onMapClick={handleMapClick}
       zoom={initialZoom}
-      isMobile={isMobile}
       hoveredLocationId={hoveredLocationId}
       onMarkerHover={handleHover}
       handleTouchStart={handleTouchStart}
       handleTouchEnd={handleTouchEnd}
       handleTouchMove={handleTouchMove}
+      isMobile={isMobile}
       showRadiusCircles={true}
     />
   );

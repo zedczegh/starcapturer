@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -27,7 +28,7 @@ interface MapContentProps {
   mapRef: React.RefObject<any>;
   onMapReady: () => void;
   currentSiqs: number | null;
-  children: React.ReactNode; // Add children to allow extra markers
+  children?: React.ReactNode;
 }
 
 const MapContent: React.FC<MapContentProps> = ({

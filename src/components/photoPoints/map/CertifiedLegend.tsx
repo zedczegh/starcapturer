@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Star, Circle, BedDouble, Building, Hotel, ParkingCircle, Trees, Mountain, Tent, Telescope } from "lucide-react";
+import { Star, Circle, Building, Hotel, ParkingCircle, Trees, Mountain, Tent, Telescope } from "lucide-react";
 
 const legendItems = [
   {
