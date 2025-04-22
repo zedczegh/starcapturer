@@ -78,9 +78,6 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     });
   }, [navigate, position, locationName, t]);
 
-  // Create a custom marker icon with stronger z-index to ensure visibility
-  const userMarkerIcon = createCustomMarker('#e11d48', 'circle', 1.2);
-
   return (
     <>
       <RealTimeSiqsProvider
@@ -93,11 +90,8 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
       
       <Marker 
         position={position} 
-        icon={userMarkerIcon}
-        eventHandlers={{
-          click: handleRefreshSiqs
-        }}
-        zIndexOffset={1000} // Higher z-index to ensure it's always clickable
+        icon={createCustomMarker('#e11d48')}
+        onClick={handleRefreshSiqs}
       >
         <Popup closeOnClick={false} autoClose={false}>
           <div className="p-2 min-w-[200px]">
