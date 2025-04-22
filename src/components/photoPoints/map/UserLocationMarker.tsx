@@ -4,10 +4,11 @@ import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
-import { MapPin, ExternalLink } from 'lucide-react';
+import { MapPin, ExternalLink, Plus } from 'lucide-react';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserLocationMarkerProps {
   position: [number, number];
@@ -17,6 +18,7 @@ interface UserLocationMarkerProps {
 const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [siqsLoading, setSiqsLoading] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
@@ -71,6 +73,20 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     });
   };
 
+  const handleCreateAstroSpot = () => {
+    navigate('/create-astro-spot', {
+      state: {
+        latitude: position[0],
+        longitude: position[1],
+        name: locationName || t("Your Location", "您的位置"),
+      }
+    });
+  };
+
+  const handleClick = useCallback(() => {
+    handleRefreshSiqs();
+  }, [handleRefreshSiqs]);
+
   return (
     <>
       <RealTimeSiqsProvider
@@ -84,7 +100,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
       <Marker 
         position={position} 
         icon={createCustomMarker('#e11d48')}
-        onClick={handleRefreshSiqs}
+        onClick={handleClick}
       >
         <Popup closeOnClick={false} autoClose={false}>
           <div className="p-2 min-w-[200px]">
@@ -108,20 +124,32 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
               </div>
             </div>
             
-            <div className="flex items-center justify-between">
-              <SiqsScoreBadge 
-                score={realTimeSiqs} 
-                compact={true}
-                loading={siqsLoading}
-              />
-              <button
-                onClick={handleViewDetails}
-                className="text-xs text-primary hover:text-primary/80 px-2 py-1 flex items-center"
-                disabled={siqsLoading}
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                {t("View Details", "查看详情")}
-              </button>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <SiqsScoreBadge 
+                  score={realTimeSiqs} 
+                  compact={true}
+                  loading={siqsLoading}
+                />
+                <button
+                  onClick={handleViewDetails}
+                  className="text-xs text-primary hover:text-primary/80 px-2 py-1 flex items-center"
+                  disabled={siqsLoading}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  {t("View Details", "查看详情")}
+                </button>
+              </div>
+              
+              {user && (
+                <button
+                  onClick={handleCreateAstroSpot}
+                  className="text-xs bg-primary/10 hover:bg-primary/20 text-primary px-2 py-1.5 rounded flex items-center justify-center"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  {t("Create my Astro Spot", "创建我的观星点")}
+                </button>
+              )}
             </div>
           </div>
         </Popup>
