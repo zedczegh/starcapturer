@@ -15,14 +15,22 @@ interface CreateAstroSpotDialogProps {
   latitude: number;
   longitude: number;
   defaultName?: string;
+  isEditing?: boolean;
+  spotId?: string;
+  defaultDescription?: string;
   trigger?: React.ReactNode;
+  onClose?: () => void;
 }
 
 const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
   latitude,
   longitude,
   defaultName,
-  trigger
+  isEditing = false,
+  spotId,
+  defaultDescription = '',
+  trigger,
+  onClose
 }) => {
   const { t } = useLanguage();
   const {
@@ -30,7 +38,13 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
     setFormData,
     isSubmitting,
     handleSubmit,
-  } = useCreateAstroSpot(latitude, longitude, defaultName);
+  } = useCreateAstroSpot(latitude, longitude, defaultName, isEditing, spotId, defaultDescription);
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    }
+  };
 
   const defaultTrigger = (
     <Button className="gap-2">
@@ -40,7 +54,7 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
   );
 
   return (
-    <Dialog>
+    <Dialog open={true} onOpenChange={(open) => !open && handleClose()}>
       <DialogTrigger asChild>
         {trigger || defaultTrigger}
       </DialogTrigger>
@@ -48,7 +62,10 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <MapPin className="h-5 w-5 text-primary" />
-            {t("Create New Astro Spot", "创建新的观星点")}
+            {isEditing 
+              ? t("Edit Astro Spot", "编辑观星点")
+              : t("Create New Astro Spot", "创建新的观星点")
+            }
           </DialogTitle>
         </DialogHeader>
 

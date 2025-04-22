@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -9,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, MapPin, MessageCircle, Tag, Calendar, Star, ChevronLeft, Image } from "lucide-react";
+import { ExternalLink, Loader2, MapPin, MessageCircle, Tag, Calendar, Star, ChevronLeft, Tool } from "lucide-react";
 import { motion } from "framer-motion";
 import BackButton from "@/components/navigation/BackButton";
+import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 
 const AstroSpotProfile = () => {
   const { id } = useParams();
@@ -19,8 +19,8 @@ const AstroSpotProfile = () => {
   const navigate = useNavigate();
   const [showPhotosDialog, setShowPhotosDialog] = useState(false);
   const [showCommentsSheet, setShowCommentsSheet] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
-  // Query to fetch the astro spot data with all related information
   const { data: spot, isLoading, error } = useQuery({
     queryKey: ['astroSpot', id],
     queryFn: async () => {
@@ -28,7 +28,6 @@ const AstroSpotProfile = () => {
       
       console.log("Fetching astro spot with ID:", id);
       
-      // First, fetch the main astro spot data
       const { data: spotData, error: spotError } = await supabase
         .from('user_astro_spots')
         .select('*')
@@ -42,7 +41,6 @@ const AstroSpotProfile = () => {
       
       console.log("Fetched astro spot data:", spotData);
       
-      // Then fetch the spot types separately
       const { data: typeData, error: typeError } = await supabase
         .from('astro_spot_types')
         .select('*')
@@ -52,7 +50,6 @@ const AstroSpotProfile = () => {
         console.error("Error fetching spot types:", typeError);
       }
       
-      // Fetch the advantages separately
       const { data: advantageData, error: advantageError } = await supabase
         .from('astro_spot_advantages')
         .select('*')
@@ -62,7 +59,6 @@ const AstroSpotProfile = () => {
         console.error("Error fetching spot advantages:", advantageError);
       }
       
-      // Fetch the comments separately
       const { data: commentData, error: commentError } = await supabase
         .from('astro_spot_comments')
         .select('*, profiles:user_id(username, avatar_url)')
@@ -73,7 +69,6 @@ const AstroSpotProfile = () => {
         // Continue despite comment errors
       }
       
-      // Build the complete spot object
       const completeSpot = {
         ...spotData,
         astro_spot_types: typeData || [],
@@ -102,42 +97,42 @@ const AstroSpotProfile = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
-        <NavBar />
-        <div className="container py-12 flex justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    console.error("Error in astro spot query:", error);
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
-        <NavBar />
-        <div className="container py-12">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-200 mb-2">
-              {t("Error loading AstroSpot", "加载观星点时出错")}
-            </h2>
-            <p className="text-gray-400 mb-4">{error.message}</p>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/manage-astro-spots')}
-              className="mt-4"
-            >
-              {t("Back to My AstroSpots", "返回我的观星点")}
-            </Button>
+  if (isLoading || !spot) {
+    if (isLoading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
+          <NavBar />
+          <div className="container py-12 flex justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
           </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (!spot) {
+    if (error) {
+      console.error("Error in astro spot query:", error);
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
+          <NavBar />
+          <div className="container py-12">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-gray-200 mb-2">
+                {t("Error loading AstroSpot", "加载观星点时出错")}
+              </h2>
+              <p className="text-gray-400 mb-4">{error.message}</p>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/manage-astro-spots')}
+                className="mt-4"
+              >
+                {t("Back to My AstroSpots", "返回我的观星点")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
         <NavBar />
@@ -162,10 +157,8 @@ const AstroSpotProfile = () => {
 
   console.log("Rendering astro spot:", spot);
 
-  // Helper function to safely get username from profiles relation
   const getUsername = (comment) => {
     if (!comment || !comment.profiles) return t("Anonymous", "匿名用户");
-    // Handle both possible shapes of the data
     if (typeof comment.profiles === 'object') {
       return comment.profiles.username || t("Anonymous", "匿名用户");
     }
@@ -176,7 +169,6 @@ const AstroSpotProfile = () => {
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
       <div className="container max-w-4xl py-8 px-4 md:px-6">
-        {/* Back button */}
         <BackButton 
           destination="/manage-astro-spots" 
           className="text-gray-300 mb-6 hover:bg-cosmic-800/50"
@@ -186,9 +178,17 @@ const AstroSpotProfile = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden"
+          className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden relative"
         >
-          {/* Header Section */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-gray-300 hover:text-primary hover:bg-cosmic-800/50"
+            onClick={() => setShowEditDialog(true)}
+          >
+            <Tool className="h-5 w-5" />
+          </Button>
+
           <div className="bg-gradient-to-r from-cosmic-800/80 to-cosmic-800/40 p-6 border-b border-cosmic-700/30">
             <div className="flex justify-between items-start mb-4">
               <div className="space-y-1">
@@ -216,7 +216,6 @@ const AstroSpotProfile = () => {
               </Button>
             </div>
             
-            {/* SIQS Score */}
             {spot.siqs && (
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-cosmic-700/60 text-primary-foreground">
                 <span className="font-bold mr-1">{t("SIQS", "SIQS")}:</span>
@@ -234,9 +233,7 @@ const AstroSpotProfile = () => {
             )}
           </div>
           
-          {/* Content Section */}
           <div className="p-6 space-y-6">
-            {/* Description */}
             {spot.description && (
               <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
                 <h2 className="text-xl font-semibold text-gray-200 mb-3 flex items-center">
@@ -247,7 +244,6 @@ const AstroSpotProfile = () => {
               </div>
             )}
             
-            {/* Location Type */}
             {spot.astro_spot_types && spot.astro_spot_types.length > 0 && (
               <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
                 <h2 className="text-xl font-semibold text-gray-200 mb-3 flex items-center">
@@ -267,7 +263,6 @@ const AstroSpotProfile = () => {
               </div>
             )}
             
-            {/* Advantages */}
             {spot.astro_spot_advantages && spot.astro_spot_advantages.length > 0 && (
               <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
                 <h2 className="text-xl font-semibold text-gray-200 mb-3 flex items-center">
@@ -287,7 +282,6 @@ const AstroSpotProfile = () => {
               </div>
             )}
             
-            {/* Comments Section */}
             {spot.astro_spot_comments && spot.astro_spot_comments.length > 0 ? (
               <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
                 <div className="flex justify-between items-center mb-3">
@@ -305,7 +299,6 @@ const AstroSpotProfile = () => {
                   </Button>
                 </div>
                 
-                {/* Show just 2 comments in the preview */}
                 <div className="space-y-3">
                   {spot.astro_spot_comments.slice(0, 2).map((comment) => (
                     <div 
@@ -337,7 +330,6 @@ const AstroSpotProfile = () => {
         </motion.div>
       </div>
       
-      {/* Comments Sheet for mobile */}
       <Sheet open={showCommentsSheet} onOpenChange={setShowCommentsSheet}>
         <SheetContent side="bottom" className="h-[85vh] bg-cosmic-900 border-cosmic-700 text-gray-100 rounded-t-xl">
           <SheetHeader>
@@ -374,6 +366,19 @@ const AstroSpotProfile = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      {showEditDialog && spot && (
+        <CreateAstroSpotDialog
+          latitude={spot.latitude}
+          longitude={spot.longitude}
+          defaultName={spot.name}
+          isEditing={true}
+          spotId={spot.id}
+          defaultDescription={spot.description}
+          trigger={<div />}
+          onClose={() => setShowEditDialog(false)}
+        />
+      )}
     </div>
   );
 };
