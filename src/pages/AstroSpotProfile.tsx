@@ -17,6 +17,11 @@ import SpotDetails from '@/components/astro-spots/profile/SpotDetails';
 import SpotImages from '@/components/astro-spots/profile/SpotImages';
 import SpotComments from '@/components/astro-spots/profile/SpotComments';
 
+interface CommentProfile {
+  username?: string;
+  avatar_url?: string;
+}
+
 interface AstroSpotComment {
   id: string;
   content: string;
@@ -25,10 +30,23 @@ interface AstroSpotComment {
   spot_id: string;
   user_id: string;
   parent_id: string | null;
-  profiles?: {
-    username?: string;
-    avatar_url?: string;
-  } | null;
+  profiles?: CommentProfile | null;
+}
+
+interface SpotData {
+  id: string;
+  name: string;
+  description?: string;
+  latitude: number;
+  longitude: number;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  bortlescale?: number;
+  siqs?: number;
+  astro_spot_types: Array<{ id: string; type_name: string }>;
+  astro_spot_advantages: Array<{ id: string; advantage_name: string }>;
+  astro_spot_comments: AstroSpotComment[];
 }
 
 const AstroSpotProfile = () => {
@@ -90,12 +108,14 @@ const AstroSpotProfile = () => {
         // Continue despite comment errors
       }
       
-      const processedComments = (commentData || []).map((comment: AstroSpotComment) => ({
-        ...comment,
-        profiles: comment.profiles || { username: t("Anonymous", "匿名用户") }
-      }));
+      const processedComments = (commentData || []).map((comment: any) => {
+        return {
+          ...comment,
+          profiles: comment.profiles || { username: t("Anonymous", "匿名用户") }
+        };
+      });
       
-      const completeSpot = {
+      const completeSpot: SpotData = {
         ...spotData,
         astro_spot_types: typeData || [],
         astro_spot_advantages: advantageData || [],
@@ -216,14 +236,6 @@ const AstroSpotProfile = () => {
 
   console.log("Rendering astro spot:", spot);
 
-  const getUsername = (comment) => {
-    if (!comment || !comment.profiles) return t("Anonymous", "匿名用户");
-    if (typeof comment.profiles === 'object') {
-      return comment.profiles.username || t("Anonymous", "匿名用户");
-    }
-    return t("Anonymous", "匿名用户");
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
@@ -260,7 +272,7 @@ const AstroSpotProfile = () => {
             )}
             
             <SpotImages 
-              images={spotImages || []} 
+              images={spot?.imagesToDisplay || []} 
               onShowDialog={() => setShowPhotosDialog(true)} 
             />
             
@@ -280,7 +292,7 @@ const AstroSpotProfile = () => {
             <DialogTitle>{t("Photo Album", "照片集")}: {spot?.name}</DialogTitle>
           </DialogHeader>
           <SpotImages 
-            images={spotImages || []} 
+            images={spot?.imagesToDisplay || []} 
             onShowDialog={() => {}} 
           />
         </DialogContent>
