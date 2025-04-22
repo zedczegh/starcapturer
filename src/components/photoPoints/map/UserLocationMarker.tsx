@@ -4,11 +4,10 @@ import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
-import { MapPin, ExternalLink, Plus } from 'lucide-react';
+import { MapPin, ExternalLink, PlusCircle } from 'lucide-react';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface UserLocationMarkerProps {
   position: [number, number];
@@ -18,7 +17,6 @@ interface UserLocationMarkerProps {
 const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [siqsLoading, setSiqsLoading] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
@@ -68,15 +66,16 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     });
   };
 
-  const handleCreateAstroSpot = useCallback(() => {
-    navigate(`/astro-spot/create`, {
+  const handleCreateAstroSpot = () => {
+    navigate(`/create-astro-spot`, {
       state: {
         latitude: position[0],
         longitude: position[1],
         name: locationName || t("Your Location", "您的位置"),
+        isUserLocation: true
       }
     });
-  }, [navigate, position, locationName, t]);
+  };
 
   return (
     <>
@@ -115,33 +114,29 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
               </div>
             </div>
             
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mt-2">
               <SiqsScoreBadge 
                 score={realTimeSiqs} 
                 compact={true}
                 loading={siqsLoading}
               />
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={handleViewDetails}
-                className="text-xs text-primary hover:text-primary/80 px-2 py-1 flex items-center justify-center bg-primary/10 rounded-md"
-                disabled={siqsLoading}
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                {t("View Details", "查看详情")}
-              </button>
-              
-              {user && (
+              <div className="flex gap-2">
+                <button
+                  onClick={handleViewDetails}
+                  className="text-xs text-primary hover:text-primary/80 px-2 py-1 flex items-center"
+                  disabled={siqsLoading}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  {t("View Details", "查看详情")}
+                </button>
                 <button
                   onClick={handleCreateAstroSpot}
-                  className="text-xs text-primary hover:text-primary/80 px-2 py-1 flex items-center justify-center bg-primary/10 rounded-md"
+                  className="text-xs text-emerald-500 hover:text-emerald-400 px-2 py-1 flex items-center"
                 >
-                  <Plus className="h-3 w-3 mr-1" />
-                  {t("Create my Astro Spot", "创建我的天文观测点")}
+                  <PlusCircle className="h-3 w-3 mr-1" />
+                  {t("Create my Astro Spot", "创建我的天文点")}
                 </button>
-              )}
+              </div>
             </div>
           </div>
         </Popup>

@@ -15,7 +15,7 @@ interface ProfileFormValues {
   username: string;
 }
 
-const Profile = () => {
+export const Profile = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
