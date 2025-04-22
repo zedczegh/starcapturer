@@ -41,7 +41,8 @@ export const useCreateAstroSpot = (
     longitude: initialLongitude,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [isSuccess, setIsSuccess] = useState(false);
+
   useEffect(() => {
     const fetchExistingData = async () => {
       if (isEditing && spotId) {
@@ -103,6 +104,7 @@ export const useCreateAstroSpot = (
     }
 
     setIsSubmitting(true);
+    setIsSuccess(false);
     try {
       const userIdToUse = user?.id;
       if (!userIdToUse) throw new Error(t("User ID not found", "未找到用户ID"));
@@ -246,6 +248,7 @@ export const useCreateAstroSpot = (
         ? t("Error updating astro spot", "更新观星点时出错") 
         : t("Error creating astro spot", "创建观星点时出错")
       );
+      setIsSuccess(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -256,5 +259,6 @@ export const useCreateAstroSpot = (
     setFormData,
     isSubmitting,
     handleSubmit,
+    isSuccess,
   };
 };

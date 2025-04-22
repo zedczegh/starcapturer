@@ -38,6 +38,7 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
     setFormData,
     isSubmitting,
     handleSubmit,
+    isSuccess // New state to track submission success
   } = useCreateAstroSpot(latitude, longitude, defaultName, isEditing, spotId, defaultDescription);
 
   const handleClose = () => {
@@ -52,6 +53,13 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
       {t("Create New Astro Spot", "创建新的观星点")}
     </Button>
   );
+
+  // Automatically close the dialog when submission is successful
+  React.useEffect(() => {
+    if (isSuccess) {
+      handleClose();
+    }
+  }, [isSuccess]);
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && handleClose()}>
@@ -149,3 +157,4 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
 };
 
 export default CreateAstroSpotDialog;
+
