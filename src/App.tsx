@@ -17,8 +17,6 @@ import ShareLocation from './pages/ShareLocation';
 import Collections from './pages/Collections';
 import Profile from './pages/Profile';
 import PreferencesPage from './pages/Preferences';
-import CreateAstroSpot from '@/pages/CreateAstroSpot';
-import MyAstroSpots from '@/pages/MyAstroSpots';
 import './App.css';
 
 // Create React Query client
@@ -53,8 +51,6 @@ function App() {
                   <Route path="/collections" element={<Collections />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/settings" element={<PreferencesPage />} />
-                  <Route path="/create-astro-spot" element={<CreateAstroSpot />} />
-                  <Route path="/my-astro-spots" element={<MyAstroSpots />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </AuthProvider>

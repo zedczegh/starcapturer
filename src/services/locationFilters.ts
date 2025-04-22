@@ -1,155 +1,204 @@
-
-// Optimized location filtering and generation services
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { isWaterLocation, isValidAstronomyLocation } from '@/utils/validation';
+import { calculateDistance } from '@/lib/api/coordinates';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 /**
- * Generate a random point within a radius of a given center point
+ * Sort locations by quality and distance using enhanced algorithms
+ * @param locations Array of locations
+ * @returns Sorted array of locations
+ */
+export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstroSpot[] {
+  return [...locations].sort((a, b) => {
+    // First prioritize certified locations
+    if ((a.isDarkSkyReserve || a.certification) && !(b.isDarkSkyReserve || b.certification)) {
+      return -1;
+    }
+    if (!(a.isDarkSkyReserve || a.certification) && (b.isDarkSkyReserve || b.certification)) {
+      return 1;
+    }
+    
+    // If both are certified or both are not certified, check if they're in the same category
+    const aIsCertified = a.isDarkSkyReserve || a.certification;
+    const bIsCertified = b.isDarkSkyReserve || b.certification;
+    
+    // Use sophisticated scoring that considers multiple factors
+    if (aIsCertified && bIsCertified) {
+      return calculateLocationScore(b) - calculateLocationScore(a);
+    }
+    
+    if (!aIsCertified && !bIsCertified) {
+      return calculateLocationScore(b) - calculateLocationScore(a);
+    }
+    
+    // Default case: sort by SIQS score
+    return (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0);
+  });
+}
+
+/**
+ * Calculate a comprehensive location score considering multiple factors
+ * @param location The location to score
+ * @returns A normalized score (higher is better)
+ */
+function calculateLocationScore(location: SharedAstroSpot): number {
+  // Base score from SIQS
+  const siqsScore = getSiqsScore(location.siqs) || 0;
+  
+  // Distance factor (closer is better, but with diminishing returns)
+  const distanceFactor = location.distance 
+    ? Math.max(0, 1 - Math.sqrt(location.distance) / 40)
+    : 0;
+  
+  // Bortle scale factor (lower is better)
+  const bortleFactor = location.bortleScale
+    ? Math.max(0, (10 - location.bortleScale) / 9)
+    : 0.5;
+  
+  // Certification bonus
+  const certificationBonus = (location.isDarkSkyReserve || location.certification) ? 2 : 0;
+  
+  // Weight the factors (SIQS has the highest weight)
+  return (siqsScore * 0.6) + (distanceFactor * 0.2) + (bortleFactor * 0.1) + certificationBonus;
+}
+
+/**
+ * Filter locations by criteria with advanced filtering algorithms
+ * @param locations Array of locations to filter
+ * @returns Filtered array of locations
+ */
+export function filterLocations(locations: SharedAstroSpot[]): SharedAstroSpot[] {
+  if (!locations || !Array.isArray(locations)) {
+    console.warn("Invalid locations array passed to filterLocations");
+    return [];
+  }
+  
+  return locations.filter(point => {
+    // Always include certified locations
+    if (point.isDarkSkyReserve || point.certification) {
+      return true;
+    }
+    
+    // Basic coordinate validation
+    if (!point.latitude || !point.longitude || 
+        !isFinite(point.latitude) || !isFinite(point.longitude)) {
+      return false;
+    }
+    
+    // Water check with relaxed validation for calculated spots
+    if (isWaterLocation(point.latitude, point.longitude, false)) {
+      return false;
+    }
+    
+    // Apply astronomy validity check with relaxed parameters
+    return isValidAstronomyLocation(point.latitude, point.longitude, point.name);
+  });
+}
+
+/**
+ * Generate a random point within a specified radius using enhanced algorithms
  * @param centerLat Center latitude
  * @param centerLng Center longitude
  * @param radius Radius in kilometers
- * @returns Object with latitude, longitude and distance
+ * @returns Random point object with additional metadata
  */
-export function generateRandomPoint(centerLat: number, centerLng: number, radius: number): {
-  latitude: number;
-  longitude: number;
-  distance: number;
-} {
-  // Earth's radius in kilometers
-  const earthRadius = 6371;
+export function generateRandomPoint(
+  centerLat: number, 
+  centerLng: number, 
+  radius: number
+): { latitude: number, longitude: number, distance: number } {
+  // Use improved point generation for more natural distribution
   
-  // Convert radius from kilometers to radians
-  const radiusInRadians = radius / earthRadius;
+  // Instead of uniform distribution, use squared root for more points near center
+  // This creates a more natural density gradient
+  const r = radius * Math.sqrt(Math.random()); // Squared root distribution
+  const theta = Math.random() * 2 * Math.PI; // Random angle
   
-  // Convert coordinates to radians
-  const centerLatRad = toRadians(centerLat);
-  const centerLngRad = toRadians(centerLng);
+  // Convert to cartesian coordinates
+  const x = r * Math.cos(theta);
+  const y = r * Math.sin(theta);
   
-  // Generate random distance within radius
-  // Use square root to ensure uniform distribution
-  const randomDistance = radiusInRadians * Math.sqrt(Math.random());
+  // Convert to lat/lng, accounting for Earth's curvature
+  // 111.32 km per degree of latitude is approximate at the equator
+  // Need to adjust longitude based on latitude (Earth narrows at higher latitudes)
+  const latRadians = centerLat * (Math.PI / 180);
+  const kmPerDegreeLat = 111.32; // km per degree latitude (approximate)
+  const kmPerDegreeLng = 111.32 * Math.cos(latRadians); // Adjust for latitude
   
-  // Generate random angle
-  const randomAngle = Math.random() * Math.PI * 2;
-  
-  // Calculate new random point coordinates
-  const newLatRad = Math.asin(
-    Math.sin(centerLatRad) * Math.cos(randomDistance) +
-    Math.cos(centerLatRad) * Math.sin(randomDistance) * Math.cos(randomAngle)
-  );
-  
-  const newLngRad = centerLngRad + Math.atan2(
-    Math.sin(randomAngle) * Math.sin(randomDistance) * Math.cos(centerLatRad),
-    Math.cos(randomDistance) - Math.sin(centerLatRad) * Math.sin(newLatRad)
-  );
-  
-  // Convert back to degrees
-  const newLat = toDegrees(newLatRad);
-  const newLng = toDegrees(newLngRad);
+  const newLat = centerLat + (y / kmPerDegreeLat);
+  const newLng = centerLng + (x / kmPerDegreeLng);
   
   // Calculate actual distance using Haversine formula
-  const distanceInKm = calculateDistance(centerLat, centerLng, newLat, newLng);
+  const distance = calculateDistance(centerLat, centerLng, newLat, newLng);
   
   return {
     latitude: newLat,
     longitude: newLng,
-    distance: distanceInKm
+    distance
   };
 }
 
 /**
- * Calculate distance between two points using Haversine formula
- * @param lat1 First latitude
- * @param lng1 First longitude
- * @param lat2 Second latitude
- * @param lng2 Second longitude
- * @returns Distance in kilometers
- */
-function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  // Earth's radius in kilometers
-  const radius = 6371;
-  
-  // Convert coordinates to radians
-  const lat1Rad = toRadians(lat1);
-  const lng1Rad = toRadians(lng1);
-  const lat2Rad = toRadians(lat2);
-  const lng2Rad = toRadians(lng2);
-  
-  // Differences
-  const dLat = lat2Rad - lat1Rad;
-  const dLng = lng2Rad - lng1Rad;
-  
-  // Haversine formula
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  
-  return radius * c;
-}
-
-/**
- * Convert degrees to radians
- * @param degrees Angle in degrees
- * @returns Angle in radians
- */
-function toRadians(degrees: number): number {
-  return degrees * (Math.PI / 180);
-}
-
-/**
- * Convert radians to degrees
- * @param radians Angle in radians
- * @returns Angle in degrees
- */
-function toDegrees(radians: number): number {
-  return radians * (180 / Math.PI);
-}
-
-/**
- * Generate a grid of points around the center
+ * Generate multiple points with improved distribution to cover the area more evenly
  * @param centerLat Center latitude
  * @param centerLng Center longitude
  * @param radius Radius in kilometers
- * @param gridSize Number of points in each direction
- * @returns Array of points with latitude, longitude and distance
+ * @param count Number of points to generate
  */
-export function generatePointGrid(
+export function generateDistributedPoints(
   centerLat: number,
   centerLng: number,
   radius: number,
-  gridSize: number = 5
-): Array<{ latitude: number; longitude: number; distance: number }> {
-  const points = [];
+  count: number = 20
+): { latitude: number, longitude: number, distance: number }[] {
+  const points: { latitude: number, longitude: number, distance: number }[] = [];
   
-  // Calculate approximate degree ranges
-  // 1 degree of latitude is ~111km, 1 degree of longitude varies with latitude
-  const latRange = radius / 111;
-  const lngRange = radius / (111 * Math.cos(toRadians(centerLat)));
+  // Generate initial random points
+  for (let i = 0; i < count * 2; i++) {
+    points.push(generateRandomPoint(centerLat, centerLng, radius));
+  }
   
-  // Generate grid of points
-  for (let i = -gridSize; i <= gridSize; i++) {
-    for (let j = -gridSize; j <= gridSize; j++) {
-      // Skip center point
-      if (i === 0 && j === 0) continue;
+  // Apply spatial distribution algorithm to select well-distributed subset
+  // This uses a simple greedy approach to maximize minimum distance between points
+  const selectedPoints: { latitude: number, longitude: number, distance: number }[] = [];
+  
+  // Add first point
+  if (points.length > 0) {
+    selectedPoints.push(points[0]);
+  }
+  
+  // Add remaining points by maximizing minimum distance to existing points
+  while (selectedPoints.length < count && points.length > selectedPoints.length) {
+    let bestPoint = null;
+    let bestMinDist = -1;
+    
+    for (const candidate of points) {
+      if (selectedPoints.some(p => p === candidate)) continue;
       
-      // Calculate grid coordinates
-      const factor = 0.8; // Adjustment factor to ensure points are within radius
-      const lat = centerLat + (i / gridSize) * latRange * factor;
-      const lng = centerLng + (j / gridSize) * lngRange * factor;
-      
-      // Calculate actual distance
-      const distance = calculateDistance(centerLat, centerLng, lat, lng);
-      
-      // Only include points within the specified radius
-      if (distance <= radius) {
-        points.push({
-          latitude: lat,
-          longitude: lng,
-          distance
-        });
+      // Find minimum distance to any existing selected point
+      let minDist = Infinity;
+      for (const selected of selectedPoints) {
+        const dist = calculateDistance(
+          candidate.latitude, candidate.longitude,
+          selected.latitude, selected.longitude
+        );
+        minDist = Math.min(minDist, dist);
       }
+      
+      // If this candidate has a larger minimum distance, it's better
+      if (minDist > bestMinDist) {
+        bestMinDist = minDist;
+        bestPoint = candidate;
+      }
+    }
+    
+    // Add best candidate to selected points
+    if (bestPoint) {
+      selectedPoints.push(bestPoint);
+    } else {
+      break; // No more candidates
     }
   }
   
-  return points;
+  return selectedPoints;
 }

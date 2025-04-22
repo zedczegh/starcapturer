@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot, getRecommendedPhotoPoints } from '@/lib/api/astroSpots';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { getCachedLocations, cacheLocations } from '@/services/locationCacheService';
@@ -56,49 +55,13 @@ export async function findCalculatedLocations(
     return cachedLocations;
   }
 
-  // Generate multiple calculated points in parallel for better performance
-  const generatedPoints: SharedAstroSpot[] = [];
-  const batchSize = Math.min(20, limit * 2); // Generate more points than needed to ensure quality
-  const maxAttempts = 50; // Maximum number of attempts to find good locations
+  // Use our enhanced spot generation service with batched processing
+  const spots = await generateQualitySpots(latitude, longitude, radius, limit, 4);
   
-  let attempts = 0;
-  
-  while (generatedPoints.length < limit && attempts < maxAttempts) {
-    // Generate a batch of points
-    const pointPromises: Promise<SharedAstroSpot | null>[] = [];
-    
-    for (let i = 0; i < batchSize; i++) {
-      pointPromises.push(generateCalculatedPoint(latitude, longitude, radius));
-    }
-    
-    // Wait for all point calculations to complete
-    const batchResults = await Promise.all(pointPromises);
-    const validPoints = batchResults.filter(p => p !== null) as SharedAstroSpot[];
-    
-    // Add new valid points to our collection
-    for (const point of validPoints) {
-      if (generatedPoints.length < limit) {
-        // Check if this point is unique enough from others
-        const isDuplicate = generatedPoints.some(existing => 
-          Math.abs(existing.latitude - point.latitude) < 0.05 &&
-          Math.abs(existing.longitude - point.longitude) < 0.05
-        );
-        
-        if (!isDuplicate) {
-          generatedPoints.push(point);
-        }
-      } else {
-        break;
-      }
-    }
-    
-    attempts++;
-  }
-  
-  if (generatedPoints.length > 0) {
+  if (spots.length > 0) {
     // Cache the results
-    cacheLocations('calculated', latitude, longitude, radius, generatedPoints);
-    return generatedPoints;
+    cacheLocations('calculated', latitude, longitude, radius, spots);
+    return spots;
   }
 
   // Try larger radius if needed with gradual increase
