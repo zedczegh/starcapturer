@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -18,7 +17,6 @@ import Collections from './pages/Collections';
 import Profile from './pages/Profile';
 import PreferencesPage from './pages/Preferences';
 import CreateAstroSpot from '@/pages/CreateAstroSpot';
-import MyAstroSpots from '@/pages/MyAstroSpots';
 import './App.css';
 
 // Create React Query client
@@ -54,7 +52,6 @@ function App() {
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/settings" element={<PreferencesPage />} />
                   <Route path="/create-astro-spot" element={<CreateAstroSpot />} />
-                  <Route path="/my-astro-spots" element={<MyAstroSpots />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </AuthProvider>
