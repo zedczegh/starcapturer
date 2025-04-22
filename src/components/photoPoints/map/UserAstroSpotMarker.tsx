@@ -44,14 +44,19 @@ const UserAstroSpotMarker: React.FC<UserAstroSpotMarkerProps> = ({ spot, onClick
   const markerIcon = React.useMemo(() => createTelescopeMarkerIcon(), []);
   // Use a static link to the profile of this user AstroSpot
   const profileUrl = `/my-astrospots/${spot.id}`;
+  
+  const handleMarkerClick = () => {
+    if (onClick) {
+      onClick(spot);
+    }
+  };
 
   return (
     <Marker
       position={[spot.latitude, spot.longitude]}
       icon={markerIcon}
-      eventHandlers={{
-        click: () => onClick?.(spot),
-      }}
+      // Use onClick prop instead of eventHandlers
+      onClick={handleMarkerClick}
     >
       <Popup>
         <div className="flex flex-col items-center gap-2 min-w-[180px]">

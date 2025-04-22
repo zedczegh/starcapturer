@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
@@ -58,19 +57,15 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     onLocationUpdate
   });
   
-  // Add persistent storage for locations
   useEffect(() => {
     if (locations && locations.length > 0) {
       try {
-        // Store ALL locations in session storage for persistence
         const storageKey = activeView === 'certified' ? 
           'persistent_certified_locations' : 
           'persistent_calculated_locations';
         
-        // Load existing locations first to avoid overwriting 
         const existingData = sessionStorage.getItem(storageKey);
         
-        // Only store the most important fields to reduce storage size
         const simplifiedLocations = locations.map(loc => ({
           id: loc.id || `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`,
           name: loc.name || 'Unknown Location',
@@ -88,10 +83,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
           try {
             const existingLocations = JSON.parse(existingData);
             
-            // Create a map to deduplicate by coordinates
             const locationMap = new Map();
             
-            // Add existing locations first
             if (Array.isArray(existingLocations)) {
               existingLocations.forEach(loc => {
                 if (loc && loc.latitude && loc.longitude) {
@@ -101,7 +94,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
               });
             }
             
-            // Add new locations, overwriting existing ones if they have the same coordinates
             simplifiedLocations.forEach(loc => {
               if (loc && loc.latitude && loc.longitude) {
                 const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
@@ -109,14 +101,12 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
               }
             });
             
-            // Convert back to array
             combinedLocations = Array.from(locationMap.values());
           } catch (err) {
             console.error('Error parsing existing locations:', err);
           }
         }
         
-        // Store the merged locations
         sessionStorage.setItem(storageKey, JSON.stringify(combinedLocations));
         console.log(`Stored ${combinedLocations.length} ${activeView} locations to session storage`);
       } catch (err) {
@@ -125,7 +115,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     }
   }, [locations, activeView]);
   
-  // Load persisted locations on component mount
   useEffect(() => {
     try {
       const storageKey = activeView === 'certified' ? 
@@ -146,25 +135,22 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   
   return (
     <MapContainer
+      center={mapCenter}
       userLocation={userLocation}
       locations={optimizedLocations}
       searchRadius={searchRadius}
       activeView={activeView}
-      mapReady={mapReady}
-      handleMapReady={handleMapReady}
-      handleLocationClicked={handleLocationClicked}
-      handleMapClick={handleMapClick}
-      mapCenter={mapCenter}
-      initialZoom={initialZoom}
-      mapContainerHeight={mapContainerHeight}
+      onMapReady={handleMapReady}
+      onLocationClick={handleLocationClicked}
+      onMapClick={handleMapClick}
+      zoom={initialZoom}
       isMobile={isMobile}
       hoveredLocationId={hoveredLocationId}
-      handleHover={handleHover}
+      onMarkerHover={handleHover}
       handleTouchStart={handleTouchStart}
       handleTouchEnd={handleTouchEnd}
       handleTouchMove={handleTouchMove}
-      handleGetLocation={handleGetLocation}
-      onLegendToggle={handleLegendToggle}
+      showRadiusCircles={true}
     />
   );
 };

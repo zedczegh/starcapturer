@@ -72,7 +72,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
     >
       {/* Render user astro spot markers as overlays */}
       {userSpots.map((spot) => (
-        <UserAstroSpotMarker key={spot.id} spot={spot} />
+        <UserAstroSpotMarker key={spot.id} spot={spot} onClick={onLocationClick} />
       ))}
     </LazyMapContainer>
   );

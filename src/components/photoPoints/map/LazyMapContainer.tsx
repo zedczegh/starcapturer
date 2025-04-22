@@ -28,6 +28,7 @@ interface LazyMapContainerProps {
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
+  children?: React.ReactNode;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -47,7 +48,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   handleTouchMove,
   isMobile,
   useMobileMapFixer = false,
-  showRadiusCircles = false
+  showRadiusCircles = false,
+  children
 }) => {
   const [mapReady, setMapReady] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
@@ -179,7 +181,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         mapRef={mapRef}
         onMapReady={handleMapReady}
         currentSiqs={currentSiqs}
-      />
+      >
+        {children}
+      </MapContent>
     </div>
   );
 };
