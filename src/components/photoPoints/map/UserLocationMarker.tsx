@@ -1,13 +1,13 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
-import { MapPin, ExternalLink } from 'lucide-react';
+import { MapPin, ExternalLink, Plus } from 'lucide-react';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserLocationMarkerProps {
   position: [number, number];
@@ -17,6 +17,7 @@ interface UserLocationMarkerProps {
 const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [siqsLoading, setSiqsLoading] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
@@ -33,7 +34,6 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     setTimeout(() => setForceUpdate(false), 100);
   };
 
-  // Fetch location name when position changes
   useEffect(() => {
     const fetchLocationName = async () => {
       setIsLoadingLocation(true);
@@ -50,12 +50,8 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     fetchLocationName();
   }, [position, language]);
 
-  // Force refresh SIQS data when position changes
   useEffect(() => {
-    // Trigger refresh when position changes
     handleRefreshSiqs();
-    
-    // Also reset the state to ensure we get fresh data
     setSiqsLoading(true);
     setRealTimeSiqs(null);
   }, [position]);
@@ -70,6 +66,16 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
       }
     });
   };
+
+  const handleCreateAstroSpot = useCallback(() => {
+    navigate(`/astro-spot/create`, {
+      state: {
+        latitude: position[0],
+        longitude: position[1],
+        name: locationName || t("Your Location", "您的位置"),
+      }
+    });
+  }, [navigate, position, locationName, t]);
 
   return (
     <>
@@ -108,20 +114,33 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
               </div>
             </div>
             
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-2">
               <SiqsScoreBadge 
                 score={realTimeSiqs} 
                 compact={true}
                 loading={siqsLoading}
               />
+            </div>
+            
+            <div className="flex flex-col gap-2">
               <button
                 onClick={handleViewDetails}
-                className="text-xs text-primary hover:text-primary/80 px-2 py-1 flex items-center"
+                className="text-xs text-primary hover:text-primary/80 px-2 py-1 flex items-center justify-center bg-primary/10 rounded-md"
                 disabled={siqsLoading}
               >
                 <ExternalLink className="h-3 w-3 mr-1" />
                 {t("View Details", "查看详情")}
               </button>
+              
+              {user && (
+                <button
+                  onClick={handleCreateAstroSpot}
+                  className="text-xs text-primary hover:text-primary/80 px-2 py-1 flex items-center justify-center bg-primary/10 rounded-md"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  {t("Create my Astro Spot", "创建我的天文观测点")}
+                </button>
+              )}
             </div>
           </div>
         </Popup>
