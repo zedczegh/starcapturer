@@ -1,15 +1,21 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useQueryClient } from '@tanstack/react-query';
-import { useSpotDataFetcher } from './astro-spots/useSpotDataFetcher';
-import { useSpotFormValidation } from './astro-spots/useSpotFormValidation';
-import { useSpotImageUpload } from './astro-spots/useSpotImageUpload';
-import { useUserRole } from './useUserRole';
+
+interface CreateAstroSpotForm {
+  locationName: string;
+  selectedTypes: string[];
+  selectedAdvantages: string[];
+  description: string;
+  images: File[];
+  latitude: number;
+  longitude: number;
+}
 
 export const useCreateAstroSpot = (
   initialLatitude: number, 
@@ -20,20 +26,17 @@ export const useCreateAstroSpot = (
   initialDescription = ''
 ) => {
   const { user } = useAuth();
+  const { isAdmin } = useUserRole();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const queryClient = useQueryClient();
-  const { fetchExistingData } = useSpotDataFetcher(isEditing, spotId);
-  const { validateForm } = useSpotFormValidation();
-  const { uploadImages } = useSpotImageUpload();
-  const { isAdmin } = useUserRole();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CreateAstroSpotForm>({
     locationName: initialName || '',
-    selectedTypes: [] as string[],
-    selectedAdvantages: [] as string[],
+    selectedTypes: [],
+    selectedAdvantages: [],
     description: initialDescription,
-    images: [] as File[],
+    images: [],
     latitude: initialLatitude,
     longitude: initialLongitude,
   });
@@ -41,30 +44,67 @@ export const useCreateAstroSpot = (
   const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
-    const initializeData = async () => {
-      const data = await fetchExistingData();
-      setFormData(prev => ({
-        ...prev,
-        selectedTypes: data.types,
-        selectedAdvantages: data.advantages
-      }));
+    const fetchExistingData = async () => {
+      if (isEditing && spotId) {
+        try {
+          console.log('Fetching existing data for spot:', spotId);
+          const { data: typeData, error: typeError } = await supabase
+            .from('astro_spot_types')
+            .select('*')
+            .eq('spot_id', spotId);
+            
+          if (typeError) throw typeError;
+          
+          const { data: advantageData, error: advantageError } = await supabase
+            .from('astro_spot_advantages')
+            .select('*')
+            .eq('spot_id', spotId);
+            
+          if (advantageError) throw advantageError;
+          
+          console.log('Fetched types:', typeData);
+          console.log('Fetched advantages:', advantageData);
+          
+          setFormData(prev => ({
+            ...prev,
+            selectedTypes: typeData.map(type => type.type_name),
+            selectedAdvantages: advantageData.map(advantage => advantage.advantage_name)
+          }));
+          
+        } catch (error) {
+          console.error('Error fetching spot data:', error);
+          toast.error(t("Failed to load spot data", "加载观星点数据失败"));
+        }
+      }
     };
     
-    initializeData();
-  }, [isEditing, spotId]);
+    fetchExistingData();
+  }, [isEditing, spotId, t]);
+
+  const validateForm = (): string | null => {
+    if (!user) {
+      return t("You must be logged in to create an astro spot", "您必须登录才能创建观星点");
+    }
+    if (!formData.locationName.trim()) {
+      return t("Location name is required", "位置名称是必填项");
+    }
+    if (!isAdmin && formData.selectedTypes.length === 0) {
+      return t("Please select at least one location type", "请至少选择一个位置类型");
+    }
+    return null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const validationError = validateForm(formData.locationName, formData.selectedTypes);
+    const validationError = validateForm();
     if (validationError) {
-      toast.error(t(validationError));
+      toast.error(validationError);
       return;
     }
 
     setIsSubmitting(true);
     setIsSuccess(false);
-    
     try {
       const userIdToUse = user?.id;
       if (!userIdToUse) throw new Error(t("User ID not found", "未找到用户ID"));
@@ -133,13 +173,21 @@ export const useCreateAstroSpot = (
         }
 
         if (formData.images.length > 0) {
-          await uploadImages(formData.images, userIdToUse, spotId);
+          const imagePromises = formData.images.map(async (image, index) => {
+            const fileName = `${spotId}/${Date.now()}_${index}.${image.name.split('.').pop()}`;
+            const { error: uploadError } = await supabase.storage
+              .from('astro_spot_images')
+              .upload(fileName, image);
+            
+            if (uploadError) throw uploadError;
+          });
+
+          await Promise.all(imagePromises);
         }
 
-        queryClient.invalidateQueries({ queryKey: ['astroSpot', spotId] });
+        queryClient.invalidateQueries({queryKey: ['astroSpot', spotId]});
         
         toast.success(t("Astro spot updated successfully!", "观星点更新成功！"));
-        setIsSuccess(true);
         navigate(`/astro-spot/${spotId}`);
       } else {
         const { data: spot, error: spotError } = await supabase
@@ -157,7 +205,16 @@ export const useCreateAstroSpot = (
         if (spotError) throw spotError;
 
         if (formData.images.length > 0) {
-          await uploadImages(formData.images, userIdToUse, spot.id);
+          const imagePromises = formData.images.map(async (image, index) => {
+            const fileName = `${userIdToUse}/${spot.id}/${Date.now()}_${index}.${image.name.split('.').pop()}`;
+            const { error: uploadError } = await supabase.storage
+              .from('astro_spot_images')
+              .upload(fileName, image);
+            
+            if (uploadError) throw uploadError;
+          });
+
+          await Promise.all(imagePromises);
         }
 
         if (isAdmin || formData.selectedTypes.length > 0) {
@@ -182,7 +239,6 @@ export const useCreateAstroSpot = (
           if (advantagesError) throw advantagesError;
         }
 
-        setIsSuccess(true);
         toast.success(t("Astro spot created successfully!", "观星点创建成功！"));
         navigate(`/location/${formData.latitude.toFixed(6)},${formData.longitude.toFixed(6)}`);
       }

@@ -8,47 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { Loader2, Pencil } from 'lucide-react';
+import { ExternalLink, Loader2, MapPin, MessageCircle, Tag, Calendar, Star, ChevronLeft, Wrench, Album } from "lucide-react";
 import { motion } from "framer-motion";
 import BackButton from "@/components/navigation/BackButton";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
-import SpotHeader from '@/components/astro-spots/profile/SpotHeader';
-import SpotDetails from '@/components/astro-spots/profile/SpotDetails';
-import SpotImages from '@/components/astro-spots/profile/SpotImages';
-import SpotComments from '@/components/astro-spots/profile/SpotComments';
-import LinksFooter from '@/components/links/LinksFooter';
-
-interface CommentProfile {
-  username?: string;
-  avatar_url?: string;
-}
-
-interface AstroSpotComment {
-  id: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-  spot_id: string;
-  user_id: string;
-  parent_id: string | null;
-  profiles?: CommentProfile | null;
-}
-
-interface SpotData {
-  id: string;
-  name: string;
-  description?: string;
-  latitude: number;
-  longitude: number;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-  bortlescale?: number;
-  siqs?: number;
-  astro_spot_types: Array<{ id: string; type_name: string }>;
-  astro_spot_advantages: Array<{ id: string; advantage_name: string }>;
-  astro_spot_comments: AstroSpotComment[];
-}
 
 const AstroSpotProfile = () => {
   const { id } = useParams();
@@ -98,10 +61,7 @@ const AstroSpotProfile = () => {
       
       const { data: commentData, error: commentError } = await supabase
         .from('astro_spot_comments')
-        .select(`
-          *,
-          profiles:user_id (username, avatar_url)
-        `)
+        .select('*, profiles:user_id(username, avatar_url)')
         .eq('spot_id', id);
         
       if (commentError) {
@@ -109,18 +69,11 @@ const AstroSpotProfile = () => {
         // Continue despite comment errors
       }
       
-      const processedComments = (commentData || []).map((comment: any) => {
-        return {
-          ...comment,
-          profiles: comment.profiles || { username: t("Anonymous", "匿名用户") }
-        };
-      });
-      
-      const completeSpot: SpotData = {
+      const completeSpot = {
         ...spotData,
         astro_spot_types: typeData || [],
         astro_spot_advantages: advantageData || [],
-        astro_spot_comments: processedComments
+        astro_spot_comments: commentData || []
       };
       
       return completeSpot;
@@ -174,7 +127,7 @@ const AstroSpotProfile = () => {
 
   const handleEditClose = () => {
     setShowEditDialog(false);
-    refetch();
+    refetch(); // Refresh spot data after editing
   };
 
   if (isLoading || !spot) {
@@ -237,6 +190,14 @@ const AstroSpotProfile = () => {
 
   console.log("Rendering astro spot:", spot);
 
+  const getUsername = (comment) => {
+    if (!comment || !comment.profiles) return t("Anonymous", "匿名用户");
+    if (typeof comment.profiles === 'object') {
+      return comment.profiles.username || t("Anonymous", "匿名用户");
+    }
+    return t("Anonymous", "匿名用户");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
@@ -253,52 +214,211 @@ const AstroSpotProfile = () => {
           className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden relative"
         >
           <Button
-            variant="outline"
-            size="sm"
-            className="absolute top-4 right-4 text-primary border-primary hover:bg-primary/10 z-10"
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 left-1/2 transform -translate-x-1/2 text-gray-300 hover:text-primary hover:bg-cosmic-800/50 z-10"
             onClick={() => setShowEditDialog(true)}
           >
-            <Pencil className="h-4 w-4 mr-2" />
-            {t("Edit", "编辑")}
+            <Wrench className="h-5 w-5" />
           </Button>
 
-          {spot && <SpotHeader spot={spot} onViewDetails={handleViewDetails} />}
+          <div className="bg-gradient-to-r from-cosmic-800/80 to-cosmic-800/40 p-6 border-b border-cosmic-700/30">
+            <div className="flex justify-between items-start mb-4">
+              <div className="space-y-1">
+                <h1 className="text-3xl font-bold text-gray-50 flex items-center">
+                  <Star className="h-5 w-5 text-yellow-400 mr-2 animate-pulse" />
+                  {spot.name}
+                </h1>
+                <div className="flex items-center text-gray-400 text-sm">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  {spot.latitude.toFixed(4)}, {spot.longitude.toFixed(4)}
+                </div>
+                <div className="flex items-center text-gray-400 text-sm mt-1">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  {new Date(spot.created_at).toLocaleDateString()}
+                </div>
+              </div>
+              
+              <Button 
+                variant="default" 
+                onClick={handleViewDetails}
+                className="bg-primary/80 hover:bg-primary flex items-center gap-2 rounded-full"
+              >
+                <ExternalLink className="h-4 w-4" />
+                {t("View Location Details", "查看位置详情")}
+              </Button>
+            </div>
+            
+            {spot.siqs && (
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-cosmic-700/60 text-primary-foreground">
+                <span className="font-bold mr-1">{t("SIQS", "SIQS")}:</span>
+                <span 
+                  className={`px-2 py-0.5 rounded-full font-mono text-sm ${
+                    spot.siqs >= 8 ? 'bg-green-500/80 text-white' :
+                    spot.siqs >= 6 ? 'bg-blue-500/80 text-white' :
+                    spot.siqs >= 4 ? 'bg-yellow-500/80 text-white' :
+                    'bg-red-500/80 text-white'
+                  }`}
+                >
+                  {spot.siqs}
+                </span>
+              </div>
+            )}
+          </div>
           
           <div className="p-6 space-y-6">
-            {spot && (
-              <SpotDetails 
-                description={spot.description}
-                types={spot.astro_spot_types}
-                advantages={spot.astro_spot_advantages}
-              />
+            {spot.description && (
+              <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
+                <h2 className="text-xl font-semibold text-gray-200 mb-3 flex items-center">
+                  <span className="w-2 h-6 bg-primary rounded-sm mr-2.5"></span>
+                  {t("Description", "描述")}
+                </h2>
+                <p className="text-gray-300 whitespace-pre-wrap">{spot.description}</p>
+              </div>
             )}
             
-            <SpotImages 
-              images={spotImages} 
-              onShowDialog={() => setShowPhotosDialog(true)} 
-            />
+            {spot.astro_spot_types && spot.astro_spot_types.length > 0 && (
+              <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
+                <h2 className="text-xl font-semibold text-gray-200 mb-3 flex items-center">
+                  <Tag className="h-5 w-5 mr-2 text-primary/80" />
+                  {t("Location Type", "位置类型")}
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {spot.astro_spot_types.map((type) => (
+                    <span 
+                      key={type.id}
+                      className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-700/50 to-indigo-700/50 border border-purple-600/30 text-sm text-gray-200 backdrop-blur-sm"
+                    >
+                      {type.type_name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             
-            {spot && (
-              <SpotComments 
-                comments={spot.astro_spot_comments} 
-                onShowAllComments={() => setShowCommentsSheet(true)}
-              />
+            {spot.astro_spot_advantages && spot.astro_spot_advantages.length > 0 && (
+              <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
+                <h2 className="text-xl font-semibold text-gray-200 mb-3 flex items-center">
+                  <span className="w-2 h-6 bg-green-500 rounded-sm mr-2.5"></span>
+                  {t("Advantages", "优势")}
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {spot.astro_spot_advantages.map((advantage) => (
+                    <span 
+                      key={advantage.id}
+                      className="px-3 py-1 rounded-full bg-gradient-to-r from-green-700/50 to-teal-700/50 border border-green-600/30 text-sm text-gray-200 backdrop-blur-sm"
+                    >
+                      {advantage.advantage_name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
+              <h2 className="text-xl font-semibold text-gray-200 mb-3 flex items-center">
+                <Album className="h-5 w-5 mr-2 text-primary/80" />
+                {t("Location Images", "位置图片")}
+              </h2>
+              
+              {spotImages.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {spotImages.map((imageUrl, index) => (
+                    <div 
+                      key={index} 
+                      className="relative aspect-square overflow-hidden rounded-lg border border-cosmic-600/30 shadow-md"
+                      onClick={() => setShowPhotosDialog(true)}
+                    >
+                      <img 
+                        src={imageUrl} 
+                        alt={`${spot.name} - ${index + 1}`}
+                        className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center py-8">
+                  <Album className="h-12 w-12 text-gray-500 mb-3" />
+                  <p className="text-gray-400">
+                    {t("No images available", "暂无图片")}
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            {spot.astro_spot_comments && spot.astro_spot_comments.length > 0 ? (
+              <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-xl font-semibold text-gray-200 flex items-center">
+                    <MessageCircle className="h-5 w-5 mr-2 text-primary/80" />
+                    {t("Comments", "评论")} ({spot.astro_spot_comments.length})
+                  </h2>
+                  
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => setShowCommentsSheet(true)}
+                    className="text-sm text-primary hover:bg-cosmic-700/30"
+                  >
+                    {t("View All", "查看全部")}
+                  </Button>
+                </div>
+                
+                <div className="space-y-3">
+                  {spot.astro_spot_comments.slice(0, 2).map((comment) => (
+                    <div 
+                      key={comment.id}
+                      className="p-3 bg-cosmic-800/20 rounded-lg border border-cosmic-600/20"
+                    >
+                      <div className="flex items-center mb-2">
+                        <div className="font-medium text-gray-200">
+                          {getUsername(comment)}
+                        </div>
+                        <span className="text-gray-500 text-sm ml-2">
+                          {new Date(comment.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-gray-300">{comment.content}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30 flex flex-col items-center justify-center text-center">
+                <MessageCircle className="h-10 w-10 text-gray-500 mb-2" />
+                <p className="text-gray-400">
+                  {t("No comments yet", "暂无评论")}
+                </p>
+              </div>
             )}
           </div>
         </motion.div>
-
-        <LinksFooter />
       </div>
       
       <Dialog open={showPhotosDialog} onOpenChange={setShowPhotosDialog}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t("Photo Album", "照片集")}: {spot?.name}</DialogTitle>
+            <DialogTitle>{t("Photo Album", "照片集")}: {spot.name}</DialogTitle>
           </DialogHeader>
-          <SpotImages 
-            images={spotImages} 
-            onShowDialog={() => {}} 
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {spotImages.map((imageUrl, index) => (
+              <div key={index} className="relative overflow-hidden rounded-lg border border-cosmic-600/30">
+                <img 
+                  src={imageUrl} 
+                  alt={`${spot.name} - ${index + 1}`}
+                  className="w-full h-auto object-contain"
+                />
+              </div>
+            ))}
+          </div>
+          {spotImages.length === 0 && (
+            <div className="flex flex-col items-center justify-center text-center py-12">
+              <Album className="h-16 w-16 text-gray-500 mb-4" />
+              <p className="text-gray-400 text-lg">
+                {t("No images available", "暂无图片")}
+              </p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       
@@ -306,16 +426,35 @@ const AstroSpotProfile = () => {
         <SheetContent side="bottom" className="h-[85vh] bg-cosmic-900 border-cosmic-700 text-gray-100 rounded-t-xl">
           <SheetHeader>
             <SheetTitle className="text-gray-100">
-              {t("All Comments", "所有评论")} ({spot?.astro_spot_comments?.length || 0})
+              {t("All Comments", "所有评论")} ({spot.astro_spot_comments?.length || 0})
             </SheetTitle>
           </SheetHeader>
+          
           <div className="mt-6 space-y-4 max-h-[calc(85vh-120px)] overflow-y-auto pr-1">
-            {spot && (
-              <SpotComments 
-                comments={spot.astro_spot_comments} 
-                onShowAllComments={() => {}}
-              />
-            )}
+            {spot.astro_spot_comments?.length > 0 ? 
+              spot.astro_spot_comments.map((comment) => (
+                <div 
+                  key={comment.id}
+                  className="p-4 bg-cosmic-800/30 rounded-lg border border-cosmic-600/20"
+                >
+                  <div className="flex items-center mb-2">
+                    <div className="font-medium text-gray-200">
+                      {getUsername(comment)}
+                    </div>
+                    <span className="text-gray-500 text-sm ml-2">
+                      {new Date(comment.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-gray-300">{comment.content}</p>
+                </div>
+              )) : (
+                <div className="text-center py-10">
+                  <p className="text-gray-400">
+                    {t("No comments yet", "暂无评论")}
+                  </p>
+                </div>
+              )
+            }
           </div>
         </SheetContent>
       </Sheet>
