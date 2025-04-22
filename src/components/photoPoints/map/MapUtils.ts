@@ -1,99 +1,80 @@
-
-import { supabase } from "@/integrations/supabase/client";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { isWaterLocation } from "@/utils/validation";
-
-/**
- * Loads all user-created astro spots from Supabase for map display.
- * @returns Promise<SharedAstroSpot[]>
- */
-export async function fetchUserAstroSpots(): Promise<SharedAstroSpot[]> {
-  // Use .select() for user_astro_spots, selecting required fields
-  const { data, error } = await supabase
-    .from("user_astro_spots")
-    .select("*");
-  if (error) {
-    console.error("Error loading user astro spots:", error);
-    return [];
-  }
-  // Transform the data to match SharedAstroSpot interface
-  return (data ?? []).map(spot => ({
-    id: spot.id,
-    name: spot.name,
-    latitude: spot.latitude,
-    longitude: spot.longitude,
-    siqs: spot.siqs,
-    bortleScale: spot.bortlescale || 4, // Convert bortlescale to bortleScale
-    timestamp: new Date().toISOString(), // Add required timestamp property
-    isUserAstroSpot: true, // Mark as user-created for filtering
-    description: spot.description
-  }));
-}
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { calculateDistance } from '@/utils/geoUtils';
+import { isWaterLocation } from '@/utils/validation';
 
 /**
- * Filters locations based on user location and search radius
- * @param locations Array of locations to filter
- * @param userLocation Current user location
- * @param searchRadius Search radius in kilometers
- * @param activeView Current active view mode
- * @returns Filtered locations array
+ * Filter locations based on various criteria
  */
-export function filterLocations(
+export const filterLocations = (
   locations: SharedAstroSpot[],
   userLocation: { latitude: number; longitude: number } | null,
   searchRadius: number,
   activeView: 'certified' | 'calculated'
-): SharedAstroSpot[] {
-  if (!locations || locations.length === 0) return [];
+): SharedAstroSpot[] => {
+  // Basic validation
+  if (!locations || locations.length === 0) {
+    return [];
+  }
 
-  // In certified view, only show certified locations and user spots
+  // First separate certified and non-certified locations
+  const certifiedLocations = locations.filter(
+    loc => loc.isDarkSkyReserve || loc.certification
+  );
+  
+  let nonCertifiedLocations = locations.filter(
+    loc => !loc.isDarkSkyReserve && !loc.certification
+  );
+
+  // For the calculated view, filter non-certified locations by distance
+  if (activeView === 'calculated' && userLocation) {
+    nonCertifiedLocations = nonCertifiedLocations.filter(loc => {
+      // Skip invalid locations
+      if (!loc.latitude || !loc.longitude) return false;
+      
+      // Calculate distance from user
+      const distance = calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        loc.latitude,
+        loc.longitude
+      );
+      
+      // Keep locations within search radius that aren't in water
+      return distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false);
+    });
+  }
+
+  // For certified view, only return certified locations
   if (activeView === 'certified') {
-    return locations.filter(loc => loc.isDarkSkyReserve || loc.certification || loc.isUserAstroSpot);
+    return certifiedLocations;
   }
   
-  // For calculated view, show all locations within radius
-  // BUT: always show certified locations regardless of distance
-  if (!userLocation) return locations;
-  
-  return locations.filter(loc => {
-    // Always show certified locations and user spots
-    if (loc.isDarkSkyReserve || loc.certification || loc.isUserAstroSpot) return true;
-    
-    // For regular locations, check distance
-    if (loc.distance !== undefined) {
-      return loc.distance <= searchRadius;
-    }
-    
-    return true;
-  });
-}
+  // For calculated view, return both filtered non-certified and all certified
+  return [...certifiedLocations, ...nonCertifiedLocations];
+};
 
 /**
- * Optimizes locations for mobile display by limiting the number shown
- * @param locations Array of locations to optimize
- * @param isMobile Whether the current device is mobile
- * @param activeView Current active view mode
- * @returns Optimized locations array
+ * Optimize locations for mobile display
  */
-export function optimizeLocationsForMobile(
+export const optimizeLocationsForMobile = (
   locations: SharedAstroSpot[],
   isMobile: boolean,
   activeView: 'certified' | 'calculated'
-): SharedAstroSpot[] {
-  if (!isMobile || locations.length <= 100) return locations;
-  
-  // On mobile, limit the number of displayed locations to improve performance
-  // But always show certified locations and user-created spots
-  const certifiedAndUserSpots = locations.filter(
-    loc => loc.isDarkSkyReserve || loc.certification || loc.isUserAstroSpot
+): SharedAstroSpot[] => {
+  if (!isMobile || locations.length <= 30) {
+    return locations;
+  }
+
+  // Always keep certified locations
+  const certified = locations.filter(loc => 
+    loc.isDarkSkyReserve || loc.certification
   );
   
-  const regularLocations = locations.filter(
-    loc => !(loc.isDarkSkyReserve || loc.certification || loc.isUserAstroSpot)
-  );
+  // Reduce the number of non-certified locations on mobile
+  const nonCertified = locations
+    .filter(loc => !loc.isDarkSkyReserve && !loc.certification)
+    .filter((_, index) => index % (activeView === 'certified' ? 4 : 2) === 0)
+    .slice(0, 50); // Hard limit for better performance
   
-  // For regular locations, take a smaller subset on mobile
-  const limitedRegularLocations = regularLocations.slice(0, 50);
-  
-  return [...certifiedAndUserSpots, ...limitedRegularLocations];
-}
+  return [...certified, ...nonCertified];
+};

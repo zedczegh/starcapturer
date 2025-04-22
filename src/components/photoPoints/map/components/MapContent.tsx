@@ -28,7 +28,6 @@ interface MapContentProps {
   mapRef: React.RefObject<any>;
   onMapReady: () => void;
   currentSiqs: number | null;
-  children?: React.ReactNode;
 }
 
 const MapContent: React.FC<MapContentProps> = ({
@@ -50,8 +49,7 @@ const MapContent: React.FC<MapContentProps> = ({
   useMobileMapFixer,
   mapRef,
   onMapReady,
-  currentSiqs,
-  children
+  currentSiqs
 }) => {
   const tileOptions = getTileLayerOptions(Boolean(isMobile));
   
@@ -154,8 +152,6 @@ const MapContent: React.FC<MapContentProps> = ({
       })}
       
       {useMobileMapFixer && isMobile && <MobileMapFixer />}
-      
-      {children}
     </MapContainer>
   );
 };

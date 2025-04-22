@@ -1,79 +1,106 @@
 
-import React, { useEffect, useState } from "react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import LazyMapContainer from "./LazyMapContainer";
-import { fetchUserAstroSpots } from "./MapUtils";
-import UserAstroSpotMarker from "./UserAstroSpotMarker";
+import React from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import LazyMapContainer from './LazyMapContainer';
+import MapLegend from './MapLegend';
+import PinpointButton from './PinpointButton';
 
 interface MapContainerProps {
-  center: [number, number];
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   searchRadius: number;
   activeView: 'certified' | 'calculated';
-  onMapReady?: () => void;
-  onLocationClick?: (location: SharedAstroSpot) => void;
-  onMapClick?: (lat: number, lng: number) => void;
-  zoom?: number;
-  hoveredLocationId?: string | null;
-  onMarkerHover?: (id: string | null) => void;
-  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
-  handleTouchMove?: (e: React.TouchEvent) => void;
-  isMobile?: boolean;
-  useMobileMapFixer?: boolean;
-  showRadiusCircles?: boolean;
+  mapReady: boolean;
+  handleMapReady: () => void;
+  handleLocationClicked: (location: SharedAstroSpot) => void;
+  handleMapClick: (lat: number, lng: number) => void;
+  mapCenter: [number, number];
+  initialZoom: number;
+  mapContainerHeight: string;
+  isMobile: boolean;
+  hoveredLocationId: string | null;
+  handleHover: (id: string | null) => void;
+  handleTouchStart: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove: (e: React.TouchEvent) => void;
+  handleGetLocation: () => void;
+  onLegendToggle: (isOpen: boolean) => void;
 }
 
 const MapContainer: React.FC<MapContainerProps> = ({
-  center,
   userLocation,
   locations,
   searchRadius,
   activeView,
-  onMapReady,
-  onLocationClick,
-  onMapClick,
-  zoom,
+  mapReady,
+  handleMapReady,
+  handleLocationClicked,
+  handleMapClick,
+  mapCenter,
+  initialZoom,
+  mapContainerHeight,
+  isMobile,
   hoveredLocationId,
-  onMarkerHover,
+  handleHover,
   handleTouchStart,
   handleTouchEnd,
   handleTouchMove,
-  isMobile,
-  useMobileMapFixer,
-  showRadiusCircles
+  handleGetLocation,
+  onLegendToggle
 }) => {
-  const [userSpots, setUserSpots] = useState<SharedAstroSpot[]>([]);
-
-  useEffect(() => {
-    fetchUserAstroSpots().then(setUserSpots);
-  }, []);
+  const { t } = useLanguage();
 
   return (
-    <LazyMapContainer
-      center={center}
-      userLocation={userLocation}
-      locations={locations}
-      searchRadius={searchRadius}
-      activeView={activeView}
-      onMapReady={onMapReady}
-      onLocationClick={onLocationClick}
-      onMapClick={onMapClick}
-      zoom={zoom}
-      hoveredLocationId={hoveredLocationId}
-      onMarkerHover={onMarkerHover}
-      handleTouchStart={handleTouchStart}
-      handleTouchEnd={handleTouchEnd}
-      handleTouchMove={handleTouchMove}
-      isMobile={isMobile}
-      useMobileMapFixer={useMobileMapFixer}
-      showRadiusCircles={showRadiusCircles}
+    <div 
+      style={{ height: mapContainerHeight }} 
+      className="w-full relative rounded-md overflow-hidden transition-all duration-300 mb-4 mt-2"
     >
-      {userSpots.map((spot) => (
-        <UserAstroSpotMarker key={spot.id} spot={spot} onClick={onLocationClick} />
-      ))}
-    </LazyMapContainer>
+      {!mapReady && (
+        <div className="absolute inset-0 z-20">
+          <div className="flex h-full items-center justify-center bg-background/80">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      )}
+      
+      <LazyMapContainer
+        center={mapCenter}
+        userLocation={userLocation}
+        locations={locations}
+        searchRadius={searchRadius}
+        activeView={activeView}
+        onMapReady={handleMapReady}
+        onLocationClick={handleLocationClicked}
+        onMapClick={handleMapClick}
+        zoom={initialZoom}
+        hoveredLocationId={hoveredLocationId}
+        onMarkerHover={handleHover}
+        handleTouchStart={handleTouchStart}
+        handleTouchEnd={handleTouchEnd}
+        handleTouchMove={handleTouchMove}
+        isMobile={isMobile}
+        useMobileMapFixer={false}
+        showRadiusCircles={activeView === 'calculated' && !isMobile}
+      />
+      
+      {/* Add MapLegend for both mobile and desktop */}
+      <MapLegend 
+        activeView={activeView} 
+        showStarLegend={activeView === 'certified'}
+        showCircleLegend={activeView === 'calculated'}
+        onToggle={onLegendToggle}
+        className="absolute top-4 right-4 z-[999]"
+      />
+      
+      {/* Update PinpointButton positioning for desktop and mobile */}
+      <PinpointButton
+        onGetLocation={handleGetLocation}
+        className={isMobile ? "absolute bottom-4 right-4 z-[999]" : "absolute bottom-4 left-4 z-[999]"}
+        shouldCenter={false}
+        hasLocation={userLocation !== null}
+      />
+    </div>
   );
 };
 
