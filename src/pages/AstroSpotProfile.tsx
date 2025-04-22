@@ -218,7 +218,7 @@ const AstroSpotProfile = () => {
           <Button
             variant="default"
             size="icon"
-            className="absolute top-4 left-4 z-10 bg-primary/20 hover:bg-primary/30 text-white rounded-full w-12 h-12"
+            className="absolute -top-2 -left-2 z-10 bg-primary/20 hover:bg-primary/30 text-white rounded-full w-12 h-12 shadow-lg border border-cosmic-700/30"
             onClick={() => setShowEditDialog(true)}
           >
             <Wrench className="h-6 w-6" />
