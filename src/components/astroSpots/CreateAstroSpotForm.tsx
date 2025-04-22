@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from "react-hook-form";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -10,6 +9,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { toast } from "sonner";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const locationTypes = [
   { id: "national-observatory", label: "National/Academic Observatory" },
@@ -76,8 +76,40 @@ const CreateAstroSpotForm: React.FC<CreateAstroSpotFormProps> = ({
     }
 
     try {
-      // We'll implement the actual submission in the next step
-      console.log("Form data:", { ...data, latitude, longitude });
+      const { data: spotData, error: spotError } = await supabase
+        .from('user_astro_spots')
+        .insert({
+          name: data.name,
+          description: data.description,
+          latitude: latitude,
+          longitude: longitude,
+          user_id: user.id,
+        })
+        .select('id')
+        .single();
+
+      if (spotError) throw spotError;
+
+      const typesInsert = data.types.map(type => ({
+        spot_id: spotData.id,
+        type_name: type
+      }));
+      const { error: typesError } = await supabase
+        .from('astro_spot_types')
+        .insert(typesInsert);
+
+      if (typesError) throw typesError;
+
+      const advantagesInsert = data.advantages.map(advantage => ({
+        spot_id: spotData.id,
+        advantage_name: advantage
+      }));
+      const { error: advantagesError } = await supabase
+        .from('astro_spot_advantages')
+        .insert(advantagesInsert);
+
+      if (advantagesError) throw advantagesError;
+
       toast.success(t("Astro Spot created successfully!", "观星点创建成功！"));
       navigate('/photo-points');
     } catch (error) {
