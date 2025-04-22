@@ -77,5 +77,6 @@ declare module "@/types/weather" {
       timeUntilDaylight?: number;
     };
     date?: string | Date;
+    user_id?: string; // Add the user_id property as optional
   }
 }
