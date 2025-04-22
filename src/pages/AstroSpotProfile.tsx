@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, MapPin, MessageCircle, Tag, Calendar, Star, ChevronLeft, Tool } from "lucide-react";
+import { ExternalLink, Loader2, MapPin, MessageCircle, Tag, Calendar, Star, ChevronLeft, Wrench } from "lucide-react";
 import { motion } from "framer-motion";
 import BackButton from "@/components/navigation/BackButton";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
@@ -186,7 +186,7 @@ const AstroSpotProfile = () => {
             className="absolute top-4 right-4 text-gray-300 hover:text-primary hover:bg-cosmic-800/50"
             onClick={() => setShowEditDialog(true)}
           >
-            <Tool className="h-5 w-5" />
+            <Wrench className="h-5 w-5" />
           </Button>
 
           <div className="bg-gradient-to-r from-cosmic-800/80 to-cosmic-800/40 p-6 border-b border-cosmic-700/30">
