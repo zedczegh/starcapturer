@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -272,7 +273,7 @@ const AstroSpotProfile = () => {
             )}
             
             <SpotImages 
-              images={spot?.imagesToDisplay || []} 
+              images={spotImages} 
               onShowDialog={() => setShowPhotosDialog(true)} 
             />
             
@@ -292,7 +293,7 @@ const AstroSpotProfile = () => {
             <DialogTitle>{t("Photo Album", "照片集")}: {spot?.name}</DialogTitle>
           </DialogHeader>
           <SpotImages 
-            images={spot?.imagesToDisplay || []} 
+            images={spotImages} 
             onShowDialog={() => {}} 
           />
         </DialogContent>
