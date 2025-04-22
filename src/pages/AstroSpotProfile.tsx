@@ -201,7 +201,7 @@ const AstroSpotProfile = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
-      <div className="container max-w-4xl py-8 px-4 md:px-6">
+      <div className="container max-w-4xl py-8 px-4 md:px-6 relative">
         <BackButton 
           destination="/manage-astro-spots" 
           className="text-gray-300 mb-6 hover:bg-cosmic-800/50"
@@ -216,7 +216,7 @@ const AstroSpotProfile = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-1/2 -translate-y-1/2 right-4 text-gray-300 hover:text-primary hover:bg-cosmic-800/50"
+            className="absolute top-4 left-1/2 transform -translate-x-1/2 text-gray-300 hover:text-primary hover:bg-cosmic-800/50 z-10"
             onClick={() => setShowEditDialog(true)}
           >
             <Wrench className="h-5 w-5" />
