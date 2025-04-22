@@ -42,7 +42,7 @@ const AstroSpotProfile = () => {
 
   const handleViewDetails = () => {
     if (spot) {
-      navigate(`/location/${spot.id}`, {
+      navigate(`/location/${spot.latitude},${spot.longitude}`, {
         state: {
           latitude: spot.latitude,
           longitude: spot.longitude,
