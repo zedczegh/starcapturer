@@ -1,11 +1,9 @@
-
 import React from 'react';
 import PreferencesForm from "@/components/preferences/PreferencesForm";
 import NavBar from "@/components/NavBar";
 import AboutFooter from '@/components/about/AboutFooter';
 
-// Rename to match the export
-export const SettingsPage = () => (
+const PreferencesPage = () => (
   <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex flex-col">
     <NavBar />
     <main className="container max-w-xl mx-auto pt-28 pb-16 px-2 flex-grow">
@@ -16,6 +14,4 @@ export const SettingsPage = () => (
   </div>
 );
 
-// Export as default as well for flexibility
-export default SettingsPage;
-
+export default PreferencesPage;
