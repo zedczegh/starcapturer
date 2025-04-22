@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -17,8 +16,8 @@ import ShareLocation from './pages/ShareLocation';
 import Collections from './pages/Collections';
 import Profile from './pages/Profile';
 import PreferencesPage from './pages/Preferences';
-// Removed CreateAstroSpot import
 import ManageAstroSpots from './pages/ManageAstroSpots';
+import AstroSpotProfile from './pages/AstroSpotProfile';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -51,8 +50,8 @@ const App = () => {
                   <Route path="/collections" element={<Collections />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/settings" element={<PreferencesPage />} />
-                  {/* Removed CreateAstroSpot route */}
                   <Route path="/manage-astro-spots" element={<ManageAstroSpots />} />
+                  <Route path="/astro-spot/:id" element={<AstroSpotProfile />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </AuthProvider>

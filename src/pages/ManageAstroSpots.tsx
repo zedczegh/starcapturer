@@ -129,10 +129,12 @@ const ManageAstroSpots = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
                 className="relative"
+                onClick={() => !editMode && navigate(`/astro-spot/${spot.id}`)}
               >
                 {editMode && (
                   <MiniRemoveButton onClick={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     handleDelete(spot.id);
                   }} />
                 )}
@@ -146,15 +148,17 @@ const ManageAstroSpots = () => {
                   onSiqsCalculated={(siqs, loading) => handleSiqsCalculated(spot.id, siqs, loading)}
                 />
                 
-                <LocationCard
-                  id={spot.id}
-                  name={spot.name}
-                  latitude={spot.latitude}
-                  longitude={spot.longitude}
-                  siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
-                  timestamp={spot.timestamp}
-                  isCertified={false}
-                />
+                <div className={`cursor-${editMode ? 'default' : 'pointer'}`}>
+                  <LocationCard
+                    id={spot.id}
+                    name={spot.name}
+                    latitude={spot.latitude}
+                    longitude={spot.longitude}
+                    siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                    timestamp={spot.timestamp}
+                    isCertified={false}
+                  />
+                </div>
               </motion.div>
             ))}
           </div>
