@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -44,7 +43,7 @@ const LOCATION_ADVANTAGES = [
 const CreateAstroSpot: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
-  const { role } = useUserRole();
+  const { role, isAdmin } = useUserRole();
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState;
@@ -75,14 +74,15 @@ const CreateAstroSpot: React.FC = () => {
       return;
     }
     
-    if (selectedTypes.length === 0) {
+    if (!isAdmin && selectedTypes.length === 0) {
       toast.error(t("Please select at least one location type", "请至少选择一个位置类型"));
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // Create the astro spot
+      const userIdToUse = isAdmin ? user.id : user.id;
+
       const { data: spot, error: spotError } = await supabase
         .from('user_astro_spots')
         .insert({
@@ -90,17 +90,16 @@ const CreateAstroSpot: React.FC = () => {
           description,
           latitude: state.latitude,
           longitude: state.longitude,
-          user_id: user.id
+          user_id: userIdToUse
         })
         .select()
         .single();
 
       if (spotError) throw spotError;
 
-      // Upload images with proper folder structure
       if (images.length > 0) {
         const imagePromises = images.map(async (image, index) => {
-          const fileName = `${user.id}/${spot.id}/${Date.now()}_${index}.${image.name.split('.').pop()}`;
+          const fileName = `${userIdToUse}/${spot.id}/${Date.now()}_${index}.${image.name.split('.').pop()}`;
           const { error: uploadError } = await supabase.storage
             .from('astro_spot_images')
             .upload(fileName, image);
@@ -111,8 +110,7 @@ const CreateAstroSpot: React.FC = () => {
         await Promise.all(imagePromises);
       }
 
-      // Add types
-      if (selectedTypes.length > 0) {
+      if (isAdmin || selectedTypes.length > 0) {
         const { error: typesError } = await supabase
           .from('astro_spot_types')
           .insert(selectedTypes.map(type => ({
@@ -123,8 +121,7 @@ const CreateAstroSpot: React.FC = () => {
         if (typesError) throw typesError;
       }
 
-      // Add advantages
-      if (selectedAdvantages.length > 0) {
+      if (isAdmin || selectedAdvantages.length > 0) {
         const { error: advantagesError } = await supabase
           .from('astro_spot_advantages')
           .insert(selectedAdvantages.map(advantage => ({
@@ -160,7 +157,6 @@ const CreateAstroSpot: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Location Name */}
           <div>
             <label className="text-sm font-medium mb-2 block">
               {t("Location Name", "位置名称")}
@@ -173,7 +169,6 @@ const CreateAstroSpot: React.FC = () => {
             />
           </div>
 
-          {/* Location Types */}
           <div>
             <label className="text-sm font-medium mb-2 block">
               {t("Location Types", "位置类型")}
@@ -201,7 +196,6 @@ const CreateAstroSpot: React.FC = () => {
             </div>
           </div>
 
-          {/* Location Advantages */}
           <div>
             <label className="text-sm font-medium mb-2 block">
               {t("Location Advantages", "位置优势")}
@@ -228,7 +222,6 @@ const CreateAstroSpot: React.FC = () => {
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label className="text-sm font-medium mb-2 block">
               {t("Description", "描述")}
@@ -242,7 +235,6 @@ const CreateAstroSpot: React.FC = () => {
             />
           </div>
 
-          {/* Image Upload */}
           <div>
             <label className="text-sm font-medium mb-2 block">
               {t("Location Images", "位置图片")}
