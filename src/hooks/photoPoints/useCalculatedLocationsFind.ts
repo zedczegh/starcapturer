@@ -153,8 +153,11 @@ async function enhancePointsWithSIQS(
         point.longitude
       );
       
-      // Calculate SIQS for this location
-      const siqsResult = await calculateRealTimeSiqs(point.latitude, point.longitude);
+      // Default bortle scale as fallback
+      const defaultBortleScale = 4;
+      
+      // Calculate SIQS for this location - fixed by adding the missing parameter
+      const siqsResult = await calculateRealTimeSiqs(point.latitude, point.longitude, defaultBortleScale);
       
       // Skip locations with poor SIQS scores
       if (!siqsResult || siqsResult.siqs < 3) {
@@ -171,7 +174,7 @@ async function enhancePointsWithSIQS(
         isViable: true,
         distance,
         timestamp: new Date().toISOString()
-      };
+      } as SharedAstroSpot;
     } catch (error) {
       console.warn('Error calculating SIQS for point:', error);
       return null;
@@ -186,7 +189,10 @@ async function enhancePointsWithSIQS(
     .filter((p): p is SharedAstroSpot => p !== null)
     .sort((a, b) => {
       // First by SIQS
-      const siqsComparison = (b.siqs || 0) - (a.siqs || 0);
+      const aScore = typeof a.siqs === 'number' ? a.siqs : (a.siqs?.score || 0);
+      const bScore = typeof b.siqs === 'number' ? b.siqs : (b.siqs?.score || 0);
+      const siqsComparison = bScore - aScore;
+      
       if (siqsComparison !== 0) return siqsComparison;
       
       // Then by distance

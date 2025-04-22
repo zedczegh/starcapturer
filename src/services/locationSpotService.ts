@@ -68,9 +68,11 @@ export async function generateQualitySpots(
     const uniqueSpots = filterUniqueSpots(combinedResults);
     
     // Sort by SIQS score (highest first)
-    const sortedSpots = uniqueSpots.sort((a, b) => 
-      ((b.siqs as number) || 0) - ((a.siqs as number) || 0)
-    );
+    const sortedSpots = uniqueSpots.sort((a, b) => {
+      const aScore = typeof a.siqs === 'number' ? a.siqs : (a.siqs?.score || 0);
+      const bScore = typeof b.siqs === 'number' ? b.siqs : (b.siqs?.score || 0);
+      return bScore - aScore;
+    });
     
     return sortedSpots.slice(0, limit);
   } catch (error) {
@@ -99,7 +101,11 @@ async function enhanceGridPoints(
     const batch = validPoints.slice(i, i + batchSize);
     const batchPromises = batch.map(async point => {
       try {
-        const siqsResult = await calculateRealTimeSiqs(point.latitude, point.longitude);
+        // Default bortle scale as fallback
+        const defaultBortleScale = 4;
+        
+        // Fixed by adding the missing parameter
+        const siqsResult = await calculateRealTimeSiqs(point.latitude, point.longitude, defaultBortleScale);
         
         if (!siqsResult || siqsResult.siqs < minSiqs) {
           return null;
@@ -115,7 +121,7 @@ async function enhanceGridPoints(
           isViable: true,
           distance: point.distance,
           timestamp: new Date().toISOString()
-        };
+        } as SharedAstroSpot;
       } catch (error) {
         console.warn('Error calculating SIQS for grid point:', error);
         return null;
@@ -152,7 +158,11 @@ async function enhanceRandomPoints(
     const batch = validPoints.slice(i, i + batchSize);
     const batchPromises = batch.map(async point => {
       try {
-        const siqsResult = await calculateRealTimeSiqs(point.latitude, point.longitude);
+        // Default bortle scale as fallback
+        const defaultBortleScale = 4;
+        
+        // Fixed by adding the missing parameter
+        const siqsResult = await calculateRealTimeSiqs(point.latitude, point.longitude, defaultBortleScale);
         
         if (!siqsResult || siqsResult.siqs < minSiqs) {
           return null;
@@ -168,7 +178,7 @@ async function enhanceRandomPoints(
           isViable: true,
           distance: point.distance,
           timestamp: new Date().toISOString()
-        };
+        } as SharedAstroSpot;
       } catch (error) {
         console.warn('Error calculating SIQS for random point:', error);
         return null;
@@ -201,10 +211,56 @@ function filterUniqueSpots(spots: SharedAstroSpot[]): SharedAstroSpot[] {
     const cellKey = `${gridX},${gridY}`;
     
     // If cell is empty or new spot has better SIQS, use it
-    if (!gridCells.has(cellKey) || ((gridCells.get(cellKey)?.siqs || 0) < (spot.siqs || 0))) {
+    if (!gridCells.has(cellKey) || 
+        (getSiqsValue(gridCells.get(cellKey)?.siqs || 0) < getSiqsValue(spot.siqs || 0))) {
       gridCells.set(cellKey, spot);
     }
   });
   
   return Array.from(gridCells.values());
 }
+
+/**
+ * Helper function to get a numeric value from a SIQS property,
+ * regardless of whether it's a number or an object with score
+ */
+function getSiqsValue(siqs: number | { score: number, isViable: boolean } | any): number {
+  if (typeof siqs === 'number') {
+    return siqs;
+  }
+  if (siqs && typeof siqs === 'object' && 'score' in siqs) {
+    return siqs.score;
+  }
+  return 0;
+}
+
+/**
+ * Validates a single astro spot against filtering criteria
+ * with enhanced precision
+ */
+function isValidAstroSpot(
+  spot: SharedAstroSpot, 
+  qualityThreshold: number
+): boolean {
+  if (!spot.latitude || !spot.longitude) {
+    return false;
+  }
+
+  if (isWaterLocation(spot.latitude, spot.longitude, false)) {
+    return false;
+  }
+
+  if (spot.siqs !== undefined && getSiqsValue(spot.siqs) < qualityThreshold) {
+    return false;
+  }
+
+  return true;
+}
+
+// Re-export location store functions
+export {
+  addLocationToStore,
+  getLocationFromStore,
+  getAllLocationsFromStore,
+  clearLocationStore
+} from './locationStore';
