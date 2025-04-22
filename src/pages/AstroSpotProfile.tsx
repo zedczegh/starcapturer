@@ -17,6 +17,20 @@ import SpotDetails from '@/components/astro-spots/profile/SpotDetails';
 import SpotImages from '@/components/astro-spots/profile/SpotImages';
 import SpotComments from '@/components/astro-spots/profile/SpotComments';
 
+interface AstroSpotComment {
+  id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  spot_id: string;
+  user_id: string;
+  parent_id: string | null;
+  profiles?: {
+    username?: string;
+    avatar_url?: string;
+  } | null;
+}
+
 const AstroSpotProfile = () => {
   const { id } = useParams();
   const { t } = useLanguage();
@@ -65,7 +79,10 @@ const AstroSpotProfile = () => {
       
       const { data: commentData, error: commentError } = await supabase
         .from('astro_spot_comments')
-        .select('*, profiles:user_id(username, avatar_url)')
+        .select(`
+          *,
+          profiles:user_id (username, avatar_url)
+        `)
         .eq('spot_id', id);
         
       if (commentError) {
@@ -73,11 +90,16 @@ const AstroSpotProfile = () => {
         // Continue despite comment errors
       }
       
+      const processedComments = (commentData || []).map((comment: AstroSpotComment) => ({
+        ...comment,
+        profiles: comment.profiles || { username: t("Anonymous", "匿名用户") }
+      }));
+      
       const completeSpot = {
         ...spotData,
         astro_spot_types: typeData || [],
         astro_spot_advantages: advantageData || [],
-        astro_spot_comments: commentData || []
+        astro_spot_comments: processedComments
       };
       
       return completeSpot;
@@ -226,24 +248,28 @@ const AstroSpotProfile = () => {
             <Wrench className="h-5 w-5" />
           </Button>
 
-          <SpotHeader spot={spot} onViewDetails={handleViewDetails} />
+          {spot && <SpotHeader spot={spot} onViewDetails={handleViewDetails} />}
           
           <div className="p-6 space-y-6">
-            <SpotDetails 
-              description={spot.description}
-              types={spot.astro_spot_types}
-              advantages={spot.astro_spot_advantages}
-            />
+            {spot && (
+              <SpotDetails 
+                description={spot.description}
+                types={spot.astro_spot_types}
+                advantages={spot.astro_spot_advantages}
+              />
+            )}
             
             <SpotImages 
-              images={spotImages} 
+              images={spotImages || []} 
               onShowDialog={() => setShowPhotosDialog(true)} 
             />
             
-            <SpotComments 
-              comments={spot.astro_spot_comments} 
-              onShowAllComments={() => setShowCommentsSheet(true)}
-            />
+            {spot && (
+              <SpotComments 
+                comments={spot.astro_spot_comments} 
+                onShowAllComments={() => setShowCommentsSheet(true)}
+              />
+            )}
           </div>
         </motion.div>
       </div>
@@ -251,10 +277,10 @@ const AstroSpotProfile = () => {
       <Dialog open={showPhotosDialog} onOpenChange={setShowPhotosDialog}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t("Photo Album", "照片集")}: {spot.name}</DialogTitle>
+            <DialogTitle>{t("Photo Album", "照片集")}: {spot?.name}</DialogTitle>
           </DialogHeader>
           <SpotImages 
-            images={spotImages} 
+            images={spotImages || []} 
             onShowDialog={() => {}} 
           />
         </DialogContent>
@@ -264,14 +290,16 @@ const AstroSpotProfile = () => {
         <SheetContent side="bottom" className="h-[85vh] bg-cosmic-900 border-cosmic-700 text-gray-100 rounded-t-xl">
           <SheetHeader>
             <SheetTitle className="text-gray-100">
-              {t("All Comments", "所有评论")} ({spot.astro_spot_comments?.length || 0})
+              {t("All Comments", "所有评论")} ({spot?.astro_spot_comments?.length || 0})
             </SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4 max-h-[calc(85vh-120px)] overflow-y-auto pr-1">
-            <SpotComments 
-              comments={spot.astro_spot_comments} 
-              onShowAllComments={() => {}}
-            />
+            {spot && (
+              <SpotComments 
+                comments={spot.astro_spot_comments} 
+                onShowAllComments={() => {}}
+              />
+            )}
           </div>
         </SheetContent>
       </Sheet>

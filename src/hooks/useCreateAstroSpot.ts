@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSpotDataFetcher } from './astro-spots/useSpotDataFetcher';
 import { useSpotFormValidation } from './astro-spots/useSpotFormValidation';
 import { useSpotImageUpload } from './astro-spots/useSpotImageUpload';
+import { useUserRole } from './useUserRole';
 
 export const useCreateAstroSpot = (
   initialLatitude: number, 
@@ -24,13 +26,14 @@ export const useCreateAstroSpot = (
   const { fetchExistingData } = useSpotDataFetcher(isEditing, spotId);
   const { validateForm } = useSpotFormValidation();
   const { uploadImages } = useSpotImageUpload();
+  const { isAdmin } = useUserRole();
 
   const [formData, setFormData] = useState({
     locationName: initialName || '',
-    selectedTypes: [],
-    selectedAdvantages: [],
+    selectedTypes: [] as string[],
+    selectedAdvantages: [] as string[],
     description: initialDescription,
-    images: [],
+    images: [] as File[],
     latitude: initialLatitude,
     longitude: initialLongitude,
   });
@@ -130,21 +133,13 @@ export const useCreateAstroSpot = (
         }
 
         if (formData.images.length > 0) {
-          const imagePromises = formData.images.map(async (image, index) => {
-            const fileName = `${spotId}/${Date.now()}_${index}.${image.name.split('.').pop()}`;
-            const { error: uploadError } = await supabase.storage
-              .from('astro_spot_images')
-              .upload(fileName, image);
-            
-            if (uploadError) throw uploadError;
-          });
-
-          await Promise.all(imagePromises);
+          await uploadImages(formData.images, userIdToUse, spotId);
         }
 
         queryClient.invalidateQueries({ queryKey: ['astroSpot', spotId] });
         
         toast.success(t("Astro spot updated successfully!", "观星点更新成功！"));
+        setIsSuccess(true);
         navigate(`/astro-spot/${spotId}`);
       } else {
         const { data: spot, error: spotError } = await supabase
@@ -162,16 +157,7 @@ export const useCreateAstroSpot = (
         if (spotError) throw spotError;
 
         if (formData.images.length > 0) {
-          const imagePromises = formData.images.map(async (image, index) => {
-            const fileName = `${userIdToUse}/${spot.id}/${Date.now()}_${index}.${image.name.split('.').pop()}`;
-            const { error: uploadError } = await supabase.storage
-              .from('astro_spot_images')
-              .upload(fileName, image);
-            
-            if (uploadError) throw uploadError;
-          });
-
-          await Promise.all(imagePromises);
+          await uploadImages(formData.images, userIdToUse, spot.id);
         }
 
         if (isAdmin || formData.selectedTypes.length > 0) {
@@ -196,6 +182,7 @@ export const useCreateAstroSpot = (
           if (advantagesError) throw advantagesError;
         }
 
+        setIsSuccess(true);
         toast.success(t("Astro spot created successfully!", "观星点创建成功！"));
         navigate(`/location/${formData.latitude.toFixed(6)},${formData.longitude.toFixed(6)}`);
       }

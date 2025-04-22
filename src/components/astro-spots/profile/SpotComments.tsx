@@ -4,23 +4,30 @@ import { MessageCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+interface CommentProfile {
+  username?: string;
+  avatar_url?: string;
+}
+
+interface Comment {
+  id: string;
+  content: string;
+  created_at: string;
+  profiles?: CommentProfile | null;
+}
+
 interface SpotCommentsProps {
-  comments: Array<{
-    id: string;
-    content: string;
-    created_at: string;
-    profiles?: { username?: string };
-  }>;
+  comments: Comment[];
   onShowAllComments: () => void;
 }
 
 const SpotComments: React.FC<SpotCommentsProps> = ({ comments, onShowAllComments }) => {
   const { t } = useLanguage();
 
-  const getUsername = (comment: any) => {
+  const getUsername = (comment: Comment): string => {
     if (!comment || !comment.profiles) return t("Anonymous", "匿名用户");
-    if (typeof comment.profiles === 'object') {
-      return comment.profiles.username || t("Anonymous", "匿名用户");
+    if (comment.profiles.username) {
+      return comment.profiles.username;
     }
     return t("Anonymous", "匿名用户");
   };
