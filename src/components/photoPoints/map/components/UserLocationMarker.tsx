@@ -90,42 +90,15 @@ const UserLocationMarker = memo(({
     });
   }, [navigate, position, locationName, t]);
 
-  const handleCreateAstroSpot = useCallback(async () => {
-    // Default name if none is available
-    const spotName = locationName || t("My Astro Spot", "我的观星点");
-    
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.id) {
-        console.error("User not authenticated");
-        return;
+  const handleCreateAstroSpot = useCallback(() => {
+    navigate('/create-astro-spot', { 
+      state: { 
+        latitude: position[0],
+        longitude: position[1],
+        name: locationName || t("My Astro Spot", "我的观星点")
       }
-
-      const { data, error } = await supabase.from('user_astro_spots').insert([
-        {
-          name: spotName,
-          latitude: position[0],
-          longitude: position[1],
-          user_id: user.id,
-          siqs: currentSiqs || null
-        }
-      ]).select().single();
-
-      if (error) {
-        console.error("Error creating astro spot:", error);
-        return;
-      }
-
-      console.log("Successfully created astro spot:", data);
-      navigate('/photo-points', { 
-        state: { 
-          message: t("Successfully created new astro spot!", "成功创建新的观星点！") 
-        } 
-      });
-    } catch (error) {
-      console.error("Error in handleCreateAstroSpot:", error);
-    }
-  }, [navigate, position, locationName, currentSiqs, t]);
+    });
+  }, [navigate, position, locationName, t]);
 
   return (
     <Marker position={position} icon={userMarkerIcon}>
