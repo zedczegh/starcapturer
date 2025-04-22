@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, MapPin, MessageCircle, Tag, Calendar, Star, ChevronLeft, Wrench } from "lucide-react";
+import { ExternalLink, Loader2, MapPin, MessageCircle, Tag, Calendar, Star, ChevronLeft, Wrench, Album } from "lucide-react";
 import { motion } from "framer-motion";
 import BackButton from "@/components/navigation/BackButton";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
@@ -20,8 +20,9 @@ const AstroSpotProfile = () => {
   const [showPhotosDialog, setShowPhotosDialog] = useState(false);
   const [showCommentsSheet, setShowCommentsSheet] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [spotImages, setSpotImages] = useState<string[]>([]);
 
-  const { data: spot, isLoading, error } = useQuery({
+  const { data: spot, isLoading, error, refetch } = useQuery({
     queryKey: ['astroSpot', id],
     queryFn: async () => {
       if (!id) throw new Error("No spot ID provided");
@@ -69,6 +70,24 @@ const AstroSpotProfile = () => {
         // Continue despite comment errors
       }
       
+      // Fetch image URLs for this spot
+      try {
+        const { data: imageData } = await supabase
+          .storage
+          .from('astro_spot_images')
+          .list(id);
+        
+        if (imageData && imageData.length > 0) {
+          const imageUrls = imageData.map(file => {
+            return supabase.storage.from('astro_spot_images').getPublicUrl(`${id}/${file.name}`).data.publicUrl;
+          });
+          setSpotImages(imageUrls);
+        }
+      } catch (imageError) {
+        console.error("Error fetching spot images:", imageError);
+        // Continue despite image errors
+      }
+      
       const completeSpot = {
         ...spotData,
         astro_spot_types: typeData || [],
@@ -95,6 +114,11 @@ const AstroSpotProfile = () => {
         }
       });
     }
+  };
+
+  const handleEditClose = () => {
+    setShowEditDialog(false);
+    refetch(); // Refresh spot data after editing
   };
 
   if (isLoading || !spot) {
@@ -183,7 +207,7 @@ const AstroSpotProfile = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 left-1/2 transform -translate-x-1/2 text-gray-300 hover:text-primary hover:bg-cosmic-800/50"
+            className="absolute top-4 translate-x-0 right-4 text-gray-300 hover:text-primary hover:bg-cosmic-800/50"
             onClick={() => setShowEditDialog(true)}
           >
             <Wrench className="h-5 w-5" />
@@ -282,6 +306,38 @@ const AstroSpotProfile = () => {
               </div>
             )}
             
+            <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
+              <h2 className="text-xl font-semibold text-gray-200 mb-3 flex items-center">
+                <Album className="h-5 w-5 mr-2 text-primary/80" />
+                {t("Location Images", "位置图片")}
+              </h2>
+              
+              {spotImages.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {spotImages.map((imageUrl, index) => (
+                    <div 
+                      key={index} 
+                      className="relative aspect-square overflow-hidden rounded-lg border border-cosmic-600/30 shadow-md"
+                      onClick={() => setShowPhotosDialog(true)}
+                    >
+                      <img 
+                        src={imageUrl} 
+                        alt={`${spot.name} - ${index + 1}`}
+                        className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center py-8">
+                  <Album className="h-12 w-12 text-gray-500 mb-3" />
+                  <p className="text-gray-400">
+                    {t("No images available", "暂无图片")}
+                  </p>
+                </div>
+              )}
+            </div>
+            
             {spot.astro_spot_comments && spot.astro_spot_comments.length > 0 ? (
               <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
                 <div className="flex justify-between items-center mb-3">
@@ -330,6 +386,33 @@ const AstroSpotProfile = () => {
         </motion.div>
       </div>
       
+      <Dialog open={showPhotosDialog} onOpenChange={setShowPhotosDialog}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t("Photo Album", "照片集")}: {spot.name}</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {spotImages.map((imageUrl, index) => (
+              <div key={index} className="relative overflow-hidden rounded-lg border border-cosmic-600/30">
+                <img 
+                  src={imageUrl} 
+                  alt={`${spot.name} - ${index + 1}`}
+                  className="w-full h-auto object-contain"
+                />
+              </div>
+            ))}
+          </div>
+          {spotImages.length === 0 && (
+            <div className="flex flex-col items-center justify-center text-center py-12">
+              <Album className="h-16 w-16 text-gray-500 mb-4" />
+              <p className="text-gray-400 text-lg">
+                {t("No images available", "暂无图片")}
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
       <Sheet open={showCommentsSheet} onOpenChange={setShowCommentsSheet}>
         <SheetContent side="bottom" className="h-[85vh] bg-cosmic-900 border-cosmic-700 text-gray-100 rounded-t-xl">
           <SheetHeader>
@@ -376,7 +459,7 @@ const AstroSpotProfile = () => {
           spotId={spot.id}
           defaultDescription={spot.description}
           trigger={<div />}
-          onClose={() => setShowEditDialog(false)}
+          onClose={handleEditClose}
         />
       )}
     </div>

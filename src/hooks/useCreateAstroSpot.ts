@@ -6,6 +6,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useQueryClient } from '@tanstack/react-query';
 
 interface CreateAstroSpotForm {
   locationName: string;
@@ -29,6 +30,7 @@ export const useCreateAstroSpot = (
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState<CreateAstroSpotForm>({
     locationName: initialName || '',
@@ -46,6 +48,7 @@ export const useCreateAstroSpot = (
     const fetchExistingData = async () => {
       if (isEditing && spotId) {
         try {
+          console.log('Fetching existing data for spot:', spotId);
           // Fetch spot types
           const { data: typeData, error: typeError } = await supabase
             .from('astro_spot_types')
@@ -61,6 +64,9 @@ export const useCreateAstroSpot = (
             .eq('spot_id', spotId);
             
           if (advantageError) throw advantageError;
+          
+          console.log('Fetched types:', typeData);
+          console.log('Fetched advantages:', advantageData);
           
           setFormData(prev => ({
             ...prev,
@@ -110,7 +116,9 @@ export const useCreateAstroSpot = (
           name: formData.locationName,
           description: formData.description,
           latitude: formData.latitude,
-          longitude: formData.longitude
+          longitude: formData.longitude,
+          selectedTypes: formData.selectedTypes,
+          selectedAdvantages: formData.selectedAdvantages
         });
         
         const { error: spotError } = await supabase
@@ -125,6 +133,8 @@ export const useCreateAstroSpot = (
 
         if (spotError) throw spotError;
 
+        console.log("Astro spot updated successfully, now updating types");
+        
         // Delete existing types then insert new ones
         await supabase
           .from('astro_spot_types')
@@ -142,6 +152,8 @@ export const useCreateAstroSpot = (
           if (typesError) throw typesError;
         }
 
+        console.log("Types updated successfully, now updating advantages");
+        
         // Delete existing advantages then insert new ones
         await supabase
           .from('astro_spot_advantages')
@@ -159,6 +171,9 @@ export const useCreateAstroSpot = (
           if (advantagesError) throw advantagesError;
         }
 
+        // Invalidate the query to force a refresh
+        queryClient.invalidateQueries({queryKey: ['astroSpot', spotId]});
+        
         toast.success(t("Astro spot updated successfully!", "观星点更新成功！"));
         navigate(`/astro-spot/${spotId}`);
       } else {
