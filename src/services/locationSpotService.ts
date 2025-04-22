@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isWaterLocation } from '@/utils/validation';
 import { generateDistributedPoints } from './location/pointGenerationService';
@@ -7,6 +6,8 @@ import { createSpotFromPoint } from './location/spotCreationService';
 
 const BATCH_SIZE = 5;
 
+// CRITICAL ALGORITHM: Location spot generation and filtering
+// Modifications require extensive validation
 export async function generateQualitySpots(
   centerLat: number,
   centerLng: number, 

@@ -6,6 +6,8 @@ import { findCalculatedLocations } from "@/services/locationSearchService";
 import { isSiqsAtLeast } from "@/utils/siqsHelpers";
 
 export const useCalculatedLocationsFind = () => {
+  // CRITICAL ALGORITHM: Do not modify without thorough review and testing
+  // See project README.md for modification guidelines
   const { t } = useLanguage();
 
   /**
