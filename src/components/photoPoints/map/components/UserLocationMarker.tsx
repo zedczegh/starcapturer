@@ -1,4 +1,3 @@
-
 import React, { memo, useCallback, useEffect, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -161,7 +160,18 @@ const UserLocationMarker = memo(({
             {isAuthenticated && (
               <button 
                 onClick={handleCreateAstroSpot}
-                className={`text-xs flex items-center justify-center w-full bg-green-500/20 hover:bg-green-500/30 text-green-700 ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
+                className={`
+                  text-xs flex items-center justify-center w-full 
+                  bg-gradient-to-br from-purple-500/80 to-indigo-600/80 
+                  text-white 
+                  ${isMobile ? 'py-3' : 'py-1.5'} 
+                  px-2 rounded-lg 
+                  transition-all duration-300 
+                  hover:scale-[1.02] hover:shadow-lg 
+                  active:scale-[0.98]
+                  shadow-md shadow-purple-500/30
+                  border border-purple-500/20
+                `}
               >
                 <MapPinPlus className="h-3 w-3 mr-1" />
                 {t("Create My Astro Spot", "创建我的观星点")}
