@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -10,12 +10,18 @@ import LocationCard from "@/components/LocationCard";
 import { SharedAstroSpot } from "@/types/weather";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
+import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
+import MiniRemoveButton from "@/components/collections/MiniRemoveButton";
+import { Button } from "@/components/ui/button";
 
 const ManageAstroSpots = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const [editMode, setEditMode] = useState(false);
+  const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
+  const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
 
   const { data: spots, isLoading, refetch } = useQuery({
     queryKey: ['userAstroSpots'],
@@ -26,7 +32,19 @@ const ManageAstroSpots = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as SharedAstroSpot[];
+      
+      // Transform the data to match the SharedAstroSpot interface
+      return data.map(spot => ({
+        id: spot.id,
+        name: spot.name,
+        latitude: spot.latitude,
+        longitude: spot.longitude,
+        bortleScale: spot.bortlescale || 4,
+        description: spot.description,
+        siqs: spot.siqs,
+        timestamp: spot.created_at,
+        user_id: spot.user_id
+      })) as SharedAstroSpot[];
     },
     enabled: !!user
   });
@@ -47,6 +65,17 @@ const ManageAstroSpots = () => {
       toast.error(t("Failed to delete AstroSpot", "删除观星点失败"));
     }
   };
+  
+  const handleSiqsCalculated = (spotId: string, siqs: number | null, loading: boolean) => {
+    setRealTimeSiqs(prev => ({
+      ...prev,
+      [spotId]: siqs
+    }));
+    setLoadingSiqs(prev => ({
+      ...prev,
+      [spotId]: loading
+    }));
+  };
 
   if (!user) {
     return (
@@ -65,13 +94,26 @@ const ManageAstroSpots = () => {
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
       <div className="container py-8 px-4 md:px-6">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-50 mb-2">
-            {t("My AstroSpots", "我的观星点")}
-          </h1>
-          <p className="text-muted-foreground">
-            {t("Manage and track your favorite astronomical observation locations", "管理和追踪您最喜欢的天文观测地点")}
-          </p>
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-50 mb-2">
+              {t("My AstroSpots", "我的观星点")}
+            </h1>
+            <p className="text-muted-foreground">
+              {t("Manage and track your favorite astronomical observation locations", "管理和追踪您最喜欢的天文观测地点")}
+            </p>
+          </div>
+          
+          {spots && spots.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditMode(!editMode)}
+              className="text-primary border-primary hover:bg-primary/10"
+            >
+              {editMode ? t("Done", "完成") : t("Edit", "编辑")}
+            </Button>
+          )}
         </div>
 
         {isLoading ? (
@@ -86,24 +128,49 @@ const ManageAstroSpots = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="relative"
               >
+                {editMode && (
+                  <MiniRemoveButton onClick={(e) => {
+                    e.preventDefault();
+                    handleDelete(spot.id);
+                  }} />
+                )}
+                
+                <RealTimeSiqsProvider
+                  isVisible={true}
+                  latitude={spot.latitude}
+                  longitude={spot.longitude}
+                  bortleScale={spot.bortleScale}
+                  existingSiqs={spot.siqs}
+                  onSiqsCalculated={(siqs, loading) => handleSiqsCalculated(spot.id, siqs, loading)}
+                />
+                
                 <LocationCard
                   id={spot.id}
                   name={spot.name}
                   latitude={spot.latitude}
                   longitude={spot.longitude}
-                  siqs={spot.siqs}
-                  timestamp={spot.created_at}
+                  siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                  timestamp={spot.timestamp}
                   isCertified={false}
                 />
               </motion.div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
+          <div className="text-center py-12 rounded-lg bg-cosmic-800/30 border border-cosmic-700/30">
+            <Trash2 className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground mb-4">
               {t("You haven't created any AstroSpots yet.", "您还没有创建任何观星点。")}
             </p>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/photo-points')}
+              className="mt-2"
+            >
+              {t("Create Your First AstroSpot", "创建您的第一个观星点")}
+            </Button>
           </div>
         )}
       </div>
@@ -112,4 +179,3 @@ const ManageAstroSpots = () => {
 };
 
 export default ManageAstroSpots;
-
