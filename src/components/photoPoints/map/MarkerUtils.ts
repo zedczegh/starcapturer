@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation } from "@/utils/validation";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
@@ -128,32 +129,42 @@ export const getLocationMarker = (
   
   // For user-created astro spots, create a telescope marker
   if (location.user_id) {
-    const telescopeIcon = ReactDOMServer.renderToString(
-      <div style={{
-        backgroundColor: color,
-        width: `${size}px`,
-        height: `${size}px`,
-        borderRadius: '50%',
-        border: '2px solid white',
-        boxShadow: '0 0 4px rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-      }}>
-        <Telescope
-          size={size * 0.6}
-          color="white"
-          style={{
-            transform: 'rotate(-45deg)',
-          }}
-        />
+    const telescopeSvg = `
+      <div style="
+        background-color: ${color};
+        width: ${size}px;
+        height: ${size}px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 4px rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      ">
+        <svg 
+          width="${size * 0.6}" 
+          height="${size * 0.6}" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="white" 
+          stroke-width="2"
+          stroke-linecap="round" 
+          stroke-linejoin="round"
+          style="transform: rotate(-45deg);"
+        >
+          <path d="M14.27 6.73 21 3l-3.73 6.73L14.27 6.73z"></path>
+          <path d="M4 14v6"></path>
+          <path d="M4 10v2"></path>
+          <path d="M14.5 6.5 6 15"></path>
+          <path d="m4 20 10-9"></path>
+        </svg>
       </div>
-    );
+    `;
 
     return L.divIcon({
       className: 'custom-div-icon',
-      html: telescopeIcon,
+      html: telescopeSvg,
       iconSize: [size, size],
       iconAnchor: [size/2, size/2],
     });
@@ -223,3 +234,4 @@ export const isValidAstronomyLocation = (
   
   return true;
 };
+
