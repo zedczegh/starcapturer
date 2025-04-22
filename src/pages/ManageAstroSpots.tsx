@@ -10,7 +10,7 @@ import LocationCard from "@/components/LocationCard";
 import { SharedAstroSpot } from "@/types/weather";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Loader2, Trash2, Edit } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import MiniRemoveButton from "@/components/collections/MiniRemoveButton";
 import { Button } from "@/components/ui/button";
@@ -96,11 +96,6 @@ const ManageAstroSpots = () => {
     }
   };
 
-  const handleEditClick = (e: React.MouseEvent, spotId: string) => {
-    e.stopPropagation();
-    navigate(`/astro-spot/${spotId}/edit`);
-  };
-
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
@@ -156,19 +151,11 @@ const ManageAstroSpots = () => {
                 onClick={() => handleSpotClick(spot.id)}
               >
                 {editMode && (
-                  <>
-                    <MiniRemoveButton onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleDelete(spot.id);
-                    }} />
-                    <button
-                      onClick={(e) => handleEditClick(e, spot.id)}
-                      className="absolute top-2 right-10 z-10 p-1 rounded-full bg-cosmic-800/80 hover:bg-cosmic-700 transition-colors"
-                    >
-                      <Edit className="h-4 w-4 text-primary" />
-                    </button>
-                  </>
+                  <MiniRemoveButton onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDelete(spot.id);
+                  }} />
                 )}
                 
                 <RealTimeSiqsProvider

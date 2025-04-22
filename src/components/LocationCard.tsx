@@ -16,8 +16,6 @@ interface LocationCardProps {
   siqs: number | { score: number; isViable: boolean } | undefined;
   timestamp?: string;
   isCertified?: boolean;
-  onEdit?: () => void;
-  showEditButton?: boolean;
 }
 
 const LocationCard: React.FC<LocationCardProps> = ({
@@ -27,9 +25,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
   longitude,
   siqs,
   timestamp,
-  isCertified = false,
-  onEdit,
-  showEditButton = false
+  isCertified = false
 }) => {
   const { t } = useLanguage();
   
