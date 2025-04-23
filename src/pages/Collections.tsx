@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -16,6 +17,7 @@ import LocationStatusMessage from "@/components/location/LocationStatusMessage";
 import MiniRemoveButton from "@/components/collections/MiniRemoveButton";
 import AboutFooter from '@/components/about/AboutFooter';
 import { useUserCollections } from "@/hooks/collections/useUserCollections";
+import CollectionsLoadingSkeleton from "@/components/collections/CollectionsLoadingSkeleton";
 
 const Collections = () => {
   const { t } = useLanguage();
