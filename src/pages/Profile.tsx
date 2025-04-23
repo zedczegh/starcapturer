@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,7 +34,10 @@ const Profile = () => {
     uploadingAvatar,
     setUploadingAvatar,
     randomTip,
-    fetchProfile
+    fetchProfile,
+    tags,
+    setTags,
+    saveProfileTags
   } = useProfile();
 
   const { register, handleSubmit, setValue } = useForm<ProfileFormValues>({
@@ -53,13 +57,13 @@ const Profile = () => {
           navigate('/photo-points');
           return;
         }
-
         await fetchProfile(session.user.id, setValue);
       } catch (error) {
         setProfile({
           username: null,
           avatar_url: null,
-          date_of_birth: null
+          date_of_birth: null,
+          tags: [],
         });
       } finally {
         setAuthChecked(true);
@@ -152,7 +156,10 @@ const Profile = () => {
         
         if (insertError) throw insertError;
       }
-      
+
+      // Save tags
+      await saveProfileTags(user.id, tags);
+
       toast.success(t("Profile updated successfully", "个人资料更新成功"));
     } catch (error: any) {
       toast.error(t("Update failed", "更新失败"), { description: error.message });
@@ -186,6 +193,8 @@ const Profile = () => {
           saving={saving}
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
+          tags={tags}
+          setTags={setTags}
         />
       </main>
       <AboutFooter />
