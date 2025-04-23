@@ -15,6 +15,7 @@ import SpotDetails from '@/components/astro-spots/profile/SpotDetails';
 import SpotImageGallery from '@/components/astro-spots/profile/SpotImageGallery';
 import SpotComments from '@/components/astro-spots/profile/SpotComments';
 import TimeSlotManager from '@/components/bookings/TimeSlotManager';
+import LocationDetailsLoading from "@/components/location/LocationDetailsLoading";
 
 interface Comment {
   id: string;
@@ -206,7 +207,7 @@ const AstroSpotProfile = () => {
   };
 
   if (isLoading || !spot) {
-    return <div className="min-h-screen flex items-center justify-center bg-cosmic-900">{t("Loading...", "加载中...")}</div>;
+    return <LocationDetailsLoading />;
   }
 
   return (

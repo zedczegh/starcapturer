@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface Comment {
   id: string;
@@ -24,6 +25,35 @@ interface SpotCommentsProps {
   user: boolean;
   onCommentsUpdate: () => void;
 }
+
+const CommentItem = ({ comment }: { comment: Comment }) => {
+  const { t } = useLanguage();
+  const username = comment.profiles?.username || t("Anonymous", "匿名用户");
+  const initial = username.charAt(0).toUpperCase();
+
+  return (
+    <div className="flex gap-3 p-3 bg-cosmic-800/20 rounded-lg border border-cosmic-600/20">
+      <Avatar className="h-8 w-8 border border-cosmic-700/30">
+        {comment.profiles?.avatar_url ? (
+          <AvatarImage src={comment.profiles.avatar_url} alt={username} />
+        ) : (
+          <AvatarFallback className="bg-cosmic-800 text-primary">{initial}</AvatarFallback>
+        )}
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <span className="font-medium text-gray-200 truncate">
+            {username}
+          </span>
+          <span className="text-xs text-gray-500 whitespace-nowrap">
+            {new Date(comment.created_at).toLocaleDateString()}
+          </span>
+        </div>
+        <p className="text-gray-300 break-words">{comment.content}</p>
+      </div>
+    </div>
+  );
+};
 
 const SpotComments: React.FC<SpotCommentsProps> = ({
   spotId,
@@ -150,65 +180,96 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
           {t("Comments", "评论")} ({commentsToDisplay.length})
         </h2>
         
-        <Button 
-          variant="ghost" 
-          onClick={() => setShowCommentsSheet(true)}
-          className="text-sm text-primary hover:bg-cosmic-700/30"
-        >
-          {t("View All", "查看全部")}
-        </Button>
-      </div>
-      
-      <div className="space-y-3">
-        {commentsToDisplay.slice(0, 2).map((comment) => (
-          <div 
-            key={comment.id}
-            className="p-3 bg-cosmic-800/20 rounded-lg border border-cosmic-600/20"
+        {commentsToDisplay.length > 2 && (
+          <Button 
+            variant="ghost" 
+            onClick={() => setShowCommentsSheet(true)}
+            className="text-sm text-primary hover:bg-cosmic-700/30"
           >
-            <div className="flex items-center mb-2">
-              <div className="font-medium text-gray-200">
-                {getUsername(comment)}
-              </div>
-              <span className="text-gray-500 text-sm ml-2">
-                {new Date(comment.created_at).toLocaleDateString()}
-              </span>
-            </div>
-            <p className="text-gray-300">{comment.content}</p>
-          </div>
-        ))}
+            {t("View All", "查看全部")}
+          </Button>
+        )}
       </div>
       
-      {user && (
-        <div className="mt-4 border-t border-cosmic-700/30 pt-4">
-          <h3 className="text-sm font-medium text-gray-300 mb-2">
-            {t("Add a comment", "添加评论")}
-          </h3>
-          <div className="space-y-3">
-            <Textarea
-              placeholder={t("Write your comment here...", "在此处写下您的评论...")}
-              value={commentInput}
-              onChange={(e) => setCommentInput(e.target.value)}
-              className="bg-cosmic-900/40 border-cosmic-700/30 text-gray-300 resize-none"
-              rows={3}
-            />
-            <div className="flex justify-end">
-              <Button
-                onClick={handleCommentSubmit}
-                disabled={commentSending || !commentInput.trim()}
-                size="sm"
-              >
-                {commentSending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t("Posting...", "发布中...")}
-                  </>
-                ) : (
-                  t("Post Comment", "发布评论")
-                )}
-              </Button>
+      {commentsToDisplay.length === 0 ? (
+        <div className="text-center py-8">
+          <MessageCircle className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+          <p className="text-gray-400">{t("No comments yet", "暂无评论")}</p>
+          
+          {user && (
+            <div className="mt-4 pt-4 border-t border-cosmic-700/30 max-w-md mx-auto">
+              <h3 className="text-sm font-medium text-gray-300 mb-2 text-left">
+                {t("Be the first to comment", "成为第一个评论的人")}
+              </h3>
+              <div className="space-y-3">
+                <Textarea
+                  placeholder={t("Write your comment here...", "在此处写下您的评论...")}
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  className="bg-cosmic-900/40 border-cosmic-700/30 text-gray-300 resize-none"
+                  rows={3}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleCommentSubmit}
+                    disabled={commentSending || !commentInput.trim()}
+                    size="sm"
+                  >
+                    {commentSending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t("Posting...", "发布中...")}
+                      </>
+                    ) : (
+                      t("Post Comment", "发布评论")
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
+      ) : (
+        <>
+          <div className="space-y-3">
+            {commentsToDisplay.slice(0, 2).map((comment) => (
+              <CommentItem key={comment.id} comment={comment} />
+            ))}
+          </div>
+          
+          {user && (
+            <div className="mt-4 pt-4 border-t border-cosmic-700/30">
+              <h3 className="text-sm font-medium text-gray-300 mb-2">
+                {t("Add a comment", "添加评论")}
+              </h3>
+              <div className="space-y-3">
+                <Textarea
+                  placeholder={t("Write your comment here...", "在此处写下您的评论...")}
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  className="bg-cosmic-900/40 border-cosmic-700/30 text-gray-300 resize-none"
+                  rows={3}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleCommentSubmit}
+                    disabled={commentSending || !commentInput.trim()}
+                    size="sm"
+                  >
+                    {commentSending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t("Posting...", "发布中...")}
+                      </>
+                    ) : (
+                      t("Post Comment", "发布评论")
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <Sheet open={showCommentsSheet} onOpenChange={setShowCommentsSheet}>
@@ -221,20 +282,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
           
           <div className="mt-6 space-y-4 max-h-[calc(85vh-120px)] overflow-y-auto pr-1">
             {commentsToDisplay.map((comment) => (
-              <div 
-                key={`sheet-comment-${comment.id}`}
-                className="p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-600/20"
-              >
-                <div className="flex items-center mb-2">
-                  <div className="font-medium text-gray-200">
-                    {getUsername(comment)}
-                  </div>
-                  <span className="text-gray-500 text-sm ml-2">
-                    {new Date(comment.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <p className="text-gray-300">{comment.content}</p>
-              </div>
+              <CommentItem key={`sheet-comment-${comment.id}`} comment={comment} />
             ))}
           </div>
         </SheetContent>
