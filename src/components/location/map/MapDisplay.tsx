@@ -41,11 +41,6 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
     return locationName;
   }, [locationName]);
 
-  // Memoized callback for map ready
-  const handleMapReady = useCallback(() => {
-    onMapReady();
-  }, [onMapReady]);
-
   return (
     <div className="z-0 h-full w-full">
       <Suspense fallback={
@@ -60,7 +55,7 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
           position={memoizedPosition}
           locationName={displayName}
           editable={editable}
-          onMapReady={handleMapReady}
+          onMapReady={onMapReady}
           onMapClick={onMapClick}
           showInfoPanel={showInfoPanel}
           isDarkSkyReserve={isDarkSkyReserve}

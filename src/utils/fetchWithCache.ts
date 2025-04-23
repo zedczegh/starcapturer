@@ -6,15 +6,11 @@ import { fetchWithEnhancedCache, clearCacheForUrls, clearAllCache } from './enha
  */
 
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
-// Track pending fetch requests to deduplicate simultaneous requests
 const pendingFetches = new Map<string, Promise<any>>();
 
 /**
- * Improved fetch with caching and request deduplication
- * - Adds memory caching for faster repeated accesses
- * - Deduplicates identical requests in flight
- * - Supports cache invalidation
- * 
+ * Fetch with caching to reduce API calls
+ * Improved with request deduplication to prevent redundant network requests
  * @param url URL to fetch
  * @param options Fetch options
  * @param cacheDuration Optional cache duration in milliseconds
@@ -27,12 +23,8 @@ export async function fetchWithCache(
 ): Promise<any> {
   // If there's already a pending request for this URL, reuse the promise
   if (pendingFetches.has(url)) {
-    console.log(`Using pending request for ${url}`);
     return pendingFetches.get(url);
   }
-
-  // Cache key for memory cache
-  const cacheKey = `${url}-${options?.method || 'GET'}-${JSON.stringify(options?.body || '')}`;
   
   // Create a new fetch promise
   const fetchPromise = fetchWithEnhancedCache(url, options, cacheDuration)
@@ -52,7 +44,6 @@ export async function fetchWithCache(
  */
 export function clearCache(): void {
   clearAllCache();
-  pendingFetches.clear();
 }
 
 /**
@@ -60,18 +51,4 @@ export function clearCache(): void {
  */
 export function clearCacheForUrl(url: string): void {
   clearCacheForUrls([url]);
-  
-  // Also clear pending fetches for this URL
-  if (pendingFetches.has(url)) {
-    pendingFetches.delete(url);
-  }
-}
-
-/**
- * Add a completed fetch to the cache manually
- * Useful for prefetching and storing results
- */
-export function addToCache(url: string, data: any, duration = CACHE_DURATION): void {
-  // Implementation would depend on enhancedCache internals
-  // This is a placeholder as the full implementation would need access to enhancedCache internals
 }

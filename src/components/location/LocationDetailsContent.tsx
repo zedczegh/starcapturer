@@ -1,5 +1,5 @@
 
-import React, { memo, Suspense, useEffect, useState } from "react";
+import React, { memo, Suspense } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import LocationContentLoader from "./LocationContentLoader";
 import LocationFaultedMessage from "./LocationFaultedMessage";
@@ -7,7 +7,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Lazy load the grid component for faster initial load
 const LocationContentGrid = React.lazy(() => import("./LocationContentGrid"));
 import { useLocationContentManager } from "./useLocationContentManager";
 
@@ -25,7 +24,6 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   showFaultedMessage = false
 }) => {
   const { t } = useLanguage();
-  const [contentVisible, setContentVisible] = useState(false);
 
   const {
     containerRef,
@@ -47,18 +45,6 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     onLocationUpdate: onLocUpdate,
     resetUpdateState
   } = useLocationContentManager(locationData, setLocationData, onLocationUpdate);
-
-  // Fade in content for smoother loading experience
-  useEffect(() => {
-    if (!loading && contentLoaded) {
-      // Small delay to allow browser painting to complete
-      const timer = setTimeout(() => {
-        setContentVisible(true);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [loading, contentLoaded]);
 
   // Fix for cases where SIQS is unavailable – show manual refresh button when loaded but no SIQS
   const shouldShowManualRefresh = 
@@ -89,7 +75,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   }
 
   return (
-    <div className={`transition-all duration-300 ${contentVisible ? 'opacity-100' : 'opacity-0'}`} ref={containerRef}>
+    <div className="transition-all duration-300 animate-fade-in" ref={containerRef}>
       <StatusMessage 
         message={statusMessage} 
         onClear={() => setStatusMessage(null)} 
