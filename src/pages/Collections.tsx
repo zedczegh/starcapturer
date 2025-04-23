@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -57,58 +58,64 @@ const Collections = () => {
     }
   };
 
+  // Fetch Bortle scale data for all locations
   useEffect(() => {
-    if (!locations || locations.length === 0) return;
+    let mounted = true;
     
-    let alive = true;
-    const fetchAllBortle = async () => {
+    const fetchBortleScales = async () => {
+      if (!locations || locations.length === 0) return;
+      
       setFetchingBortle(true);
+      const updatedBortles: Record<string, number | null> = {};
       
-      const updated: Record<string, number | null> = {};
-      
-      const batchSize = 5;
+      // Process locations in small batches to avoid overwhelming the API
+      const batchSize = 3;
       for (let i = 0; i < locations.length; i += batchSize) {
         const batch = locations.slice(i, i + batchSize);
         
         await Promise.all(
-          batch.map(async (loc) => {
-            if (typeof loc.bortleScale === "number" && 
-                loc.bortleScale >= 1 && 
-                loc.bortleScale <= 9) {
-              updated[loc.id] = loc.bortleScale;
-              return;
-            }
+          batch.map(async (location) => {
+            if (!location.latitude || !location.longitude) return;
             
-            if (loc.latitude && loc.longitude) {
+            // Only fetch if we don't already have a valid Bortle scale
+            if (typeof location.bortleScale !== 'number' || 
+                location.bortleScale < 1 || 
+                location.bortleScale > 9) {
               try {
-                const value = await getBortleScaleForCoords(
-                  loc.latitude, 
-                  loc.longitude, 
-                  loc.name || ""
+                const bortleScale = await getBortleScaleForCoords(
+                  location.latitude,
+                  location.longitude,
+                  location.name || ''
                 );
-                updated[loc.id] = value;
+                
+                if (mounted) {
+                  updatedBortles[location.id] = bortleScale;
+                }
               } catch (err) {
-                console.error(`Failed to get Bortle scale for ${loc.name}:`, err);
+                console.error(`Error fetching Bortle scale for ${location.name}:`, err);
               }
+            } else {
+              // Use the existing valid Bortle scale
+              updatedBortles[location.id] = location.bortleScale;
             }
           })
         );
         
-        if (alive) {
-          setBortleMap(prev => ({...prev, ...updated}));
+        // Update state after each batch and wait briefly to avoid API rate limits
+        if (mounted) {
+          setBortleMap(prev => ({ ...prev, ...updatedBortles }));
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
       }
       
-      if (alive) {
+      if (mounted) {
         setFetchingBortle(false);
       }
     };
     
-    fetchAllBortle();
+    fetchBortleScales();
     
-    return () => { alive = false; };
+    return () => { mounted = false; };
   }, [locations]);
 
   if (!authChecked) return <PageLoader />;
@@ -169,10 +176,11 @@ const Collections = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedLocations.map((location, index) => {
-                const overrideBortle = bortleMap[location.id];
+                const overrideBortleScale = bortleMap[location.id];
+                // Create a modified location with the updated Bortle scale
                 const effectiveLocation = {
                   ...location,
-                  bortleScale: typeof overrideBortle === "number" ? overrideBortle : location.bortleScale,
+                  bortleScale: typeof overrideBortleScale === 'number' ? overrideBortleScale : location.bortleScale
                 };
                 
                 return (
@@ -190,7 +198,7 @@ const Collections = () => {
                       onViewDetails={handleViewDetails}
                       showRealTimeSiqs={true}
                     />
-                    {fetchingBortle && overrideBortle === undefined && (
+                    {fetchingBortle && overrideBortleScale === undefined && (
                       <div className="absolute right-2 top-2 z-10 bg-background/80 rounded-full p-1">
                         <Loader className="h-4 w-4 animate-spin text-primary" />
                       </div>
