@@ -14,6 +14,7 @@ import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsPro
 import MiniRemoveButton from "@/components/collections/MiniRemoveButton";
 import { Button } from "@/components/ui/button";
 import AstroFooter from "@/components/index/AstroFooter";
+import AstroSpotsLoadingSkeleton from "@/components/astro-spots/AstroSpotsLoadingSkeleton";
 
 const ManageAstroSpots = () => {
   const { user } = useAuth();
@@ -28,20 +29,13 @@ const ManageAstroSpots = () => {
     queryFn: async () => {
       if (!user) throw new Error("User not authenticated");
       
-      console.log("Fetching user astro spots");
-      
       const { data, error } = await supabase
         .from('user_astro_spots')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
-      if (error) {
-        console.error("Error fetching astro spots:", error);
-        throw error;
-      }
-      
-      console.log("Fetched astro spots:", data);
+      if (error) throw error;
       
       return data.map(spot => ({
         id: spot.id,
@@ -57,7 +51,9 @@ const ManageAstroSpots = () => {
     },
     enabled: !!user,
     refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5 // 5 minutes
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 
   const handleDelete = async (spotId: string) => {
@@ -156,9 +152,7 @@ const ManageAstroSpots = () => {
 
         <div className="bg-cosmic-900/60 glassmorphism rounded-2xl border border-cosmic-700/40 shadow-glow px-4 py-8 md:py-10">
           {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
-            </div>
+            <AstroSpotsLoadingSkeleton />
           ) : spots && spots.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {spots.map((spot, index) => (

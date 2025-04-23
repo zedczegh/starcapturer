@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -87,7 +86,6 @@ const Collections = () => {
 
       if (error) throw error;
 
-      // Update the locations state with the new name
       setLocations((prev) =>
         prev.map((loc) =>
           loc.id === id ? { ...loc, name: newName } : loc
@@ -95,14 +93,12 @@ const Collections = () => {
       );
       toast.success(t("Location name updated", "位置名称已更新"));
       
-      // Reset the editing state for this location
       setEditingNames((prev) => {
         const updated = { ...prev };
         delete updated[id];
         return updated;
       });
       
-      // Force reload to ensure all components receive the updated data
       forceReload?.();
     } catch (error: any) {
       toast.error(t("Failed to update name", "更新名称失败"), { description: error.message });
@@ -130,7 +126,7 @@ const Collections = () => {
   const sortedLocations = sortLocationsBySiqs(locations);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background">
       <NavBar />
       <TooltipProvider>
         <main className="container mx-auto px-4 py-8 pt-16 md:pt-20 flex-grow">
@@ -138,7 +134,7 @@ const Collections = () => {
             <h1 className="text-2xl font-bold text-foreground">
               {t("My Collections", "我的收藏")}
             </h1>
-            {sortedLocations.length > 0 && (
+            {sortedLocations?.length > 0 && (
               <button
                 className="bg-cosmic-800 text-white rounded-full px-4 py-1 text-sm font-medium border border-cosmic-600 shadow hover:bg-cosmic-700 transition"
                 onClick={() => setEditMode((v) => !v)}
@@ -150,11 +146,9 @@ const Collections = () => {
 
           {error && <LocationStatusMessage message={error} type="error" />}
 
-          {loading ? (
-            <div className="flex justify-center items-center h-40">
-              <Loader className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : sortedLocations.length === 0 ? (
+          {loading && !locations?.length ? (
+            <CollectionsLoadingSkeleton />
+          ) : locations?.length === 0 ? (
             <div className="text-center py-12 bg-cosmic-800/50 rounded-lg border border-cosmic-700/50">
               <div className="mb-4 text-muted-foreground">
                 {t("You haven't saved any locations yet.", "您还没有保存任何位置。")}
@@ -213,7 +207,6 @@ const Collections = () => {
                     <PhotoLocationCard
                       location={{
                         ...location,
-                        // Use the modified name for display
                         name: customName
                       }}
                       index={index}
