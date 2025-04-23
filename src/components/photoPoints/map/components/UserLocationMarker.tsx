@@ -116,9 +116,6 @@ const UserLocationMarker = memo(({
       >
         <Popup
           offset={[0, 10]}
-          direction="bottom"
-          onOpen={() => setIsPopupOpen(true)}
-          onClose={() => setIsPopupOpen(false)}
         >
           <div className="p-2 leaflet-popup-custom min-w-[180px]">
             <strong>
