@@ -54,15 +54,24 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
     setIsBooking(true);
     
     try {
-      const { error } = await supabase
-        .from('astro_spot_reservations')
-        .insert({
-          timeslot_id: timeSlot.id,
-          user_id: user.id,
-          status: 'confirmed'
-        });
-        
-      if (error) throw error;
+      const { error } = await supabase.rpc('insert_astro_spot_reservation', {
+        p_timeslot_id: timeSlot.id,
+        p_user_id: user.id,
+        p_status: 'confirmed'
+      }) as { error: any };
+
+      if (error) {
+        // Fallback to direct insert if RPC doesn't exist
+        const { error: insertError } = await supabase
+          .from('astro_spot_reservations')
+          .insert({
+            timeslot_id: timeSlot.id,
+            user_id: user.id,
+            status: 'confirmed'
+          }) as { error: any };
+          
+        if (insertError) throw insertError;
+      }
       
       toast.success(t("Booking confirmed!", "预订已确认！"));
       onUpdate();
@@ -83,7 +92,7 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
       const { error } = await supabase
         .from('astro_spot_reservations')
         .delete()
-        .eq('id', userReservation.id);
+        .eq('id', userReservation.id) as { error: any };
         
       if (error) throw error;
       
@@ -102,7 +111,7 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
       const { error } = await supabase
         .from('astro_spot_timeslots')
         .delete()
-        .eq('id', timeSlot.id);
+        .eq('id', timeSlot.id) as { error: any };
         
       if (error) throw error;
       

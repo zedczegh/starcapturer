@@ -85,18 +85,45 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
       };
       
       if (isEditing) {
-        const { error } = await supabase
-          .from('astro_spot_timeslots')
-          .update(timeSlotData)
-          .eq('id', existingTimeSlot.id);
-          
-        if (error) throw error;
+        // Use a custom RPC for this operation
+        const { error } = await supabase.rpc('update_astro_spot_timeslot', {
+          p_id: existingTimeSlot.id,
+          p_spot_id: spotId,
+          p_creator_id: user.id,
+          p_start_time: startDateTime.toISOString(),
+          p_end_time: endDateTime.toISOString(),
+          p_max_capacity: maxCapacity,
+          p_description: description.trim()
+        }) as { error: any };
+
+        // Fall back to direct update if RPC doesn't exist
+        if (error) {
+          const { error: updateError } = await supabase
+            .from('astro_spot_timeslots')
+            .update(timeSlotData)
+            .eq('id', existingTimeSlot.id) as { error: any };
+            
+          if (updateError) throw updateError;
+        }
       } else {
-        const { error } = await supabase
-          .from('astro_spot_timeslots')
-          .insert(timeSlotData);
-          
-        if (error) throw error;
+        // Try to use an RPC first
+        const { error } = await supabase.rpc('insert_astro_spot_timeslot', {
+          p_spot_id: spotId,
+          p_creator_id: user.id,
+          p_start_time: startDateTime.toISOString(),
+          p_end_time: endDateTime.toISOString(),
+          p_max_capacity: maxCapacity,
+          p_description: description.trim()
+        }) as { error: any };
+
+        // Fall back to direct insert if RPC doesn't exist
+        if (error) {
+          const { error: insertError } = await supabase
+            .from('astro_spot_timeslots')
+            .insert(timeSlotData) as { error: any };
+            
+          if (insertError) throw insertError;
+        }
       }
       
       onSuccess();

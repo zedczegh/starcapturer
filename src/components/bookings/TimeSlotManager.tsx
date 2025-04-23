@@ -29,13 +29,34 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
   const { data: timeSlots, isLoading, refetch } = useQuery({
     queryKey: ['timeSlots', spotId],
     queryFn: async () => {
+      // Use the generic query method instead of the typed method
       const { data, error } = await supabase
         .from('astro_spot_timeslots')
-        .select('*, astro_spot_reservations(*, profiles:user_id(username, avatar_url))')
+        .select('*, astro_spot_reservations(*)')
         .eq('spot_id', spotId)
-        .order('start_time', { ascending: true });
+        .order('start_time', { ascending: true }) as { data: any[], error: any };
       
       if (error) throw error;
+
+      // Get user profiles for each reservation
+      for (const slot of data || []) {
+        if (slot.astro_spot_reservations && slot.astro_spot_reservations.length > 0) {
+          const userIds = slot.astro_spot_reservations.map((res: any) => res.user_id);
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .in('id', userIds);
+          
+          // Attach profile to each reservation
+          if (profiles) {
+            slot.astro_spot_reservations = slot.astro_spot_reservations.map((res: any) => {
+              const profile = profiles.find((p: any) => p.id === res.user_id);
+              return { ...res, profiles: profile };
+            });
+          }
+        }
+      }
+      
       return data || [];
     }
   });
