@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Star, Wrench, MessageCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 import NavBar from "@/components/NavBar";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 import BackButton from "@/components/navigation/BackButton";

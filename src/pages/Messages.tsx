@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef, useLocation } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,14 +56,12 @@ const Messages: React.FC = () => {
     }
     
     fetchConversations().then(() => {
-      // If we have a selectedUser from the location state, find and select their conversation
       if (location.state?.selectedUser) {
         const selectedUserId = location.state.selectedUser;
         const existingConversation = conversations.find(conv => conv.id === selectedUserId);
         if (existingConversation) {
           handleSelectConversation(existingConversation);
         } else {
-          // Fetch the user's profile to create a new conversation
           supabase
             .from('profiles')
             .select('username, avatar_url')
@@ -86,7 +84,6 @@ const Messages: React.FC = () => {
       }
     });
 
-    // Set up real-time subscription for new messages
     const channel = supabase
       .channel('messages_channel')
       .on('postgres_changes', 
@@ -121,7 +118,6 @@ const Messages: React.FC = () => {
     setLoading(true);
 
     try {
-      // Get all messages where the user is either the sender or receiver
       const { data: messagesData, error: messagesError } = await supabase
         .from('user_messages')
         .select('*')
@@ -140,14 +136,12 @@ const Messages: React.FC = () => {
         return;
       }
 
-      // Get unique user IDs from conversations
       const uniqueUserIds = new Set<string>();
       messagesData.forEach(msg => {
         if (msg.sender_id !== user.id) uniqueUserIds.add(msg.sender_id);
         if (msg.receiver_id !== user.id) uniqueUserIds.add(msg.receiver_id);
       });
 
-      // Fetch profiles for all users
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -159,13 +153,11 @@ const Messages: React.FC = () => {
         return;
       }
 
-      // Create a map of user profiles
       const profilesMap = new Map();
       profilesData?.forEach(profile => {
         profilesMap.set(profile.id, profile);
       });
 
-      // Process conversations
       const conversationsMap = new Map<string, ConversationPartner>();
 
       messagesData.forEach(msg => {
@@ -210,7 +202,6 @@ const Messages: React.FC = () => {
     if (!user || !partnerId) return;
 
     try {
-      // Get all messages between the user and the partner
       const { data, error } = await supabase
         .from('user_messages')
         .select('*')
@@ -219,7 +210,6 @@ const Messages: React.FC = () => {
 
       if (error) throw error;
       
-      // Fetch profiles for the senders to display with messages
       const senderIds = data?.map(msg => msg.sender_id) || [];
       const uniqueSenderIds = [...new Set(senderIds)];
       
@@ -230,7 +220,6 @@ const Messages: React.FC = () => {
         
       if (profilesError) throw profilesError;
       
-      // Add sender profile information to each message
       const messagesWithProfiles = data?.map(msg => {
         const senderProfile = profilesData?.find(profile => profile.id === msg.sender_id);
         return {
@@ -244,7 +233,6 @@ const Messages: React.FC = () => {
       
       setMessages(messagesWithProfiles || []);
       
-      // Mark unread messages as read
       const unreadMessages = data?.filter(msg => !msg.read && msg.sender_id === partnerId);
       
       if (unreadMessages && unreadMessages.length > 0) {
@@ -255,7 +243,6 @@ const Messages: React.FC = () => {
             .eq('id', msg.id);
         }
         
-        // Update unread count in conversations
         setConversations(prev => 
           prev.map(conv => 
             conv.id === partnerId ? { ...conv, unread_count: 0 } : conv
@@ -303,9 +290,9 @@ const Messages: React.FC = () => {
     const now = new Date();
     
     if (date.toDateString() === now.toDateString()) {
-      return format(date, "h:mm a"); // Today, show only time
+      return format(date, "h:mm a");
     } else {
-      return format(date, "MMM d, h:mm a"); // Not today, show date and time
+      return format(date, "MMM d, h:mm a");
     }
   };
 
