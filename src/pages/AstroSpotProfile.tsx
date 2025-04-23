@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Star, Wrench, MessageCircle } from 'lucide-react';
+import { Star, Wrench } from 'lucide-react';
 import { motion } from 'framer-motion';
 import NavBar from "@/components/NavBar";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
@@ -218,17 +218,6 @@ const AstroSpotProfile = () => {
             destination={comingFromCommunity ? "/community" : "/manage-astro-spots"}
             className="text-gray-300 hover:bg-cosmic-800/50"
           />
-          
-          {comingFromCommunity && user && spot.user_id !== user.id && (
-            <Button
-              onClick={handleMessageCreator}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <MessageCircle className="h-4 w-4" />
-              {t("Message Creator", "联系创建者")}
-            </Button>
-          )}
         </div>
 
         <motion.div
@@ -254,6 +243,7 @@ const AstroSpotProfile = () => {
             loadingCreator={loadingCreator}
             spotId={spot.user_id}
             onViewDetails={handleViewDetails}
+            comingFromCommunity={comingFromCommunity}
           />
           
           <div className="p-6 space-y-6">

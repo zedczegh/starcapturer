@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { Star, MapPin, Calendar, ExternalLink } from 'lucide-react';
+import { Star, MapPin, Calendar, ExternalLink, MessageCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SpotHeaderProps {
   spot: {
@@ -12,6 +13,7 @@ interface SpotHeaderProps {
     longitude: number;
     created_at: string;
     siqs?: number;
+    user_id: string;
   };
   creatorProfile?: {
     username: string | null;
@@ -20,6 +22,7 @@ interface SpotHeaderProps {
   loadingCreator: boolean;
   spotId: string;
   onViewDetails: () => void;
+  comingFromCommunity: boolean;
 }
 
 const SpotHeader: React.FC<SpotHeaderProps> = ({
@@ -27,9 +30,17 @@ const SpotHeader: React.FC<SpotHeaderProps> = ({
   creatorProfile,
   loadingCreator,
   spotId,
-  onViewDetails
+  onViewDetails,
+  comingFromCommunity
 }) => {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleMessageCreator = () => {
+    if (!user || !spot.user_id) return;
+    navigate('/messages', { state: { selectedUser: spot.user_id } });
+  };
 
   const renderCreatorAvatar = () => {
     if (loadingCreator) {
@@ -95,14 +106,26 @@ const SpotHeader: React.FC<SpotHeaderProps> = ({
               {new Date(spot.created_at).toLocaleDateString()}
             </div>
           </div>
-          <Button
-            variant="default"
-            onClick={onViewDetails}
-            className="bg-primary/80 hover:bg-primary flex items-center gap-2 rounded-full mt-4 sm:mt-0"
-          >
-            <ExternalLink className="h-4 w-4" />
-            {t("View Location Details", "查看位置详情")}
-          </Button>
+          <div className="flex flex-col gap-2 mt-4 sm:mt-0">
+            {comingFromCommunity && user && spot.user_id !== user.id && (
+              <Button
+                variant="secondary"
+                onClick={handleMessageCreator}
+                className="flex items-center gap-2"
+              >
+                <MessageCircle className="h-4 w-4" />
+                {t("Message Creator", "联系创建者")}
+              </Button>
+            )}
+            <Button
+              variant="default"
+              onClick={onViewDetails}
+              className="bg-primary/80 hover:bg-primary flex items-center gap-2 rounded-full"
+            >
+              <ExternalLink className="h-4 w-4" />
+              {t("View Location Details", "查看位置详情")}
+            </Button>
+          </div>
         </div>
         {spot.siqs && (
           <div className="inline-flex items-center px-4 py-2 rounded-full bg-cosmic-700/60 text-primary-foreground">
