@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -15,6 +15,8 @@ import { motion } from "framer-motion";
 import BackButton from "@/components/navigation/BackButton";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const AstroSpotProfile = () => {
   const { id } = useParams();
@@ -28,6 +30,11 @@ const AstroSpotProfile = () => {
   const [isCreator, setIsCreator] = useState(false);
   const [comingFromCommunity, setComingFromCommunity] = useState(false);
   const [showInstantLoader, setShowInstantLoader] = useState(false);
+  const [commentInput, setCommentInput] = useState("");
+  const [commentSending, setCommentSending] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: spot, isLoading, error, refetch } = useQuery({
     queryKey: ['astroSpot', id],
@@ -131,6 +138,63 @@ const AstroSpotProfile = () => {
   const handleEditClose = () => {
     setShowEditDialog(false);
     refetch(); // Refresh spot data after editing
+  };
+
+  const handleCommentSubmit = async () => {
+    if (!user?.id || !id || !commentInput.trim()) return;
+    setCommentSending(true);
+    const { error, data } = await supabase
+      .from("astro_spot_comments")
+      .insert({
+        user_id: user.id,
+        spot_id: id,
+        content: commentInput.trim(),
+      })
+      .select("*, profiles:user_id(username, avatar_url)")
+      .single();
+    if (error) {
+      toast.error(t("Failed to post comment.", "评论发送失败。"));
+      setCommentSending(false);
+      return;
+    }
+    setCommentInput("");
+    // Optimistically update comments cache
+    if (spot?.astro_spot_comments) {
+      spot.astro_spot_comments.unshift(data);
+    }
+    toast.success(t("Comment posted!", "评论已发表！"));
+    setCommentSending(false);
+    refetch(); // Refresh data to ensure update consistency
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    if (spotImages.length + e.target.files.length > 10) {
+      toast.error(t("Maximum 10 images allowed", "最多允许10张图片"));
+      return;
+    }
+    setSelectedFiles(Array.from(e.target.files));
+  };
+
+  const handleUploadImages = async () => {
+    if (!id || !selectedFiles.length) return;
+    setImageUploading(true);
+    const bucket = "astro_spot_images";
+    for (const file of selectedFiles) {
+      // Upload each file using Supabase Storage
+      const { error } = await supabase.storage
+        .from(bucket)
+        .upload(`${id}/${file.name}`, file, { upsert: false });
+      if (error) {
+        toast.error(t("Failed to upload one or more images.", "部分图片上传失败"));
+        setImageUploading(false);
+        return;
+      }
+    }
+    setSelectedFiles([]);
+    toast.success(t("Images uploaded!", "图片已上传！"));
+    refetch(); // Refresh images
+    setImageUploading(false);
   };
 
   if (isLoading || !spot || showInstantLoader) {
