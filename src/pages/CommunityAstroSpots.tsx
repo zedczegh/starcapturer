@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
@@ -9,8 +10,8 @@ import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import CommunityMap from "@/components/community/CommunityMap";
-import Loader2 from "@/components/Loader2";
-import CommunityLocationsSkeleton from "@/components/CommunityLocationsSkeleton";
+import { Loader2 } from "@/components/ui/loader";
+import CommunityLocationsSkeleton from "@/components/community/CommunityLocationsSkeleton";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
