@@ -8,7 +8,8 @@ interface CommunityUserLocationMarkerProps {
 }
 
 const CommunityUserLocationMarker = ({ position, onLocationUpdate }: CommunityUserLocationMarkerProps) => {
-  return <UserLocationMarker position={position} currentSiqs={null} onLocationUpdate={onLocationUpdate} />;
+  // Pass null as currentSiqs to ensure the RealTimeSiqsProvider inside UserLocationMarker will calculate it
+  return <UserLocationMarker position={position} onLocationUpdate={onLocationUpdate} />;
 };
 
 export default CommunityUserLocationMarker;

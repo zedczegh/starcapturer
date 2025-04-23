@@ -1,93 +1,96 @@
 
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
-import { useLanguage } from "@/contexts/LanguageContext";
-import SiqsScoreBadge from '../../cards/SiqsScoreBadge';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { ExternalLink } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import SiqsScoreBadge from '../cards/SiqsScoreBadge';
+import { MapPin, ExternalLink } from 'lucide-react';
+import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
-import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface UserLocationMarkerProps {
   position: [number, number];
-  currentSiqs: number | null;
+  currentSiqs?: number | null;
   onLocationUpdate?: (lat: number, lng: number) => void;
 }
 
-const UserLocationMarker = memo(({ 
-  position, 
+const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ 
+  position,
   currentSiqs,
   onLocationUpdate 
-}: UserLocationMarkerProps) => {
+}) => {
   const { t, language } = useLanguage();
-  const isMobile = useIsMobile();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
+  const [siqsLoading, setSiqsLoading] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(false);
+  const [locationName, setLocationName] = useState<string>('');
+  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  
   const userMarkerIcon = createCustomMarker('#e11d48', 'circle', isMobile ? 1.2 : 1.0);
 
-  const [locationName, setLocationName] = useState<string>('');
-  const [loadingName, setLoadingName] = useState<boolean>(true);
-  const [isWaterLocation, setIsWaterLocation] = useState<boolean>(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-  const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setIsAuthenticated(!!user);
-    });
+  const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean) => {
+    setRealTimeSiqs(siqs);
+    setSiqsLoading(loading);
   }, []);
 
+  const handleRefreshSiqs = useCallback(() => {
+    setForceUpdate(true);
+    setTimeout(() => setForceUpdate(false), 100);
+  }, []);
+
+  // Fetch location name when position changes
   useEffect(() => {
-    let ignore = false;
-    const fetchName = async () => {
-      setLoadingName(true);
+    const fetchLocationName = async () => {
+      setIsLoadingLocation(true);
       try {
-        const details = await getEnhancedLocationDetails(
-          position[0], 
-          position[1], 
-          language === 'zh' ? 'zh' : 'en'
-        );
+        const details = await getEnhancedLocationDetails(position[0], position[1], language === 'zh' ? 'zh' : 'en');
+        setLocationName(details.formattedName || '');
         
-        if (!ignore) {
-          setLocationName(details.formattedName || '');
-          setIsWaterLocation(details.isWater || false);
-          
-          if (details.isWater) {
-            console.log("Location was detected as water but overriding for user marker");
-            if (details.townName || details.cityName) {
-              const nearestPlace = details.townName || details.cityName;
-              setLocationName(language === 'en' 
-                ? `Near ${nearestPlace}`
-                : `靠近 ${nearestPlace}`);
-            } else {
-              setLocationName(t("Your Location", "您的位置"));
-            }
+        if (details.isWater) {
+          console.log("Location was detected as water but overriding for user marker");
+          if (details.townName || details.cityName) {
+            const nearestPlace = details.townName || details.cityName;
+            setLocationName(language === 'en' 
+              ? `Near ${nearestPlace}`
+              : `靠近 ${nearestPlace}`);
+          } else {
+            setLocationName(t("Your Location", "您的位置"));
           }
         }
-      } catch (e) {
-        if (!ignore) {
-          setLocationName(t("Your Location", "您的位置"));
-          setIsWaterLocation(false);
-        }
+      } catch (error) {
+        console.error('Error fetching location name:', error);
+        setLocationName(t("Your Location", "您的位置"));
       } finally {
-        if (!ignore) setLoadingName(false);
+        setIsLoadingLocation(false);
       }
     };
-    fetchName();
-    return () => { ignore = true; };
+
+    fetchLocationName();
   }, [position, language, t]);
+
+  // Force refresh SIQS data when position changes
+  useEffect(() => {
+    handleRefreshSiqs();
+    setSiqsLoading(true);
+    setRealTimeSiqs(null);
+  }, [position, handleRefreshSiqs]);
 
   const handleViewDetails = useCallback(() => {
     navigate(`/location/${position[0].toFixed(6)},${position[1].toFixed(6)}`, {
       state: {
         latitude: position[0],
         longitude: position[1],
-        isUserLocation: true,
         name: locationName || t("Your Location", "您的位置"),
-        isWater: false
+        isUserLocation: true
       }
     });
   }, [navigate, position, locationName, t]);
@@ -110,6 +113,14 @@ const UserLocationMarker = memo(({
 
   return (
     <>
+      <RealTimeSiqsProvider
+        isVisible={true}
+        latitude={position[0]}
+        longitude={position[1]}
+        onSiqsCalculated={handleSiqsCalculated}
+        forceUpdate={forceUpdate}
+      />
+      
       <Marker 
         position={position} 
         icon={userMarkerIcon}
@@ -123,17 +134,17 @@ const UserLocationMarker = memo(({
         >
           <div className="p-2 leaflet-popup-custom marker-popup-gradient min-w-[180px]">
             <strong>
-              {loadingName
+              {isLoadingLocation
                 ? <span className="animate-pulse text-xs text-muted-foreground">{t("Loading location...", "正在加载位置...")}</span>
                 : (locationName || t("Your Location", "您的位置"))}
             </strong>
             <div className="text-xs mt-1">
               {position[0].toFixed(5)}, {position[1].toFixed(5)}
             </div>
-            {currentSiqs !== null && (
+            {realTimeSiqs !== null && (
               <div className="text-xs mt-1.5 flex items-center">
                 <span className="mr-1">SIQS:</span>
-                <SiqsScoreBadge score={currentSiqs} compact={true} />
+                <SiqsScoreBadge score={realTimeSiqs} compact={true} loading={siqsLoading} />
               </div>
             )}
             <div className="mt-2 flex flex-col gap-2">
@@ -145,7 +156,7 @@ const UserLocationMarker = memo(({
                 {t("View Details", "查看详情")}
               </button>
               
-              {isAuthenticated && (
+              {user && (
                 <button 
                   onClick={handleOpenDialog}
                   className={`
@@ -168,8 +179,8 @@ const UserLocationMarker = memo(({
           </div>
         </Popup>
       </Marker>
-
-      {isDialogOpen && (
+      
+      {user && isDialogOpen && (
         <CreateAstroSpotDialog
           latitude={position[0]}
           longitude={position[1]}
@@ -179,8 +190,6 @@ const UserLocationMarker = memo(({
       )}
     </>
   );
-});
+};
 
-UserLocationMarker.displayName = 'UserLocationMarker';
-
-export { UserLocationMarker };
+export default React.memo(UserLocationMarker);
