@@ -1,9 +1,8 @@
-
+import { Telescope } from 'lucide-react';
+import L from 'leaflet';
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { isWaterLocation } from "@/utils/validation";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
 import { getSiqsScore } from "@/utils/siqsHelpers";
-import L from 'leaflet'; // Add this import for the Leaflet library
 
 /**
  * Get SIQS quality class for styling
@@ -119,17 +118,17 @@ export const getLocationMarker = (
   isHovered: boolean,
   isMobile: boolean
 ): L.DivIcon => {
-  // Get the marker color based on location properties
-  const color = getLocationColor(location);
-  
+  // Use a nice blue color for the telescope
+  const color = "#0EA5E9"; // Ocean Blue from the color palette
+
   // Determine size based on device and hover state
   const size = isMobile ? 
     (isHovered ? 22 : 16) : // Mobile sizes
     (isHovered ? 28 : 24);  // Desktop sizes
-  
-  // Create a marker with a custom HTML representation
+
+  // Create a marker with a blue telescope icon in a circle
   return L.divIcon({
-    className: 'custom-div-icon',
+    className: 'custom-div-icon telescope-marker',
     html: `
       <div 
         style="
@@ -144,11 +143,19 @@ export const getLocationMarker = (
           justify-content: center;
         "
       >
-        ${isCertified ? 
-          `<svg xmlns="http://www.w3.org/2000/svg" width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-           </svg>` : 
-          ''}
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="${size * 0.6}" 
+          height="${size * 0.6}" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="white" 
+          stroke-width="2" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"
+        >
+          <path d="M3 15c0 4.4 1.1 6 2.7 6 2.8 0 3.3-4.1 3.3-6h0c0-1.9-.5-6-3.3-6C4.1 9 3 10.6 3 15Zm15 0c0 4.4 1.1 6 2.7 6 2.8 0 3.3-4.1 3.3-6h0c0-1.9-.5-6-3.3-6-1.6 0-2.7 1.6-2.7 6Zm-7.5 4.8a.7.7 0 0 1 .7.7v1.5a.7.7 0 0 1-.7.7H6.3a.7.7 0 0 1-.7-.7v-1.5a.7.7 0 0 1 .7-.7Zm10 0a.7.7 0 0 1 .7.7v1.5a.7.7 0 0 1-.7.7h-3.3a.7.7 0 0 1-.7-.7v-1.5a.7.7 0 0 1 .7-.7ZM16.5 4.2l-1-1.7a1.5 1.5 0 0 0-2.1-.5l-1 .5a1.5 1.5 0 0 1-2.1-.5l-1-1.7m6.2 4.2h-3a2 2 0 0 0-2 2v2"/>
+        </svg>
       </div>
     `,
     iconSize: [size, size],
