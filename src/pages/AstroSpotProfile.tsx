@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 import BackButton from "@/components/navigation/BackButton";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 import { Link } from 'react-router-dom';
+import { Skeleton } from "@/components/ui/skeleton";
 
 const AstroSpotProfile = () => {
   const { id } = useParams();
@@ -26,12 +27,20 @@ const AstroSpotProfile = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
   const [comingFromCommunity, setComingFromCommunity] = useState(false);
+  const [showInstantLoader, setShowInstantLoader] = useState(false);
 
   useEffect(() => {
-    if (location.state?.from === 'community') {
+    if (location.state?.from === "community") {
       setComingFromCommunity(true);
+      setShowInstantLoader(true);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    if (!isLoading && !!spot) {
+      setShowInstantLoader(false);
+    }
+  }, [isLoading, spot]);
 
   const { data: spot, isLoading, error, refetch } = useQuery({
     queryKey: ['astroSpot', id],
@@ -148,20 +157,8 @@ const AstroSpotProfile = () => {
     refetch(); // Refresh spot data after editing
   };
 
-  if (isLoading || !spot) {
-    if (isLoading) {
-      return (
-        <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
-          <NavBar />
-          <div className="container py-12 flex justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
-          </div>
-        </div>
-      );
-    }
-
+  if (isLoading || !spot || showInstantLoader) {
     if (error) {
-      console.error("Error in astro spot query:", error);
       return (
         <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
           <NavBar />
@@ -191,31 +188,29 @@ const AstroSpotProfile = () => {
         </div>
       );
     }
-
     return (
       <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
         <NavBar />
-        <div className="container py-12">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-200 mb-2">
-              {t("AstroSpot not found", "未找到观星点")}
-            </h2>
-            <p className="text-gray-400 mb-4">{t("The requested AstroSpot could not be found. It may have been deleted or you may not have access to it.", "找不到请求的观星点。它可能已被删除或您可能无权访问它。")}</p>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                if (location.state?.from === 'community') {
-                  navigate('/community');
-                } else {
-                  navigate('/manage-astro-spots');
-                }
-              }}
-              className="mt-4"
-            >
-              {location.state?.from === 'community' 
-                ? t("Back to Community", "返回社区") 
-                : t("Back to My AstroSpots", "返回我的观星点")}
-            </Button>
+        <div className="container max-w-4xl py-8 px-4 md:px-6">
+          <Skeleton className="w-48 h-8 mb-6 rounded-lg" />
+          <div className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden relative">
+            <div className="bg-gradient-to-r from-cosmic-800/80 to-cosmic-800/40 p-6 border-b border-cosmic-700/30">
+              <div className="flex justify-between items-start mb-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-64 rounded mb-2" />
+                  <Skeleton className="h-4 w-32 rounded" />
+                  <Skeleton className="h-4 w-28 rounded mt-2" />
+                </div>
+                <Skeleton className="h-9 w-40 rounded-full" />
+              </div>
+              <Skeleton className="h-6 w-36 mt-4 rounded-full" />
+            </div>
+            <div className="p-6 space-y-6">
+              <Skeleton className="h-16 w-full rounded-lg mb-4" />
+              <Skeleton className="h-10 w-3/4 rounded-lg mb-3" />
+              <Skeleton className="h-10 w-2/3 rounded-lg mb-3" />
+              <Skeleton className="h-32 w-full rounded-lg" />
+            </div>
           </div>
         </div>
       </div>
