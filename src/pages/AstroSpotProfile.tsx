@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -37,9 +38,15 @@ const AstroSpotProfile = () => {
   const [isCreator, setIsCreator] = useState(false);
   const [comingFromCommunity, setComingFromCommunity] = useState(false);
   const [showInstantLoader, setShowInstantLoader] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Function to trigger refreshes
+  const triggerRefresh = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   const { data: spot, isLoading, error, refetch } = useQuery({
-    queryKey: ['astroSpot', id],
+    queryKey: ['astroSpot', id, refreshTrigger],
     queryFn: async () => {
       if (!id) throw new Error("No spot ID provided");
       const { data: spotData, error: spotError } = await supabase
@@ -89,7 +96,7 @@ const AstroSpotProfile = () => {
       };
     },
     retry: 1,
-    staleTime: 1000 * 60,
+    staleTime: 1000 * 15, // Reduced stale time to 15 seconds for more frequent refreshes
     refetchOnWindowFocus: false
   });
 
@@ -112,18 +119,12 @@ const AstroSpotProfile = () => {
   });
 
   const { data: spotImages = [], isLoading: loadingImages, refetch: refetchImages } = useQuery({
-    queryKey: ['spotImages', id],
+    queryKey: ['spotImages', id, refreshTrigger],
     queryFn: async () => {
       if (!id) return [];
       
       try {
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const astroBucketExists = buckets?.some(bucket => bucket.name === 'astro_spot_images');
-        
-        if (!astroBucketExists) {
-          console.log("Astro spot images bucket doesn't exist yet");
-          return [];
-        }
+        console.log("Fetching images for spot:", id);
         
         const { data: files, error } = await supabase
           .storage
@@ -136,8 +137,11 @@ const AstroSpotProfile = () => {
         }
         
         if (!files || files.length === 0) {
+          console.log("No images found for spot:", id);
           return [];
         }
+        
+        console.log("Found", files.length, "images for spot:", id);
         
         return files.map(file => {
           const { data } = supabase
@@ -151,7 +155,8 @@ const AstroSpotProfile = () => {
         return [];
       }
     },
-    enabled: !!id
+    enabled: !!id,
+    staleTime: 1000 * 15 // Reduced stale time to 15 seconds
   });
 
   useEffect(() => {
@@ -184,6 +189,24 @@ const AstroSpotProfile = () => {
   const handleEditClose = () => {
     setShowEditDialog(false);
     refetch();
+  };
+
+  // Handle comments update
+  const handleCommentsUpdate = async () => {
+    console.log("Comments update triggered");
+    // First do an immediate refetch
+    await refetch();
+    // Also trigger the refresh for any subsequent operations
+    triggerRefresh();
+  };
+
+  // Handle image updates
+  const handleImagesUpdate = async () => {
+    console.log("Images update triggered");
+    // First do an immediate refetch
+    await refetchImages();
+    // Also trigger the refresh for any subsequent operations
+    triggerRefresh();
   };
 
   if (isLoading || !spot) {
@@ -239,14 +262,14 @@ const AstroSpotProfile = () => {
               spotImages={spotImages}
               loadingImages={loadingImages}
               user={!!user}
-              onImagesUpdate={refetchImages}
+              onImagesUpdate={handleImagesUpdate}
             />
             
             <SpotComments
               spotId={id!}
               comments={spot.astro_spot_comments || []}
               user={!!user}
-              onCommentsUpdate={refetch}
+              onCommentsUpdate={handleCommentsUpdate}
             />
           </div>
         </motion.div>

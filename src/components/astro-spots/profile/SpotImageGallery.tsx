@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Album, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -28,10 +29,16 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
   const [showPhotosDialog, setShowPhotosDialog] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
+  const [localImages, setLocalImages] = useState<string[]>(spotImages);
+
+  // Update local images when props change
+  useEffect(() => {
+    setLocalImages(spotImages);
+  }, [spotImages]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-    if (spotImages.length + e.target.files.length > 10) {
+    if (localImages.length + e.target.files.length > 10) {
       toast.error(t("Maximum 10 images allowed", "最多允许10张图片"));
       return;
     }
@@ -49,7 +56,7 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
       for (const file of selectedFiles) {
         const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
         
-        const { error } = await supabase.storage
+        const { error, data } = await supabase.storage
           .from('astro_spot_images')
           .upload(`${spotId}/${fileName}`, file, { 
             upsert: false,
@@ -61,6 +68,15 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
           uploadResults.push({ success: false, fileName, error });
         } else {
           uploadResults.push({ success: true, fileName });
+          
+          // Get the public URL for immediate display
+          const { data: publicUrlData } = supabase.storage
+            .from('astro_spot_images')
+            .getPublicUrl(`${spotId}/${fileName}`);
+          
+          if (publicUrlData) {
+            setLocalImages(prev => [...prev, publicUrlData.publicUrl]);
+          }
         }
       }
       
@@ -95,9 +111,9 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
             <div key={i} className="aspect-square bg-cosmic-800/50 animate-pulse rounded-lg" />
           ))}
         </div>
-      ) : spotImages.length > 0 ? (
+      ) : localImages.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {spotImages.map((imageUrl, index) => (
+          {localImages.map((imageUrl, index) => (
             <div 
               key={`image-${index}`}
               className="relative aspect-square overflow-hidden rounded-lg border border-cosmic-600/30 shadow-md"
@@ -168,7 +184,7 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
             <DialogTitle>{t("Photo Album", "照片集")}: {spotName}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            {spotImages.map((imageUrl, index) => (
+            {localImages.map((imageUrl, index) => (
               <div key={`dialog-image-${index}`} className="relative overflow-hidden rounded-lg border border-cosmic-600/30">
                 <img 
                   src={imageUrl} 
@@ -182,7 +198,7 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
               </div>
             ))}
           </div>
-          {spotImages.length === 0 && (
+          {localImages.length === 0 && (
             <div className="flex flex-col items-center justify-center text-center py-12">
               <Album className="h-16 w-16 text-gray-500 mb-4" />
               <p className="text-gray-400 text-lg">

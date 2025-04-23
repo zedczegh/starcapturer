@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageCircle, Loader2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,12 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
   const [showCommentsSheet, setShowCommentsSheet] = useState(false);
   const [commentInput, setCommentInput] = useState("");
   const [commentSending, setCommentSending] = useState(false);
+  const [localComments, setLocalComments] = useState<Comment[]>(comments);
+
+  // Update local comments when props change
+  useEffect(() => {
+    setLocalComments(comments);
+  }, [comments]);
 
   const getUsername = (comment: Comment) => {
     if (!comment || !comment.profiles) return t("Anonymous", "匿名用户");
@@ -51,18 +57,31 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     
     try {
       // Insert the comment
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from("astro_spot_comments")
         .insert({
           user_id: (await supabase.auth.getUser()).data.user?.id,
           spot_id: spotId,
           content: commentInput.trim(),
-        });
+        })
+        .select();
       
       if (error) {
         console.error("Error posting comment:", error);
         toast.error(t("Failed to post comment.", "评论发送失败。"));
         return;
+      }
+      
+      // Add the new comment to local state immediately
+      if (data && data.length > 0) {
+        const newComment = {
+          ...data[0],
+          profiles: {
+            username: (await supabase.auth.getUser()).data.user?.email?.split('@')[0] || t("Anonymous", "匿名用户"),
+            avatar_url: null
+          }
+        };
+        setLocalComments(prev => [newComment, ...prev]);
       }
       
       // Clear input and trigger a refresh of comments
@@ -78,7 +97,10 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     }
   };
 
-  if (!comments || comments.length === 0) {
+  // Use the local comments state instead of the prop
+  const commentsToDisplay = localComments || [];
+
+  if (!commentsToDisplay || commentsToDisplay.length === 0) {
     return (
       <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30 flex flex-col items-center justify-center text-center">
         <MessageCircle className="h-10 w-10 text-gray-500 mb-2" />
@@ -125,7 +147,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
       <div className="flex justify-between items-center mb-3">
         <h2 className="text-xl font-semibold text-gray-200 flex items-center">
           <MessageCircle className="h-5 w-5 mr-2 text-primary/80" />
-          {t("Comments", "评论")} ({comments.length})
+          {t("Comments", "评论")} ({commentsToDisplay.length})
         </h2>
         
         <Button 
@@ -138,7 +160,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
       </div>
       
       <div className="space-y-3">
-        {comments.slice(0, 2).map((comment) => (
+        {commentsToDisplay.slice(0, 2).map((comment) => (
           <div 
             key={comment.id}
             className="p-3 bg-cosmic-800/20 rounded-lg border border-cosmic-600/20"
@@ -193,12 +215,12 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         <SheetContent side="bottom" className="h-[85vh] bg-cosmic-900 border-cosmic-700 text-gray-100 rounded-t-xl">
           <SheetHeader>
             <SheetTitle className="text-gray-100">
-              {t("All Comments", "所有评论")} ({comments.length})
+              {t("All Comments", "所有评论")} ({commentsToDisplay.length})
             </SheetTitle>
           </SheetHeader>
           
           <div className="mt-6 space-y-4 max-h-[calc(85vh-120px)] overflow-y-auto pr-1">
-            {comments.map((comment) => (
+            {commentsToDisplay.map((comment) => (
               <div 
                 key={`sheet-comment-${comment.id}`}
                 className="p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-600/20"
