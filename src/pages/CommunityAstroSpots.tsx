@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
@@ -10,21 +9,23 @@ import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import CommunityMap from "@/components/community/CommunityMap";
+import Loader2 from "@/components/Loader2";
+import CommunityLocationsSkeleton from "@/components/CommunityLocationsSkeleton";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
 const CommunityAstroSpots: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+
   const { data: astrospots, isLoading } = useQuery({
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
+    staleTime: 1000 * 60 * 5,
   });
 
-  // Manage SIQS state like in ManageAstroSpots
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
-  // User location state
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
   const handleSiqsCalculated = (spotId: string, siqs: number | null, loading: boolean) => {
@@ -38,13 +39,11 @@ const CommunityAstroSpots: React.FC = () => {
     }));
   };
 
-  // Handle user location updates from map clicks
   const handleLocationUpdate = useCallback((lat: number, lng: number) => {
     console.log("Location updated:", lat, lng);
     setUserLocation([lat, lng]);
   }, []);
 
-  // Header animation variants
   const titleVariants = {
     hidden: { opacity: 0, scale: 0.96, y: -10 },
     visible: { opacity: 1, scale: 1, y: 0, transition: { delay: 0.1, duration: 0.6, ease: "easeOut" } }
@@ -58,9 +57,7 @@ const CommunityAstroSpots: React.FC = () => {
     visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
   };
 
-  // Function to handle clicking a location card
   const handleCardClick = (id: string) => {
-    // Pass source information when navigating to the profile
     navigate(`/astro-spot/${id}`, { 
       state: { from: 'community' } 
     });
@@ -69,41 +66,38 @@ const CommunityAstroSpots: React.FC = () => {
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>
       <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
-        {/* Header Section with Gradient, Animated Line & Better Layout */}
-        <div className="mb-9">
-          <motion.div
-            className="flex flex-col items-center justify-center gap-3"
-            initial="hidden"
-            animate="visible"
-            variants={{}}
+        <motion.div
+          className="flex flex-col items-center justify-center gap-3 mb-9"
+          initial="hidden"
+          animate="visible"
+          variants={{}}
+        >
+          <motion.h1
+            className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-3xl md:text-4xl text-center drop-shadow tracking-tight"
+            variants={titleVariants}
           >
-            <motion.h1
-              className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-3xl md:text-4xl text-center drop-shadow tracking-tight"
-              variants={titleVariants}
-            >
-              {t("Astrospots Community", "观星社区")}
-            </motion.h1>
-            <motion.div
-              className="rounded-full h-1 bg-gradient-to-r from-blue-400 to-purple-400 mb-1"
-              style={{ width: 90, maxWidth: "40vw" }}
-              variants={lineVariants}
-            />
-            <motion.p
-              className="text-center mb-2 mt-1 max-w-2xl text-base md:text-lg text-muted-foreground leading-relaxed"
-              variants={descVariants}
-            >
-              {t(
-                "Discover and explore astrospots contributed by our SIQS community members. View their favorite stargazing locations on the interactive map and find inspiration for your next adventure.",
-                "由SIQS社区成员贡献的观星点，在这里一览无余。浏览大家推荐的拍摄位置，探索灵感，发现下次观星之旅的新去处。"
-              )}
-            </motion.p>
-          </motion.div>
-        </div>
+            {t("Astrospots Community", "观星社区")}
+          </motion.h1>
+          <motion.div
+            className="rounded-full h-1 bg-gradient-to-r from-blue-400 to-purple-400 mb-1"
+            style={{ width: 90, maxWidth: "40vw" }}
+            variants={lineVariants}
+          />
+          <motion.p
+            className="text-center mb-2 mt-1 max-w-2xl text-base md:text-lg text-muted-foreground leading-relaxed"
+            variants={descVariants}
+          >
+            {t(
+              "Discover and explore astrospots contributed by our SIQS community members. View their favorite stargazing locations on the interactive map and find inspiration for your next adventure.",
+              "由SIQS社区成员贡献的观星点，在这里一览无余。浏览大家推荐的拍摄位置，探索灵感，发现下次观星之旅的新去处。"
+            )}
+          </motion.p>
+        </motion.div>
 
-        <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 border border-cosmic-700/20" style={{ height: 380, minHeight: 275 }}>
+        <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 380, minHeight: 275 }}>
           {isLoading ? (
-            <div className="flex justify-center items-center h-full w-full bg-cosmic-800/10">
-              <Loader className="h-7 w-7 animate-spin text-primary" />
+            <div className="absolute inset-0 flex justify-center items-center bg-cosmic-900/20 backdrop-blur-sm">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/80" />
             </div>
           ) : (
             <CommunityMap
@@ -121,7 +115,10 @@ const CommunityAstroSpots: React.FC = () => {
           <Circle className="h-4 w-4 text-primary" />
           <span>{t("All Community Astrospots", "全部社区地点")}</span>
         </h2>
-        {astrospots && astrospots.length > 0 ? (
+
+        {isLoading ? (
+          <CommunityLocationsSkeleton />
+        ) : astrospots && astrospots.length > 0 ? (
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
             {astrospots.map((spot: any) => (
               <button
@@ -159,7 +156,6 @@ const CommunityAstroSpots: React.FC = () => {
                       isCertified={false}
                     />
                   </div>
-                  {/* Overlay for click effect (optional visual feedback) */}
                   <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />
                 </div>
               </button>
