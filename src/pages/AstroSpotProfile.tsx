@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import NavBar from "@/components/NavBar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,19 +19,9 @@ const AstroSpotProfile = () => {
   const { id } = useParams();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user } = useAuth();
   const [showPhotosDialog, setShowPhotosDialog] = useState(false);
   const [showCommentsSheet, setShowCommentsSheet] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [isCreator, setIsCreator] = useState(false);
-  const [comingFromCommunity, setComingFromCommunity] = useState(false);
-
-  useEffect(() => {
-    if (location.state?.from === 'community') {
-      setComingFromCommunity(true);
-    }
-  }, [location.state]);
 
   const { data: spot, isLoading, error, refetch } = useQuery({
     queryKey: ['astroSpot', id],
@@ -52,12 +42,6 @@ const AstroSpotProfile = () => {
       }
       
       console.log("Fetched astro spot data:", spotData);
-
-      if (user && spotData.user_id === user.id) {
-        setIsCreator(true);
-      } else {
-        setIsCreator(false);
-      }
       
       const { data: typeData, error: typeError } = await supabase
         .from('astro_spot_types')
@@ -173,18 +157,10 @@ const AstroSpotProfile = () => {
               <p className="text-gray-400 mb-4">{error.message}</p>
               <Button 
                 variant="outline" 
-                onClick={() => {
-                  if (location.state?.from === 'community') {
-                    navigate('/community');
-                  } else {
-                    navigate('/manage-astro-spots');
-                  }
-                }}
+                onClick={() => navigate('/manage-astro-spots')}
                 className="mt-4"
               >
-                {location.state?.from === 'community' 
-                  ? t("Back to Community", "返回社区") 
-                  : t("Back to My AstroSpots", "返回我的观星点")}
+                {t("Back to My AstroSpots", "返回我的观星点")}
               </Button>
             </div>
           </div>
@@ -203,18 +179,10 @@ const AstroSpotProfile = () => {
             <p className="text-gray-400 mb-4">{t("The requested AstroSpot could not be found. It may have been deleted or you may not have access to it.", "找不到请求的观星点。它可能已被删除或您可能无权访问它。")}</p>
             <Button 
               variant="outline" 
-              onClick={() => {
-                if (location.state?.from === 'community') {
-                  navigate('/community');
-                } else {
-                  navigate('/manage-astro-spots');
-                }
-              }}
+              onClick={() => navigate('/manage-astro-spots')}
               className="mt-4"
             >
-              {location.state?.from === 'community' 
-                ? t("Back to Community", "返回社区") 
-                : t("Back to My AstroSpots", "返回我的观星点")}
+              {t("Back to My AstroSpots", "返回我的观星点")}
             </Button>
           </div>
         </div>
@@ -237,7 +205,7 @@ const AstroSpotProfile = () => {
       <NavBar />
       <div className="container max-w-4xl py-8 px-4 md:px-6 relative">
         <BackButton 
-          destination={comingFromCommunity ? "/community" : "/manage-astro-spots"}
+          destination="/manage-astro-spots" 
           className="text-gray-300 mb-6 hover:bg-cosmic-800/50"
         />
         
@@ -247,16 +215,14 @@ const AstroSpotProfile = () => {
           transition={{ duration: 0.5 }}
           className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden relative"
         >
-          {isCreator && (
-            <Button
-              variant="default"
-              size="icon"
-              className="absolute -top-2 -left-2 z-10 bg-primary/20 hover:bg-primary/30 text-white rounded-full w-12 h-12 shadow-lg border border-cosmic-700/30"
-              onClick={() => setShowEditDialog(true)}
-            >
-              <Wrench className="h-6 w-6" />
-            </Button>
-          )}
+          <Button
+            variant="default"
+            size="icon"
+            className="absolute -top-2 -left-2 z-10 bg-primary/20 hover:bg-primary/30 text-white rounded-full w-12 h-12 shadow-lg border border-cosmic-700/30"
+            onClick={() => setShowEditDialog(true)}
+          >
+            <Wrench className="h-6 w-6" />
+          </Button>
 
           <div className="bg-gradient-to-r from-cosmic-800/80 to-cosmic-800/40 p-6 border-b border-cosmic-700/30">
             <div className="flex justify-between items-start mb-4">
@@ -495,7 +461,7 @@ const AstroSpotProfile = () => {
         </SheetContent>
       </Sheet>
 
-      {showEditDialog && spot && isCreator && (
+      {showEditDialog && spot && (
         <CreateAstroSpotDialog
           latitude={spot.latitude}
           longitude={spot.longitude}

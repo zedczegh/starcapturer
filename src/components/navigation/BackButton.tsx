@@ -1,6 +1,6 @@
 
 import React from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -24,7 +24,6 @@ const BackButton: React.FC<BackButtonProps> = ({
   onClick
 }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { t } = useLanguage();
   
   const handleClick = () => {
@@ -33,15 +32,7 @@ const BackButton: React.FC<BackButtonProps> = ({
       return;
     }
     
-    // Use state-based routing if there's "from" information available
-    const fromPage = location.state?.from;
-    
-    if (fromPage === 'community') {
-      navigate('/community', { replace });
-    } else {
-      // Default behavior
-      navigate(destination, { replace });
-    }
+    navigate(destination, { replace });
   };
   
   return (
