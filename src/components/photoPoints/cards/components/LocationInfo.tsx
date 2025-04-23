@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MapPin, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -22,10 +21,6 @@ const LocationInfo: React.FC<LocationInfoProps> = ({
   showBortleScale = true
 }) => {
   const { t } = useLanguage();
-  
-  const secondaryName = language === 'zh' ? 
-    (location.name && location.name !== displayName ? location.name : '') : 
-    (location.chineseName && location.chineseName !== displayName ? location.chineseName : '');
 
   return (
     <div className="space-y-1.5 mb-3">
@@ -39,14 +34,6 @@ const LocationInfo: React.FC<LocationInfoProps> = ({
             {React.createElement(certInfo.icon, { className: "h-3.5 w-3.5" })}
             <span>{certInfo.language === 'en' ? certInfo.label : certInfo.labelChinese}</span>
           </Badge>
-        </div>
-      )}
-
-      {/* Secondary name */}
-      {secondaryName && (
-        <div className="flex items-center text-muted-foreground">
-          <MapPin className="h-3.5 w-3.5 mr-1.5" />
-          <span className="text-xs">{secondaryName}</span>
         </div>
       )}
 

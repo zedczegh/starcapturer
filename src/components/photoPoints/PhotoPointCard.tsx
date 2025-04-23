@@ -1,4 +1,3 @@
-
 import React from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -11,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDisplayName } from "./cards/DisplayNameResolver";
 import CardActions from "./cards/components/CardActions";
+import LocationHeaderMainDisplay from "./cards/LocationHeaderMainDisplay";
 
 interface PhotoPointCardProps {
   point: SharedAstroSpot;
@@ -19,8 +19,8 @@ interface PhotoPointCardProps {
   userLocation: { latitude: number; longitude: number } | null;
 }
 
-const PhotoPointCard: React.FC<PhotoPointCardProps> = ({ 
-  point, 
+const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
+  point,
   onSelect,
   onViewDetails,
   userLocation
@@ -29,13 +29,17 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const certInfo = React.useMemo(() => getCertificationInfo(point), [point]);
-  
+
   const { displayName, showOriginalName } = useDisplayName({
     location: point,
     language,
     locationCounter: null
   });
-  
+
+  const mainName = displayName || point.name || point.chineseName || t("Unnamed Location", "未命名位置");
+  const smallName = (language === "zh" ? point.name : point.chineseName) || "";
+  const showSmallName = smallName && smallName !== mainName;
+
   const formatCardDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");
     
@@ -52,19 +56,17 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     }
   };
 
-  const primaryName = language === 'zh' && point.chineseName ? point.chineseName : (point.name || t("Unnamed Location", "未命名位置"));
-  const secondaryName = language === 'zh' ? (point.name || "") : (point.chineseName || "");
-  
   return (
-    <div 
+    <div
       className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
       onClick={handleCardClick}
     >
       <div className="flex items-center justify-between mb-1.5">
-        <h4 className="font-medium text-sm line-clamp-1">
-          {displayName || primaryName}
-        </h4>
-        
+        <LocationHeaderMainDisplay
+          mainName={mainName}
+          originalName={smallName}
+          showOriginalName={showSmallName}
+        />
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
           <span className="text-xs font-medium">{formatSiqsScore(point.siqs)}</span>
@@ -77,15 +79,6 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
             {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
             <span className="text-xs">{getLocalizedCertText(certInfo, language)}</span>
           </Badge>
-        </div>
-      )}
-      
-      {secondaryName && (
-        <div className="mt-1.5 mb-2 flex items-center">
-          <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1" />
-          <span className="text-xs text-muted-foreground line-clamp-1">
-            {secondaryName}
-          </span>
         </div>
       )}
       

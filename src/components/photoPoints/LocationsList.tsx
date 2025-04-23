@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoLocationCard from './PhotoLocationCard';
@@ -27,17 +26,14 @@ const LocationsList: React.FC<LocationsListProps> = ({
   const [page, setPage] = useState(1);
   const locationsPerPage = 5;
   
-  // Update visible locations when main locations list changes or page changes
   useEffect(() => {
     if (locations.length > 0) {
-      // Use a stable reference for location objects to prevent re-renders
       setVisibleLocations([...locations.slice(0, page * locationsPerPage)]);
     } else {
       setVisibleLocations([]);
     }
   }, [locations, page]);
   
-  // Reset pagination when locations change completely
   useEffect(() => {
     setPage(1);
   }, [locations.length]); 

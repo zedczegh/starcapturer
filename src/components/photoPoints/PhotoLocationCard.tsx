@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -14,6 +13,7 @@ import CardActions from './cards/components/CardActions';
 import SiqsDisplay from './cards/components/SiqsDisplay';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import { useIsMobile } from "@/hooks/use-mobile";
+import LocationHeaderMainDisplay from './cards/LocationHeaderMainDisplay';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -42,6 +42,16 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     language,
     locationCounter: null
   });
+
+  // New: swap positions for header display (River Murray is displayName; "Melbourne" is location.name/chineseName)
+  const mainName = displayName || location.name || location.chineseName || "";
+  const smallName = (language === "zh"
+    ? location.name
+    : location.chineseName) || "";  // original name fallback (the NON-prominent one)
+  // Always show original name if available and different
+  const showSmallName =
+    smallName &&
+    smallName !== mainName;
 
   const getLocationId = useCallback(() => {
     if (!location || !location.latitude || !location.longitude) return null;
@@ -132,13 +142,11 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     <VisibilityObserver onVisibilityChange={setIsVisible}>
       <CardContainer index={index} isVisible={effectiveIsVisible} isMobile={isMobile}>
         <div className="flex justify-between items-start mb-2">
-          <LocationHeader
-            displayName={displayName}
-            showOriginalName={showOriginalName}
-            location={location}
-            language={language}
+          <LocationHeaderMainDisplay
+            mainName={mainName}
+            originalName={smallName}
+            showOriginalName={showSmallName}
           />
-          
           <SiqsDisplay
             realTimeSiqs={realTimeSiqs}
             loadingSiqs={loadingSiqs}
@@ -149,17 +157,14 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             locationSiqs={getSiqsScore(location.siqs)}
           />
         </div>
-        
         <LocationInfo
           location={location}
           certInfo={certInfo}
-          displayName={displayName}
+          displayName={mainName}
           language={language}
           showBortleScale={showBortleScale}
         />
-        
         <CardActions onViewDetails={handleViewDetails} />
-        
         {showRealTimeSiqs && (
           <RealTimeSiqsProvider
             isVisible={effectiveIsVisible}
@@ -170,7 +175,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             isDarkSkyReserve={location.isDarkSkyReserve}
             existingSiqs={location.siqs}
             onSiqsCalculated={handleSiqsCalculated}
-            forceUpdate={false} // Don't force update by default
+            forceUpdate={false}
           />
         )}
       </CardContainer>
