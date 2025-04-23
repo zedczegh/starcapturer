@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { NavLink } from "./NavButtons";
@@ -31,6 +32,9 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
           active={location.pathname.startsWith('/location/')}
         >
           {t("Location Details", "位置详情")}
+        </NavLink>
+        <NavLink to="/community" active={location.pathname === "/community"}>
+          {t("Community", "社区")}
         </NavLink>
         <NavLink to="/share" active={location.pathname === "/share"}>
           {t("Bortle Now", "实时光污染")}

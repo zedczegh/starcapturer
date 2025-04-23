@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useLocation } from "react-router-dom";
-import { Telescope, Map, Smartphone, Link2, Info } from "lucide-react";
+import { Telescope, Map, Smartphone, Link2, Info, Users } from "lucide-react";
 import { MobileNavButton } from "./NavButtons";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -15,10 +15,10 @@ const MobileNav: React.FC<MobileNavProps> = ({
   locationId
 }) => {
   const { t } = useLanguage();
-  
+
   // Use a default location ID for when there isn't one
   const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
-  
+
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-nav-bar">
       <div className="flex justify-around items-center py-3 px-2 bg-[#123341]/[0.84] backdrop-blur-xl border-t border-cosmic-100/10">
@@ -35,7 +35,14 @@ const MobileNav: React.FC<MobileNavProps> = ({
           label={t("Location", "位置")} 
           active={location.pathname.startsWith('/location/')} 
         />
-        
+
+        <MobileNavButton
+          to="/community"
+          icon={<Users className="h-5 w-5" />}
+          label={t("Community", "社区")}
+          active={location.pathname === "/community"}
+        />
+
         <MobileNavButton 
           to="/share" 
           icon={<Smartphone className="h-5 w-5" />} 
