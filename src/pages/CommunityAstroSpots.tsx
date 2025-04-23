@@ -1,11 +1,13 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LazyMapContainer from "@/components/photoPoints/map/LazyMapContainer";
 import { Loader, Star, Circle } from "lucide-react";
 import BackButton from "@/components/navigation/BackButton";
+import LocationCard from "@/components/LocationCard";
+import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
@@ -15,6 +17,21 @@ const CommunityAstroSpots: React.FC = () => {
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
   });
+
+  // Manage SIQS state like in ManageAstroSpots
+  const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
+  const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
+
+  const handleSiqsCalculated = (spotId: string, siqs: number | null, loading: boolean) => {
+    setRealTimeSiqs(prev => ({
+      ...prev,
+      [spotId]: siqs
+    }));
+    setLoadingSiqs(prev => ({
+      ...prev,
+      [spotId]: loading
+    }));
+  };
 
   return (
     <div className="max-w-5xl mx-auto pt-8 px-3 pb-12">
@@ -58,38 +75,31 @@ const CommunityAstroSpots: React.FC = () => {
         <span>{t("All Community Astrospots", "全部社区地点")}</span>
       </h2>
       {astrospots && astrospots.length > 0 ? (
-        <ul className="grid gap-6 grid-cols-1 md:grid-cols-2">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
           {astrospots.map((spot: any) => (
-            <li
-              key={spot.id}
-              className="bg-gradient-to-tr from-cosmic-900/95 to-cosmic-800/80 border border-cosmic-700/30 rounded-lg p-4 shadow-md hover:border-primary hover:shadow-lg hover:shadow-primary/10 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-semibold text-base truncate group-hover:text-primary">
-                  {spot.name || t("Unnamed Location", "未命名位置")}
-                </span>
-                {typeof spot.siqs === "number" && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full bg-blue-700/60 text-xs text-blue-100 font-bold tracking-tighter">
-                    SIQS {Number(spot.siqs).toFixed(1)}
-                  </span>
-                )}
-                {spot.bortleScale && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full bg-yellow-600/90 text-xs text-yellow-100 font-medium">
-                    {t("Bortle", "博特尔")} {spot.bortleScale}
-                  </span>
-                )}
-              </div>
-              <div className="flex gap-2 items-center text-xs text-muted-foreground mb-1">
-                <span>
-                  📍 {spot.latitude?.toFixed(4)}, {spot.longitude?.toFixed(4)}
-                </span>
-              </div>
-              {spot.description && (
-                <div className="mt-2 text-xs text-card-foreground/90 line-clamp-3">{spot.description}</div>
-              )}
-            </li>
+            <div key={spot.id} className="relative">
+              <RealTimeSiqsProvider
+                isVisible={true}
+                latitude={spot.latitude}
+                longitude={spot.longitude}
+                bortleScale={spot.bortleScale} // Bortle scale is needed for calculation, but not displayed
+                existingSiqs={spot.siqs}
+                onSiqsCalculated={(siqs, loading) =>
+                  handleSiqsCalculated(spot.id, siqs, loading)
+                }
+              />
+              <LocationCard
+                id={spot.id}
+                name={spot.name}
+                latitude={spot.latitude}
+                longitude={spot.longitude}
+                siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                timestamp={spot.timestamp}
+                isCertified={false}
+              />
+            </div>
           ))}
-        </ul>
+        </div>
       ) : (
         <div className="w-full text-muted-foreground/70 text-center py-16">
           {t("No community astrospots yet. Be the first to share!", "还没有社区观星点，快来分享吧！")}
