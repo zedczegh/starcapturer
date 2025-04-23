@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 
 export interface MapControllerProps {
@@ -16,10 +16,10 @@ const MapController: React.FC<MapControllerProps> = ({
   const map = useMap();
   
   // Handle map click events
-  React.useEffect(() => {
+  useEffect(() => {
     if (!map || !onMapClick) return;
     
-    const handleClick = (e: any) => {
+    const handleClick = (e: L.LeafletMouseEvent) => {
       if (onMapClick) {
         onMapClick(e.latlng.lat, e.latlng.lng);
       }
