@@ -8,8 +8,6 @@ import { Loader, Star, Circle } from "lucide-react";
 import LocationCard from "@/components/LocationCard";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
-import { motion } from "framer-motion";
-import NavBar from "@/components/NavBar";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
@@ -35,54 +33,24 @@ const CommunityAstroSpots: React.FC = () => {
     }));
   };
 
-  // Header animation variants
-  const titleVariants = {
-    hidden: { opacity: 0, scale: 0.96, y: -10 },
-    visible: { opacity: 1, scale: 1, y: 0, transition: { delay: 0.1, duration: 0.6, ease: "easeOut" } }
-  };
-  const lineVariants = {
-    hidden: { width: 0, opacity: 0 },
-    visible: { width: 90, opacity: 1, transition: { delay: 0.35, duration: 0.7, ease: "easeOut" } }
-  };
-  const descVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
-  };
-
   return (
-    <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "社区观星点 | SIQS")}>
-      <NavBar />
-      <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
-        {/* Header Section with Gradient, Animated Line & Better Layout */}
-        <div className="mb-9">
-          <motion.div
-            className="flex flex-col items-center justify-center gap-3"
-            initial="hidden"
-            animate="visible"
-            variants={{}}
-          >
-            <motion.h1
-              className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-4xl md:text-5xl text-center drop-shadow tracking-tight"
-              variants={titleVariants}
-            >
-              {t("Astrospots Community", "社区观星点")}
-            </motion.h1>
-            <motion.div
-              className="rounded-full h-1 bg-gradient-to-r from-blue-400 to-purple-400 mb-1"
-              style={{ width: 90, maxWidth: "40vw" }}
-              variants={lineVariants}
-            />
-            <motion.p
-              className="text-center mb-2 mt-1 max-w-2xl text-lg md:text-xl text-muted-foreground leading-relaxed"
-              variants={descVariants}
-            >
-              {t(
-                "Discover and explore astrospots contributed by our community members. View their favorite stargazing locations on the interactive map and find inspiration for your next adventure.",
-                "由社区成员贡献的观星点，在这里一览无余。浏览大家推荐的拍摄位置，探索灵感，发现下次观星之旅的新去处。"
-              )}
-            </motion.p>
-          </motion.div>
+    <PhotoPointsLayout pageTitle={t("Community Astrospots | SIQS", "社区观星点 | SIQS")}>
+      <div className="max-w-5xl mx-auto pt-8 px-3 pb-12">
+        <div className="flex items-center gap-4 mb-5">
+          <div className="inline-flex items-center rounded-full px-3 py-1.5 bg-gradient-to-r from-primary/80 to-blue-400/20 border border-primary/20">
+            <Star className="h-4 w-4 mr-1 text-primary" />
+            <span className="text-xs font-semibold text-primary">{t("Community Astrospots", "社区观星地点")}</span>
+          </div>
         </div>
+        <h1 className="text-3xl md:text-4xl font-extrabold text-gradient-blue mb-2 drop-shadow tracking-tight">
+          {t("Explore Shared Stargazing Spots", "探索社区拍摄点")}
+        </h1>
+        <p className="mb-8 text-muted-foreground max-w-2xl text-lg leading-relaxed">
+          {t(
+            "Discover and explore astrospots contributed by our SIQS community members. View their favorite stargazing locations on the interactive map and find inspiration for your next adventure.",
+            "由SIQS成员贡献的社区观星地，尽在此处。浏览他们推荐的拍摄位置，探索地图，发现适合你下次观星之旅的灵感。"
+          )}
+        </p>
 
         <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 border border-cosmic-700/20" style={{ height: 380, minHeight: 275 }}>
           {isLoading ? (
@@ -102,7 +70,7 @@ const CommunityAstroSpots: React.FC = () => {
           )}
         </div>
 
-        <h2 className="font-bold text-xl mt-12 mb-5 flex items-center gap-2 text-gradient-blue">
+        <h2 className="font-bold text-xl mt-10 mb-4 flex items-center gap-2">
           <Circle className="h-4 w-4 text-primary" />
           <span>{t("All Community Astrospots", "全部社区地点")}</span>
         </h2>
@@ -114,7 +82,7 @@ const CommunityAstroSpots: React.FC = () => {
                   isVisible={true}
                   latitude={spot.latitude}
                   longitude={spot.longitude}
-                  bortleScale={spot.bortleScale}
+                  bortleScale={spot.bortleScale} // Bortle scale is needed for calculation, but not displayed
                   existingSiqs={spot.siqs}
                   onSiqsCalculated={(siqs, loading) =>
                     handleSiqsCalculated(spot.id, siqs, loading)
@@ -143,3 +111,4 @@ const CommunityAstroSpots: React.FC = () => {
 };
 
 export default CommunityAstroSpots;
+
