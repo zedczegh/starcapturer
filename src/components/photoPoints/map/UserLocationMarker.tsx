@@ -101,15 +101,12 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
       <Marker 
         position={position} 
         icon={createCustomMarker('#e11d48')}
-        eventHandlers={{
-          click: togglePopup
-        }}
+        onClick={togglePopup}
       >
         {isPopupOpen && (
           <Popup 
             closeOnClick={false} 
             autoClose={false}
-            onClose={() => setIsPopupOpen(false)}
           >
             <div className="p-2 min-w-[200px]">
               <div className="font-medium text-sm mb-2 flex items-center">
