@@ -9,11 +9,13 @@ import LocationCard from "@/components/LocationCard";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
 const CommunityAstroSpots: React.FC = () => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const { data: astrospots, isLoading } = useQuery({
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
@@ -46,6 +48,11 @@ const CommunityAstroSpots: React.FC = () => {
   const descVariants = {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
+  };
+
+  // Function to handle clicking a location card
+  const handleCardClick = (id: string) => {
+    navigate(`/astro-spot/${id}`);
   };
 
   return (
@@ -107,27 +114,45 @@ const CommunityAstroSpots: React.FC = () => {
         {astrospots && astrospots.length > 0 ? (
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
             {astrospots.map((spot: any) => (
-              <div key={spot.id} className="relative">
-                <RealTimeSiqsProvider
-                  isVisible={true}
-                  latitude={spot.latitude}
-                  longitude={spot.longitude}
-                  bortleScale={spot.bortleScale}
-                  existingSiqs={spot.siqs}
-                  onSiqsCalculated={(siqs, loading) =>
-                    handleSiqsCalculated(spot.id, siqs, loading)
+              <button
+                key={spot.id}
+                className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
+                tabIndex={0}
+                onClick={() => handleCardClick(spot.id)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleCardClick(spot.id);
                   }
-                />
-                <LocationCard
-                  id={spot.id}
-                  name={spot.name}
-                  latitude={spot.latitude}
-                  longitude={spot.longitude}
-                  siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
-                  timestamp={spot.timestamp}
-                  isCertified={false}
-                />
-              </div>
+                }}
+                aria-label={spot.name}
+                style={{ background: "none", padding: 0 }}
+              >
+                <div className="w-full h-full">
+                  <RealTimeSiqsProvider
+                    isVisible={true}
+                    latitude={spot.latitude}
+                    longitude={spot.longitude}
+                    bortleScale={spot.bortleScale}
+                    existingSiqs={spot.siqs}
+                    onSiqsCalculated={(siqs, loading) =>
+                      handleSiqsCalculated(spot.id, siqs, loading)
+                    }
+                  />
+                  <div className="transition-shadow group-hover:shadow-xl group-hover:ring-2 group-hover:ring-primary rounded-xl">
+                    <LocationCard
+                      id={spot.id}
+                      name={spot.name}
+                      latitude={spot.latitude}
+                      longitude={spot.longitude}
+                      siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                      timestamp={spot.timestamp}
+                      isCertified={false}
+                    />
+                  </div>
+                  {/* Overlay for click effect (optional visual feedback) */}
+                  <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />
+                </div>
+              </button>
             ))}
           </div>
         ) : (
