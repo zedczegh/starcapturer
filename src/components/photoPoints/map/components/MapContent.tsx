@@ -28,6 +28,7 @@ interface MapContentProps {
   mapRef: React.RefObject<any>;
   onMapReady: () => void;
   currentSiqs: number | null;
+  customPopup?: (location: any) => React.ReactNode;
 }
 
 const MapContent: React.FC<MapContentProps> = ({
@@ -49,7 +50,8 @@ const MapContent: React.FC<MapContentProps> = ({
   useMobileMapFixer,
   mapRef,
   onMapReady,
-  currentSiqs
+  currentSiqs,
+  customPopup
 }) => {
   const tileOptions = getTileLayerOptions(Boolean(isMobile));
   
@@ -147,6 +149,7 @@ const MapContent: React.FC<MapContentProps> = ({
             handleTouchStart={handleTouchStart}
             handleTouchEnd={handleTouchEnd}
             handleTouchMove={handleTouchMove}
+            customPopup={customPopup}
           />
         );
       })}
