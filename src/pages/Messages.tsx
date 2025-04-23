@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { MessageCircle, User, Send, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -29,6 +30,10 @@ interface Message {
   message: string;
   created_at: string;
   read: boolean;
+  sender_profile?: {
+    username: string | null;
+    avatar_url: string | null;
+  };
 }
 
 const Messages: React.FC = () => {
@@ -42,6 +47,7 @@ const Messages: React.FC = () => {
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) {
@@ -76,6 +82,11 @@ const Messages: React.FC = () => {
       supabase.removeChannel(channel);
     };
   }, [user, activeConversation]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const fetchConversations = async () => {
     if (!user) return;
@@ -171,6 +182,7 @@ const Messages: React.FC = () => {
     if (!user || !partnerId) return;
 
     try {
+      // Get all messages between the user and the partner
       const { data, error } = await supabase
         .from('user_messages')
         .select('*')
@@ -179,7 +191,30 @@ const Messages: React.FC = () => {
 
       if (error) throw error;
       
-      setMessages(data || []);
+      // Fetch profiles for the senders to display with messages
+      const senderIds = data?.map(msg => msg.sender_id) || [];
+      const uniqueSenderIds = [...new Set(senderIds)];
+      
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', uniqueSenderIds);
+        
+      if (profilesError) throw profilesError;
+      
+      // Add sender profile information to each message
+      const messagesWithProfiles = data?.map(msg => {
+        const senderProfile = profilesData?.find(profile => profile.id === msg.sender_id);
+        return {
+          ...msg,
+          sender_profile: {
+            username: senderProfile?.username || "User",
+            avatar_url: senderProfile?.avatar_url
+          }
+        };
+      });
+      
+      setMessages(messagesWithProfiles || []);
       
       // Mark unread messages as read
       const unreadMessages = data?.filter(msg => !msg.read && msg.sender_id === partnerId);
@@ -381,6 +416,26 @@ const Messages: React.FC = () => {
                             : 'mr-auto bg-cosmic-800 text-cosmic-100'
                         }`}
                       >
+                        {message.sender_id !== user?.id && (
+                          <div className="flex items-center gap-2 mb-1">
+                            <Avatar className="h-6 w-6">
+                              {message.sender_profile?.avatar_url ? (
+                                <img 
+                                  src={message.sender_profile.avatar_url} 
+                                  alt={message.sender_profile.username || "User"}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <AvatarFallback className="text-xs">
+                                  <User className="h-3 w-3" />
+                                </AvatarFallback>
+                              )}
+                            </Avatar>
+                            <span className="text-sm font-medium">
+                              {message.sender_profile?.username}
+                            </span>
+                          </div>
+                        )}
                         <p>{message.message}</p>
                         <p className="text-xs opacity-70 mt-1 text-right">
                           {formatMessageTime(message.created_at)}
@@ -388,6 +443,7 @@ const Messages: React.FC = () => {
                       </div>
                     ))
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
                 
                 <div className="p-4 border-t border-cosmic-800">
