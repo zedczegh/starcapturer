@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -21,7 +20,6 @@ const Collections = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
-  // Initialize these state variables outside of any conditions
   const [bortleMap, setBortleMap] = useState<Record<string, number | null>>({});
   const [fetchingBortle, setFetchingBortle] = useState(false);
 
@@ -59,34 +57,59 @@ const Collections = () => {
     }
   };
 
-  // Fetch Bortle scale values when locations change
   useEffect(() => {
     if (!locations || locations.length === 0) return;
     
     let alive = true;
     const fetchAllBortle = async () => {
       setFetchingBortle(true);
+      
       const updated: Record<string, number | null> = {};
-      await Promise.all(
-        locations.map(async (loc) => {
-          if (typeof loc.bortleScale === "number" && loc.bortleScale >= 1 && loc.bortleScale <= 9) {
-            updated[loc.id] = loc.bortleScale;
-            return;
-          }
-          if (loc.latitude && loc.longitude) {
-            const value = await getBortleScaleForCoords(loc.latitude, loc.longitude, loc.name);
-            updated[loc.id] = value ?? null;
-          }
-        })
-      );
+      
+      const batchSize = 5;
+      for (let i = 0; i < locations.length; i += batchSize) {
+        const batch = locations.slice(i, i + batchSize);
+        
+        await Promise.all(
+          batch.map(async (loc) => {
+            if (typeof loc.bortleScale === "number" && 
+                loc.bortleScale >= 1 && 
+                loc.bortleScale <= 9) {
+              updated[loc.id] = loc.bortleScale;
+              return;
+            }
+            
+            if (loc.latitude && loc.longitude) {
+              try {
+                const value = await getBortleScaleForCoords(
+                  loc.latitude, 
+                  loc.longitude, 
+                  loc.name || ""
+                );
+                updated[loc.id] = value;
+              } catch (err) {
+                console.error(`Failed to get Bortle scale for ${loc.name}:`, err);
+              }
+            }
+          })
+        );
+        
+        if (alive) {
+          setBortleMap(prev => ({...prev, ...updated}));
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
       if (alive) {
-        setBortleMap(updated);
         setFetchingBortle(false);
       }
     };
+    
     fetchAllBortle();
+    
     return () => { alive = false; };
-  }, [locations]); // Simplified dependency to avoid object serialization issues
+  }, [locations]);
 
   if (!authChecked) return <PageLoader />;
 
@@ -147,6 +170,11 @@ const Collections = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedLocations.map((location, index) => {
                 const overrideBortle = bortleMap[location.id];
+                const effectiveLocation = {
+                  ...location,
+                  bortleScale: typeof overrideBortle === "number" ? overrideBortle : location.bortleScale,
+                };
+                
                 return (
                   <div key={location.id} className="relative group">
                     {editMode && (
@@ -157,11 +185,7 @@ const Collections = () => {
                       }}/>
                     )}
                     <PhotoLocationCard
-                      location={{
-                        ...location,
-                        bortleScale:
-                          typeof overrideBortle === "number" ? overrideBortle : location.bortleScale,
-                      }}
+                      location={effectiveLocation}
                       index={index}
                       onViewDetails={handleViewDetails}
                       showRealTimeSiqs={true}
