@@ -4,6 +4,8 @@ import { MapContainer, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import CommunityMapMarker from "./CommunityMapMarker";
+import { useUserGeolocation } from "@/hooks/community/useUserGeolocation";
+import CommunityUserLocationMarker from "./CommunityUserLocationMarker";
 
 interface CommunityMapProps {
   center: [number, number];
@@ -23,6 +25,8 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
   zoom = 3
 }) => {
   // Only render community NON-CERTIFIED spots, since the data is for contributed user spots.
+  const userPosition = useUserGeolocation();
+
   return (
     <MapContainer
       center={center}
@@ -37,6 +41,9 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         maxZoom={19}
       />
+      {userPosition && (
+        <CommunityUserLocationMarker position={userPosition} />
+      )}
       {locations.map((spot) => (
         <CommunityMapMarker
           key={spot.id}
