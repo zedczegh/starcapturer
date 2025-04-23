@@ -9,7 +9,6 @@ import LocationCard from "@/components/LocationCard";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import { motion } from "framer-motion";
-import NavBar from "@/components/NavBar";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
@@ -51,7 +50,6 @@ const CommunityAstroSpots: React.FC = () => {
 
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "社区观星点 | SIQS")}>
-      <NavBar />
       <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
         {/* Header Section with Gradient, Animated Line & Better Layout */}
         <div className="mb-9">
@@ -62,7 +60,7 @@ const CommunityAstroSpots: React.FC = () => {
             variants={{}}
           >
             <motion.h1
-              className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-4xl md:text-5xl text-center drop-shadow tracking-tight"
+              className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-3xl md:text-4xl text-center drop-shadow tracking-tight"
               variants={titleVariants}
             >
               {t("Astrospots Community", "社区观星点")}
@@ -73,12 +71,12 @@ const CommunityAstroSpots: React.FC = () => {
               variants={lineVariants}
             />
             <motion.p
-              className="text-center mb-2 mt-1 max-w-2xl text-lg md:text-xl text-muted-foreground leading-relaxed"
+              className="text-center mb-2 mt-1 max-w-2xl text-base md:text-lg text-muted-foreground leading-relaxed"
               variants={descVariants}
             >
               {t(
-                "Discover and explore astrospots contributed by our community members. View their favorite stargazing locations on the interactive map and find inspiration for your next adventure.",
-                "由社区成员贡献的观星点，在这里一览无余。浏览大家推荐的拍摄位置，探索灵感，发现下次观星之旅的新去处。"
+                "Discover and explore astrospots contributed by our SIQS community members. View their favorite stargazing locations on the interactive map and find inspiration for your next adventure.",
+                "由SIQS社区成员贡献的观星点，在这里一览无余。浏览大家推荐的拍摄位置，探索灵感，发现下次观星之旅的新去处。"
               )}
             </motion.p>
           </motion.div>
