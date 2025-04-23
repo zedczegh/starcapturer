@@ -26,6 +26,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
   const [locationName, setLocationName] = useState<string>('');
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
 
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(siqs);
@@ -80,6 +81,11 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     setIsDialogOpen(false);
   }, []);
 
+  const handleMarkerClick = useCallback(() => {
+    setIsPopupOpen(true);
+    handleRefreshSiqs();
+  }, []);
+
   return (
     <>
       <RealTimeSiqsProvider
@@ -93,9 +99,16 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
       <Marker 
         position={position} 
         icon={createCustomMarker('#e11d48')}
-        onClick={handleRefreshSiqs}
+        eventHandlers={{
+          click: handleMarkerClick
+        }}
       >
-        <Popup closeOnClick={false} autoClose={false}>
+        <Popup 
+          closeOnClick={false} 
+          autoClose={false}
+          isOpen={isPopupOpen}
+          onClose={() => setIsPopupOpen(false)}
+        >
           <div className="p-2 min-w-[200px]">
             <div className="font-medium text-sm mb-2 flex items-center">
               <MapPin className="h-4 w-4 mr-1 text-primary" />
@@ -157,4 +170,3 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
 };
 
 export default React.memo(UserLocationMarker);
-
