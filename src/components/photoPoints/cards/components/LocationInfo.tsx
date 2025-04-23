@@ -1,53 +1,66 @@
 
 import React from 'react';
-import LightPollutionIndicator from '@/components/location/LightPollutionIndicator';
-import LocationMetadata from '../LocationMetadata';
-import { getCertificationInfo, getLocalizedCertText } from '@/components/photoPoints/utils/certificationUtils';
+import { MapPin, Star } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { Language } from '@/contexts/LanguageContext';
+import { getBortleDescription } from '@/utils/weather/bortleScaleUtils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface LocationInfoProps {
   location: SharedAstroSpot;
-  certInfo: ReturnType<typeof getCertificationInfo>;
+  certInfo: any;
   displayName: string;
-  language: Language;
+  language: string;
+  showBortleScale?: boolean;
 }
 
-const LocationInfo: React.FC<LocationInfoProps> = ({
-  location,
-  certInfo,
-  displayName,
-  language
+const LocationInfo: React.FC<LocationInfoProps> = ({ 
+  location, 
+  certInfo, 
+  displayName, 
+  language,
+  showBortleScale = true
 }) => {
+  const { t } = useLanguage();
+  
+  const secondaryName = language === 'zh' ? 
+    (location.name && location.name !== displayName ? location.name : '') : 
+    (location.chineseName && location.chineseName !== displayName ? location.chineseName : '');
+
   return (
-    <>
+    <div className="space-y-1.5 mb-3">
+      {/* Certification badge */}
       {certInfo && (
-        <div className="flex items-center mt-1.5 mb-2">
-          <div className={`px-2 py-0.5 rounded-full text-xs flex items-center ${certInfo.color}`}>
-            {React.createElement(certInfo.icon, { className: "h-4 w-4 mr-1.5" })}
-            <span>{getLocalizedCertText(certInfo, language)}</span>
-          </div>
+        <div className="flex items-center">
+          <Badge 
+            variant="outline" 
+            className={`${certInfo.color} text-xs px-2 py-1 flex items-center gap-1.5`}
+          >
+            {React.createElement(certInfo.icon, { className: "h-3.5 w-3.5" })}
+            <span>{certInfo.language === 'en' ? certInfo.label : certInfo.labelChinese}</span>
+          </Badge>
         </div>
       )}
 
-      <div className="mb-4 mt-2">
-        <LightPollutionIndicator 
-          bortleScale={location.bortleScale || 5} 
-          size="md"
-          showBortleNumber={true}
-          className="text-base"
-        />
-      </div>
+      {/* Secondary name */}
+      {secondaryName && (
+        <div className="flex items-center text-muted-foreground">
+          <MapPin className="h-3.5 w-3.5 mr-1.5" />
+          <span className="text-xs">{secondaryName}</span>
+        </div>
+      )}
 
-      <LocationMetadata 
-        distance={location.distance} 
-        date={location.date}
-        latitude={location.latitude}
-        longitude={location.longitude}
-        locationName={displayName}
-      />
-    </>
+      {/* Bortle scale information - only if showBortleScale is true */}
+      {showBortleScale && location.bortleScale && (
+        <div className="flex items-center text-muted-foreground">
+          <Star className="h-3.5 w-3.5 mr-1.5" />
+          <span className="text-xs">
+            {t("Bortle", "波尔特")}: {location.bortleScale} - {getBortleDescription(location.bortleScale, t)}
+          </span>
+        </div>
+      )}
+    </div>
   );
 };
 
-export default React.memo(LocationInfo);
+export default LocationInfo;

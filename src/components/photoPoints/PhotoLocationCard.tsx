@@ -19,6 +19,7 @@ interface PhotoLocationCardProps {
   location: SharedAstroSpot;
   index: number;
   showRealTimeSiqs?: boolean;
+  showBortleScale?: boolean;
   onSelect?: (location: SharedAstroSpot) => void;
   onViewDetails: (location: SharedAstroSpot) => void;
   userLocation?: { latitude: number; longitude: number } | null;
@@ -28,7 +29,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   location, 
   index = 0,
   onViewDetails,
-  showRealTimeSiqs = true
+  showRealTimeSiqs = true,
+  showBortleScale = true
 }) => {
   const { language } = useLanguage();
   const navigate = useNavigate();
@@ -59,7 +61,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         chineseName: location.chineseName || '',
         latitude: location.latitude,
         longitude: location.longitude,
-        bortleScale: location.bortleScale || 4,
+        bortleScale: showBortleScale ? (location.bortleScale || 4) : undefined,
         siqsResult: {
           score: getSiqsScore(location.siqs) || 0
         },
@@ -69,7 +71,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         fromPhotoPoints: true
       }
     });
-  }, [location, navigate, getLocationId]);
+  }, [location, navigate, getLocationId, showBortleScale]);
 
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState(false);
@@ -153,6 +155,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           certInfo={certInfo}
           displayName={displayName}
           language={language}
+          showBortleScale={showBortleScale}
         />
         
         <CardActions onViewDetails={handleViewDetails} />
