@@ -1,4 +1,3 @@
-
 // Export all UI components for easier imports
 export * from "./accordion";
 export * from "./alert";
@@ -49,3 +48,4 @@ export * from "./toast";
 export * from "./toggle-group";
 export * from "./toggle";
 export * from "./tooltip";
+export * from "./loader"
