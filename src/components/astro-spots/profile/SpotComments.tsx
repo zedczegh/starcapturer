@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Loader2 } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { toast } from "sonner";
+import { AnimatePresence, motion } from 'framer-motion';
+import CommentItem from './comments/CommentItem';
+import CommentInput from './comments/CommentInput';
 
 interface Comment {
   id: string;
@@ -63,28 +63,25 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
 }) => {
   const { t } = useLanguage();
   const [showCommentsSheet, setShowCommentsSheet] = useState(false);
-  const [commentInput, setCommentInput] = useState("");
   const [commentSending, setCommentSending] = useState(false);
   const [localComments, setLocalComments] = useState<Comment[]>(comments);
 
-  // Update local comments when props change
   useEffect(() => {
     setLocalComments(comments);
   }, [comments]);
 
-  const handleCommentSubmit = async () => {
-    if (!user || !spotId || !commentInput.trim()) return;
+  const handleCommentSubmit = async (content: string) => {
+    if (!user || !spotId || !content.trim()) return;
     
     setCommentSending(true);
     
     try {
-      // Insert the comment
       const { error, data } = await supabase
         .from("astro_spot_comments")
         .insert({
           user_id: (await supabase.auth.getUser()).data.user?.id,
           spot_id: spotId,
-          content: commentInput.trim(),
+          content: content.trim(),
         })
         .select();
       
@@ -94,7 +91,6 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         return;
       }
       
-      // Add the new comment to local state immediately for better UX
       if (data && data.length > 0) {
         const userResponse = await supabase.auth.getUser();
         const { data: profileData } = await supabase
@@ -111,15 +107,10 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
           }
         };
         
-        // Add to beginning of array since newest comments come first
         setLocalComments(prev => [newComment, ...prev]);
+        toast.success(t("Comment posted!", "评论已发表！"));
       }
       
-      // Clear input and trigger a refresh of comments
-      setCommentInput("");
-      toast.success(t("Comment posted!", "评论已发表！"));
-      
-      // Wait a moment before refreshing to ensure database consistency
       setTimeout(() => {
         onCommentsUpdate();
       }, 500);
@@ -132,60 +123,15 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     }
   };
 
-  // Use the local comments state instead of the prop
-  const commentsToDisplay = localComments || [];
-
-  if (!commentsToDisplay || commentsToDisplay.length === 0) {
-    return (
-      <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30 flex flex-col items-center justify-center text-center">
-        <MessageCircle className="h-10 w-10 text-gray-500 mb-2" />
-        <p className="text-gray-400">{t("No comments yet", "暂无评论")}</p>
-        
-        {user && (
-          <div className="mt-4 pt-4 border-t border-cosmic-700/30 w-full">
-            <h3 className="text-sm font-medium text-gray-300 mb-2 text-left">
-              {t("Be the first to comment", "成为第一个评论的人")}
-            </h3>
-            <div className="space-y-3">
-              <Textarea
-                placeholder={t("Write your comment here...", "在此处写下您的评论...")}
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                className="bg-cosmic-900/40 border-cosmic-700/30 text-gray-300 resize-none"
-                rows={3}
-              />
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleCommentSubmit}
-                  disabled={commentSending || !commentInput.trim()}
-                  size="sm"
-                >
-                  {commentSending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {t("Posting...", "发布中...")}
-                    </>
-                  ) : (
-                    t("Post Comment", "发布评论")
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-200 flex items-center">
           <MessageCircle className="h-5 w-5 mr-2 text-primary/80" />
-          {t("Comments", "评论")} ({commentsToDisplay.length})
+          {t("Comments", "评论")} ({localComments.length})
         </h2>
         
-        {commentsToDisplay.length > 2 && (
+        {localComments.length > 2 && (
           <Button 
             variant="ghost" 
             onClick={() => setShowCommentsSheet(true)}
@@ -196,100 +142,62 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         )}
       </div>
       
-      {commentsToDisplay.length === 0 ? (
-        <div className="text-center py-8">
-          <MessageCircle className="h-10 w-10 text-gray-500 mx-auto mb-2" />
-          <p className="text-gray-400">{t("No comments yet", "暂无评论")}</p>
-          
-          {user && (
-            <div className="mt-4 pt-4 border-t border-cosmic-700/30 max-w-md mx-auto">
-              <h3 className="text-sm font-medium text-gray-300 mb-2 text-left">
-                {t("Be the first to comment", "成为第一个评论的人")}
-              </h3>
-              <div className="space-y-3">
-                <Textarea
-                  placeholder={t("Write your comment here...", "在此处写下您的评论...")}
-                  value={commentInput}
-                  onChange={(e) => setCommentInput(e.target.value)}
-                  className="bg-cosmic-900/40 border-cosmic-700/30 text-gray-300 resize-none"
-                  rows={3}
-                />
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleCommentSubmit}
-                    disabled={commentSending || !commentInput.trim()}
-                    size="sm"
-                  >
-                    {commentSending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {t("Posting...", "发布中...")}
-                      </>
-                    ) : (
-                      t("Post Comment", "发布评论")
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-          <div className="space-y-3">
-            {commentsToDisplay.slice(0, 2).map((comment) => (
+      <AnimatePresence mode="popLayout">
+        {localComments.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="text-center py-8"
+          >
+            <MessageCircle className="h-10 w-10 text-gray-500 mx-auto mb-2" />
+            <p className="text-gray-400">{t("No comments yet", "暂无评论")}</p>
+          </motion.div>
+        ) : (
+          <motion.div layout className="space-y-3">
+            {localComments.slice(0, 2).map((comment) => (
               <CommentItem key={comment.id} comment={comment} />
             ))}
-          </div>
-          
-          {user && (
-            <div className="mt-4 pt-4 border-t border-cosmic-700/30">
-              <h3 className="text-sm font-medium text-gray-300 mb-2">
-                {t("Add a comment", "添加评论")}
-              </h3>
-              <div className="space-y-3">
-                <Textarea
-                  placeholder={t("Write your comment here...", "在此处写下您的评论...")}
-                  value={commentInput}
-                  onChange={(e) => setCommentInput(e.target.value)}
-                  className="bg-cosmic-900/40 border-cosmic-700/30 text-gray-300 resize-none"
-                  rows={3}
-                />
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleCommentSubmit}
-                    disabled={commentSending || !commentInput.trim()}
-                    size="sm"
-                  >
-                    {commentSending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {t("Posting...", "发布中...")}
-                      </>
-                    ) : (
-                      t("Post Comment", "发布评论")
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {user && (
+        <div className="mt-4 pt-4 border-t border-cosmic-700/30">
+          <CommentInput
+            onSubmit={handleCommentSubmit}
+            sending={commentSending}
+          />
+        </div>
       )}
 
       <Sheet open={showCommentsSheet} onOpenChange={setShowCommentsSheet}>
-        <SheetContent side="bottom" className="h-[85vh] bg-cosmic-900 border-cosmic-700 text-gray-100 rounded-t-xl">
+        <SheetContent 
+          side="bottom" 
+          className="h-[85vh] bg-cosmic-900 border-cosmic-700 text-gray-100 rounded-t-xl"
+        >
           <SheetHeader>
             <SheetTitle className="text-gray-100">
-              {t("All Comments", "所有评论")} ({commentsToDisplay.length})
+              {t("All Comments", "所有评论")} ({localComments.length})
             </SheetTitle>
           </SheetHeader>
           
-          <div className="mt-6 space-y-4 max-h-[calc(85vh-120px)] overflow-y-auto pr-1">
-            {commentsToDisplay.map((comment) => (
-              <CommentItem key={`sheet-comment-${comment.id}`} comment={comment} />
-            ))}
+          <div className="mt-6 space-y-4 max-h-[calc(85vh-220px)] overflow-y-auto pr-1">
+            <AnimatePresence mode="popLayout">
+              {localComments.map((comment) => (
+                <CommentItem key={`sheet-comment-${comment.id}`} comment={comment} />
+              ))}
+            </AnimatePresence>
           </div>
+
+          {user && (
+            <div className="sticky bottom-0 pt-4 mt-4 border-t border-cosmic-700/30 bg-cosmic-900">
+              <CommentInput
+                onSubmit={handleCommentSubmit}
+                sending={commentSending}
+              />
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </div>
