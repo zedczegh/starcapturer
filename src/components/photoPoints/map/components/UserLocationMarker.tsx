@@ -1,3 +1,4 @@
+
 import React, { memo, useCallback, useEffect, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -31,6 +32,7 @@ const UserLocationMarker = memo(({
   const [isWaterLocation, setIsWaterLocation] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -98,66 +100,74 @@ const UserLocationMarker = memo(({
     setIsDialogOpen(false);
   }, []);
 
-  const handleMapClick = useCallback((latitude: number, longitude: number) => {
-    if (onLocationUpdate) {
-      onLocationUpdate(latitude, longitude);
-    }
-  }, [onLocationUpdate]);
+  const handleMarkerClick = useCallback(() => {
+    setIsPopupOpen(true);
+  }, []);
+  
+  const handlePopupClose = useCallback(() => {
+    setIsPopupOpen(false);
+  }, []);
 
   return (
-    <Marker 
-      position={position} 
-      icon={userMarkerIcon}
-    >
-      <Popup
-        offset={[0, 10]}
+    <>
+      <Marker 
+        position={position} 
+        icon={userMarkerIcon}
+        eventHandlers={{
+          click: handleMarkerClick
+        }}
       >
-        <div className="p-2 leaflet-popup-custom marker-popup-gradient min-w-[180px]">
-          <strong>
-            {loadingName
-              ? <span className="animate-pulse text-xs text-muted-foreground">{t("Loading location...", "正在加载位置...")}</span>
-              : (locationName || t("Your Location", "您的位置"))}
-          </strong>
-          <div className="text-xs mt-1">
-            {position[0].toFixed(5)}, {position[1].toFixed(5)}
-          </div>
-          {currentSiqs !== null && (
-            <div className="text-xs mt-1.5 flex items-center">
-              <span className="mr-1">SIQS:</span>
-              <SiqsScoreBadge score={currentSiqs} compact={true} />
+        <Popup
+          offset={[0, 10]}
+          onClose={handlePopupClose}
+        >
+          <div className="p-2 leaflet-popup-custom marker-popup-gradient min-w-[180px]">
+            <strong>
+              {loadingName
+                ? <span className="animate-pulse text-xs text-muted-foreground">{t("Loading location...", "正在加载位置...")}</span>
+                : (locationName || t("Your Location", "您的位置"))}
+            </strong>
+            <div className="text-xs mt-1">
+              {position[0].toFixed(5)}, {position[1].toFixed(5)}
             </div>
-          )}
-          <div className="mt-2 flex flex-col gap-2">
-            <button 
-              onClick={handleViewDetails}
-              className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
-            >
-              <ExternalLink className="h-3 w-3 mr-1" />
-              {t("View Details", "查看详情")}
-            </button>
-            
-            {isAuthenticated && (
-              <button 
-                onClick={handleOpenDialog}
-                className={`
-                  text-xs flex items-center justify-center w-full 
-                  bg-gradient-to-br from-purple-500/80 to-indigo-600/80 
-                  text-white 
-                  ${isMobile ? 'py-3' : 'py-1.5'} 
-                  px-2 rounded-lg 
-                  transition-all duration-300 
-                  hover:scale-[1.02] hover:shadow-lg 
-                  active:scale-[0.98]
-                  shadow-md shadow-purple-500/30
-                  border border-purple-500/20
-                `}
-              >
-                {t("Create My Astro Spot", "创建我的观星点")}
-              </button>
+            {currentSiqs !== null && (
+              <div className="text-xs mt-1.5 flex items-center">
+                <span className="mr-1">SIQS:</span>
+                <SiqsScoreBadge score={currentSiqs} compact={true} />
+              </div>
             )}
+            <div className="mt-2 flex flex-col gap-2">
+              <button 
+                onClick={handleViewDetails}
+                className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                {t("View Details", "查看详情")}
+              </button>
+              
+              {isAuthenticated && (
+                <button 
+                  onClick={handleOpenDialog}
+                  className={`
+                    text-xs flex items-center justify-center w-full 
+                    bg-gradient-to-br from-purple-500/80 to-indigo-600/80 
+                    text-white 
+                    ${isMobile ? 'py-3' : 'py-1.5'} 
+                    px-2 rounded-lg 
+                    transition-all duration-300 
+                    hover:scale-[1.02] hover:shadow-lg 
+                    active:scale-[0.98]
+                    shadow-md shadow-purple-500/30
+                    border border-purple-500/20
+                  `}
+                >
+                  {t("Create My Astro Spot", "创建我的观星点")}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      </Popup>
+        </Popup>
+      </Marker>
 
       {isDialogOpen && (
         <CreateAstroSpotDialog
@@ -167,7 +177,7 @@ const UserLocationMarker = memo(({
           onClose={handleCloseDialog}
         />
       )}
-    </Marker>
+    </>
   );
 });
 

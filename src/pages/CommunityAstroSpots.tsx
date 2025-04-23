@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -24,6 +24,8 @@ const CommunityAstroSpots: React.FC = () => {
   // Manage SIQS state like in ManageAstroSpots
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
+  // User location state
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
   const handleSiqsCalculated = (spotId: string, siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(prev => ({
@@ -35,6 +37,12 @@ const CommunityAstroSpots: React.FC = () => {
       [spotId]: loading
     }));
   };
+
+  // Handle user location updates from map clicks
+  const handleLocationUpdate = useCallback((lat: number, lng: number) => {
+    console.log("Location updated:", lat, lng);
+    setUserLocation([lat, lng]);
+  }, []);
 
   // Header animation variants
   const titleVariants = {
@@ -99,12 +107,12 @@ const CommunityAstroSpots: React.FC = () => {
             </div>
           ) : (
             <CommunityMap
-              center={DEFAULT_CENTER}
+              center={userLocation || DEFAULT_CENTER}
               locations={astrospots ?? []}
               hoveredLocationId={null}
               isMobile={false}
-              zoom={3}
-              onMarkerClick={(spot) => handleCardClick(spot.id)}
+              zoom={userLocation ? 8 : 3}
+              onLocationUpdate={handleLocationUpdate}
             />
           )}
         </div>
