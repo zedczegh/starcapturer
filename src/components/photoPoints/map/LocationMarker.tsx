@@ -9,7 +9,6 @@ import { getSiqsScore } from '@/utils/siqsHelpers';
 import LocationPopupContent from './LocationPopupContent';
 import { useMarkerState } from './hooks/useMarkerState';
 import { useNavigate } from "react-router-dom";
-import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -117,20 +116,9 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
     }
   }, [handleTouchMove]);
 
-  // Handle navigation to location details page from popup
+  // New: Handle navigation to astrospot profile from popup
   const handleViewDetails = useCallback((loc: SharedAstroSpot) => {
-    try {
-      const navigationData = prepareLocationForNavigation(loc);
-      
-      if (navigationData) {
-        navigate(`/location/${navigationData.locationId}`, { 
-          state: navigationData.locationState 
-        });
-        console.log("Opening location details", navigationData.locationId);
-      }
-    } catch (error) {
-      console.error("Error navigating to location details:", error, loc);
-    }
+    navigate(`/astro-spot/${loc.id}`, { state: { from: 'community' } });
   }, [navigate]);
 
   return (
@@ -169,7 +157,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
           siqsLoading={siqsLoading}
           displayName={displayName}
           isCertified={isCertified}
-          onViewDetails={handleViewDetails} // Use the correct navigation callback
+          onViewDetails={handleViewDetails} // Use navigation callback here
         />
       </Marker>
     </>
