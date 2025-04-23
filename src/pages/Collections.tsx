@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -86,12 +87,22 @@ const Collections = () => {
 
       if (error) throw error;
 
+      // Update the locations state with the new name
       setLocations((prev) =>
         prev.map((loc) =>
           loc.id === id ? { ...loc, name: newName } : loc
         )
       );
       toast.success(t("Location name updated", "位置名称已更新"));
+      
+      // Reset the editing state for this location
+      setEditingNames((prev) => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
+      
+      // Force reload to ensure all components receive the updated data
       forceReload?.();
     } catch (error: any) {
       toast.error(t("Failed to update name", "更新名称失败"), { description: error.message });
@@ -158,10 +169,9 @@ const Collections = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedLocations.map((location, index) => {
-                const editingValue =
-                  editingNames[location.id] !== undefined
-                    ? editingNames[location.id]
-                    : location.name;
+                const isEditing = editMode && editingNames[location.id] !== undefined;
+                const customName = isEditing ? editingNames[location.id] : location.name;
+                
                 return (
                   <div key={location.id} className="relative group">
                     {editMode && (
@@ -175,7 +185,7 @@ const Collections = () => {
                       <div className="mb-3 flex items-center gap-2">
                         <Input
                           className="flex-1 px-2 py-1 text-base rounded bg-background border border-cosmic-700 text-foreground"
-                          value={editingValue}
+                          value={editingNames[location.id] ?? location.name}
                           maxLength={32}
                           onChange={(e) =>
                             handleNameChange(location.id, e.target.value)
@@ -201,7 +211,11 @@ const Collections = () => {
                       </div>
                     ) : null}
                     <PhotoLocationCard
-                      location={location}
+                      location={{
+                        ...location,
+                        // Use the modified name for display
+                        name: customName
+                      }}
                       index={index}
                       onViewDetails={handleViewDetails}
                       showRealTimeSiqs={true}
