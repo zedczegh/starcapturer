@@ -1,6 +1,6 @@
 
 import React from "react";
-import { UserLocationMarker } from "@/components/photoPoints/map/components/UserLocationMarker";
+import UserLocationMarker from "@/components/photoPoints/map/components/UserLocationMarker";
 
 interface CommunityUserLocationMarkerProps {
   position: [number, number];

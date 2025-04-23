@@ -3,9 +3,9 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
-import SiqsScoreBadge from '../cards/SiqsScoreBadge';
+import SiqsScoreBadge from '@/components/photoPoints/cards/SiqsScoreBadge';
 import { MapPin, ExternalLink } from 'lucide-react';
-import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
+import RealTimeSiqsProvider from '@/components/photoPoints/cards/RealTimeSiqsProvider';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { useNavigate } from 'react-router-dom';
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
@@ -128,9 +128,8 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
       >
         <Popup
           offset={[0, 10]}
-          closeOnClick={false}
+          onClose={handlePopupClose}
           onOpen={() => setIsPopupOpen(true)}
-          onClose={() => setIsPopupOpen(false)}
         >
           <div className="p-2 leaflet-popup-custom marker-popup-gradient min-w-[180px]">
             <strong>
@@ -192,4 +191,4 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
   );
 };
 
-export default React.memo(UserLocationMarker);
+export default UserLocationMarker;
