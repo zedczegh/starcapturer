@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -20,6 +21,9 @@ const Collections = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
+  // Initialize these state variables outside of any conditions
+  const [bortleMap, setBortleMap] = useState<Record<string, number | null>>({});
+  const [fetchingBortle, setFetchingBortle] = useState(false);
 
   const {
     locations,
@@ -55,34 +59,16 @@ const Collections = () => {
     }
   };
 
-  if (!authChecked) return <PageLoader />;
-
-  if (locations === null) {
-    return (
-      <div className="min-h-screen bg-background">
-        <NavBar />
-        <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
-          <LocationStatusMessage
-            message={t("Please sign in to view your collections", "请登录以查看您的收藏")}
-            type="error"
-          />
-        </div>
-      </div>
-    );
-  }
-
-  const sortedLocations = sortLocationsBySiqs(locations);
-
-  const [bortleMap, setBortleMap] = useState<Record<string, number | null>>({});
-  const [fetchingBortle, setFetchingBortle] = useState(false);
-
+  // Fetch Bortle scale values when locations change
   useEffect(() => {
+    if (!locations || locations.length === 0) return;
+    
     let alive = true;
     const fetchAllBortle = async () => {
       setFetchingBortle(true);
       const updated: Record<string, number | null> = {};
       await Promise.all(
-        sortedLocations.map(async (loc) => {
+        locations.map(async (loc) => {
           if (typeof loc.bortleScale === "number" && loc.bortleScale >= 1 && loc.bortleScale <= 9) {
             updated[loc.id] = loc.bortleScale;
             return;
@@ -100,7 +86,25 @@ const Collections = () => {
     };
     fetchAllBortle();
     return () => { alive = false; };
-  }, [JSON.stringify(sortedLocations)]);
+  }, [locations]); // Simplified dependency to avoid object serialization issues
+
+  if (!authChecked) return <PageLoader />;
+
+  if (locations === null) {
+    return (
+      <div className="min-h-screen bg-background">
+        <NavBar />
+        <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
+          <LocationStatusMessage
+            message={t("Please sign in to view your collections", "请登录以查看您的收藏")}
+            type="error"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const sortedLocations = sortLocationsBySiqs(locations);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -162,7 +166,7 @@ const Collections = () => {
                       onViewDetails={handleViewDetails}
                       showRealTimeSiqs={true}
                     />
-                    {!overrideBortle && fetchingBortle && (
+                    {fetchingBortle && overrideBortle === undefined && (
                       <div className="absolute right-2 top-2 z-10 bg-background/80 rounded-full p-1">
                         <Loader className="h-4 w-4 animate-spin text-primary" />
                       </div>
