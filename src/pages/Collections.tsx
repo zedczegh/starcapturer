@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
@@ -15,13 +14,13 @@ import LocationStatusMessage from "@/components/location/LocationStatusMessage";
 import MiniRemoveButton from "@/components/collections/MiniRemoveButton";
 import AboutFooter from '@/components/about/AboutFooter';
 import { useUserCollections } from "@/hooks/collections/useUserCollections";
+import { getBortleScaleForCoords } from "@/utils/getBortleScaleForCoords";
 
 const Collections = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
 
-  // Use new efficient collections hook
   const {
     locations,
     setLocations,
@@ -32,10 +31,8 @@ const Collections = () => {
   } = useUserCollections();
 
   const handleDelete = async (locationId: string) => {
-    // Remove from UI and cache immediately for snappy feel
     removeLocationImmediately(locationId);
     try {
-      // Optimistically delete on Supabase; does not restore in UI on error for now
       const { error: dbError } = await import("@/integrations/supabase/client")
         .then((mod) => mod.supabase)
         .then((supabase) =>
@@ -60,7 +57,6 @@ const Collections = () => {
 
   if (!authChecked) return <PageLoader />;
 
-  // Auth state managed in useUserCollections, so if no user, just show relevant UI
   if (locations === null) {
     return (
       <div className="min-h-screen bg-background">
@@ -76,6 +72,35 @@ const Collections = () => {
   }
 
   const sortedLocations = sortLocationsBySiqs(locations);
+
+  const [bortleMap, setBortleMap] = useState<Record<string, number | null>>({});
+  const [fetchingBortle, setFetchingBortle] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    const fetchAllBortle = async () => {
+      setFetchingBortle(true);
+      const updated: Record<string, number | null> = {};
+      await Promise.all(
+        sortedLocations.map(async (loc) => {
+          if (typeof loc.bortleScale === "number" && loc.bortleScale >= 1 && loc.bortleScale <= 9) {
+            updated[loc.id] = loc.bortleScale;
+            return;
+          }
+          if (loc.latitude && loc.longitude) {
+            const value = await getBortleScaleForCoords(loc.latitude, loc.longitude, loc.name);
+            updated[loc.id] = value ?? null;
+          }
+        })
+      );
+      if (alive) {
+        setBortleMap(updated);
+        setFetchingBortle(false);
+      }
+    };
+    fetchAllBortle();
+    return () => { alive = false; };
+  }, [JSON.stringify(sortedLocations)]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -116,23 +141,35 @@ const Collections = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortedLocations.map((location, index) => (
-                <div key={location.id} className="relative group">
-                  {editMode && (
-                    <MiniRemoveButton onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      handleDelete(location.id);
-                    }}/>
-                  )}
-                  <PhotoLocationCard
-                    location={location}
-                    index={index}
-                    onViewDetails={handleViewDetails}
-                    showRealTimeSiqs={true}
-                  />
-                </div>
-              ))}
+              {sortedLocations.map((location, index) => {
+                const overrideBortle = bortleMap[location.id];
+                return (
+                  <div key={location.id} className="relative group">
+                    {editMode && (
+                      <MiniRemoveButton onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handleDelete(location.id);
+                      }}/>
+                    )}
+                    <PhotoLocationCard
+                      location={{
+                        ...location,
+                        bortleScale:
+                          typeof overrideBortle === "number" ? overrideBortle : location.bortleScale,
+                      }}
+                      index={index}
+                      onViewDetails={handleViewDetails}
+                      showRealTimeSiqs={true}
+                    />
+                    {!overrideBortle && fetchingBortle && (
+                      <div className="absolute right-2 top-2 z-10 bg-background/80 rounded-full p-1">
+                        <Loader className="h-4 w-4 animate-spin text-primary" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </main>
@@ -143,4 +180,3 @@ const Collections = () => {
 };
 
 export default Collections;
-
