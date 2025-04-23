@@ -106,8 +106,6 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
         <Popup 
           closeOnClick={false} 
           autoClose={false}
-          isOpen={isPopupOpen}
-          onClose={() => setIsPopupOpen(false)}
         >
           <div className="p-2 min-w-[200px]">
             <div className="font-medium text-sm mb-2 flex items-center">
