@@ -1,0 +1,87 @@
+
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { toast } from "sonner";
+import { SharedAstroSpot } from "@/types/weather";
+import { useAuth } from "@/contexts/AuthContext";
+
+export const useAstroSpots = () => {
+  const { user } = useAuth();
+  const { t } = useLanguage();
+  const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
+  const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
+  const [editMode, setEditMode] = useState(false);
+
+  const { data: spots, isLoading, refetch } = useQuery({
+    queryKey: ['userAstroSpots'],
+    queryFn: async () => {
+      if (!user) throw new Error("User not authenticated");
+      
+      const { data, error } = await supabase
+        .from('user_astro_spots')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      return data.map(spot => ({
+        id: spot.id,
+        name: spot.name,
+        latitude: spot.latitude,
+        longitude: spot.longitude,
+        bortleScale: spot.bortlescale || 4,
+        description: spot.description,
+        siqs: spot.siqs,
+        timestamp: spot.created_at,
+        user_id: spot.user_id
+      })) as SharedAstroSpot[];
+    },
+    enabled: !!user,
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+  });
+
+  const handleDelete = async (spotId: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_astro_spots')
+        .delete()
+        .eq('id', spotId);
+      
+      if (error) throw error;
+      
+      toast.success(t("AstroSpot deleted successfully", "观星点删除成功"));
+      refetch();
+    } catch (error) {
+      console.error('Error deleting astro spot:', error);
+      toast.error(t("Failed to delete AstroSpot", "删除观星点失败"));
+    }
+  };
+  
+  const handleSiqsCalculated = (spotId: string, siqs: number | null, loading: boolean) => {
+    setRealTimeSiqs(prev => ({
+      ...prev,
+      [spotId]: siqs
+    }));
+    setLoadingSiqs(prev => ({
+      ...prev,
+      [spotId]: loading
+    }));
+  };
+
+  return {
+    spots,
+    isLoading,
+    editMode,
+    setEditMode,
+    handleDelete,
+    realTimeSiqs,
+    loadingSiqs,
+    handleSiqsCalculated
+  };
+};
