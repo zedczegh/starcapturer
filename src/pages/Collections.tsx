@@ -127,7 +127,7 @@ const Collections = () => {
                       index={index}
                       onViewDetails={handleViewDetails}
                       showRealTimeSiqs={true}
-                      showBortleScale={false} {/* Disable Bortle scale display for Collections page */}
+                      showBortleScale={false}
                     />
                   </div>
                 );
