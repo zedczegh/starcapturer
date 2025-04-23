@@ -20,7 +20,6 @@ const CommunityAstroSpots: React.FC = () => {
     queryFn: fetchCommunityAstroSpots,
   });
 
-  // Manage SIQS state like in ManageAstroSpots
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
 
@@ -35,7 +34,6 @@ const CommunityAstroSpots: React.FC = () => {
     }));
   };
 
-  // Header animation variants
   const titleVariants = {
     hidden: { opacity: 0, scale: 0.96, y: -10 },
     visible: { opacity: 1, scale: 1, y: 0, transition: { delay: 0.1, duration: 0.6, ease: "easeOut" } }
@@ -49,18 +47,15 @@ const CommunityAstroSpots: React.FC = () => {
     visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
   };
 
-  // Function to handle clicking a location card
   const handleCardClick = (id: string) => {
-    // Pass source information when navigating to the profile
     navigate(`/astro-spot/${id}`, { 
       state: { from: 'community' } 
     });
   };
 
   return (
-    <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "社区观星点 | SIQS")}>
+    <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>
       <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
-        {/* Header Section with Gradient, Animated Line & Better Layout */}
         <div className="mb-9">
           <motion.div
             className="flex flex-col items-center justify-center gap-3"
@@ -72,7 +67,7 @@ const CommunityAstroSpots: React.FC = () => {
               className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-3xl md:text-4xl text-center drop-shadow tracking-tight"
               variants={titleVariants}
             >
-              {t("Astrospots Community", "社区观星点")}
+              {t("Astrospots Community", "观星社区")}
             </motion.h1>
             <motion.div
               className="rounded-full h-1 bg-gradient-to-r from-blue-400 to-purple-400 mb-1"
@@ -110,7 +105,7 @@ const CommunityAstroSpots: React.FC = () => {
 
         <h2 className="font-bold text-xl mt-12 mb-5 flex items-center gap-2 text-gradient-blue">
           <Circle className="h-4 w-4 text-primary" />
-          <span>{t("All Community Astrospots", "全部社区地点")}</span>
+          <span>{t("All Community Astrospots", "全部观星社区地点")}</span>
         </h2>
         {astrospots && astrospots.length > 0 ? (
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
@@ -150,7 +145,6 @@ const CommunityAstroSpots: React.FC = () => {
                       isCertified={false}
                     />
                   </div>
-                  {/* Overlay for click effect (optional visual feedback) */}
                   <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />
                 </div>
               </button>
