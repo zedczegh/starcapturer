@@ -1,14 +1,15 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
+import LazyMapContainer from "@/components/photoPoints/map/LazyMapContainer";
 import { Loader, Star, Circle } from "lucide-react";
 import LocationCard from "@/components/LocationCard";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import CommunityMap from "@/components/community/CommunityMap";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
@@ -97,13 +98,14 @@ const CommunityAstroSpots: React.FC = () => {
               <Loader className="h-7 w-7 animate-spin text-primary" />
             </div>
           ) : (
-            <CommunityMap
+            <LazyMapContainer
               center={DEFAULT_CENTER}
+              userLocation={null}
               locations={astrospots ?? []}
-              hoveredLocationId={null}
-              isMobile={false}
+              searchRadius={10000}
+              activeView="calculated"
               zoom={3}
-              onMarkerClick={(spot) => handleCardClick(spot.id)}
+              hoveredLocationId={null}
             />
           )}
         </div>
