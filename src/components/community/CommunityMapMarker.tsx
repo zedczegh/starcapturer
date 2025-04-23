@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
@@ -72,6 +73,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     if (onMarkerClick) {
       onMarkerClick(spot);
     } else {
+      // This is specifically for community astro spots - navigate to the astro spot page
       navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } });
     }
   };

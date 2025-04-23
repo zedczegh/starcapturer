@@ -17,7 +17,7 @@ interface LocationPopupContentProps {
   siqsLoading: boolean;
   displayName: string;
   isCertified: boolean;
-  onViewDetails: (location: SharedAstroSpot) => void; // CHANGED from onClick
+  onViewDetails: (location: SharedAstroSpot) => void;
 }
 
 const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
@@ -26,7 +26,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
   siqsLoading,
   displayName,
   isCertified,
-  onViewDetails, // renamed prop
+  onViewDetails,
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
