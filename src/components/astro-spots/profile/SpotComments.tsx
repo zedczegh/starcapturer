@@ -1,24 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { MessageCircle } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { AnimatePresence, motion } from 'framer-motion';
 import CommentItem from './comments/CommentItem';
 import CommentInput from './comments/CommentInput';
-
-interface Comment {
-  id: string;
-  content: string;
-  created_at: string;
-  profiles?: {
-    username: string | null;
-    avatar_url: string | null;
-  };
-}
+import CommentHeader from './comments/CommentHeader';
+import EmptyComments from './comments/EmptyComments';
+import CommentSheet from './comments/CommentSheet';
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Comment } from './types/comments';
 
 interface SpotCommentsProps {
   spotId: string;
@@ -97,34 +88,15 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
 
   return (
     <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-200 flex items-center">
-          <MessageCircle className="h-5 w-5 mr-2 text-primary/80" />
-          {t("Comments", "评论")} ({localComments.length})
-        </h2>
-        
-        {localComments.length > 2 && (
-          <Button 
-            variant="ghost" 
-            onClick={() => setShowCommentsSheet(true)}
-            className="text-sm text-primary hover:bg-cosmic-700/30"
-          >
-            {t("View All", "查看全部")}
-          </Button>
-        )}
-      </div>
+      <CommentHeader 
+        commentCount={localComments.length}
+        onViewAll={() => setShowCommentsSheet(true)}
+        showViewAll={localComments.length > 2}
+      />
       
       <AnimatePresence mode="popLayout">
         {localComments.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="text-center py-8"
-          >
-            <MessageCircle className="h-10 w-10 text-gray-500 mx-auto mb-2" />
-            <p className="text-gray-400">{t("No comments yet", "暂无评论")}</p>
-          </motion.div>
+          <EmptyComments />
         ) : (
           <motion.div layout className="space-y-3">
             {localComments.slice(0, 2).map((comment) => (
@@ -143,35 +115,14 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         </div>
       )}
 
-      <Sheet open={showCommentsSheet} onOpenChange={setShowCommentsSheet}>
-        <SheetContent 
-          side="bottom" 
-          className="h-[85vh] bg-cosmic-900 border-cosmic-700 text-gray-100 rounded-t-xl"
-        >
-          <SheetHeader>
-            <SheetTitle className="text-gray-100">
-              {t("All Comments", "所有评论")} ({localComments.length})
-            </SheetTitle>
-          </SheetHeader>
-          
-          <div className="mt-6 space-y-4 max-h-[calc(85vh-220px)] overflow-y-auto pr-1">
-            <AnimatePresence mode="popLayout">
-              {localComments.map((comment) => (
-                <CommentItem key={`sheet-comment-${comment.id}`} comment={comment} />
-              ))}
-            </AnimatePresence>
-          </div>
-
-          {user && (
-            <div className="sticky bottom-0 pt-4 mt-4 border-t border-cosmic-700/30 bg-cosmic-900">
-              <CommentInput
-                onSubmit={handleCommentSubmit}
-                sending={commentSending}
-              />
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      <CommentSheet
+        open={showCommentsSheet}
+        onOpenChange={setShowCommentsSheet}
+        comments={localComments}
+        user={user}
+        onSubmit={handleCommentSubmit}
+        sending={commentSending}
+      />
     </div>
   );
 };
