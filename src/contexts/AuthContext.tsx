@@ -1,8 +1,8 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AuthContextType {
   user: User | null;
@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const { t } = useLanguage ? useLanguage() : { t: (en: string, zh: string) => en };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -52,31 +53,61 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      // Use the current window location origin to ensure the redirect URL is correct
-      const redirectTo = window.location.origin;
-      
-      const { data, error } = await supabase.auth.signUp({ 
-        email, 
+
+      let redirectTo = window.location.origin;
+      if (!redirectTo.startsWith('http')) {
+        redirectTo = 'https://siqs.astroai.top';
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
         password,
         options: {
-          emailRedirectTo: redirectTo
+          emailRedirectTo: redirectTo + '/photo-points'
         }
       });
 
       if (error) throw error;
 
       if (data.user && !data.user.confirmed_at) {
-        toast.success("Almost there! ✨", {
-          duration: 6000,
-          description: "Check your email to verify your account and start your cosmic journey!",
-          position: "top-center"
-        });
+        toast.success(
+          t(
+            "Almost there! ✨",
+            "就差一步！✨"
+          ),
+          {
+            duration: 8000,
+            description: (
+              <>
+                {t(
+                  "Check your email (inbox and spam)! Click the confirmation link to activate your account. You will be redirected back to our website to complete your signup.",
+                  "请查收您的邮箱（包括垃圾箱）！点击确认链接激活账号，系统将自动将您带回本站继续完成注册。"
+                )}
+                <br />
+                <span className="font-bold">
+                  {t(
+                    "If you are not redirected, return to the site and sign in.",
+                    "若未自动跳转，请回到本站重新登录。"
+                  )}
+                </span>
+              </>
+            ),
+            position: "top-center"
+          }
+        );
       }
     } catch (error: any) {
-      toast.error("Account creation paused", {
-        description: error.message || "Please try again with a different email",
-        position: "top-center"
-      });
+      toast.error(
+        t(
+          "Account creation paused",
+          "帐户创建已暂停"
+        ),
+        {
+          description: error.message ||
+            t("Please try again with a different email", "请更换邮箱后重试"),
+          position: "top-center"
+        }
+      );
     } finally {
       setIsLoading(false);
     }
