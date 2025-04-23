@@ -59,7 +59,6 @@ type CommunityMapMarkerProps = {
   onMarkerClick?: (spot: SharedAstroSpot) => void;
 };
 
-// Fix event handler prop for react-leaflet Marker
 const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   spot,
   isHovered,
@@ -81,8 +80,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     <Marker
       position={[spot.latitude, spot.longitude]}
       icon={icon}
-      // Use the correct event prop for react-leaflet v4+
-      eventHandlers={{ click: handleClick }}
+      onClick={handleClick}
     >
       <Popup>
         <div>
