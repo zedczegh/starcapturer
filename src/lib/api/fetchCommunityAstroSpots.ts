@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 /**
  * Fetch all astrospots created by users from Supabase.
  * Returns an array of spots with SIQS, Bortle, name, description, etc.
- * Now also joins profiles to provide username.
  */
 export async function fetchCommunityAstroSpots() {
   const { data, error } = await supabase
@@ -17,11 +16,7 @@ export async function fetchCommunityAstroSpots() {
       bortlescale,
       siqs,
       description,
-      created_at,
-      user_id,
-      profiles (
-        username
-      )
+      created_at
     `)
     .order("created_at", { ascending: false });
 
@@ -39,8 +34,6 @@ export async function fetchCommunityAstroSpots() {
     siqs: spot.siqs,
     description: spot.description,
     timestamp: spot.created_at,
-    username: spot.profiles?.username ?? undefined,
-    user_id: spot.user_id ?? undefined,
     // Optionally add more fields as needed
   }));
 }
