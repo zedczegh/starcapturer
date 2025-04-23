@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion"; // Add this import
 import { Card } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
 import { useAuth } from "@/contexts/AuthContext";
