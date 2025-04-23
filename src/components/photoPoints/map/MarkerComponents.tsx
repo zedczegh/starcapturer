@@ -89,11 +89,11 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
-      eventHandlers={{
-        click: handleMarkerClick,
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut,
-      }}
+      // Use onClick prop instead of eventHandlers
+      onClick={handleMarkerClick}
+      // Use onMouseover and onMouseout instead of eventHandlers
+      onMouseover={handleMouseOver}
+      onMouseout={handleMouseOut}
     >
       {customPopup ? (
         customPopup(location)
