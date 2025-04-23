@@ -29,29 +29,6 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
 
-  const createBucketIfNeeded = async () => {
-    try {
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const bucketExists = buckets?.some(bucket => bucket.name === 'astro_spot_images');
-      
-      if (!bucketExists) {
-        const { error } = await supabase.storage.createBucket('astro_spot_images', {
-          public: true
-        });
-        
-        if (error) {
-          console.error("Error creating bucket:", error);
-          return false;
-        }
-        console.log("Created astro_spot_images bucket");
-      }
-      return true;
-    } catch (error) {
-      console.error("Error checking/creating bucket:", error);
-      return false;
-    }
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     if (spotImages.length + e.target.files.length > 10) {
@@ -67,12 +44,6 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
     setImageUploading(true);
     
     try {
-      const bucketReady = await createBucketIfNeeded();
-      if (!bucketReady) {
-        toast.error(t("Failed to prepare storage", "存储准备失败"));
-        return;
-      }
-      
       const uploadResults = [];
       
       for (const file of selectedFiles) {

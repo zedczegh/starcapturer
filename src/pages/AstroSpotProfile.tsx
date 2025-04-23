@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -57,7 +56,6 @@ const AstroSpotProfile = () => {
       const { data: advantageData } = await supabase
         .from('astro_spot_advantages').select('*').eq('spot_id', id);
       
-      // Updated comment fetching with proper join
       const { data: commentData } = await supabase
         .from('astro_spot_comments')
         .select(`
@@ -91,7 +89,7 @@ const AstroSpotProfile = () => {
       };
     },
     retry: 1,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60,
     refetchOnWindowFocus: false
   });
 

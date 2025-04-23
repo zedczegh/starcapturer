@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { MessageCircle, Loader2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -49,6 +50,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     setCommentSending(true);
     
     try {
+      // Insert the comment
       const { error } = await supabase
         .from("astro_spot_comments")
         .insert({
@@ -63,6 +65,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         return;
       }
       
+      // Clear input and trigger a refresh of comments
       setCommentInput("");
       toast.success(t("Comment posted!", "评论已发表！"));
       onCommentsUpdate();
