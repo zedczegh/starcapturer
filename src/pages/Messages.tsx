@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import NavBar from "@/components/NavBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MessageCircle, User, Send, Search } from "lucide-react";
+import { MessageCircle, User, Send, Search, ChevronLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -291,7 +290,6 @@ const Messages: React.FC = () => {
       
       <div className="container mx-auto px-4 py-6 pt-20 max-w-6xl">
         <div className="flex flex-col md:flex-row gap-4 h-[80vh]">
-          {/* Side panel - conversations list */}
           <Card className={`${activeConversation ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 glassmorphism overflow-hidden flex-col`}>
             <div className="p-4 border-b border-cosmic-800">
               <h2 className="text-xl font-semibold text-white flex items-center gap-2">
@@ -365,7 +363,6 @@ const Messages: React.FC = () => {
             </div>
           </Card>
           
-          {/* Main panel - conversation */}
           <Card className={`${!activeConversation ? 'hidden md:flex' : 'flex'} w-full md:w-2/3 glassmorphism overflow-hidden flex flex-col`}>
             {activeConversation ? (
               <>
@@ -473,7 +470,7 @@ const Messages: React.FC = () => {
                       ) : (
                         <>
                           <Send className="h-4 w-4 mr-2" />
-                          {t("Send", "发送")}
+                          {t("Send", "���送")}
                         </>
                       )}
                     </Button>
