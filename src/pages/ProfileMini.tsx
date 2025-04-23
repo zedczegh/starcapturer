@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { User } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translateProfileTag } from "@/utils/linkTranslations";
+import { useMessageNavigation } from "@/hooks/useMessageNavigation";
 
 interface ProfileData {
   username: string | null;
@@ -24,32 +25,48 @@ const ProfileMini: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { t, language } = useLanguage();
   
+  // Check if we came from messages to hide the "Send message" button
   const isFromMessages = location.state?.fromMessages;
+  const { activeConversation } = useMessageNavigation();
 
   useEffect(() => {
     if (!profileId) return;
     const fetchData = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("username, avatar_url")
-        .eq("id", profileId)
-        .maybeSingle();
-      if (!data || error) {
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("username, avatar_url")
+          .eq("id", profileId)
+          .maybeSingle();
+          
+        if (!data || error) {
+          console.error("Error fetching profile:", error);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+        
+        const { data: tagRows, error: tagError } = await supabase
+          .from("profile_tags")
+          .select("tag")
+          .eq("user_id", profileId);
+          
+        if (tagError) {
+          console.error("Error fetching profile tags:", tagError);
+        }
+        
+        setProfile({
+          username: data.username || "Stargazer",
+          avatar_url: data.avatar_url,
+          tags: tagRows ? tagRows.map((t) => t.tag) : [],
+        });
+      } catch (err) {
+        console.error("Exception fetching profile data:", err);
         setProfile(null);
+      } finally {
         setLoading(false);
-        return;
       }
-      const { data: tagRows } = await supabase
-        .from("profile_tags")
-        .select("tag")
-        .eq("user_id", profileId);
-      setProfile({
-        username: data.username || "Stargazer",
-        avatar_url: data.avatar_url,
-        tags: tagRows ? tagRows.map((t) => t.tag) : [],
-      });
-      setLoading(false);
     };
     fetchData();
   }, [profileId]);
@@ -66,6 +83,12 @@ const ProfileMini: React.FC = () => {
       </div>
     );
   }
+
+  const handleSendMessage = () => {
+    if (profileId) {
+      navigate(`/messages/${profileId}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950 flex flex-col items-center px-4 pt-20">
@@ -94,9 +117,9 @@ const ProfileMini: React.FC = () => {
           </div>
         </div>
         <div className="flex justify-between mt-6">
-          {!isFromMessages && (
+          {!isFromMessages && user && user.id !== profileId && (
             <Button
-              onClick={() => navigate(`/messages/${profileId}`)}
+              onClick={handleSendMessage}
               className="w-full mr-2"
             >
               {t("Send Message", "发送消息")}
@@ -105,7 +128,7 @@ const ProfileMini: React.FC = () => {
           <Button 
             variant="secondary" 
             onClick={() => navigate(-1)}
-            className={isFromMessages ? "w-full" : ""}
+            className={isFromMessages || (user && user.id !== profileId) ? "" : "w-full"}
           >
             {t("Back", "返回")}
           </Button>

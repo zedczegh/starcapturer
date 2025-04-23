@@ -57,7 +57,8 @@ const AstroSpotProfile = () => {
       const { data: commentData } = await supabase
         .from('astro_spot_comments')
         .select('*, profiles:user_id(username, avatar_url)')
-        .eq('spot_id', id);
+        .eq('spot_id', id)
+        .order('created_at', { ascending: false });
 
       return {
         ...spotData,
@@ -102,22 +103,45 @@ const AstroSpotProfile = () => {
     }
   }, [isLoading, spot]);
 
-  const { data: spotImages = [], isLoading: loadingImages } = useQuery({
+  const { data: spotImages = [], isLoading: loadingImages, refetch: refetchImages } = useQuery({
     queryKey: ['spotImages', id],
     queryFn: async () => {
       if (!id) return [];
-      const { data: files, error } = await supabase
-        .storage
-        .from('astro_spot_images')
-        .list(id);
-      if (error) return [];
-      return files.map(file => {
-        const { data } = supabase
+      
+      try {
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const astroBucketExists = buckets?.some(bucket => bucket.name === 'astro_spot_images');
+        
+        if (!astroBucketExists) {
+          console.log("Astro spot images bucket doesn't exist yet");
+          return [];
+        }
+        
+        const { data: files, error } = await supabase
           .storage
           .from('astro_spot_images')
-          .getPublicUrl(`${id}/${file.name}`);
-        return data.publicUrl;
-      });
+          .list(id);
+          
+        if (error) {
+          console.error("Error listing files:", error);
+          return [];
+        }
+        
+        if (!files || files.length === 0) {
+          return [];
+        }
+        
+        return files.map(file => {
+          const { data } = supabase
+            .storage
+            .from('astro_spot_images')
+            .getPublicUrl(`${id}/${file.name}`);
+          return data.publicUrl;
+        });
+      } catch (error) {
+        console.error("Error fetching spot images:", error);
+        return [];
+      }
     },
     enabled: !!id
   });
@@ -143,29 +167,41 @@ const AstroSpotProfile = () => {
 
   const handleCommentSubmit = async () => {
     if (!user?.id || !id || !commentInput.trim()) return;
+    
     setCommentSending(true);
-    const { error, data } = await supabase
-      .from("astro_spot_comments")
-      .insert({
-        user_id: user.id,
-        spot_id: id,
-        content: commentInput.trim(),
-      })
-      .select("*, profiles:user_id(username, avatar_url)")
-      .single();
-    if (error) {
+    
+    try {
+      const { error, data } = await supabase
+        .from("astro_spot_comments")
+        .insert({
+          user_id: user.id,
+          spot_id: id,
+          content: commentInput.trim(),
+        })
+        .select("*, profiles:user_id(username, avatar_url)")
+        .single();
+      
+      if (error) {
+        console.error("Error posting comment:", error);
+        toast.error(t("Failed to post comment.", "评论发送失败。"));
+        return;
+      }
+      
+      setCommentInput("");
+      toast.success(t("Comment posted!", "评论已发表！"));
+      
+      if (spot?.astro_spot_comments) {
+        const updatedComments = [data, ...spot.astro_spot_comments];
+        spot.astro_spot_comments = updatedComments;
+      }
+      
+      refetch(); // Refresh all data to ensure consistent state
+    } catch (err) {
+      console.error("Exception when posting comment:", err);
       toast.error(t("Failed to post comment.", "评论发送失败。"));
+    } finally {
       setCommentSending(false);
-      return;
     }
-    setCommentInput("");
-    // Optimistically update comments cache
-    if (spot?.astro_spot_comments) {
-      spot.astro_spot_comments.unshift(data);
-    }
-    toast.success(t("Comment posted!", "评论已发表！"));
-    setCommentSending(false);
-    refetch(); // Refresh data to ensure update consistency
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,86 +213,80 @@ const AstroSpotProfile = () => {
     setSelectedFiles(Array.from(e.target.files));
   };
 
+  const createBucketIfNotExists = async () => {
+    try {
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const bucketExists = buckets?.some(bucket => bucket.name === 'astro_spot_images');
+      
+      if (!bucketExists) {
+        console.log("Creating astro_spot_images bucket");
+        const { data, error } = await supabase.storage.createBucket(
+          'astro_spot_images', 
+          { public: true }
+        );
+        
+        if (error) {
+          console.error("Error creating bucket:", error);
+          return false;
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error("Error checking/creating bucket:", error);
+      return false;
+    }
+  };
+
   const handleUploadImages = async () => {
     if (!id || !selectedFiles.length) return;
+    
     setImageUploading(true);
-    const bucket = "astro_spot_images";
-    for (const file of selectedFiles) {
-      // Upload each file using Supabase Storage
-      const { error } = await supabase.storage
-        .from(bucket)
-        .upload(`${id}/${file.name}`, file, { upsert: false });
-      if (error) {
-        toast.error(t("Failed to upload one or more images.", "部分图片上传失败"));
+    
+    try {
+      const bucketReady = await createBucketIfNotExists();
+      if (!bucketReady) {
+        toast.error(t("Failed to prepare storage", "存储准备失败"));
         setImageUploading(false);
         return;
       }
+      
+      const uploadPromises = selectedFiles.map(async (file) => {
+        const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
+        
+        const { error } = await supabase.storage
+          .from('astro_spot_images')
+          .upload(`${id}/${fileName}`, file, { 
+            upsert: false,
+            cacheControl: '3600'
+          });
+          
+        if (error) {
+          console.error(`Error uploading ${fileName}:`, error);
+          return { success: false, fileName, error };
+        }
+        return { success: true, fileName };
+      });
+      
+      const results = await Promise.all(uploadPromises);
+      const failures = results.filter(r => !r.success);
+      
+      if (failures.length > 0) {
+        toast.error(t("Failed to upload some images", "部分图片上传失败"));
+        console.error("Failed uploads:", failures);
+      } else {
+        toast.success(t("Images uploaded!", "图片已上传！"));
+        setSelectedFiles([]);
+      }
+      
+      refetchImages();
+      
+    } catch (error) {
+      console.error("Error in upload process:", error);
+      toast.error(t("Failed to upload images", "图片上传失败"));
+    } finally {
+      setImageUploading(false);
     }
-    setSelectedFiles([]);
-    toast.success(t("Images uploaded!", "图片已上传！"));
-    refetch(); // Refresh images
-    setImageUploading(false);
   };
-
-  if (isLoading || !spot || showInstantLoader) {
-    if (error) {
-      return (
-        <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
-          <NavBar />
-          <div className="container py-12">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-gray-200 mb-2">
-                {t("Error loading AstroSpot", "加载观星点时出错")}
-              </h2>
-              <p className="text-gray-400 mb-4">{error.message}</p>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  if (location.state?.from === 'community') {
-                    navigate('/community');
-                  } else {
-                    navigate('/manage-astro-spots');
-                  }
-                }}
-                className="mt-4"
-              >
-                {location.state?.from === 'community' 
-                  ? t("Back to Community", "返回社区") 
-                  : t("Back to My AstroSpots", "返回我的观星点")}
-              </Button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
-        <NavBar />
-        <div className="container max-w-4xl py-8 px-4 md:px-6">
-          <Skeleton className="w-48 h-8 mb-6 rounded-lg" />
-          <div className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden relative">
-            <div className="bg-gradient-to-r from-cosmic-800/80 to-cosmic-800/40 p-6 border-b border-cosmic-700/30">
-              <div className="flex justify-between items-start mb-4">
-                <div className="space-y-2">
-                  <Skeleton className="h-10 w-64 rounded mb-2" />
-                  <Skeleton className="h-4 w-32 rounded" />
-                  <Skeleton className="h-4 w-28 rounded mt-2" />
-                </div>
-                <Skeleton className="h-9 w-40 rounded-full" />
-              </div>
-              <Skeleton className="h-6 w-36 mt-4 rounded-full" />
-            </div>
-            <div className="p-6 space-y-6">
-              <Skeleton className="h-16 w-full rounded-lg mb-4" />
-              <Skeleton className="h-10 w-3/4 rounded-lg mb-3" />
-              <Skeleton className="h-10 w-2/3 rounded-lg mb-3" />
-              <Skeleton className="h-32 w-full rounded-lg" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const getUsername = (comment) => {
     if (!comment || !comment.profiles) return t("Anonymous", "匿名用户");
@@ -443,11 +473,17 @@ const AstroSpotProfile = () => {
                 {t("Location Images", "位置图片")}
               </h2>
               
-              {spotImages.length > 0 ? (
+              {loadingImages ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {[1, 2, 3].map(i => (
+                    <Skeleton key={i} className="aspect-square rounded-lg" />
+                  ))}
+                </div>
+              ) : spotImages.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {spotImages.map((imageUrl, index) => (
                     <div 
-                      key={index} 
+                      key={`image-${index}`}
                       className="relative aspect-square overflow-hidden rounded-lg border border-cosmic-600/30 shadow-md"
                       onClick={() => setShowPhotosDialog(true)}
                     >
@@ -455,6 +491,10 @@ const AstroSpotProfile = () => {
                         src={imageUrl} 
                         alt={`${spot.name} - ${index + 1}`}
                         className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                        onError={(e) => {
+                          console.error("Image failed to load:", imageUrl);
+                          e.currentTarget.src = 'https://placehold.co/400x400/121927/8888aa?text=Image+Not+Found';
+                        }}
                       />
                     </div>
                   ))}
@@ -518,33 +558,43 @@ const AstroSpotProfile = () => {
                     {t("Comments", "评论")} ({spot.astro_spot_comments.length})
                   </h2>
                   
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => setShowCommentsSheet(true)}
-                    className="text-sm text-primary hover:bg-cosmic-700/30"
-                  >
-                    {t("View All", "查看全部")}
-                  </Button>
+                  {spot.astro_spot_comments.length > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setShowCommentsSheet(true)}
+                      className="text-sm text-primary hover:bg-cosmic-700/30"
+                    >
+                      {t("View All", "查看全部")}
+                    </Button>
+                  )}
                 </div>
                 
-                <div className="space-y-3">
-                  {spot.astro_spot_comments.slice(0, 2).map((comment) => (
-                    <div 
-                      key={comment.id}
-                      className="p-3 bg-cosmic-800/20 rounded-lg border border-cosmic-600/20"
-                    >
-                      <div className="flex items-center mb-2">
-                        <div className="font-medium text-gray-200">
-                          {getUsername(comment)}
+                {spot.astro_spot_comments.length > 0 ? (
+                  <div className="space-y-3">
+                    {spot.astro_spot_comments.slice(0, 2).map((comment) => (
+                      <div 
+                        key={comment.id}
+                        className="p-3 bg-cosmic-800/20 rounded-lg border border-cosmic-600/20"
+                      >
+                        <div className="flex items-center mb-2">
+                          <div className="font-medium text-gray-200">
+                            {getUsername(comment)}
+                          </div>
+                          <span className="text-gray-500 text-sm ml-2">
+                            {new Date(comment.created_at).toLocaleDateString()}
+                          </span>
                         </div>
-                        <span className="text-gray-500 text-sm ml-2">
-                          {new Date(comment.created_at).toLocaleDateString()}
-                        </span>
+                        <p className="text-gray-300">{comment.content}</p>
                       </div>
-                      <p className="text-gray-300">{comment.content}</p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-gray-400">
+                      {t("No comments yet", "暂无评论")}
+                    </p>
+                  </div>
+                )}
                 
                 {user && (
                   <div className="mt-4 border-t border-cosmic-700/30 pt-4">
@@ -627,15 +677,19 @@ const AstroSpotProfile = () => {
       <Dialog open={showPhotosDialog} onOpenChange={setShowPhotosDialog}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t("Photo Album", "照片集")}: {spot.name}</DialogTitle>
+            <DialogTitle>{t("Photo Album", "照片集")}: {spot?.name}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             {spotImages.map((imageUrl, index) => (
-              <div key={index} className="relative overflow-hidden rounded-lg border border-cosmic-600/30">
+              <div key={`dialog-image-${index}`} className="relative overflow-hidden rounded-lg border border-cosmic-600/30">
                 <img 
                   src={imageUrl} 
-                  alt={`${spot.name} - ${index + 1}`}
+                  alt={`${spot?.name} - ${index + 1}`}
                   className="w-full h-auto object-contain"
+                  onError={(e) => {
+                    console.error("Dialog image failed to load:", imageUrl);
+                    e.currentTarget.src = 'https://placehold.co/600x400/121927/8888aa?text=Image+Not+Found';
+                  }}
                 />
               </div>
             ))}
@@ -655,15 +709,15 @@ const AstroSpotProfile = () => {
         <SheetContent side="bottom" className="h-[85vh] bg-cosmic-900 border-cosmic-700 text-gray-100 rounded-t-xl">
           <SheetHeader>
             <SheetTitle className="text-gray-100">
-              {t("All Comments", "所有评论")} ({spot.astro_spot_comments?.length || 0})
+              {t("All Comments", "所有评论")} ({spot?.astro_spot_comments?.length || 0})
             </SheetTitle>
           </SheetHeader>
           
           <div className="mt-6 space-y-4 max-h-[calc(85vh-120px)] overflow-y-auto pr-1">
-            {spot.astro_spot_comments?.length > 0 ? 
+            {spot?.astro_spot_comments?.length > 0 ? 
               spot.astro_spot_comments.map((comment) => (
                 <div 
-                  key={comment.id}
+                  key={`sheet-comment-${comment.id}`}
                   className="p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-600/20"
                 >
                   <div className="flex items-center mb-2">
