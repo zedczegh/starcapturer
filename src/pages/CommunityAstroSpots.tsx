@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
@@ -6,6 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader, Telescope } from "lucide-react";
 import { Link } from "react-router-dom";
 import CommunityAstroSpotMarker from "@/components/photoPoints/map/CommunityAstroSpotMarker";
+import { MapContainer, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
@@ -15,8 +15,6 @@ function AstroSpotsMap({ spots, onProfile }: {
   spots: any[],
   onProfile: (spot: any) => void
 }) {
-  const { MapContainer, TileLayer } = require("react-leaflet");
-
   // Only render markers if Leaflet is loaded in browser
   return (
     <div className="w-full h-full">
