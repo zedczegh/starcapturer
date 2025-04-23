@@ -54,21 +54,27 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
     setIsBooking(true);
     
     try {
-      const { error } = await supabase.rpc('insert_astro_spot_reservation', {
-        p_timeslot_id: timeSlot.id,
-        p_user_id: user.id,
-        p_status: 'confirmed'
-      }) as { error: any };
+      // Use the REST API directly for function calls
+      const { data, error } = await supabase.functions.invoke('call-rpc', {
+        body: {
+          function: 'insert_astro_spot_reservation',
+          params: {
+            p_timeslot_id: timeSlot.id,
+            p_user_id: user.id,
+            p_status: 'confirmed'
+          }
+        }
+      });
 
       if (error) {
-        // Fallback to direct insert if RPC doesn't exist
-        const { error: insertError } = await supabase
-          .from('astro_spot_reservations')
-          .insert({
+        // Fallback to direct insert
+        const { error: insertError } = await supabase.rest.post('/astro_spot_reservations', {
+          body: {
             timeslot_id: timeSlot.id,
             user_id: user.id,
             status: 'confirmed'
-          }) as { error: any };
+          }
+        });
           
         if (insertError) throw insertError;
       }
@@ -89,10 +95,7 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
     setIsCancelling(true);
     
     try {
-      const { error } = await supabase
-        .from('astro_spot_reservations')
-        .delete()
-        .eq('id', userReservation.id) as { error: any };
+      const { error } = await supabase.rest.delete(`/astro_spot_reservations?id=eq.${userReservation.id}`);
         
       if (error) throw error;
       
@@ -108,10 +111,7 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
   
   const handleDeleteTimeSlot = async () => {
     try {
-      const { error } = await supabase
-        .from('astro_spot_timeslots')
-        .delete()
-        .eq('id', timeSlot.id) as { error: any };
+      const { error } = await supabase.rest.delete(`/astro_spot_timeslots?id=eq.${timeSlot.id}`);
         
       if (error) throw error;
       

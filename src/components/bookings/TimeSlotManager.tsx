@@ -29,30 +29,34 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
   const { data: timeSlots, isLoading, refetch } = useQuery({
     queryKey: ['timeSlots', spotId],
     queryFn: async () => {
-      // Use the generic query method instead of the typed method
-      const { data, error } = await supabase
-        .from('astro_spot_timeslots')
-        .select('*, astro_spot_reservations(*)')
-        .eq('spot_id', spotId)
-        .order('start_time', { ascending: true }) as { data: any[], error: any };
+      // Use the REST API directly to avoid TypeScript issues
+      const { data, error } = await supabase.rest.get(`/astro_spot_timeslots?spot_id=eq.${spotId}&order=start_time.asc`);
       
       if (error) throw error;
-
-      // Get user profiles for each reservation
+      
+      // Fetch reservations for each time slot
       for (const slot of data || []) {
-        if (slot.astro_spot_reservations && slot.astro_spot_reservations.length > 0) {
-          const userIds = slot.astro_spot_reservations.map((res: any) => res.user_id);
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, username, avatar_url')
-            .in('id', userIds);
+        const { data: reservations, error: reservationsError } = await supabase.rest.get(
+          `/astro_spot_reservations?timeslot_id=eq.${slot.id}`
+        );
+        
+        if (!reservationsError && reservations) {
+          slot.astro_spot_reservations = reservations;
           
-          // Attach profile to each reservation
-          if (profiles) {
-            slot.astro_spot_reservations = slot.astro_spot_reservations.map((res: any) => {
-              const profile = profiles.find((p: any) => p.id === res.user_id);
-              return { ...res, profiles: profile };
-            });
+          // Get user profiles for each reservation
+          if (reservations.length > 0) {
+            const userIds = reservations.map((res: any) => res.user_id);
+            const userIdsQuery = userIds.map((id: string) => `id=eq.${id}`).join(',');
+            
+            const { data: profiles } = await supabase.rest.get(`/profiles?${userIdsQuery}`);
+            
+            // Attach profile to each reservation
+            if (profiles) {
+              slot.astro_spot_reservations = slot.astro_spot_reservations.map((res: any) => {
+                const profile = profiles.find((p: any) => p.id === res.user_id);
+                return { ...res, profiles: profile };
+              });
+            }
           }
         }
       }
