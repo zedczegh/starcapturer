@@ -29,19 +29,6 @@ const AstroSpotProfile = () => {
   const [comingFromCommunity, setComingFromCommunity] = useState(false);
   const [showInstantLoader, setShowInstantLoader] = useState(false);
 
-  useEffect(() => {
-    if (location.state?.from === "community") {
-      setComingFromCommunity(true);
-      setShowInstantLoader(true);
-    }
-  }, [location.state]);
-
-  useEffect(() => {
-    if (!isLoading && !!spot) {
-      setShowInstantLoader(false);
-    }
-  }, [isLoading, spot]);
-
   const { data: spot, isLoading, error, refetch } = useQuery({
     queryKey: ['astroSpot', id],
     queryFn: async () => {
@@ -109,6 +96,19 @@ const AstroSpotProfile = () => {
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false
   });
+
+  useEffect(() => {
+    if (location.state?.from === "community") {
+      setComingFromCommunity(true);
+      setShowInstantLoader(true);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    if (!isLoading && !!spot) {
+      setShowInstantLoader(false);
+    }
+  }, [isLoading, spot]);
 
   const { data: spotImages = [], isLoading: loadingImages } = useQuery({
     queryKey: ['spotImages', id],
