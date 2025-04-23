@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
@@ -85,7 +86,7 @@ const CommunityAstroSpots: React.FC = () => {
             >
               {t(
                 "Discover and explore astrospots contributed by our SIQS community members. View their favorite stargazing locations on the interactive map and find inspiration for your next adventure.",
-                "由SIQS社区成员贡献的观星点，在这里一览无余。���览大家推荐的拍摄位置，探索灵感，发现下次观星之旅的新去处。"
+                "由SIQS社区成员贡献的观星点，在这里一览无余。浏览大家推荐的拍摄位置，探索灵感，发现下次观星之旅的新去处。"
               )}
             </motion.p>
           </motion.div>

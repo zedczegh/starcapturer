@@ -76,8 +76,8 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       icon={icon}
       onClick={handleClick}
     >
-      <Popup className="community-popup">
-        <div className="px-1 py-2">
+      <Popup>
+        <div className="community-popup px-1 py-2">
           <div className="text-base font-medium mb-1">{spot.name}</div>
           <div className="text-xs text-muted-foreground mb-2">
             {spot.latitude.toFixed(4)}, {spot.longitude.toFixed(4)}
