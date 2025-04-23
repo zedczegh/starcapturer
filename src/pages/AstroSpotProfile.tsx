@@ -17,6 +17,7 @@ import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialo
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import TimeSlotManager from '@/components/bookings/TimeSlotManager';
 
 const AstroSpotProfile = () => {
   const { id } = useParams();
@@ -434,6 +435,8 @@ const AstroSpotProfile = () => {
               </div>
             )}
             
+            <TimeSlotManager spotId={id!} isCreator={isCreator} />
+            
             <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
               <h2 className="text-xl font-semibold text-gray-200 mb-3 flex items-center">
                 <Album className="h-5 w-5 mr-2 text-primary/80" />
@@ -462,6 +465,47 @@ const AstroSpotProfile = () => {
                   <p className="text-gray-400">
                     {t("No images available", "暂无图片")}
                   </p>
+                </div>
+              )}
+              
+              {user && (
+                <div className="mt-4">
+                  <div className="bg-cosmic-800/40 rounded-lg p-4 border border-cosmic-700/30">
+                    <h3 className="text-sm font-medium text-gray-300 mb-2">
+                      {t("Upload Images", "上传图片")}
+                    </h3>
+                    <div className="space-y-3">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        className="bg-cosmic-900/40 border-cosmic-700/30 text-gray-300"
+                      />
+                      {selectedFiles.length > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-400">
+                            {t("Selected", "已选择")}: {selectedFiles.length} {selectedFiles.length > 1 ? t("files", "个文件") : t("file", "个文件")}
+                          </span>
+                          <Button
+                            onClick={handleUploadImages}
+                            disabled={imageUploading}
+                            size="sm"
+                          >
+                            {imageUploading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                {t("Uploading...", "上传中...")}
+                              </>
+                            ) : (
+                              t("Upload", "上传")
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -501,6 +545,39 @@ const AstroSpotProfile = () => {
                     </div>
                   ))}
                 </div>
+                
+                {user && (
+                  <div className="mt-4 border-t border-cosmic-700/30 pt-4">
+                    <h3 className="text-sm font-medium text-gray-300 mb-2">
+                      {t("Add a comment", "添加评论")}
+                    </h3>
+                    <div className="space-y-3">
+                      <Textarea
+                        placeholder={t("Write your comment here...", "在此处写下您的评论...")}
+                        value={commentInput}
+                        onChange={(e) => setCommentInput(e.target.value)}
+                        className="bg-cosmic-900/40 border-cosmic-700/30 text-gray-300 resize-none"
+                        rows={3}
+                      />
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={handleCommentSubmit}
+                          disabled={commentSending || !commentInput.trim()}
+                          size="sm"
+                        >
+                          {commentSending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              {t("Posting...", "发布中...")}
+                            </>
+                          ) : (
+                            t("Post Comment", "发布评论")
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30 flex flex-col items-center justify-center text-center">
@@ -508,6 +585,39 @@ const AstroSpotProfile = () => {
                 <p className="text-gray-400">
                   {t("No comments yet", "暂无评论")}
                 </p>
+                
+                {user && (
+                  <div className="mt-4 pt-4 border-t border-cosmic-700/30 w-full">
+                    <h3 className="text-sm font-medium text-gray-300 mb-2 text-left">
+                      {t("Be the first to comment", "成为第一个评论的人")}
+                    </h3>
+                    <div className="space-y-3">
+                      <Textarea
+                        placeholder={t("Write your comment here...", "在此处写下您的评论...")}
+                        value={commentInput}
+                        onChange={(e) => setCommentInput(e.target.value)}
+                        className="bg-cosmic-900/40 border-cosmic-700/30 text-gray-300 resize-none"
+                        rows={3}
+                      />
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={handleCommentSubmit}
+                          disabled={commentSending || !commentInput.trim()}
+                          size="sm"
+                        >
+                          {commentSending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              {t("Posting...", "发布中...")}
+                            </>
+                          ) : (
+                            t("Post Comment", "发布评论")
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
