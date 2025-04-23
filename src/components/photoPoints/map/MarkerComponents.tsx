@@ -24,7 +24,7 @@ const createIcon = (url: string, className = '') => {
   });
 };
 
-// Helper function to get SIQS color class
+// Local implementation of getSiqsColorClass function since it's not exported from siqsHelpers
 const getSiqsColorClass = (siqs: number): string => {
   if (siqs >= 7.5) return 'excellent';
   if (siqs >= 6.0) return 'good';
@@ -89,7 +89,7 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
-      // In react-leaflet, event handlers are passed via 'eventHandlers' prop
+      onClick={handleMarkerClick}
       eventHandlers={{
         click: handleMarkerClick,
         mouseover: handleMouseOver,
