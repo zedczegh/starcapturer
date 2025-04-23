@@ -7,14 +7,16 @@ import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
 import { useQueryClient } from "@tanstack/react-query";
 import { getCurrentPosition } from "@/utils/geolocationUtils";
 import { getLocationInfo } from "@/data/locationDatabase";
-import { isInChina } from "@/utils/chinaBortleData"; // Import isInChina from the correct location
-import { prefetchLocationData } from "@/lib/queryPrefetcher"; // Import prefetchLocationData
+import { isInChina } from "@/utils/chinaBortleData"; 
+import { prefetchLocationData } from "@/lib/queryPrefetcher"; 
 
 export function useLocationDetailsLogic({ id, location, navigate, t, setCachedData, getCachedData }) {
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
   const locationInitializedRef = useRef(false);
   const initialRenderRef = useRef(true);
   const siqsUpdateRequiredRef = useRef(true);
+  const queriesInitializedRef = useRef(false);
+  const queryClient = useQueryClient();
   
   const {
     locationData, 
@@ -38,6 +40,22 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
     setLocationData,
     t
   );
+
+  // Pre-fetch data as soon as we have location coordinates
+  useEffect(() => {
+    if (
+      locationData?.latitude && 
+      locationData?.longitude && 
+      !queriesInitializedRef.current
+    ) {
+      queriesInitializedRef.current = true;
+      
+      // Use prefetcher to load data in parallel
+      prefetchLocationData(queryClient, locationData.latitude, locationData.longitude);
+      
+      console.log("Prefetching data for location:", locationData.name);
+    }
+  }, [locationData?.latitude, locationData?.longitude, queryClient]);
 
   // Handle using current location when no location data is available
   useEffect(() => {
@@ -94,7 +112,7 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
   useEffect(() => {
     if (initialRenderRef.current && locationData) {
       initialRenderRef.current = false;
-      console.log("Initial render, triggering forced refresh");
+      console.log("Initial render, triggering lazy data loading");
       
       // Small delay to ensure everything is loaded
       const timer = setTimeout(() => {
@@ -102,28 +120,18 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
           // Reset SIQS update state to force recalculation
           resetUpdateState();
           siqsUpdateRequiredRef.current = true;
-          
-          // Trigger a refresh event on the viewport
-          const viewport = document.querySelector('[data-refresh-trigger]');
-          if (viewport) {
-            viewport.dispatchEvent(new CustomEvent('forceRefresh'));
-            console.log("Force refresh event dispatched");
-          }
         } catch (error) {
           console.error("Error triggering refresh:", error);
         }
-      }, 300);
+      }, 100); // Reduced delay for better performance
       
       return () => clearTimeout(timer);
     }
   }, [locationData, resetUpdateState]);
 
   // Prefetch data when location data is available to improve loading speed
-  const queryClient = useQueryClient();
   useEffect(() => {
     if (locationData && !isLoading && locationData.latitude && locationData.longitude) {
-      prefetchLocationData(queryClient, locationData.latitude, locationData.longitude);
-      
       // Reset the SIQS update state when location changes to force recalculation
       if (siqsUpdateRequiredRef.current) {
         resetUpdateState();
@@ -138,7 +146,7 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
         return () => clearTimeout(timer);
       }
     }
-  }, [locationData, isLoading, queryClient, resetUpdateState]);
+  }, [locationData, isLoading, resetUpdateState]);
 
   // Make sure we have Bortle scale data, with special handling for Chinese locations
   const { updateBortleScale } = useBortleUpdater();

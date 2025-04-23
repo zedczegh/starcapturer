@@ -1,10 +1,10 @@
 
-// Refactored to use new hooks and smaller components!
+// Refactored to use new hooks and smaller components with improved loading
 import React, { useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 import { useLocationNameTranslation } from "@/hooks/location/useLocationNameTranslation";
-import { prefetchLocationData } from "@/lib/queryPrefetcher";
+import { prefetchLocationData, prefetchPopularLocations } from "@/lib/queryPrefetcher";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationDetailsLoading from "@/components/location/LocationDetailsLoading";
@@ -24,6 +24,16 @@ const LocationDetails = () => {
   const { t, language } = useLanguage();
   // Add a ref to track if the toast has been shown
   const toastShownRef = useRef(false);
+  const initialLoadCompleteRef = useRef(false);
+
+  // Prefetch popular locations data when page loads
+  useEffect(() => {
+    if (!initialLoadCompleteRef.current) {
+      initialLoadCompleteRef.current = true;
+      // Prefetch popular locations to make navigation faster
+      prefetchPopularLocations(queryClient);
+    }
+  }, [queryClient]);
 
   // New logic hook
   const {
@@ -55,12 +65,17 @@ const LocationDetails = () => {
     if (!tip) return;
     
     const tipText = language === "zh" ? tip[1] : tip[0];
-    toast.info(tipText, {
-      duration: 6000,
-      position: "bottom-right",
-    });
     
-    toastShownRef.current = true;
+    // Delay toast to avoid blocking initial render
+    const timer = setTimeout(() => {
+      toast.info(tipText, {
+        duration: 6000,
+        position: "bottom-right",
+      });
+      toastShownRef.current = true;
+    }, 1500);
+    
+    return () => clearTimeout(timer);
   }, [language]);
 
   // Reset the toast shown ref when the page is unmounted and remounted (navigation)
@@ -69,6 +84,13 @@ const LocationDetails = () => {
       toastShownRef.current = false;
     };
   }, [id]);
+
+  // Preload data for the current location
+  useEffect(() => {
+    if (locationData?.latitude && locationData?.longitude) {
+      prefetchLocationData(queryClient, locationData.latitude, locationData.longitude);
+    }
+  }, [locationData?.latitude, locationData?.longitude, queryClient]);
 
   if (isLoading) {
     return <LocationDetailsLoading />;
