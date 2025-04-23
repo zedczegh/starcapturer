@@ -3,7 +3,7 @@ import React from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getSiqsColorClass } from '@/utils/siqsHelpers';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 // Import existing marker icons and styles here
 import './MarkerStyles.css';
@@ -22,6 +22,15 @@ const createIcon = (url: string, className = '') => {
     popupAnchor: [0, -36],
     className
   });
+};
+
+// Helper function to get SIQS color class
+const getSiqsColorClass = (siqs: number): string => {
+  if (siqs >= 7.5) return 'excellent';
+  if (siqs >= 6.0) return 'good';
+  if (siqs >= 4.5) return 'average';
+  if (siqs >= 3.0) return 'poor';
+  return 'bad';
 };
 
 interface LocationMarkerProps {
@@ -51,7 +60,7 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
   handleTouchMove,
   customPopup
 }) => {
-  const siqsClass = getSiqsColorClass(location?.siqs || 0);
+  const siqsClass = getSiqsColorClass(getSiqsScore(location?.siqs || 0));
   
   // For certified locations, use certified icons
   const regularIcon = isCertified 
