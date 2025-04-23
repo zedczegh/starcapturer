@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { User } from 'lucide-react';
 import { UseFormRegister } from 'react-hook-form';
 import ProfileBenefits from './ProfileBenefits';
-import ProfileTagsSelector from './ProfileTagsSelector';
 
 interface ProfileFormValues {
   username: string;
@@ -17,29 +16,10 @@ interface ProfileFormProps {
   register: UseFormRegister<ProfileFormValues>;
   loading: boolean;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  tags: string[];
-  setTags: (tags: string[]) => void;
 }
 
-const ALL_TAGS = [
-  "Professional Astronomer",
-  "Amateur Astronomer",
-  "Astrophotographer",
-  "Meteorology Enthusiast",
-  "Cosmos Lover",
-  "Traveler",
-  "Dark Sky Volunteer"
-];
-
-const ProfileForm = ({ register, loading, onSubmit, tags, setTags }: ProfileFormProps) => {
+const ProfileForm = ({ register, loading, onSubmit }: ProfileFormProps) => {
   const { t } = useLanguage();
-  const handleTagChange = (tag: string, checked: boolean) => {
-    if (checked && !tags.includes(tag)) {
-      setTags([...tags, tag]);
-    } else if (!checked) {
-      setTags(tags.filter((t) => t !== tag));
-    }
-  };
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
@@ -60,8 +40,6 @@ const ProfileForm = ({ register, loading, onSubmit, tags, setTags }: ProfileForm
               </div>
             </div>
           </div>
-          {/* Tag selector */}
-          <ProfileTagsSelector selectedTags={tags} onChange={handleTagChange} disabled={loading} />
         </div>
 
         <ProfileBenefits />

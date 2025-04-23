@@ -6,8 +6,7 @@ import { getRandomAstronomyTip } from '@/utils/astronomyTips';
 interface Profile {
   username: string | null;
   avatar_url: string | null;
-  date_of_birth: string | null;
-  tags: string[];
+  date_of_birth: string | null; // Keeping this in the interface for backward compatibility
 }
 
 export function useProfile() {
@@ -16,51 +15,25 @@ export function useProfile() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [randomTip, setRandomTip] = useState<[string, string] | null>(getRandomAstronomyTip());
-  const [tags, setTags] = useState<string[]>([]);
 
-  // Fetch profile, including tags
+  // Simplified; you can expand as needed
   const fetchProfile = useCallback(async (userId: string, setValue: any) => {
     const { data, error } = await supabase
       .from('profiles')
       .select('username, avatar_url')
       .eq('id', userId)
       .maybeSingle();
-
+      
     if (!error && data) {
-      // Fetch tags
-      const { data: tagsData } = await supabase
-        .from('profile_tags')
-        .select('tag')
-        .eq('user_id', userId);
-
-      const tagArr = tagsData ? tagsData.map(t => t.tag) : [];
       setProfile({
         username: data.username || '',
         avatar_url: data.avatar_url,
-        date_of_birth: null,
-        tags: tagArr,
+        date_of_birth: null, // No longer used but kept for interface compatibility
       });
       setValue('username', data.username || '');
-      setTags(tagArr);
       setAvatarUrl(data.avatar_url);
     }
     return { data, error };
-  }, []);
-
-  // Save profile tags
-  const saveProfileTags = useCallback(async (userId: string, newTags: string[]) => {
-    // Remove all current tags for this user, then insert selected ones
-    await supabase.from('profile_tags').delete().eq('user_id', userId);
-    if (newTags.length === 0) return;
-    const tagRows = newTags.map((tag) => ({
-      user_id: userId,
-      tag,
-    }));
-    await supabase.from('profile_tags').insert(tagRows);
-    setTags(newTags);
-    setProfile((prev) =>
-      prev ? { ...prev, tags: newTags } : prev
-    );
   }, []);
 
   return {
@@ -74,9 +47,6 @@ export function useProfile() {
     setUploadingAvatar,
     randomTip,
     setRandomTip,
-    fetchProfile,
-    tags,
-    setTags,
-    saveProfileTags,
+    fetchProfile
   }
 }
