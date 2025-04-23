@@ -8,7 +8,6 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 
 function createTelescopeIcon() {
   return L.divIcon({
-    className: "community-telescope-marker",
     html: `
       <div class="flex flex-col items-center">
         <span style="background: linear-gradient(90deg,#9b87f5,#1EAEDB); border-radius:50%;padding:7.5px 8px;display:inline-flex">

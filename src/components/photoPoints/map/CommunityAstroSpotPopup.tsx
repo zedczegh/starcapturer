@@ -18,7 +18,7 @@ const CommunityAstroSpotPopup: React.FC<CommunityAstroSpotPopupProps> = ({
   const { t } = useLanguage();
   const navigate = useNavigate();
   return (
-    <Popup closeButton={true}>
+    <Popup>
       <div className="w-[220px] px-1 py-1.5 marker-popup-gradient rounded shadow">
         <div className="flex items-center gap-2 mb-2">
           <Telescope className="h-4 w-4 text-primary" />
