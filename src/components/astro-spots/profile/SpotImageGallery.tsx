@@ -30,7 +30,6 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
   const [localImages, setLocalImages] = useState<string[]>(spotImages);
-  const [isCreatingBucket, setIsCreatingBucket] = useState(false);
 
   // Update local images when props change
   useEffect(() => {
@@ -46,48 +45,12 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
     setSelectedFiles(Array.from(e.target.files));
   };
 
-  const createBucketIfNeeded = async () => {
-    try {
-      setIsCreatingBucket(true);
-      // Check if bucket exists
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const bucketExists = buckets?.some(bucket => bucket.name === 'astro_spot_images');
-      
-      if (!bucketExists) {
-        const { error } = await supabase.storage.createBucket('astro_spot_images', {
-          public: true,
-          fileSizeLimit: 5242880, // 5MB
-        });
-        
-        if (error) {
-          console.error("Error creating bucket:", error);
-          return false;
-        }
-        console.log("Created astro_spot_images bucket");
-      }
-      return true;
-    } catch (error) {
-      console.error("Error checking/creating bucket:", error);
-      return false;
-    } finally {
-      setIsCreatingBucket(false);
-    }
-  };
-
   const handleUploadImages = async () => {
     if (!spotId || !selectedFiles.length) return;
     
     setImageUploading(true);
     
     try {
-      // First ensure the bucket exists
-      const bucketReady = await createBucketIfNeeded();
-      if (!bucketReady) {
-        toast.error(t("Failed to prepare storage", "存储准备失败"));
-        return;
-      }
-      
-      // Now upload the images
       const uploadResults = [];
       
       for (const file of selectedFiles) {
@@ -123,9 +86,9 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
         console.error("Failed uploads:", failures);
         toast.error(t("Failed to upload some images", "部分图片上传失败"));
       } else {
-        toast.success(t("Images uploaded successfully!", "图片已成功上传！"));
+        toast.success(t("Images uploaded!", "图片已上传！"));
         setSelectedFiles([]);
-        onImagesUpdate(); // Trigger a refresh of the parent component
+        onImagesUpdate();
       }
     } catch (error) {
       console.error("Error in upload process:", error);
@@ -152,7 +115,7 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {localImages.map((imageUrl, index) => (
             <div 
-              key={`image-${index}-${imageUrl.substring(imageUrl.lastIndexOf('/') + 1, imageUrl.lastIndexOf('?')) || index}`}
+              key={`image-${index}`}
               className="relative aspect-square overflow-hidden rounded-lg border border-cosmic-600/30 shadow-md"
               onClick={() => setShowPhotosDialog(true)}
             >
@@ -160,7 +123,6 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
                 src={imageUrl} 
                 alt={`${spotName} - ${index + 1}`}
                 className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                loading="lazy"
                 onError={(e) => {
                   console.error("Image failed to load:", imageUrl);
                   e.currentTarget.src = 'https://placehold.co/400x400/121927/8888aa?text=Image+Not+Found';
@@ -197,10 +159,10 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
                   </span>
                   <Button
                     onClick={handleUploadImages}
-                    disabled={imageUploading || isCreatingBucket}
+                    disabled={imageUploading}
                     size="sm"
                   >
-                    {(imageUploading || isCreatingBucket) ? (
+                    {imageUploading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         {t("Uploading...", "上传中...")}
@@ -223,15 +185,11 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             {localImages.map((imageUrl, index) => (
-              <div 
-                key={`dialog-image-${index}-${imageUrl.substring(imageUrl.lastIndexOf('/') + 1, imageUrl.lastIndexOf('?')) || index}`} 
-                className="relative overflow-hidden rounded-lg border border-cosmic-600/30"
-              >
+              <div key={`dialog-image-${index}`} className="relative overflow-hidden rounded-lg border border-cosmic-600/30">
                 <img 
                   src={imageUrl} 
                   alt={`${spotName} - ${index + 1}`}
                   className="w-full h-auto object-contain"
-                  loading="lazy"
                   onError={(e) => {
                     console.error("Dialog image failed to load:", imageUrl);
                     e.currentTarget.src = 'https://placehold.co/600x400/121927/8888aa?text=Image+Not+Found';

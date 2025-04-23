@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
@@ -91,31 +90,6 @@ export const useCreateAstroSpot = (
     return null;
   };
 
-  const createBucketIfNeeded = async () => {
-    try {
-      // Check if bucket exists
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const bucketExists = buckets?.some(bucket => bucket.name === 'astro_spot_images');
-      
-      if (!bucketExists) {
-        const { error } = await supabase.storage.createBucket('astro_spot_images', {
-          public: true,
-          fileSizeLimit: 5242880, // 5MB
-        });
-        
-        if (error) {
-          console.error("Error creating bucket:", error);
-          return false;
-        }
-        console.log("Created astro_spot_images bucket");
-      }
-      return true;
-    } catch (error) {
-      console.error("Error checking/creating bucket:", error);
-      return false;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -127,18 +101,7 @@ export const useCreateAstroSpot = (
 
     setIsSubmitting(true);
     setIsSuccess(false);
-    
     try {
-      // First ensure the storage bucket exists if we have images
-      if (formData.images.length > 0) {
-        const bucketReady = await createBucketIfNeeded();
-        if (!bucketReady) {
-          toast.error(t("Failed to prepare storage for images", "无法准备图片存储"));
-          setIsSubmitting(false);
-          return;
-        }
-      }
-      
       const userIdToUse = user?.id;
       if (!userIdToUse) throw new Error(t("User ID not found", "未找到用户ID"));
 
@@ -207,10 +170,10 @@ export const useCreateAstroSpot = (
 
         if (formData.images.length > 0) {
           const imagePromises = formData.images.map(async (image, index) => {
-            const fileName = `${Date.now()}_${index}_${image.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
+            const fileName = `${spotId}/${Date.now()}_${index}.${image.name.split('.').pop()}`;
             const { error: uploadError } = await supabase.storage
               .from('astro_spot_images')
-              .upload(`${spotId}/${fileName}`, image);
+              .upload(fileName, image);
             
             if (uploadError) throw uploadError;
           });
@@ -219,10 +182,8 @@ export const useCreateAstroSpot = (
         }
 
         queryClient.invalidateQueries({queryKey: ['astroSpot', spotId]});
-        queryClient.invalidateQueries({queryKey: ['spotImages', spotId]});
         
         toast.success(t("Astro spot updated successfully!", "观星点更新成功！"));
-        setIsSuccess(true);
         navigate(`/astro-spot/${spotId}`);
       } else {
         const { data: spot, error: spotError } = await supabase
@@ -239,32 +200,24 @@ export const useCreateAstroSpot = (
 
         if (spotError) throw spotError;
 
-        const newSpotId = spot.id;
-        
         if (formData.images.length > 0) {
           const imagePromises = formData.images.map(async (image, index) => {
-            const fileName = `${Date.now()}_${index}_${image.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
+            const fileName = `${userIdToUse}/${spot.id}/${Date.now()}_${index}.${image.name.split('.').pop()}`;
             const { error: uploadError } = await supabase.storage
               .from('astro_spot_images')
-              .upload(`${newSpotId}/${fileName}`, image);
+              .upload(fileName, image);
             
             if (uploadError) throw uploadError;
           });
 
-          try {
-            await Promise.all(imagePromises);
-          } catch (uploadError) {
-            console.error("Error uploading images:", uploadError);
-            // Continue with the rest of the process even if image uploads fail
-            toast.error(t("Some images failed to upload, but spot was created", "部分图片上传失败，但观星点已创建"));
-          }
+          await Promise.all(imagePromises);
         }
 
         if (isAdmin || formData.selectedTypes.length > 0) {
           const { error: typesError } = await supabase
             .from('astro_spot_types')
             .insert(formData.selectedTypes.map(type => ({
-              spot_id: newSpotId,
+              spot_id: spot.id,
               type_name: type
             })));
 
@@ -275,7 +228,7 @@ export const useCreateAstroSpot = (
           const { error: advantagesError } = await supabase
             .from('astro_spot_advantages')
             .insert(formData.selectedAdvantages.map(advantage => ({
-              spot_id: newSpotId,
+              spot_id: spot.id,
               advantage_name: advantage
             })));
 
@@ -283,10 +236,7 @@ export const useCreateAstroSpot = (
         }
 
         toast.success(t("Astro spot created successfully!", "观星点创建成功！"));
-        setIsSuccess(true);
-        
-        // Navigate to the new astro spot details page instead of location page
-        navigate(`/astro-spot/${newSpotId}`);
+        navigate(`/location/${formData.latitude.toFixed(6)},${formData.longitude.toFixed(6)}`);
       }
     } catch (error) {
       console.error('Error handling astro spot:', error);
