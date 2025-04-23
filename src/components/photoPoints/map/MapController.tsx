@@ -1,6 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
+import * as L from 'leaflet';
 
 export interface MapControllerProps {
   userLocation?: { latitude: number; longitude: number } | null;

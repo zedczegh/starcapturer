@@ -113,16 +113,13 @@ const UserLocationMarker = memo(({
       <Marker 
         position={position} 
         icon={userMarkerIcon}
-        // Use regular onClick handler instead of eventHandlers
         onClick={handleMarkerClick}
       >
         <Popup
           offset={[0, 10]}
-          // Remove onClose prop as it doesn't exist in PopupProps
-          // Add eventHandlers object for onClose event
-          eventHandlers={{
-            close: handlePopupClose
-          }}
+          closeOnClick={false}
+          onOpen={() => setIsPopupOpen(true)}
+          onClose={() => setIsPopupOpen(false)}
         >
           <div className="p-2 leaflet-popup-custom marker-popup-gradient min-w-[180px]">
             <strong>

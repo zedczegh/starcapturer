@@ -43,6 +43,8 @@ declare module 'react-leaflet' {
     closeOnClick?: boolean;
     offset?: L.PointExpression;
     direction?: string;
+    onOpen?: () => void;
+    onClose?: () => void;
     children?: React.ReactNode;
   }
   

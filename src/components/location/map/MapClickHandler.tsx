@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { useMap } from 'react-leaflet';
+import * as L from 'leaflet';
 
 interface MapClickHandlerProps {
   onClick: (lat: number, lng: number) => void;
