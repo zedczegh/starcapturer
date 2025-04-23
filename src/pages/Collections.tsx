@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -9,6 +8,8 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { prepareLocationForNavigation } from "@/utils/locationNavigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { sortLocationsBySiqs } from "./collections/sortLocationsBySiqs";
 import PageLoader from "@/components/loaders/PageLoader";
 import LocationStatusMessage from "@/components/location/LocationStatusMessage";
@@ -21,6 +22,9 @@ const Collections = () => {
   const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
 
+  const [editingNames, setEditingNames] = useState<{[id: string]: string}>({});
+  const [savingNames, setSavingNames] = useState<{[id: string]: boolean}>({});
+
   const {
     locations,
     setLocations,
@@ -28,6 +32,7 @@ const Collections = () => {
     authChecked,
     error,
     removeLocationImmediately,
+    forceReload,
   } = useUserCollections();
 
   const handleDelete = async (locationId: string) => {
@@ -52,6 +57,46 @@ const Collections = () => {
     const { locationId, locationState } = prepareLocationForNavigation(location);
     if (locationId) {
       navigate(`/location/${locationId}`, { state: locationState });
+    }
+  };
+
+  const handleNameChange = (id: string, value: string) => {
+    setEditingNames((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleSaveName = async (location: SharedAstroSpot) => {
+    const id = location.id;
+    const newName = (editingNames[id] ?? "").trim();
+    if (!newName) {
+      toast.error(t("Name cannot be empty", "名称不能为空"));
+      return;
+    }
+    if (newName === location.name) {
+      toast.info(t("No changes to save", "没有更改需要保存"));
+      return;
+    }
+
+    setSavingNames((prev) => ({ ...prev, [id]: true }));
+    try {
+      const supabase = (await import("@/integrations/supabase/client")).supabase;
+      const { error } = await supabase
+        .from("saved_locations")
+        .update({ name: newName })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setLocations((prev) =>
+        prev.map((loc) =>
+          loc.id === id ? { ...loc, name: newName } : loc
+        )
+      );
+      toast.success(t("Location name updated", "位置名称已更新"));
+      forceReload?.();
+    } catch (error: any) {
+      toast.error(t("Failed to update name", "更新名称失败"), { description: error.message });
+    } finally {
+      setSavingNames((prev) => ({ ...prev, [id]: false }));
     }
   };
 
@@ -113,6 +158,10 @@ const Collections = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedLocations.map((location, index) => {
+                const editingValue =
+                  editingNames[location.id] !== undefined
+                    ? editingNames[location.id]
+                    : location.name;
                 return (
                   <div key={location.id} className="relative group">
                     {editMode && (
@@ -122,6 +171,35 @@ const Collections = () => {
                         handleDelete(location.id);
                       }}/>
                     )}
+                    {editMode ? (
+                      <div className="mb-3 flex items-center gap-2">
+                        <Input
+                          className="flex-1 px-2 py-1 text-base rounded bg-background border border-cosmic-700 text-foreground"
+                          value={editingValue}
+                          maxLength={32}
+                          onChange={(e) =>
+                            handleNameChange(location.id, e.target.value)
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={t("Edit location name", "编辑位置名称")}
+                          disabled={savingNames[location.id]}
+                        />
+                        <Button
+                          size="sm"
+                          className="px-3 py-1 rounded text-xs font-medium"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSaveName(location);
+                          }}
+                          disabled={savingNames[location.id]}
+                          type="button"
+                        >
+                          {savingNames[location.id]
+                            ? t("Saving...", "保存中…")
+                            : t("Save", "保存")}
+                        </Button>
+                      </div>
+                    ) : null}
                     <PhotoLocationCard
                       location={location}
                       index={index}
