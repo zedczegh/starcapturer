@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -35,17 +36,22 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const certInfo = useMemo(() => getCertificationInfo(location), [location]);
-  
-  const { displayName, showOriginalName } = useDisplayName({
+
+  // displayName: official/certified name (what you want as the MAIN title everywhere)
+  // location.name/chineseName: reverse geocoded/physical place name
+  const { displayName } = useDisplayName({
     location,
     language,
     locationCounter: null
   });
 
-  const mainName = displayName || location.name || location.chineseName || "";
+  // SWAP: mainName must always be the OFFICIAL/CERTIFIED name
+  const mainName = displayName || "";
+  // smallName should be the reverse geocoded place name (if different)
   const smallName = (language === "zh"
     ? location.name
     : location.chineseName) || "";
+  // Show small name only if it exists and is NOT the same as displayName
   const showSmallName =
     smallName &&
     smallName !== mainName;
@@ -86,12 +92,12 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const [siqsConfidence, setSiqsConfidence] = useState<number>(8);
   const [initialScoreSet, setInitialScoreSet] = useState(false);
-  
+
   const isCertified = useMemo(() => 
     Boolean(location.certification || location.isDarkSkyReserve || location.type === 'dark-site'),
     [location]
   );
-  
+
   useEffect(() => {
     if (!initialScoreSet) {
       const staticSiqs = getSiqsScore(location.siqs);
@@ -101,7 +107,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       }
     }
   }, [location.siqs, isCertified, initialScoreSet]);
-  
+
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
     if (loading) {
       if (!realTimeSiqs || realTimeSiqs <= 0) {
@@ -109,10 +115,10 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       }
       return;
     }
-    
+
     setLoadingSiqs(false);
     setHasAttemptedLoad(true);
-    
+
     if (siqs !== null && siqs > 0) {
       setRealTimeSiqs(siqs);
       setInitialScoreSet(true);
@@ -127,9 +133,9 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
       }
     }
   }, [realTimeSiqs, isCertified, location.siqs]);
-  
+
   const effectiveIsVisible = isCertified || isVisible;
-  
+
   return (
     <VisibilityObserver onVisibilityChange={setIsVisible}>
       <CardContainer index={index} isVisible={effectiveIsVisible} isMobile={isMobile}>

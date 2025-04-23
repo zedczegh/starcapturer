@@ -1,14 +1,13 @@
 
 import React from "react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { MapPin } from "lucide-react";
 
 interface LocationHeaderMainDisplayProps {
-  // The main, prominent name for the card (certified/official/enhanced, etc.)
+  // Main title: should be the official/certified name
   mainName: string;
-  // The original name (for subtitle/smaller font)
+  // Subtitle: original (usually geocoded) name
   originalName?: string;
-  // If true, show the original name; may be empty if it's same as mainName
+  // If true, show the original name; only shown when different from main
   showOriginalName?: boolean;
 }
 

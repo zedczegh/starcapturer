@@ -1,3 +1,4 @@
+
 import React from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -30,13 +31,14 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const isMobile = useIsMobile();
   const certInfo = React.useMemo(() => getCertificationInfo(point), [point]);
 
-  const { displayName, showOriginalName } = useDisplayName({
+  const { displayName } = useDisplayName({
     location: point,
     language,
     locationCounter: null
   });
 
-  const mainName = displayName || point.name || point.chineseName || t("Unnamed Location", "未命名位置");
+  // SWAP: displayName should be the main title, smallName is geocoded
+  const mainName = displayName || t("Unnamed Location", "未命名位置");
   const smallName = (language === "zh" ? point.name : point.chineseName) || "";
   const showSmallName = smallName && smallName !== mainName;
 
@@ -106,3 +108,4 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
 };
 
 export default PhotoPointCard;
+
