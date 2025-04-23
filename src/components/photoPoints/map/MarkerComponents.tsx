@@ -89,6 +89,7 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
+      // In react-leaflet, event handlers are passed via 'eventHandlers' prop
       eventHandlers={{
         click: handleMarkerClick,
         mouseover: handleMouseOver,
