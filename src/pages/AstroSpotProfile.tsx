@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -5,6 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Star, Wrench } from 'lucide-react';
+import NavBar from "@/components/NavBar"; // Re-add this import
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 import BackButton from "@/components/navigation/BackButton";
 import { Link } from 'react-router-dom';
