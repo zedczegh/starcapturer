@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -17,7 +16,7 @@ interface LocationPopupContentProps {
   siqsLoading: boolean;
   displayName: string;
   isCertified: boolean;
-  onViewDetails: (location: SharedAstroSpot) => void; // CHANGED from onClick
+  onClick: () => void;
 }
 
 const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
@@ -26,21 +25,25 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
   siqsLoading,
   displayName,
   isCertified,
-  onViewDetails, // renamed prop
+  onClick
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
   
+  // Stabilize SIQS score to prevent flashing
   useEffect(() => {
     if (siqsScore !== null && siqsScore > 0) {
       setStabilizedScore(siqsScore);
     }
   }, [siqsScore]);
 
+  // Get SIQS class for coloring the popup based on score
   const siqsClass = getSiqsClass(stabilizedScore || siqsScore);
+  
+  // Only use real scores (never default values)
   const hasValidScore = stabilizedScore !== null || (siqsScore !== null && siqsScore > 0);
-
+  
   return (
     <Popup 
       closeOnClick={false}
@@ -51,7 +54,10 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
       <div 
         className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}
         onClick={() => {
-          // Force refresh on popup click if desired
+          // Force refresh on popup click
+          if (isCertified) {
+            console.log("Certified location popup clicked, forcing update");
+          }
         }}
       >
         <div className="font-medium text-sm mb-1.5 flex items-center">
@@ -88,10 +94,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
         
         <div className="mt-2 text-center">
           <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewDetails(location);
-            }}
+            onClick={onClick}
             className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
           >
             <ExternalLink className="h-3 w-3 mr-1" />
