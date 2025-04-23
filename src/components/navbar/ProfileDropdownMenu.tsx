@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   DropdownMenuContent,
@@ -6,7 +5,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, User, LogOut, Settings, MapPin } from 'lucide-react';
+import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -33,6 +32,13 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
         <span className="text-xs text-cosmic-400 truncate">{email}</span>
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
+      <DropdownMenuItem
+        onClick={() => navigate('/messages')}
+        className="interactive-button px-4 py-2 flex gap-2 items-center hover:!bg-primary/10 hover:text-primary rounded-md"
+      >
+        <MessageCircle className="h-4 w-4 text-primary" />
+        <span>{t('Messages', '消息')}</span>
+      </DropdownMenuItem>
       <DropdownMenuItem
         onClick={() => navigate('/profile')}
         className="interactive-button px-4 py-2 flex gap-2 items-center hover:!bg-primary/10 hover:text-primary rounded-md"
