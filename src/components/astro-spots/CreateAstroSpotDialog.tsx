@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -33,19 +33,29 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
   onClose
 }) => {
   const { t } = useLanguage();
+  const [isOpen, setIsOpen] = useState<boolean>(true);
+  
   const {
     formData,
     setFormData,
     isSubmitting,
     handleSubmit,
-    isSuccess // New state to track submission success
+    isSuccess
   } = useCreateAstroSpot(latitude, longitude, defaultName, isEditing, spotId, defaultDescription);
 
-  const handleClose = () => {
+  const handleDialogClose = () => {
+    setIsOpen(false);
     if (onClose) {
       onClose();
     }
   };
+
+  // Automatically close the dialog when submission is successful
+  React.useEffect(() => {
+    if (isSuccess) {
+      handleDialogClose();
+    }
+  }, [isSuccess]);
 
   const defaultTrigger = (
     <Button className="gap-2">
@@ -54,18 +64,13 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
     </Button>
   );
 
-  // Automatically close the dialog when submission is successful
-  React.useEffect(() => {
-    if (isSuccess) {
-      handleClose();
-    }
-  }, [isSuccess]);
-
   return (
-    <Dialog open={true} onOpenChange={(open) => !open && handleClose()}>
-      <DialogTrigger asChild>
-        {trigger || defaultTrigger}
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      setIsOpen(open);
+      if (!open) handleDialogClose();
+    }}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
+      
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
@@ -138,11 +143,9 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
           )}
 
           <div className="flex justify-end gap-4 pt-4">
-            <DialogTrigger asChild>
-              <Button type="button" variant="outline">
-                {t("Cancel", "取消")}
-              </Button>
-            </DialogTrigger>
+            <Button type="button" variant="outline" onClick={handleDialogClose}>
+              {t("Cancel", "取消")}
+            </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting 
                 ? (isEditing ? t("Updating...", "更新中...") : t("Creating...", "创建中..."))
@@ -157,4 +160,3 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
 };
 
 export default CreateAstroSpotDialog;
-
