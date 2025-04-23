@@ -1,4 +1,3 @@
-
 import React, { memo, useCallback, useEffect, useState } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -14,11 +13,13 @@ import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialo
 interface UserLocationMarkerProps {
   position: [number, number];
   currentSiqs: number | null;
+  onLocationUpdate?: (lat: number, lng: number) => void;
 }
 
 const UserLocationMarker = memo(({ 
   position, 
-  currentSiqs 
+  currentSiqs,
+  onLocationUpdate 
 }: UserLocationMarkerProps) => {
   const { t, language } = useLanguage();
   const isMobile = useIsMobile();
@@ -97,11 +98,19 @@ const UserLocationMarker = memo(({
     setIsDialogOpen(false);
   }, []);
 
+  const handleMapClick = useCallback((latitude: number, longitude: number) => {
+    if (onLocationUpdate) {
+      onLocationUpdate(latitude, longitude);
+    }
+  }, [onLocationUpdate]);
+
   return (
-    <Marker position={position} icon={userMarkerIcon}>
+    <Marker 
+      position={position} 
+      icon={userMarkerIcon}
+    >
       <Popup
         offset={[0, 10]}
-        direction="bottom"
       >
         <div className="p-2 leaflet-popup-custom marker-popup-gradient min-w-[180px]">
           <strong>

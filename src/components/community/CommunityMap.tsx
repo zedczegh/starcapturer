@@ -6,6 +6,7 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import CommunityMapMarker from "./CommunityMapMarker";
 import { useUserGeolocation } from "@/hooks/community/useUserGeolocation";
 import CommunityUserLocationMarker from "./CommunityUserLocationMarker";
+import MapClickHandler from "../location/map/MapClickHandler";
 
 interface CommunityMapProps {
   center: [number, number];
@@ -14,6 +15,7 @@ interface CommunityMapProps {
   onMarkerClick?: (spot: SharedAstroSpot) => void;
   isMobile?: boolean;
   zoom?: number;
+  onLocationUpdate?: (lat: number, lng: number) => void;
 }
 
 const CommunityMap: React.FC<CommunityMapProps> = ({
@@ -22,7 +24,8 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
   hoveredLocationId,
   onMarkerClick,
   isMobile = false,
-  zoom = 3
+  zoom = 3,
+  onLocationUpdate
 }) => {
   const userPosition = useUserGeolocation();
 
@@ -40,7 +43,7 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
         maxZoom={19}
       />
       {userPosition && (
-        <CommunityUserLocationMarker position={userPosition} />
+        <CommunityUserLocationMarker position={userPosition} onLocationUpdate={onLocationUpdate} />
       )}
       {locations.map((spot) => (
         <CommunityMapMarker
@@ -51,6 +54,7 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
           onMarkerClick={onMarkerClick}
         />
       ))}
+      {onLocationUpdate && <MapClickHandler onClick={onLocationUpdate} />}
     </MapContainer>
   );
 };
