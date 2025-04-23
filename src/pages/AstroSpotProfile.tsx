@@ -47,17 +47,21 @@ const AstroSpotProfile = () => {
     queryKey: ['astroSpot', id, refreshTrigger],
     queryFn: async () => {
       if (!id) throw new Error("No spot ID provided");
+      
       const { data: spotData, error: spotError } = await supabase
         .from('user_astro_spots')
         .select('*')
         .eq('id', id)
         .single();
+        
       if (spotError) throw spotError;
+      
       if (user && spotData.user_id === user.id) setIsCreator(true);
       else setIsCreator(false);
 
       const { data: typeData } = await supabase
         .from('astro_spot_types').select('*').eq('spot_id', id);
+        
       const { data: advantageData } = await supabase
         .from('astro_spot_advantages').select('*').eq('spot_id', id);
       
@@ -192,7 +196,6 @@ const AstroSpotProfile = () => {
   const handleCommentsUpdate = async () => {
     console.log("Comments update triggered");
     await refetch();
-    triggerRefresh();
   };
 
   const handleImagesUpdate = async () => {

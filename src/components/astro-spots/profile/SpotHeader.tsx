@@ -109,11 +109,11 @@ const SpotHeader: React.FC<SpotHeaderProps> = ({
           <div className="flex flex-col gap-2 mt-4 sm:mt-0">
             {comingFromCommunity && user && spot.user_id !== user.id && (
               <Button
-                variant="secondary"
+                variant="outline"
                 onClick={handleMessageCreator}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-cosmic-700/40 hover:bg-cosmic-700/60 text-primary-foreground border-cosmic-600/40 backdrop-blur-sm transition-all duration-300"
               >
-                <MessageCircle className="h-4 w-4" />
+                <MessageCircle className="h-4 w-4 text-primary" />
                 {t("Message Creator", "联系创建者")}
               </Button>
             )}

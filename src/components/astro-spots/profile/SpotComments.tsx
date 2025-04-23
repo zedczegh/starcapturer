@@ -72,14 +72,6 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     setLocalComments(comments);
   }, [comments]);
 
-  const getUsername = (comment: Comment) => {
-    if (!comment || !comment.profiles) return t("Anonymous", "匿名用户");
-    if (typeof comment.profiles === 'object') {
-      return comment.profiles.username || t("Anonymous", "匿名用户");
-    }
-    return t("Anonymous", "匿名用户");
-  };
-
   const handleCommentSubmit = async () => {
     if (!user || !spotId || !commentInput.trim()) return;
     
@@ -102,22 +94,35 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         return;
       }
       
-      // Add the new comment to local state immediately
+      // Add the new comment to local state immediately for better UX
       if (data && data.length > 0) {
+        const userResponse = await supabase.auth.getUser();
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', userResponse.data.user?.id)
+          .single();
+          
         const newComment = {
           ...data[0],
           profiles: {
-            username: (await supabase.auth.getUser()).data.user?.email?.split('@')[0] || t("Anonymous", "匿名用户"),
-            avatar_url: null
+            username: profileData?.username || userResponse.data.user?.email?.split('@')[0] || t("Anonymous", "匿名用户"),
+            avatar_url: profileData?.avatar_url
           }
         };
+        
+        // Add to beginning of array since newest comments come first
         setLocalComments(prev => [newComment, ...prev]);
       }
       
       // Clear input and trigger a refresh of comments
       setCommentInput("");
       toast.success(t("Comment posted!", "评论已发表！"));
-      onCommentsUpdate();
+      
+      // Wait a moment before refreshing to ensure database consistency
+      setTimeout(() => {
+        onCommentsUpdate();
+      }, 500);
       
     } catch (err) {
       console.error("Exception when posting comment:", err);
