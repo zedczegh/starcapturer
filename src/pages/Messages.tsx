@@ -292,7 +292,7 @@ const Messages: React.FC = () => {
       <div className="container mx-auto px-4 py-6 pt-20 max-w-6xl">
         <div className="flex flex-col md:flex-row gap-4 h-[80vh]">
           {/* Side panel - conversations list */}
-          <Card className="w-full md:w-1/3 glassmorphism overflow-hidden flex flex-col">
+          <Card className={`${activeConversation ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 glassmorphism overflow-hidden flex-col`}>
             <div className="p-4 border-b border-cosmic-800">
               <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                 <MessageCircle className="h-5 w-5" /> {t("Messages", "消息")}
@@ -366,10 +366,17 @@ const Messages: React.FC = () => {
           </Card>
           
           {/* Main panel - conversation */}
-          <Card className="w-full md:w-2/3 glassmorphism overflow-hidden flex flex-col">
+          <Card className={`${!activeConversation ? 'hidden md:flex' : 'flex'} w-full md:w-2/3 glassmorphism overflow-hidden flex flex-col`}>
             {activeConversation ? (
               <>
                 <div className="p-4 border-b border-cosmic-800 flex items-center gap-3">
+                  <Button 
+                    variant="ghost" 
+                    className="md:hidden mr-2" 
+                    onClick={() => setActiveConversation(null)}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
                   <Avatar className="h-10 w-10 border border-cosmic-700">
                     {activeConversation.avatar_url ? (
                       <img
@@ -390,7 +397,7 @@ const Messages: React.FC = () => {
                     <Button
                       variant="link"
                       className="p-0 h-auto text-sm text-primary"
-                      onClick={() => navigate(`/profile/${activeConversation.id}`)}
+                      onClick={() => navigate(`/profile/${activeConversation.id}`, { state: { fromMessages: true } })}
                     >
                       View Profile
                     </Button>
@@ -449,18 +456,26 @@ const Messages: React.FC = () => {
                 <div className="p-4 border-t border-cosmic-800">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Type a message..."
+                      placeholder={t("Type a message...", "输入消息...")}
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                       disabled={sending}
+                      className="flex-1"
                     />
                     <Button 
                       onClick={handleSendMessage} 
                       disabled={!newMessage.trim() || sending}
+                      className="px-4 min-w-[80px]"
                     >
-                      <Send className="h-4 w-4 mr-2" />
-                      Send
+                      {sending ? (
+                        <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          {t("Send", "发送")}
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
