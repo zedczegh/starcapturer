@@ -8,6 +8,8 @@ import { MapPin, ExternalLink } from 'lucide-react';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { useNavigate } from 'react-router-dom';
+import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserLocationMarkerProps {
   position: [number, number];
@@ -16,13 +18,16 @@ interface UserLocationMarkerProps {
 
 const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [siqsLoading, setSiqsLoading] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
   const [locationName, setLocationName] = useState<string>('');
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
-  
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(siqs);
     setSiqsLoading(loading);
@@ -52,10 +57,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
 
   // Force refresh SIQS data when position changes
   useEffect(() => {
-    // Trigger refresh when position changes
     handleRefreshSiqs();
-    
-    // Also reset the state to ensure we get fresh data
     setSiqsLoading(true);
     setRealTimeSiqs(null);
   }, [position]);
@@ -71,6 +73,19 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     });
   };
 
+  const handleOpenDialog = useCallback(() => {
+    setIsDialogOpen(true);
+  }, []);
+
+  const handleCloseDialog = useCallback(() => {
+    setIsDialogOpen(false);
+  }, []);
+
+  const handleMarkerClick = useCallback(() => {
+    setIsPopupOpen(true);
+    handleRefreshSiqs();
+  }, []);
+
   return (
     <>
       <RealTimeSiqsProvider
@@ -84,9 +99,14 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
       <Marker 
         position={position} 
         icon={createCustomMarker('#e11d48')}
-        onClick={handleRefreshSiqs}
+        eventHandlers={{
+          click: handleMarkerClick
+        }}
       >
-        <Popup closeOnClick={false} autoClose={false}>
+        <Popup 
+          closeOnClick={false} 
+          autoClose={false}
+        >
           <div className="p-2 min-w-[200px]">
             <div className="font-medium text-sm mb-2 flex items-center">
               <MapPin className="h-4 w-4 mr-1 text-primary" />
@@ -123,8 +143,25 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
                 {t("View Details", "查看详情")}
               </button>
             </div>
+
+            {user && (
+              <button
+                onClick={handleOpenDialog}
+                className="mt-3 text-xs flex items-center justify-center w-full bg-gradient-to-br from-purple-500/80 to-indigo-600/80 text-white py-2 px-2 rounded-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] shadow-md shadow-purple-500/30 border border-purple-500/20"
+              >
+                {t("Create My Astro Spot", "创建我的观星点")}
+              </button>
+            )}
           </div>
         </Popup>
+        {user && isDialogOpen && (
+          <CreateAstroSpotDialog
+            latitude={position[0]}
+            longitude={position[1]}
+            defaultName={locationName || t("My Astro Spot", "我的观星点")}
+            onClose={handleCloseDialog}
+          />
+        )}
       </Marker>
     </>
   );

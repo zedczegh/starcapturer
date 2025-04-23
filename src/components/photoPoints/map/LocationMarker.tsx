@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState, useEffect } from 'react';
 import { Marker } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -7,6 +8,8 @@ import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import LocationPopupContent from './LocationPopupContent';
 import { useMarkerState } from './hooks/useMarkerState';
+import { useNavigate } from "react-router-dom";
+import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
@@ -34,54 +37,47 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   handleTouchMove
 }) => {
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
-  const [siqsLoading, setSiqsLoading] = useState<boolean>(isCertified); // Start with loading for certified locations
+  const [siqsLoading, setSiqsLoading] = useState<boolean>(isCertified);
   const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
   const [forceUpdate, setForceUpdate] = useState<boolean>(false);
-  
+
   const { siqsScore, displayName, icon } = useMarkerState({
     location,
     realTimeSiqs,
     isCertified,
     isHovered
   });
-  
-  // Force immediate SIQS update for certified locations on mount and when clicked
+
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (isCertified) {
       setForceUpdate(true);
-      setSiqsLoading(true); // Ensure loading state is shown until we get real data
+      setSiqsLoading(true);
       const timer = setTimeout(() => setForceUpdate(false), 100);
       return () => clearTimeout(timer);
     }
   }, [isCertified]);
-  
-  // Check if coordinates are valid
+
   if (!location.latitude || !location.longitude || 
       !isFinite(location.latitude) || !isFinite(location.longitude)) {
     return null;
   }
   
-  // Handle SIQS calculation results
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
-    console.log(`SIQS calculated for ${locationId} (${isCertified ? 'certified' : 'regular'}): ${siqs}, loading: ${loading}`);
     setRealTimeSiqs(siqs);
     setSiqsLoading(loading);
     if (confidence) {
       setSiqsConfidence(confidence);
     }
-    
-    // If this is a certified location and we got no score, keep loading state active
     if (isCertified && (siqs === null || siqs <= 0) && !loading) {
       setSiqsLoading(true);
-      // Try again after a delay
       setTimeout(() => setForceUpdate(true), 2000);
       setTimeout(() => setForceUpdate(false), 2100);
     }
   }, [locationId, isCertified]);
   
-  // Handle marker events
   const handleClick = useCallback(() => {
-    // Force refresh SIQS on click for certified locations
     if (isCertified) {
       setForceUpdate(true);
       setTimeout(() => setForceUpdate(false), 100);
@@ -98,9 +94,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
     onHover(null);
   }, [onHover]);
   
-  // Handle touch events for mobile
   const handleMarkerTouchStart = useCallback((e: React.TouchEvent) => {
-    // Force refresh SIQS on touch for certified locations
     if (isCertified) {
       setForceUpdate(true);
       setTimeout(() => setForceUpdate(false), 100);
@@ -122,11 +116,27 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
       handleTouchMove(e);
     }
   }, [handleTouchMove]);
-  
+
+  // Handle navigation to location details page from popup
+  const handleViewDetails = useCallback((loc: SharedAstroSpot) => {
+    try {
+      const navigationData = prepareLocationForNavigation(loc);
+      
+      if (navigationData) {
+        navigate(`/location/${navigationData.locationId}`, { 
+          state: navigationData.locationState 
+        });
+        console.log("Opening location details", navigationData.locationId);
+      }
+    } catch (error) {
+      console.error("Error navigating to location details:", error, loc);
+    }
+  }, [navigate]);
+
   return (
     <>
       <RealTimeSiqsProvider
-        isVisible={true} // Always keep visible for certified locations
+        isVisible={true}
         latitude={location.latitude}
         longitude={location.longitude}
         bortleScale={location.bortleScale}
@@ -159,7 +169,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
           siqsLoading={siqsLoading}
           displayName={displayName}
           isCertified={isCertified}
-          onClick={handleClick}
+          onViewDetails={handleViewDetails} // Use the correct navigation callback
         />
       </Marker>
     </>
