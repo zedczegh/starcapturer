@@ -6,7 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Star, Wrench } from 'lucide-react';
-import NavBar from "@/components/NavBar"; // Re-add this import
+import NavBar from "@/components/NavBar";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 import BackButton from "@/components/navigation/BackButton";
 import { Link } from 'react-router-dom';
@@ -57,30 +57,30 @@ const AstroSpotProfile = () => {
       const { data: advantageData } = await supabase
         .from('astro_spot_advantages').select('*').eq('spot_id', id);
       
+      // Updated comment fetching with proper join
       const { data: commentData } = await supabase
         .from('astro_spot_comments')
-        .select('*, user_id')
+        .select(`
+          id,
+          content,
+          created_at,
+          user_id,
+          profiles:user_id(
+            username,
+            avatar_url
+          )
+        `)
         .eq('spot_id', id)
         .order('created_at', { ascending: false });
-        
+
       let commentsWithProfiles: Comment[] = [];
-      if (commentData && commentData.length > 0) {
-        const userIds = commentData.map((comment: any) => comment.user_id);
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('id, username, avatar_url')
-          .in('id', userIds);
-          
-        commentsWithProfiles = commentData.map((comment: any) => {
-          const profile = profilesData?.find(p => p.id === comment.user_id) || { username: null, avatar_url: null };
-          return {
-            ...comment,
-            profiles: {
-              username: profile.username,
-              avatar_url: profile.avatar_url
-            }
-          };
-        });
+      if (commentData) {
+        commentsWithProfiles = commentData.map((comment: any) => ({
+          id: comment.id,
+          content: comment.content,
+          created_at: comment.created_at,
+          profiles: comment.profiles || { username: null, avatar_url: null }
+        }));
       }
 
       return {

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MessageCircle, Loader2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -50,15 +49,13 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     setCommentSending(true);
     
     try {
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from("astro_spot_comments")
         .insert({
           user_id: (await supabase.auth.getUser()).data.user?.id,
           spot_id: spotId,
           content: commentInput.trim(),
-        })
-        .select("*, profiles:user_id(username, avatar_url)")
-        .single();
+        });
       
       if (error) {
         console.error("Error posting comment:", error);
