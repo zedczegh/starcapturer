@@ -7,6 +7,7 @@ import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
 import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import MapContent from './components/MapContent';
+import CommunitySpotPopup from '@/components/community/CommunitySpotPopup';
 
 configureLeaflet();
 
@@ -28,6 +29,7 @@ interface LazyMapContainerProps {
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
+  mapMode?: "default" | "community";
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -47,30 +49,31 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   handleTouchMove,
   isMobile,
   useMobileMapFixer = false,
-  showRadiusCircles = false
+  showRadiusCircles = false,
+  mapMode = "default"
 }) => {
   const [mapReady, setMapReady] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
-  const previousLocations = useRef<SharedAstroSpot[]>([]);
-  
+  const previousLocations = useRef<any[]>([]);
+
   console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}`);
-  
+
   const handleUserLocationSiqs = useCallback((siqs: number | null, loading: boolean) => {
     if (!loading && siqs !== null) {
       setCurrentSiqs(siqs);
     }
   }, []);
-  
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
   }, []);
-  
+
   useEffect(() => {
     if (locations && locations.length > 0) {
       const locationIds = new Set(locations.map(loc => 
@@ -89,7 +92,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       previousLocations.current = combinedLocations;
     }
   }, [locations, activeView]);
-  
+
   const filteredLocations = useCallback(() => {
     if (!previousLocations.current || previousLocations.current.length === 0) {
       return locations || [];
@@ -141,11 +144,18 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   }, [mapRef.current]);
 
   const displayLocations = filteredLocations();
-  
+
   const handleMapReady = useCallback(() => {
     setMapReady(true);
     if (onMapReady) onMapReady();
   }, [onMapReady]);
+
+  function renderCustomPopup(location: any) {
+    if (mapMode === "community") {
+      return <CommunitySpotPopup location={location} />;
+    }
+    return null;
+  }
 
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
@@ -158,7 +168,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
           onSiqsCalculated={handleUserLocationSiqs}
         />
       )}
-      
+
       <MapContent 
         center={center}
         userLocation={userLocation}
@@ -179,6 +189,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         mapRef={mapRef}
         onMapReady={handleMapReady}
         currentSiqs={currentSiqs}
+        customPopup={renderCustomPopup}
       />
     </div>
   );
