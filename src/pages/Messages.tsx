@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, motion } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -306,187 +306,215 @@ const Messages: React.FC = () => {
       
       <div className="container mx-auto px-4 py-6 pt-20 max-w-6xl">
         <div className="flex flex-col md:flex-row gap-4 h-[80vh]">
-          <Card className={`${activeConversation ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 glassmorphism overflow-hidden flex-col`}>
-            <div className="p-4 border-b border-cosmic-800">
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" /> {t("Messages", "消息")}
+          <Card className={`${activeConversation ? 'hidden md:flex' : 'flex'} 
+            w-full md:w-1/3 glassmorphism overflow-hidden flex-col
+            border border-cosmic-800/30 shadow-xl backdrop-blur-lg`}>
+            <div className="p-4 border-b border-cosmic-800/50 bg-cosmic-900/50">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
+                <MessageCircle className="h-5 w-5 text-primary" /> {t("Messages", "消息")}
               </h2>
-              <div className="mt-3 relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-cosmic-400" />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cosmic-400" />
                 <Input 
                   placeholder={t("Search conversations", "搜索对话")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8"
+                  className="pl-10 bg-cosmic-800/30 border-cosmic-700/50 focus:border-primary/50 focus:ring-primary/20
+                    placeholder:text-cosmic-500"
                 />
               </div>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
               {loading ? (
-                <div className="p-4 text-center text-cosmic-400">Loading conversations...</div>
+                <div className="p-8 flex flex-col items-center justify-center space-y-3 text-cosmic-400">
+                  <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"/>
+                  <p className="text-sm">{t("Loading conversations...", "加载对话中...")}</p>
+                </div>
               ) : filteredConversations.length === 0 ? (
-                <div className="p-4 text-center text-cosmic-400">
-                  {searchQuery ? "No conversations match your search" : "No conversations yet"}
+                <div className="p-8 text-center text-cosmic-400 space-y-2">
+                  <MessageCircle className="mx-auto h-12 w-12 opacity-30 mb-2" />
+                  <p>{searchQuery ? t("No conversations match your search", "没有匹配的对话") 
+                    : t("No conversations yet", "暂无对话")}</p>
                 </div>
               ) : (
                 filteredConversations.map(conversation => (
-                  <div
+                  <motion.div
                     key={conversation.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
                     onClick={() => handleSelectConversation(conversation)}
-                    className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors flex items-center gap-3 
+                    className={`p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 
+                      hover:bg-primary/5 border border-transparent
                       ${activeConversation?.id === conversation.id 
-                        ? 'bg-primary/20 hover:bg-primary/30' 
-                        : 'hover:bg-cosmic-800/50'
+                        ? 'bg-primary/10 border-primary/20 shadow-lg' 
+                        : 'hover:border-cosmic-700/30'
                       }`}
                   >
                     <div className="relative">
-                      <Avatar className="h-10 w-10 border border-cosmic-700">
+                      <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20">
                         {conversation.avatar_url ? (
-                          <img
+                          <AvatarImage
                             src={conversation.avatar_url}
                             alt={conversation.username || "User"}
-                            className="h-full w-full object-cover"
+                            className="object-cover"
                           />
                         ) : (
-                          <AvatarFallback>
-                            <User className="h-5 w-5 text-cosmic-400" />
+                          <AvatarFallback className="bg-primary/10">
+                            <User className="h-6 w-6 text-primary" />
                           </AvatarFallback>
                         )}
                       </Avatar>
                       {conversation.unread_count > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                        <span className="absolute -top-1 -right-1 bg-primary text-white rounded-full w-5 h-5 
+                          flex items-center justify-center text-xs font-medium shadow-lg
+                          ring-2 ring-cosmic-900">
                           {conversation.unread_count}
                         </span>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center">
                         <p className="font-medium text-white truncate">
-                          {conversation.username}
+                          {conversation.username || t("User", "用户")}
                         </p>
                         <span className="text-xs text-cosmic-400">
                           {formatMessageTime(conversation.last_message_time)}
                         </span>
                       </div>
-                      <p className="text-sm text-cosmic-300 truncate">
+                      <p className="text-sm text-cosmic-300 truncate mt-0.5">
                         {conversation.last_message}
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
                 ))
               )}
             </div>
           </Card>
           
-          <Card className={`${!activeConversation ? 'hidden md:flex' : 'flex'} w-full md:w-2/3 glassmorphism overflow-hidden flex flex-col`}>
+          <Card className={`${!activeConversation ? 'hidden md:flex' : 'flex'} 
+            w-full md:w-2/3 glassmorphism overflow-hidden flex flex-col
+            border border-cosmic-800/30 shadow-xl backdrop-blur-lg`}>
             {activeConversation ? (
               <>
-                <div className="p-4 border-b border-cosmic-800 flex items-center gap-3">
+                <div className="p-4 border-b border-cosmic-800/50 bg-cosmic-900/50 flex items-center gap-3">
                   <Button 
                     variant="ghost" 
-                    className="md:hidden mr-2" 
+                    className="md:hidden mr-2 text-cosmic-400 hover:text-white hover:bg-cosmic-800/50" 
                     onClick={() => setActiveConversation(null)}
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <Avatar className="h-10 w-10 border border-cosmic-700">
+                  <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20">
                     {activeConversation.avatar_url ? (
-                      <img
+                      <AvatarImage
                         src={activeConversation.avatar_url}
                         alt={activeConversation.username || "User"}
-                        className="h-full w-full object-cover"
+                        className="object-cover"
                       />
                     ) : (
-                      <AvatarFallback>
-                        <User className="h-5 w-5 text-cosmic-400" />
+                      <AvatarFallback className="bg-primary/10">
+                        <User className="h-6 w-6 text-primary" />
                       </AvatarFallback>
                     )}
                   </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-white">
-                      {activeConversation.username}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-white text-lg">
+                      {activeConversation.username || t("User", "用户")}
                     </h3>
                     <Button
                       variant="link"
-                      className="p-0 h-auto text-sm text-primary"
-                      onClick={() => navigate(`/profile/${activeConversation.id}`, { state: { fromMessages: true } })}
+                      className="p-0 h-auto text-sm text-primary hover:text-primary/80"
+                      onClick={() => navigate(`/profile/${activeConversation.id}`)}
                     >
-                      View Profile
+                      {t("View Profile", "查看资料")}
                     </Button>
                   </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-4 flex flex-col space-y-3">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {messages.length === 0 ? (
                     <div className="flex-1 flex items-center justify-center">
-                      <div className="text-center text-cosmic-400">
-                        <MessageCircle className="mx-auto h-12 w-12 mb-2 opacity-50" />
-                        <p>No messages yet</p>
-                        <p className="text-sm">Send a message to start the conversation</p>
+                      <div className="text-center text-cosmic-400 space-y-2">
+                        <MessageCircle className="mx-auto h-16 w-16 mb-4 opacity-30" />
+                        <p className="text-lg font-medium">{t("No messages yet", "暂无消息")}</p>
+                        <p className="text-sm">
+                          {t("Send a message to start the conversation", "发送消息开始对话")}
+                        </p>
                       </div>
                     </div>
                   ) : (
                     messages.map(message => (
-                      <div 
-                        key={message.id} 
-                        className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                          message.sender_id === user?.id 
-                            ? 'ml-auto bg-primary/80 text-white' 
-                            : 'mr-auto bg-cosmic-800 text-cosmic-100'
+                      <motion.div
+                        key={message.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className={`flex gap-3 ${
+                          message.sender_id === user?.id ? 'flex-row-reverse' : 'flex-row'
                         }`}
                       >
-                        {message.sender_id !== user?.id && (
-                          <div className="flex items-center gap-2 mb-1">
-                            <Avatar className="h-6 w-6">
-                              {message.sender_profile?.avatar_url ? (
-                                <img 
-                                  src={message.sender_profile.avatar_url} 
-                                  alt={message.sender_profile.username || "User"}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <AvatarFallback className="text-xs">
-                                  <User className="h-3 w-3" />
-                                </AvatarFallback>
-                              )}
-                            </Avatar>
-                            <span className="text-sm font-medium">
-                              {message.sender_profile?.username}
-                            </span>
+                        <Avatar className="h-8 w-8 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20 flex-shrink-0">
+                          {message.sender_profile?.avatar_url ? (
+                            <AvatarImage 
+                              src={message.sender_profile.avatar_url} 
+                              alt={message.sender_profile.username || "User"}
+                              className="object-cover"
+                            />
+                          ) : (
+                            <AvatarFallback className="bg-primary/10">
+                              <User className="h-4 w-4 text-primary" />
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className={`max-w-[70%] space-y-1 ${
+                          message.sender_id === user?.id ? 'items-end' : 'items-start'
+                        }`}>
+                          <div className={`rounded-2xl px-4 py-2 ${
+                            message.sender_id === user?.id 
+                              ? 'bg-primary text-white ml-auto' 
+                              : 'bg-cosmic-800/50 text-cosmic-100'
+                          }`}>
+                            <p>{message.message}</p>
                           </div>
-                        )}
-                        <p>{message.message}</p>
-                        <p className="text-xs opacity-70 mt-1 text-right">
-                          {formatMessageTime(message.created_at)}
-                        </p>
-                      </div>
+                          <div className={`flex items-center gap-2 text-xs text-cosmic-400 ${
+                            message.sender_id === user?.id ? 'flex-row-reverse' : 'flex-row'
+                          }`}>
+                            <span>{message.sender_profile?.username || t("User", "用户")}</span>
+                            <span>•</span>
+                            <span>{formatMessageTime(message.created_at)}</span>
+                          </div>
+                        </div>
+                      </motion.div>
                     ))
                   )}
                   <div ref={messagesEndRef} />
                 </div>
                 
-                <div className="p-4 border-t border-cosmic-800">
+                <div className="p-4 border-t border-cosmic-800/50 bg-cosmic-900/30">
                   <div className="flex gap-2">
                     <Input
                       placeholder={t("Type a message...", "输入消息...")}
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                       disabled={sending}
-                      className="flex-1"
+                      className="flex-1 bg-cosmic-800/30 border-cosmic-700/50 focus:border-primary/50 
+                        focus:ring-primary/20 placeholder:text-cosmic-500"
                     />
                     <Button 
                       onClick={handleSendMessage} 
                       disabled={!newMessage.trim() || sending}
-                      className="px-4 min-w-[80px]"
+                      className="px-6 bg-primary hover:bg-primary/90 text-white shadow-lg
+                        disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                     >
                       {sending ? (
-                        <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        <div className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                       ) : (
                         <>
                           <Send className="h-4 w-4 mr-2" />
-                          {t("Send", "���送")}
+                          {t("Send", "发送")}
                         </>
                       )}
                     </Button>
@@ -494,13 +522,19 @@ const Messages: React.FC = () => {
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center p-4">
-                <div className="text-center text-cosmic-400">
-                  <MessageCircle className="mx-auto h-16 w-16 mb-3 opacity-30" />
-                  <h3 className="text-lg font-medium mb-2">
+              <div className="flex-1 flex items-center justify-center p-8">
+                <div className="text-center text-cosmic-400 space-y-4">
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <MessageCircle className="mx-auto h-20 w-20 mb-6 opacity-20" />
+                  </motion.div>
+                  <h3 className="text-xl font-medium text-white mb-2">
                     {t("Select a conversation", "选择一个对话")}
                   </h3>
-                  <p className="max-w-md mx-auto">
+                  <p className="max-w-md mx-auto text-cosmic-300">
                     {t(
                       "Choose a conversation from the list or start a new one by going to a user's profile", 
                       "从列表中选择一个对话，或通过访问用户资料开始新的对话"
