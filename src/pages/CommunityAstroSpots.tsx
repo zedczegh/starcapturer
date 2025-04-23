@@ -9,21 +9,27 @@ import LocationCard from "@/components/LocationCard";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+// Removed useNavigate as navigation is not used anymore.
+import CommunityAstroSpotDialog from "@/components/astro-spots/CommunityAstroSpotDialog";
+import { supabase } from "@/integrations/supabase/client"; // To fetch extra profile info
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
 const CommunityAstroSpots: React.FC = () => {
   const { t } = useLanguage();
-  const navigate = useNavigate();
   const { data: astrospots, isLoading } = useQuery({
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
   });
 
-  // Manage SIQS state like in ManageAstroSpots
+  // SIQS state management
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
+
+  // Dialog state
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedSpot, setSelectedSpot] = useState<any | null>(null);
+  const [spotImages, setSpotImages] = useState<string[]>([]);
 
   const handleSiqsCalculated = (spotId: string, siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(prev => ({
@@ -36,32 +42,44 @@ const CommunityAstroSpots: React.FC = () => {
     }));
   };
 
-  // Header animation variants
-  const titleVariants = {
-    hidden: { opacity: 0, scale: 0.96, y: -10 },
-    visible: { opacity: 1, scale: 1, y: 0, transition: { delay: 0.1, duration: 0.6, ease: "easeOut" } }
-  };
-  const lineVariants = {
-    hidden: { width: 0, opacity: 0 },
-    visible: { width: 90, opacity: 1, transition: { delay: 0.35, duration: 0.7, ease: "easeOut" } }
-  };
-  const descVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
+  // Dialog open handler fetches photos
+  const handleCardClick = async (spot: any) => {
+    setSelectedSpot(spot);
+    setOpenDialog(true);
+
+    // Fetch images for spot
+    if (spot?.id) {
+      const { data: files, error } = await supabase
+        .storage
+        .from('astro_spot_images')
+        .list(spot.id);
+
+      if (error || !files) {
+        setSpotImages([]);
+      } else {
+        const urls = files.map(file => {
+          const { data } = supabase
+            .storage
+            .from('astro_spot_images')
+            .getPublicUrl(`${spot.id}/${file.name}`);
+          return data.publicUrl;
+        });
+        setSpotImages(urls);
+      }
+    } else {
+      setSpotImages([]);
+    }
   };
 
-  // Function to handle clicking a location card
-  const handleCardClick = (id: string) => {
-    // Pass source information when navigating to the profile
-    navigate(`/astro-spot/${id}`, { 
-      state: { from: 'community' } 
-    });
-  };
+  // Animation variants
+  const titleVariants = { hidden: { opacity: 0, scale: 0.96, y: -10 }, visible: { opacity: 1, scale: 1, y: 0, transition: { delay: 0.1, duration: 0.6, ease: "easeOut" } } };
+  const lineVariants = { hidden: { width: 0, opacity: 0 }, visible: { width: 90, opacity: 1, transition: { delay: 0.35, duration: 0.7, ease: "easeOut" } } };
+  const descVariants = { hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } } };
 
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "社区观星点 | SIQS")}>
       <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
-        {/* Header Section with Gradient, Animated Line & Better Layout */}
+        {/* Header */}
         <div className="mb-9">
           <motion.div
             className="flex flex-col items-center justify-center gap-3"
@@ -121,10 +139,10 @@ const CommunityAstroSpots: React.FC = () => {
                 key={spot.id}
                 className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
                 tabIndex={0}
-                onClick={() => handleCardClick(spot.id)}
+                onClick={() => handleCardClick(spot)}
                 onKeyDown={e => {
                   if (e.key === 'Enter' || e.key === ' ') {
-                    handleCardClick(spot.id);
+                    handleCardClick(spot);
                   }
                 }}
                 aria-label={spot.name}
@@ -152,7 +170,6 @@ const CommunityAstroSpots: React.FC = () => {
                       isCertified={false}
                     />
                   </div>
-                  {/* Overlay for click effect (optional visual feedback) */}
                   <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />
                 </div>
               </button>
@@ -163,9 +180,18 @@ const CommunityAstroSpots: React.FC = () => {
             {t("No community astrospots yet. Be the first to share!", "还没有社区观星点，快来分享吧！")}
           </div>
         )}
+
+        {/* Dialog for AstroSpot Profile */}
+        <CommunityAstroSpotDialog
+          open={openDialog}
+          onClose={() => setOpenDialog(false)}
+          spot={selectedSpot}
+          spotImages={spotImages}
+        />
       </div>
     </PhotoPointsLayout>
   );
 };
 
 export default CommunityAstroSpots;
+
