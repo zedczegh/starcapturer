@@ -14,7 +14,11 @@ export const LOCATION_ADVANTAGES = [
   "Parking available",
   "Well-paved roads to location",
   "No local interruptions",
-  "Hard Soil or Concrete floor"
+  "Hard Soil or Concrete floor",
+  "Power supplies available",
+  "Mobile battery available",
+  "Wi-Fi available",
+  "Friendly host"
 ];
 
 interface LocationAdvantagesSelectorProps {

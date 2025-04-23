@@ -288,7 +288,7 @@ const AstroSpotProfile = () => {
     }
   };
 
-  const getUsername = (comment) => {
+  const getUsername = (comment: any) => {
     if (!comment || !comment.profiles) return t("Anonymous", "匿名用户");
     if (typeof comment.profiles === 'object') {
       return comment.profiles.username || t("Anonymous", "匿名用户");
@@ -320,6 +320,20 @@ const AstroSpotProfile = () => {
     );
   };
 
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-cosmic-900">{t("Loading...", "加载中...")}</div>;
+  }
+
+  if (!spot) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-cosmic-900 text-white">
+        <User2 className="w-10 h-10 mb-4 text-cosmic-400" />
+        <div>{t("Spot not found.", "找不到观星点。")}</div>
+        <Button className="mt-4" onClick={() => navigate(-1)}>{t("Back", "返回")}</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
@@ -345,7 +359,7 @@ const AstroSpotProfile = () => {
           </div>
           <div className="text-xs text-gray-500 mt-1">{t("Created by this user", "由该用户创建")}</div>
         </div>
-
+        
         <BackButton
           destination={comingFromCommunity ? "/community" : "/manage-astro-spots"}
           className="text-gray-300 mb-6 hover:bg-cosmic-800/50"

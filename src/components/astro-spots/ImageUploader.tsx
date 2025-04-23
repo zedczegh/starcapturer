@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 }) => {
   const { t } = useLanguage();
   const totalImagesCount = images.length + (existingImages?.length || 0);
+  const [isCreatingBucket, setIsCreatingBucket] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -38,20 +39,28 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
 
   const createBucketIfNeeded = async () => {
     try {
+      setIsCreatingBucket(true);
       // Check if bucket exists
       const { data: buckets } = await supabase.storage.listBuckets();
       const bucketExists = buckets?.some(bucket => bucket.name === 'astro_spot_images');
       
       if (!bucketExists) {
-        await supabase.storage.createBucket('astro_spot_images', {
+        const { error } = await supabase.storage.createBucket('astro_spot_images', {
           public: true
         });
+        
+        if (error) {
+          console.error("Error creating bucket:", error);
+          return false;
+        }
         console.log("Created astro_spot_images bucket");
       }
       return true;
     } catch (error) {
       console.error("Error checking/creating bucket:", error);
       return false;
+    } finally {
+      setIsCreatingBucket(false);
     }
   };
 
@@ -66,6 +75,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
       return;
     }
     
+    const uploadResults = [];
+    
     for (const file of images) {
       const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
       
@@ -78,13 +89,21 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         
       if (error) {
         console.error(`Error uploading ${fileName}:`, error);
-        toast.error(t("Failed to upload image", "图片上传失败"));
-        return;
+        uploadResults.push({ success: false, fileName, error });
+      } else {
+        uploadResults.push({ success: true, fileName });
       }
     }
     
-    toast.success(t("Images uploaded!", "图片已上传！"));
-    onImagesChange([]);
+    const failures = uploadResults.filter(r => !r.success);
+    
+    if (failures.length > 0) {
+      console.error("Failed uploads:", failures);
+      toast.error(t("Failed to upload some images", "部分图片上传失败"));
+    } else {
+      toast.success(t("Images uploaded!", "图片已上传！"));
+      onImagesChange([]);
+    }
   };
 
   return (
@@ -112,7 +131,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
             multiple
             accept="image/*"
             onChange={handleImageUpload}
-            disabled={uploading || totalImagesCount >= 10}
+            disabled={uploading || isCreatingBucket || totalImagesCount >= 10}
           />
         </label>
         {images.length > 0 && (
@@ -140,10 +159,10 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
           <div className="flex justify-end">
             <button 
               onClick={onUpload || handleUpload}
-              disabled={uploading}
+              disabled={uploading || isCreatingBucket}
               className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-md disabled:opacity-50"
             >
-              {uploading ? (
+              {uploading || isCreatingBucket ? (
                 <div className="flex items-center">
                   <Loader2 className="animate-spin mr-2 h-4 w-4" />
                   {t("Uploading...", "上传中...")}
