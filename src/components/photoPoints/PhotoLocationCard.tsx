@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { useDisplayName } from "./cards/DisplayNameResolver";
 import VisibilityObserver from './cards/VisibilityObserver';
 import RealTimeSiqsProvider from './cards/RealTimeSiqsProvider';
-import LocationHeader from './cards/LocationHeader';
 import { getCertificationInfo } from './utils/certificationUtils';
 import CardContainer from './cards/components/CardContainer';
 import LocationInfo from './cards/components/LocationInfo';
@@ -43,12 +42,10 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     locationCounter: null
   });
 
-  // New: swap positions for header display (River Murray is displayName; "Melbourne" is location.name/chineseName)
   const mainName = displayName || location.name || location.chineseName || "";
   const smallName = (language === "zh"
     ? location.name
-    : location.chineseName) || "";  // original name fallback (the NON-prominent one)
-  // Always show original name if available and different
+    : location.chineseName) || "";
   const showSmallName =
     smallName &&
     smallName !== mainName;
@@ -95,7 +92,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     [location]
   );
   
-  // If there's a static SIQS already, use it initially to prevent flickering
   useEffect(() => {
     if (!initialScoreSet) {
       const staticSiqs = getSiqsScore(location.siqs);
@@ -108,7 +104,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
     if (loading) {
-      // Only show loading if we don't already have a score
       if (!realTimeSiqs || realTimeSiqs <= 0) {
         setLoadingSiqs(true);
       }
@@ -125,8 +120,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
         setSiqsConfidence(confidence);
       }
     } else if (!realTimeSiqs && isCertified) {
-      // If we still don't have a score but this is a certified location, 
-      // use the static score if available
       const staticSiqs = getSiqsScore(location.siqs);
       if (staticSiqs > 0) {
         setRealTimeSiqs(staticSiqs);
@@ -135,7 +128,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     }
   }, [realTimeSiqs, isCertified, location.siqs]);
   
-  // Force visibility for certified locations
   const effectiveIsVisible = isCertified || isVisible;
   
   return (
