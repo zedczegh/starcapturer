@@ -61,15 +61,19 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({ spot }) => {
     return null;
   }
 
+  const handleMarkerClick = () => {
+    navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } });
+  };
+
   return (
     <Marker
       position={[spot.latitude, spot.longitude]}
       icon={icon}
       eventHandlers={{
-        click: () => navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } }),
+        click: handleMarkerClick,
       }}
     >
-      <Popup autoPan>
+      <Popup>
         <div className="font-medium text-sm mb-1.5">{spot.name ?? "Unnamed spot"}</div>
         <button
           className="inline-flex items-center px-2.5 py-1 rounded bg-primary text-white text-xs mt-2"
@@ -86,4 +90,3 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({ spot }) => {
 };
 
 export default React.memo(CommunityMapMarker);
-
