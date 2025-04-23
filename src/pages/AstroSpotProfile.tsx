@@ -4,16 +4,27 @@ import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import NavBar from "@/components/NavBar";
-import { Star } from 'lucide-react';
+import { Star, Wrench } from 'lucide-react';
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 import BackButton from "@/components/navigation/BackButton";
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Button } from "@/components/ui/button";
 import SpotHeader from '@/components/astro-spots/profile/SpotHeader';
 import SpotDetails from '@/components/astro-spots/profile/SpotDetails';
 import SpotImageGallery from '@/components/astro-spots/profile/SpotImageGallery';
 import SpotComments from '@/components/astro-spots/profile/SpotComments';
+import TimeSlotManager from '@/components/bookings/TimeSlotManager';
+
+interface Comment {
+  id: string;
+  content: string;
+  created_at: string;
+  profiles?: {
+    username: string | null;
+    avatar_url: string | null;
+  };
+}
 
 const AstroSpotProfile = () => {
   const { id } = useParams();
@@ -43,17 +54,38 @@ const AstroSpotProfile = () => {
         .from('astro_spot_types').select('*').eq('spot_id', id);
       const { data: advantageData } = await supabase
         .from('astro_spot_advantages').select('*').eq('spot_id', id);
+      
       const { data: commentData } = await supabase
         .from('astro_spot_comments')
-        .select('*, profiles:user_id(username, avatar_url)')
+        .select('*, user_id')
         .eq('spot_id', id)
         .order('created_at', { ascending: false });
+        
+      let commentsWithProfiles: Comment[] = [];
+      if (commentData && commentData.length > 0) {
+        const userIds = commentData.map((comment: any) => comment.user_id);
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, username, avatar_url')
+          .in('id', userIds);
+          
+        commentsWithProfiles = commentData.map((comment: any) => {
+          const profile = profilesData?.find(p => p.id === comment.user_id) || { username: null, avatar_url: null };
+          return {
+            ...comment,
+            profiles: {
+              username: profile.username,
+              avatar_url: profile.avatar_url
+            }
+          };
+        });
+      }
 
       return {
         ...spotData,
         astro_spot_types: typeData || [],
         astro_spot_advantages: advantageData || [],
-        astro_spot_comments: commentData || [],
+        astro_spot_comments: commentsWithProfiles || [],
       };
     },
     retry: 1,
