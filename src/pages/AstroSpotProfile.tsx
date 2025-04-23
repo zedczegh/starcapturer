@@ -68,7 +68,7 @@ const AstroSpotProfile = () => {
       if (!spot?.user_id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('username')
+        .select('username, avatar_url')
         .eq('id', spot.user_id)
         .maybeSingle();
       if (error) {
@@ -200,10 +200,56 @@ const AstroSpotProfile = () => {
     return t("Anonymous", "匿名用户");
   };
 
+  const renderCreatorAvatar = () => {
+    if (loadingCreator) {
+      return (
+        <div className="h-10 w-10 rounded-full bg-cosmic-700 animate-pulse mr-3" />
+      );
+    }
+    if (creatorProfile?.avatar_url) {
+      return (
+        <img
+          src={creatorProfile.avatar_url}
+          alt="Creator Avatar"
+          className="h-10 w-10 rounded-full object-cover mr-3 border-2 border-primary shadow"
+        />
+      );
+    }
+    return (
+      <span className="h-10 w-10 flex items-center justify-center bg-cosmic-700 rounded-full mr-3 border-2 border-cosmic-700">
+        <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16 19a4 4 0 0 0-8 0m8 0v2a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3v-2m8 0H8a8 8 0 0 1 8-8h0a8 8 0 0 1 8 8z"/>
+        </svg>
+      </span>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
       <div className="container max-w-4xl py-8 px-4 md:px-6 relative">
+        <div className="flex flex-col items-center mb-6">
+          <div className="flex items-center gap-2">
+            {renderCreatorAvatar()}
+            {loadingCreator ? (
+              <div className="h-4 w-32 rounded bg-cosmic-700 animate-pulse" />
+            ) : creatorProfile && creatorProfile.username ? (
+              <Link
+                to={`/profile/${spot.user_id}`}
+                className="text-base font-semibold underline hover:text-primary text-gray-200 truncate max-w-[10rem]"
+                title={creatorProfile.username}
+              >
+                @{creatorProfile.username}
+              </Link>
+            ) : (
+              <span className="text-base font-semibold text-gray-400">
+                {t("Unknown", "未知用户")}
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">{t("Created by this user", "由该用户创建")}</div>
+        </div>
+
         <BackButton
           destination={comingFromCommunity ? "/community" : "/manage-astro-spots"}
           className="text-gray-300 mb-6 hover:bg-cosmic-800/50"
@@ -215,7 +261,7 @@ const AstroSpotProfile = () => {
           transition={{ duration: 0.5 }}
           className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden relative"
         >
-          {isCreator && (
+          {isCreator && !comingFromCommunity && (
             <Button
               variant="default"
               size="icon"
@@ -229,28 +275,6 @@ const AstroSpotProfile = () => {
           <div className="bg-gradient-to-r from-cosmic-800/80 to-cosmic-800/40 p-6 border-b border-cosmic-700/30">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
               <div className="space-y-1">
-                {loadingCreator ? (
-                  <div className="h-4 w-32 rounded bg-cosmic-700 animate-pulse mb-1.5" />
-                ) : creatorProfile && creatorProfile.username ? (
-                  <div className="flex items-center text-xs text-gray-400 mb-1">
-                    <User2 className="h-4 w-4 mr-1.5 text-primary" />
-                    {t("Created by", "由以下用户创建")}
-                    <Link
-                      to={`/profile/${spot.user_id}`}
-                      className="ml-1 underline hover:text-primary font-semibold truncate max-w-[10rem] inline-block"
-                      title={creatorProfile.username}
-                    >
-                      @{creatorProfile.username}
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="flex items-center text-xs text-gray-400 mb-1">
-                    <User2 className="h-4 w-4 mr-1.5 text-primary" />
-                    {t("Created by", "由以下用户创建")}
-                    <span className="ml-1">{t("Unknown", "未知用户")}</span>
-                  </div>
-                )}
-
                 <h1 className="text-3xl font-bold text-gray-50 flex items-center">
                   <Star className="h-5 w-5 text-yellow-400 mr-2 animate-pulse" />
                   {spot.name}
@@ -264,7 +288,6 @@ const AstroSpotProfile = () => {
                   {new Date(spot.created_at).toLocaleDateString()}
                 </div>
               </div>
-
               <Button
                 variant="default"
                 onClick={handleViewDetails}
@@ -274,7 +297,6 @@ const AstroSpotProfile = () => {
                 {t("View Location Details", "查看位置详情")}
               </Button>
             </div>
-
             {spot.siqs && (
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-cosmic-700/60 text-primary-foreground">
                 <span className="font-bold mr-1">{t("SIQS", "SIQS")}:</span>
