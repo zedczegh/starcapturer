@@ -1,16 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Star, Wrench } from 'lucide-react';
+import { Star, Wrench, MessageCircle } from 'lucide-react';
 import NavBar from "@/components/NavBar";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 import BackButton from "@/components/navigation/BackButton";
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import SpotHeader from '@/components/astro-spots/profile/SpotHeader';
 import SpotDetails from '@/components/astro-spots/profile/SpotDetails';
@@ -40,7 +37,6 @@ const AstroSpotProfile = () => {
   const [showInstantLoader, setShowInstantLoader] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Function to trigger refreshes
   const triggerRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
   };
@@ -96,7 +92,7 @@ const AstroSpotProfile = () => {
       };
     },
     retry: 1,
-    staleTime: 1000 * 15, // Reduced stale time to 15 seconds for more frequent refreshes
+    staleTime: 1000 * 15,
     refetchOnWindowFocus: false
   });
 
@@ -156,7 +152,7 @@ const AstroSpotProfile = () => {
       }
     },
     enabled: !!id,
-    staleTime: 1000 * 15 // Reduced stale time to 15 seconds
+    staleTime: 1000 * 15
   });
 
   useEffect(() => {
@@ -191,22 +187,21 @@ const AstroSpotProfile = () => {
     refetch();
   };
 
-  // Handle comments update
   const handleCommentsUpdate = async () => {
     console.log("Comments update triggered");
-    // First do an immediate refetch
     await refetch();
-    // Also trigger the refresh for any subsequent operations
     triggerRefresh();
   };
 
-  // Handle image updates
   const handleImagesUpdate = async () => {
     console.log("Images update triggered");
-    // First do an immediate refetch
     await refetchImages();
-    // Also trigger the refresh for any subsequent operations
     triggerRefresh();
+  };
+
+  const handleMessageCreator = () => {
+    if (!user || !spot?.user_id) return;
+    navigate('/messages', { state: { selectedUser: spot.user_id } });
   };
 
   if (isLoading || !spot) {
@@ -217,10 +212,23 @@ const AstroSpotProfile = () => {
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
       <div className="container max-w-4xl py-8 px-4 md:px-6 relative">
-        <BackButton
-          destination={comingFromCommunity ? "/community" : "/manage-astro-spots"}
-          className="text-gray-300 mb-6 hover:bg-cosmic-800/50"
-        />
+        <div className="flex justify-between items-start mb-6">
+          <BackButton
+            destination={comingFromCommunity ? "/community" : "/manage-astro-spots"}
+            className="text-gray-300 hover:bg-cosmic-800/50"
+          />
+          
+          {comingFromCommunity && user && spot.user_id !== user.id && (
+            <Button
+              onClick={handleMessageCreator}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <MessageCircle className="h-4 w-4" />
+              {t("Message Creator", "联系创建者")}
+            </Button>
+          )}
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}

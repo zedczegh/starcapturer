@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useLocation } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -39,6 +39,7 @@ const Messages: React.FC = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const [conversations, setConversations] = useState<ConversationPartner[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeConversation, setActiveConversation] = useState<ConversationPartner | null>(null);
@@ -54,7 +55,36 @@ const Messages: React.FC = () => {
       return;
     }
     
-    fetchConversations();
+    fetchConversations().then(() => {
+      // If we have a selectedUser from the location state, find and select their conversation
+      if (location.state?.selectedUser) {
+        const selectedUserId = location.state.selectedUser;
+        const existingConversation = conversations.find(conv => conv.id === selectedUserId);
+        if (existingConversation) {
+          handleSelectConversation(existingConversation);
+        } else {
+          // Fetch the user's profile to create a new conversation
+          supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('id', selectedUserId)
+            .single()
+            .then(({ data: profile }) => {
+              if (profile) {
+                const newConversation: ConversationPartner = {
+                  id: selectedUserId,
+                  username: profile.username,
+                  avatar_url: profile.avatar_url,
+                  last_message: '',
+                  last_message_time: new Date().toISOString(),
+                  unread_count: 0
+                };
+                handleSelectConversation(newConversation);
+              }
+            });
+        }
+      }
+    });
 
     // Set up real-time subscription for new messages
     const channel = supabase
@@ -80,9 +110,8 @@ const Messages: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, activeConversation]);
+  }, [user, location.state]);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
