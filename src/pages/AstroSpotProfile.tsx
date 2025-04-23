@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,11 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, MapPin, MessageCircle, Tag, Calendar, Star, ChevronLeft, Wrench, Album } from "lucide-react";
+import { ExternalLink, Loader2, MapPin, MessageCircle, Tag, Calendar, Star, ChevronLeft, Wrench, Album, User2 } from "lucide-react";
 import { motion } from "framer-motion";
 import BackButton from "@/components/navigation/BackButton";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
-import { Link } from 'react-router-dom';
 import { Skeleton } from "@/components/ui/skeleton";
 
 const AstroSpotProfile = () => {
@@ -33,68 +32,52 @@ const AstroSpotProfile = () => {
     queryKey: ['astroSpot', id],
     queryFn: async () => {
       if (!id) throw new Error("No spot ID provided");
-      
-      console.log("Fetching astro spot with ID:", id);
-      
       const { data: spotData, error: spotError } = await supabase
         .from('user_astro_spots')
         .select('*')
         .eq('id', id)
         .single();
+      if (spotError) throw spotError;
+      if (user && spotData.user_id === user.id) setIsCreator(true);
+      else setIsCreator(false);
 
-      if (spotError) {
-        console.error("Error fetching astro spot:", spotError);
-        throw spotError;
-      }
-      
-      console.log("Fetched astro spot data:", spotData);
-
-      if (user && spotData.user_id === user.id) {
-        setIsCreator(true);
-      } else {
-        setIsCreator(false);
-      }
-      
-      const { data: typeData, error: typeError } = await supabase
-        .from('astro_spot_types')
-        .select('*')
-        .eq('spot_id', id);
-        
-      if (typeError) {
-        console.error("Error fetching spot types:", typeError);
-      }
-      
-      const { data: advantageData, error: advantageError } = await supabase
-        .from('astro_spot_advantages')
-        .select('*')
-        .eq('spot_id', id);
-        
-      if (advantageError) {
-        console.error("Error fetching spot advantages:", advantageError);
-      }
-      
-      const { data: commentData, error: commentError } = await supabase
+      const { data: typeData } = await supabase
+        .from('astro_spot_types').select('*').eq('spot_id', id);
+      const { data: advantageData } = await supabase
+        .from('astro_spot_advantages').select('*').eq('spot_id', id);
+      const { data: commentData } = await supabase
         .from('astro_spot_comments')
         .select('*, profiles:user_id(username, avatar_url)')
         .eq('spot_id', id);
-        
-      if (commentError) {
-        console.error("Error fetching spot comments:", commentError);
-        // Continue despite comment errors
-      }
-      
-      const completeSpot = {
+
+      return {
         ...spotData,
         astro_spot_types: typeData || [],
         astro_spot_advantages: advantageData || [],
-        astro_spot_comments: commentData || []
+        astro_spot_comments: commentData || [],
       };
-      
-      return completeSpot;
     },
     retry: 1,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false
+  });
+
+  const { data: creatorProfile, isLoading: loadingCreator } = useQuery({
+    queryKey: ['creatorProfile', spot?.user_id],
+    queryFn: async () => {
+      if (!spot?.user_id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', spot.user_id)
+        .maybeSingle();
+      if (error) {
+        console.error("Error fetching creator profile:", error);
+        return null;
+      }
+      return data;
+    },
+    enabled: !!spot?.user_id
   });
 
   useEffect(() => {
@@ -114,19 +97,11 @@ const AstroSpotProfile = () => {
     queryKey: ['spotImages', id],
     queryFn: async () => {
       if (!id) return [];
-      
-      console.log("Fetching images for spot:", id);
-      
       const { data: files, error } = await supabase
         .storage
         .from('astro_spot_images')
         .list(id);
-        
-      if (error) {
-        console.error("Error fetching spot images:", error);
-        return [];
-      }
-
+      if (error) return [];
       return files.map(file => {
         const { data } = supabase
           .storage
@@ -217,8 +192,6 @@ const AstroSpotProfile = () => {
     );
   }
 
-  console.log("Rendering astro spot:", spot);
-
   const getUsername = (comment) => {
     if (!comment || !comment.profiles) return t("Anonymous", "匿名用户");
     if (typeof comment.profiles === 'object') {
@@ -231,12 +204,12 @@ const AstroSpotProfile = () => {
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
       <div className="container max-w-4xl py-8 px-4 md:px-6 relative">
-        <BackButton 
+        <BackButton
           destination={comingFromCommunity ? "/community" : "/manage-astro-spots"}
           className="text-gray-300 mb-6 hover:bg-cosmic-800/50"
         />
-        
-        <motion.div 
+
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -254,8 +227,30 @@ const AstroSpotProfile = () => {
           )}
 
           <div className="bg-gradient-to-r from-cosmic-800/80 to-cosmic-800/40 p-6 border-b border-cosmic-700/30">
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
               <div className="space-y-1">
+                {loadingCreator ? (
+                  <div className="h-4 w-32 rounded bg-cosmic-700 animate-pulse mb-1.5" />
+                ) : creatorProfile && creatorProfile.username ? (
+                  <div className="flex items-center text-xs text-gray-400 mb-1">
+                    <User2 className="h-4 w-4 mr-1.5 text-primary" />
+                    {t("Created by", "由以下用户创建")}
+                    <Link
+                      to={`/profile/${spot.user_id}`}
+                      className="ml-1 underline hover:text-primary font-semibold truncate max-w-[10rem] inline-block"
+                      title={creatorProfile.username}
+                    >
+                      @{creatorProfile.username}
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="flex items-center text-xs text-gray-400 mb-1">
+                    <User2 className="h-4 w-4 mr-1.5 text-primary" />
+                    {t("Created by", "由以下用户创建")}
+                    <span className="ml-1">{t("Unknown", "未知用户")}</span>
+                  </div>
+                )}
+
                 <h1 className="text-3xl font-bold text-gray-50 flex items-center">
                   <Star className="h-5 w-5 text-yellow-400 mr-2 animate-pulse" />
                   {spot.name}
@@ -269,26 +264,26 @@ const AstroSpotProfile = () => {
                   {new Date(spot.created_at).toLocaleDateString()}
                 </div>
               </div>
-              
-              <Button 
-                variant="default" 
+
+              <Button
+                variant="default"
                 onClick={handleViewDetails}
-                className="bg-primary/80 hover:bg-primary flex items-center gap-2 rounded-full"
+                className="bg-primary/80 hover:bg-primary flex items-center gap-2 rounded-full mt-4 sm:mt-0"
               >
                 <ExternalLink className="h-4 w-4" />
                 {t("View Location Details", "查看位置详情")}
               </Button>
             </div>
-            
+
             {spot.siqs && (
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-cosmic-700/60 text-primary-foreground">
                 <span className="font-bold mr-1">{t("SIQS", "SIQS")}:</span>
-                <span 
+                <span
                   className={`px-2 py-0.5 rounded-full font-mono text-sm ${
-                    spot.siqs >= 8 ? 'bg-green-500/80 text-white' :
-                    spot.siqs >= 6 ? 'bg-blue-500/80 text-white' :
-                    spot.siqs >= 4 ? 'bg-yellow-500/80 text-white' :
-                    'bg-red-500/80 text-white'
+                    spot.siqs >= 8 ? 'bg-green-500/80 text-white'
+                    : spot.siqs >= 6 ? 'bg-blue-500/80 text-white'
+                    : spot.siqs >= 4 ? 'bg-yellow-500/80 text-white'
+                    : 'bg-red-500/80 text-white'
                   }`}
                 >
                   {spot.siqs}
