@@ -89,7 +89,6 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
     <Marker
       position={[location.latitude, location.longitude]}
       icon={icon}
-      onClick={handleMarkerClick}
       eventHandlers={{
         click: handleMarkerClick,
         mouseover: handleMouseOver,
