@@ -29,26 +29,63 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
   const { data: timeSlots, isLoading, refetch } = useQuery({
     queryKey: ['timeSlots', spotId],
     queryFn: async () => {
-      // Use the REST API directly to avoid TypeScript issues
-      const { data, error } = await supabase.rest.get(`/astro_spot_timeslots?spot_id=eq.${spotId}&order=start_time.asc`);
-      
-      if (error) throw error;
+      // Use fetch to directly access the Supabase API
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const response = await fetch(
+        `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/astro_spot_timeslots?spot_id=eq.${spotId}&order=start_time.asc`,
+        {
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y',
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch time slots');
+      }
+
+      const data = await response.json();
       
       // Fetch reservations for each time slot
       for (const slot of data || []) {
-        const { data: reservations, error: reservationsError } = await supabase.rest.get(
-          `/astro_spot_reservations?timeslot_id=eq.${slot.id}`
+        const reservationsResponse = await fetch(
+          `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/astro_spot_reservations?timeslot_id=eq.${slot.id}`,
+          {
+            headers: {
+              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y',
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
         );
         
-        if (!reservationsError && reservations) {
-          slot.astro_spot_reservations = reservations;
-          
-          // Get user profiles for each reservation
-          if (reservations.length > 0) {
-            const userIds = reservations.map((res: any) => res.user_id);
-            const userIdsQuery = userIds.map((id: string) => `id=eq.${id}`).join(',');
+        if (!reservationsResponse.ok) {
+          throw new Error('Failed to fetch reservations');
+        }
+        
+        const reservations = await reservationsResponse.json();
+        slot.astro_spot_reservations = reservations;
+        
+        // Get user profiles for each reservation
+        if (reservations.length > 0) {
+          const userIds = reservations.map((res: any) => res.user_id);
+          const userIdsQuery = userIds.map((id: string) => `id=eq.${id}`).join(',');
             
-            const { data: profiles } = await supabase.rest.get(`/profiles?${userIdsQuery}`);
+          const profilesResponse = await fetch(
+            `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/profiles?${userIdsQuery}`,
+            {
+              headers: {
+                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y',
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+            
+          if (profilesResponse.ok) {
+            const profiles = await profilesResponse.json();
             
             // Attach profile to each reservation
             if (profiles) {
@@ -61,7 +98,7 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
         }
       }
       
-      return data || [];
+      return data;
     }
   });
 

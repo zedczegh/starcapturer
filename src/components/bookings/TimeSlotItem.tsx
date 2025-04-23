@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -54,7 +53,7 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
     setIsBooking(true);
     
     try {
-      // Use the REST API directly for function calls
+      // Use the Edge Function to call RPC
       const { data, error } = await supabase.functions.invoke('call-rpc', {
         body: {
           function: 'insert_astro_spot_reservation',
@@ -66,18 +65,7 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
         }
       });
 
-      if (error) {
-        // Fallback to direct insert
-        const { error: insertError } = await supabase.rest.post('/astro_spot_reservations', {
-          body: {
-            timeslot_id: timeSlot.id,
-            user_id: user.id,
-            status: 'confirmed'
-          }
-        });
-          
-        if (insertError) throw insertError;
-      }
+      if (error) throw error;
       
       toast.success(t("Booking confirmed!", "预订已确认！"));
       onUpdate();
@@ -95,9 +83,21 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
     setIsCancelling(true);
     
     try {
-      const { error } = await supabase.rest.delete(`/astro_spot_reservations?id=eq.${userReservation.id}`);
+      // Use fetch to make a direct delete request to the supabase API
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const response = await fetch(
+        `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/astro_spot_reservations?id=eq.${userReservation.id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y',
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
         
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to cancel reservation');
       
       toast.success(t("Booking cancelled", "预订已取消"));
       onUpdate();
@@ -111,9 +111,21 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
   
   const handleDeleteTimeSlot = async () => {
     try {
-      const { error } = await supabase.rest.delete(`/astro_spot_timeslots?id=eq.${timeSlot.id}`);
+      // Use fetch to make a direct delete request to the supabase API
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const response = await fetch(
+        `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/astro_spot_timeslots?id=eq.${timeSlot.id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y',
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
         
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to delete time slot');
       
       toast.success(t("Time slot deleted", "时间段已删除"));
       onUpdate();

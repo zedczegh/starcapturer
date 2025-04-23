@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -76,7 +75,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
       }
       
       if (isEditing) {
-        // Use the REST API directly for function calls to avoid type issues
+        // Call the edge function to update the time slot
         const { data, error } = await supabase.functions.invoke('call-rpc', {
           body: {
             function: 'update_astro_spot_timeslot',
@@ -92,25 +91,9 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
           }
         });
 
-        if (error) {
-          // Fallback to direct update
-          const { error: updateError } = await supabase.rest.post(`/astro_spot_timeslots?id=eq.${existingTimeSlot.id}`, {
-            body: {
-              start_time: startDateTime.toISOString(),
-              end_time: endDateTime.toISOString(),
-              max_capacity: maxCapacity,
-              description: description.trim(),
-              updated_at: new Date().toISOString()
-            },
-            headers: {
-              Prefer: 'return=representation'
-            }
-          });
-
-          if (updateError) throw updateError;
-        }
+        if (error) throw error;
       } else {
-        // Try to use the REST API directly for function calls
+        // Call the edge function to create a new time slot
         const { data, error } = await supabase.functions.invoke('call-rpc', {
           body: {
             function: 'insert_astro_spot_timeslot',
@@ -125,21 +108,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
           }
         });
 
-        if (error) {
-          // Fallback to direct insert
-          const { error: insertError } = await supabase.rest.post('/astro_spot_timeslots', {
-            body: {
-              spot_id: spotId,
-              creator_id: user.id,
-              start_time: startDateTime.toISOString(),
-              end_time: endDateTime.toISOString(),
-              max_capacity: maxCapacity,
-              description: description.trim()
-            }
-          });
-
-          if (insertError) throw insertError;
-        }
+        if (error) throw error;
       }
       
       onSuccess();
