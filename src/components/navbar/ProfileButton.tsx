@@ -5,14 +5,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import AuthDialog from '../auth/AuthDialog';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import ProfileDropdownMenu from './ProfileDropdownMenu';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ProfileButton = () => {
   const { user, signOut } = useAuth();
@@ -47,15 +45,23 @@ const ProfileButton = () => {
   if (!user) {
     return (
       <>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowAuthDialog(true)}
-          className="text-primary hover:text-primary-focus rounded-full flex items-center justify-center"
-          aria-label="Login"
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
-          <UserRound className="h-5 w-5" />
-        </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowAuthDialog(true)}
+            className="text-primary hover:text-primary hover:bg-primary/10 rounded-full flex items-center justify-center gap-2 px-4"
+            aria-label="Login"
+          >
+            <UserRound className="h-5 w-5" />
+            <span className="hidden sm:inline text-sm font-medium">
+              {t("Sign In", "登录")}
+            </span>
+          </Button>
+        </motion.div>
         <AuthDialog
           open={showAuthDialog}
           onOpenChange={setShowAuthDialog}
@@ -65,27 +71,41 @@ const ProfileButton = () => {
   }
 
   return (
-    <DropdownMenu modal>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative rounded-full p-0 border border-accent/40 hover:border-primary shadow-glow focus:ring-2 focus:ring-primary group" aria-label="Profile">
-          <Avatar className="h-8 w-8">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
-            ) : (
-              <AvatarFallback>
-                {user.email?.[0]?.toUpperCase() || "?"}
-              </AvatarFallback>
-            )}
-          </Avatar>
-        </Button>
-      </DropdownMenuTrigger>
-      <ProfileDropdownMenu
-        user={user}
-        profile={profile}
-        onSignOut={handleSignOut}
-        email={user.email}
-      />
-    </DropdownMenu>
+    <AnimatePresence>
+      <DropdownMenu modal>
+        <DropdownMenuTrigger asChild>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="relative rounded-full p-0 border border-accent/40 hover:border-primary shadow-glow focus:ring-2 focus:ring-primary group transition-all duration-300" 
+              aria-label="Profile"
+            >
+              <Avatar className="h-8 w-8 transition-transform duration-300 group-hover:scale-105">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {user.email?.[0]?.toUpperCase() || "?"}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+            </Button>
+          </motion.div>
+        </DropdownMenuTrigger>
+        <ProfileDropdownMenu
+          user={user}
+          profile={profile}
+          onSignOut={handleSignOut}
+          email={user.email}
+        />
+      </DropdownMenu>
+    </AnimatePresence>
   );
 };
 
