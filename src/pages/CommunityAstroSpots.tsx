@@ -52,7 +52,10 @@ const CommunityAstroSpots: React.FC = () => {
 
   // Function to handle clicking a location card
   const handleCardClick = (id: string) => {
-    navigate(`/astro-spot/${id}`);
+    // Pass source information when navigating to the profile
+    navigate(`/astro-spot/${id}`, { 
+      state: { from: 'community' } 
+    });
   };
 
   return (
