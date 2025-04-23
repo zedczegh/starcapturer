@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from "@/contexts/LanguageContext";
+import { translateCategory, translateType } from "@/utils/linkTranslations";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import NavBar from "@/components/NavBar";
@@ -337,7 +338,10 @@ const AstroSpotProfile = () => {
                       key={type.id}
                       className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-700/50 to-indigo-700/50 border border-purple-600/30 text-sm text-gray-200 backdrop-blur-sm"
                     >
-                      {type.type_name}
+                      {t(
+                        translateType(type.type_name) !== type.type_name ? type.type_name : type.type_name,
+                        translateType(type.type_name)
+                      )}
                     </span>
                   ))}
                 </div>
@@ -356,7 +360,10 @@ const AstroSpotProfile = () => {
                       key={advantage.id}
                       className="px-3 py-1 rounded-full bg-gradient-to-r from-green-700/50 to-teal-700/50 border border-green-600/30 text-sm text-gray-200 backdrop-blur-sm"
                     >
-                      {advantage.advantage_name}
+                      {t(
+                        translateCategory(advantage.advantage_name) !== advantage.advantage_name ? advantage.advantage_name : advantage.advantage_name,
+                        translateCategory(advantage.advantage_name)
+                      )}
                     </span>
                   ))}
                 </div>
@@ -483,7 +490,7 @@ const AstroSpotProfile = () => {
               spot.astro_spot_comments.map((comment) => (
                 <div 
                   key={comment.id}
-                  className="p-4 bg-cosmic-800/30 rounded-lg border border-cosmic-600/20"
+                  className="p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-600/20"
                 >
                   <div className="flex items-center mb-2">
                     <div className="font-medium text-gray-200">
