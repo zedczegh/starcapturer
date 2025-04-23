@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -6,29 +7,43 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface LoginFormProps {
   onSuccess: () => void;
 }
 
+interface LoginFormValues {
+  email: string;
+  password: string;
+}
+
 const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const { signIn, isLoading } = useAuth();
   const { t } = useLanguage();
-  const form = useForm();
+  const form = useForm<LoginFormValues>();
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [formSubmitted, setFormSubmitted] = React.useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: LoginFormValues) => {
     try {
       setFormSubmitted(true);
-      await signIn(data.email, data.password);
-      onSuccess();
-      navigate('/photo-points');
-      // Toast notification is handled in AuthContext for a more consistent experience
+      setAuthError(null); // Reset previous errors
+      
+      const { success, error } = await signIn(data.email, data.password);
+      
+      if (success) {
+        onSuccess();
+        navigate('/photo-points');
+      } else if (error) {
+        setAuthError(error);
+      }
     } catch (error: any) {
-      // Error handling is done in AuthContext
+      console.error("Login form error:", error);
+      setAuthError(t("An unexpected error occurred", "发生意外错误"));
     } finally {
       setFormSubmitted(false);
     }
@@ -40,6 +55,13 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {authError && (
+          <div className="bg-red-500/10 border border-red-500/50 rounded-md p-3 text-sm text-red-500 flex items-start">
+            <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+            <span>{authError}</span>
+          </div>
+        )}
+        
         <FormField
           control={form.control}
           name="email"
