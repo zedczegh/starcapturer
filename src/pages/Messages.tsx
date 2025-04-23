@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -295,7 +294,11 @@ const Messages: React.FC = () => {
                     <div className="relative">
                       <Avatar className="h-10 w-10 border border-cosmic-700">
                         {conversation.avatar_url ? (
-                          <img src={conversation.avatar_url} alt="avatar" className="h-full w-full object-cover" />
+                          <img
+                            src={conversation.avatar_url}
+                            alt={conversation.username || "User"}
+                            className="h-full w-full object-cover"
+                          />
                         ) : (
                           <AvatarFallback>
                             <User className="h-5 w-5 text-cosmic-400" />
@@ -334,7 +337,11 @@ const Messages: React.FC = () => {
                 <div className="p-4 border-b border-cosmic-800 flex items-center gap-3">
                   <Avatar className="h-10 w-10 border border-cosmic-700">
                     {activeConversation.avatar_url ? (
-                      <img src={activeConversation.avatar_url} alt="avatar" className="h-full w-full object-cover" />
+                      <img
+                        src={activeConversation.avatar_url}
+                        alt={activeConversation.username || "User"}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <AvatarFallback>
                         <User className="h-5 w-5 text-cosmic-400" />
@@ -345,8 +352,8 @@ const Messages: React.FC = () => {
                     <h3 className="font-semibold text-white">
                       {activeConversation.username}
                     </h3>
-                    <Button 
-                      variant="link" 
+                    <Button
+                      variant="link"
                       className="p-0 h-auto text-sm text-primary"
                       onClick={() => navigate(`/profile/${activeConversation.id}`)}
                     >
