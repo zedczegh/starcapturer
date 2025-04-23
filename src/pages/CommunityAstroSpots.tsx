@@ -9,13 +9,12 @@ import LocationCard from "@/components/LocationCard";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import NavBar from "@/components/NavBar";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
 const CommunityAstroSpots: React.FC = () => {
   const { t } = useLanguage();
-  const navigate = useNavigate();
   const { data: astrospots, isLoading } = useQuery({
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
@@ -50,13 +49,9 @@ const CommunityAstroSpots: React.FC = () => {
     visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
   };
 
-  // Function to handle clicking a location card
-  const handleCardClick = (id: string) => {
-    navigate(`/astro-spot/${id}`);
-  };
-
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "社区观星点 | SIQS")}>
+      <NavBar />
       <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
         {/* Header Section with Gradient, Animated Line & Better Layout */}
         <div className="mb-9">
@@ -67,7 +62,7 @@ const CommunityAstroSpots: React.FC = () => {
             variants={{}}
           >
             <motion.h1
-              className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-3xl md:text-4xl text-center drop-shadow tracking-tight"
+              className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-4xl md:text-5xl text-center drop-shadow tracking-tight"
               variants={titleVariants}
             >
               {t("Astrospots Community", "社区观星点")}
@@ -78,12 +73,12 @@ const CommunityAstroSpots: React.FC = () => {
               variants={lineVariants}
             />
             <motion.p
-              className="text-center mb-2 mt-1 max-w-2xl text-base md:text-lg text-muted-foreground leading-relaxed"
+              className="text-center mb-2 mt-1 max-w-2xl text-lg md:text-xl text-muted-foreground leading-relaxed"
               variants={descVariants}
             >
               {t(
-                "Discover and explore astrospots contributed by our SIQS community members. View their favorite stargazing locations on the interactive map and find inspiration for your next adventure.",
-                "由SIQS社区成员贡献的观星点，在这里一览无余。浏览大家推荐的拍摄位置，探索灵感，发现下次观星之旅的新去处。"
+                "Discover and explore astrospots contributed by our community members. View their favorite stargazing locations on the interactive map and find inspiration for your next adventure.",
+                "由社区成员贡献的观星点，在这里一览无余。浏览大家推荐的拍摄位置，探索灵感，发现下次观星之旅的新去处。"
               )}
             </motion.p>
           </motion.div>
@@ -114,45 +109,27 @@ const CommunityAstroSpots: React.FC = () => {
         {astrospots && astrospots.length > 0 ? (
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
             {astrospots.map((spot: any) => (
-              <button
-                key={spot.id}
-                className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
-                tabIndex={0}
-                onClick={() => handleCardClick(spot.id)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    handleCardClick(spot.id);
+              <div key={spot.id} className="relative">
+                <RealTimeSiqsProvider
+                  isVisible={true}
+                  latitude={spot.latitude}
+                  longitude={spot.longitude}
+                  bortleScale={spot.bortleScale}
+                  existingSiqs={spot.siqs}
+                  onSiqsCalculated={(siqs, loading) =>
+                    handleSiqsCalculated(spot.id, siqs, loading)
                   }
-                }}
-                aria-label={spot.name}
-                style={{ background: "none", padding: 0 }}
-              >
-                <div className="w-full h-full">
-                  <RealTimeSiqsProvider
-                    isVisible={true}
-                    latitude={spot.latitude}
-                    longitude={spot.longitude}
-                    bortleScale={spot.bortleScale}
-                    existingSiqs={spot.siqs}
-                    onSiqsCalculated={(siqs, loading) =>
-                      handleSiqsCalculated(spot.id, siqs, loading)
-                    }
-                  />
-                  <div className="transition-shadow group-hover:shadow-xl group-hover:ring-2 group-hover:ring-primary rounded-xl">
-                    <LocationCard
-                      id={spot.id}
-                      name={spot.name}
-                      latitude={spot.latitude}
-                      longitude={spot.longitude}
-                      siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
-                      timestamp={spot.timestamp}
-                      isCertified={false}
-                    />
-                  </div>
-                  {/* Overlay for click effect (optional visual feedback) */}
-                  <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />
-                </div>
-              </button>
+                />
+                <LocationCard
+                  id={spot.id}
+                  name={spot.name}
+                  latitude={spot.latitude}
+                  longitude={spot.longitude}
+                  siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                  timestamp={spot.timestamp}
+                  isCertified={false}
+                />
+              </div>
             ))}
           </div>
         ) : (
