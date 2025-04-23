@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -53,9 +52,6 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
           }}
           render={({ field }) => (
             <FormItem>
-              <label htmlFor="login_email" className="block text-sm font-medium mb-1 text-foreground">
-                {t("Email", "电子邮箱")}
-              </label>
               <div className="relative">
                 <FormControl>
                   <Input 
@@ -63,14 +59,14 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
                     id="login_email"
                     type="email" 
                     autoComplete="email"
-                    placeholder={t("name@email.com", "邮箱")}
-                    className="pl-10"
+                    placeholder={t("Your email address", "您的邮箱")}
+                    className="pl-10 h-11 text-base"
                     disabled={processing}
                   />
                 </FormControl>
-                <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
               </div>
-              <FormMessage />
+              <FormMessage className="text-xs" />
             </FormItem>
           )}
         />
@@ -83,9 +79,6 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
           }}
           render={({ field }) => (
             <FormItem>
-              <label htmlFor="login_password" className="block text-sm font-medium mb-1 text-foreground">
-                {t("Password", "密码")}
-              </label>
               <div className="relative">
                 <FormControl>
                   <Input 
@@ -93,12 +86,12 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
                     type={showPassword ? "text" : "password"}
                     id="login_password"
                     autoComplete="current-password"
-                    placeholder={t("Your password", "密码")}
-                    className="pl-10 pr-10"
+                    placeholder={t("Your password", "您的密码")}
+                    className="pl-10 pr-10 h-11 text-base"
                     disabled={processing}
                   />
                 </FormControl>
-                <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                 <Button
                   type="button"
                   variant="ghost"
@@ -106,29 +99,27 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={processing}
-                  tabIndex={-1}
-                  aria-label={showPassword ? t("Hide password", "隐藏密码") : t("Show password", "显示密码")}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    <EyeOff className="h-5 w-5 text-muted-foreground" />
                   ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <Eye className="h-5 w-5 text-muted-foreground" />
                   )}
                 </Button>
               </div>
-              <FormMessage />
+              <FormMessage className="text-xs" />
             </FormItem>
           )}
         />
 
         <Button 
           type="submit" 
-          className="w-full animate-fade-in bg-primary hover:bg-primary/90"
+          className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90"
           disabled={processing}
         >
           {processing ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               {t("Signing in...", "登录中...")}
             </>
           ) : (

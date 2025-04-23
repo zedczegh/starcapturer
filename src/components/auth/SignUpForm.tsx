@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -9,6 +8,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import { Loader2 } from '@/components/ui/loader';
 
 interface SignUpFormProps {
   onSuccess: () => void;
@@ -28,9 +28,7 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
       await signUp(data.email, data.password);
       onSuccess();
       navigate('/photo-points');
-      // Toast notification is handled in AuthContext for a more consistent experience
     } catch (error: any) {
-      // Error handling is done in AuthContext
     } finally {
       setIsLoading(false);
     }
@@ -51,9 +49,6 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
           }}
           render={({ field }) => (
             <FormItem>
-              <label htmlFor="signup_email" className="block text-sm font-medium mb-1 text-foreground">
-                {t("Email", "电子邮箱")}
-              </label>
               <div className="relative">
                 <FormControl>
                   <Input 
@@ -62,13 +57,13 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
                     type="email" 
                     autoComplete="email"
                     placeholder={t("name@email.com", "邮箱")}
-                    className="pl-10"
+                    className="pl-10 h-11 text-base"
                     disabled={isLoading}
                   />
                 </FormControl>
-                <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
               </div>
-              <FormMessage />
+              <FormMessage className="text-xs" />
             </FormItem>
           )}
         />
@@ -85,9 +80,6 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
           }}
           render={({ field }) => (
             <FormItem>
-              <label htmlFor="signup_password" className="block text-sm font-medium mb-1 text-foreground">
-                {t("Password", "密码")}
-              </label>
               <div className="relative">
                 <FormControl>
                   <Input 
@@ -95,12 +87,12 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
                     id="signup_password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
-                    placeholder={t("Create a password", "创建密码")}
-                    className="pl-10 pr-10"
+                    placeholder={t("Create a strong password", "创建强密码")}
+                    className="pl-10 pr-10 h-11 text-base"
                     disabled={isLoading}
                   />
                 </FormControl>
-                <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                 <Button
                   type="button"
                   variant="ghost"
@@ -108,27 +100,32 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
-                  tabIndex={-1}
-                  aria-label={showPassword ? t("Hide password", "隐藏密码") : t("Show password", "显示密码")}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    <EyeOff className="h-5 w-5 text-muted-foreground" />
                   ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <Eye className="h-5 w-5 text-muted-foreground" />
                   )}
                 </Button>
               </div>
-              <FormMessage />
+              <FormMessage className="text-xs" />
             </FormItem>
           )}
         />
 
         <Button 
           type="submit" 
-          className="w-full animate-fade-in bg-primary hover:bg-primary/90"
+          className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90"
           disabled={isLoading}
         >
-          {isLoading ? t("Creating account...", "创建帐户中...") : t("Create Account", "创建帐户")}
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {t("Creating Account...", "创建帐户中...")}
+            </>
+          ) : (
+            t("Create Account", "创建帐户")
+          )}
         </Button>
       </form>
     </Form>
