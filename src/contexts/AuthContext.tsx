@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   signUp: (email: string, password: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<{success: boolean, error?: string}>;
+  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   isLoading: boolean;
 }
@@ -97,7 +96,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         );
       }
-      return;
     } catch (error: any) {
       toast.error(
         t(
@@ -115,8 +113,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signIn = async (email: string, password: string): Promise<{success: boolean, error?: string}> => {
+  const signIn = async (email: string, password: string) => {
     setIsLoading(true);
+    let signedIn = false;
     try {
       toast("Signing in...", {
         description: "Checking your credentials...",
@@ -124,49 +123,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         duration: 1500
       });
 
-      const { error, data } = await supabase.auth.signInWithPassword({ 
+      const { error } = await supabase.auth.signInWithPassword({ 
         email, 
         password
       });
 
       if (error) {
-        let errorMessage = t("Please double-check your email and password", "请检查您的邮箱和密码");
-        
+        let errorMessage = "Please double-check your email and password";
         if (error.message.includes("Email not confirmed")) {
-          // Resend verification email automatically
           await supabase.auth.resend({
             type: 'signup',
             email: email,
           });
-          errorMessage = t("Check your inbox for the verification email we just sent!", "请查收您的邮箱，我们刚刚发送了验证邮件！");
+          errorMessage = "Check your inbox for the verification email we just sent!";
         } else if (error.message.includes("Invalid login")) {
-          errorMessage = t("Incorrect email or password. Please try again.", "邮箱或密码错误，请重试。");
+          errorMessage = "Please double-check your email and password";
         } else if (error.message.includes("Too many requests")) {
-          errorMessage = t("Too many login attempts. Please try again in a few minutes", "登录尝试次数过多，请稍后重试。");
-        } else {
-          // Log detailed error for debugging
-          console.error("Supabase auth error details:", error);
-          errorMessage = t("Authentication error: ", "认证错误: ") + error.message;
+          errorMessage = "Too many login attempts. Please try again in a few minutes";
         }
-        
-        toast.error(t("Sign in paused", "登录暂停"), {
+        toast.error("Sign in paused", {
           description: errorMessage,
-          position: "top-center",
-          duration: 5000
+          position: "top-center"
         });
-        return {success: false, error: errorMessage};
+        return;
       }
 
-      // Success - session will be set through onAuthStateChange
-      return {success: true};
+      signedIn = true;
     } catch (error: any) {
-      console.error("Unexpected error during sign in:", error);
-      const errorMessage = t("An authentication error occurred. Please try again later.", "身份验证时发生错误，请稍后重试。");
-      toast.error(t("Sign in error", "登录错误"), {
-        description: errorMessage,
+      toast.error("Sign in error", {
+        description: "An unknown error occurred. Please try again.",
         position: "top-center"
       });
-      return {success: false, error: errorMessage};
     } finally {
       setIsLoading(false);
     }
