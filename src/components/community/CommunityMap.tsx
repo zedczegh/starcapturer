@@ -24,7 +24,6 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
   isMobile = false,
   zoom = 3
 }) => {
-  // Only render community NON-CERTIFIED spots, since the data is for contributed user spots.
   const userPosition = useUserGeolocation();
 
   return (
@@ -34,11 +33,10 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
       scrollWheelZoom={true}
       style={{ height: "100%", width: "100%", background: "#010e1a" }}
       worldCopyJump
-      attributionControl
+      attributionControl={false}
     >
       <TileLayer
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         maxZoom={19}
       />
       {userPosition && (
@@ -58,4 +56,3 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
 };
 
 export default CommunityMap;
-
