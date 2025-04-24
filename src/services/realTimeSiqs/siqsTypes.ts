@@ -42,13 +42,6 @@ export interface WeatherDataWithClearSky extends WeatherData {
   latitude?: number;
   longitude?: number;
   timestamp?: string;
-  nighttimeCloudData?: {
-    average: number | null;
-    evening?: number | null;
-    morning?: number | null;
-    sourceType?: 'forecast' | 'calculated';
-  };
-  _forecast?: any; // Added to handle forecast data references
 }
 
 export interface SiqsCalculationOptions {
@@ -60,7 +53,6 @@ export interface SiqsCalculationOptions {
   hourlyWeighting?: boolean;
   useHistoricalData?: boolean;
   useRealTimeData?: boolean;
-  anomalyDetection?: boolean; // Added missing option
 }
 
 export interface SiqsComparisonResult {
@@ -72,26 +64,3 @@ export interface SiqsComparisonResult {
     worsened: string[];
   };
 }
-
-// Add missing interfaces referenced by other files
-export interface MoonPhaseInfo {
-  phase: number;
-  name: string;
-  illumination: number;
-  isNew?: boolean;
-  isFull?: boolean;
-}
-
-export interface MoonlessNightInfo {
-  isGoodForAstro: boolean;
-  moonPhase: number;
-  moonriseTime?: string;
-  moonsetTime?: string;
-  sunriseTime?: string;
-  sunsetTime?: string;
-  hoursBetweenSunsetAndMoonrise?: number;
-  hoursBetweenMoonsetAndSunrise?: number;
-  hasMoonlessWindow?: boolean;
-  moonlessWindowDuration?: number;
-}
-

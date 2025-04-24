@@ -3,11 +3,11 @@
  * Unified SIQS display utility to consistently handle SIQS scores
  * across different components and views
  */
-import { normalizeToSiqsScale, getSiqsScore } from './siqsHelpers';
+import { normalizeToSiqsScale } from './siqsHelpers';
 
 interface DisplaySiqsOptions {
   realTimeSiqs: number | null;
-  staticSiqs?: number | null | { score: number; isViable: boolean } | any;
+  staticSiqs?: number | null;
   isCertified?: boolean;
   isDarkSkyReserve?: boolean;
   confidenceThreshold?: number;
@@ -30,11 +30,8 @@ export function getDisplaySiqs({
   }
   
   // Second priority: static/stored SIQS if available
-  if (staticSiqs !== null) {
-    const normalizedStaticSiqs = getSiqsScore(staticSiqs);
-    if (normalizedStaticSiqs > 0) {
-      return normalizedStaticSiqs;
-    }
+  if (staticSiqs !== null && staticSiqs > 0) {
+    return normalizeToSiqsScale(staticSiqs);
   }
   
   // For certified or dark sky locations, show a default score if no actual data
