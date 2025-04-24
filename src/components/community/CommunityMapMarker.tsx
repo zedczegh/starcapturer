@@ -87,7 +87,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
           {/* SIQS Score Display */}
           <div className="flex items-center mb-2">
             <SiqsScoreBadge 
-              score={realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(spot.siqs)} 
+              score={realTimeSiqs !== null ? getSiqsScore(realTimeSiqs) : getSiqsScore(spot.siqs)} 
               loading={loadingSiqs} 
             />
           </div>

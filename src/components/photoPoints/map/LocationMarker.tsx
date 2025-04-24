@@ -165,7 +165,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
         
         <LocationPopupContent
           location={location}
-          siqsScore={siqsScore}
+          siqsScore={getSiqsScore(siqsScore)}
           siqsLoading={siqsLoading}
           displayName={displayName}
           isCertified={isCertified}

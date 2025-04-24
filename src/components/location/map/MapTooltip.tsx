@@ -100,7 +100,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
         {/* Display SIQS score, but don't use default scores for certified locations */}
         <div className="mt-1.5 flex items-center">
           <SiqsScoreBadge 
-            score={displaySiqs} 
+            score={getSiqsScore(displaySiqs)}
             compact={true}
             loading={siqsLoading}
             isCertified={isCertified}

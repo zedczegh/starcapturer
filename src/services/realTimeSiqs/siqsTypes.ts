@@ -1,17 +1,15 @@
 
-// Define types for SIQS calculation
+// SIQS Calculation Types
+
 export interface SiqsResult {
   siqs: number;
   isViable: boolean;
+  factors?: any[];
   weatherData?: WeatherDataWithClearSky;
   forecastData?: any;
-  factors?: {
-    name: string;
-    score: number;
-    description: string;
-  }[];
   metadata?: {
     calculatedAt: string;
+    targetHour?: number;
     sources: {
       weather: boolean;
       forecast: boolean;
@@ -25,29 +23,63 @@ export interface SiqsResult {
       score: number;
       issues: string[];
     };
-    targetHour?: number;
   };
 }
 
-export interface WeatherDataWithClearSky {
+export interface WeatherData {
   temperature: number;
   humidity: number;
   cloudCover: number;
-  windSpeed: number;
   precipitation: number;
-  clearSkyRate?: number;
-  latitude: number;
-  longitude: number;
-  time?: string;
-  timestamp?: number | string; // Add timestamp property
-  condition?: string;
+  windSpeed: number;
   aqi?: number;
-  _forecast?: any;
+  weatherCondition?: string;
+  timestamp?: string;
+}
+
+export interface WeatherDataWithClearSky extends WeatherData {
+  clearSkyRate?: number;
+  latitude?: number;
+  longitude?: number;
+  timestamp?: string;
   nighttimeCloudData?: {
     average: number;
-    timeRange: string;
-    sourceType: 'forecast' | 'calculated' | 'historical' | 'optimized';
+    timeRange?: string;
+    sourceType?: 'forecast' | 'calculated' | 'historical' | 'optimized';
   };
+  _forecast?: any;
+}
+
+export interface SiqsCalculationOptions {
+  useSingleHourSampling?: boolean;
+  targetHour?: number;
+  cacheDurationMins?: number;
+  includeMetadata?: boolean;
+  forecastDays?: number;
+  hourlyWeighting?: boolean;
+  useHistoricalData?: boolean;
+  useRealTimeData?: boolean;
+  anomalyDetection?: boolean;
+  includeForecast?: boolean;
+  reliability?: boolean;
+  adjustForLatitude?: boolean;
+}
+
+export interface SiqsComparisonResult {
+  score: number;
+  comparison: 'better' | 'worse' | 'similar';
+  percentDifference: number;
+  factors?: {
+    improved: string[];
+    worsened: string[];
+  };
+}
+
+export interface MoonPhaseInfo {
+  phase: number; // 0-1 normalized value
+  name: string;
+  illumination: number; // percentage 0-100
+  isGoodForAstronomy: boolean;
 }
 
 export interface MoonlessNightInfo {
@@ -63,26 +95,7 @@ export interface MoonlessNightInfo {
   astronomicalNightDuration: number;
 }
 
-export interface MoonPhaseInfo {
-  phase: number; // 0-1 normalized value
-  name: string;
-  illumination: number; // percentage 0-100
-  isGoodForAstronomy: boolean;
-}
-
-// Add SiqsCalculationOptions interface
-export interface SiqsCalculationOptions {
-  anomalyDetection?: boolean;
-  includeMetadata?: boolean;
-  includeForecast?: boolean;
-  reliability?: boolean;
-  adjustForLatitude?: boolean;
-  useSingleHourSampling?: boolean;
-  targetHour?: number;
-  cacheDurationMins?: number;
-}
-
-// Add interface for display options
+// Display options for SIQS UI components
 export interface SiqsDisplayOptions {
   skipCache?: boolean;
   useSingleHourSampling?: boolean;

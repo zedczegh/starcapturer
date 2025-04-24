@@ -66,7 +66,9 @@ export async function calculateRealTimeSiqs(
     const windSpeed = weatherData.windSpeed || 0;
     const temperature = weatherData.temperature || 15; // Default to 15°C if missing
     const precipitation = weatherData.precipitation || 0;
-    const clearSkyRate = (weatherData as WeatherDataWithClearSky).clearSkyRate || null; // Cast to access optional property
+    
+    // Cast to access optional property, safeguarding with default value
+    const clearSkyRate = (weatherData as WeatherDataWithClearSky).clearSkyRate || null;
     
     let effectiveCloudCover = cloudCover;
     let targetHourData: { hour: number; cloudCover: number } | null = null;
@@ -142,16 +144,20 @@ export async function calculateRealTimeSiqs(
       });
     }
     
+    // Create enhanced weather data object with additional properties
+    const enhancedWeatherData: WeatherDataWithClearSky = {
+      ...weatherData, 
+      clearSkyRate,
+      latitude,
+      longitude
+    };
+    
     // Build result object with metadata
     const result: SiqsResult = {
       siqs: siqsScore,
       isViable,
       factors,
-      weatherData: {
-        ...weatherData,
-        latitude,
-        longitude
-      } as WeatherDataWithClearSky,
+      weatherData: enhancedWeatherData,
       forecastData: forecastData || undefined
     };
     
