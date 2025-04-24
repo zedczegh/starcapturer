@@ -1,3 +1,4 @@
+
 /**
  * Clear sky rate utility functions with performance optimizations
  */
@@ -584,3 +585,4 @@ export function getBestMonths(
 export function clearCaches(): void {
   clearSkyCalculationCache.clear();
 }
+

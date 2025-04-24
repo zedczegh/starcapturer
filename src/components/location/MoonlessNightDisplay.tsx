@@ -4,7 +4,7 @@ import { CloudMoon, Sun, Moon, Calendar, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getMoonInfo, calculateMoonriseMoonsetTimes } from '@/services/realTimeSiqs/moonPhaseCalculator';
-import { calculateMoonlessNight } from '@/utils/weather/moonUtils';  // Changed function name here
+import { calculateMoonlessNightDuration } from '@/utils/weather/moonUtils';
 import {
   Tooltip,
   TooltipContent,
@@ -30,13 +30,13 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
   const { isGoodForAstronomy, name: moonPhaseName } = getMoonInfo();
   
   // Get moonless night information with detailed timing data
-  const nightInfo = calculateMoonlessNight(new Date(), latitude, longitude);  // Changed function name here
+  const nightInfo = calculateMoonlessNightDuration(latitude, longitude);
 
   // Get direct moonrise/moonset times as a fallback
   const directMoonTimes = useMemo(() => {
     return calculateMoonriseMoonsetTimes(latitude, longitude);
   }, [latitude, longitude]);
-
+  
   // Format time label and value with better alignment
   const TimeItem = ({ label, value }: { label: string; value: string }) => (
     <div className="flex justify-between items-center">
