@@ -77,11 +77,11 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center">
           <SiqsScoreBadge 
-            score={getSiqsScore(displaySiqs)}
+            score={displaySiqs} 
             compact={false} 
             loading={siqsLoading}
             isCertified={isCertified}
-            forceCertified={false}
+            forceCertified={false} // Don't force certified default scores
           />
         </div>
         <button 
