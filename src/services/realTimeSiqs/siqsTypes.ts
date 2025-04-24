@@ -25,6 +25,7 @@ export interface SiqsResult {
       score: number;
       issues: string[];
     };
+    targetHour?: number;
   };
 }
 
@@ -38,6 +39,7 @@ export interface WeatherDataWithClearSky {
   latitude: number;
   longitude: number;
   time?: string;
+  timestamp?: number | string; // Add timestamp property
   condition?: string;
   aqi?: number;
   _forecast?: any;

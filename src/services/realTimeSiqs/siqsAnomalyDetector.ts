@@ -1,3 +1,4 @@
+
 /**
  * Enhanced SIQS Anomaly Detector and Data Reliability Assessment
  * 
@@ -128,7 +129,11 @@ export function assessDataReliability(
   
   // Check if data is stale
   if (weatherData && weatherData.timestamp) {
-    const dataAge = Date.now() - new Date(weatherData.timestamp).getTime();
+    const currentTime = Date.now();
+    const dataTime = typeof weatherData.timestamp === 'string' ? 
+                    new Date(weatherData.timestamp).getTime() : 
+                    weatherData.timestamp;
+    const dataAge = currentTime - dataTime;
     const hoursSinceUpdate = dataAge / (1000 * 60 * 60);
     
     if (hoursSinceUpdate > 3) {

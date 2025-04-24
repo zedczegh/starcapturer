@@ -164,10 +164,13 @@ export async function calculateRealTimeSiqs(
           forecast: !!forecastData,
           clearSky: clearSkyRate !== null,
           lightPollution: true
-        },
-        targetHour: targetHourData?.hour,
-        bortleScale: normalizedBortleScale
+        }
       };
+      
+      // Add targetHour to metadata if available
+      if (useSingleHourSampling && targetHourData) {
+        result.metadata.targetHour = targetHourData.hour;
+      }
     }
     
     // Cache the result

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -37,21 +36,16 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const isMobile = useIsMobile();
   const certInfo = useMemo(() => getCertificationInfo(location), [location]);
 
-  // displayName: official/certified name (what you want as the MAIN title everywhere)
-  // location.name/chineseName: reverse geocoded/physical place name
   const { displayName } = useDisplayName({
     location,
     language,
     locationCounter: null
   });
 
-  // SWAP: mainName must always be the OFFICIAL/CERTIFIED name
   const mainName = displayName || "";
-  // smallName should be the reverse geocoded place name (if different)
   const smallName = (language === "zh"
     ? location.name
     : location.chineseName) || "";
-  // Show small name only if it exists and is NOT the same as displayName
   const showSmallName =
     smallName &&
     smallName !== mainName;
