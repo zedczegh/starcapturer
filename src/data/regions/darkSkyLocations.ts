@@ -563,5 +563,95 @@ export const darkSkyLocations: (LocationEntry & {
       fall: { clearSkyRate: 85, averageTemperature: 18 },
       winter: { clearSkyRate: 90, averageTemperature: 8 }
     }
+  },
+  {
+    name: "Brecon Beacons Dark Sky Reserve",
+    chineseName: "布雷肯比肯斯暗夜天空保护区",
+    coordinates: [51.9478, -3.3865],
+    bortleScale: 2.5,
+    radius: 35,
+    type: 'dark-site',
+    clearSkyRate: 52,
+    clearestMonths: ['Mar', 'Apr', 'Sep'],
+    annualPrecipitationDays: 170,
+    visibility: 'good',
+    seasonalTrends: {
+      spring: { clearSkyRate: 58, averageTemperature: 10 },
+      summer: { clearSkyRate: 48, averageTemperature: 17 },
+      fall: { clearSkyRate: 55, averageTemperature: 12 },
+      winter: { clearSkyRate: 45, averageTemperature: 5 }
+    }
+  },
+  {
+    name: "Galloway Forest Dark Sky Park",
+    chineseName: "加洛韦森林暗夜天空公园",
+    coordinates: [55.1135, -4.3584],
+    bortleScale: 2.0,
+    radius: 30,
+    type: 'dark-site',
+    clearSkyRate: 48,
+    clearestMonths: ['Mar', 'Apr', 'Sep'],
+    annualPrecipitationDays: 200,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 52, averageTemperature: 8 },
+      summer: { clearSkyRate: 45, averageTemperature: 15 },
+      fall: { clearSkyRate: 50, averageTemperature: 10 },
+      winter: { clearSkyRate: 42, averageTemperature: 3 }
+    }
+  },
+  {
+    name: "Kerry International Dark Sky Reserve",
+    chineseName: "克里国际暗夜天空保护区",
+    coordinates: [51.9427, -9.9839],
+    bortleScale: 2.0,
+    radius: 35,
+    type: 'dark-site',
+    clearSkyRate: 50,
+    clearestMonths: ['Apr', 'May', 'Sep'],
+    annualPrecipitationDays: 180,
+    visibility: 'excellent',
+    seasonalTrends: {
+      spring: { clearSkyRate: 55, averageTemperature: 10 },
+      summer: { clearSkyRate: 48, averageTemperature: 16 },
+      fall: { clearSkyRate: 52, averageTemperature: 12 },
+      winter: { clearSkyRate: 43, averageTemperature: 6 }
+    }
+  },
+  {
+    name: "Teide Observatory",
+    chineseName: "泰德天文台",
+    coordinates: [28.3004, -16.5098],
+    bortleScale: 1.0,
+    radius: 25,
+    type: 'dark-site',
+    clearSkyRate: 84,
+    clearestMonths: ['Jun', 'Jul', 'Aug', 'Sep'],
+    annualPrecipitationDays: 40,
+    visibility: 'exceptional',
+    seasonalTrends: {
+      spring: { clearSkyRate: 80, averageTemperature: 15 },
+      summer: { clearSkyRate: 90, averageTemperature: 22 },
+      fall: { clearSkyRate: 85, averageTemperature: 18 },
+      winter: { clearSkyRate: 75, averageTemperature: 10 }
+    }
+  },
+  {
+    name: "Mauna Kea Observatory",
+    chineseName: "莫纳克亚天文台",
+    coordinates: [19.8208, -155.4681],
+    bortleScale: 1.0,
+    radius: 30,
+    type: 'dark-site',
+    clearSkyRate: 86,
+    clearestMonths: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+    annualPrecipitationDays: 100,
+    visibility: 'exceptional',
+    seasonalTrends: {
+      spring: { clearSkyRate: 82, averageTemperature: 5 },
+      summer: { clearSkyRate: 90, averageTemperature: 8 },
+      fall: { clearSkyRate: 88, averageTemperature: 6 },
+      winter: { clearSkyRate: 80, averageTemperature: 2 }
+    }
   }
 ];
