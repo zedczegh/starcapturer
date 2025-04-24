@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
@@ -12,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import CommunityMap from "@/components/community/CommunityMap";
 import { Loader2 } from "@/components/ui/loader";
 import CommunityLocationsSkeleton from "@/components/community/CommunityLocationsSkeleton";
+import AstroSpotsLoadingSkeleton from "@/components/astro-spots/AstroSpotsLoadingSkeleton";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
@@ -23,6 +23,9 @@ const CommunityAstroSpots: React.FC = () => {
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
     staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
@@ -118,7 +121,7 @@ const CommunityAstroSpots: React.FC = () => {
         </h2>
 
         {isLoading ? (
-          <CommunityLocationsSkeleton />
+          <AstroSpotsLoadingSkeleton />
         ) : astrospots && astrospots.length > 0 ? (
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
             {astrospots.map((spot: any) => (
