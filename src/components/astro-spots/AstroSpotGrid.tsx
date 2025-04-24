@@ -66,9 +66,7 @@ const AstroSpotGrid: React.FC<AstroSpotGridProps> = ({
               name={spot.name}
               latitude={spot.latitude}
               longitude={spot.longitude}
-              siqs={realTimeSiqs[spot.id] !== undefined ? 
-                getSiqsScore(realTimeSiqs[spot.id]) : 
-                getSiqsScore(spot.siqs)}
+              siqs={realTimeSiqs[spot.id] !== undefined ? getSiqsScore(realTimeSiqs[spot.id]) : getSiqsScore(spot.siqs)}
               timestamp={spot.timestamp}
               isCertified={false}
             />

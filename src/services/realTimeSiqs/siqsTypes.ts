@@ -80,14 +80,11 @@ export interface MoonPhaseInfo {
   illumination: number;
   isNew?: boolean;
   isFull?: boolean;
-  isGoodForAstronomy?: boolean; // Added missing property
 }
 
 export interface MoonlessNightInfo {
   isGoodForAstro: boolean;
   moonPhase: number;
-  moonrise: string;
-  moonset: string;
   moonriseTime?: string;
   moonsetTime?: string;
   sunriseTime?: string;
@@ -96,12 +93,5 @@ export interface MoonlessNightInfo {
   hoursBetweenMoonsetAndSunrise?: number;
   hasMoonlessWindow?: boolean;
   moonlessWindowDuration?: number;
-  duration: number; // Added missing property
-  startTime: string; // Added missing property
-  endTime: string; // Added missing property
-  daysUntilNewMoon: number; // Added missing property
-  nextNewMoon?: string;
-  astronomicalNightStart?: string;
-  astronomicalNightEnd?: string;
-  astronomicalNightDuration?: number;
 }
+
