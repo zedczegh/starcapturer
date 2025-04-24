@@ -124,3 +124,4 @@ export function formatSiqsForDisplay(score: number | null): string {
   const normalizedScore = normalizeToSiqsScale(score);
   return normalizedScore.toFixed(1);
 }
+

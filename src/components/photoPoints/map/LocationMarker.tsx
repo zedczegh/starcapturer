@@ -133,6 +133,11 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
     }
   }, [navigate]);
 
+  // Ensure siqsScore is a number for the LocationPopupContent
+  const numericSiqsScore = typeof siqsScore === 'number' ? 
+    siqsScore : 
+    getSiqsScore(siqsScore);
+
   return (
     <>
       <RealTimeSiqsProvider
@@ -165,7 +170,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
         
         <LocationPopupContent
           location={location}
-          siqsScore={getSiqsScore(siqsScore)}
+          siqsScore={numericSiqsScore}
           siqsLoading={siqsLoading}
           displayName={displayName}
           isCertified={isCertified}
