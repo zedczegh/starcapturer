@@ -7,6 +7,7 @@ import { getMoonInfo, calculateMoonriseMoonsetTimes } from '@/services/realTimeS
 import { calculateMoonlessNight } from '@/utils/weather/moonUtils';  // Changed function name here
 import {
   Tooltip,
+  TooltipContent,
   TooltipProvider,
   TooltipTrigger 
 } from '@/components/ui/tooltip';
