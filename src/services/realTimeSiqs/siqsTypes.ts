@@ -42,12 +42,6 @@ export interface WeatherDataWithClearSky extends WeatherData {
   latitude?: number;
   longitude?: number;
   timestamp?: string;
-  nighttimeCloudData?: {
-    average: number;
-    timeRange?: string;
-    sourceType?: 'forecast' | 'calculated' | 'historical' | 'optimized';
-  };
-  _forecast?: any;
 }
 
 export interface SiqsCalculationOptions {
@@ -59,10 +53,6 @@ export interface SiqsCalculationOptions {
   hourlyWeighting?: boolean;
   useHistoricalData?: boolean;
   useRealTimeData?: boolean;
-  anomalyDetection?: boolean;
-  includeForecast?: boolean;
-  reliability?: boolean;
-  adjustForLatitude?: boolean;
 }
 
 export interface SiqsComparisonResult {
@@ -73,31 +63,4 @@ export interface SiqsComparisonResult {
     improved: string[];
     worsened: string[];
   };
-}
-
-export interface MoonPhaseInfo {
-  phase: number; // 0-1 normalized value
-  name: string;
-  illumination: number; // percentage 0-100
-  isGoodForAstronomy: boolean;
-}
-
-export interface MoonlessNightInfo {
-  duration: number; // in hours
-  startTime: string;
-  endTime: string;
-  moonrise: Date | string;
-  moonset: Date | string;
-  nextNewMoon: string;
-  daysUntilNewMoon: number;
-  astronomicalNightStart: string;
-  astronomicalNightEnd: string;
-  astronomicalNightDuration: number;
-}
-
-// Display options for SIQS UI components
-export interface SiqsDisplayOptions {
-  skipCache?: boolean;
-  useSingleHourSampling?: boolean;
-  targetHour?: number;
 }
