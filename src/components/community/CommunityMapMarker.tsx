@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
@@ -14,7 +13,6 @@ import { getSiqsScore } from '@/utils/siqsHelpers';
 function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.DivIcon {
   const size = isMobile ? (isHovered ? 28 : 20) : (isHovered ? 32 : 26);
   
-  // Create the HTML for the icon, but we'll render the actual telescope SVG in the DOM
   return L.divIcon({
     className: "community-marker",
     iconSize: [size, size],
@@ -55,7 +53,6 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState<boolean>(false);
   
-  // Handler for SIQS calculation results
   const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(siqs);
     setLoadingSiqs(loading);
@@ -65,12 +62,14 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     if (onMarkerClick) {
       onMarkerClick(spot);
     } else {
-      // Navigate to the astro spot page
       navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } });
     }
   };
 
-  // Use onClick directly with Marker (not eventHandlers which was causing the error)
+  const spotSiqsScore = realTimeSiqs !== null ? 
+    getSiqsScore(realTimeSiqs) : 
+    getSiqsScore(spot.siqs);
+
   return (
     <Marker
       position={[spot.latitude, spot.longitude]}
@@ -84,15 +83,13 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             {spot.latitude.toFixed(4)}, {spot.longitude.toFixed(4)}
           </div>
           
-          {/* SIQS Score Display */}
           <div className="flex items-center mb-2">
             <SiqsScoreBadge 
-              score={realTimeSiqs !== null ? getSiqsScore(realTimeSiqs) : getSiqsScore(spot.siqs)} 
+              score={spotSiqsScore} 
               loading={loadingSiqs} 
             />
           </div>
           
-          {/* View Profile Button */}
           <Button 
             size="sm" 
             className="w-full text-xs flex items-center justify-center gap-1 mt-1"
@@ -105,7 +102,6 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             View Profile
           </Button>
           
-          {/* Hidden SIQS Provider Component */}
           <RealTimeSiqsProvider
             isVisible={true}
             latitude={spot.latitude}

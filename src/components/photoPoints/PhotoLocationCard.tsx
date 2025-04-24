@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -130,6 +129,8 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   }, [realTimeSiqs, isCertified, location.siqs]);
 
   const effectiveIsVisible = isCertified || isVisible;
+  
+  const locationSiqsScore = getSiqsScore(location.siqs);
 
   return (
     <VisibilityObserver onVisibilityChange={setIsVisible}>
@@ -147,7 +148,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
             isVisible={effectiveIsVisible}
             isCertified={isCertified}
             siqsConfidence={siqsConfidence}
-            locationSiqs={getSiqsScore(location.siqs)}
+            locationSiqs={locationSiqsScore}
           />
         </div>
         <LocationInfo
