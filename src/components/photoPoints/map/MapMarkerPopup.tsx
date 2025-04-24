@@ -81,7 +81,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
             compact={false} 
             loading={siqsLoading}
             isCertified={isCertified}
-            forceCertified={false} // Don't force certified default scores
+            forceCertified={false} 
           />
         </div>
         <button 
