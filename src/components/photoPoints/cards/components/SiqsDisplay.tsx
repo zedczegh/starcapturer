@@ -2,7 +2,6 @@
 import React from 'react';
 import { useMemo } from 'react';
 import SiqsScoreBadge from '../SiqsScoreBadge';
-import { normalizeToSiqsScale } from '@/utils/siqsHelpers';
 
 interface SiqsDisplayProps {
   realTimeSiqs: number | null;
@@ -32,40 +31,23 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
     if (locationSiqs && locationSiqs > 0) {
       return false;
     }
-    // Only show loading for certified locations or explicitly visible ones
-    return (isCertified || isVisible) && loadingSiqs && !hasAttemptedLoad;
-  }, [isCertified, loadingSiqs, isVisible, realTimeSiqs, locationSiqs, hasAttemptedLoad]);
+    // Only show loading for certified locations when no score is available
+    return isCertified && isVisible && loadingSiqs;
+  }, [isCertified, loadingSiqs, isVisible, realTimeSiqs, locationSiqs]);
   
-  // Use the best available score, normalized to 0-10 scale
+  // Use the best available score
   const displayScore = useMemo(() => {
-    // First priority: real-time SIQS if available
     if (realTimeSiqs !== null && realTimeSiqs > 0) {
-      return normalizeToSiqsScale(realTimeSiqs);
+      return realTimeSiqs;
     }
-    
-    // Second priority: stored location SIQS if available
     if (locationSiqs && locationSiqs > 0) {
-      return normalizeToSiqsScale(locationSiqs);
+      return locationSiqs;
     }
-    
-    // No score available
+    if (isCertified) {
+      return locationSiqs && locationSiqs > 0 ? locationSiqs : null;
+    }
     return null;
-  }, [realTimeSiqs, locationSiqs]);
-  
-  // Calculate confidence level for display
-  const confidenceLevel = useMemo(() => {
-    // Higher confidence for real-time SIQS
-    if (realTimeSiqs !== null && realTimeSiqs > 0) {
-      return siqsConfidence;
-    }
-    
-    // Lower confidence for stored SIQS
-    if (locationSiqs && locationSiqs > 0) {
-      return isCertified ? 9 : 7;
-    }
-    
-    return 5;
-  }, [realTimeSiqs, locationSiqs, siqsConfidence, isCertified]);
+  }, [realTimeSiqs, locationSiqs, isCertified]);
 
   return (
     <SiqsScoreBadge 
@@ -74,7 +56,7 @@ const SiqsDisplay: React.FC<SiqsDisplayProps> = ({
       isCertified={isCertified}
       loading={showLoadingState}
       forceCertified={false}
-      confidenceScore={confidenceLevel}
+      confidenceScore={siqsConfidence}
     />
   );
 };

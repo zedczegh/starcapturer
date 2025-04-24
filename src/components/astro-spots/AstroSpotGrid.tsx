@@ -6,7 +6,6 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import LocationCard from "@/components/LocationCard";
 import MiniRemoveButton from "@/components/collections/MiniRemoveButton";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
-import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface AstroSpotGridProps {
   spots: SharedAstroSpot[];
@@ -66,7 +65,7 @@ const AstroSpotGrid: React.FC<AstroSpotGridProps> = ({
               name={spot.name}
               latitude={spot.latitude}
               longitude={spot.longitude}
-              siqs={realTimeSiqs[spot.id] !== undefined ? getSiqsScore(realTimeSiqs[spot.id]) : getSiqsScore(spot.siqs)}
+              siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
               timestamp={spot.timestamp}
               isCertified={false}
             />

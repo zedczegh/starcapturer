@@ -1,84 +1,31 @@
 
-/**
- * Configuration settings for SIQS caching system
- */
+// Cache configuration for SIQS calculator
 
-// Cache duration in milliseconds
-export const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
-
-// Cache cleanup interval
-export const AUTO_CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutes
-
-// Maximum cache entries
-export const MAX_CACHE_ENTRIES = 300;
+// Cache durations for different scenarios
+export const NIGHT_CACHE_DURATION = 20 * 60 * 1000; // 20 minutes at night
+export const DAY_CACHE_DURATION = 10 * 60 * 1000;  // 10 minutes during day
+export const AUTO_CLEANUP_INTERVAL = 5 * 60 * 1000; // Automatic cleanup every 5 minutes
 
 /**
- * Get a consistent location key format for caching
- * @param latitude Location latitude
- * @param longitude Location longitude
- * @returns Consistent string key for the location
+ * Determine if it's nighttime for cache duration purposes
  */
-export function getLocationKey(latitude: number, longitude: number): string {
-  // Use 4 decimal places for sufficient precision (~11m accuracy)
+export const isNighttime = (): boolean => {
+  const hour = new Date().getHours();
+  return hour >= 18 || hour < 8; // 6 PM to 8 AM
+};
+
+/**
+ * Get the appropriate cache duration based on time of day
+ */
+export const getCacheDuration = (): number => {
+  return isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
+};
+
+/**
+ * Generate a consistent cache key for a location
+ * @param latitude Latitude of the location
+ * @param longitude Longitude of the location
+ */
+export const getLocationKey = (latitude: number, longitude: number): string => {
   return `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-}
-
-/**
- * Get current cache duration in milliseconds
- * This is a function to allow for dynamic adjustments in the future
- */
-export function getCacheDuration(): number {
-  return CACHE_DURATION;
-}
-
-/**
- * Check if two locations are effectively the same for caching purposes
- * @param lat1 First location latitude
- * @param lon1 First location longitude
- * @param lat2 Second location latitude
- * @param lon2 Second location longitude
- * @returns True if locations should use the same cache key
- */
-export function areLocationsEquivalent(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): boolean {
-  // Using 4 decimal places comparison (approximately 11m precision)
-  return lat1.toFixed(4) === lat2.toFixed(4) && lon1.toFixed(4) === lon2.toFixed(4);
-}
-
-/**
- * Generate location ID suitable for routing and persistence
- * @param latitude Location latitude
- * @param longitude Location longitude
- * @returns Location ID string
- */
-export function generateLocationId(latitude: number, longitude: number): string {
-  return `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
-}
-
-/**
- * Extract coordinates from location ID
- * @param locationId Location ID string
- * @returns Coordinates object or null if invalid format
- */
-export function extractCoordinatesFromId(locationId: string): { latitude: number, longitude: number } | null {
-  if (!locationId.startsWith('loc-')) return null;
-  
-  try {
-    const parts = locationId.replace('loc-', '').split('-');
-    if (parts.length !== 2) return null;
-    
-    const latitude = parseFloat(parts[0]);
-    const longitude = parseFloat(parts[1]);
-    
-    if (isNaN(latitude) || isNaN(longitude)) return null;
-    
-    return { latitude, longitude };
-  } catch (error) {
-    console.error("Error extracting coordinates from ID:", error);
-    return null;
-  }
-}
+};

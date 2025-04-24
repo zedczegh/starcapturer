@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
-import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeSiqs/siqsCache';
+import { hasCachedSiqs, getCachedSiqs } from '@/services/realTimeSiqs/siqsCache';
 import { detectAndFixAnomalies, assessDataReliability } from '@/services/realTimeSiqs/siqsAnomalyDetector';
 import { WeatherDataWithClearSky } from '@/services/realTimeSiqs/siqsTypes';
 
@@ -11,13 +11,12 @@ interface RealTimeSiqsFetcherProps {
   latitude?: number;
   longitude?: number;
   bortleScale?: number;
-  onSiqsCalculated: (siqs: number | null, loading: boolean, confidence?: number) => void;
-  forceUpdate?: boolean;
+  onSiqsCalculated: (siqs: number | null, loading: boolean) => void;
 }
 
 // In-memory cache across component instances
-const siqsResultCache = new Map<string, {siqs: number, confidence: number, timestamp: number}>();
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+const siqsResultCache = new Map<string, {siqs: number, timestamp: number}>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const pendingCalculations = new Map<string, Promise<any>>();
 
 const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
@@ -26,59 +25,35 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
   latitude,
   longitude,
   bortleScale = 5,
-  onSiqsCalculated,
-  forceUpdate = false
+  onSiqsCalculated
 }) => {
   const [loading, setLoading] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
-  const mountedRef = useRef(true);
-  
-  // Reset timer when component unmounts
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
   
   useEffect(() => {
-    if (!showRealTimeSiqs || !isVisible || !latitude || !longitude) {
-      return;
-    }
-    
-    if (forceUpdate) {
-      // Clear cache for this location when force update is requested
-      const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}-${bortleScale}`;
-      siqsResultCache.delete(cacheKey);
-      pendingCalculations.delete(cacheKey);
-      console.log("Force updating SIQS data for:", cacheKey);
-    }
+    if (!showRealTimeSiqs || !isVisible || !latitude || !longitude) return;
     
     const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}-${bortleScale}`;
     const now = Date.now();
     
     // Check memory cache first (fastest)
     const memoCached = siqsResultCache.get(cacheKey);
-    if (memoCached && (now - memoCached.timestamp) < CACHE_DURATION && !forceUpdate) {
+    if (memoCached && (now - memoCached.timestamp) < CACHE_DURATION) {
       console.log("Using in-memory cached SIQS");
-      onSiqsCalculated(memoCached.siqs, false, memoCached.confidence);
+      onSiqsCalculated(memoCached.siqs, false);
       return;
     }
     
     // Then check persistent cache
-    if (hasCachedSiqs(latitude, longitude) && !forceUpdate) {
+    if (hasCachedSiqs(latitude, longitude)) {
       const cachedData = getCachedSiqs(latitude, longitude);
       if (cachedData && (now - new Date(cachedData.metadata?.calculatedAt || 0).getTime()) < CACHE_DURATION) {
         console.log("Using persistent cached SIQS");
-        
-        // Extract confidence score from metadata if available
-        const confidence = cachedData.metadata?.reliability?.score || 8;
-        
-        onSiqsCalculated(cachedData.siqs, false, confidence);
+        onSiqsCalculated(cachedData.siqs, false);
         
         // Update memory cache
         siqsResultCache.set(cacheKey, {
           siqs: cachedData.siqs,
-          confidence,
           timestamp: now
         });
         
@@ -87,13 +62,13 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
     }
 
     // Check if we should fetch fresh data
-    const shouldFetch = forceUpdate || now - lastFetchTimestamp > 30000; // Don't fetch too often
+    const shouldFetch = now - lastFetchTimestamp > CACHE_DURATION;
     
     if (shouldFetch) {
       console.log(`Fetching real-time SIQS for location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
       
       // Check if a calculation is already pending for these coordinates
-      if (pendingCalculations.has(cacheKey) && !forceUpdate) {
+      if (pendingCalculations.has(cacheKey)) {
         console.log("Reusing pending SIQS calculation");
         setLoading(true);
         onSiqsCalculated(null, true);
@@ -101,33 +76,18 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
         // Reuse the existing promise
         pendingCalculations.get(cacheKey)!
           .then((result) => {
-            if (!mountedRef.current) return;
-            
             if (result && result.siqs > 0) {
-              const confidence = result.metadata?.reliability?.score || 8;
-              onSiqsCalculated(result.siqs, false, confidence);
+              onSiqsCalculated(result.siqs, false);
               
               // Update cache
               siqsResultCache.set(cacheKey, {
                 siqs: result.siqs,
-                confidence,
                 timestamp: Date.now()
               });
-              
-              // Also update persistent cache
-              setSiqsCache(latitude, longitude, result);
             }
           })
-          .catch((error) => {
-            if (!mountedRef.current) return;
-            console.error("Error in pending SIQS calculation:", error);
-            onSiqsCalculated(null, false);
-          })
-          .finally(() => {
-            if (mountedRef.current) {
-              setLoading(false);
-            }
-          });
+          .catch(() => onSiqsCalculated(null, false))
+          .finally(() => setLoading(false));
           
         return;
       }
@@ -145,12 +105,9 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
         {
           useSingleHourSampling: true,
           targetHour: 1,
-          cacheDurationMins: 10,
-          includeMetadata: true
+          cacheDurationMins: 5
         }
       ).then(result => {
-        if (!mountedRef.current) return result;
-        
         if (result && result.siqs > 0) {
           const weatherData = result.weatherData || { 
             cloudCover: 0, 
@@ -172,64 +129,39 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
           
           let finalSiqs: number;
           if (reliability.reliable) {
-            finalSiqs = correctedResult.siqs > 10 ? 
-              correctedResult.siqs / 10 : correctedResult.siqs;
+            finalSiqs = correctedResult.siqs;
           } else {
             finalSiqs = correctedResult.siqs > 10 ? 
               correctedResult.siqs / 10 : correctedResult.siqs;
             finalSiqs *= (reliability.confidenceScore / 10);
           }
           
-          // Ensure SIQS is in the correct scale (0-10)
-          finalSiqs = finalSiqs > 10 ? finalSiqs / 10 : finalSiqs;
-          finalSiqs = Math.min(Math.max(finalSiqs, 0), 10);
-          
-          // Update persistent cache
-          const enhancedResult = {
-            ...correctedResult,
-            siqs: finalSiqs,
-            metadata: {
-              ...correctedResult.metadata,
-              calculatedAt: new Date().toISOString(),
-              reliability: {
-                score: reliability.confidenceScore,
-                issues: reliability.issues
-              }
-            }
-          };
-          
-          setSiqsCache(latitude, longitude, enhancedResult);
-          
           // Update memory cache
           siqsResultCache.set(cacheKey, {
             siqs: finalSiqs,
-            confidence: reliability.confidenceScore,
             timestamp: Date.now()
           });
           
-          onSiqsCalculated(finalSiqs, false, reliability.confidenceScore);
-          return enhancedResult;
+          onSiqsCalculated(finalSiqs, false);
+          return result;
         }
         
         onSiqsCalculated(0, false);
         return result;
       }).catch(error => {
-        if (!mountedRef.current) return null;
         console.error("Error fetching real-time SIQS:", error);
         onSiqsCalculated(null, false);
         throw error;
       }).finally(() => {
-        if (mountedRef.current) {
-          setLoading(false);
-          setLastFetchTimestamp(now);
-        }
+        setLoading(false);
+        setLastFetchTimestamp(now);
         pendingCalculations.delete(cacheKey);
       });
       
       // Store the promise to allow other components to reuse it
       pendingCalculations.set(cacheKey, calculationPromise);
     }
-  }, [latitude, longitude, showRealTimeSiqs, isVisible, bortleScale, onSiqsCalculated, lastFetchTimestamp, forceUpdate]);
+  }, [latitude, longitude, showRealTimeSiqs, isVisible, bortleScale, onSiqsCalculated, lastFetchTimestamp]);
 
   return null;
 };

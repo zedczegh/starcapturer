@@ -48,7 +48,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
       (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
   
   // Use our unified display SIQS function - no default scores for certified locations
-  const staticSiqs = getSiqsScore(location.siqs);
+  const staticSiqs = getSiqsScore(location);
   const displaySiqs = getDisplaySiqs({
     realTimeSiqs,
     staticSiqs,
@@ -77,7 +77,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center">
           <SiqsScoreBadge 
-            score={getSiqsScore(displaySiqs)}
+            score={displaySiqs} 
             compact={false} 
             loading={siqsLoading}
             isCertified={isCertified}

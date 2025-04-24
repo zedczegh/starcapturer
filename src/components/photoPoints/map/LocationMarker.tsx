@@ -165,11 +165,11 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
         
         <LocationPopupContent
           location={location}
-          siqsScore={getSiqsScore(siqsScore)}
+          siqsScore={siqsScore}
           siqsLoading={siqsLoading}
           displayName={displayName}
           isCertified={isCertified}
-          onViewDetails={handleViewDetails}
+          onViewDetails={handleViewDetails} // Use the correct navigation callback
         />
       </Marker>
     </>
