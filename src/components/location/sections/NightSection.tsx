@@ -7,11 +7,14 @@ import TimeItem from '../timeDisplay/TimeItem';
 interface NightSectionProps {
   astroNightStart: string;
   astroNightEnd: string;
-  duration: string;
+  duration: string | number; // Update type to accept both string and number
 }
 
 const NightSection = ({ astroNightStart, astroNightEnd, duration }: NightSectionProps) => {
   const { t } = useLanguage();
+  
+  // Convert duration to string if it's a number
+  const formattedDuration = typeof duration === 'number' ? duration.toString() : duration;
   
   return (
     <div className="space-y-1 border-b border-cosmic-700/30 pb-2">
@@ -27,7 +30,7 @@ const NightSection = ({ astroNightStart, astroNightEnd, duration }: NightSection
       
       <TimeItem 
         label={t('Duration', '持续时间')} 
-        value={`${duration} ${t('hrs', '小时')}`} 
+        value={`${formattedDuration} ${t('hrs', '小时')}`} 
       />
     </div>
   );
