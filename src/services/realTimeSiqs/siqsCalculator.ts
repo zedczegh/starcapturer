@@ -66,7 +66,7 @@ export async function calculateRealTimeSiqs(
     const windSpeed = weatherData.windSpeed || 0;
     const temperature = weatherData.temperature || 15; // Default to 15°C if missing
     const precipitation = weatherData.precipitation || 0;
-    const clearSkyRate = weatherData.clearSkyRate || null;
+    const clearSkyRate = (weatherData as WeatherDataWithClearSky).clearSkyRate || null; // Cast to access optional property
     
     let effectiveCloudCover = cloudCover;
     let targetHourData: { hour: number; cloudCover: number } | null = null;

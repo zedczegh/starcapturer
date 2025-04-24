@@ -48,7 +48,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
       (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
   
   // Use our unified display SIQS function - no default scores for certified locations
-  const staticSiqs = getSiqsScore(location);
+  const staticSiqs = getSiqsScore(location.siqs);
   const displaySiqs = getDisplaySiqs({
     realTimeSiqs,
     staticSiqs,

@@ -169,7 +169,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
           siqsLoading={siqsLoading}
           displayName={displayName}
           isCertified={isCertified}
-          onViewDetails={handleViewDetails} // Use the correct navigation callback
+          onViewDetails={handleViewDetails}
         />
       </Marker>
     </>
