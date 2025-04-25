@@ -1,7 +1,9 @@
-import React from "react";
+
+import React, { useEffect } from "react";
 import { useSiqsCalculatorState } from "./siqs/hooks/useSiqsCalculatorState";
 import { useLocationHandlers } from "./siqs/hooks/useLocationHandlers";
 import { useSIQSAdvancedSettings } from "./siqs/hooks/useSIQSAdvancedSettings";
+import { useLanguage } from "@/contexts/LanguageContext";
 import CalculatorContainer from "./siqs/calculator/CalculatorContainer";
 import RecommendationsSection from "./siqs/calculator/RecommendationsSection";
 import LocationSelector from "./siqs/LocationSelector";
@@ -26,6 +28,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
   noAutoLocationRequest = false,
   onSiqsCalculated
 }) => {
+  const { language } = useLanguage();
+  
   const {
     loading,
     statusMessage,
