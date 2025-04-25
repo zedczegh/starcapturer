@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { useRealTimeSiqs } from '@/hooks/siqs/useRealTimeSiqs';
 
 interface RealTimeSiqsProviderProps {
@@ -25,24 +25,44 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   forceUpdate = false
 }) => {
   const positionRef = useRef<string>('');
+  const lastCalculationRef = useRef<number>(0);
+  
+  // Configuration based on location type
+  const refreshInterval = isCertified ? 300000 : 900000; // 5 mins for certified, 15 for others
+  
   const { siqsScore, loading, calculateSiqs } = useRealTimeSiqs({
     skipCache: forceUpdate,
-    refreshInterval: isCertified ? 300000 : 900000 // 5 mins for certified, 15 for others
+    refreshInterval
   });
+  
+  // Callback for SIQS calculation
+  const performSiqsCalculation = useCallback(() => {
+    if (!latitude || !longitude) return;
+    
+    const now = Date.now();
+    const newPositionKey = `${latitude.toFixed(5)}-${longitude.toFixed(5)}`;
+    
+    // Skip if same position and not forced
+    if (positionRef.current === newPositionKey && !forceUpdate) {
+      // But still refresh if enough time has passed
+      if (now - lastCalculationRef.current < refreshInterval) {
+        return;
+      }
+    }
+    
+    positionRef.current = newPositionKey;
+    lastCalculationRef.current = now;
+    
+    calculateSiqs(latitude, longitude, bortleScale);
+  }, [latitude, longitude, bortleScale, calculateSiqs, forceUpdate, refreshInterval]);
   
   // Only calculate when visible and have coordinates
   useEffect(() => {
-    if (!isVisible || !latitude || !longitude) return;
-    
-    const newPositionKey = `${latitude.toFixed(5)}-${longitude.toFixed(5)}`;
-    if (positionRef.current === newPositionKey && !forceUpdate) return;
-    
-    positionRef.current = newPositionKey;
-    
-    calculateSiqs(latitude, longitude, bortleScale);
-  }, [isVisible, latitude, longitude, bortleScale, forceUpdate, calculateSiqs]);
-
-  // Notify parent of SIQS updates
+    if (!isVisible) return;
+    performSiqsCalculation();
+  }, [isVisible, performSiqsCalculation, forceUpdate]);
+  
+  // Notify parent of SIQS updates with confidence value
   useEffect(() => {
     onSiqsCalculated(
       siqsScore, 
@@ -50,7 +70,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       siqsScore ? (forceUpdate ? 9 : 7) : undefined
     );
   }, [siqsScore, loading, onSiqsCalculated, forceUpdate]);
-
+  
   return null;
 };
 

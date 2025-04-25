@@ -61,4 +61,27 @@ class SpotCacheService {
 }
 
 // Create singleton instance
-export const spotCacheService = new SpotCacheService();
+const spotCacheService = new SpotCacheService();
+
+// Export both the class and the singleton instance
+export { spotCacheService };
+
+// Export functions that match the expected interface in locationSpotService.ts
+export const getCachedSpots = (
+  centerLat: number,
+  centerLng: number,
+  radius: number,
+  limit: number
+): any[] | null => {
+  return spotCacheService.getCachedSpots(centerLat, centerLng, radius, limit);
+};
+
+export const cacheSpots = (
+  centerLat: number,
+  centerLng: number,
+  radius: number,
+  limit: number,
+  spots: any[]
+): void => {
+  spotCacheService.cacheSpots(centerLat, centerLng, radius, limit, spots);
+};
