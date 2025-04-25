@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -10,8 +10,8 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import CommunityMap from "@/components/community/CommunityMap";
 import { Loader2 } from "@/components/ui/loader";
-import CommunityLocationsSkeleton from "@/components/community/CommunityLocationsSkeleton";
 import AstroSpotsLoadingSkeleton from "@/components/astro-spots/AstroSpotsLoadingSkeleton";
+import useDebounce from "@/hooks/useDebounce";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
@@ -22,17 +22,21 @@ const CommunityAstroSpots: React.FC = () => {
   const { data: astrospots, isLoading } = useQuery({
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    refetchOnReconnect: true,
+    refetchInterval: 1000 * 60 * 15, // Refresh every 15 minutes
+    suspense: true
   });
 
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
-  const handleSiqsCalculated = (spotId: string, siqs: number | null, loading: boolean) => {
+  // Debounce SIQS updates to prevent too many re-renders on mobile
+  const debouncedHandleSiqsCalculated = useDebounce((spotId: string, siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(prev => ({
       ...prev,
       [spotId]: siqs
@@ -41,7 +45,7 @@ const CommunityAstroSpots: React.FC = () => {
       ...prev,
       [spotId]: loading
     }));
-  };
+  }, 300);
 
   const handleLocationUpdate = useCallback((lat: number, lng: number) => {
     console.log("Location updated:", lat, lng);
@@ -61,11 +65,11 @@ const CommunityAstroSpots: React.FC = () => {
     visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
   };
 
-  const handleCardClick = (id: string) => {
+  const handleCardClick = useCallback((id: string) => {
     navigate(`/astro-spot/${id}`, { 
       state: { from: 'community' } 
     });
-  };
+  }, [navigate]);
 
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>
@@ -98,78 +102,76 @@ const CommunityAstroSpots: React.FC = () => {
           </motion.p>
         </motion.div>
 
-        <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 380, minHeight: 275 }}>
-          {isLoading ? (
+        <Suspense fallback={
+          <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 380, minHeight: 275 }}>
             <div className="absolute inset-0 flex justify-center items-center bg-cosmic-900/20 backdrop-blur-sm">
               <Loader2 className="h-8 w-8 animate-spin text-primary/80" />
             </div>
-          ) : (
+          </div>
+        }>
+          <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 380, minHeight: 275 }}>
             <CommunityMap
               center={userLocation || DEFAULT_CENTER}
               locations={astrospots ?? []}
               hoveredLocationId={null}
-              isMobile={false}
+              isMobile={true}
               zoom={userLocation ? 8 : 3}
               onLocationUpdate={handleLocationUpdate}
             />
-          )}
-        </div>
+          </div>
+        </Suspense>
 
         <h2 className="font-bold text-xl mt-12 mb-5 flex items-center gap-2 text-gradient-blue">
           <Circle className="h-4 w-4 text-primary" />
           <span>{t("All Community Astrospots", "全部社区地点")}</span>
         </h2>
 
-        {isLoading ? (
-          <AstroSpotsLoadingSkeleton />
-        ) : astrospots && astrospots.length > 0 ? (
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-            {astrospots.map((spot: any) => (
-              <button
-                key={spot.id}
-                className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
-                tabIndex={0}
-                onClick={() => handleCardClick(spot.id)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    handleCardClick(spot.id);
-                  }
-                }}
-                aria-label={spot.name}
-                style={{ background: "none", padding: 0 }}
-              >
-                <div className="w-full h-full">
-                  <RealTimeSiqsProvider
-                    isVisible={true}
-                    latitude={spot.latitude}
-                    longitude={spot.longitude}
-                    bortleScale={spot.bortleScale}
-                    existingSiqs={spot.siqs}
-                    onSiqsCalculated={(siqs, loading) =>
-                      handleSiqsCalculated(spot.id, siqs, loading)
-                    }
-                  />
-                  <div className="transition-shadow group-hover:shadow-xl group-hover:ring-2 group-hover:ring-primary rounded-xl">
-                    <LocationCard
-                      id={spot.id}
-                      name={spot.name}
+        <Suspense fallback={<AstroSpotsLoadingSkeleton />}>
+          {isLoading ? (
+            <AstroSpotsLoadingSkeleton />
+          ) : astrospots && astrospots.length > 0 ? (
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+              {astrospots.map((spot: any) => (
+                <button
+                  key={spot.id}
+                  className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
+                  onClick={() => handleCardClick(spot.id)}
+                  aria-label={spot.name}
+                  style={{ background: "none", padding: 0 }}
+                >
+                  <div className="w-full h-full">
+                    <RealTimeSiqsProvider
+                      isVisible={true}
                       latitude={spot.latitude}
                       longitude={spot.longitude}
-                      siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
-                      timestamp={spot.timestamp}
-                      isCertified={false}
+                      bortleScale={spot.bortleScale}
+                      existingSiqs={spot.siqs}
+                      onSiqsCalculated={(siqs, loading) =>
+                        debouncedHandleSiqsCalculated(spot.id, siqs, loading)
+                      }
                     />
+                    <div className="transition-shadow group-hover:shadow-xl group-hover:ring-2 group-hover:ring-primary rounded-xl">
+                      <LocationCard
+                        id={spot.id}
+                        name={spot.name}
+                        latitude={spot.latitude}
+                        longitude={spot.longitude}
+                        siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                        timestamp={spot.timestamp}
+                        isCertified={false}
+                      />
+                    </div>
+                    <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />
                   </div>
-                  <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="w-full text-muted-foreground/70 text-center py-16">
-            {t("No community astrospots yet. Be the first to share!", "还没有社区观星点，快来分享吧！")}
-          </div>
-        )}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="w-full text-muted-foreground/70 text-center py-16">
+              {t("No community astrospots yet. Be the first to share!", "还没有社区观星点，快来分享吧！")}
+            </div>
+          )}
+        </Suspense>
       </div>
     </PhotoPointsLayout>
   );
