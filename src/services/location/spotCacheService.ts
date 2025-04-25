@@ -1,18 +1,21 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+// Cache service for storing and retrieving spot data
 
 const SPOT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 const spotCache = new Map<string, {
-  spots: SharedAstroSpot[],
+  spots: any[],
   timestamp: number
 }>();
 
+/**
+ * Get spots from cache if they exist and aren't expired
+ */
 export const getCachedSpots = (
   centerLat: number,
   centerLng: number,
   radius: number,
   limit: number
-): SharedAstroSpot[] | null => {
+): any[] | null => {
   const cacheKey = `spots-${centerLat.toFixed(2)}-${centerLng.toFixed(2)}-${radius}-${limit}`;
   const cachedSpots = spotCache.get(cacheKey);
   
@@ -24,12 +27,15 @@ export const getCachedSpots = (
   return null;
 };
 
+/**
+ * Cache spots for future use
+ */
 export const cacheSpots = (
   centerLat: number,
   centerLng: number,
   radius: number,
   limit: number,
-  spots: SharedAstroSpot[]
+  spots: any[]
 ): void => {
   const cacheKey = `spots-${centerLat.toFixed(2)}-${centerLng.toFixed(2)}-${radius}-${limit}`;
   spotCache.set(cacheKey, {
@@ -38,6 +44,16 @@ export const cacheSpots = (
   });
 };
 
+/**
+ * Clear the spot cache
+ */
 export const clearSpotCache = (): void => {
   spotCache.clear();
+};
+
+// Create a service object for easier imports
+export const spotCacheService = {
+  getCachedSpots,
+  cacheSpots,
+  clearSpotCache
 };
