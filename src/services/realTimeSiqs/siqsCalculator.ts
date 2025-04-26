@@ -1,4 +1,3 @@
-
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -15,8 +14,8 @@ import { findClimateRegion, getClimateAdjustmentFactor } from "./climateRegions"
 import { findClosestEnhancedLocation } from "./enhancedLocationData";
 import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
 import { extractSingleHourCloudCover } from "@/utils/weather/hourlyCloudCoverExtractor";
+import { clearSkyDataCollector } from '@/services/clearSky/clearSkyDataCollector';
 
-// Performance optimization: Reduce duplicate calculations with memoization
 const memoizedResults = new Map<string, {result: SiqsResult, timestamp: number}>();
 const MEMO_EXPIRY = 5 * 60 * 1000; // 5 minutes
 
@@ -75,33 +74,27 @@ export async function calculateRealTimeSiqs(
     return { siqs: 0, isViable: false };
   }
   
-  // Default options
   const {
     useSingleHourSampling = true,
     targetHour = 1, // Default to 1 AM for best astronomical viewing
     cacheDurationMins = 15
   } = options;
   
-  // Generate a cache key
   const cacheKey = `siqs-${latitude.toFixed(4)}-${longitude.toFixed(4)}-${bortleScale.toFixed(1)}`;
   
-  // Check memory cache first (fastest)
   const memoizedResult = memoizedResults.get(cacheKey);
   if (memoizedResult && (Date.now() - memoizedResult.timestamp) < MEMO_EXPIRY) {
     console.log("Using in-memory cached SIQS result");
     return memoizedResult.result;
   }
   
-  // Check persistent cache next
   if (hasCachedSiqs(latitude, longitude)) {
     const cachedData = getCachedSiqs(latitude, longitude);
     if (cachedData && 
         (Date.now() - new Date(cachedData.metadata?.calculatedAt || 0).getTime()) < cacheDurationMins * 60 * 1000) {
-      // Ensure cached score is normalized to 0-10 scale
       if (cachedData.siqs > 10) {
         cachedData.siqs = cachedData.siqs / 10;
       }
-      // Store in memory cache for even faster access next time
       memoizedResults.set(cacheKey, {
         result: cachedData,
         timestamp: Date.now()
@@ -111,14 +104,12 @@ export async function calculateRealTimeSiqs(
   }
   
   try {
-    // Use Promise.all for parallel API calls
     const [enhancedLocation, climateRegion, forecastData] = await Promise.all([
       findClosestEnhancedLocation(latitude, longitude),
       findClimateRegion(latitude, longitude),
       fetchForecastData({ latitude, longitude, days: 2 }).catch(() => null)
     ]);
     
-    // Only fetch these if needed and after initial forecast check
     const [weatherData, clearSkyData, pollutionData] = await Promise.all([
       fetchWeatherData({ latitude, longitude }),
       fetchClearSkyRate(latitude, longitude).catch(() => null),
@@ -141,7 +132,6 @@ export async function calculateRealTimeSiqs(
       console.warn("Could not get terrain-corrected Bortle scale:", e);
     }
     
-    // Prepare weather data with clear sky info
     const weatherDataWithClearSky: WeatherDataWithClearSky = {
       ...weatherData,
       clearSkyRate: clearSkyData?.annualRate || enhancedLocation?.clearSkyRate,
@@ -150,7 +140,6 @@ export async function calculateRealTimeSiqs(
       _forecast: forecastData
     };
     
-    // Apply single hour cloud cover sampling if enabled and forecast is available
     if (useSingleHourSampling && forecastData?.hourly) {
       const singleHourCloudCover = extractSingleHourCloudCover(forecastData, targetHour);
       
@@ -162,9 +151,7 @@ export async function calculateRealTimeSiqs(
           sourceType: 'optimized'
         };
       }
-    }
-    // Use traditional nighttime cloud data if available
-    else if (weatherData && 'nighttimeCloudData' in weatherData) {
+    } else if (weatherData && 'nighttimeCloudData' in weatherData) {
       const nighttimeData = weatherData.nighttimeCloudData as { 
         average?: number; 
         timeRange?: string; 
@@ -178,7 +165,6 @@ export async function calculateRealTimeSiqs(
       };
     }
     
-    // Validate and finalize cloud cover
     let finalCloudCover = weatherDataWithClearSky.cloudCover;
     if (weatherDataWithClearSky.nighttimeCloudData) {
       finalCloudCover = validateNighttimeCloudData(
@@ -190,7 +176,6 @@ export async function calculateRealTimeSiqs(
     const moonPhase = calculateMoonPhase();
     const seeingConditions = enhancedLocation?.averageVisibility === 'excellent' ? 2 : 3;
     
-    // Calculate SIQS using the weather data with appropriate cloud cover
     const siqsResult = await calculateSIQSWithWeatherData(
       {
         ...weatherDataWithClearSky,
@@ -202,7 +187,6 @@ export async function calculateRealTimeSiqs(
       forecastData
     );
     
-    // Apply adjustments to the raw score
     let adjustedScore = applyIntelligentAdjustments(
       siqsResult.score,
       weatherDataWithClearSky,
@@ -216,7 +200,6 @@ export async function calculateRealTimeSiqs(
       adjustedScore *= climateAdjustment;
     }
     
-    // Ensure score is always normalized to 0-10 scale
     adjustedScore = Math.min(10, Math.max(0, adjustedScore));
     if (adjustedScore > 10) {
       adjustedScore = adjustedScore / 10;
@@ -230,7 +213,6 @@ export async function calculateRealTimeSiqs(
       forecastData,
       factors: siqsResult.factors.map(factor => ({
         ...factor,
-        // Normalize any factor scores as well
         score: factor.score > 10 ? factor.score / 10 : factor.score
       })),
       metadata: {
@@ -247,10 +229,63 @@ export async function calculateRealTimeSiqs(
       }
     };
     
-    // Cache the result
-    setSiqsCache(latitude, longitude, result);
+    let hasObservationData = false;
+    try {
+      const localData = clearSkyDataCollector.calculateClearSkyRate(latitude, longitude, 20);
+      
+      if (localData && localData.confidence > 0.6) {
+        if (!weatherDataWithClearSky.clearSkyRate) {
+          weatherDataWithClearSky.clearSkyRate = localData.rate;
+          console.log(`Using local observation data for clear sky rate: ${localData.rate}%`);
+        } else {
+          weatherDataWithClearSky.clearSkyRate = 
+            Math.round(weatherDataWithClearSky.clearSkyRate * 0.7 + localData.rate * 0.3);
+          console.log(`Blended clear sky rate with observations: ${weatherDataWithClearSky.clearSkyRate}%`);
+        }
+        
+        const observations = clearSkyDataCollector.getObservationsForLocation(latitude, longitude, 5);
+        const recentObservations = observations.filter(
+          obs => new Date(obs.timestamp).getTime() > Date.now() - 12 * 60 * 60 * 1000
+        );
+        
+        if (recentObservations.length > 0) {
+          const avgCloudCover = recentObservations.reduce(
+            (sum, obs) => sum + obs.cloudCover, 0
+          ) / recentObservations.length;
+          
+          if (weatherDataWithClearSky.cloudCover !== undefined) {
+            weatherDataWithClearSky.cloudCover = 
+              Math.round(weatherDataWithClearSky.cloudCover * 0.6 + avgCloudCover * 0.4);
+          }
+          
+          hasObservationData = true;
+        }
+      }
+    } catch (error) {
+      console.warn("Error incorporating local observation data:", error);
+    }
     
-    // Add to memory cache
+    if (result.metadata) {
+      result.metadata.sources = {
+        ...result.metadata.sources,
+        observations: hasObservationData
+      };
+    }
+    
+    if (weatherDataWithClearSky.cloudCover !== undefined) {
+      try {
+        clearSkyDataCollector.recordStationData(
+          latitude, 
+          longitude,
+          weatherDataWithClearSky.cloudCover,
+          weatherDataWithClearSky.visibility || 100
+        );
+      } catch (error) {
+        console.warn("Error recording weather observation:", error);
+      }
+    }
+    
+    setSiqsCache(latitude, longitude, result);
     memoizedResults.set(cacheKey, {
       result,
       timestamp: Date.now()

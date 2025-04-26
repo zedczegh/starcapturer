@@ -1,120 +1,128 @@
-
-// Refactored to use new hooks and smaller components with improved loading
-import React, { useEffect, useRef } from "react";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { useLocationDataCache } from "@/hooks/useLocationData";
-import { useLocationNameTranslation } from "@/hooks/location/useLocationNameTranslation";
-import { prefetchLocationData, prefetchPopularLocations } from "@/lib/queryPrefetcher";
-import { useQueryClient } from "@tanstack/react-query";
+import React, { useEffect, useState } from "react";
+import { useParams, useLocation as useRouterLocation } from "react-router-dom";
+import { RotateCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import LocationDetailsLoading from "@/components/location/LocationDetailsLoading";
-import LocationErrorSection from "@/components/location/LocationErrorSection";
-import LocationDetailsMain from "@/components/location/LocationDetailsMain";
-import { useLocationDetailsLogic } from "@/hooks/location/useLocationDetailsLogic";
-import { toast } from "sonner";
-import { getRandomAstronomyTip } from "@/utils/astronomyTips"; 
-import NavBar from "@/components/NavBar";
+import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
+import LocationDetailsContent from "@/components/location/LocationDetailsContent";
+import { useLocationDetails } from "@/hooks/useLocationDetails";
+import { useToast } from "@/components/ui/use-toast";
+import { Loader2 } from "@/components/ui/loader";
+import { Button } from "@/components/ui/button";
+import { useWeatherDataIntegration } from "@/hooks/useWeatherDataIntegration";
+import ClimateDataContributor from "@/components/location/ClimateDataContributor";
 
-const LocationDetails = () => {
-  const { id } = useParams();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { setCachedData, getCachedData } = useLocationDataCache();
-  const { t, language } = useLanguage();
-  // Add a ref to track if the toast has been shown
-  const toastShownRef = useRef(false);
-  const initialLoadCompleteRef = useRef(false);
+const LocationDetails: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const { t } = useLanguage();
+  const { toast } = useToast();
+  const routerLocation = useRouterLocation();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Prefetch popular locations data when page loads
-  useEffect(() => {
-    if (!initialLoadCompleteRef.current) {
-      initialLoadCompleteRef.current = true;
-      // Prefetch popular locations to make navigation faster
-      prefetchPopularLocations(queryClient);
-    }
-  }, [queryClient]);
+  const { location, isLoading, error, refreshLocation } = useLocationDetails(id);
 
-  // New logic hook
   const {
-    locationData,
-    setLocationData,
-    statusMessage,
-    messageType,
-    setStatusMessage,
-    handleUpdateLocation,
-    isLoading,
-    loadingCurrentLocation,
-    setLoadingCurrentLocation
-  } = useLocationDetailsLogic({ id, location, navigate, t, setCachedData, getCachedData });
-
-  // Use the extracted hook for location name translation
-  useLocationNameTranslation({
-    locationData,
-    setLocationData,
-    setCachedData,
-    getCachedData
+    clearSkyData,
+    weatherData,
+    historicalData,
+    loading: weatherLoading,
+    fetching: weatherFetching,
+    refresh,
+    isCertifiedLocation
+  } = useWeatherDataIntegration(location?.latitude, location?.longitude, {
+    refreshInterval: isCertifiedLocation ? 1000 * 60 * 10 : 0,
+    includeHistoricalData: true
   });
 
-  // Show a random astronomy fact as a toast when this page opens
-  // Use the ref to ensure it only shows once
+  const clearSkyRate = clearSkyData?.annualRate || 0;
+  const monthlyRates = clearSkyData?.monthlyRates || {};
+  const clearestMonths = clearSkyData?.clearestMonths || [];
+
   useEffect(() => {
-    if (toastShownRef.current) return;
-    
-    const tip = getRandomAstronomyTip();
-    if (!tip) return;
-    
-    const tipText = language === "zh" ? tip[1] : tip[0];
-    
-    // Delay toast to avoid blocking initial render
-    const timer = setTimeout(() => {
-      toast.info(tipText, {
-        duration: 6000,
-        position: "bottom-right",
+    if (error) {
+      toast({
+        title: t("Error fetching location", "获取位置错误"),
+        description: t(
+          "Failed to retrieve location details. Please try again.",
+          "无法检索位置详细信息。请重试。"
+        ),
+        variant: "destructive",
       });
-      toastShownRef.current = true;
-    }, 1500);
-    
-    return () => clearTimeout(timer);
-  }, [language]);
-
-  // Reset the toast shown ref when the page is unmounted and remounted (navigation)
-  useEffect(() => {
-    return () => {
-      toastShownRef.current = false;
-    };
-  }, [id]);
-
-  // Preload data for the current location
-  useEffect(() => {
-    if (locationData?.latitude && locationData?.longitude) {
-      prefetchLocationData(queryClient, locationData.latitude, locationData.longitude);
     }
-  }, [locationData?.latitude, locationData?.longitude, queryClient]);
+  }, [error, t, toast]);
 
-  if (isLoading) {
-    return <LocationDetailsLoading />;
-  }
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        refreshLocation(),
+        refresh()
+      ]);
+      toast({
+        title: t("Location Refreshed", "位置已刷新"),
+        description: t(
+          "The location details have been updated.",
+          "位置详细信息已更新。"
+        ),
+      });
+    } catch (err) {
+      console.error("Error refreshing location:", err);
+      toast({
+        title: t("Refresh Failed", "刷新失败"),
+        description: t(
+          "Failed to refresh location details. Please try again.",
+          "无法刷新位置详细信息。请重试。"
+        ),
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   return (
-    <>
-      <NavBar />
-      {!locationData ? (
-        <LocationErrorSection 
-          onUseCurrentLocation={() => {}}
-          isLoading={loadingCurrentLocation}
+    <PhotoPointsLayout pageTitle={location?.name || t("Loading...", "加载中...")}>
+      <div className="max-w-5xl mx-auto px-4 pb-10">
+        <div className="pt-10 pb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <h1 className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-3xl md:text-4xl text-left drop-shadow tracking-tight">
+              {location?.name || t("Loading...", "加载中...")}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {location?.latitude}, {location?.longitude}
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={handleRefresh}
+            disabled={isLoading || isRefreshing}
+          >
+            {(isLoading || isRefreshing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <RotateCw className="h-4 w-4" />
+            {t("Refresh", "刷新")}
+          </Button>
+        </div>
+        
+        <LocationDetailsContent
+          location={location}
+          clearSkyRate={clearSkyRate}
+          monthlyRates={monthlyRates}
+          clearestMonths={clearestMonths}
         />
-      ) : (
-        <LocationDetailsMain
-          locationData={locationData}
-          setLocationData={setLocationData}
-          statusMessage={statusMessage}
-          messageType={messageType}
-          setStatusMessage={setStatusMessage}
-          handleUpdateLocation={handleUpdateLocation}
-        />
-      )}
-    </>
+        
+        {location && (
+          <div className="mt-8">
+            <ClimateDataContributor
+              latitude={location.latitude}
+              longitude={location.longitude}
+              locationName={location.name}
+            />
+          </div>
+        )}
+        
+      </div>
+    </PhotoPointsLayout>
   );
 };
 

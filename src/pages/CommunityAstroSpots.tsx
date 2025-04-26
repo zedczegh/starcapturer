@@ -1,9 +1,8 @@
-
 import React, { useState, useCallback, Suspense, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader, Star, Circle } from "lucide-react";
+import { Loader, Star, Circle, CloudSun } from "lucide-react";
 import LocationCard from "@/components/LocationCard";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
@@ -13,6 +12,7 @@ import CommunityMap from "@/components/community/CommunityMap";
 import { Loader2 } from "@/components/ui/loader";
 import AstroSpotsLoadingSkeleton from "@/components/astro-spots/AstroSpotsLoadingSkeleton";
 import { useDebouncedCallback } from "@/hooks/useDebounce";
+import ClimateDataContributor from "@/components/location/ClimateDataContributor";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
@@ -127,6 +127,37 @@ const CommunityAstroSpots: React.FC = () => {
     );
   }, [astrospots, isLoading, t, realTimeSiqs, handleCardClick, debouncedSiqsUpdate]);
 
+  // Add information about data contributions
+  const [contributionStats, setContributionStats] = useState({
+    totalLocations: 0,
+    totalObservations: 0
+  });
+  
+  // Get contribution stats
+  useEffect(() => {
+    try {
+      const storageKey = `clear-sky-observations`;
+      const storedData = localStorage.getItem(storageKey);
+      
+      if (storedData) {
+        const observations = JSON.parse(storedData);
+        const locationCount = Object.keys(observations).length;
+        
+        let observationCount = 0;
+        Object.values(observations).forEach((locationData: any) => {
+          observationCount += locationData.length;
+        });
+        
+        setContributionStats({
+          totalLocations: locationCount,
+          totalObservations: observationCount
+        });
+      }
+    } catch (error) {
+      console.error("Error retrieving contribution stats:", error);
+    }
+  }, []);
+
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>
       <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
@@ -158,6 +189,23 @@ const CommunityAstroSpots: React.FC = () => {
           </motion.p>
         </motion.div>
 
+        {/* Add contribution info before the community map */}
+        {contributionStats.totalObservations > 0 && (
+          <motion.div 
+            className="mb-4 text-center text-sm"
+            variants={descVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <span className="text-blue-400 font-medium">
+              {t("Community contributions", "社区贡献")}: 
+            </span>
+            <span className="ml-1">
+              {contributionStats.totalObservations} {t("observations from", "来自")} {contributionStats.totalLocations} {t("locations", "地点")}
+            </span>
+          </motion.div>
+        )}
+
         <Suspense fallback={
           <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 380, minHeight: 275 }}>
             <div className="absolute inset-0 flex justify-center items-center bg-cosmic-900/20 backdrop-blur-sm">
@@ -183,6 +231,21 @@ const CommunityAstroSpots: React.FC = () => {
         </h2>
 
         {renderContent}
+        
+        {/* Add the climate data contributor at the bottom */}
+        {userLocation && (
+          <div className="mt-12 mb-6">
+            <h2 className="font-bold text-xl mb-5 flex items-center gap-2 text-gradient-blue">
+              <CloudSun className="h-4 w-4 text-primary" />
+              <span>{t("Contribute Location Data", "贡献位置数据")}</span>
+            </h2>
+            <ClimateDataContributor
+              latitude={userLocation[0]}
+              longitude={userLocation[1]}
+              locationName={t("My Current Location", "我的当前位置")}
+            />
+          </div>
+        )}
       </div>
     </PhotoPointsLayout>
   );
