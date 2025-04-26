@@ -10,7 +10,62 @@ import { Loader2 } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
 import { useWeatherDataIntegration } from "@/hooks/useWeatherDataIntegration";
 import ClimateDataContributor from "@/components/location/ClimateDataContributor";
-import { useLocationDetails as useLocationData } from "@/hooks/useLocationData"; // Using existing hook or you'll need to create it
+
+// Create a hook for location data since useLocationDetails doesn't exist
+const useLocationDetails = (id: string | undefined) => {
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      if (!id) {
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        // For now we'll simulate fetching location data
+        // In a real app, this would make an API call
+        setTimeout(() => {
+          // Parse location ID to get coordinates
+          // Format: loc-latitude-longitude
+          if (id.startsWith('loc-')) {
+            const parts = id.split('-');
+            if (parts.length >= 3) {
+              const latitude = parseFloat(parts[1]);
+              const longitude = parseFloat(parts[2]);
+              
+              setData({
+                id,
+                name: `Location at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+                latitude,
+                longitude
+              });
+            }
+          }
+          setIsLoading(false);
+        }, 500);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Unknown error'));
+        setIsLoading(false);
+      }
+    };
+    
+    fetchLocationData();
+  }, [id]);
+  
+  const refetch = async () => {
+    setIsLoading(true);
+    setError(null);
+    // Implement actual refresh logic here
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+  };
+  
+  return { data, isLoading, error, refetch };
+};
 
 const LocationDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,14 +76,10 @@ const LocationDetails: React.FC = () => {
   const [locationData, setLocationData] = useState<any>(null);
 
   // Use location data hook
-  const { data: location, isLoading, error, refetch: refreshLocation } = useLocationData(id);
+  const { data: location, isLoading, error, refetch: refreshLocation } = useLocationDetails(id);
 
-  // Update local state when location data is received
-  useEffect(() => {
-    if (location && !isLoading) {
-      setLocationData(location);
-    }
-  }, [location, isLoading]);
+  // Define isCertifiedLocation first to fix the error
+  const isCertifiedLocation = locationData?.certification || locationData?.isDarkSkyReserve;
 
   const {
     clearSkyData,
@@ -37,11 +88,17 @@ const LocationDetails: React.FC = () => {
     loading: weatherLoading,
     fetching: weatherFetching,
     refresh,
-    isCertifiedLocation
   } = useWeatherDataIntegration(locationData?.latitude, locationData?.longitude, {
     refreshInterval: isCertifiedLocation ? 1000 * 60 * 10 : 0,
     includeHistoricalData: true
   });
+
+  // Update local state when location data is received
+  useEffect(() => {
+    if (location && !isLoading) {
+      setLocationData(location);
+    }
+  }, [location, isLoading]);
 
   const clearSkyRate = clearSkyData?.annualRate || 0;
   const monthlyRates = clearSkyData?.monthlyRates || {};

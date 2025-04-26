@@ -1,3 +1,4 @@
+
 import { fetchClearSkyRate as fetchClearSkyRateFromApi } from './apiUtils';
 import { clearClearSkyRateCache as clearCache } from './cacheUtils';
 import { clearSkyDataCollector } from '@/services/clearSky/clearSkyDataCollector';
