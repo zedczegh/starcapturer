@@ -1,3 +1,34 @@
+/**
+ * Utility for terrain-corrected Bortle scale calculations
+ * Takes into account elevation and surrounding topography
+ */
+
+// Constants for terrain adjustments
+const ELEVATION_FACTOR = 0.18; // Higher elevations have better sky clarity (increased from 0.15)
+const MOUNTAIN_CORRECTION = 0.9; // Mountains block light pollution from cities (increased from 0.8)
+const ELEVATION_THRESHOLD = 800; // Meters above which terrain is considered mountainous
+const TYPICAL_CITY_LIGHT_RADIUS = 30; // Km that city light pollution typically extends
+
+/**
+ * Cache to store recent terrain-corrected Bortle scale values
+ * Key: latitude-longitude, Value: correction data
+ */
+const terrainCorrectionCache = new Map<string, {
+  bortleScale: number;
+  confidence: 'high' | 'medium' | 'low';
+  timestamp: number;
+  elevation?: number;
+  terrain?: string;
+}>();
+
+/**
+ * Get terrain-corrected Bortle scale based on location
+ * @param latitude Latitude of the location
+ * @param longitude Longitude of the location
+ * @param locationName Optional location name for additional context
+ * @returns Corrected Bortle scale or null if correction not possible
+ */
+import { estimateBortleScaleByLocation } from '@/utils/locationUtils';
 
 /**
  * Utility for terrain-corrected Bortle scale calculations
@@ -155,7 +186,6 @@ async function getBaseBortleScale(
     
     // Fall back to estimation based on location name if API fails
     if (locationName) {
-      const { estimateBortleScaleByLocation } = await import('@/utils/locationUtils');
       return estimateBortleScaleByLocation(locationName, latitude, longitude);
     }
   } catch (error) {

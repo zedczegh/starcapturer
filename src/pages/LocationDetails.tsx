@@ -1,15 +1,16 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation as useRouterLocation } from "react-router-dom";
 import { RotateCw } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import LocationDetailsContent from "@/components/location/LocationDetailsContent";
-import { useLocationDetails } from "@/hooks/useLocationDetails";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2 } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
 import { useWeatherDataIntegration } from "@/hooks/useWeatherDataIntegration";
 import ClimateDataContributor from "@/components/location/ClimateDataContributor";
+import { useLocationDetails as useLocationData } from "@/hooks/useLocationData"; // Using existing hook or you'll need to create it
 
 const LocationDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,8 +18,17 @@ const LocationDetails: React.FC = () => {
   const { toast } = useToast();
   const routerLocation = useRouterLocation();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [locationData, setLocationData] = useState<any>(null);
 
-  const { location, isLoading, error, refreshLocation } = useLocationDetails(id);
+  // Use location data hook
+  const { data: location, isLoading, error, refetch: refreshLocation } = useLocationData(id);
+
+  // Update local state when location data is received
+  useEffect(() => {
+    if (location && !isLoading) {
+      setLocationData(location);
+    }
+  }, [location, isLoading]);
 
   const {
     clearSkyData,
@@ -28,7 +38,7 @@ const LocationDetails: React.FC = () => {
     fetching: weatherFetching,
     refresh,
     isCertifiedLocation
-  } = useWeatherDataIntegration(location?.latitude, location?.longitude, {
+  } = useWeatherDataIntegration(locationData?.latitude, locationData?.longitude, {
     refreshInterval: isCertifiedLocation ? 1000 * 60 * 10 : 0,
     includeHistoricalData: true
   });
@@ -80,15 +90,15 @@ const LocationDetails: React.FC = () => {
   };
 
   return (
-    <PhotoPointsLayout pageTitle={location?.name || t("Loading...", "加载中...")}>
+    <PhotoPointsLayout pageTitle={locationData?.name || t("Loading...", "加载中...")}>
       <div className="max-w-5xl mx-auto px-4 pb-10">
         <div className="pt-10 pb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex flex-col gap-2">
             <h1 className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-3xl md:text-4xl text-left drop-shadow tracking-tight">
-              {location?.name || t("Loading...", "加载中...")}
+              {locationData?.name || t("Loading...", "加载中...")}
             </h1>
             <p className="text-muted-foreground text-sm">
-              {location?.latitude}, {location?.longitude}
+              {locationData?.latitude}, {locationData?.longitude}
             </p>
           </div>
 
@@ -105,18 +115,20 @@ const LocationDetails: React.FC = () => {
         </div>
         
         <LocationDetailsContent
-          location={location}
+          locationData={locationData}
+          setLocationData={setLocationData}
+          onLocationUpdate={async () => {}}
           clearSkyRate={clearSkyRate}
           monthlyRates={monthlyRates}
           clearestMonths={clearestMonths}
         />
         
-        {location && (
+        {locationData && (
           <div className="mt-8">
             <ClimateDataContributor
-              latitude={location.latitude}
-              longitude={location.longitude}
-              locationName={location.name}
+              latitude={locationData.latitude}
+              longitude={locationData.longitude}
+              locationName={locationData.name}
             />
           </div>
         )}

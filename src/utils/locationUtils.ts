@@ -79,3 +79,105 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
 function deg2rad(deg: number): number {
   return deg * (Math.PI/180);
 }
+
+/**
+ * Find the closest known location to a set of coordinates
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Closest known location with distance
+ */
+export function findClosestKnownLocation(latitude: number, longitude: number): { 
+  name: string; 
+  bortleScale?: number;
+  distance: number;
+} {
+  // Default location if no known locations are found
+  const defaultLocation = {
+    name: "Unknown Location",
+    distance: 999999
+  };
+  
+  try {
+    // This is a placeholder for a real implementation that would query a database
+    // In a real implementation, you would search through known locations
+    // For now, we'll return a default value
+    return defaultLocation;
+  } catch (error) {
+    console.error("Error finding closest known location:", error);
+    return defaultLocation;
+  }
+}
+
+/**
+ * Estimate Bortle scale based on location name and coordinates
+ * @param locationName Name of the location
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Estimated Bortle scale (1-9)
+ */
+export function estimateBortleScaleByLocation(
+  locationName: string,
+  latitude?: number,
+  longitude?: number
+): number {
+  // Default to moderate light pollution
+  let estimated = 4;
+  
+  // Check for keywords in the location name
+  const name = locationName.toLowerCase();
+  
+  // Common keywords for dark sky locations
+  if (name.includes('national park') || 
+      name.includes('reserve') || 
+      name.includes('wilderness') ||
+      name.includes('forest') ||
+      name.includes('mountains') ||
+      name.includes('mountain range')) {
+    estimated = 3;
+  }
+  
+  // Very dark locations
+  if (name.includes('dark sky') || 
+      name.includes('stargazing') || 
+      name.includes('observatory')) {
+    estimated = 2;
+  }
+  
+  // Urban keywords
+  if (name.includes('city') ||
+      name.includes('downtown') ||
+      name.includes('metro')) {
+    estimated = 7;
+  }
+  
+  // Major cities
+  if (name.includes('beijing') ||
+      name.includes('shanghai') ||
+      name.includes('new york') ||
+      name.includes('tokyo') ||
+      name.includes('london') ||
+      name.includes('los angeles') ||
+      name.includes('hong kong')) {
+    estimated = 8;
+  }
+  
+  // Rural keywords
+  if (name.includes('village') ||
+      name.includes('rural') ||
+      name.includes('countryside')) {
+    estimated = 4;
+  }
+  
+  // Adjust based on latitude/longitude if available
+  if (latitude !== undefined && longitude !== undefined) {
+    // Very remote areas (far from equator)
+    if (Math.abs(latitude) > 60) {
+      estimated = Math.max(1, estimated - 2);
+    }
+    
+    // Adjust for known dark sky regions
+    // This is a simple placeholder for a more complex implementation
+  }
+  
+  return estimated;
+}

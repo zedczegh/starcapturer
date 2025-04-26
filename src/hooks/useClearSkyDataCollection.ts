@@ -44,7 +44,10 @@ export function useClearSkyDataCollection({
     try {
       // Extract cloud cover and visibility
       const cloudCover = weatherData.cloudCover || 0;
-      const visibility = weatherData.visibility || 100;
+      // Use visibility if available, otherwise calculate from cloud cover
+      const visibility = weatherData.visibility !== undefined 
+        ? weatherData.visibility 
+        : (100 - (cloudCover * 0.8)); // Estimate visibility inversely to cloud cover
       
       // Record station data
       clearSkyDataCollector.recordStationData(

@@ -1,4 +1,3 @@
-
 import React, { memo, Suspense, useEffect, useState } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import LocationContentLoader from "./LocationContentLoader";
@@ -16,13 +15,19 @@ interface LocationDetailsContentProps {
   setLocationData: (data: any) => void;
   onLocationUpdate: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
   showFaultedMessage?: boolean;
+  clearSkyRate?: number;
+  monthlyRates?: Record<string, number>;
+  clearestMonths?: string[];
 }
 
 const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   locationData,
   setLocationData,
   onLocationUpdate,
-  showFaultedMessage = false
+  showFaultedMessage = false,
+  clearSkyRate,
+  monthlyRates,
+  clearestMonths
 }) => {
   const { t } = useLanguage();
   const [contentVisible, setContentVisible] = useState(false);
