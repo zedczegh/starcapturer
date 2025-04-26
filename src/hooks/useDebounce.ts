@@ -1,4 +1,5 @@
 
+import { useEffect, useRef, useState } from 'react';
 import useEnhancedDebounce from './useEnhancedDebounce';
 
 /**
@@ -17,5 +18,33 @@ function useDebounce<T>(value: T, delay: number = 500): T {
     inputBasedTiming: true
   });
 }
+
+/**
+ * A utility that creates a debounced function
+ * This is useful when you need to debounce a callback function rather than a value
+ * 
+ * @param fn The function to debounce
+ * @param delay The delay in milliseconds
+ * @returns A debounced version of the function
+ */
+export const useDebouncedCallback = <T extends (...args: any[]) => any>(
+  fn: T,
+  delay: number = 500
+): T => {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  const debouncedFn = useRef((...args: Parameters<T>) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      fn(...args);
+      timeoutRef.current = null;
+    }, delay);
+  }).current as T;
+  
+  return debouncedFn;
+};
 
 export default useDebounce;

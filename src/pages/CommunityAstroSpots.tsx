@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, Suspense, useMemo } from "react";
+import React, { useState, useCallback, Suspense, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 import CommunityMap from "@/components/community/CommunityMap";
 import { Loader2 } from "@/components/ui/loader";
 import AstroSpotsLoadingSkeleton from "@/components/astro-spots/AstroSpotsLoadingSkeleton";
-import useDebounce from "@/hooks/useDebounce";
+import { useDebouncedCallback } from "@/hooks/useDebounce";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
@@ -35,8 +35,8 @@ const CommunityAstroSpots: React.FC = () => {
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
-  // Create debounced function using useCallback to ensure it's stable
-  const debouncedSiqsUpdate = useDebounce((spotId: string, siqs: number | null, loading: boolean) => {
+  // Create a debounced update function using the new useDebouncedCallback hook
+  const debouncedSiqsUpdate = useDebouncedCallback((spotId: string, siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(prev => ({
       ...prev,
       [spotId]: siqs
