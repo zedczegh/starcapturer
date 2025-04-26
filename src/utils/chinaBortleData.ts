@@ -1,248 +1,117 @@
 
-import { chineseLocationDatabase } from '@/services/geocoding/data/chineseLocationData';
-
 /**
- * Checks if coordinates are within Chinese boundaries
- * More accurate version that includes special administrative regions
+ * China-specific Bortle scale data
+ * 
+ * This module provides specialized Bortle scale estimation for locations in China,
+ * which often have unique light pollution characteristics.
  */
+
+// Detect if a location is within China's borders
 export function isInChina(latitude: number, longitude: number): boolean {
-  // General bounding box for mainland China, Taiwan, Hong Kong, and Macau
-  // Includes disputed territories for comprehensive coverage
-  if (
-    latitude >= 18.0 && latitude <= 53.6 &&
-    longitude >= 73.0 && longitude <= 135.0
-  ) {
-    // Exclude areas that are clearly not part of China
-    // Mongolia
-    if (latitude >= 41.5 && latitude <= 52.0 && 
-        longitude >= 87.6 && longitude <= 119.9 && 
-        !(latitude >= 47.5 && longitude >= 117.5)) {
-      return false;
-    }
-    
-    // Northern regions of other neighboring countries
-    if (latitude >= 45.0 && longitude <= 87.0) {
-      return false;
-    }
-    
-    return true;
-  }
-  
-  return false;
+  // Simple bounding box check for mainland China
+  return (
+    latitude >= 18 && latitude <= 53 &&
+    longitude >= 73 && longitude <= 135
+  );
+}
+
+// Lookup table for known cities in China with accurate Bortle measurements
+interface CityBortleData {
+  latitude: number;
+  longitude: number;
+  bortleScale: number;
+  name: string;
+  chineseName: string;
+  radius: number; // km
+}
+
+// Some major cities with their approximate Bortle scales
+const CHINA_CITIES: CityBortleData[] = [
+  { latitude: 39.9042, longitude: 116.4074, bortleScale: 9, name: "Beijing", chineseName: "北京", radius: 50 },
+  { latitude: 31.2304, longitude: 121.4737, bortleScale: 9, name: "Shanghai", chineseName: "上海", radius: 45 },
+  { latitude: 22.5431, longitude: 114.0579, bortleScale: 8.5, name: "Shenzhen", chineseName: "深圳", radius: 30 },
+  { latitude: 23.1291, longitude: 113.2644, bortleScale: 8.5, name: "Guangzhou", chineseName: "广州", radius: 35 },
+  { latitude: 30.5928, longitude: 114.3055, bortleScale: 8, name: "Wuhan", chineseName: "武汉", radius: 25 },
+  { latitude: 29.5516, longitude: 106.5478, bortleScale: 8, name: "Chongqing", chineseName: "重庆", radius: 30 },
+  { latitude: 28.2280, longitude: 112.9388, bortleScale: 7.5, name: "Changsha", chineseName: "长沙", radius: 20 },
+  { latitude: 34.2583, longitude: 108.9286, bortleScale: 7.5, name: "Xi'an", chineseName: "西安", radius: 20 },
+  { latitude: 43.8256, longitude: 87.6168, bortleScale: 7, name: "Urumqi", chineseName: "乌鲁木齐", radius: 15 },
+  { latitude: 36.6512, longitude: 101.7535, bortleScale: 6, name: "Xining", chineseName: "西宁", radius: 10 },
+  { latitude: 29.6500, longitude: 91.1000, bortleScale: 5, name: "Lhasa", chineseName: "拉萨", radius: 8 }
+];
+
+// Calculate the distance between two points using the Haversine formula
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return R * c;
 }
 
 /**
- * Identifies which region of China the coordinates are in
- * Enhanced for better geographical accuracy
- */
-export function getChineseRegion(latitude: number, longitude: number): string {
-  // Beijing region
-  if (latitude >= 39.4 && latitude <= 41.0 && 
-      longitude >= 115.7 && longitude <= 117.4) {
-    return 'Beijing';
-  }
-  
-  // Tianjin region
-  if (latitude >= 38.5 && latitude <= 40.2 && 
-      longitude >= 116.7 && longitude <= 118.0) {
-    return 'Tianjin';
-  }
-  
-  // Taiwan
-  if (latitude >= 21.9 && latitude <= 25.3 && 
-      longitude >= 120.0 && longitude <= 122.0) {
-    return 'Taiwan';
-  }
-  
-  // Hong Kong
-  if (latitude >= 22.1 && latitude <= 22.6 && 
-      longitude >= 113.8 && longitude <= 114.5) {
-    return 'Hong Kong';
-  }
-  
-  // Macau
-  if (latitude >= 22.1 && latitude <= 22.25 && 
-      longitude >= 113.5 && longitude <= 113.6) {
-    return 'Macau';
-  }
-  
-  // Tibet Autonomous Region
-  if (latitude >= 27.5 && latitude <= 36.5 && 
-      longitude >= 78.0 && longitude <= 99.0) {
-    return 'Tibet';
-  }
-  
-  // Xinjiang Uygur Autonomous Region
-  if (latitude >= 34.0 && latitude <= 49.0 && 
-      longitude >= 73.0 && longitude <= 96.0) {
-    return 'Xinjiang';
-  }
-  
-  // Inner Mongolia Autonomous Region
-  if (((latitude >= 37.0 && latitude <= 53.0 && 
-       longitude >= 97.0 && longitude <= 126.0) ||
-      (latitude >= 41.0 && latitude <= 46.0 && 
-       longitude >= 113.0 && longitude <= 119.0)) &&
-      !(latitude >= 44.0 && latitude <= 46.0 && 
-        longitude >= 124.0 && longitude <= 126.0)) {
-    return 'Inner Mongolia';
-  }
-  
-  // Heilongjiang Province
-  if (latitude >= 43.5 && latitude <= 53.5 && 
-      longitude >= 121.0 && longitude <= 135.0) {
-    return 'Heilongjiang';
-  }
-  
-  // Jilin Province
-  if (latitude >= 41.0 && latitude <= 46.0 && 
-      longitude >= 122.0 && longitude <= 131.0) {
-    return 'Jilin';
-  }
-  
-  // Liaoning Province
-  if (latitude >= 38.7 && latitude <= 43.0 && 
-      longitude >= 118.5 && longitude <= 125.5) {
-    return 'Liaoning';
-  }
-  
-  // Hebei Province
-  if (latitude >= 36.0 && latitude <= 42.5 && 
-      longitude >= 113.5 && longitude <= 119.5 &&
-      !(latitude >= 39.4 && latitude <= 41.0 && 
-        longitude >= 115.7 && longitude <= 117.4) && // Exclude Beijing
-      !(latitude >= 38.5 && latitude <= 40.2 && 
-        longitude >= 116.7 && longitude <= 118.0)) { // Exclude Tianjin
-    return 'Hebei';
-  }
-  
-  // General regions instead of specific provinces
-  // Northeast China
-  if (latitude >= 38.0 && latitude <= 53.5 && 
-      longitude >= 118.0 && longitude <= 135.0) {
-    return 'Northeast China';
-  }
-  
-  // North China
-  if (latitude >= 35.0 && latitude <= 42.0 && 
-      longitude >= 110.0 && longitude <= 120.0) {
-    return 'North China';
-  }
-  
-  // East China
-  if (latitude >= 24.0 && latitude <= 35.0 && 
-      longitude >= 114.0 && longitude <= 123.0) {
-    return 'East China';
-  }
-  
-  // South China
-  if (latitude >= 18.0 && latitude <= 26.0 && 
-      longitude >= 105.0 && longitude <= 117.0) {
-    return 'South China';
-  }
-  
-  // Central China
-  if (latitude >= 26.0 && latitude <= 36.0 && 
-      longitude >= 108.0 && longitude <= 116.0) {
-    return 'Central China';
-  }
-  
-  // Southwest China
-  if (latitude >= 21.0 && latitude <= 34.0 && 
-      longitude >= 97.0 && longitude <= 110.0) {
-    return 'Southwest China';
-  }
-  
-  // Northwest China
-  if (latitude >= 32.0 && latitude <= 42.0 && 
-      longitude >= 92.0 && longitude <= 108.0) {
-    return 'Northwest China';
-  }
-  
-  // Default
-  return 'China';
-}
-
-/**
- * Gets the Bortle scale for a specific city in China
- * Uses our enhanced database for more accurate results
+ * Get the Bortle scale for a known Chinese city based on precise coordinates
+ * 
+ * @param latitude Latitude coordinate
+ * @param longitude Longitude coordinate
+ * @returns Bortle scale if location is within a known city, null otherwise
  */
 export function getCityBortleScale(latitude: number, longitude: number): number | null {
-  if (!isInChina(latitude, longitude)) {
-    return null;
-  }
-  
-  // Try to find a close match in our database
-  const radius = 0.05; // Approximately 5km
-  for (const location of chineseLocationDatabase) {
-    const latDiff = Math.abs(location.latitude - latitude);
-    const lonDiff = Math.abs(location.longitude - longitude);
-    
-    if (latDiff < radius && lonDiff < radius && location.bortleScale) {
-      return location.bortleScale;
+  for (const city of CHINA_CITIES) {
+    const distance = calculateDistance(latitude, longitude, city.latitude, city.longitude);
+    if (distance <= city.radius) {
+      // For locations within the city, calculate a gradient based on distance from center
+      // City centers have higher light pollution
+      const distanceFactor = distance / city.radius; // 0 at center, 1 at edge
+      const bortleReduction = distanceFactor * 0.5; // Up to 0.5 reduction at edges
+      
+      return Math.max(1, city.bortleScale - bortleReduction);
     }
   }
   
-  // If not found in database, estimate based on region
-  const region = getChineseRegion(latitude, longitude);
-  
-  // Default Bortle scales for different regions
-  switch (region) {
-    case 'Beijing':
-      return 8;
-    case 'Tianjin':
-      return 8;
-    case 'Hong Kong':
-      return 8;
-    case 'Macau':
-      return 8;
-    case 'Tibet':
-      return 3;
-    case 'Xinjiang':
-      return 4;
-    case 'Inner Mongolia':
-      return 4;
-    case 'Heilongjiang':
-      return 5;
-    case 'Jilin':
-      return 5;
-    case 'Liaoning':
-      return 6;
-    case 'Hebei':
-      return 6;
-    case 'Northeast China':
-      return 5;
-    case 'North China':
-      return 6;
-    case 'East China':
-      return 7;
-    case 'South China':
-      return 6;
-    case 'Central China':
-      return 6;
-    case 'Southwest China':
-      return 5;
-    case 'Northwest China':
-      return 4;
-    default:
-      return 5;
-  }
+  return null; // Not within any known city
 }
 
 /**
- * Finds Bortle scale from city or district name
+ * Get additional information about a Chinese location including recommended
+ * viewing times and seasonal considerations
  */
-export function getBortleScaleFromName(name: string): number | null {
-  const location = chineseLocationDatabase.find(loc => 
-    loc.district === name || 
-    loc.nameEn === name || 
-    loc.pinyin === name.toLowerCase() ||
-    (loc.city.includes(name) && name.length >= 2)
-  );
+export function getChineseLocationInfo(latitude: number, longitude: number): {
+  bestTimeOfYear: string;
+  notes: string;
+  pollutionFactor: number;
+} {
+  // Default values
+  let bestTimeOfYear = "Winter (December-February)";
+  let notes = "Best viewing on clear nights away from urban areas.";
+  let pollutionFactor = 1.0;
   
-  if (location?.bortleScale) {
-    return location.bortleScale;
+  // Northern China: generally better winter viewing due to reduced air pollution
+  if (latitude > 35) {
+    bestTimeOfYear = "Late autumn to early spring";
+    notes = "Winter has clearest skies but cold temperatures. Check air quality reports before observing.";
+    pollutionFactor = 1.2; // Higher pollution impact in northern regions
+  } 
+  // Southern China: more affected by monsoon season
+  else if (latitude < 30) {
+    bestTimeOfYear = "October to March";
+    notes = "Avoid summer monsoon season (June-August) when humidity and cloud cover are high.";
+    pollutionFactor = 0.9; // Lower pollution impact in southern regions
   }
   
-  return null;
+  // Western regions: generally better viewing conditions
+  if (longitude < 105) {
+    notes += " Higher elevation areas offer significantly better transparency.";
+    pollutionFactor *= 0.8; // Western regions often have less industrial pollution
+  }
+  
+  return {
+    bestTimeOfYear,
+    notes,
+    pollutionFactor
+  };
 }

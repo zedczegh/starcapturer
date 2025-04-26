@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useWeatherDataIntegration } from "@/hooks/useWeatherDataIntegration";
 import ClimateDataContributor from "@/components/location/ClimateDataContributor";
 
-// Create a hook for location data since useLocationDetails doesn't exist
+// Create a hook for location data 
 const useLocationDetails = (id: string | undefined) => {
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,9 +78,6 @@ const LocationDetails: React.FC = () => {
   // Use location data hook
   const { data: location, isLoading, error, refetch: refreshLocation } = useLocationDetails(id);
 
-  // Define isCertifiedLocation first to fix the error
-  const isCertifiedLocation = locationData?.certification || locationData?.isDarkSkyReserve;
-
   const {
     clearSkyData,
     weatherData,
@@ -89,9 +86,12 @@ const LocationDetails: React.FC = () => {
     fetching: weatherFetching,
     refresh,
   } = useWeatherDataIntegration(locationData?.latitude, locationData?.longitude, {
-    refreshInterval: isCertifiedLocation ? 1000 * 60 * 10 : 0,
+    refreshInterval: locationData?.certification || locationData?.isDarkSkyReserve ? 1000 * 60 * 10 : 0,
     includeHistoricalData: true
   });
+
+  // Define isCertifiedLocation based on locationData
+  const isCertifiedLocation = locationData?.certification || locationData?.isDarkSkyReserve;
 
   // Update local state when location data is received
   useEffect(() => {

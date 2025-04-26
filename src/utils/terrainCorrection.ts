@@ -2,7 +2,7 @@
 import { fetchElevation } from '@/lib/api/elevation';
 import { memoize } from '@/utils/memoization';
 import { getBortleScale } from '@/services/bortleScaleService';
-import { locationUtils } from '@/utils/locationUtils';
+import { estimateBortleScaleByLocation } from '@/utils/locationUtils';
 
 // Constants for terrain-based corrections
 const ELEVATION_FACTOR = 0.05; // Correction per 100m of elevation

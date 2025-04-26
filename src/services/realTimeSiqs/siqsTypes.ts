@@ -40,7 +40,9 @@ export interface WeatherDataWithClearSky {
   time?: string;
   condition?: string;
   aqi?: number;
+  visibility?: number;
   _forecast?: any;
+  weatherCondition?: string | number;
   nighttimeCloudData?: {
     average: number;
     timeRange: string;

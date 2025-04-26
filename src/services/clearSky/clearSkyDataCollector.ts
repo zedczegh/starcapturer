@@ -1,253 +1,143 @@
+
 /**
  * Clear Sky Data Collector Service
  * 
- * Collects user observations and official weather station data to improve
- * the accuracy of clear sky predictions globally.
+ * Collects and processes user-contributed data about clear sky conditions
  */
-import { getLocationKey } from '@/utils/locationUtils';
-import { getClimateAdjustmentFactor } from '@/services/realTimeSiqs/climateRegions';
 
+import { getLocationKey } from '@/utils/locationUtils';
+
+// Define the structure of a user observation
 interface ClearSkyObservation {
   latitude: number;
   longitude: number;
-  timestamp: string;
-  cloudCover: number;
-  visibility: number;
-  source: 'user' | 'station' | 'satellite';
-  confidence: number;  // 0-1 scale
+  clearSkyRate: number;
+  observationDate: string;
+  reliability: number; // 0-1 scale 
+  userId?: string;
 }
 
-// In-memory cache for faster repeated access
-const recentObservationsCache = new Map<string, ClearSkyObservation[]>();
+// In-memory storage for observations
+const observations: ClearSkyObservation[] = [];
 
+// Calculate the distance between two coordinates in km
+function calculateDistance(
+  lat1: number, 
+  lon1: number, 
+  lat2: number, 
+  lon2: number
+): number {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  const d = R * c; // Distance in km
+  return d;
+}
+
+function deg2rad(deg: number): number {
+  return deg * (Math.PI/180);
+}
+
+// Exported service for clear sky data collection
 export const clearSkyDataCollector = {
-  /**
-   * Store a new observation in the local storage and memory cache
-   */
-  storeObservation(observation: ClearSkyObservation): void {
-    try {
-      // Generate location key for storage
-      const locationKey = getLocationKey(observation.latitude, observation.longitude, 0.1);
-      
-      // Store in local storage
-      const storageKey = `clear-sky-observations`;
-      const storedData = localStorage.getItem(storageKey);
-      const observations = storedData ? JSON.parse(storedData) : {};
-      
-      // Initialize location array if needed
-      if (!observations[locationKey]) {
-        observations[locationKey] = [];
-      }
-      
-      // Add new observation
-      observations[locationKey].push(observation);
-      
-      // Limit storage size (keep last 30 days of observations per location)
-      if (observations[locationKey].length > 30) {
-        observations[locationKey] = observations[locationKey]
-          .sort((a: ClearSkyObservation, b: ClearSkyObservation) => 
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-          .slice(0, 30);
-      }
-      
-      // Save back to storage
-      localStorage.setItem(storageKey, JSON.stringify(observations));
-      
-      // Update in-memory cache
-      if (!recentObservationsCache.has(locationKey)) {
-        recentObservationsCache.set(locationKey, []);
-      }
-      recentObservationsCache.get(locationKey)?.push(observation);
-      
-      console.log(`Stored clear sky observation for ${locationKey}`);
-      
-    } catch (error) {
-      console.error("Error storing clear sky observation:", error);
-    }
-  },
-
-  /**
-   * Record current conditions observation from user
-   */
-  recordUserObservation(
+  // Add a new observation
+  addObservation: (
     latitude: number,
     longitude: number,
-    cloudCover: number,
-    visibility: number
-  ): void {
+    clearSkyRate: number,
+    userId?: string
+  ): boolean => {
+    // Validate inputs
+    if (
+      latitude < -90 || latitude > 90 ||
+      longitude < -180 || longitude > 180 ||
+      clearSkyRate < 0 || clearSkyRate > 100
+    ) {
+      console.error("Invalid observation data");
+      return false;
+    }
+    
+    // Create observation
     const observation: ClearSkyObservation = {
       latitude,
       longitude,
-      timestamp: new Date().toISOString(),
-      cloudCover,  // 0-100 scale
-      visibility,  // 0-100 scale 
-      source: 'user',
-      confidence: 0.85  // User reports are given high confidence
+      clearSkyRate,
+      observationDate: new Date().toISOString(),
+      reliability: userId ? 0.9 : 0.6, // Higher reliability for logged-in users
+      userId
     };
     
-    this.storeObservation(observation);
-  },
-  
-  /**
-   * Record station/API weather data
-   */
-  recordStationData(
-    latitude: number,
-    longitude: number,
-    cloudCover: number,
-    visibility: number
-  ): void {
-    const observation: ClearSkyObservation = {
-      latitude,
-      longitude,
-      timestamp: new Date().toISOString(),
-      cloudCover,
-      visibility,
-      source: 'station',
-      confidence: 0.95  // Station data is highly reliable
-    };
+    // Store observation
+    observations.push(observation);
+    console.log(`Added clear sky observation: ${clearSkyRate}% at ${latitude}, ${longitude}`);
     
-    this.storeObservation(observation);
+    return true;
   },
   
-  /**
-   * Get stored observations for a location
-   */
-  getObservationsForLocation(
-    latitude: number,
-    longitude: number,
-    radiusKm: number = 10
-  ): ClearSkyObservation[] {
-    try {
-      // First try in-memory cache
-      const nearbyObservations: ClearSkyObservation[] = [];
-      const targetKey = getLocationKey(latitude, longitude, 0.1);
-      
-      if (recentObservationsCache.has(targetKey)) {
-        return recentObservationsCache.get(targetKey) || [];
-      }
-      
-      // If not in cache, try local storage
-      const storageKey = `clear-sky-observations`;
-      const storedData = localStorage.getItem(storageKey);
-      if (!storedData) return [];
-      
-      const observations = JSON.parse(storedData);
-      
-      // Find all observations within the radius
-      Object.keys(observations).forEach(locationKey => {
-        const [lat, lng] = locationKey.split('-').map(Number);
-        const distance = this.calculateDistance(latitude, longitude, lat, lng);
-        
-        if (distance <= radiusKm) {
-          nearbyObservations.push(...observations[locationKey]);
-        }
-      });
-      
-      return nearbyObservations;
-    } catch (error) {
-      console.error("Error retrieving clear sky observations:", error);
-      return [];
+  // Calculate clear sky rate for a location based on nearby observations
+  calculateClearSkyRate: (
+    latitude: number, 
+    longitude: number, 
+    radiusKm: number = 20
+  ): { rate: number; confidence: number; observations: number } | null => {
+    // Find relevant observations
+    const relevantObs = observations.filter(obs => 
+      calculateDistance(latitude, longitude, obs.latitude, obs.longitude) <= radiusKm
+    );
+    
+    if (relevantObs.length === 0) {
+      return null;
     }
-  },
-  
-  /**
-   * Calculate distance between two points in kilometers using Haversine formula
-   */
-  calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Earth radius in kilometers
-    const dLat = this.deg2rad(lat2 - lat1);
-    const dLon = this.deg2rad(lon2 - lon1);
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  },
-  
-  /**
-   * Convert degrees to radians
-   */
-  deg2rad(deg: number): number {
-    return deg * (Math.PI/180);
-  },
-  
-  /**
-   * Calculate average clear sky rate based on collected observations
-   */
-  calculateClearSkyRate(
-    latitude: number,
-    longitude: number,
-    radiusKm: number = 10
-  ): {rate: number, confidence: number} | null {
-    const observations = this.getObservationsForLocation(latitude, longitude, radiusKm);
-    if (observations.length === 0) return null;
-    
-    // Weight observations by recency and confidence
-    let totalWeight = 0;
-    let weightedSumClearSky = 0;
-    const now = new Date().getTime();
-    const oneDay = 24 * 60 * 60 * 1000;
-    
-    observations.forEach(obs => {
-      // Calculate recency weight - observations within last day are weighted higher
-      const obsDate = new Date(obs.timestamp).getTime();
-      const ageInDays = (now - obsDate) / oneDay;
-      const recencyWeight = Math.max(0.2, 1 - (ageInDays / 30)); // 0.2-1.0 range
-      
-      // Combine with confidence weight
-      const totalObsWeight = recencyWeight * obs.confidence;
-      
-      // Convert cloud cover to clear sky rate (100 - cloudCover)
-      const clearSkyRate = 100 - obs.cloudCover;
-      
-      weightedSumClearSky += clearSkyRate * totalObsWeight;
-      totalWeight += totalObsWeight;
-    });
-    
-    if (totalWeight === 0) return null;
     
     // Calculate weighted average
-    const avgClearSkyRate = weightedSumClearSky / totalWeight;
+    let totalWeight = 0;
+    let weightedSum = 0;
     
-    // Calculate confidence based on number of observations and their weights
-    const confidence = Math.min(0.95, 0.5 + (observations.length / 20) * 0.4 + (totalWeight / observations.length) * 0.1);
+    relevantObs.forEach(obs => {
+      const distance = calculateDistance(latitude, longitude, obs.latitude, obs.longitude);
+      const ageInDays = (Date.now() - new Date(obs.observationDate).getTime()) / (1000 * 60 * 60 * 24);
+      
+      // Weight by distance, age and reliability
+      const distanceWeight = Math.max(0, 1 - distance/radiusKm);
+      const ageWeight = Math.max(0.1, 1 - (ageInDays / 90)); // Reduce weight as observation ages
+      
+      const weight = distanceWeight * ageWeight * obs.reliability;
+      
+      totalWeight += weight;
+      weightedSum += obs.clearSkyRate * weight;
+    });
+    
+    if (totalWeight === 0) {
+      return null;
+    }
+    
+    const rate = weightedSum / totalWeight;
+    
+    // Calculate confidence based on number of observations and their distribution
+    const confidence = Math.min(
+      0.95, 
+      0.4 + (0.05 * Math.min(10, relevantObs.length))
+    );
     
     return {
-      rate: Math.round(avgClearSkyRate),
-      confidence
+      rate,
+      confidence,
+      observations: relevantObs.length
     };
   },
   
-  /**
-   * Export collected data for analysis
-   */
-  exportCollectedData(): string {
-    try {
-      const storageKey = `clear-sky-observations`;
-      const storedData = localStorage.getItem(storageKey);
-      if (!storedData) return JSON.stringify({});
-      
-      return storedData;
-    } catch (error) {
-      console.error("Error exporting clear sky data:", error);
-      return "{}";
-    }
+  // Get all observations for a specific user
+  getUserObservations: (userId: string): ClearSkyObservation[] => {
+    return observations.filter(obs => obs.userId === userId);
   },
   
-  /**
-   * Clear all stored observations
-   */
-  clearAllData(): void {
-    try {
-      localStorage.removeItem('clear-sky-observations');
-      recentObservationsCache.clear();
-      console.log("All clear sky observations cleared");
-    } catch (error) {
-      console.error("Error clearing clear sky observations:", error);
-    }
+  // For testing: clear all observations
+  clearObservations: (): void => {
+    observations.length = 0;
   }
 };
-
-export default clearSkyDataCollector;

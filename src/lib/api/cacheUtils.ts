@@ -1,86 +1,81 @@
 
 /**
- * Cache utility functions for API data
+ * Cache utilities for API data
  */
 
-// Cache duration constants
-const DEFAULT_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+// Cache TTL in milliseconds
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+// Check if cache is expired
+export function isCacheExpired(timestamp: number): boolean {
+  return Date.now() - timestamp > CACHE_TTL;
+}
 
 /**
- * Clear cached data for a specific key or cache group
- * @param cacheKey The specific cache key or prefix to clear
+ * Clear cache for a specific key pattern
  */
-export function clearCache(cacheKey: string): void {
+export function clearCache(keyPattern: string): void {
   try {
     // Get all localStorage keys
     const keys = Object.keys(localStorage);
     
-    // Filter keys that match the cache key or start with the cache key as a prefix
-    const matchingKeys = keys.filter(key => 
-      key === cacheKey || 
-      (cacheKey.endsWith('*') && key.startsWith(cacheKey.slice(0, -1))) || 
-      key.startsWith(`cache:${cacheKey}`)
-    );
+    // Filter keys that match the pattern
+    const matchingKeys = keys.filter(key => key.includes(keyPattern));
     
-    // Remove matching keys
+    // Remove matching items
     matchingKeys.forEach(key => localStorage.removeItem(key));
     
-    console.log(`Cleared ${matchingKeys.length} cache entries for: ${cacheKey}`);
+    console.log(`Cleared ${matchingKeys.length} cache items matching '${keyPattern}'`);
   } catch (error) {
     console.error("Error clearing cache:", error);
   }
 }
 
 /**
- * Clear cached data for a clear sky rate at specific coordinates
- * @param latitude Location latitude
- * @param longitude Location longitude
+ * Clear specific cache for clear sky rate data
  */
 export function clearClearSkyRateCache(latitude?: number, longitude?: number): void {
   if (latitude !== undefined && longitude !== undefined) {
-    const cacheKey = `clear-sky-${latitude.toFixed(2)}-${longitude.toFixed(2)}`;
-    clearCache(cacheKey);
-    return;
+    clearCache(`clear-sky-${latitude.toFixed(2)}-${longitude.toFixed(2)}`);
+  } else {
+    clearCache('clear-sky');
   }
-  
-  clearCache('clear-sky');
 }
 
 /**
- * Store data in cache with expiration
- * @param key Cache key
- * @param data Data to cache
- * @param duration Cache duration in milliseconds
+ * Set item with expiration
  */
-export function setCacheData<T>(key: string, data: T, duration: number = DEFAULT_CACHE_DURATION): void {
+export function setCacheItem(key: string, data: any): void {
   try {
-    const cacheItem = {
+    const item = {
       data,
-      expiry: Date.now() + duration
+      timestamp: Date.now()
     };
     
-    localStorage.setItem(`cache:${key}`, JSON.stringify(cacheItem));
+    localStorage.setItem(key, JSON.stringify(item));
   } catch (error) {
-    console.error("Error setting cache data:", error);
+    console.error("Error setting cache item:", error);
   }
 }
 
 /**
- * Retrieve data from cache if not expired
- * @param key Cache key
- * @returns Cached data or null if expired or not found
+ * Get cached item if not expired
  */
-export function getCacheData<T>(key: string): T | null {
+export function getCacheItem(key: string): any {
   try {
-    const cacheItem = localStorage.getItem(`cache:${key}`);
-    if (!cacheItem) return null;
+    const item = localStorage.getItem(key);
+    if (!item) return null;
     
-    const { data, expiry } = JSON.parse(cacheItem);
+    const parsedItem = JSON.parse(item);
     
-    // Return data if not expired
-    return Date.now() < expiry ? data : null;
+    if (isCacheExpired(parsedItem.timestamp)) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    
+    return parsedItem.data;
   } catch (error) {
-    console.error("Error getting cache data:", error);
+    console.error("Error getting cache item:", error);
     return null;
   }
 }

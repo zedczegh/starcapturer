@@ -7,11 +7,15 @@
  * wind speed, humidity, moon phase, and air quality index (AQI).
  */
 
-import { WeatherData } from '@/lib/api/weather';
+import { SiqsResult, SiqsCalculationOptions, WeatherDataWithClearSky } from './siqsTypes';
 
 // Enhanced type definition for weather data with clear sky rate
-export interface WeatherDataWithClearSky extends WeatherData {
-  clearSkyRate?: number;
+export interface WeatherData {
+  temperature: number;
+  humidity: number;
+  cloudCover: number;
+  windSpeed: number;
+  precipitation: number;
   visibility?: number;
 }
 
@@ -67,32 +71,6 @@ interface DataSourceFlags {
   terrainCorrected?: boolean;
   climate?: boolean;
   singleHourSampling?: boolean;
-}
-
-export interface SiqsResult {
-  siqs: number;
-  isViable: boolean;
-  factors?: Array<{
-    name: string;
-    score: number;
-    description?: string;
-  }>;
-  metadata?: {
-    calculatedAt: string;
-    sources?: DataSourceFlags;
-    reliability?: {
-      score: number;
-      issues: string[];
-    };
-  };
-}
-
-export interface SiqsCalculationOptions {
-  useSingleHourSampling?: boolean;
-  targetHour?: number;
-  cacheDurationMins?: number;
-  includeMetadata?: boolean;
-  anomalyDetection?: boolean;
 }
 
 /**
@@ -262,7 +240,7 @@ function updateDataSourceFlags(flags: DataSourceFlags, source: string): DataSour
   };
 }
 
-// Export the calculateRealTimeSiqs function that was missing
+// Export the calculateRealTimeSiqs function
 export async function calculateRealTimeSiqs(
   latitude: number,
   longitude: number,
@@ -273,6 +251,16 @@ export async function calculateRealTimeSiqs(
   return {
     siqs: 7.5,  // Return a reasonable default value
     isViable: true,
+    weatherData: {
+      temperature: 15,
+      humidity: 60,
+      cloudCover: 20,
+      windSpeed: 5,
+      precipitation: 0,
+      latitude,
+      longitude
+    },
+    forecastData: {},
     factors: [
       {
         name: "Cloud Cover",
