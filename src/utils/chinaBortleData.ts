@@ -40,6 +40,47 @@ const CHINA_CITIES: CityBortleData[] = [
   { latitude: 29.6500, longitude: 91.1000, bortleScale: 5, name: "Lhasa", chineseName: "拉萨", radius: 8 }
 ];
 
+// China's administrative regions with light pollution characteristics
+export type ChineseRegion = {
+  name: string;
+  chineseName: string;
+  avgBortleScale: number;
+  maxBortleScale: number;
+  minBortleScale: number;
+  recommendedViewingAreas?: string[];
+};
+
+// Define Chinese administrative regions
+const CHINESE_REGIONS: ChineseRegion[] = [
+  { name: "Beijing", chineseName: "北京", avgBortleScale: 8.5, maxBortleScale: 9, minBortleScale: 7 },
+  { name: "Shanghai", chineseName: "上海", avgBortleScale: 8.5, maxBortleScale: 9, minBortleScale: 7 },
+  { name: "Guangdong", chineseName: "广东", avgBortleScale: 7, maxBortleScale: 9, minBortleScale: 4 },
+  { name: "Tibet", chineseName: "西藏", avgBortleScale: 2, maxBortleScale: 5, minBortleScale: 1, 
+    recommendedViewingAreas: ["Namtso Lake", "Mount Everest Base Camp"] },
+  { name: "Xinjiang", chineseName: "新疆", avgBortleScale: 3.5, maxBortleScale: 7, minBortleScale: 1, 
+    recommendedViewingAreas: ["Karakul Lake", "Tian Shan Mountains"] },
+  { name: "Inner Mongolia", chineseName: "内蒙古", avgBortleScale: 4, maxBortleScale: 7, minBortleScale: 2, 
+    recommendedViewingAreas: ["Xilamuren Grassland", "Kubuqi Desert"] }
+];
+
+// Get region based on coordinates
+export function getChineseRegion(latitude: number, longitude: number): ChineseRegion | null {
+  // Simplified check - in a real app this would use precise boundaries
+  // This is just a placeholder implementation
+  if (latitude > 39 && latitude < 41 && longitude > 115 && longitude < 117) {
+    return CHINESE_REGIONS.find(r => r.name === "Beijing") || null;
+  } else if (latitude > 30.5 && latitude < 32 && longitude > 120.5 && longitude < 122) {
+    return CHINESE_REGIONS.find(r => r.name === "Shanghai") || null;
+  } else if (latitude > 28 && latitude < 32 && longitude > 90 && longitude < 95) {
+    return CHINESE_REGIONS.find(r => r.name === "Tibet") || null;
+  } else if (latitude > 40 && latitude < 46 && longitude > 85 && longitude < 90) {
+    return CHINESE_REGIONS.find(r => r.name === "Xinjiang") || null;
+  }
+  
+  // Default
+  return null;
+}
+
 // Calculate the distance between two points using the Haversine formula
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // Earth's radius in kilometers

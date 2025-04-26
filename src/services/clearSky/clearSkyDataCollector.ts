@@ -15,6 +15,10 @@ interface ClearSkyObservation {
   observationDate: string;
   reliability: number; // 0-1 scale 
   userId?: string;
+  cloudCover?: number;
+  visibility?: number;
+  isStationData?: boolean;
+  timestamp?: string;
 }
 
 // In-memory storage for observations
@@ -139,5 +143,98 @@ export const clearSkyDataCollector = {
   // For testing: clear all observations
   clearObservations: (): void => {
     observations.length = 0;
+  },
+
+  // Add station data (automated weather station observations)
+  recordStationData: (
+    latitude: number,
+    longitude: number,
+    cloudCover: number,
+    visibility: number
+  ): boolean => {
+    // Convert cloud cover to clear sky rate (inverse relationship)
+    const clearSkyRate = Math.max(0, Math.min(100, 100 - cloudCover));
+    
+    // Create observation with station data fields
+    const observation: ClearSkyObservation = {
+      latitude,
+      longitude,
+      clearSkyRate,
+      cloudCover,
+      visibility,
+      observationDate: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+      reliability: 0.85, // Slightly less reliable than user data but more than anonymous
+      isStationData: true
+    };
+    
+    // Store observation
+    observations.push(observation);
+    console.log(`Added station data observation: ${clearSkyRate}% at ${latitude}, ${longitude}`);
+    
+    return true;
+  },
+  
+  // Add manual user observation with cloud cover and visibility
+  recordUserObservation: (
+    latitude: number,
+    longitude: number,
+    cloudCover: number,
+    visibility: number,
+    userId?: string
+  ): boolean => {
+    // Convert cloud cover to clear sky rate (inverse relationship)
+    const clearSkyRate = Math.max(0, Math.min(100, 100 - (cloudCover * 0.9)));
+    
+    // Create observation
+    const observation: ClearSkyObservation = {
+      latitude,
+      longitude,
+      clearSkyRate,
+      cloudCover,
+      visibility,
+      observationDate: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+      reliability: userId ? 0.95 : 0.75, // Higher reliability for logged-in users
+      userId
+    };
+    
+    // Store observation
+    observations.push(observation);
+    console.log(`Added user observation: ${clearSkyRate}% at ${latitude}, ${longitude}`);
+    
+    return true;
+  },
+
+  // Get observations for a specific location
+  getObservationsForLocation: (
+    latitude: number,
+    longitude: number,
+    limit: number = 10
+  ): ClearSkyObservation[] => {
+    // Find observations within a reasonable distance
+    const radiusKm = 10; // 10km radius
+    
+    const nearbyObservations = observations.filter(obs => 
+      calculateDistance(latitude, longitude, obs.latitude, obs.longitude) <= radiusKm
+    );
+    
+    // Sort by date, newest first
+    const sortedObservations = [...nearbyObservations].sort((a, b) => 
+      new Date(b.observationDate).getTime() - new Date(a.observationDate).getTime()
+    );
+    
+    return sortedObservations.slice(0, limit);
+  },
+  
+  // Export collected data for backup or analysis
+  exportCollectedData: (): string => {
+    return JSON.stringify(observations);
+  },
+  
+  // Clear all stored data
+  clearAllData: (): void => {
+    observations.length = 0;
+    console.log("All observation data cleared");
   }
 };

@@ -6,7 +6,7 @@
 type MemoizeFunction = <T extends (...args: any[]) => Promise<any>>(
   fn: T,
   keyFn?: (...args: Parameters<T>) => string
-) => (...args: Parameters<T>) => ReturnType<T>;
+) => (...args: Parameters<T>) => Promise<ReturnType<T>>;
 
 /**
  * Create a memoized version of an async function

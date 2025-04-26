@@ -1,29 +1,39 @@
 
+/**
+ * Terrain correction utilities for light pollution analysis
+ */
+
 import { fetchElevation } from '@/lib/api/elevation';
 import { memoize } from '@/utils/memoization';
-import { getBortleScale } from '@/services/bortleScaleService';
+import { getBortleScaleEnhanced } from '@/services/environmentalDataService/bortleScaleService';
 import { estimateBortleScaleByLocation } from '@/utils/locationUtils';
 
-// Constants for terrain-based corrections
-const ELEVATION_FACTOR = 0.05; // Correction per 100m of elevation
-const MOUNTAIN_CORRECTION = 0.7; // Maximum correction for mountains
-const ELEVATION_THRESHOLD = 500; // Elevation in meters considered "significant"
-const TYPICAL_CITY_LIGHT_RADIUS = 50; // km - typical radius of city light pollution
+// Define constants for terrain correction
+const ELEVATION_FACTOR = 0.0002;        // How much elevation affects Bortle scale
+const MOUNTAIN_CORRECTION = 0.05;       // Additional correction for mountainous regions
+const ELEVATION_THRESHOLD = 1000;       // Elevation (m) considered "high" for corrections
+const TYPICAL_CITY_LIGHT_RADIUS = 50;   // Typical radius of city light dome in km
 
-// Cache for terrain correction to avoid recalculating
+// Cache for terrain correction results
 const terrainCorrectionCache = new Map<string, {
-  correctedBortle: number;
+  correctedBortleScale: number;
   elevation: number;
-  timestamp: number;
+  correctionFactor: number;
+  reason: string;
 }>();
 
 /**
- * Get bortle scale corrected for terrain (elevation, mountain blocking)
- * This function takes into account how terrain might affect light pollution
+ * Apply terrain-based correction to Bortle scale
+ * Elevation and terrain can significantly impact light pollution
+ * 
+ * @param latitude Latitude coordinate
+ * @param longitude Longitude coordinate 
+ * @param baseBortleScale Base Bortle scale to correct (if known)
+ * @returns Corrected Bortle scale with additional information
  */
 export async function getTerrainCorrectedBortleScale(
-  latitude: number, 
-  longitude: number, 
+  latitude: number,
+  longitude: number,
   baseBortleScale?: number
 ): Promise<{
   correctedBortleScale: number;
@@ -31,127 +41,90 @@ export async function getTerrainCorrectedBortleScale(
   correctionFactor: number;
   reason: string;
 }> {
-  // Generate cache key
-  const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}-${baseBortleScale || 'auto'}`;
-  
-  // Check cache first
-  const cached = terrainCorrectionCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < 24 * 60 * 60 * 1000) { // 24 hour cache
-    return {
-      correctedBortleScale: cached.correctedBortle,
-      elevation: cached.elevation,
-      correctionFactor: calculateCorrectionFactor(cached.elevation),
-      reason: explainCorrection(cached.elevation, calculateCorrectionFactor(cached.elevation))
-    };
-  }
-  
   try {
-    // Get base bortle scale if not provided
-    const baseScale = baseBortleScale || await getBortleScale(latitude, longitude);
+    // Create cache key
+    const cacheKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}-${baseBortleScale || 'auto'}`;
     
-    // Get elevation data
+    // Check cache first
+    if (terrainCorrectionCache.has(cacheKey)) {
+      return terrainCorrectionCache.get(cacheKey)!;
+    }
+    
+    // Get elevation for the location
     const elevation = await fetchElevation(latitude, longitude);
     
+    // If no base Bortle scale provided, try to estimate it
+    const bortleScale = baseBortleScale ?? await estimateBaseBortleScale(latitude, longitude);
+    
     // Calculate correction factor based on elevation
-    const correctionFactor = calculateCorrectionFactor(elevation);
+    let correctionFactor = 0;
+    let reason = '';
     
-    // Apply correction (lower is better for bortle scale)
-    // More sophisticated correction that doesn't go below 1
-    let correctedScale = Math.max(1, baseScale - (baseScale * correctionFactor));
+    if (elevation > ELEVATION_THRESHOLD) {
+      // Higher elevations have less atmosphere to scatter light
+      const elevationCorrection = (elevation - ELEVATION_THRESHOLD) * ELEVATION_FACTOR;
+      correctionFactor -= elevationCorrection;
+      
+      reason = `Elevation ${elevation}m reduces light pollution`;
+      
+      // Check for mountain blocking effect
+      if (isLocationProtectedByMountains(latitude, longitude)) {
+        correctionFactor -= MOUNTAIN_CORRECTION;
+        reason += ` and mountains block light pollution`;
+      }
+    } else {
+      reason = `Minimal terrain impact at ${elevation}m elevation`;
+    }
     
-    // Round to 1 decimal place
-    correctedScale = Math.round(correctedScale * 10) / 10;
+    // Apply correction, but ensure it stays in valid Bortle range
+    const correctedValue = Math.max(1, Math.min(9, bortleScale + correctionFactor));
     
-    // Cache result
-    terrainCorrectionCache.set(cacheKey, {
-      correctedBortle: correctedScale,
-      elevation,
-      timestamp: Date.now()
-    });
+    // Round to one decimal
+    const correctedBortleScale = Math.round(correctedValue * 10) / 10;
     
-    return {
-      correctedBortleScale: correctedScale,
+    // Cache the result
+    const result = {
+      correctedBortleScale,
       elevation,
       correctionFactor,
-      reason: explainCorrection(elevation, correctionFactor)
+      reason
     };
+    
+    terrainCorrectionCache.set(cacheKey, result);
+    
+    return result;
   } catch (error) {
-    console.error("Error getting terrain-corrected Bortle scale:", error);
-    return {
-      correctedBortleScale: baseBortleScale || 4,
-      elevation: 0,
-      correctionFactor: 0,
-      reason: "Could not calculate terrain correction"
-    };
+    console.error("Error applying terrain correction:", error);
+    throw error;
   }
 }
 
 /**
- * Calculate correction factor based on elevation
+ * Estimate if location is protected from light pollution by mountains
+ * This would use digital elevation model data in a real implementation
  */
-function calculateCorrectionFactor(elevation: number): number {
-  if (elevation < ELEVATION_THRESHOLD) {
-    return 0; // No correction for low elevations
-  }
-  
-  // Progressive correction that increases with elevation
-  const elevationCorrection = Math.min(
-    MOUNTAIN_CORRECTION, 
-    ((elevation - ELEVATION_THRESHOLD) / 1000) * ELEVATION_FACTOR
-  );
-  
-  return elevationCorrection;
+function isLocationProtectedByMountains(latitude: number, longitude: number): boolean {
+  // Simplified placeholder - in reality would analyze surrounding terrain
+  // This just returns true ~20% of the time randomly
+  return Math.random() < 0.2;
 }
 
 /**
- * Generate explanation for the correction
+ * Estimate base Bortle scale if not provided
+ * Uses memoization for performance
  */
-function explainCorrection(elevation: number, correctionFactor: number): string {
-  if (correctionFactor <= 0) {
-    return "No terrain correction applied";
-  }
-  
-  if (elevation > 2000) {
-    return `High elevation (${elevation}m) significantly reduces light pollution`;
-  } else if (elevation > 1000) {
-    return `Moderate elevation (${elevation}m) helps reduce light pollution`;
-  } else {
-    return `Slight light pollution reduction due to ${elevation}m elevation`;
-  }
-}
-
-/**
- * Memoized function for getting terrain-corrected bortle scale
- * This helps with performance when making multiple calls
- */
-export const getMemoizedTerrainCorrectedBortleScale = memoize(
-  getTerrainCorrectedBortleScale,
-  (lat, lng, bortle) => `${lat.toFixed(3)}-${lng.toFixed(3)}-${bortle || 'auto'}`
-);
-
-/**
- * Estimate bortle scale for a location based on coordinates and nearby known locations
- */
-export async function estimateBortleScaleWithTerrain(
-  latitude: number,
-  longitude: number
-): Promise<number> {
-  let estimatedBortleScale;
-  
+const estimateBaseBortleScale = memoize(async (latitude: number, longitude: number): Promise<number> => {
   try {
-    // Try to find from known locations first
-    estimatedBortleScale = await getBortleScale(latitude, longitude);
-    
-    // Apply terrain correction
-    const terrainCorrected = await getTerrainCorrectedBortleScale(
-      latitude,
-      longitude,
-      estimatedBortleScale
-    );
-    
-    return terrainCorrected.correctedBortleScale;
+    return await getBortleScaleEnhanced(latitude, longitude);
   } catch (error) {
-    console.error("Error estimating Bortle scale with terrain:", error);
-    return 4; // Default value
+    console.warn("Failed to get enhanced Bortle scale, using fallback estimation");
+    return estimateBortleScaleByLocation("Unknown", latitude, longitude);
   }
+});
+
+/**
+ * Clear the terrain correction cache
+ */
+export function clearTerrainCorrectionCache(): void {
+  terrainCorrectionCache.clear();
 }

@@ -100,15 +100,22 @@ export async function fetchClearSkyRate(
 }> {
   // First check if we have local observations with good confidence
   try {
-    const localData = clearSkyDataCollector.calculateClearSkyRate(latitude, longitude, 20);
+    const localData = clearSkyDataCollector.calculateClearSkyRate(
+      Number(latitude), 
+      Number(longitude), 
+      20
+    );
     
     if (localData && localData.confidence > 0.7 && localData.rate > 0) {
       console.log(`Using local observation data for clear sky rate: ${localData.rate}%`);
       
       // We have high confidence local data, use it as our primary source
       // But we'll still fetch API data to fill in monthly rates
-      const apiData = await fetchClearSkyRateFromApi(latitude, longitude, includeHistorical)
-        .catch(() => null);
+      const apiData = await fetchClearSkyRateFromApi(
+        Number(latitude), 
+        Number(longitude), 
+        includeHistorical
+      ).catch(() => null);
       
       if (apiData) {
         // Blend the local rate with API data for the annual rate
@@ -124,8 +131,8 @@ export async function fetchClearSkyRate(
       // If API fetch failed, generate synthetic monthly data from the annual rate
       return {
         annualRate: localData.rate,
-        monthlyRates: generateSyntheticMonthlyRates(localData.rate, latitude),
-        clearestMonths: generateClearestMonths(latitude),
+        monthlyRates: generateSyntheticMonthlyRates(localData.rate, Number(latitude)),
+        clearestMonths: generateClearestMonths(Number(latitude)),
         confidence: localData.confidence,
         dataSource: 'Local observations'
       };
@@ -135,7 +142,7 @@ export async function fetchClearSkyRate(
   }
   
   // Fall back to API or cache data
-  return fetchClearSkyRateFromCache(latitude, longitude, includeHistorical);
+  return fetchClearSkyRateFromCache(Number(latitude), Number(longitude), includeHistorical);
 }
 
 /**

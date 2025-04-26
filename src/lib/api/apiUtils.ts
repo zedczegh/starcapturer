@@ -62,3 +62,90 @@ export async function fetchClearSkyRate(
     throw error;
   }
 }
+
+/**
+ * Generic API request function with error handling
+ */
+export async function apiRequest<T>(
+  endpoint: string, 
+  options: RequestInit = {}
+): Promise<T> {
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`API request failed: ${url}`, error);
+    throw error;
+  }
+}
+
+/**
+ * Weather data fetching
+ */
+export async function fetchWeatherData(
+  params: { latitude: number; longitude: number }
+): Promise<{
+  temperature: number;
+  humidity: number;
+  cloudCover: number;
+  windSpeed: number;
+  precipitation: number;
+  visibility?: number;
+  weatherCondition?: string;
+  aqi?: number;
+}> {
+  // Mock implementation - in a real app this would call a weather API
+  return {
+    temperature: 15 + Math.random() * 10 - 5,
+    humidity: 40 + Math.random() * 40,
+    cloudCover: Math.random() * 50,
+    windSpeed: Math.random() * 20,
+    precipitation: Math.random() * 5,
+    visibility: 80 + Math.random() * 20,
+    weatherCondition: Math.random() > 0.2 ? "Clear" : "Partly cloudy",
+    aqi: 20 + Math.random() * 40
+  };
+}
+
+/**
+ * Light pollution data fetching
+ */
+export async function fetchLightPollutionData(
+  latitude: number, 
+  longitude: number
+): Promise<{
+  bortleScale: number;
+  artificialBrightness?: number;
+  lightIntensity?: number;
+}> {
+  // Mock implementation - in a real app this would call an API
+  // Use latitude to slightly vary the Bortle scale (closer to equator = higher)
+  const latitudeFactor = Math.abs(latitude) / 90; // 0 at equator, 1 at poles
+  const bortleBase = 6 - (latitudeFactor * 3); // 6 at equator, 3 at poles
+  
+  // Add some randomness
+  const bortleVariation = Math.random() * 2 - 1;
+  
+  // Ensure within valid Bortle range (1-9)
+  const bortleScale = Math.max(1, Math.min(9, bortleBase + bortleVariation));
+  
+  return {
+    bortleScale: Math.round(bortleScale * 10) / 10,
+    artificialBrightness: (bortleScale - 1) * 0.2,
+    lightIntensity: (bortleScale - 1) * 10
+  };
+}

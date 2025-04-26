@@ -185,11 +185,14 @@ export function calculateSIQS(
 
   // Weather Condition Impact (penalize bad weather)
   let weatherConditionImpact = baseScore * weatherConditionWeight;
-  if (weatherData.weatherCondition?.toLowerCase().includes("rain") ||
-    weatherData.weatherCondition?.toLowerCase().includes("snow") ||
-    weatherData.weatherCondition?.toLowerCase().includes("thunderstorm") ||
-    weatherData.weatherCondition?.toLowerCase().includes("fog")) {
-    weatherConditionImpact = 0;
+  if (weatherData.weatherCondition && typeof weatherData.weatherCondition === 'string') {
+    const condition = weatherData.weatherCondition.toLowerCase();
+    if (condition.includes("rain") ||
+        condition.includes("snow") ||
+        condition.includes("thunderstorm") ||
+        condition.includes("fog")) {
+      weatherConditionImpact = 0;
+    }
   }
 
   // Precipitation Impact (lower is better)
@@ -239,6 +242,9 @@ function updateDataSourceFlags(flags: DataSourceFlags, source: string): DataSour
     terrainCorrected: source === 'terrain' || flags.terrainCorrected
   };
 }
+
+// Export the SIQS types
+export { SiqsResult, SiqsCalculationOptions } from './siqsTypes';
 
 // Export the calculateRealTimeSiqs function
 export async function calculateRealTimeSiqs(
