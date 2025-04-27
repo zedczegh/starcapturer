@@ -1,6 +1,12 @@
 
 import { getBortleScaleFromCoordinates } from '@/utils/bortleScaleUtils';
-import { ChineseLocationData } from '@/data/regions/chinaCityLocations';
+
+// Define a placeholder type for Chinese location data
+interface ChineseLocation {
+  name: string;
+  district?: string;
+  bortleScale?: number;
+}
 
 interface CachedDataFn {
   (key: string): any;

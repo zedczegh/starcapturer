@@ -53,8 +53,7 @@ export const useSIQSCalculation = (
         getCachedData, 
         setCachedData, 
         displayOnly,
-        language,
-        setStatusMessage
+        language
       );
       
       if (!data) {
@@ -83,8 +82,7 @@ export const useSIQSCalculation = (
         displayOnly,
         getCachedData,
         setCachedData,
-        language,
-        setStatusMessage
+        language
       );
       
       // Validate Bortle scale before proceeding

@@ -8,8 +8,8 @@ import { SharedAstroSpot } from '@/types/weather';
  * @returns Promise resolving to an array of locations with SIQS results
  */
 export async function batchCalculateSiqs(
-  locations: SharedAstroSpot[]
-): Promise<SharedAstroSpot[]> {
+  locations: any[]
+): Promise<any[]> {
   if (!locations || locations.length === 0) {
     return [];
   }
