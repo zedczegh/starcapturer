@@ -55,10 +55,10 @@ export function useBortleUpdater() {
           
           // Import terrain analysis utilities
           const { getTerrainCorrectedBortleScale } = await import('@/utils/terrainCorrection');
-          const result = await getTerrainCorrectedBortleScale(latitude, longitude);
+          const terrainCorrectedScale = await getTerrainCorrectedBortleScale(latitude, longitude, locationName);
           
-          if (result !== null) {
-            return result.correctedBortleScale;
+          if (terrainCorrectedScale !== null) {
+            return terrainCorrectedScale;
           }
         } catch (error) {
           console.warn("Terrain correction failed:", error);

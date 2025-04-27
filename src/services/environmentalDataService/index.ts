@@ -1,3 +1,3 @@
 
-export * from './weatherService';
-export * from './bortleScaleService';
+export { getWeatherData } from './weatherService';
+export { getBortleScaleData } from './bortleScaleService';

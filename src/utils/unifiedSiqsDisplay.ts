@@ -1,4 +1,3 @@
-
 /**
  * Unified SIQS Display Utility
  * 
@@ -99,29 +98,188 @@ export function formatSiqsForDisplay(siqs: number | null): string {
 /**
  * Get cached SIQS with optimized performance
  */
-export async function getCachedOrCalculateSiqs(
-  latitude: number,
-  longitude: number,
-  bortleScale: number = 4
-): Promise<number> {
-  // First check for cached value
-  if (hasCachedSiqs(latitude, longitude)) {
+export function getCachedRealTimeSiqs(latitude: number, longitude: number, skipCache: boolean = false): number | null {
+  if (!skipCache && hasCachedSiqs(latitude, longitude)) {
     const cached = getCachedSiqs(latitude, longitude);
     if (cached && cached.siqs > 0) {
-      return cached.siqs;
+      return normalizeToSiqsScale(cached.siqs);
     }
+  }
+  return null;
+}
+
+/**
+ * Simplified SIQS calculation based primarily on nighttime cloud cover
+ * This provides a quick estimate for locations when we want to avoid complex calculations
+ */
+export function calculateSimplifiedSiqs(cloudCover: number, bortleScale: number = 4): number {
+  // Base score determined by cloud cover (0-100%)
+  // 0% clouds = 10, 100% clouds = 0
+  const cloudScore = Math.max(0, 10 - (cloudCover / 10));
+  
+  // Adjust for Bortle scale (1-9)
+  // Lower Bortle = better score
+  const bortleAdjustment = Math.max(0, 5 - (bortleScale / 2));
+  
+  // Simple weighted combination
+  // 70% cloud cover, 30% Bortle scale
+  const rawScore = (cloudScore * 0.7) + (bortleAdjustment * 0.3);
+  
+  // Round to one decimal place and ensure within 0-10 range
+  return Math.round(Math.min(10, Math.max(0, rawScore)) * 10) / 10;
+}
+
+/**
+ * All-in-one function to get complete SIQS display information
+ * No default scores for certified locations
+ */
+export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promise<SiqsResult> {
+  const { 
+    latitude, 
+    longitude, 
+    bortleScale = 4, 
+    isCertified = false, 
+    isDarkSkyReserve = false,
+    existingSiqs = null,
+    skipCache = false
+  } = options;
+  
+  // Get existing SIQS, without defaults - never use default scores
+  const staticSiqs = existingSiqs !== null ? getSiqsScore(existingSiqs) : 0;
+                      
+  const defaultResult: SiqsResult = {
+    siqs: 0, // Never use default scores - return 0 instead
+    loading: isCertified, // Show loading for certified locations with no score
+    formattedSiqs: formatSiqsForDisplay(staticSiqs > 0 ? staticSiqs : null),
+    colorClass: getSiqsColorClass(staticSiqs),
+    source: 'default'
+  };
+  
+  // Check for invalid coordinates
+  if (!isFinite(latitude) || !isFinite(longitude)) {
+    return defaultResult;
   }
   
   try {
-    // Calculate if not cached
-    const result = await calculateRealTimeSiqs(latitude, longitude, bortleScale);
-    if (result && result.siqs > 0) {
-      return result.siqs;
+    // Try to get cached SIQS first (unless we're skipping cache)
+    if (!skipCache) {
+      const cachedSiqs = getCachedRealTimeSiqs(latitude, longitude);
+      if (cachedSiqs !== null) {
+        // Ensure the cached SIQS is on the 0-10 scale
+        const normalizedSiqs = normalizeToSiqsScale(cachedSiqs);
+        return {
+          siqs: normalizedSiqs,
+          loading: false,
+          formattedSiqs: formatSiqsForDisplay(normalizedSiqs),
+          colorClass: getSiqsColorClass(normalizedSiqs),
+          source: 'cached'
+        };
+      }
+    } else {
+      console.log(`Skipping cache for SIQS at ${latitude.toFixed(5)},${longitude.toFixed(5)}`);
     }
+    
+    // For certified locations, use simplified calculation if the full calculation fails
+    try {
+      // Try the full calculation first
+      const result = await calculateRealTimeSiqs(
+        latitude,
+        longitude,
+        bortleScale
+      );
+      
+      if (result && result.siqs > 0) {
+        // Use actual calculated score
+        const finalScore = result.siqs;
+        
+        // Cache the result to avoid repeated calculations
+        setSiqsCache(latitude, longitude, result);
+        
+        return {
+          siqs: finalScore,
+          loading: false,
+          formattedSiqs: formatSiqsForDisplay(finalScore),
+          colorClass: getSiqsColorClass(finalScore),
+          source: 'realtime'
+        };
+      }
+    } catch (error) {
+      console.log("Full SIQS calculation failed, using simplified method:", error);
+    }
+    
+    // If we're still here and this is a certified location, use simplified calculation
+    if (isCertified) {
+      try {
+        // Get current cloud cover data directly
+        const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=cloud_cover&timezone=auto`);
+        const weatherData = await weatherResponse.json();
+        
+        if (weatherData && weatherData.current && weatherData.current.cloud_cover !== undefined) {
+          // Use simplified calculation based mainly on cloud cover
+          const cloudCover = weatherData.current.cloud_cover;
+          console.log(`Using simplified calculation with cloud cover ${cloudCover}% for certified location`);
+          
+          const simplifiedScore = calculateSimplifiedSiqs(cloudCover, bortleScale);
+          
+          // Cache result using simplified method - use proper metadata format
+          setSiqsCache(latitude, longitude, {
+            siqs: simplifiedScore,
+            isViable: simplifiedScore > 3,
+            metadata: { 
+              calculatedAt: new Date().toISOString(),
+              sources: {
+                weather: true,
+                forecast: false,
+                clearSky: false,
+                lightPollution: true
+              },
+              reliability: {
+                score: 7,
+                issues: ["Using simplified calculation"]
+              }
+            }
+          });
+          
+          return {
+            siqs: simplifiedScore,
+            loading: false,
+            formattedSiqs: formatSiqsForDisplay(simplifiedScore),
+            colorClass: getSiqsColorClass(simplifiedScore),
+            source: 'realtime'
+          };
+        }
+      } catch (error) {
+        console.error("Simplified SIQS calculation failed:", error);
+      }
+    }
+    
+    // If we reach here, we couldn't calculate SIQS for some reason
+    // For certified locations, show loading instead of default score
+    if (isCertified) {
+      return {
+        siqs: 0, // No default scores
+        loading: true, // Always show loading for certified locations with no data
+        formattedSiqs: "N/A",
+        colorClass: "text-muted-foreground",
+        source: 'default'
+      };
+    }
+    
+    return defaultResult;
   } catch (error) {
-    console.error("Error calculating SIQS:", error);
+    console.error("Error getting SIQS display data:", error);
+    
+    // For certified locations with errors, show loading instead of default score
+    if (isCertified) {
+      return {
+        siqs: 0, // No default scores
+        loading: true,
+        formattedSiqs: "N/A",
+        colorClass: "text-muted-foreground",
+        source: 'default'
+      };
+    }
+    
+    return defaultResult;
   }
-  
-  // Default fallback
-  return 0;
 }

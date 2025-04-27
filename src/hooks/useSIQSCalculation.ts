@@ -74,7 +74,7 @@ export const useSIQSCalculation = (
         setForecastData(forecastResult);
       }
       
-      // Get Bortle scale data with the correct parameter order
+      // Get Bortle scale data
       const actualBortleScale = await getBortleScaleData(
         lat,
         lng,
@@ -83,7 +83,8 @@ export const useSIQSCalculation = (
         displayOnly,
         getCachedData,
         setCachedData,
-        language
+        language,
+        setStatusMessage
       );
       
       // Validate Bortle scale before proceeding

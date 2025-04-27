@@ -38,7 +38,6 @@ export interface WeatherData {
   time: string;
   condition: string;
   weatherCondition?: string;
-  visibility?: number; // Added visibility property
   aqi?: number;
 }
 
@@ -121,7 +120,6 @@ export async function fetchWeatherData(
       time: data.current.time,
       condition: weatherConditions[data.current.weather_code] || determineWeatherCondition(data.current.cloud_cover),
       weatherCondition: weatherConditions[data.current.weather_code] || "",
-      visibility: 100 - (data.current.cloud_cover * 0.8), // Estimate visibility based on cloud cover
     };
     
     // Try to fetch AQI data
