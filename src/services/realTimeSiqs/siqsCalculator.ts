@@ -1,4 +1,3 @@
-
 /**
  * SIQS (Starlight Index and Quality Score) Calculator
  *

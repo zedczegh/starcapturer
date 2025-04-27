@@ -1,4 +1,3 @@
-
 /**
  * China-specific Bortle scale data and utilities
  * This module contains specialized data and functions for Chinese cities and regions
@@ -123,7 +122,8 @@ export function getCityBortleScale(latitude: number, longitude: number): number 
   
   // If we found a match within 25km, use its Bortle scale
   if (closestCity && closestCity.distance < 25) {
-    return closestCity.bortleScale;
+    // Fix: access bortleScale from the location property
+    return closestCity.location.bortleScale;
   }
 
   // Check mountain database
@@ -131,7 +131,8 @@ export function getCityBortleScale(latitude: number, longitude: number): number 
   
   // If we found a mountain within 20km, use its Bortle scale
   if (closestMountain && closestMountain.distance < 20) {
-    return closestMountain.bortleScale;
+    // Fix: access bortleScale from the location property
+    return closestMountain.location.bortleScale;
   }
 
   return null;

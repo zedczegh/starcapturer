@@ -1,4 +1,3 @@
-
 import { fetchClearSkyRate as fetchClearSkyRateFromApi } from './apiUtils';
 import { clearClearSkyRateCache as clearCache } from './cacheUtils';
 
@@ -9,7 +8,11 @@ const CLEAR_SKY_RATE_API_URL = process.env.NEXT_PUBLIC_CLEAR_SKY_RATE_API_URL;
  */
 export function clearClearSkyRateCache(latitude?: number, longitude?: number): void {
   if (latitude !== undefined && longitude !== undefined) {
-    const cacheKey = `clear-sky-${latitude.toFixed(2)}-${longitude.toFixed(2)}`;
+    // Fix: convert string to number if needed
+    const lat = typeof latitude === 'string' ? parseFloat(latitude) : latitude;
+    const lng = typeof longitude === 'string' ? parseFloat(longitude) : longitude;
+    
+    const cacheKey = `clear-sky-${lat.toFixed(2)}-${lng.toFixed(2)}`;
     clearCache(cacheKey);
     return;
   }
