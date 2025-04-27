@@ -1,20 +1,13 @@
 
 import { API_URL } from './config';
 
-export interface ClearSkyRateResponse {
-  annualRate: number;
-  rate3months: number;
-  rateMonth: number;
-  source: string;
-  calmDays: number;
-}
-
 export async function fetchClearSkyRate(
-  latitude: number,
-  longitude: number
+  latitude: number, 
+  longitude: number, 
+  includeHistoricalData: boolean = true
 ): Promise<ClearSkyRateResponse> {
   try {
-    const url = `${API_URL}/clear-sky?lat=${Number(latitude).toFixed(4)}&lng=${Number(longitude).toFixed(4)}`;
+    const url = `${API_URL}/clear-sky?lat=${Number(latitude).toFixed(4)}&lng=${Number(longitude).toFixed(4)}${includeHistoricalData ? '&historical=true' : ''}`;
     const response = await fetch(url);
     
     if (!response.ok) {
@@ -33,6 +26,7 @@ export async function fetchClearSkyRate(
     };
   } catch (error) {
     console.error(`Failed to fetch clear sky rate for ${latitude}, ${longitude}:`, error);
+    
     // Return default values
     return {
       annualRate: 65,
@@ -42,4 +36,18 @@ export async function fetchClearSkyRate(
       calmDays: 0
     };
   }
+}
+
+export interface ClearSkyRateResponse {
+  annualRate: number;
+  rate3months: number;
+  rateMonth: number;
+  source: string;
+  calmDays: number;
+}
+
+// Add a cache clearing function
+export function clearClearSkyRateCache(latitude?: number, longitude?: number) {
+  // Implement cache clearing logic if needed
+  console.log(`Clearing cache for ${latitude}, ${longitude}`);
 }

@@ -1,4 +1,3 @@
-
 // Main API file that re-exports all functionality from the sub-modules
 export type { Coordinates } from './api/coordinates';
 export { validateCoordinates, normalizeLongitude, calculateDistance } from './api/coordinates';
@@ -19,7 +18,11 @@ export { getLocationNameFromCoordinates } from './api/location';
 export { fetchLightPollutionData } from './api/pollution';
 
 // Export clear sky rate functionality
-export { fetchClearSkyRate, clearClearSkyRateCache } from './api/clearSkyRate';
+export { 
+  fetchClearSkyRate, 
+  clearClearSkyRateCache,
+  type ClearSkyRateResponse 
+} from './api/clearSkyRate';
 
 // Export types and functions related to shared astronomy spots
 export type { SharedAstroSpot, SharingResponse } from './api/astroSpots';
