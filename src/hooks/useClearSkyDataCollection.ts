@@ -49,7 +49,7 @@ export function useClearSkyDataCollection({
         ? weatherData.visibility 
         : (100 - (cloudCover * 0.8)); // Estimate visibility inversely to cloud cover
       
-      // Record station data - Fix: adjust parameters to match expected signature
+      // Record station data - Using addObservation instead of recordStationData
       clearSkyDataCollector.addObservation(
         latitude,
         longitude,
@@ -59,7 +59,7 @@ export function useClearSkyDataCollection({
       setLastCollectionTime(Date.now());
       console.log(`Recorded clear sky observation at [${latitude}, ${longitude}]`);
       
-      // Update stats - Fix: modify to use available methods
+      // Update stats using getUserObservations
       const observations = clearSkyDataCollector.getUserObservations("");
       setCollectionStats({
         observationsCount: observations.length,
@@ -78,7 +78,7 @@ export function useClearSkyDataCollection({
     if (!latitude || !longitude) return false;
     
     try {
-      // Fix: adjust to use addObservation instead of recordUserObservation
+      // Using addObservation instead of recordUserObservation
       clearSkyDataCollector.addObservation(
         latitude,
         longitude,
@@ -88,7 +88,7 @@ export function useClearSkyDataCollection({
       setLastCollectionTime(Date.now());
       console.log(`Recorded manual clear sky observation at [${latitude}, ${longitude}]`);
       
-      // Update stats - Fix: modify to use available methods
+      // Update stats using getUserObservations
       const observations = clearSkyDataCollector.getUserObservations("");
       setCollectionStats({
         observationsCount: observations.length,
@@ -120,10 +120,12 @@ export function useClearSkyDataCollection({
   useEffect(() => {
     if (!latitude || !longitude || !enabled) return;
     
-    // Fix: modify to use available methods
+    // Get user observations
     const observations = clearSkyDataCollector.getUserObservations("");
-    // Fix: modify type to match string requirement
-    const lastUpdated = observations.length > 0 ? observations[0].timestamp : null;
+    // Use the timestamp of the first observation or null if none
+    const lastUpdated = observations.length > 0 
+      ? observations[0].timestamp 
+      : null;
     
     setCollectionStats({
       observationsCount: observations.length,
@@ -146,7 +148,7 @@ export function useClearSkyDataCollection({
     weatherData,
     collectionStats,
     lastCollectionTime,
-    // Fix: replace missing methods with workarounds
+    // Use available methods for missing functions
     exportData: () => clearSkyDataCollector.getUserObservations(""), // Placeholder for exportCollectedData
     clearData: () => clearSkyDataCollector.clearObservations() // Placeholder for clearAllData
   };
