@@ -41,8 +41,10 @@ const LocationCard: React.FC<LocationCardProps> = ({
     <Card className="bg-cosmic-900/70 backdrop-blur-md border border-cosmic-700/50 hover:border-cosmic-600/70 transition-colors duration-300 shadow-md hover:shadow-lg">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-gray-50">{name}</h3>
-          <SiqsScoreBadge score={numericSiqs} isCertified={isCertified} />
+          <h3 className="text-lg font-semibold text-gray-50 truncate pr-2">{name}</h3>
+          <div className="flex-shrink-0">
+            <SiqsScoreBadge score={numericSiqs} isCertified={isCertified} />
+          </div>
         </div>
         <div className="space-y-2 text-sm text-gray-400">
           <div className="flex items-center">

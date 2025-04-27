@@ -14,6 +14,7 @@ const ScoreBadgeContainer: React.FC<ScoreBadgeContainerProps> = ({
   isTransitioning,
   children
 }) => {
+  // Always provide a fallback color class in case score is null
   const colorClass = score !== null ? getScoreColor(score) : 'bg-cosmic-700/50 text-muted-foreground border-cosmic-600/30';
 
   return (

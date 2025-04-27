@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore, normalizeToSiqsScale } from '@/utils/siqsHelpers';
@@ -27,20 +26,30 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   const [loadingState, setLoadingState] = useState(loading);
   const stableScoreRef = useRef<number | null>(null);
   const loadingTimeoutRef = useRef<number | null>(null);
+  const loadingRetryCountRef = useRef(0);
   
   const numericScore = score === null ? 0 : getSiqsScore(score);
-  const showLoading = loading && !stableScoreRef.current;
+  const showLoading = loading && !stableScoreRef.current && loadingRetryCountRef.current < 3;
+
+  const clearTimeouts = () => {
+    if (loadingTimeoutRef.current !== null) {
+      window.clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (numericScore > 0) {
       stableScoreRef.current = numericScore;
     }
     
-    if (showLoading && !stableScoreRef.current) {
+    if (showLoading) {
       setLoadingState(true);
-      if (loadingTimeoutRef.current) window.clearTimeout(loadingTimeoutRef.current);
+      clearTimeouts();
       
       loadingTimeoutRef.current = window.setTimeout(() => {
+        loadingRetryCountRef.current += 1;
+        
         if (numericScore > 0) {
           setDisplayedScore(numericScore);
           setLoadingState(false);
@@ -48,36 +57,35 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
           setDisplayedScore(stableScoreRef.current);
           setLoadingState(false);
         } else {
-          setDisplayedScore(null);
-          setLoadingState(false);
+          if (loadingRetryCountRef.current >= 3) {
+            setDisplayedScore(null);
+            setLoadingState(false);
+          } else {
+            setLoadingState(true);
+          }
         }
-        loadingTimeoutRef.current = null;
-      }, 600);
+      }, 800);
       
-      return () => {
-        if (loadingTimeoutRef.current) window.clearTimeout(loadingTimeoutRef.current);
-      };
+      return clearTimeouts;
     }
 
     if (numericScore > 0 || (isCertified || forceCertified)) {
-      if (Math.abs((displayedScore || 0) - numericScore) >= 0.2) {
+      if (displayedScore === null || Math.abs((displayedScore || 0) - numericScore) >= 0.2) {
         setIsTransitioning(true);
-        setTimeout(() => {
+        const transitionTimer = setTimeout(() => {
           setDisplayedScore(numericScore);
           setIsTransitioning(false);
         }, 300);
-      } else {
+        
+        return () => clearTimeout(transitionTimer);
+      } else if (displayedScore !== numericScore) {
         setDisplayedScore(numericScore);
       }
     }
   }, [numericScore, showLoading, displayedScore, isCertified, forceCertified]);
 
   useEffect(() => {
-    return () => {
-      if (loadingTimeoutRef.current) {
-        window.clearTimeout(loadingTimeoutRef.current);
-      }
-    };
+    return clearTimeouts;
   }, []);
 
   if ((numericScore <= 0 && !loadingState && !forceCertified && !isCertified && !stableScoreRef.current) || 

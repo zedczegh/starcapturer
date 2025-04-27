@@ -34,8 +34,10 @@ const CommunityAstroSpots: React.FC = () => {
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  // Track which spots have attempted SIQS calculation
+  const [attemptedSiqs, setAttemptedSiqs] = useState<Set<string>>(new Set());
 
-  // Create a debounced update function using the new useDebouncedCallback hook
+  // Create a debounced update function using the useDebouncedCallback hook
   const debouncedSiqsUpdate = useDebouncedCallback((spotId: string, siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(prev => ({
       ...prev,
@@ -45,6 +47,15 @@ const CommunityAstroSpots: React.FC = () => {
       ...prev,
       [spotId]: loading
     }));
+    
+    // Mark this spot as having attempted SIQS calculation
+    if (!loading) {
+      setAttemptedSiqs(prev => {
+        const updated = new Set(prev);
+        updated.add(spotId);
+        return updated;
+      });
+    }
   }, 300);
 
   const handleLocationUpdate = useCallback((lat: number, lng: number) => {
@@ -99,14 +110,16 @@ const CommunityAstroSpots: React.FC = () => {
           >
             <div className="w-full h-full">
               <RealTimeSiqsProvider
+                key={`siqs-provider-${spot.id}`}
                 isVisible={true}
                 latitude={spot.latitude}
                 longitude={spot.longitude}
-                bortleScale={spot.bortleScale}
+                bortleScale={spot.bortleScale || 4}
                 existingSiqs={spot.siqs}
                 onSiqsCalculated={(siqs, loading) =>
                   debouncedSiqsUpdate(spot.id, siqs, loading)
                 }
+                forceUpdate={!attemptedSiqs.has(spot.id)}
               />
               <div className="transition-shadow group-hover:shadow-xl group-hover:ring-2 group-hover:ring-primary rounded-xl">
                 <LocationCard
@@ -125,7 +138,7 @@ const CommunityAstroSpots: React.FC = () => {
         ))}
       </div>
     );
-  }, [astrospots, isLoading, t, realTimeSiqs, handleCardClick, debouncedSiqsUpdate]);
+  }, [astrospots, isLoading, t, realTimeSiqs, handleCardClick, debouncedSiqsUpdate, attemptedSiqs]);
 
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>

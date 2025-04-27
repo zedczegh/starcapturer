@@ -26,6 +26,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
 }) => {
   const positionRef = useRef<string>('');
   const lastCalculationRef = useRef<number>(0);
+  const hasNotifiedRef = useRef<boolean>(false);
   
   // Configuration based on location type
   const refreshInterval = isCertified ? 300000 : 900000; // 5 mins for certified, 15 for others
@@ -59,17 +60,36 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   // Only calculate when visible and have coordinates
   useEffect(() => {
     if (!isVisible) return;
-    performSiqsCalculation();
+    
+    // Short delay to prevent all calculations happening at once
+    const timer = setTimeout(() => {
+      performSiqsCalculation();
+    }, Math.random() * 500);
+    
+    return () => clearTimeout(timer);
   }, [isVisible, performSiqsCalculation, forceUpdate]);
   
   // Notify parent of SIQS updates with confidence value
   useEffect(() => {
+    // Always notify parent of loading state changes
     onSiqsCalculated(
       siqsScore, 
       loading,
       siqsScore ? (forceUpdate ? 9 : 7) : undefined
     );
+    
+    // Mark that we've notified the parent
+    hasNotifiedRef.current = true;
+    
   }, [siqsScore, loading, onSiqsCalculated, forceUpdate]);
+  
+  // Send existing SIQS if available and we're still loading
+  useEffect(() => {
+    if (loading && existingSiqs && existingSiqs > 0 && !hasNotifiedRef.current) {
+      onSiqsCalculated(existingSiqs, false, 5);
+      hasNotifiedRef.current = true;
+    }
+  }, [loading, existingSiqs, onSiqsCalculated]);
   
   return null;
 };
