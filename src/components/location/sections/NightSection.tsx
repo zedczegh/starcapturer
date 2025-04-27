@@ -3,14 +3,23 @@ import React from 'react';
 import { CloudMoon } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import TimeItem from '../timeDisplay/TimeItem';
+import TimeZoneDisplay from '../timeDisplay/TimeZoneDisplay';
 
 interface NightSectionProps {
   astroNightStart: string;
   astroNightEnd: string;
-  duration: string | number; // Update type to accept both string and number
+  duration: string | number;
+  latitude: number;
+  longitude: number;
 }
 
-const NightSection = ({ astroNightStart, astroNightEnd, duration }: NightSectionProps) => {
+const NightSection = ({ 
+  astroNightStart, 
+  astroNightEnd, 
+  duration,
+  latitude,
+  longitude 
+}: NightSectionProps) => {
   const { t } = useLanguage();
   
   // Convert duration to string if it's a number
@@ -23,7 +32,9 @@ const NightSection = ({ astroNightStart, astroNightEnd, duration }: NightSection
         <span className="text-xs font-medium">{t('Night', '夜晚')}</span>
       </div>
       
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+      <TimeZoneDisplay latitude={latitude} longitude={longitude} />
+      
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
         <TimeItem label={t('Begins', '开始')} value={astroNightStart} />
         <TimeItem label={t('Ends', '结束')} value={astroNightEnd} />
       </div>

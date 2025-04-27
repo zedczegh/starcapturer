@@ -23,23 +23,18 @@ interface MoonlessNightDisplayProps {
 const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, longitude }) => {
   const { t, language } = useLanguage();
   
-  // Get comprehensive astronomical data using our optimized service
   const astronomyData = useMemo(() => {
     return getAstronomicalData(latitude, longitude);
   }, [latitude, longitude]);
   
-  // Use our advanced moon phase algorithm to get moon info
   const { isGoodForAstronomy, name: moonPhaseName } = getMoonInfo();
   
-  // Get moonless night information with detailed timing data
   const nightInfo = calculateMoonlessNightDuration(latitude, longitude);
 
-  // Get direct moonrise/moonset times as a fallback
   const directMoonTimes = useMemo(() => {
     return calculateMoonriseMoonsetTimes(latitude, longitude);
   }, [latitude, longitude]);
   
-  // Format moon time for display safely
   const formatMoonTime = (time: Date | string) => {
     if (typeof time === 'string') {
       if (time === 'Unknown') {
@@ -50,11 +45,9 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
     return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Get the most reliable moonrise/moonset times available
   const moonriseTime = nightInfo.moonrise === 'Unknown' ? directMoonTimes.moonrise : nightInfo.moonrise;
   const moonsetTime = nightInfo.moonset === 'Unknown' ? directMoonTimes.moonset : nightInfo.moonset;
 
-  // Format astronomical night times
   const astroNightStart = formatAstronomicalTime(astronomyData.astronomicalNight.start);
   const astroNightEnd = formatAstronomicalTime(astronomyData.astronomicalNight.end);
 
@@ -83,6 +76,8 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
           astroNightStart={astroNightStart}
           astroNightEnd={astroNightEnd}
           duration={astronomyData.astronomicalNight.duration}
+          latitude={latitude}
+          longitude={longitude}
         />
         
         <div className="space-y-1 border-b border-cosmic-700/30 pb-2">
