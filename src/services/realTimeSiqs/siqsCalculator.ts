@@ -243,8 +243,8 @@ function updateDataSourceFlags(flags: DataSourceFlags, source: string): DataSour
   };
 }
 
-// Export the SIQS types
-export { SiqsResult, SiqsCalculationOptions } from './siqsTypes';
+// Export the SIQS types properly with 'export type' syntax
+export type { SiqsResult, SiqsCalculationOptions } from './siqsTypes';
 
 // Export the calculateRealTimeSiqs function
 export async function calculateRealTimeSiqs(

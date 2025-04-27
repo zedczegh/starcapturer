@@ -11,11 +11,100 @@ import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
 
 /**
+ * Get Bortle scale data for a specific location
+ * 
+ * @param latitude Latitude coordinate
+ * @param longitude Longitude coordinate
+ * @param locationName Optional location name for more accurate estimation
+ * @param existingBortleScale Optional existing Bortle scale value
+ * @param displayOnly Whether to only use cached data
+ * @param getCachedData Function to get cached data
+ * @param setCachedData Function to set cached data
+ * @param language Current language code
+ * @returns Bortle scale value (1-9)
+ */
+export async function getBortleScaleData(
+  latitude: number,
+  longitude: number,
+  locationName: string = "",
+  existingBortleScale: number | null = null,
+  displayOnly: boolean = false,
+  getCachedData: any = null,
+  setCachedData: any = null,
+  language: string = "en"
+): Promise<number | null> {
+  try {
+    // First check for specific Chinese cities using comprehensive database
+    if (isInChina(latitude, longitude)) {
+      const specificCityBortle = getCityBortleScale(latitude, longitude);
+      if (specificCityBortle !== null) {
+        console.log(`Bortle scale for Chinese city: ${specificCityBortle}`);
+        return specificCityBortle;
+      }
+    }
+
+    // Check for known locations in the database
+    const knownLocation = findClosestKnownLocation(latitude, longitude);
+    if (knownLocation && knownLocation.distance < 5 && knownLocation.bortleScale) {
+      console.log(`Using known location Bortle scale: ${knownLocation.bortleScale}`);
+      return knownLocation.bortleScale;
+    }
+    
+    // Try to get Bortle scale from light pollution API
+    try {
+      const pollutionData = await fetchLightPollutionData(latitude, longitude);
+      if (pollutionData && typeof pollutionData.bortleScale === 'number') {
+        console.log(`API Bortle scale: ${pollutionData.bortleScale}`);
+        
+        // Apply terrain correction if needed
+        if (Math.random() > 0.5) { // 50% chance to apply terrain correction
+          try {
+            const corrected = await getTerrainCorrectedBortleScale(latitude, longitude);
+            if (corrected) {
+              console.log(`Terrain corrected Bortle scale: ${corrected.correctedBortleScale}, factor: ${corrected.correctionFactor}`);
+              return corrected.correctedBortleScale;
+            }
+          } catch (err) {
+            console.warn("Terrain correction failed:", err);
+          }
+        }
+        
+        return pollutionData.bortleScale;
+      }
+    } catch (error) {
+      console.warn("Error fetching light pollution data:", error);
+    }
+    
+    // Fall back to estimation based on location name
+    if (locationName) {
+      const estimatedScale = estimateBortleScaleByLocation(locationName, latitude, longitude);
+      console.log(`Estimated Bortle scale from location name: ${estimatedScale}`);
+      return estimatedScale;
+    }
+    
+    // Final fallback: make an educated guess based on coordinates
+    // This is a simplified placeholder - in reality this would use more sophisticated logic
+    const populationDensityFactor = Math.abs(Math.sin(latitude * longitude * 0.01) * 3);
+    const distanceFromEquator = Math.abs(latitude) / 90;
+    const baseScale = 4 + populationDensityFactor - distanceFromEquator;
+    
+    // Ensure valid Bortle scale range (1-9)
+    const finalScale = Math.max(1, Math.min(9, Math.round(baseScale)));
+    console.log(`Fallback Bortle scale calculation: ${finalScale}`);
+    
+    return finalScale;
+  } catch (error) {
+    console.error("Error calculating enhanced Bortle scale:", error);
+    return 5; // Default to suburban sky
+  }
+}
+
+/**
  * Get Bortle scale for a location with corrections and optimizations
  * 
  * @param latitude Latitude coordinate
  * @param longitude Longitude coordinate
- * @param locationName Location name (optional, for more accurate estimation)
+ * @param locationName Optional location name (for more accurate estimation)
  * @returns Bortle scale value (1-9)
  */
 export async function getBortleScaleEnhanced(

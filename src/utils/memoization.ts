@@ -17,7 +17,7 @@ type MemoizeFunction = <T extends (...args: any[]) => Promise<any>>(
 export const memoize: MemoizeFunction = (fn, keyFn) => {
   const cache = new Map<string, any>();
 
-  return async (...args) => {
+  return async (...args): Promise<any> => {
     const key = keyFn 
       ? keyFn(...args) 
       : JSON.stringify(args);
