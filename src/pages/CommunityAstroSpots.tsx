@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, Suspense, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";

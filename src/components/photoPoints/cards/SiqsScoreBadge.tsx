@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore, normalizeToSiqsScale } from '@/utils/siqsHelpers';
@@ -28,6 +29,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   const loadingTimeoutRef = useRef<number | null>(null);
   const loadingRetryCountRef = useRef(0);
   
+  // Parse score to numeric value, handling different formats
   const numericScore = score === null ? 0 : getSiqsScore(score);
   const showLoading = loading && !stableScoreRef.current && loadingRetryCountRef.current < 3;
 
@@ -39,6 +41,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   };
 
   useEffect(() => {
+    // Always update stable score if we have a valid value
     if (numericScore > 0) {
       stableScoreRef.current = numericScore;
     }
@@ -69,6 +72,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       return clearTimeouts;
     }
 
+    // For certified locations or when we have a valid score, update display
     if (numericScore > 0 || (isCertified || forceCertified)) {
       if (displayedScore === null || Math.abs((displayedScore || 0) - numericScore) >= 0.2) {
         setIsTransitioning(true);
@@ -88,8 +92,9 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     return clearTimeouts;
   }, []);
 
+  // Early returns for cases where we shouldn't display a badge
   if ((numericScore <= 0 && !loadingState && !forceCertified && !isCertified && !stableScoreRef.current) || 
-      (!displayedScore && !loadingState)) {
+      (!displayedScore && !loadingState && !stableScoreRef.current)) {
     return null;
   }
 
@@ -107,8 +112,9 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     );
   }
 
-  const scoreToDisplay = displayedScore || (stableScoreRef.current && (isCertified || forceCertified) ? stableScoreRef.current : null);
-  if (!scoreToDisplay) return null;
+  // If we have a stable score (either current or from ref), display it
+  const scoreToDisplay = displayedScore || (stableScoreRef.current || numericScore);
+  if (!scoreToDisplay && scoreToDisplay !== 0) return null;
 
   const formattedScore = formatSiqsForDisplay(scoreToDisplay);
 

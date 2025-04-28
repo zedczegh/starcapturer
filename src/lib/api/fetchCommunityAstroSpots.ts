@@ -21,6 +21,7 @@ export async function fetchCommunityAstroSpots() {
         siqs,
         description,
         created_at,
+        user_id,
         profiles (
           username
         )
