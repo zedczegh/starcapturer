@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,17 +27,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-
-        if (event === 'SIGNED_IN' && session?.user) {
-          setTimeout(() => {
-            const username = session.user.email?.split('@')[0] || 'stargazer';
-            toast.success(`Welcome, ${username}! 🌟`, {
-              description: "Ready for some stargazing? Your sky awaits!",
-              duration: 4000,
-              position: "top-center"
-            });
-          }, 0);
-        }
       }
     );
 
@@ -115,14 +105,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
-    let signedIn = false;
     try {
-      toast("Signing in...", {
-        description: "Checking your credentials...",
-        position: "top-center",
-        duration: 1500
-      });
-
       const { error } = await supabase.auth.signInWithPassword({ 
         email, 
         password
@@ -141,17 +124,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } else if (error.message.includes("Too many requests")) {
           errorMessage = "Too many login attempts. Please try again in a few minutes";
         }
-        toast.error("Sign in paused", {
-          description: errorMessage,
+        toast.error(t("Sign in paused", "登录暂停"), {
+          description: t(errorMessage, "请检查您的邮箱和密码"),
           position: "top-center"
         });
-        return;
       }
-
-      signedIn = true;
     } catch (error: any) {
-      toast.error("Sign in error", {
-        description: "An unknown error occurred. Please try again.",
+      toast.error(t("Sign in error", "登录错误"), {
+        description: t("An unknown error occurred. Please try again.", "发生未知错误，请重试。"),
         position: "top-center"
       });
     } finally {
@@ -161,25 +141,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     setIsLoading(true);
-    let toastId: string | number | undefined = undefined;
     try {
-      toastId = toast("Signing out...", {
-        position: "top-center",
-        duration: 1000
-      });
       const { error } = await supabase.auth.signOut();
       setUser(null);
       setSession(null);
 
       if (error) throw error;
-
-      toast.success("See you soon! ✨", {
-        description: "The stars will be waiting for your return",
-        position: "top-center"
-      });
     } catch (error: any) {
-      toast.error("Sign out issue", {
-        description: "Please try again in a moment",
+      toast.error(t("Sign out issue", "登出问题"), {
+        description: t("Please try again in a moment", "请稍后重试"),
         position: "top-center"
       });
     } finally {
