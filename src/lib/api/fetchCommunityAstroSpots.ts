@@ -2,13 +2,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { spotCacheService } from "@/services/location/spotCacheService";
 
-/**
- * Fetch all astrospots created by users from Supabase.
- * Optimized with parallel processing, caching and better error handling.
- */
 export async function fetchCommunityAstroSpots() {
   try {
-    // Check cache first
     const cachedSpots = spotCacheService.getCachedSpots(0, 0, 0, 50);
     if (cachedSpots) {
       console.log("Using cached community spots");
@@ -25,10 +20,13 @@ export async function fetchCommunityAstroSpots() {
         bortlescale,
         siqs,
         description,
-        created_at
+        created_at,
+        profiles (
+          username
+        )
       `)
       .order("created_at", { ascending: false })
-      .limit(50); // Limit initial load for better performance
+      .limit(50);
 
     if (error) {
       console.error("Error fetching community astro spots:", error);
@@ -44,11 +42,10 @@ export async function fetchCommunityAstroSpots() {
       siqs: spot.siqs,
       description: spot.description,
       timestamp: spot.created_at,
+      username: spot.profiles?.username || 'Anonymous Stargazer'
     }));
 
-    // Cache the results
     spotCacheService.cacheSpots(0, 0, 0, 50, formattedData);
-
     return formattedData;
   } catch (error) {
     console.error("Failed to fetch community astro spots:", error);

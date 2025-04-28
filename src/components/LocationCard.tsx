@@ -6,7 +6,7 @@ import { formatTime, calculateAstronomicalNight } from '@/utils/astronomy/nightT
 import { siqsToColor } from '@/lib/siqs/utils';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import SiqsScoreBadge from './photoPoints/cards/SiqsScoreBadge';
-import { Star, Clock, MapPin } from 'lucide-react';
+import { Star, Clock, User } from 'lucide-react';
 
 interface LocationCardProps {
   id: string;
@@ -16,6 +16,7 @@ interface LocationCardProps {
   siqs: number | { score: number; isViable: boolean } | undefined;
   timestamp?: string;
   isCertified?: boolean;
+  username?: string;
 }
 
 const LocationCard: React.FC<LocationCardProps> = ({
@@ -25,13 +26,12 @@ const LocationCard: React.FC<LocationCardProps> = ({
   longitude,
   siqs,
   timestamp,
-  isCertified = false
+  isCertified = false,
+  username = 'Anonymous Stargazer'
 }) => {
   const { t } = useLanguage();
   
   const numericSiqs = getSiqsScore(siqs);
-  const siqsColor = siqsToColor(numericSiqs);
-  
   const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
   const nightTimeStr = `${formatTime(nightStart)}-${formatTime(nightEnd)}`;
   
@@ -48,8 +48,8 @@ const LocationCard: React.FC<LocationCardProps> = ({
         </div>
         <div className="space-y-2 text-sm text-gray-400">
           <div className="flex items-center">
-            <MapPin className="h-4 w-4 mr-2 text-cosmic-400" />
-            <span>{t("Latitude", "纬度")}: {latitude.toFixed(4)}, {t("Longitude", "经度")}: {longitude.toFixed(4)}</span>
+            <User className="h-4 w-4 mr-2 text-cosmic-400" />
+            <span>{t("Shared by", "分享者")}: {username}</span>
           </div>
           
           <div className="flex items-center">

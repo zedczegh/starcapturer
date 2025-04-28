@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, Suspense, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
@@ -34,10 +33,8 @@ const CommunityAstroSpots: React.FC = () => {
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-  // Track which spots have attempted SIQS calculation
   const [attemptedSiqs, setAttemptedSiqs] = useState<Set<string>>(new Set());
 
-  // Create a debounced update function using the useDebouncedCallback hook
   const debouncedSiqsUpdate = useDebouncedCallback((spotId: string, siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(prev => ({
       ...prev,
@@ -48,7 +45,6 @@ const CommunityAstroSpots: React.FC = () => {
       [spotId]: loading
     }));
     
-    // Mark this spot as having attempted SIQS calculation
     if (!loading) {
       setAttemptedSiqs(prev => {
         const updated = new Set(prev);
@@ -84,7 +80,6 @@ const CommunityAstroSpots: React.FC = () => {
     visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
   };
 
-  // Extract the render content logic to avoid repeated code
   const renderContent = useMemo(() => {
     if (isLoading) {
       return <AstroSpotsLoadingSkeleton />;
@@ -130,6 +125,7 @@ const CommunityAstroSpots: React.FC = () => {
                   siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
                   timestamp={spot.timestamp}
                   isCertified={false}
+                  username={spot.username}
                 />
               </div>
               <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />
