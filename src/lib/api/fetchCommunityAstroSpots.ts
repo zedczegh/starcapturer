@@ -10,7 +10,8 @@ export async function fetchCommunityAstroSpots() {
       return cachedSpots;
     }
 
-    const { data, error } = await supabase
+    // First fetch the spots
+    const { data: spots, error: spotsError } = await supabase
       .from("user_astro_spots")
       .select(`
         id,
@@ -21,20 +22,36 @@ export async function fetchCommunityAstroSpots() {
         siqs,
         description,
         created_at,
-        user_id,
-        profiles (
-          username
-        )
+        user_id
       `)
       .order("created_at", { ascending: false })
       .limit(50);
 
-    if (error) {
-      console.error("Error fetching community astro spots:", error);
-      throw error;
+    if (spotsError) {
+      console.error("Error fetching community astro spots:", spotsError);
+      throw spotsError;
     }
 
-    const formattedData = (data || []).map((spot: any) => ({
+    // Then fetch usernames separately to avoid join issues
+    const userIds = spots.map(spot => spot.user_id).filter(Boolean);
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, username")
+      .in("id", userIds);
+
+    if (profilesError) {
+      console.error("Error fetching user profiles:", profilesError);
+    }
+
+    // Create a map of user IDs to usernames
+    const usernameMap = new Map();
+    if (profiles && profiles.length > 0) {
+      profiles.forEach(profile => {
+        usernameMap.set(profile.id, profile.username);
+      });
+    }
+
+    const formattedData = (spots || []).map((spot: any) => ({
       id: spot.id,
       name: spot.name,
       latitude: Number(spot.latitude),
@@ -43,7 +60,7 @@ export async function fetchCommunityAstroSpots() {
       siqs: spot.siqs,
       description: spot.description,
       timestamp: spot.created_at,
-      username: spot.profiles?.username || 'Anonymous Stargazer'
+      username: usernameMap.get(spot.user_id) || 'Anonymous Stargazer'
     }));
 
     spotCacheService.cacheSpots(0, 0, 0, 50, formattedData);

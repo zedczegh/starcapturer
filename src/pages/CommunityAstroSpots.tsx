@@ -1,24 +1,22 @@
 
-import React, { useState, useCallback, Suspense, useMemo, useEffect } from "react";
+import React, { useState, useCallback, Suspense, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader, Star, Circle } from "lucide-react";
-import LocationCard from "@/components/LocationCard";
-import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
+import { Circle } from "lucide-react";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import CommunityMap from "@/components/community/CommunityMap";
 import { Loader2 } from "@/components/ui/loader";
-import AstroSpotsLoadingSkeleton from "@/components/astro-spots/AstroSpotsLoadingSkeleton";
-import { useDebouncedCallback } from "@/hooks/useDebounce";
+import CommunityLocationsList from "@/components/community/CommunityLocationsList";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
 const CommunityAstroSpots: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
   const { data: astrospots, isLoading } = useQuery({
     queryKey: ["community-astrospots-supabase"],
@@ -31,40 +29,10 @@ const CommunityAstroSpots: React.FC = () => {
     refetchInterval: 1000 * 60 * 15, // Refresh every 15 minutes
   });
 
-  const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
-  const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-  const [attemptedSiqs, setAttemptedSiqs] = useState<Set<string>>(new Set());
-
-  const debouncedSiqsUpdate = useDebouncedCallback((spotId: string, siqs: number | null, loading: boolean) => {
-    setRealTimeSiqs(prev => ({
-      ...prev,
-      [spotId]: siqs
-    }));
-    setLoadingSiqs(prev => ({
-      ...prev,
-      [spotId]: loading
-    }));
-    
-    if (!loading) {
-      setAttemptedSiqs(prev => {
-        const updated = new Set(prev);
-        updated.add(spotId);
-        return updated;
-      });
-    }
-  }, 300);
-
   const handleLocationUpdate = useCallback((lat: number, lng: number) => {
     console.log("Location updated:", lat, lng);
     setUserLocation([lat, lng]);
   }, []);
-
-  const handleCardClick = useCallback((id: string) => {
-    navigate(`/astro-spot/${id}`, { 
-      state: { from: 'community' } 
-    });
-  }, [navigate]);
 
   const titleVariants = {
     hidden: { opacity: 0, scale: 0.96, y: -10 },
@@ -81,61 +49,10 @@ const CommunityAstroSpots: React.FC = () => {
     visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
   };
 
-  const renderContent = useMemo(() => {
-    if (isLoading) {
-      return <AstroSpotsLoadingSkeleton />;
-    }
-
-    if (!astrospots || astrospots.length === 0) {
-      return (
-        <div className="w-full text-muted-foreground/70 text-center py-16">
-          {t("No community astrospots yet. Be the first to share!", "还没有社区观星点，快来分享吧！")}
-        </div>
-      );
-    }
-
-    return (
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-        {astrospots.map((spot: any) => (
-          <button
-            key={spot.id}
-            className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
-            onClick={() => handleCardClick(spot.id)}
-            aria-label={spot.name}
-            style={{ background: "none", padding: 0 }}
-          >
-            <div className="w-full h-full">
-              <RealTimeSiqsProvider
-                key={`siqs-provider-${spot.id}`}
-                isVisible={true}
-                latitude={spot.latitude}
-                longitude={spot.longitude}
-                bortleScale={spot.bortleScale || 4}
-                existingSiqs={spot.siqs}
-                onSiqsCalculated={(siqs, loading) =>
-                  debouncedSiqsUpdate(spot.id, siqs, loading)
-                }
-                forceUpdate={!attemptedSiqs.has(spot.id)}
-              />
-              <div className="transition-shadow group-hover:shadow-xl group-hover:ring-2 group-hover:ring-primary rounded-xl">
-                <LocationCard
-                  id={spot.id}
-                  name={spot.name}
-                  latitude={spot.latitude}
-                  longitude={spot.longitude}
-                  siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
-                  timestamp={spot.timestamp}
-                  isCertified={false}
-                  username={spot.username}
-                />
-              </div>
-              <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />
-            </div>
-          </button>
-        ))}
-      </div>
-    );
-  }, [astrospots, isLoading, t, realTimeSiqs, handleCardClick, debouncedSiqsUpdate, attemptedSiqs]);
+  // Log the data to help with debugging
+  useEffect(() => {
+    console.log("Astrospots data:", astrospots);
+  }, [astrospots]);
 
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>
@@ -192,7 +109,7 @@ const CommunityAstroSpots: React.FC = () => {
           <span>{t("All Community Astrospots", "全部社区地点")}</span>
         </h2>
 
-        {renderContent}
+        <CommunityLocationsList locations={astrospots} isLoading={isLoading} />
       </div>
     </PhotoPointsLayout>
   );

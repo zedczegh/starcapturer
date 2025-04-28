@@ -31,6 +31,9 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   
   // Parse score to numeric value, handling different formats
   const numericScore = score === null ? 0 : getSiqsScore(score);
+
+  // SIQS values of 0 are likely invalid, so treat as undefined unless forceCertified
+  const validNumericScore = (numericScore > 0 || forceCertified) ? numericScore : null;
   const showLoading = loading && !stableScoreRef.current && loadingRetryCountRef.current < 3;
 
   const clearTimeouts = () => {
@@ -73,28 +76,33 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     }
 
     // For certified locations or when we have a valid score, update display
-    if (numericScore > 0 || (isCertified || forceCertified)) {
-      if (displayedScore === null || Math.abs((displayedScore || 0) - numericScore) >= 0.2) {
+    if (validNumericScore !== null || isCertified || forceCertified) {
+      if (displayedScore === null || (validNumericScore && Math.abs((displayedScore || 0) - validNumericScore) >= 0.2)) {
         setIsTransitioning(true);
         const transitionTimer = setTimeout(() => {
-          setDisplayedScore(numericScore);
+          setDisplayedScore(validNumericScore);
           setIsTransitioning(false);
         }, 300);
         
         return () => clearTimeout(transitionTimer);
-      } else if (displayedScore !== numericScore) {
-        setDisplayedScore(numericScore);
+      } else if (validNumericScore && displayedScore !== validNumericScore) {
+        setDisplayedScore(validNumericScore);
       }
     }
-  }, [numericScore, showLoading, displayedScore, isCertified, forceCertified]);
+  }, [numericScore, showLoading, displayedScore, isCertified, forceCertified, validNumericScore]);
 
   useEffect(() => {
     return clearTimeouts;
   }, []);
 
+  // Debug logging
+  useEffect(() => {
+    console.log(`SiqsScoreBadge - score: ${JSON.stringify(score)}, numericScore: ${numericScore}, displayed: ${displayedScore}, stable: ${stableScoreRef.current}`);
+  }, [score, numericScore, displayedScore]);
+
   // Early returns for cases where we shouldn't display a badge
-  if ((numericScore <= 0 && !loadingState && !forceCertified && !isCertified && !stableScoreRef.current) || 
-      (!displayedScore && !loadingState && !stableScoreRef.current)) {
+  if ((numericScore <= 0 && !loadingState && !forceCertified && !isCertified && !stableScoreRef.current)) {
+    console.log("SiqsScoreBadge - early return: no valid score");
     return null;
   }
 
@@ -112,9 +120,14 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     );
   }
 
-  // If we have a stable score (either current or from ref), display it
-  const scoreToDisplay = displayedScore || (stableScoreRef.current || numericScore);
-  if (!scoreToDisplay && scoreToDisplay !== 0) return null;
+  // Fallbacks to ensure we always have a score to display
+  const scoreToDisplay = displayedScore ?? stableScoreRef.current ?? (numericScore > 0 ? numericScore : null);
+  
+  // If after all fallbacks we still don't have a score, return null
+  if (scoreToDisplay === null) {
+    console.log("SiqsScoreBadge - final return: no score to display");
+    return null;
+  }
 
   const formattedScore = formatSiqsForDisplay(scoreToDisplay);
 
