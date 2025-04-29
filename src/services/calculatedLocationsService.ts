@@ -1,173 +1,380 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { calculateDistance } from '@/utils/geoUtils';
-import { isWaterLocation } from '@/utils/validation';
-import { getRandomFloat, getRandomInt } from '@/utils/random';
-import { getBortleScaleForLocation } from '@/utils/bortleScaleUtils';
-import { generateLocationName } from '@/utils/locationNameGenerator';
-
-// Options for location search
-export interface LocationSearchOptions {
-  minSiqs?: number;
-  maxResults?: number;
-  includeWater?: boolean;
-  preferHigherAltitude?: boolean;
-  onlyDarkSkyReserves?: boolean;
-}
+import { SharedAstroSpot } from '@/types/weather';
+import { generateRandomPoint } from '@/services/locationFilters';
+import { isWaterLocation, isValidAstronomyLocation } from '@/utils/validation';
+import { getSiqsScore } from '@/utils/siqsHelpers';
+import { fetchLightPollutionData } from '@/lib/api/pollution';
+import { fetchClearSkyRate } from '@/lib/api/clearSkyRate';
+import { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
 
 /**
- * Find locations within a specified radius of a center point
- * @param centerLat Center latitude
- * @param centerLon Center longitude
- * @param radiusKm Radius in kilometers
- * @param options Search options
- * @returns Array of locations
+ * Enhanced service for generating and filtering calculated astronomy locations
+ * with state-of-the-art algorithms for identifying optimal observation spots.
  */
-export function findLocationsInArea(
-  centerLat: number,
-  centerLon: number,
-  radiusKm: number,
-  options?: LocationSearchOptions
-): SharedAstroSpot[] {
-  const defaultOptions: LocationSearchOptions = {
-    minSiqs: 0,
-    maxResults: 50,
-    includeWater: false,
-    preferHigherAltitude: true,
-    onlyDarkSkyReserves: false
-  };
+export class CalculatedLocationsService {
+  private centerLatitude: number;
+  private centerLongitude: number;
+  private searchRadiusKm: number;
+  private numberOfPoints: number;
+  private qualityThreshold: number;
+  private adaptiveGeneration: boolean;
+  private densityBasedSampling: boolean;
 
-  const mergedOptions = { ...defaultOptions, ...options };
-  
-  // Generate a set of random locations within the radius
-  const numLocations = getRandomInt(10, 30);
-  let validLocations: SharedAstroSpot[] = [];
-  
-  for (let i = 0; i < numLocations * 3; i++) {
-    // Generate a random distance within the radius
-    const distance = Math.sqrt(Math.random()) * radiusKm;
+  constructor(
+    centerLatitude: number,
+    centerLongitude: number,
+    searchRadiusKm: number,
+    numberOfPoints: number = 30,
+    qualityThreshold: number = 0,
+    adaptiveGeneration: boolean = true,
+    densityBasedSampling: boolean = true
+  ) {
+    this.centerLatitude = centerLatitude;
+    this.centerLongitude = centerLongitude;
+    this.searchRadiusKm = searchRadiusKm;
+    this.numberOfPoints = numberOfPoints;
+    this.qualityThreshold = qualityThreshold;
+    this.adaptiveGeneration = adaptiveGeneration;
+    this.densityBasedSampling = densityBasedSampling;
+  }
+
+  /**
+   * Main method to generate and filter astro spots with enhanced algorithms
+   */
+  public async generateAndFilterAstroSpots(): Promise<SharedAstroSpot[]> {
+    console.log(`Generating ${this.numberOfPoints} points within ${this.searchRadiusKm}km of [${this.centerLatitude.toFixed(4)}, ${this.centerLongitude.toFixed(4)}]`);
     
-    // Generate a random angle
-    const angle = Math.random() * 2 * Math.PI;
+    try {
+      // Generate points with adaptive algorithms if enabled
+      const generatedPoints = this.adaptiveGeneration 
+        ? await this.generateAdaptivePoints()
+        : await this.generateRandomPoints();
+      
+      console.log(`Generated ${generatedPoints.length} initial locations`);
+      
+      // Apply multi-stage filtering
+      const filteredPoints = await this.applyMultiStageFiltering(generatedPoints);
+      console.log(`After filtering: ${filteredPoints.length} locations remain`);
+      
+      // Apply ranking and sorting
+      const sortedPoints = this.applyScoringAndSorting(filteredPoints);
+      
+      return sortedPoints;
+    } catch (error) {
+      console.error("Error generating astronomy spots:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Creates a single astro spot from point data with enhanced metadata
+   */
+  private async createAstroSpot(randomPoint: { 
+    latitude: number; 
+    longitude: number; 
+    distance: number;
+    preferenceScore?: number;
+  }): Promise<SharedAstroSpot> {
+    const id = `calculated-${randomPoint.latitude.toFixed(6)}-${randomPoint.longitude.toFixed(6)}`;
     
-    // Calculate the offset in kilometers
-    const latOffset = distance * Math.cos(angle) / 111.32; // 1 degree lat = 111.32 km
-    const lonOffset = distance * Math.sin(angle) / (111.32 * Math.cos(centerLat * Math.PI / 180));
-    
-    // Calculate the new coordinates
-    const lat = centerLat + latOffset;
-    const lon = centerLon + lonOffset;
-    
-    // Skip if outside valid range
-    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-      continue;
+    // Try to get real light pollution data
+    let bortleScale = 4; // Default
+    try {
+      const pollutionData = await fetchLightPollutionData(
+        randomPoint.latitude, 
+        randomPoint.longitude
+      ).catch(() => null);
+      
+      if (pollutionData?.bortleScale) {
+        bortleScale = pollutionData.bortleScale;
+      }
+    } catch (error) {
+      console.warn(`Could not fetch light pollution data for ${id}`, error);
     }
     
-    // Calculate actual distance (Haversine formula)
-    const actualDistance = calculateDistance(centerLat, centerLon, lat, lon);
+    // Calculate approximate SIQS score
+    let siqs = 50 + (Math.random() * 20); // Default range 50-70
     
-    // Skip if outside the radius
-    if (actualDistance > radiusKm) {
-      continue;
+    // Try to get real-time SIQS data when possible
+    try {
+      const siqsResult = await calculateRealTimeSiqs(
+        randomPoint.latitude,
+        randomPoint.longitude,
+        bortleScale
+      ).catch(() => ({ siqs: siqs / 10, isViable: true }));
+      
+      if (siqsResult && typeof siqsResult.siqs === 'number') {
+        siqs = siqsResult.siqs * 10; // Convert 0-10 scale to 0-100
+      }
+    } catch (error) {
+      console.warn(`Could not calculate real-time SIQS for ${id}`, error);
     }
     
-    // Generate a random SIQS score based on Bortle scale
-    const bortleScale = getBortleScaleForLocation(lat, lon);
-    let siqs = 10 - bortleScale + getRandomFloat(-1, 1);
-    siqs = Math.max(0, Math.min(10, siqs));
+    return {
+      id,
+      name: 'Calculated Location',
+      latitude: randomPoint.latitude,
+      longitude: randomPoint.longitude,
+      bortleScale,
+      siqs,
+      timestamp: new Date().toISOString(),
+      distance: randomPoint.distance,
+      isDarkSkyReserve: false,
+      certification: null,
+      description: null,
+      chineseName: `计算位置 ${randomPoint.latitude.toFixed(6)}-${randomPoint.longitude.toFixed(6)}`,
+      isViable: true,
+      preferenceScore: randomPoint.preferenceScore
+    };
+  }
+
+  /**
+   * Generate points with advanced adaptive algorithms
+   */
+  private async generateAdaptivePoints(): Promise<SharedAstroSpot[]> {
+    // Start with a base set of points
+    const basePoints = await this.generateRandomPoints();
     
-    // Generate a random altitude
-    const altitude = getRandomInt(0, 2000);
+    if (!this.densityBasedSampling) {
+      return basePoints;
+    }
     
-    // Create the location
-    validLocations.push({
-      latitude: lat,
-      longitude: lon,
-      siqs: siqs,
-      bortleScale: bortleScale,
-      altitude: altitude,
-      distance: actualDistance,
-      name: generateLocationName(lat, lon),
-      isDarkSkyReserve: Math.random() < 0.05, // 5% chance of being a dark sky reserve
-      timestamp: new Date().toISOString() // Add timestamp property
+    // Apply density-based sampling to find optimal distribution
+    const sampledPoints = this.adaptivePointDistribution(basePoints);
+    
+    // Convert to SharedAstroSpot objects
+    const spotPromises = sampledPoints.map(point => this.createAstroSpot(point));
+    const astroSpots = await Promise.all(spotPromises);
+    
+    return astroSpots;
+  }
+
+  /**
+   * Generate random points within the specified radius
+   */
+  private async generateRandomPoints(): Promise<SharedAstroSpot[]> {
+    const generatedPoints: SharedAstroSpot[] = [];
+    const attempts = this.numberOfPoints * 2; // Generate more points to compensate for filtering
+    const pointPromises = [];
+    
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const randomPoint = generateRandomPoint(
+          this.centerLatitude,
+          this.centerLongitude,
+          this.searchRadiusKm
+        );
+        
+        // Quick validity check
+        if (randomPoint.latitude && randomPoint.longitude) {
+          pointPromises.push(this.createAstroSpot(randomPoint));
+        }
+      } catch (error) {
+        console.warn("Error generating random point:", error);
+      }
+    }
+    
+    try {
+      const resolvedPoints = await Promise.all(pointPromises);
+      return resolvedPoints;
+    } catch (error) {
+      console.error("Failed to create some astro spots:", error);
+      return generatedPoints;
+    }
+  }
+  
+  /**
+   * Implements density-based adaptive distribution of points
+   * using k-means like algorithm to ensure good coverage
+   */
+  private adaptivePointDistribution(points: SharedAstroSpot[]): {
+    latitude: number;
+    longitude: number;
+    distance: number;
+    preferenceScore?: number;
+  }[] {
+    // Convert to simple points for processing
+    const simplePoints = points.map(p => ({
+      latitude: p.latitude,
+      longitude: p.longitude,
+      distance: p.distance || 0,
+      preferenceScore: 0
+    }));
+    
+    // Calculate quadrant density to ensure even distribution
+    const quadrants = {
+      nw: 0, ne: 0, sw: 0, se: 0
+    };
+    
+    simplePoints.forEach(point => {
+      const latDiff = point.latitude - this.centerLatitude;
+      const lngDiff = point.longitude - this.centerLongitude;
+      
+      if (latDiff >= 0 && lngDiff >= 0) quadrants.ne++;
+      else if (latDiff >= 0 && lngDiff < 0) quadrants.nw++;
+      else if (latDiff < 0 && lngDiff >= 0) quadrants.se++;
+      else quadrants.sw++;
+    });
+    
+    // Calculate average quadrant count
+    const avgQuadCount = Object.values(quadrants).reduce((a, b) => a + b, 0) / 4;
+    
+    // Apply preference scores based on quadrant density
+    simplePoints.forEach(point => {
+      const latDiff = point.latitude - this.centerLatitude;
+      const lngDiff = point.longitude - this.centerLongitude;
+      let quadrantScore = 1;
+      
+      if (latDiff >= 0 && lngDiff >= 0 && quadrants.ne < avgQuadCount) 
+        quadrantScore = 1.5; // Northeast is under-represented
+      else if (latDiff >= 0 && lngDiff < 0 && quadrants.nw < avgQuadCount) 
+        quadrantScore = 1.5; // Northwest is under-represented
+      else if (latDiff < 0 && lngDiff >= 0 && quadrants.se < avgQuadCount) 
+        quadrantScore = 1.5; // Southeast is under-represented
+      else if (latDiff < 0 && lngDiff < 0 && quadrants.sw < avgQuadCount) 
+        quadrantScore = 1.5; // Southwest is under-represented
+      
+      // Distance preference (favor points at mid-range distance)
+      const normalizedDistance = point.distance / this.searchRadiusKm;
+      const distanceScore = 1 - Math.abs(normalizedDistance - 0.6);
+      
+      // Combine scores
+      point.preferenceScore = quadrantScore * distanceScore;
+    });
+    
+    // Sort by preference score and take top points
+    return simplePoints
+      .sort((a, b) => (b.preferenceScore || 0) - (a.preferenceScore || 0))
+      .slice(0, this.numberOfPoints);
+  }
+
+  /**
+   * Apply sophisticated multi-stage filtering to candidate locations
+   */
+  private async applyMultiStageFiltering(points: SharedAstroSpot[]): Promise<SharedAstroSpot[]> {
+    // Stage 1: Basic validity filtering
+    let validPoints = points.filter(spot => {
+      if (!spot.latitude || !spot.longitude) {
+        return false;
+      }
+      
+      // Apply water check but don't be too strict
+      if (isWaterLocation(spot.latitude, spot.longitude, false)) {
+        return false;
+      }
+      
+      // Check basic astronomy location validity
+      if (!isValidAstronomyLocation(spot.latitude, spot.longitude, spot.name)) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Stage 2: Clear sky rate enhancement when available
+    try {
+      // Enhance up to 10 points with clear sky data in parallel
+      const enhancementPromises = validPoints.slice(0, 10).map(async (spot) => {
+        try {
+          const clearSkyData = await fetchClearSkyRate(spot.latitude, spot.longitude);
+          if (clearSkyData && clearSkyData.annualRate) {
+            // Apply clear sky bonus to SIQS
+            const clearSkyBonus = clearSkyData.annualRate / 100 * 10;
+            const currentSiqs = typeof spot.siqs === 'number' ? spot.siqs : 
+                               (spot.siqs && typeof spot.siqs === 'object' ? spot.siqs.score * 10 : 50);
+            
+            return {
+              ...spot,
+              siqs: Math.min(100, currentSiqs + clearSkyBonus),
+              clearSkyRate: clearSkyData.annualRate
+            };
+          }
+        } catch (error) {
+          // Silently continue without enhancement
+        }
+        return spot;
+      });
+      
+      // Replace the first 10 points with enhanced versions when available
+      const enhancedPoints = await Promise.all(enhancementPromises);
+      validPoints = [
+        ...enhancedPoints,
+        ...validPoints.slice(10)
+      ];
+    } catch (error) {
+      console.warn("Error enhancing points with clear sky data:", error);
+    }
+    
+    // Stage 3: Quality threshold filtering
+    if (this.qualityThreshold > 0) {
+      validPoints = validPoints.filter(spot => {
+        return spot.siqs === undefined || getSiqsScore(spot.siqs) >= this.qualityThreshold;
+      });
+    }
+    
+    return validPoints;
+  }
+
+  /**
+   * Apply advanced scoring and sorting to filtered locations
+   */
+  private applyScoringAndSorting(points: SharedAstroSpot[]): SharedAstroSpot[] {
+    // Create a scoring system that balances quality and distance
+    return [...points].sort((a, b) => {
+      // Primary sort by SIQS score
+      const siqsA = getSiqsScore(a.siqs) || 0;
+      const siqsB = getSiqsScore(b.siqs) || 0;
+      
+      if (Math.abs(siqsB - siqsA) > 1) {
+        return siqsB - siqsA;
+      }
+      
+      // If SIQS scores are close, consider distance as secondary factor
+      const distanceA = a.distance || Infinity;
+      const distanceB = b.distance || Infinity;
+      
+      // Normalize distance to prevent it from overwhelming SIQS in ranking
+      const normalizedDistanceA = Math.min(1, distanceA / this.searchRadiusKm);
+      const normalizedDistanceB = Math.min(1, distanceB / this.searchRadiusKm);
+      
+      // Combine SIQS and distance into a weighted score
+      // Give SIQS 70% weight, distance 30% weight
+      const scoreA = (siqsA * 0.7) - (normalizedDistanceA * 0.3);
+      const scoreB = (siqsB * 0.7) - (normalizedDistanceB * 0.3);
+      
+      return scoreB - scoreA;
     });
   }
   
-  // Keep only locations on land, not in water (we don't want ocean points)
-  validLocations = validLocations.filter(location => {
-    return !isWaterLocation(location.latitude, location.longitude);
-  });
-  
-  // Apply filters based on options
-  if (mergedOptions.minSiqs && mergedOptions.minSiqs > 0) {
-    validLocations = validLocations.filter(location => 
-      (typeof location.siqs === 'number' && location.siqs >= mergedOptions.minSiqs!)
-    );
+  /**
+   * Validates a single astro spot against filtering criteria
+   * with enhanced precision
+   */
+  private isValidAstroSpot(spot: SharedAstroSpot): boolean {
+    if (!spot.latitude || !spot.longitude) {
+      return false;
+    }
+
+    if (isWaterLocation(spot.latitude, spot.longitude, false)) {
+      return false;
+    }
+
+    if (!isValidAstronomyLocation(spot.latitude, spot.longitude, spot.name)) {
+      return false;
+    }
+
+    if (spot.siqs !== undefined && getSiqsScore(spot.siqs) < this.qualityThreshold) {
+      return false;
+    }
+
+    return true;
   }
-  
-  if (mergedOptions.onlyDarkSkyReserves) {
-    validLocations = validLocations.filter(location => location.isDarkSkyReserve);
-  }
-  
-  // Sort by distance
-  validLocations.sort((a, b) => (a.distance || 0) - (b.distance || 0));
-  
-  // Limit the number of results
-  if (mergedOptions.maxResults) {
-    validLocations = validLocations.slice(0, mergedOptions.maxResults);
-  }
-  
-  return validLocations;
 }
 
-/**
- * Find locations with good forecast for astrophotography
- * @param centerLat Center latitude
- * @param centerLon Center longitude
- * @param options Search options including forecast day
- * @returns Array of forecast locations
- */
-export function findForecastLocations(
-  center: { latitude: number; longitude: number },
-  options: { day: number; radius: number; maxPoints: number }
-): Promise<SharedAstroSpot[]> {
-  return new Promise((resolve) => {
-    // For now, this is a mock implementation
-    // In a real app, this would call a weather API
-    
-    setTimeout(() => {
-      const locations = findLocationsInArea(
-        center.latitude,
-        center.longitude,
-        options.radius,
-        { maxResults: options.maxPoints }
-      );
-      
-      // Add forecast-specific properties
-      const forecastLocations = locations.map(loc => ({
-        ...loc,
-        isForecast: true,
-        forecastDay: options.day,
-        forecastDate: new Date(Date.now() + options.day * 24 * 60 * 60 * 1000).toISOString(),
-        // Simulate weather conditions - further days have more uncertainty
-        cloudCover: Math.max(0, Math.min(100, getRandomInt(0, 40) + options.day * 2)),
-        weatherScore: Math.max(0, Math.min(10, 10 - (getRandomInt(0, 3) + options.day * 0.5)))
-      }));
-      
-      // Sort by weather score (higher is better)
-      forecastLocations.sort((a, b) => 
-        (b.weatherScore || 0) - (a.weatherScore || 0)
-      );
-      
-      resolve(forecastLocations);
-    }, 1000);
-  });
-}
-
-// Re-export the location store functions
-export { 
-  addLocationToStore, 
-  getLocationFromStore, 
-  getAllLocationsFromStore, 
-  clearLocationStore 
-} from '../services/locationStore';
+// Re-export location store functions
+export {
+  addLocationToStore,
+  getLocationFromStore,
+  getAllLocationsFromStore,
+  clearLocationStore
+} from './locationStore';

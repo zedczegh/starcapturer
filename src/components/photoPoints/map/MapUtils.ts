@@ -40,7 +40,7 @@ export const filterLocations = (
       );
       
       // Keep locations within search radius that aren't in water
-      return distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude);
+      return distance <= searchRadius && !isWaterLocation(loc.latitude, loc.longitude, false);
     });
   }
 

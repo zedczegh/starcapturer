@@ -1,10 +1,9 @@
-
 import { useMemo } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SharedAstroSpot } from '@/types/weather';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSiqsScore } from '@/utils/siqsHelpers';
+import { getLocationMarker } from '../MarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { getCertifiedLocationIcon, getCalculatedLocationIcon, getDarkSkyLocationIcon, getForecastLocationIcon } from '../MarkerUtils';
 
 interface UseMarkerStateProps {
   location: SharedAstroSpot;
@@ -47,22 +46,10 @@ export function useMarkerState({
     return null;
   }, [location, realTimeSiqs]);
   
-  // Get marker icon for this location
+  // Get marker icon without considering Bortle scale
   const icon = useMemo(() => {
-    if (location.isForecast) {
-      return getForecastLocationIcon(isHovered);
-    }
-    
-    if (location.isDarkSkyReserve) {
-      return getDarkSkyLocationIcon(isHovered);
-    }
-    
-    if (isCertified || location.certification) {
-      return getCertifiedLocationIcon(isHovered);
-    }
-    
-    return getCalculatedLocationIcon(isHovered);
-  }, [location, isCertified, isHovered]);
+    return getLocationMarker(location, isCertified, isHovered, isMobile);
+  }, [location, isCertified, isHovered, isMobile]);
 
   return {
     displayName,

@@ -1,3 +1,4 @@
+
 /**
  * Types and functions for working with shared astronomy spots
  * Enhanced with better Dark Sky International location support
@@ -12,7 +13,6 @@ import {
   isValidAstronomyLocation
 } from '@/utils/validation';
 import { isCertifiedLocation } from '@/utils/validation/coordinateValidator';
-import { isValidCoordinates } from '@/utils/validation/coordinateValidator';
 
 /**
  * Represents a shared astronomy spot with location details and quality metrics
@@ -20,25 +20,36 @@ import { isValidCoordinates } from '@/utils/validation/coordinateValidator';
 export interface SharedAstroSpot {
   id: string;
   name: string;
+  chineseName?: string;
   latitude: number;
   longitude: number;
-  siqs?: number | null;
+  bortleScale: number;
+  siqs?: number | { score: number; isViable: boolean };
+  isViable?: boolean;
+  distance?: number;
+  description?: string;
+  date?: string | Date;
+  timestamp: string;
   isDarkSkyReserve?: boolean;
   certification?: string;
-  distance?: number;
-  timestamp?: string;
+  photographer?: string;
+  cloudCover?: number;
   visibility?: number;
-  weather?: Record<string, any>;
-  bortleScale?: number;
-  siqsDetails?: Record<string, any>;
-  clearSkyRate?: number;
-  recommendation?: string;
-  description?: string;
-  imageUrl?: string;
-  tags?: string[];
   type?: string;
-  advantages?: string[];
-  forecastData?: any;
+  timeInfo?: {
+    isNighttime: boolean;
+    timeUntilNight?: number;
+    timeUntilDaylight?: number;
+  };
+  siqsResult?: {
+    score: number;
+    isViable: boolean;
+    factors?: Array<{
+      name: string;
+      score: number;
+      description: string;
+    }>;
+  };
 }
 
 /**
@@ -121,24 +132,17 @@ export async function getSharedAstroSpot(id: string): Promise<SharedAstroSpot | 
     return {
       id,
       name: `Astronomy Spot ${id.substring(0, 4)}`,
-      displayName: `天文观测点 ${id.substring(0, 4)}`,
+      chineseName: `天文观测点 ${id.substring(0, 4)}`,
       latitude: 40.7128,
       longitude: -74.0060,
       bortleScale: 4,
       siqs: 7.2,
       isViable: true,
       description: "A great spot for astrophotography with minimal light pollution.",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      userId: "user123",
-      username: "JohnDoe",
-      altitude: 100,
-      timezone: "America/New_York",
-      distance: 10,
+      timestamp: new Date().toISOString(),
       isDarkSkyReserve: id.includes('reserve'),
       certification: id.includes('certified') ? "International Dark Sky Park" : undefined,
-      siqsConfidence: 90,
-      images: ["image1.jpg", "image2.jpg"],
+      photographer: "John Doe",
       cloudCover: 0.5,
       visibility: 10
     };
@@ -247,23 +251,18 @@ function getCertifiedLocationsNearby(
       locations.push({
         id: `certified-${locations.length}-${Date.now()}`,
         name: location.name,
+        // Chinese name is transliteration with "Dark Sky" prefix
         chineseName: `暗夜天空 ${location.name}`,
-        displayName: `暗夜天空 ${location.name}`,
         latitude: location.coordinates[0],
         longitude: location.coordinates[1],
         bortleScale: location.bortleScale,
         siqs: siqs,
+        isViable: true,
         distance: distance,
         description: `An officially certified dark sky location designated by the International Dark-Sky Association.`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        userId: "user123",
-        username: "JohnDoe",
-        altitude: 100,
-        timezone: "America/New_York",
+        timestamp: new Date().toISOString(),
         isDarkSkyReserve: isDarkSkyReserve,
-        certification: certification,
-        timestamp: new Date().toISOString()
+        certification: certification
       });
     }
   }
@@ -304,7 +303,7 @@ function generateCalculatedSpots(
   const chineseNames = [
     "山区观测点", "山谷观景点", "高地观测点",
     "山脊观景台", "天文台址", "峡谷观景点",
-    "峰顶观测区", "高��观景台", "山坡瞭望点",
+    "峰顶观测区", "高原观景台", "山坡瞭望点",
     "草地观测点", "林间空地", "草原观景点", 
     "沙漠观测站", "岩石观景点", "乡村天文点",
     "乡间观景区", "偏远观测站", "山顶观景点"
@@ -315,7 +314,7 @@ function generateCalculatedSpots(
   
   // Add existing certified locations to avoid overlap
   existingLocations.forEach(loc => {
-    const posKey = `${loc.latitude?.toFixed(2)},${loc.longitude?.toFixed(2)}`;
+    const posKey = `${loc.latitude.toFixed(2)},${loc.longitude.toFixed(2)}`;
     existingPositions.add(posKey);
   });
   
@@ -386,21 +385,13 @@ function generateCalculatedSpots(
         id: `calculated-${spots.length}-${Date.now()}`,
         name: englishNames[nameIndex],
         chineseName: chineseNames[nameIndex],
-        displayName: chineseNames[nameIndex],
         latitude: randomPoint.latitude,
         longitude: randomPoint.longitude,
         bortleScale,
         siqs: siqs,
+        isViable,
         distance: randomPoint.distance,
         description: "A calculated location with potentially good conditions for astrophotography.",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        userId: "user123",
-        username: "JohnDoe",
-        altitude: 100,
-        timezone: "America/New_York",
-        isDarkSkyReserve: false,
-        certification: undefined,
         timestamp: new Date().toISOString()
       });
     }

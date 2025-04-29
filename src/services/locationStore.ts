@@ -1,36 +1,37 @@
 
 import { SharedAstroSpot } from '@/types/weather';
 
-// In-memory store for locations
-const locationStore: Map<string, SharedAstroSpot> = new Map();
+// Location storage cache
+const locationStore = new Map<string, SharedAstroSpot>();
 
 /**
- * Add a location to the store
- * @param location The location to add
+ * Add a location to the location store
+ * @param location Location to store
  */
 export function addLocationToStore(location: SharedAstroSpot): void {
-  // Use ID if available, otherwise create a coordinate-based key
-  const key = location.id || `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-  locationStore.set(key, location);
+  if (!location || !location.id) return;
+  locationStore.set(location.id, location);
 }
 
 /**
  * Get a location from the store by ID
- * @param id The ID of the location to retrieve
+ * @param locationId ID of the location to retrieve
+ * @returns The location or undefined if not found
  */
-export function getLocationFromStore(id: string): SharedAstroSpot | undefined {
-  return locationStore.get(id);
+export function getLocationFromStore(locationId: string): SharedAstroSpot | undefined {
+  return locationStore.get(locationId);
 }
 
 /**
  * Get all locations from the store
+ * @returns Array of all stored locations
  */
 export function getAllLocationsFromStore(): SharedAstroSpot[] {
   return Array.from(locationStore.values());
 }
 
 /**
- * Clear the location store
+ * Clear all locations from the store
  */
 export function clearLocationStore(): void {
   locationStore.clear();

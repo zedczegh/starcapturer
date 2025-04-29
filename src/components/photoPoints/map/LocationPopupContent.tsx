@@ -2,11 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { Popup } from 'react-leaflet';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SharedAstroSpot } from '@/types/weather';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { Star, ExternalLink } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getSiqsScore } from '@/utils/siqsHelpers';
+import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
+import { formatDistance } from '@/utils/geoUtils';
 import { getSiqsClass } from './MarkerUtils';
 
 interface LocationPopupContentProps {
@@ -79,7 +81,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
           
           {typeof location.distance === 'number' && isFinite(location.distance) && (
             <span className="text-xs text-gray-300 flex items-center justify-end">
-              {location.distance < 10 ? location.distance.toFixed(1) : Math.round(location.distance)} km
+              {formatDistance(location.distance)}
             </span>
           )}
         </div>

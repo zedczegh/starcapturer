@@ -1,23 +1,29 @@
 
 import React from 'react';
-import { getSiqsClass } from './MarkerUtils';
+import SiqsScoreBadge from '../cards/SiqsScoreBadge';
+import { motion } from 'framer-motion';
 
 interface SiqsDisplayProps {
-  siqs: number;
-  showLabel?: boolean;
-  className?: string;
+  realTimeSiqs: number | null;
+  loading: boolean;
 }
 
-const SiqsDisplay: React.FC<SiqsDisplayProps> = ({ siqs, showLabel = false, className = '' }) => {
-  const siqsClass = getSiqsClass(siqs);
+/**
+ * Component to display SIQS score with smooth transitions to prevent flickering
+ */
+const SiqsDisplay: React.FC<SiqsDisplayProps> = ({ realTimeSiqs, loading }) => {
+  if (realTimeSiqs === null) return null;
   
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <div className={`h-3 w-3 rounded-full bg-${siqsClass === 'excellent' ? 'green' : siqsClass === 'good' ? 'blue' : siqsClass === 'fair' ? 'yellow' : 'red'}-500`}></div>
-      <span className="text-sm">
-        {showLabel ? 'SIQS: ' : ''}{siqs > 0 ? siqs.toFixed(1) : 'N/A'}
-      </span>
-    </div>
+    <motion.div 
+      className="bg-cosmic-800/90 rounded-md p-1.5 shadow-md flex items-center justify-center border border-cosmic-700/30"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.2 }}
+      layout
+    >
+      <SiqsScoreBadge score={realTimeSiqs} loading={loading} />
+    </motion.div>
   );
 };
 

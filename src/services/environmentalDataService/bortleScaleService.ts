@@ -1,27 +1,56 @@
 
-// Add missing exported function
-export const getBortleScaleData = async (latitude: number, longitude: number): Promise<number> => {
-  // Default bortle scale value if we can't fetch data
-  const defaultBortleScale = 4;
-  
-  try {
-    // In a real application, this would fetch data from an API
-    // For now, return simulated data based on location
-    
-    // Urban areas tend to have higher bortle scale values
-    // Rural areas tend to have lower values
-    
-    // Simple simulation: higher latitudes and longitudes get lower bortle scale values
-    const latitudeFactor = Math.abs(latitude) / 90;  // 0-1
-    const longitudeFactor = Math.abs(longitude) / 180;  // 0-1
-    
-    // Calculate a value between 1 and 9
-    const calculatedBortle = Math.round(9 - (latitudeFactor + longitudeFactor) * 4);
-    
-    // Ensure value is within Bortle scale range (1-9)
-    return Math.max(1, Math.min(9, calculatedBortle));
-  } catch (error) {
-    console.error("Error getting Bortle scale data:", error);
-    return defaultBortleScale;
+import { getBortleScaleFromCoordinates } from '@/utils/bortleScaleUtils';
+
+// Define a placeholder type for Chinese location data
+interface ChineseLocation {
+  name: string;
+  district?: string;
+  bortleScale?: number;
+}
+
+interface CachedDataFn {
+  (key: string): any;
+}
+
+interface SetCachedDataFn {
+  (key: string, value: any): void;
+}
+
+export async function getBortleScaleData(
+  latitude: number,
+  longitude: number,
+  originalName: string,
+  existingBortle: number | null,
+  displayOnly: boolean,
+  getCachedDataFn: CachedDataFn,
+  setCachedDataFn: SetCachedDataFn,
+  language: string
+): Promise<number> {
+  // Check if we already have the Bortle scale for this location
+  if (existingBortle && existingBortle > 0 && existingBortle <= 9) {
+    return existingBortle;
   }
-};
+
+  // Check cache first
+  const cacheKey = `bortle-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  const cachedValue = getCachedDataFn(cacheKey);
+  
+  if (cachedValue !== undefined && cachedValue !== null) {
+    return Number(cachedValue);
+  }
+
+  try {
+    // Get Bortle scale from coordinates
+    const bortleScale = await getBortleScaleFromCoordinates(latitude, longitude);
+    
+    // Cache the value
+    if (bortleScale && !displayOnly) {
+      setCachedDataFn(cacheKey, bortleScale);
+    }
+    
+    return bortleScale;
+  } catch (error) {
+    console.error('Error fetching Bortle scale:', error);
+    return 4; // Default value
+  }
+}

@@ -10,43 +10,36 @@ interface LocationsGridProps {
   initialLoad?: boolean;
   isMobile?: boolean;
   onViewDetails?: (location: SharedAstroSpot) => void;
-  isForecastMode?: boolean;
 }
 
 const LocationsGrid: React.FC<LocationsGridProps> = ({ 
   locations,
   initialLoad = false,
   isMobile = false,
-  onViewDetails,
-  isForecastMode = false
+  onViewDetails
 }) => {
   const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
   
   // Update locations with real-time SIQS
   useEffect(() => {
     if (locations.length > 0) {
-      // Only update non-forecast locations with real-time SIQS
-      if (!isForecastMode) {
-        const updateWithSiqs = async () => {
-          try {
-            const updated = await updateLocationsWithRealTimeSiqs(locations);
-            setEnhancedLocations(updated);
-          } catch (err) {
-            console.error("Error updating grid locations with real-time SIQS:", err);
-            // Fallback to original locations
-            setEnhancedLocations(locations);
-          }
-        };
-        
-        updateWithSiqs();
-      } else {
-        // For forecast locations, just use them as is
-        setEnhancedLocations(locations);
-      }
+      const updateWithSiqs = async () => {
+        try {
+          // Update all locations regardless of type
+          const updated = await updateLocationsWithRealTimeSiqs(locations);
+          setEnhancedLocations(updated);
+        } catch (err) {
+          console.error("Error updating grid locations with real-time SIQS:", err);
+          // Fallback to original locations
+          setEnhancedLocations(locations);
+        }
+      };
+      
+      updateWithSiqs();
     } else {
       setEnhancedLocations([]);
     }
-  }, [locations, isForecastMode]);
+  }, [locations]);
 
   const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : locations;
   

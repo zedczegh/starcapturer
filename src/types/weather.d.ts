@@ -1,4 +1,3 @@
-
 declare module "@/types/weather" {
   export interface WeatherData {
     temperature: number;
@@ -42,26 +41,30 @@ declare module "@/types/weather" {
   }
 
   export interface SharedAstroSpot {
-    id?: string;
-    name?: string;
-    displayName?: string;
-    siqs?: number | { score: number; isViable: boolean };
-    bortleScale?: number;
+    id: string;
+    name: string;
     latitude: number;
     longitude: number;
-    altitude?: number;
-    timezone?: string;
-    distance?: number;
-    isDarkSkyReserve?: boolean;
-    certification?: string;
-    siqsConfidence?: number;
-    images?: string[];
-    createdAt?: string;
-    updatedAt?: string;
-    userId?: string;
-    username?: string;
+    bortleScale: number;
     description?: string;
-    advantages?: string[];
+    imageURL?: string;
+    rating?: number;
+    timestamp: string;
+    chineseName?: string;
+    siqs?: number | {
+      score: number;
+      isViable: boolean;
+    };
+    siqsResult?: SIQSData;
+    distance?: number;
+    isViable?: boolean;
+    siqsFactors?: Array<{
+      name: string;
+      score: number;
+      description: string;
+    }>;
+    certification?: string;
+    isDarkSkyReserve?: boolean;
     type?: string;
     preferenceScore?: number;
     clearSkyRate?: number;
@@ -74,16 +77,5 @@ declare module "@/types/weather" {
     };
     date?: string | Date;
     user_id?: string;
-    isForecast?: boolean;
-    forecastDate?: string;
-    weatherData?: WeatherData;
-    cloudCover?: number;
-    photographer?: string;
-    chineseName?: string;
-    timestamp?: string;
-    isViable?: boolean;
-    weatherScore?: number;
-    siqsResult?: SIQSData;
-    visibility?: number;
   }
 }

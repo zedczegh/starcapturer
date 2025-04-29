@@ -24,8 +24,6 @@ interface CalculatedLocationsProps {
   canLoadMoreCalculated?: boolean;
   loadMoreClickCount?: number;
   maxLoadMoreClicks?: number;
-  isForecastMode?: boolean;
-  selectedForecastDay?: number;
 }
 
 const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
@@ -39,9 +37,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   onLoadMoreCalculated,
   canLoadMoreCalculated = false,
   loadMoreClickCount = 0,
-  maxLoadMoreClicks = 2,
-  isForecastMode = false,
-  selectedForecastDay = 0
+  maxLoadMoreClicks = 2
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
@@ -50,20 +46,13 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   // Set up the event listener for expanding search radius
   useExpandSearchRadius({ onRefresh });
   
-  // Filter locations based on current mode
-  const validLocations = isForecastMode 
-    ? locations 
-    : locations.filter(loc => loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0));
+  // Filter out locations with SIQS score of 0
+  const validLocations = locations.filter(loc => loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0));
   
-  // Sort locations by either distance or SIQS score
-  const sortedLocations = [...validLocations].sort((a, b) => {
-    if (isForecastMode) {
-      // For forecast mode, prioritize by SIQS (higher first)
-      return (b.siqs as number || 0) - (a.siqs as number || 0);
-    }
-    // For regular mode, sort by distance
-    return (a.distance || Infinity) - (b.distance || Infinity);
-  });
+  // Sort locations by distance (closest first)
+  const sortedLocations = [...validLocations].sort((a, b) => 
+    (a.distance || Infinity) - (b.distance || Infinity)
+  );
   
   // Determine if we should show loading state
   if (loading && sortedLocations.length === 0) {
@@ -80,8 +69,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
       <EmptyCalculatedState 
         searchRadius={searchRadius}
         onRefresh={onRefresh}
-        isForecastMode={isForecastMode}
-        selectedForecastDay={selectedForecastDay}
       />
     );
   }
@@ -107,19 +94,16 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
         initialLoad={initialLoad}
         isMobile={isMobile}
         onViewDetails={handleViewLocation}
-        isForecastMode={isForecastMode}
       />
       
-      {!isForecastMode && (
-        <LoadMoreButtons 
-          hasMore={hasMore}
-          onLoadMore={onLoadMore}
-          canLoadMoreCalculated={canLoadMoreCalculated}
-          onLoadMoreCalculated={onLoadMoreCalculated}
-          loadMoreClickCount={loadMoreClickCount}
-          maxLoadMoreClicks={maxLoadMoreClicks}
-        />
-      )}
+      <LoadMoreButtons 
+        hasMore={hasMore}
+        onLoadMore={onLoadMore}
+        canLoadMoreCalculated={canLoadMoreCalculated}
+        onLoadMoreCalculated={onLoadMoreCalculated}
+        loadMoreClickCount={loadMoreClickCount}
+        maxLoadMoreClicks={maxLoadMoreClicks}
+      />
     </>
   );
 };
