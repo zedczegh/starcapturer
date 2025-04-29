@@ -1,45 +1,32 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
-import * as L from 'leaflet';
 
 interface MapEffectsComposerProps {
-  effects?: ('leaflet-fullscreen' | 'zoom-controls')[];  // Removed 'scale' from this array
-  userLocation?: { latitude: number; longitude: number } | null;
-  activeView?: 'certified' | 'calculated';
-  searchRadius?: number;
+  activeView: 'certified' | 'calculated';
+  searchRadius: number;
+  isForecast?: boolean;
 }
 
 const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({ 
-  effects = [],
-  userLocation,
-  activeView,
-  searchRadius
+  activeView, 
+  searchRadius,
+  isForecast = false
 }) => {
   const map = useMap();
   
-  React.useEffect(() => {
-    // Apply various map effects based on props
-    if (effects.includes('zoom-controls')) {
-      // Add zoom controls if not already added
-      if (!map.zoomControl) {
-        map.addControl(L.control.zoom({ position: 'bottomright' }));
-      }
+  useEffect(() => {
+    if (activeView === 'calculated') {
+      console.log(`Map effects applied for calculated view with radius ${searchRadius}km${isForecast ? ' (forecast mode)' : ''}`);
+    } else {
+      console.log('Map effects applied for certified view');
     }
     
-    // Removed scale control - we no longer add it
-    
-    // If we have user location and view mode, we could add additional effects here
-    if (userLocation && activeView) {
-      console.log(`Map effects applied for ${activeView} view with radius ${searchRadius}km`);
-    }
-    
-    return () => {
-      // Clean up effects if needed (no need to clean up scale control anymore)
-    };
-  }, [map, effects, userLocation, activeView, searchRadius]);
+    // Force a map redraw
+    map.invalidateSize();
+  }, [activeView, searchRadius, isForecast, map]);
   
-  return null; // This component doesn't render anything visible
+  return null;
 };
 
 export default MapEffectsComposer;

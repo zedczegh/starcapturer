@@ -1,3 +1,4 @@
+
 // Main API file that re-exports all functionality from the sub-modules
 export type { Coordinates } from './api/coordinates';
 export { validateCoordinates, normalizeLongitude, calculateDistance } from './api/coordinates';

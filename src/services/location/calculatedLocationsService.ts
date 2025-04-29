@@ -3,6 +3,29 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
 
 /**
+ * Local storage for locations
+ */
+let locationStore: Map<string, SharedAstroSpot> = new Map();
+
+/**
+ * Add a location to the persistent store
+ */
+export function addLocationToStore(location: SharedAstroSpot): void {
+  if (location && location.latitude && location.longitude) {
+    const key = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    locationStore.set(key, location);
+  }
+}
+
+/**
+ * Get a location from the store by coordinates
+ */
+export function getLocationFromStore(latitude: number, longitude: number): SharedAstroSpot | undefined {
+  const key = `${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
+  return locationStore.get(key);
+}
+
+/**
  * Generate a grid of points within a radius of a center point
  * @param centerLat Center latitude
  * @param centerLng Center longitude

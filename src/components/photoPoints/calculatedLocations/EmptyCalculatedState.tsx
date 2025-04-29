@@ -2,8 +2,7 @@
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, RefreshCcw, Calendar } from 'lucide-react';
-import { format, addDays } from 'date-fns';
+import { RefreshCw, AlertCircle } from 'lucide-react';
 
 interface EmptyCalculatedStateProps {
   searchRadius: number;
@@ -11,54 +10,49 @@ interface EmptyCalculatedStateProps {
   isForecast?: boolean;
 }
 
-const EmptyCalculatedState: React.FC<EmptyCalculatedStateProps> = ({ 
-  searchRadius, 
+const EmptyCalculatedState: React.FC<EmptyCalculatedStateProps> = ({
+  searchRadius,
   onRefresh,
   isForecast = false
 }) => {
   const { t } = useLanguage();
-
+  
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
+  
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-      <div className="bg-yellow-100 dark:bg-yellow-900/30 rounded-full p-4 mb-4">
-        {isForecast ? (
-          <Calendar className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
-        ) : (
-          <AlertCircle className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
-        )}
-      </div>
+    <div className="flex flex-col items-center justify-center p-6 rounded-lg border border-border bg-card/50 text-center min-h-[300px]">
+      <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
       
-      <h3 className="text-xl font-semibold mb-2">
-        {isForecast 
-          ? t("No forecast spots found", "未找到预测点位") 
-          : t("No calculated spots found", "未找到计算点位")
+      <h3 className="text-lg font-medium mb-2">
+        {isForecast ? 
+          t("No forecast spots found", "未找到预报观星点") :
+          t("No spots found", "未找到观星点")
         }
       </h3>
       
-      <p className="text-muted-foreground max-w-md mb-6">
-        {isForecast 
-          ? t(
-              "We couldn't find good photo spots for this forecast date. Try another day or expand your search radius.",
-              "我们无法为此预测日期找到好的拍摄点。请尝试另一天或扩大您的搜索半径。"
-            )
-          : t(
-              "We couldn't find any calculated spots within {radius}km of your location. Try expanding the search radius.",
-              "我们无法在您位置周围{radius}公里内找到任何计算点位。请尝试扩大搜索半径。",
-              { radius: searchRadius }
-            )
+      <p className="text-muted-foreground mb-4 max-w-md">
+        {isForecast ? 
+          t(
+            `We couldn't find any good stargazing locations with favorable weather forecasts in this area for the selected day. Try changing the forecast day or increasing the search radius.`,
+            `在选定的日期内，我们无法在该区域找到具有良好天气预报的观星地点。请尝试更改预报日期或增加搜索半径。`
+          ) :
+          t(
+            `We couldn't find any good stargazing locations within ${searchRadius}km of your current location. Try increasing the search radius.`,
+            `我们在您当前位置${searchRadius}公里范围内找不到良好的观星地点。尝试增加搜索半径。`
+          )
         }
       </p>
       
-      {onRefresh && (
-        <Button 
-          onClick={onRefresh} 
-          className="flex items-center gap-2"
-          variant="outline"
-        >
-          <RefreshCcw className="h-4 w-4" />
+      <div className="flex gap-4">
+        <Button onClick={handleRefresh} variant="outline" className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" />
           {t("Refresh", "刷新")}
         </Button>
-      )}
+      </div>
     </div>
   );
 };

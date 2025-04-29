@@ -1,105 +1,82 @@
 
-import { SharedAstroSpot } from '@/types/weather';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * Filters out invalid locations from an array of locations
- * @param locations The array of locations to filter
- * @returns An array of valid locations
+ * Determine if a location is certified (either Dark Sky Reserve or has certification)
  */
-export const filterValidLocations = (locations: SharedAstroSpot[]): SharedAstroSpot[] => {
-  // Make sure locations is an array
-  if (!Array.isArray(locations)) {
-    console.warn('filterValidLocations received non-array input:', locations);
-    return [];
-  }
-  
-  console.log(`Filtering ${locations.length} locations for validity`);
-  
-  // Filter out invalid locations
-  return locations.filter(
-    loc => loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
+export function isCertifiedLocation(location: SharedAstroSpot): boolean {
+  return Boolean(
+    location.isDarkSkyReserve ||
+    location.certification ||
+    location.type === 'dark-site'
   );
-};
+}
 
 /**
- * Separates certified and calculated locations into different arrays
- * @param locations The array of locations to separate
- * @returns An object containing certified and calculated locations
+ * Filter locations that have valid properties
  */
-export const separateLocationTypes = (
+export function filterValidLocations(
   locations: SharedAstroSpot[]
-): { certifiedLocations: SharedAstroSpot[]; calculatedLocations: SharedAstroSpot[] } => {
-  // Make sure locations is an array
-  if (!Array.isArray(locations)) {
-    console.warn('separateLocationTypes received non-array input:', locations);
-    return { certifiedLocations: [], calculatedLocations: [] };
-  }
+): SharedAstroSpot[] {
+  return locations.filter(loc => 
+    loc && 
+    typeof loc.latitude === 'number' && 
+    typeof loc.longitude === 'number' &&
+    !Number.isNaN(loc.latitude) &&
+    !Number.isNaN(loc.longitude)
+  );
+}
 
-  const certifiedLocations: SharedAstroSpot[] = [];
-  const calculatedLocations: SharedAstroSpot[] = [];
-
-  for (const location of locations) {
-    if (isCertifiedLocation(location)) {
-      certifiedLocations.push(location);
+/**
+ * Separate locations into certified and calculated types
+ */
+export function separateLocationTypes(
+  locations: SharedAstroSpot[]
+): {
+  certifiedLocations: SharedAstroSpot[];
+  calculatedLocations: SharedAstroSpot[];
+} {
+  const certified: SharedAstroSpot[] = [];
+  const calculated: SharedAstroSpot[] = [];
+  
+  locations.forEach(loc => {
+    if (isCertifiedLocation(loc)) {
+      certified.push(loc);
     } else {
-      calculatedLocations.push(location);
+      calculated.push(loc);
     }
-  }
+  });
   
-  console.log(`Separated locations: ${certifiedLocations.length} certified, ${calculatedLocations.length} calculated`);
-
-  return { certifiedLocations, calculatedLocations };
-};
-
-/**
- * Merges certified and calculated locations with proper prioritization
- * @param certifiedLocations Array of certified locations
- * @param calculatedLocations Array of calculated locations
- * @param activeView Current view mode
- * @returns Merged array of locations
- */
-export const mergeLocations = (
-  certifiedLocations: SharedAstroSpot[],
-  calculatedLocations: SharedAstroSpot[],
-  activeView: 'certified' | 'calculated'
-): SharedAstroSpot[] => {
-  if (activeView === 'certified') {
-    console.log(`Returning certified-only locations: ${certifiedLocations.length}`);
-    return [...certifiedLocations];
-  }
+  console.log(`Processing ${locations.length} locations for certified/calculated separation`);
+  console.log(`Found ${certified.length} certified and ${calculated.length} calculated locations`);
   
-  // For calculated view, include both but prioritize certified locations
-  const combinedCount = certifiedLocations.length + calculatedLocations.length;
-  console.log(`Returning combined locations for calculated view: ${combinedCount}`);
-  return [...certifiedLocations, ...calculatedLocations];
-};
+  return {
+    certifiedLocations: certified,
+    calculatedLocations: calculated
+  };
+}
 
 /**
- * Checks if a location is a certified location (has certification or is a dark sky reserve)
- * @param location The location to check
- * @returns True if the location is certified, false otherwise
+ * Merge arrays of locations with deduplication by coordinates
  */
-export const isCertifiedLocation = (location: SharedAstroSpot): boolean => {
-  return Boolean(location?.isDarkSkyReserve || location?.certification);
-};
-
-/**
- * Gets the SIQS score from a location, handling different formats
- * @param location The location to get the SIQS score from
- * @returns The SIQS score, or null if not available
- */
-export const getSiqsScore = (location: SharedAstroSpot): number | null => {
-  if (typeof location.siqs === 'number') {
-    return location.siqs;
-  }
+export function mergeLocations(
+  ...locationArrays: SharedAstroSpot[][]
+): SharedAstroSpot[] {
+  const locationMap = new Map<string, SharedAstroSpot>();
   
-  if (location.siqs && typeof location.siqs === 'object' && 'score' in location.siqs) {
-    return location.siqs.score;
-  }
+  locationArrays.forEach(locations => {
+    if (Array.isArray(locations)) {
+      locations.forEach(loc => {
+        if (loc && loc.latitude && loc.longitude) {
+          const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+          // If we already have a location at this coordinate, prefer certified ones
+          if (!locationMap.has(key) || isCertifiedLocation(loc)) {
+            locationMap.set(key, loc);
+          }
+        }
+      });
+    }
+  });
   
-  if (location.siqsResult && typeof location.siqsResult.score === 'number') {
-    return location.siqsResult.score;
-  }
-  
-  return null;
-};
+  return Array.from(locationMap.values());
+}
