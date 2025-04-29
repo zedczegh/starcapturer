@@ -1,14 +1,101 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import { fetchLongRangeForecastData } from '@/lib/api';
-import { calculateDistance } from '@/lib/api/coordinates';
+import { calculateDistance } from '@/utils/geoUtils';
 import { getEffectiveCloudCover } from '@/lib/siqs/weatherDataUtils';
-import { generateDistributedPoints } from './location/pointGenerationService';
 import { isWaterLocation } from '@/utils/validation';
 
 // Cache forecast data by location and day to reduce API calls
 const forecastCache = new Map<string, {data: any, timestamp: number}>();
 const CACHE_EXPIRY = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Generate a random point within a specified radius
+ */
+const generateRandomPoint = (
+  centerLat: number, 
+  centerLng: number, 
+  radius: number
+): { latitude: number, longitude: number, distance: number } => {
+  // Use squared root distribution for more natural density gradient
+  const r = radius * Math.sqrt(Math.random());
+  const theta = Math.random() * 2 * Math.PI;
+  
+  // Convert to cartesian coordinates
+  const x = r * Math.cos(theta);
+  const y = r * Math.sin(theta);
+  
+  // Convert to lat/lng with Earth's curvature consideration
+  const latRadians = centerLat * (Math.PI / 180);
+  const kmPerDegreeLat = 111.32;
+  const kmPerDegreeLng = 111.32 * Math.cos(latRadians);
+  
+  const newLat = centerLat + (y / kmPerDegreeLat);
+  const newLng = centerLng + (x / kmPerDegreeLng);
+  
+  const distance = calculateDistance(centerLat, centerLng, newLat, newLng);
+  
+  return {
+    latitude: newLat,
+    longitude: newLng,
+    distance
+  };
+};
+
+/**
+ * Generate multiple points with improved distribution
+ */
+const generateDistributedPoints = (
+  centerLat: number,
+  centerLng: number,
+  radius: number,
+  count: number = 20
+): { latitude: number, longitude: number, distance: number }[] => {
+  const points: { latitude: number, longitude: number, distance: number }[] = [];
+  
+  // Generate initial random points
+  for (let i = 0; i < count * 2; i++) {
+    points.push(generateRandomPoint(centerLat, centerLng, radius));
+  }
+  
+  // Apply spatial distribution algorithm
+  const selectedPoints: { latitude: number, longitude: number, distance: number }[] = [];
+  
+  if (points.length > 0) {
+    selectedPoints.push(points[0]);
+  }
+  
+  while (selectedPoints.length < count && points.length > selectedPoints.length) {
+    let bestPoint = null;
+    let bestMinDist = -1;
+    
+    for (const candidate of points) {
+      if (selectedPoints.some(p => p === candidate)) continue;
+      
+      let minDist = Infinity;
+      for (const selected of selectedPoints) {
+        const dist = calculateDistance(
+          candidate.latitude, candidate.longitude,
+          selected.latitude, selected.longitude
+        );
+        minDist = Math.min(minDist, dist);
+      }
+      
+      if (minDist > bestMinDist) {
+        bestMinDist = minDist;
+        bestPoint = candidate;
+      }
+    }
+    
+    if (bestPoint) {
+      selectedPoints.push(bestPoint);
+    } else {
+      break;
+    }
+  }
+  
+  return selectedPoints;
+};
 
 // Define types for forecast spots
 interface ForecastWeatherSpot {
@@ -194,7 +281,7 @@ export async function findForecastLocations(
     // Get forecast data for each point
     const forecastPromises = points.map(async (point) => {
       // Skip water locations
-      if (isWaterLocation(point.latitude, point.longitude)) {
+      if (isWaterLocation && isWaterLocation(point.latitude, point.longitude)) {
         return null;
       }
       

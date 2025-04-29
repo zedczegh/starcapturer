@@ -1,108 +1,151 @@
 
-import { useState, useCallback, useEffect } from 'react';
-import { useGeolocation } from '@/hooks/location/useGeolocation';
+import { useState, useEffect, useCallback } from 'react';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useGeolocation } from '@/hooks/use-geolocation';
 
-/**
- * Hook to manage photo points state
- */
 export const usePhotoPointsState = () => {
-  const [activeView, setActiveView] = useState<'certified' | 'calculated'>('certified');
-  const [showMap, setShowMap] = useState(false);
-  const [initialLoad, setInitialLoad] = useState(true);
-  const [currentSearchRadius, setCurrentSearchRadius] = useState<number>(500);
-  const [calculatedSearchRadius, setCalculatedSearchRadius] = useState<number>(500);
-  const [selectedForecastDay, setSelectedForecastDay] = useState<number>(0); // Default to current day (0)
-  const [showForecast, setShowForecast] = useState<boolean>(false);
+  // State for view mode (certified vs. calculated)
+  const [activeView, setActiveView] = useLocalStorage<'certified' | 'calculated'>(
+    'photo-points-active-view',
+    'calculated'
+  );
   
-  // Geolocation hook
-  const {
-    latitude,
-    longitude,
-    loading: locationLoading,
-    locationInitialized,
-    initializeLocation,
+  // State for forecast mode
+  const [showForecast, setShowForecast] = useLocalStorage<boolean>(
+    'photo-points-forecast-mode',
+    false
+  );
+  
+  // State for forecast day (0 = today, 1 = tomorrow, etc.)
+  const [selectedForecastDay, setSelectedForecastDay] = useLocalStorage<number>(
+    'photo-points-forecast-day',
+    0
+  );
+  
+  // State for map view toggle
+  const [showMap, setShowMap] = useLocalStorage<boolean>(
+    'photo-points-show-map',
+    true
+  );
+
+  // Use geolocation hook to get user's location
+  const { 
+    coords, 
+    error, 
+    loading, 
+    getPosition,
+    locationInitialized = false,
     updateLocation
   } = useGeolocation();
+
+  // Extract latitude and longitude from coords for easier use
+  const latitude = coords?.latitude;
+  const longitude = coords?.longitude;
+
+  // State for search radius
+  const [calculatedSearchRadius, setCalculatedSearchRadius] = useLocalStorage<number>(
+    'calculated-search-radius',
+    200
+  );
   
-  // Effective location
-  const effectiveLocation = latitude && longitude
-    ? { latitude, longitude }
-    : null;
+  const [certifiedSearchRadius, setCertifiedSearchRadius] = useLocalStorage<number>(
+    'certified-search-radius',
+    500
+  );
   
-  // Handle view change
+  // Manual location override (when user clicks on map)
+  const [manualLocation, setManualLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  
+  // Initialize location handling
+  const [initialLoad, setInitialLoad] = useState(true);
+  
+  useEffect(() => {
+    if (locationInitialized || error || latitude) {
+      setInitialLoad(false);
+    }
+  }, [locationInitialized, error, latitude]);
+  
+  // Function to handle radius change
+  const handleRadiusChange = useCallback((value: number) => {
+    if (activeView === 'certified') {
+      setCertifiedSearchRadius(value);
+    } else {
+      setCalculatedSearchRadius(value);
+    }
+  }, [activeView, setCertifiedSearchRadius, setCalculatedSearchRadius]);
+  
+  // Function to handle view mode change
   const handleViewChange = useCallback((view: 'certified' | 'calculated') => {
     setActiveView(view);
     
-    // Reset forecast when switching views
-    if (view === 'certified') {
+    // When switching to certified, disable forecast mode
+    if (view === 'certified' && showForecast) {
       setShowForecast(false);
     }
-  }, []);
+  }, [setActiveView, showForecast, setShowForecast]);
   
-  // Handle radius change
-  const handleRadiusChange = useCallback((radius: number) => {
-    setCalculatedSearchRadius(radius);
-    setCurrentSearchRadius(radius);
-  }, []);
-  
-  // Handle forecast day change
-  const handleForecastDayChange = useCallback((day: number) => {
-    setSelectedForecastDay(day);
-  }, []);
-  
-  // Toggle forecast view
-  const toggleForecastView = useCallback(() => {
-    setShowForecast(prev => !prev);
-  }, []);
-  
-  // Toggle map view
+  // Function to toggle map view
   const toggleMapView = useCallback(() => {
     setShowMap(prev => !prev);
-  }, []);
+  }, [setShowMap]);
   
-  // Handle location update
+  // Function to toggle forecast mode
+  const toggleForecastView = useCallback(() => {
+    setShowForecast(prev => !prev);
+  }, [setShowForecast]);
+  
+  // Function to handle forecast day change
+  const handleForecastDayChange = useCallback((day: number) => {
+    setSelectedForecastDay(day);
+  }, [setSelectedForecastDay]);
+  
+  // Function to handle location update (map click)
   const handleLocationUpdate = useCallback((lat: number, lng: number) => {
-    updateLocation(lat, lng);
+    if (updateLocation) {
+      updateLocation(lat, lng);
+    } else {
+      // Fallback if updateLocation is not available
+      setManualLocation({ latitude: lat, longitude: lng });
+    }
   }, [updateLocation]);
   
-  // Handle reset location
+  // Function to reset to device location
   const handleResetLocation = useCallback(() => {
-    initializeLocation();
-  }, [initializeLocation]);
-  
-  // Initialize location on mount
-  useEffect(() => {
-    initializeLocation();
-  }, [initializeLocation]);
-  
-  // Set initial load to false once location is initialized
-  useEffect(() => {
-    if (locationInitialized) {
-      const timer = setTimeout(() => {
-        setInitialLoad(false);
-      }, 2000);
-      
-      return () => clearTimeout(timer);
+    if (getPosition) {
+      getPosition();
+      setManualLocation(null);
     }
-  }, [locationInitialized]);
+  }, [getPosition]);
+  
+  // Determine effective location (device or manual override)
+  const effectiveLocation = manualLocation || (coords ? { latitude, longitude } : null);
+  
+  // Determine current search radius based on active view
+  const currentSearchRadius = activeView === 'certified' 
+    ? certifiedSearchRadius 
+    : calculatedSearchRadius;
   
   return {
     activeView,
     showMap,
     initialLoad,
-    locationLoading,
+    locationLoading: loading,
     effectiveLocation,
-    locationInitialized,
+    locationInitialized: Boolean(locationInitialized || latitude || manualLocation),
     calculatedSearchRadius,
+    certifiedSearchRadius,
     currentSearchRadius,
-    selectedForecastDay,
     showForecast,
+    selectedForecastDay,
     handleRadiusChange,
     handleViewChange,
     handleLocationUpdate,
     handleResetLocation,
     toggleMapView,
-    handleForecastDayChange,
-    toggleForecastView
+    toggleForecastView,
+    handleForecastDayChange
   };
 };

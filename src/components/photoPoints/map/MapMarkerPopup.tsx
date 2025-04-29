@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Calendar, Info } from 'lucide-react';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 
 interface MarkerPopupContentProps {
   location: SharedAstroSpot;
@@ -71,6 +71,11 @@ const MarkerPopupContent: React.FC<MarkerPopupContentProps> = ({
         
         {location.isDarkSkyReserve && (
           <div className="text-purple-600 font-medium">{t("Dark Sky Reserve", "暗夜保护区")}</div>
+        )}
+        
+        {/* For forecast locations */}
+        {location.type && (
+          <div className="text-blue-600 font-medium">{location.type}</div>
         )}
         
         {/* SIQS score */}

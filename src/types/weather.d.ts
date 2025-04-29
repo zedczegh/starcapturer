@@ -80,5 +80,8 @@ declare module "@/types/weather" {
     user_id?: string;
     isForecast?: boolean;
     forecastDate?: string;
+    weatherData?: WeatherData;
+    cloudCover?: number;
+    photographer?: string;
   }
 }

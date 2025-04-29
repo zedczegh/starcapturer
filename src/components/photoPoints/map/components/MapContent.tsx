@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
 import { MapEffectsComposer } from '../MapComponents';
 import MapController from '../MapController';
@@ -147,7 +147,7 @@ const MapContent: React.FC<MapContentProps> = ({
             handleTouchStart={handleTouchStart}
             handleTouchEnd={handleTouchEnd}
             handleTouchMove={handleTouchMove}
-            isForecast={isForecastMode || location.isForecast}
+            isForecast={Boolean(isForecastMode || location.isForecast)}
           />
         );
       })}

@@ -1,5 +1,6 @@
 
 import L from 'leaflet';
+import { SharedAstroSpot } from '@/types/weather';
 
 // Icon configurations
 const markerSizePx = 26;
@@ -84,4 +85,28 @@ export function getForecastLocationIcon(isHovered = false) {
   });
 }
 
-// You can add additional marker types here as needed
+// Helper function to get the appropriate marker icon based on location type
+export function getLocationMarker(location: SharedAstroSpot, isCertified: boolean, isHovered: boolean, isMobile: boolean = false) {
+  if (location.isForecast) {
+    return getForecastLocationIcon(isHovered);
+  }
+  
+  if (location.isDarkSkyReserve) {
+    return getDarkSkyLocationIcon(isHovered);
+  }
+  
+  if (isCertified || location.certification) {
+    return getCertifiedLocationIcon(isHovered);
+  }
+  
+  return getCalculatedLocationIcon(isHovered);
+}
+
+// Get SIQS class based on score value
+export function getSiqsClass(score: number | null): string {
+  if (score === null || score <= 0) return 'poor';
+  if (score >= 8) return 'excellent';
+  if (score >= 6) return 'good';
+  if (score >= 4) return 'fair';
+  return 'poor';
+}

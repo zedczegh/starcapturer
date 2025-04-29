@@ -4,7 +4,7 @@ import { Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import { User } from 'lucide-react';
 import MarkerPopupContent from './MapMarkerPopup';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 
 // Import custom marker icons
 import { getCertifiedLocationIcon, getCalculatedLocationIcon, getDarkSkyLocationIcon, getForecastLocationIcon } from './MarkerUtils';
@@ -58,9 +58,21 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
       onClick(location);
     }
   };
+
+  const handleMouseOver = () => {
+    if (onHover) {
+      onHover(locationId);
+    }
+  };
+
+  const handleMouseOut = () => {
+    if (onHover) {
+      onHover(null);
+    }
+  };
   
   // Enhance visibility for markers
-  const markerZIndexOffset = isHovered ? 1000 : (isForecast ? 500 : 0);
+  const zOffset = isHovered ? 1000 : (isForecast ? 500 : 0);
   
   return (
     <Marker
@@ -68,10 +80,9 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
       icon={getIcon()}
       eventHandlers={{
         click: handleClick,
-        mouseover: () => onHover(locationId),
-        mouseout: () => onHover(null),
+        mouseover: handleMouseOver,
+        mouseout: handleMouseOut,
       }}
-      zIndexOffset={markerZIndexOffset}
     >
       <Popup>
         <div 
@@ -126,7 +137,7 @@ export const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
   });
 
   return (
-    <Marker position={position} icon={userIcon} zIndexOffset={2000}>
+    <Marker position={position} icon={userIcon}>
       <Popup>
         <div className="text-sm p-1">
           <div className="font-semibold mb-1">Your Location</div>

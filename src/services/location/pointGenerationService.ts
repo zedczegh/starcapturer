@@ -1,5 +1,4 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
 
 /**
