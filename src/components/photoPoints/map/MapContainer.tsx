@@ -59,6 +59,16 @@ const MapContainer: React.FC<MapContainerProps> = ({
   // Only show the radius circle for calculated view when not in forecast mode
   const showRadiusCircles = activeView === 'calculated' && !isForecast;
   
+  // Helper function to get numeric SIQS value
+  const getSiqsValue = (siqs: number | { score: number; isViable: boolean } | undefined): number | null => {
+    if (siqs === undefined) return null;
+    if (typeof siqs === 'number') return siqs;
+    if (typeof siqs === 'object' && siqs !== null && 'score' in siqs) {
+      return siqs.score;
+    }
+    return null;
+  };
+  
   // Current SIQS score at user location
   const currentSiqs = useMemo(() => {
     // If we have no user location, return null
@@ -70,7 +80,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
       Math.abs(loc.longitude - userLocation.longitude) < 0.0001
     );
     
-    return userLocationSpot?.siqs || null;
+    return userLocationSpot ? getSiqsValue(userLocationSpot.siqs) : null;
   }, [locations, userLocation]);
   
   // Check map loading status

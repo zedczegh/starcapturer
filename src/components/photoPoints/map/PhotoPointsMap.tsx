@@ -3,7 +3,6 @@ import React, { useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
 import MapContainer from './MapContainer';
-import PageLoader from '@/components/loaders/PageLoader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format, addDays } from 'date-fns';
 
@@ -101,9 +100,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
           isDarkSkyReserve: loc.isDarkSkyReserve,
           certification: loc.certification,
           distance: loc.distance,
-          isForecast: loc.isForecast,
-          forecastDate: loc.forecastDate,
-          weatherData: loc.weatherData
+          isForecast: loc.isForecast || false,
+          forecastDate: loc.forecastDate || null,
+          weatherData: loc.weatherData || null
         }));
         
         let combinedLocations = simplifiedLocations;

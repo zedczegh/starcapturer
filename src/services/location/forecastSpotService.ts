@@ -17,6 +17,7 @@ interface WeatherSpot {
   precipitation?: number;
   weatherCode?: number;
   weatherScore: number;
+  distance?: number;
 }
 
 interface ForecastOptions {
