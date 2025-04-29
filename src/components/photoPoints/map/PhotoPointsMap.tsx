@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
 import MapContainer from './MapContainer';
 import PageLoader from '@/components/loaders/PageLoader';
@@ -84,7 +84,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
           isDarkSkyReserve: loc.isDarkSkyReserve,
           certification: loc.certification,
           distance: loc.distance,
-          isForecast: loc.isForecast,
+          isForecast: isForecastMode || loc.isForecast,
           forecastDate: loc.forecastDate
         }));
         
@@ -129,7 +129,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         console.error('Error storing locations in session storage:', err);
       }
     }
-  }, [locations, activeView]);
+  }, [locations, activeView, isForecastMode]);
   
   // Load persisted locations on component mount
   useEffect(() => {

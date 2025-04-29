@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
 import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
@@ -84,7 +84,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       
       const previousToKeep = previousLocations.current.filter(loc => {
         // Don't mix forecast and non-forecast locations
-        if (isForecastMode !== !!loc.isForecast) {
+        const locForecast = loc.isForecast === true;
+        if (isForecastMode !== locForecast) {
           return false;
         }
         
@@ -190,6 +191,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         onMapReady={handleMapReady}
         currentSiqs={currentSiqs}
         isForecastMode={isForecastMode}
+        selectedForecastDay={selectedForecastDay}
       />
     </div>
   );

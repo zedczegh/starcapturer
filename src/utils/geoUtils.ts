@@ -23,9 +23,14 @@ export function calculateDistance(
 /**
  * Convert degrees to radians
  */
-function deg2rad(deg: number): number {
+export function deg2rad(deg: number): number {
   return deg * (Math.PI / 180);
 }
+
+/**
+ * Alias for deg2rad to maintain compatibility
+ */
+export const degToRad = deg2rad;
 
 /**
  * Format a distance value for display

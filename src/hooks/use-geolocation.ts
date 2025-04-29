@@ -1,84 +1,75 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocalStorage } from './use-local-storage';
 
-interface GeolocationState {
-  coords: GeolocationCoordinates | null;
-  error: GeolocationPositionError | null;
-  loading: boolean;
-  locationInitialized: boolean;
-  getPosition: () => void;
-  updateLocation: (lat: number, lng: number) => void;
-}
-
-export function useGeolocation(): GeolocationState {
+// A custom hook that provides access to device geolocation
+export function useGeolocation() {
   const [coords, setCoords] = useState<GeolocationCoordinates | null>(null);
   const [error, setError] = useState<GeolocationPositionError | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [locationInitialized, setLocationInitialized] = useState<boolean>(false);
-  
-  // Save manual location to localStorage
-  const [manualLocation, setManualLocation] = useLocalStorage<{lat: number, lng: number} | null>(
-    'manual-location-override',
-    null
-  );
-  
-  // Load manual location on init if exists
+  const [loading, setLoading] = useState<boolean>(false);
+  const [cachedPosition, setCachedPosition] = useLocalStorage<{
+    latitude: number;
+    longitude: number;
+    timestamp: number;
+  } | null>('cached-geolocation', null);
+
+  // Function to request geolocation
+  const getPosition = useCallback(() => {
+    if (!navigator.geolocation) {
+      setError(new GeolocationPositionError());
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCoords(position.coords);
+        setLoading(false);
+        
+        // Cache the position
+        setCachedPosition({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          timestamp: Date.now()
+        });
+      },
+      (err) => {
+        setError(err);
+        setLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }, [setCachedPosition]);
+
+  // Try to load cached position if available and recent
   useEffect(() => {
-    if (manualLocation && !coords) {
+    const CACHE_VALIDITY = 30 * 60 * 1000; // 30 minutes
+    
+    if (cachedPosition && (Date.now() - cachedPosition.timestamp < CACHE_VALIDITY)) {
+      // Use cached position as initial value
       setCoords({
-        latitude: manualLocation.lat,
-        longitude: manualLocation.lng,
+        latitude: cachedPosition.latitude,
+        longitude: cachedPosition.longitude,
         accuracy: 0,
         altitude: null,
         altitudeAccuracy: null,
         heading: null,
         speed: null
       } as GeolocationCoordinates);
-      setLocationInitialized(true);
-      setLoading(false);
+    } else {
+      // Automatically get position on mount if no recent cache
+      getPosition();
     }
-  }, [manualLocation]);
+  }, [cachedPosition, getPosition]);
+
+  // Create derived state for easier consumption
+  const locationInitialized = Boolean(coords);
+  const latitude = coords?.latitude;
+  const longitude = coords?.longitude;
   
-  const onSuccess = useCallback((position: GeolocationPosition) => {
-    setCoords(position.coords);
-    setError(null);
-    setLoading(false);
-    setLocationInitialized(true);
-  }, []);
-  
-  const onError = useCallback((error: GeolocationPositionError) => {
-    setError(error);
-    setLoading(false);
-    console.error("Geolocation error:", error.message);
-  }, []);
-  
-  const getPosition = useCallback(() => {
-    setLoading(true);
-    
-    // Clear manual location if any
-    setManualLocation(null);
-    
-    if (!navigator.geolocation) {
-      setError({
-        code: 0,
-        message: 'Geolocation is not supported by your browser',
-        PERMISSION_DENIED: 1,
-        POSITION_UNAVAILABLE: 2,
-        TIMEOUT: 3
-      } as GeolocationPositionError);
-      setLoading(false);
-      return;
-    }
-    
-    navigator.geolocation.getCurrentPosition(onSuccess, onError, {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 300000 // 5 minutes
-    });
-  }, [onSuccess, onError, setManualLocation]);
-  
-  // Allow manual updating of location (e.g. from map click)
+  // Helper function to update location programmatically
   const updateLocation = useCallback((lat: number, lng: number) => {
     setCoords({
       latitude: lat,
@@ -89,24 +80,37 @@ export function useGeolocation(): GeolocationState {
       heading: null,
       speed: null
     } as GeolocationCoordinates);
-    setLocationInitialized(true);
-    setLoading(false);
-    setError(null);
     
-    // Save to localStorage
-    setManualLocation({ lat, lng });
-  }, [setManualLocation]);
+    // Update cache
+    setCachedPosition({
+      latitude: lat,
+      longitude: lng,
+      timestamp: Date.now()
+    });
+  }, [setCachedPosition]);
   
-  useEffect(() => {
-    getPosition();
-  }, []);
-  
-  return {
-    coords,
-    error,
-    loading,
-    locationInitialized,
+  // Initialize location from cache or set defaults if unavailable
+  const initializeLocation = useCallback(() => {
+    if (coords) return; // Already initialized
+    
+    if (cachedPosition) {
+      // Use cached position
+      updateLocation(cachedPosition.latitude, cachedPosition.longitude);
+    } else {
+      // Set default location (e.g., center of China)
+      updateLocation(35.8617, 104.1954);
+    }
+  }, [coords, cachedPosition, updateLocation]);
+
+  return { 
+    coords, 
+    error, 
+    loading, 
     getPosition,
-    updateLocation
+    locationInitialized,
+    latitude,
+    longitude,
+    updateLocation,
+    initializeLocation
   };
 }

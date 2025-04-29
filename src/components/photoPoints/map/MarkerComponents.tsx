@@ -41,7 +41,7 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
   
   // Get the appropriate icon based on location type and hover state
   const getIcon = () => {
-    if (isForecast) {
+    if (isForecast || location.isForecast) {
       return getForecastLocationIcon(isHovered);
     }
     if (location.isDarkSkyReserve) {
@@ -71,18 +71,13 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
     }
   };
   
-  // Enhance visibility for markers
-  const zOffset = isHovered ? 1000 : (isForecast ? 500 : 0);
-  
   return (
     <Marker
       position={[latitude, longitude]}
       icon={getIcon()}
-      eventHandlers={{
-        click: handleClick,
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut,
-      }}
+      onClick={handleClick}
+      onMouseOver={handleMouseOver}
+      onMouseOut={handleMouseOut}
     >
       <Popup>
         <div 
@@ -90,7 +85,7 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
           onTouchEnd={(e) => handleTouchEnd && handleTouchEnd(e, null)}
           onTouchMove={handleTouchMove}
         >
-          <MarkerPopupContent location={location} onClick={onClick} isForecast={isForecast} />
+          <MarkerPopupContent location={location} onClick={onClick} isForecast={isForecast || location.isForecast} />
         </div>
       </Popup>
       
@@ -98,8 +93,8 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
         <Circle
           center={[latitude, longitude]}
           pathOptions={{
-            color: isForecast ? '#8B5CF6' : '#3B82F6',
-            fillColor: isForecast ? '#C4B5FD' : '#93C5FD',
+            color: (isForecast || location.isForecast) ? '#8B5CF6' : '#3B82F6',
+            fillColor: (isForecast || location.isForecast) ? '#C4B5FD' : '#93C5FD',
             fillOpacity: 0.15,
             weight: 2,
           }}

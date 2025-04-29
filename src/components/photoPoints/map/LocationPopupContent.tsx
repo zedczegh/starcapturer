@@ -7,16 +7,7 @@ import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { Star, ExternalLink } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
-
-// Helper function to get SIQS class based on score
-export function getSiqsClass(score: number | null): string {
-  if (score === null || score <= 0) return 'poor';
-  if (score >= 8) return 'excellent';
-  if (score >= 6) return 'good';
-  if (score >= 4) return 'fair';
-  return 'poor';
-}
+import { getSiqsClass } from '../MarkerUtils';
 
 interface LocationPopupContentProps {
   location: SharedAstroSpot;

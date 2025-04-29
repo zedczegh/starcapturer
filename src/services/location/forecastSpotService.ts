@@ -281,7 +281,7 @@ export async function findForecastLocations(
     // Get forecast data for each point
     const forecastPromises = points.map(async (point) => {
       // Skip water locations
-      if (isWaterLocation && isWaterLocation(point.latitude, point.longitude)) {
+      if (isWaterLocation(point.latitude, point.longitude)) {
         return null;
       }
       
@@ -322,14 +322,14 @@ export async function findForecastLocations(
         precipitation,
         weatherCode,
         weatherScore
-      };
+      } as ForecastWeatherSpot;
     });
     
     const weatherResults = await Promise.all(forecastPromises);
     
     // Filter null results and ensure weatherScore is defined
     const validResults = weatherResults.filter((spot): spot is ForecastWeatherSpot => 
-      spot !== null && spot.weatherScore !== undefined
+      spot !== null && typeof spot.weatherScore === 'number'
     );
     
     // Sort by weather score (best first) and convert to AstroSpots

@@ -1,39 +1,28 @@
 
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-
 /**
- * Validate location coordinates are within valid ranges
- * @param location Location to validate
- * @returns boolean indicating if location is valid
+ * Validate if coordinates are within valid range
  */
-export const hasValidCoordinates = (location: SharedAstroSpot): boolean => {
-  return Boolean(
-    location && 
-    typeof location.latitude === 'number' && 
-    typeof location.longitude === 'number' &&
-    isFinite(location.latitude) &&
-    isFinite(location.longitude) &&
-    Math.abs(location.latitude) <= 90 &&
-    Math.abs(location.longitude) <= 180
+export function isValidCoordinates(latitude: number, longitude: number): boolean {
+  return (
+    isFinite(latitude) && 
+    isFinite(longitude) &&
+    latitude >= -90 && 
+    latitude <= 90 && 
+    longitude >= -180 && 
+    longitude <= 180
   );
-};
+}
 
 /**
- * Create a unique ID for a location
- * @param location Location to create ID for
- * @returns string ID
+ * Format coordinates to a nicely readable string
  */
-export const getLocationId = (location: SharedAstroSpot): string => {
-  return location.id || 
-    `location-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
-};
-
-/**
- * Check if a location is a certified dark sky location
- * @param location Location to check
- * @returns boolean indicating if location is certified
- */
-export const isCertifiedLocation = (location: SharedAstroSpot): boolean => {
-  return location.isDarkSkyReserve === true || 
-    (location.certification && location.certification !== '');
-};
+export function formatCoordinates(latitude: number, longitude: number): string {
+  if (!isValidCoordinates(latitude, longitude)) {
+    return "Invalid coordinates";
+  }
+  
+  const latDir = latitude >= 0 ? "N" : "S";
+  const lonDir = longitude >= 0 ? "E" : "W";
+  
+  return `${Math.abs(latitude).toFixed(6)}° ${latDir}, ${Math.abs(longitude).toFixed(6)}° ${lonDir}`;
+}

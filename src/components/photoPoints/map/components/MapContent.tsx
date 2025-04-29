@@ -1,12 +1,55 @@
 
 import React from 'react';
-import { MapContainer, TileLayer, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, ZoomControl, useMap } from 'react-leaflet';
 import { SharedAstroSpot } from '@/types/weather';
 import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
-import { MapEffectsComposer } from '../MapComponents';
-import MapController from '../MapController';
-import MobileMapFixer from '../MobileMapFixer';
-import { getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
+import { Circle } from 'react-leaflet';
+
+// Map event handler component
+const MapEventHandler: React.FC<{
+  onMapClick?: (lat: number, lng: number) => void;
+  onMapLoad?: () => void;
+}> = ({ onMapClick, onMapLoad }) => {
+  const map = useMap();
+  
+  React.useEffect(() => {
+    if (onMapLoad) {
+      onMapLoad();
+    }
+    
+    if (onMapClick) {
+      const handleMapClick = (e: any) => {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      };
+      
+      map.addEventListener('click', handleMapClick);
+      
+      return () => {
+        map.removeEventListener('click', handleMapClick);
+      };
+    }
+    
+    return undefined;
+  }, [map, onMapClick, onMapLoad]);
+  
+  return null;
+};
+
+// MapRef effect component
+const MapRefEffect: React.FC<{
+  mapRef: React.MutableRefObject<any>;
+}> = ({ mapRef }) => {
+  const map = useMap();
+  
+  React.useEffect(() => {
+    mapRef.current = map;
+    return () => {
+      mapRef.current = null;
+    };
+  }, [map, mapRef]);
+  
+  return null;
+};
 
 interface MapContentProps {
   center: [number, number];
@@ -24,11 +67,12 @@ interface MapContentProps {
   handleTouchStart?: (e: React.TouchEvent, id: string) => void;
   handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
   handleTouchMove?: (e: React.TouchEvent) => void;
-  useMobileMapFixer: boolean;
-  mapRef: React.RefObject<any>;
-  onMapReady: () => void;
-  currentSiqs: number | null;
+  useMobileMapFixer?: boolean;
+  mapRef: React.MutableRefObject<any>;
+  onMapReady?: () => void;
+  currentSiqs?: number | null;
   isForecastMode?: boolean;
+  selectedForecastDay?: number;
 }
 
 const MapContent: React.FC<MapContentProps> = ({
@@ -51,94 +95,60 @@ const MapContent: React.FC<MapContentProps> = ({
   mapRef,
   onMapReady,
   currentSiqs,
-  isForecastMode = false
+  isForecastMode = false,
+  selectedForecastDay = 0
 }) => {
-  const tileOptions = getTileLayerOptions(Boolean(isMobile));
-  
-  const getDefaultZoom = () => {
-    if (activeView === 'calculated') {
-      return isMobile ? 3 : 4;
-    }
-    return isMobile ? zoom - 1 : zoom;
-  };
-
-  const stableOnLocationClick = React.useCallback((location: SharedAstroSpot) => {
-    if (onLocationClick) {
-      onLocationClick(location);
-    }
-  }, [onLocationClick]);
-
-  const stableOnMapClick = React.useCallback((lat: number, lng: number) => {
-    if (onMapClick) {
-      onMapClick(lat, lng);
-    }
-  }, [onMapClick]);
-
   return (
     <MapContainer
       center={center}
-      zoom={getDefaultZoom()}
-      style={{ height: "100%", width: "100%" }}
-      scrollWheelZoom={!isMobile}
-      ref={mapRef}
-      className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
-      whenReady={onMapReady}
-      attributionControl={false}
+      zoom={zoom}
+      scrollWheelZoom={true}
+      style={{ height: '100%', width: '100%', borderRadius: '0.375rem' }}
+      zoomControl={false}
+      attributionControl={true}
     >
       <TileLayer
-        attribution={tileOptions.attribution}
-        url={tileOptions.url}
-        maxZoom={isMobile ? tileOptions.maxZoom - 2 : tileOptions.maxZoom}
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <ZoomControl position="bottomleft" />
+      <MapEventHandler onMapClick={onMapClick} onMapLoad={onMapReady} />
+      <MapRefEffect mapRef={mapRef} />
       
-      {showRadiusCircles && userLocation && !isMobile && (
+      {/* User location marker */}
+      {userLocation && (
+        <UserLocationMarker 
+          position={[userLocation.latitude, userLocation.longitude]} 
+          currentSiqs={currentSiqs || null} 
+        />
+      )}
+      
+      {/* Search radius circles */}
+      {showRadiusCircles && userLocation && (
         <Circle
           center={[userLocation.latitude, userLocation.longitude]}
-          pathOptions={{
-            color: 'rgb(99, 102, 241)',
-            fillColor: 'rgb(99, 102, 241)',
+          pathOptions={{ 
+            color: '#3B82F6', 
+            fillColor: '#3B82F6', 
             fillOpacity: 0.05,
             weight: 1,
-            dashArray: '5, 5',
+            dashArray: '5, 5'
           }}
           radius={searchRadius * 1000}
         />
       )}
       
-      <MapEffectsComposer 
-        userLocation={userLocation}
-        activeView={activeView}
-        searchRadius={searchRadius}
-        effects={['zoom-controls']} 
-      />
-      
-      {onMapClick && (
-        <MapController 
-          userLocation={userLocation} 
-          searchRadius={searchRadius} 
-          onMapClick={stableOnMapClick}
-        />
-      )}
-      
-      {userLocation && (
-        <UserLocationMarker 
-          position={[userLocation.latitude, userLocation.longitude]} 
-          currentSiqs={currentSiqs}
-        />
-      )}
-      
-      {displayLocations.map(location => {
-        if (!location || !location.latitude || !location.longitude) return null;
-        
+      {/* Location markers */}
+      {displayLocations.map((location) => {
         const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-        const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
+        const locationId = location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
         const isHovered = hoveredLocationId === locationId;
         
         return (
           <LocationMarker
             key={locationId}
             location={location}
-            onClick={stableOnLocationClick}
+            onClick={onLocationClick || (() => {})}
             isHovered={isHovered}
             onHover={onMarkerHover || (() => {})}
             locationId={locationId}
@@ -147,12 +157,10 @@ const MapContent: React.FC<MapContentProps> = ({
             handleTouchStart={handleTouchStart}
             handleTouchEnd={handleTouchEnd}
             handleTouchMove={handleTouchMove}
-            isForecast={Boolean(isForecastMode || location.isForecast)}
+            isForecast={isForecastMode || Boolean(location.isForecast)}
           />
         );
       })}
-      
-      {useMobileMapFixer && isMobile && <MobileMapFixer />}
     </MapContainer>
   );
 };
