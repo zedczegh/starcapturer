@@ -10,10 +10,7 @@ interface PhotoPointsMapProps {
   locations: SharedAstroSpot[];
   certifiedLocations: SharedAstroSpot[];
   calculatedLocations: SharedAstroSpot[];
-  forecastLocations?: SharedAstroSpot[];
   activeView: 'certified' | 'calculated';
-  showForecast?: boolean;
-  forecastDay?: number;
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
@@ -25,19 +22,13 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     locations,
     certifiedLocations,
     calculatedLocations,
-    forecastLocations = [],
     activeView,
-    showForecast = false,
-    forecastDay = 1,
     searchRadius,
     onLocationClick,
     onLocationUpdate
   } = props;
   
-  // Determine which locations to display on the map
-  const displayedLocations = showForecast && activeView === 'calculated' ? forecastLocations : locations;
-  
-  console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${displayedLocations?.length || 0}, forecast: ${showForecast}`);
+  console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
   
   const {
     mapContainerHeight,
@@ -58,20 +49,18 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     isMobile
   } = usePhotoPointsMapContainer({
     userLocation,
-    locations: displayedLocations,
+    locations,
     certifiedLocations,
     calculatedLocations,
     activeView,
     searchRadius,
     onLocationClick,
-    onLocationUpdate,
-    showForecast,
-    forecastDay
+    onLocationUpdate
   });
   
   // Add persistent storage for locations
   useEffect(() => {
-    if (locations && locations.length > 0 && !showForecast) {
+    if (locations && locations.length > 0) {
       try {
         // Store ALL locations in session storage for persistence
         const storageKey = activeView === 'certified' ? 
@@ -134,7 +123,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
         console.error('Error storing locations in session storage:', err);
       }
     }
-  }, [locations, activeView, showForecast]);
+  }, [locations, activeView]);
   
   // Load persisted locations on component mount
   useEffect(() => {
@@ -153,7 +142,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     }
   }, [activeView]);
   
-  console.log(`PhotoPointsMap: optimizedLocations=${optimizedLocations?.length || 0}, mapReady=${mapReady}, showForecast=${showForecast}`);
+  console.log(`PhotoPointsMap: optimizedLocations=${optimizedLocations?.length || 0}, mapReady=${mapReady}`);
   
   return (
     <MapContainer
@@ -176,8 +165,6 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
       handleTouchMove={handleTouchMove}
       handleGetLocation={handleGetLocation}
       onLegendToggle={handleLegendToggle}
-      showForecast={showForecast}
-      forecastDay={forecastDay}
     />
   );
 };

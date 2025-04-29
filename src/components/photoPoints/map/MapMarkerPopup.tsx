@@ -1,114 +1,172 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { MapPin, ArrowRight, CloudSun, CalendarClock } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { formatDistance } from '@/utils/formatters';
-import SiqsDisplay from './SiqsDisplay';
-import { normalizeToSiqsScale } from '@/utils/siqsHelpers';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Star, MapPin, Navigation, RefreshCw } from 'lucide-react';
+import { formatDistance } from '@/utils/geoUtils';
+import { useDisplayName } from '../cards/DisplayNameResolver';
+import SiqsScoreBadge from '../cards/SiqsScoreBadge';
+import { getSiqsScore } from '@/utils/siqsHelpers';
+import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
+import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 
 interface MapMarkerPopupProps {
   location: SharedAstroSpot;
-  onClick?: (location: SharedAstroSpot) => void;
-  isForecast?: boolean;
+  onClose: () => void;
+  onViewDetails: (location: SharedAstroSpot) => void;
 }
 
 const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({ 
   location, 
-  onClick,
-  isForecast = false
+  onClose, 
+  onViewDetails 
 }) => {
-  const { t } = useLanguage();
-  const { name, latitude, longitude, distance, siqs, isDarkSkyReserve, certification } = location;
+  const { language, t } = useLanguage();
+  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
+  const [siqsLoading, setSiqsLoading] = useState(false);
+  const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
+  const [forceUpdate, setForceUpdate] = useState(false);
   
-  const displayName = location.chineseName && location.name 
-    ? `${location.name} (${location.chineseName})` 
-    : location.name || t('Unnamed Location', '未命名位置');
+  const { displayName, showOriginalName, nearestTownInfo } = useDisplayName({
+    location,
+    language,
+    locationCounter: null
+  });
   
-  const handleDetailsClick = () => {
-    if (onClick) onClick(location);
+  // Determine if this is a certified location of any type
+  const isCertified = Boolean(
+    location.isDarkSkyReserve || 
+    (location.certification && location.certification !== '') || 
+    (location.type === 'lodging') || 
+    (location.type === 'dark-site')
+  );
+  
+  // Get certification text safely
+  const certificationText = location.certification || 
+    (location.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜天空保护区") : 
+      (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
+  
+  // Use our unified display SIQS function - no default scores for certified locations
+  const staticSiqs = getSiqsScore(location);
+  const displaySiqs = getDisplaySiqs({
+    realTimeSiqs,
+    staticSiqs,
+    isCertified,
+    isDarkSkyReserve: Boolean(location.isDarkSkyReserve)
+  });
+  
+  const handleSiqsCalculated = (siqs: number | null, loading: boolean, confidence?: number) => {
+    setRealTimeSiqs(siqs);
+    setSiqsLoading(loading);
+    if (confidence) setSiqsConfidence(confidence);
   };
   
-  const normalizedSiqs = siqs ? normalizeToSiqsScale(siqs) : null;
+  const handleRefreshSiqs = () => {
+    setForceUpdate(true);
+    setTimeout(() => setForceUpdate(false), 100);
+  };
   
-  const locationTypeLabel = isDarkSkyReserve 
-    ? t('Dark Sky Reserve', '黑暗天空保护区')
-    : certification 
-      ? t('Certified Location', '认证地点')
-      : isForecast
-        ? t('Forecast Location', '预测地点')
-        : t('Calculated Location', '计算位置');
-  
-  const locationTypeColor = isDarkSkyReserve 
-    ? 'bg-yellow-500/90' 
-    : certification 
-      ? 'bg-green-500/90' 
-      : isForecast 
-        ? 'bg-blue-500/90'
-        : 'bg-primary/90';
-
   return (
-    <div className="p-1">
-      <div className="flex flex-col">
-        <div className="flex items-start justify-between gap-2">
-          <Badge variant="outline" className={`${locationTypeColor} text-white px-2 py-0.5`}>
-            {locationTypeLabel}
-          </Badge>
-          
-          {isForecast && location.forecastDay && (
-            <Badge variant="outline" className="bg-blue-500/80 text-white px-2 py-0.5 flex items-center gap-1">
-              <CalendarClock className="h-3 w-3" />
-              {t('Day', '天')} {location.forecastDay}
-            </Badge>
-          )}
-        </div>
-        
-        <h3 className="font-medium text-sm mt-2 mb-1 leading-tight">{displayName}</h3>
-        
-        <div className="flex items-center text-xs text-muted-foreground mb-2">
-          <MapPin className="h-3 w-3 mr-1" />
-          {latitude.toFixed(4)}, {longitude.toFixed(4)}
-          {distance !== undefined && (
-            <span className="ml-1.5">
-              ({formatDistance(distance)})
-            </span>
-          )}
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            {isForecast ? (
-              <div className="flex items-center gap-1">
-                <CloudSun className="h-4 w-4 text-blue-500" />
-                <span className="text-xs font-medium">{t('Forecast SIQS', '预测SIQS')}</span>
-              </div>
-            ) : (
-              normalizedSiqs && <SiqsDisplay realTimeSiqs={normalizedSiqs} loading={false} />
-            )}
-          </div>
-          
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="gap-1 text-xs" 
-            onClick={handleDetailsClick}
-          >
-            {t('View', '查看')}
-            <ArrowRight className="h-3 w-3" />
-          </Button>
-        </div>
-        
-        {isForecast && location.forecastData && (
-          <div className="mt-2 pt-2 border-t border-border text-xs">
-            <div className="flex justify-between items-center text-muted-foreground">
-              <span>{t('Cloud Cover', '云层')}: {location.forecastData.cloudCover}%</span>
-              <span>{t('Precip Chance', '降水概率')}: {location.forecastData.precipitationProbability}%</span>
-            </div>
-          </div>
-        )}
+    <div className="p-3 min-w-[220px] max-w-[280px]">
+      <div className="flex justify-between items-center mb-2">
+        <h4 className="font-semibold text-sm line-clamp-1">{displayName}</h4>
       </div>
+      
+      {/* Show SIQS with more detailed info - no default scores for certified locations */}
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center">
+          <SiqsScoreBadge 
+            score={displaySiqs} 
+            compact={false} 
+            loading={siqsLoading}
+            isCertified={isCertified}
+            forceCertified={false} // Don't force certified default scores
+          />
+        </div>
+        <button 
+          onClick={handleRefreshSiqs} 
+          className="text-muted-foreground hover:text-primary p-1 rounded-full"
+          disabled={siqsLoading}
+          title={t("Refresh SIQS", "刷新SIQS")}
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${siqsLoading ? "animate-spin" : ""}`} />
+        </button>
+      </div>
+      
+      {/* Show certification for all certified location types */}
+      {isCertified && certificationText && (
+        <div className="flex items-center mb-2 mt-1">
+          <div className="flex items-center text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+            <Star className="h-3.5 w-3.5 mr-1" />
+            <span>{certificationText}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Show original name if different */}
+      {showOriginalName && (
+        <div className="flex items-center mb-2">
+          <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground line-clamp-1">
+            {language === 'zh' ? location.name : location.chineseName}
+          </span>
+        </div>
+      )}
+      
+      {/* Show nearest town info */}
+      {nearestTownInfo && nearestTownInfo.detailedName && (
+        <div className="flex items-center mb-2">
+          <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground line-clamp-1">
+            {nearestTownInfo.detailedName}
+          </span>
+        </div>
+      )}
+      
+      {/* Show distance if available */}
+      {location.distance !== undefined && (
+        <div className="flex items-center mb-2">
+          <Navigation className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">
+            {formatDistance(location.distance)}
+          </span>
+        </div>
+      )}
+      
+      {/* Show coordinates */}
+      {location.latitude !== undefined && location.longitude !== undefined && (
+        <div className="flex items-center mb-2">
+          <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">
+            {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+          </span>
+        </div>
+      )}
+      
+      <div className="mt-2 flex justify-end">
+        <Button 
+          size="sm"
+          variant="secondary"
+          className="h-7 py-0 px-2 text-xs"
+          onClick={() => onViewDetails(location)}
+        >
+          {t("Details", "详情")}
+        </Button>
+      </div>
+      
+      {/* Real-time SIQS provider - hidden component */}
+      <RealTimeSiqsProvider
+        isVisible={true}
+        latitude={location.latitude}
+        longitude={location.longitude}
+        bortleScale={location.bortleScale}
+        isCertified={isCertified}
+        isDarkSkyReserve={location.isDarkSkyReserve}
+        existingSiqs={location.siqs}
+        onSiqsCalculated={handleSiqsCalculated}
+        forceUpdate={forceUpdate}
+      />
     </div>
   );
 };

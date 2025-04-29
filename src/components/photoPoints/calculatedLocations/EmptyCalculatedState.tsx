@@ -1,56 +1,77 @@
 
 import React from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { CloudSun, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
+import { Calculator, Target, RefreshCw, Search } from "lucide-react";
 
 interface EmptyCalculatedStateProps {
   searchRadius?: number;
   onRefresh?: () => void;
-  isForecastMode?: boolean;
-  forecastDay?: number;
 }
 
 const EmptyCalculatedState: React.FC<EmptyCalculatedStateProps> = ({
   searchRadius = 0,
-  onRefresh,
-  isForecastMode = false,
-  forecastDay = 1
+  onRefresh
 }) => {
   const { t } = useLanguage();
-
-  // Create a custom message based on mode
-  const title = isForecastMode
-    ? t("No forecast spots found", "未找到预测点")
-    : t("No calculated spots found", "未找到计算点");
-
-  const message = isForecastMode 
-    ? t(`No quality spots predicted for Day ${forecastDay} within ${searchRadius}km radius`, `在${searchRadius}公里半径内没有找到第${forecastDay}天的高质量预测点`)
-    : t(`No quality spots found within ${searchRadius}km radius`, `在${searchRadius}公里半径内没有找到高质量点`);
-
-  const suggestion = isForecastMode
-    ? t("Try a different forecast day or increase search radius", "尝试其他预测天数或增加搜索半径")
-    : t("Try increasing search radius or moving to a less light-polluted area", "尝试增加搜索半径或移动到光污染较少的地区");
-
+  
   return (
-    <div className="flex flex-col items-center justify-center py-8 px-4 text-center max-w-md mx-auto">
-      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-        <CloudSun className="w-8 h-8 text-muted-foreground" />
+    <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
+      <Calculator className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
+      <h2 className="text-xl font-semibold mb-2">
+        {t("No Recommended Locations Found", "未找到推荐地点")}
+      </h2>
+      <p className="text-muted-foreground max-w-lg mx-auto mb-2 text-sm">
+        {t(
+          "We couldn't find any locations with good viewing conditions within your search radius.",
+          "在您的搜索半径内，我们未能找到具有良好观测条件的地点。"
+        )}
+      </p>
+      <div className="flex items-center justify-center gap-2 mt-4">
+        <Target className="h-4 w-4 text-primary" />
+        <p className="text-sm text-primary">
+          {searchRadius > 0 ? 
+            t(
+              `Try increasing your search radius beyond ${searchRadius}km.`,
+              `尝试将搜索半径增加到${searchRadius}公里以上。`
+            ) :
+            t(
+              "Try adjusting your search radius to find better viewing spots.",
+              "尝试调整搜索半径以找到更好的观测地点。"
+            )
+          }
+        </p>
       </div>
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-sm text-muted-foreground mb-2">{message}</p>
-      <p className="text-sm text-muted-foreground mb-4">{suggestion}</p>
       
       {onRefresh && (
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={onRefresh}
-          className="gap-2"
-        >
-          <RefreshCw className="w-4 h-4" />
-          {t("Refresh", "刷新")}
-        </Button>
+        <div className="mt-6 flex flex-col gap-3 items-center">
+          <Button 
+            variant="outline" 
+            onClick={onRefresh}
+            className="group border-primary/40 hover:bg-cosmic-800/50"
+          >
+            <RefreshCw className="mr-2 h-4 w-4 group-hover:animate-spin" />
+            {t("Refresh Recommendations", "刷新推荐")}
+          </Button>
+          
+          {searchRadius < 10000 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => {
+                // Trigger custom event to expand search radius
+                const newRadius = Math.min(10000, searchRadius + 1000);
+                document.dispatchEvent(new CustomEvent('expand-search-radius', { 
+                  detail: { radius: newRadius } 
+                }));
+              }}
+            >
+              <Search className="mr-1.5 h-3 w-3" />
+              {t("Try wider search area", "尝试更广的搜索范围")}
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

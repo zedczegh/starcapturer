@@ -16,8 +16,6 @@ interface UsePhotoPointsMapContainerProps {
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
-  showForecast?: boolean;
-  forecastDay?: number;
 }
 
 export const usePhotoPointsMapContainer = ({
@@ -28,9 +26,7 @@ export const usePhotoPointsMapContainer = ({
   activeView,
   searchRadius,
   onLocationClick,
-  onLocationUpdate,
-  showForecast = false,
-  forecastDay = 1
+  onLocationUpdate
 }: UsePhotoPointsMapContainerProps) => {
   const [mapReady, setMapReady] = useState(false);
   
@@ -67,13 +63,11 @@ export const usePhotoPointsMapContainer = ({
     userLocation,
     locations: locations,
     searchRadius,
-    activeView,
-    showForecast,
-    forecastDay
+    activeView
   });
   
-  // Use locations persistence hook when not in forecast mode
-  useLocationsPersistence(showForecast ? [] : locations, activeView);
+  // Use locations persistence hook
+  useLocationsPersistence(locations, activeView);
   
   const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
     if (onLocationClick) {

@@ -24,8 +24,6 @@ interface CalculatedLocationsProps {
   canLoadMoreCalculated?: boolean;
   loadMoreClickCount?: number;
   maxLoadMoreClicks?: number;
-  isForecastMode?: boolean;
-  forecastDay?: number;
 }
 
 const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
@@ -39,9 +37,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   onLoadMoreCalculated,
   canLoadMoreCalculated = false,
   loadMoreClickCount = 0,
-  maxLoadMoreClicks = 2,
-  isForecastMode = false,
-  forecastDay = 1
+  maxLoadMoreClicks = 2
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
@@ -73,14 +69,12 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
       <EmptyCalculatedState 
         searchRadius={searchRadius}
         onRefresh={onRefresh}
-        isForecastMode={isForecastMode}
-        forecastDay={forecastDay}
       />
     );
   }
   
   const handleViewLocation = (point: SharedAstroSpot) => {
-    const locationId = point.id || `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+    const locationId = `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
     
     // Navigate to location details page
     navigate(`/location/${locationId}`, {
@@ -95,35 +89,21 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   
   return (
     <>
-      {isForecastMode && (
-        <div className="mb-4 px-4 py-3 bg-muted/30 border border-border rounded-lg text-center">
-          <span className="text-sm font-medium">
-            {t(`Showing forecast for Day ${forecastDay}`, `显示第${forecastDay}天的预测`)}
-          </span>
-          <p className="text-xs text-muted-foreground mt-1">
-            {t("These spots show predicted sky quality based on weather forecasts", "这些点显示基于天气预报的预计天空质量")}
-          </p>
-        </div>
-      )}
-
       <LocationsGrid 
         locations={sortedLocations}
         initialLoad={initialLoad}
         isMobile={isMobile}
         onViewDetails={handleViewLocation}
-        isForecastMode={isForecastMode}
       />
       
-      {!isForecastMode && (
-        <LoadMoreButtons 
-          hasMore={hasMore}
-          onLoadMore={onLoadMore}
-          canLoadMoreCalculated={canLoadMoreCalculated}
-          onLoadMoreCalculated={onLoadMoreCalculated}
-          loadMoreClickCount={loadMoreClickCount}
-          maxLoadMoreClicks={maxLoadMoreClicks}
-        />
-      )}
+      <LoadMoreButtons 
+        hasMore={hasMore}
+        onLoadMore={onLoadMore}
+        canLoadMoreCalculated={canLoadMoreCalculated}
+        onLoadMoreCalculated={onLoadMoreCalculated}
+        loadMoreClickCount={loadMoreClickCount}
+        maxLoadMoreClicks={maxLoadMoreClicks}
+      />
     </>
   );
 };
