@@ -6,7 +6,8 @@ import {
   Navigation, 
   Globe, 
   Map,
-  Calendar
+  ChevronDown, 
+  ChevronUp 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import CopyLocationButton from "../CopyLocationButton";
 import { 
   generateGoogleMapUrl, 
   generateAppleMapUrl, 
@@ -21,25 +23,20 @@ import {
   generateBaiduMapUrl 
 } from "@/utils/mapUtils";
 import { toast } from "sonner";
-import { format, isValid } from "date-fns";
 
 interface NavigationButtonsProps {
   latitude: number;
   longitude: number;
   locationName: string;
-  forecastDate?: string;
 }
 
 const NavigationButtons: React.FC<NavigationButtonsProps> = ({ 
   latitude, 
   longitude, 
-  locationName,
-  forecastDate
+  locationName 
 }) => {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
-  
-  const isForecast = Boolean(forecastDate && isValid(new Date(forecastDate)));
 
   const handleOpenMap = (mapType: string) => {
     let url = "";
@@ -74,22 +71,16 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({
     setIsOpen(false);
   };
 
-  const renderForecastBadge = () => {
-    if (!isForecast) return null;
-    
-    const date = new Date(forecastDate!);
-    const formattedDate = format(date, 'MMM d, yyyy');
-    
-    return (
-      <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded-md text-xs text-primary mb-2">
-        <Calendar className="h-3 w-3" />
-        <span>{t("Forecast for", "预测日期：")} {formattedDate}</span>
-      </div>
-    );
-  };
-
   return (
     <div className="flex items-center gap-2">
+      <CopyLocationButton 
+        latitude={latitude} 
+        longitude={longitude} 
+        name={locationName} 
+        size="icon" 
+        variant="outline" 
+      />
+
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" size="icon" aria-label={t("Navigation options", "导航选项")}>
@@ -101,8 +92,6 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({
             <h3 className="font-medium text-sm mb-2">
               {t("Open with map app", "使用地图应用打开")}
             </h3>
-            
-            {renderForecastBadge()}
             
             <div className="grid grid-cols-1 gap-2">
               <Button 
@@ -153,3 +142,4 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({
 };
 
 export default NavigationButtons;
+

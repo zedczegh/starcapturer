@@ -7,7 +7,6 @@ import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
 import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
 import ViewToggle from '@/components/photoPoints/ViewToggle';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
-import ForecastDaySlider from '@/components/photoPoints/ForecastDaySlider';
 import PhotoPointsView from '@/components/photoPoints/PhotoPointsView';
 import { usePhotoPointsState } from '@/hooks/photoPoints/usePhotoPointsState';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
@@ -28,9 +27,7 @@ const PhotoPointsNearby: React.FC = () => {
     locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
-    forecastDay,
     handleRadiusChange,
-    handleForecastDayChange,
     handleViewChange,
     handleLocationUpdate,
     handleResetLocation,
@@ -52,8 +49,7 @@ const PhotoPointsNearby: React.FC = () => {
     maxLoadMoreClicks
   } = useRecommendedLocations(
     effectiveLocation, 
-    currentSearchRadius,
-    forecastDay
+    currentSearchRadius
   );
   
   // Get certified and calculated locations from the hook
@@ -113,7 +109,7 @@ const PhotoPointsNearby: React.FC = () => {
       />
       
       {activeView === 'calculated' && (
-        <div className="max-w-xl mx-auto mb-4">
+        <div className="max-w-xl mx-auto mb-6">
           <DistanceRangeSlider
             currentValue={calculatedSearchRadius}
             onValueChange={handleRadiusChange}
@@ -123,14 +119,6 @@ const PhotoPointsNearby: React.FC = () => {
             loading={loading && !locationLoading}
             loadingComplete={!loading && !locationLoading}
           />
-          
-          <div className="mt-4">
-            <ForecastDaySlider
-              currentValue={forecastDay}
-              onValueChange={handleForecastDayChange}
-              loading={loading && !locationLoading}
-            />
-          </div>
         </div>
       )}
       
@@ -152,7 +140,6 @@ const PhotoPointsNearby: React.FC = () => {
         calculatedLocations={calculatedLocations}
         searchRadius={currentSearchRadius}
         calculatedSearchRadius={calculatedSearchRadius}
-        forecastDay={forecastDay}
         loading={loading && !locationLoading}
         hasMore={hasMore}
         loadMore={loadMore}

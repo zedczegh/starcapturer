@@ -6,7 +6,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
 import { isWaterLocation } from '@/utils/validation';
 import { toast } from '@/components/ui/use-toast';
-import { findForecastLocations } from '@/services/location/forecastSpotService';
 
 interface Location {
   latitude: number;
@@ -20,8 +19,7 @@ const DEFAULT_CERTIFIED_RADIUS = 10000;
 
 export const useRecommendedLocations = (
   userLocation: Location | null,
-  initialRadius: number = DEFAULT_CALCULATED_RADIUS,
-  forecastDay: number = 0
+  initialRadius: number = DEFAULT_CALCULATED_RADIUS
 ) => {
   const { t } = useLanguage();
   const [searchRadius, setSearchRadius] = useState<number>(initialRadius);
@@ -32,7 +30,6 @@ export const useRecommendedLocations = (
   const [page, setPage] = useState<number>(1);
   const prevRadiusRef = useRef<number>(searchRadius);
   const prevLocationRef = useRef<Location | null>(userLocation);
-  const prevForecastDayRef = useRef<number>(forecastDay);
   const previousLocationsRef = useRef<SharedAstroSpot[]>([]);
   
   const [canLoadMoreCalculated, setCanLoadMoreCalculated] = useState<boolean>(false);
@@ -60,13 +57,10 @@ export const useRecommendedLocations = (
         Math.abs(userLocation.latitude - prevLocationRef.current.latitude) > 0.001 ||
         Math.abs(userLocation.longitude - prevLocationRef.current.longitude) > 0.001;
       
-      const forecastDayChanged = forecastDay !== prevForecastDayRef.current;
-      
       prevRadiusRef.current = searchRadius;
       prevLocationRef.current = userLocation;
-      prevForecastDayRef.current = forecastDay;
       
-      console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}, forecast day: ${forecastDay}, preserving: ${isRadiusIncrease && !locationChanged && !forecastDayChanged}`);
+      console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}, preserving: ${isRadiusIncrease && !locationChanged}`);
       
       const certifiedResults = await findLocationsWithinRadius(
         userLocation.latitude,
@@ -74,24 +68,11 @@ export const useRecommendedLocations = (
         DEFAULT_CERTIFIED_RADIUS
       );
       
-      let calculatedResults: SharedAstroSpot[] = [];
-      
-      if (forecastDay > 0) {
-        calculatedResults = await findForecastLocations(
-          userLocation,
-          { 
-            day: forecastDay, 
-            radius: searchRadius,
-            maxPoints: 20 
-          }
-        );
-      } else {
-        calculatedResults = await findCalculatedLocations(
-          userLocation.latitude,
-          userLocation.longitude,
-          searchRadius
-        );
-      }
+      const calculatedResults = await findCalculatedLocations(
+        userLocation.latitude,
+        userLocation.longitude,
+        searchRadius
+      );
       
       const filteredCalculatedResults = calculatedResults.filter(loc => 
         !isWaterLocation(loc.latitude, loc.longitude)
@@ -110,7 +91,7 @@ export const useRecommendedLocations = (
         setLocations(sortedResults);
         previousLocationsRef.current = sortedResults;
         setHasMore(sortedResults.length >= 20);
-        setCanLoadMoreCalculated(forecastDay === 0);
+        setCanLoadMoreCalculated(true);
         setLoadMoreClickCount(0);
       }
       
@@ -134,7 +115,7 @@ export const useRecommendedLocations = (
     } finally {
       setLoading(false);
     }
-  }, [searchRadius, userLocation, forecastDay, t, findLocationsWithinRadius, findCalculatedLocations, sortLocationsByQuality]);
+  }, [searchRadius, userLocation, t, findLocationsWithinRadius, findCalculatedLocations, sortLocationsByQuality]);
   
   const loadMore = useCallback(async () => {
     if (!userLocation || !hasMore) {
@@ -188,7 +169,7 @@ export const useRecommendedLocations = (
   }, [hasMore, locations, page, searchRadius, userLocation, t, findLocationsWithinRadius, sortLocationsByQuality]);
   
   const loadMoreCalculatedLocations = useCallback(async () => {
-    if (!userLocation || loadMoreClickCount >= MAX_LOAD_MORE_CLICKS || forecastDay > 0) {
+    if (!userLocation || loadMoreClickCount >= MAX_LOAD_MORE_CLICKS) {
       return;
     }
     
@@ -257,7 +238,7 @@ export const useRecommendedLocations = (
     } finally {
       setSearching(false);
     }
-  }, [loadMoreClickCount, locations, searchRadius, forecastDay, t, userLocation, findCalculatedLocations, sortLocationsByQuality]);
+  }, [loadMoreClickCount, locations, searchRadius, t, userLocation, findCalculatedLocations, sortLocationsByQuality]);
   
   const refreshSiqsData = useCallback(async () => {
     if (!userLocation) {
@@ -290,12 +271,11 @@ export const useRecommendedLocations = (
       (userLocation && prevLocationRef.current && 
         (Math.abs(userLocation.latitude - prevLocationRef.current.latitude) > 0.001 || 
          Math.abs(userLocation.longitude - prevLocationRef.current.longitude) > 0.001));
-    const forecastDayChanged = forecastDay !== prevForecastDayRef.current;
     
-    if (userLocation && (radiusChanged || locationChanged || forecastDayChanged)) {
+    if (userLocation && (radiusChanged || locationChanged)) {
       loadLocations();
     }
-  }, [loadLocations, searchRadius, userLocation, forecastDay]);
+  }, [loadLocations, searchRadius, userLocation]);
   
   return {
     searchRadius,

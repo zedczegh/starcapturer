@@ -1,5 +1,4 @@
-
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot, getRecommendedPhotoPoints } from '@/lib/api/astroSpots';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { getCachedLocations, cacheLocations } from '@/services/locationCacheService';
 import { calculateDistance } from '@/utils/geoUtils';
@@ -8,7 +7,6 @@ import { isWaterLocation } from '@/utils/validation';
 import { generateRandomPoint } from './locationFilters';
 import { getTerrainCorrectedBortleScale } from '@/utils/terrainCorrection';
 import { generateQualitySpots } from './locationSpotService';
-import { findNearestImprovedLocations } from './location/calculatedLocationsService';
 
 /**
  * Find locations within radius with improved caching and performance
@@ -29,27 +27,10 @@ export async function findLocationsWithinRadius(
       : cachedData;
   }
 
-  // Mock implementation - in a real app this would call an API
-  const locations: SharedAstroSpot[] = [];
-  
-  // Generate some mock data based on the location
-  for (let i = 0; i < (certifiedOnly ? 3 : limit); i++) {
-    const offset = (i * 0.01) + (Math.random() * 0.02);
-    locations.push({
-      id: `mock-${i}-${Date.now()}`,
-      name: `Location near ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
-      latitude: latitude + offset,
-      longitude: longitude + offset,
-      certification: certifiedOnly ? "Mock Certification" : undefined,
-      isDarkSkyReserve: certifiedOnly,
-      siqs: Math.floor(Math.random() * 10) + 1,
-      distance: Math.random() * radius,
-      bortleScale: Math.floor(Math.random() * 9) + 1,
-      timestamp: new Date().toISOString()
-    });
-  }
-  
-  const validPoints = locations.filter(point => !isWaterLocation(point.latitude, point.longitude));
+  const points = await getRecommendedPhotoPoints(latitude, longitude, radius, certifiedOnly, limit);
+  if (!points?.length) return [];
+
+  const validPoints = points.filter(point => !isWaterLocation(point.latitude, point.longitude));
   
   cacheLocations(certifiedOnly ? 'certified' : 'calculated', latitude, longitude, radius, validPoints);
   return validPoints;

@@ -1,4 +1,3 @@
-
 import React, { useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
@@ -16,7 +15,6 @@ interface PhotoPointsViewProps {
   calculatedLocations: SharedAstroSpot[];
   searchRadius: number;
   calculatedSearchRadius: number;
-  forecastDay?: number;
   loading: boolean;
   hasMore: boolean;
   loadMore: () => void;
@@ -38,7 +36,6 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   calculatedLocations,
   searchRadius,
   calculatedSearchRadius,
-  forecastDay = 0,
   loading,
   hasMore,
   loadMore,
@@ -67,7 +64,6 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
             certifiedLocations={certifiedLocations}
             calculatedLocations={calculatedLocations}
             activeView={activeView}
-            forecastDay={forecastDay}
           />
         </div>
       )}
@@ -92,7 +88,6 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           onLoadMore={loadMore}
           onRefresh={refreshSiqs}
           searchRadius={calculatedSearchRadius}
-          forecastDay={forecastDay}
           initialLoad={initialLoad}
           canLoadMoreCalculated={canLoadMoreCalculated}
           onLoadMoreCalculated={loadMoreCalculated}
