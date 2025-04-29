@@ -11,6 +11,7 @@ import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
+import { format, addDays } from 'date-fns';
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -19,6 +20,7 @@ interface CalculatedLocationsProps {
   onLoadMore: () => void;
   onRefresh?: () => void;
   searchRadius?: number;
+  forecastDay?: number;
   initialLoad?: boolean;
   onLoadMoreCalculated?: () => void;
   canLoadMoreCalculated?: boolean;
@@ -33,6 +35,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   onLoadMore,
   onRefresh,
   searchRadius = 0,
+  forecastDay = 0,
   initialLoad = false,
   onLoadMoreCalculated,
   canLoadMoreCalculated = false,
@@ -69,6 +72,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
       <EmptyCalculatedState 
         searchRadius={searchRadius}
         onRefresh={onRefresh}
+        isForecast={forecastDay > 0}
       />
     );
   }
@@ -87,23 +91,44 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
     toast.info(t("Opening location details", "正在打开位置详情"));
   };
   
+  // Generate title based on forecast day
+  const getForecastTitle = () => {
+    if (forecastDay === 0) return null;
+    
+    const forecastDate = addDays(new Date(), forecastDay);
+    const formattedDate = format(forecastDate, 'yyyy-MM-dd');
+    
+    return (
+      <div className="text-center mb-4">
+        <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-medium">
+          {t("Forecast for", "预测日期：")} {format(forecastDate, 'MMM d, yyyy')}
+        </span>
+      </div>
+    );
+  };
+  
   return (
     <>
+      {getForecastTitle()}
+      
       <LocationsGrid 
         locations={sortedLocations}
         initialLoad={initialLoad}
         isMobile={isMobile}
         onViewDetails={handleViewLocation}
+        isForecast={forecastDay > 0}
       />
       
-      <LoadMoreButtons 
-        hasMore={hasMore}
-        onLoadMore={onLoadMore}
-        canLoadMoreCalculated={canLoadMoreCalculated}
-        onLoadMoreCalculated={onLoadMoreCalculated}
-        loadMoreClickCount={loadMoreClickCount}
-        maxLoadMoreClicks={maxLoadMoreClicks}
-      />
+      {forecastDay === 0 && (
+        <LoadMoreButtons 
+          hasMore={hasMore}
+          onLoadMore={onLoadMore}
+          canLoadMoreCalculated={canLoadMoreCalculated}
+          onLoadMoreCalculated={onLoadMoreCalculated}
+          loadMoreClickCount={loadMoreClickCount}
+          maxLoadMoreClicks={maxLoadMoreClicks}
+        />
+      )}
     </>
   );
 };

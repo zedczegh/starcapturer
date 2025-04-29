@@ -1,186 +1,116 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import 'leaflet/dist/leaflet.css';
-import './MarkerStyles.css';
-import './MapStyles.css';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { configureLeaflet } from '@/components/location/map/MapMarkerUtils';
-import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
-import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
-import MapContent from './components/MapContent';
 
-configureLeaflet();
+import React, { useState, useRef } from 'react';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import MapContent from './components/MapContent';
 
 interface LazyMapContainerProps {
   center: [number, number];
   userLocation: { latitude: number; longitude: number } | null;
-  locations: SharedAstroSpot[];
-  searchRadius: number;
+  zoom: number;
+  displayLocations: SharedAstroSpot[];
   activeView: 'certified' | 'calculated';
-  onMapReady?: () => void;
+  searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onMapClick?: (lat: number, lng: number) => void;
-  zoom?: number;
+  isMobile: boolean;
   hoveredLocationId?: string | null;
   onMarkerHover?: (id: string | null) => void;
   handleTouchStart?: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchEnd?: (e: React.TouchEvent) => void;
   handleTouchMove?: (e: React.TouchEvent) => void;
-  isMobile?: boolean;
-  useMobileMapFixer?: boolean;
+  onMapReady?: () => void;
   showRadiusCircles?: boolean;
+  currentSiqs: number | null;
+  isForecast?: boolean;
 }
 
-const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
-  center,
-  userLocation,
-  locations,
-  searchRadius,
-  activeView,
-  onMapReady,
-  onLocationClick,
-  onMapClick,
-  zoom = 10,
-  hoveredLocationId,
-  onMarkerHover,
-  handleTouchStart,
-  handleTouchEnd,
-  handleTouchMove,
-  isMobile,
-  useMobileMapFixer = false,
-  showRadiusCircles = false
-}) => {
-  const [mapReady, setMapReady] = useState(false);
-  const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
+const LazyMapContainer: React.FC<LazyMapContainerProps> = (props) => {
+  const {
+    center,
+    userLocation,
+    zoom,
+    displayLocations,
+    activeView,
+    searchRadius,
+    onLocationClick,
+    onMapClick,
+    isMobile,
+    hoveredLocationId,
+    onMarkerHover,
+    handleTouchStart,
+    handleTouchEnd,
+    handleTouchMove,
+    onMapReady,
+    showRadiusCircles = true,
+    currentSiqs,
+    isForecast = false
+  } = props;
+  
+  const [mapVisible, setMapVisible] = useState(false);
   const mapRef = useRef<any>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const isMountedRef = useRef(true);
-  const previousLocations = useRef<SharedAstroSpot[]>([]);
   
-  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}`);
-  
-  const handleUserLocationSiqs = useCallback((siqs: number | null, loading: boolean) => {
-    if (!loading && siqs !== null) {
-      setCurrentSiqs(siqs);
-    }
-  }, []);
-  
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-  
-  useEffect(() => {
-    if (locations && locations.length > 0) {
-      const locationIds = new Set(locations.map(loc => 
-        `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
-      ));
-      
-      const previousToKeep = previousLocations.current.filter(loc => {
-        const locId = `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`;
-        return !locationIds.has(locId);
-      });
-      
-      const combinedLocations = activeView === 'calculated' 
-        ? [...locations, ...previousToKeep] 
-        : locations;
-      
-      previousLocations.current = combinedLocations;
-    }
-  }, [locations, activeView]);
-  
-  const filteredLocations = useCallback(() => {
-    if (!previousLocations.current || previousLocations.current.length === 0) {
-      return locations || [];
-    }
+  React.useEffect(() => {
+    // Short delay to ensure other components are rendered first
+    const timer = setTimeout(() => {
+      setMapVisible(true);
+    }, 100);
     
-    const filtered = filterLocations(previousLocations.current, userLocation, searchRadius, activeView);
-    return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
-  }, [locations, userLocation, searchRadius, activeView, isMobile]);
-
-  useEffect(() => {
-    if (!mapRef.current) return;
-    
-    const map = mapRef.current;
-    
-    let resizeTimeout: number | null = null;
-    const handleResize = () => {
-      if (resizeTimeout) {
-        window.clearTimeout(resizeTimeout);
-      }
-      resizeTimeout = window.setTimeout(() => {
-        if (map) map.invalidateSize();
-        resizeTimeout = null;
-      }, 300);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    
-    const timeoutId = setTimeout(() => {
-      if (map) map.invalidateSize();
-    }, 300);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (resizeTimeout) {
-        window.clearTimeout(resizeTimeout);
-      }
-      clearTimeout(timeoutId);
-    };
+    return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
+  // For performance optimization on mobile
+  const useMobileMapFixer = isMobile && displayLocations.length > 50;
+  
+  const handleMapReadyComplete = () => {
+    if (onMapReady) {
+      onMapReady();
+    }
+    
+    // Store the map object in the window for external access
     if (mapRef.current) {
-      (window as any).leafletMap = mapRef.current;
-      
-      return () => {
-        delete (window as any).leafletMap;
-      };
+      try {
+        (window as any).leafletMap = mapRef.current;
+      } catch (e) {
+        console.error("Failed to store map in window object:", e);
+      }
     }
-  }, [mapRef.current]);
-
-  const displayLocations = filteredLocations();
+  };
   
-  const handleMapReady = useCallback(() => {
-    setMapReady(true);
-    if (onMapReady) onMapReady();
-  }, [onMapReady]);
-
+  console.log(`LazyMapContainer rendering with ${displayLocations.length} locations, activeView: ${activeView}`);
+  
+  if (!mapVisible) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-8 w-8 rounded-full border-4 border-t-primary border-r-primary border-b-primary/30 border-l-primary/30 animate-spin"></div>
+          <div className="mt-2 text-xs text-muted-foreground">Map loading...</div>
+        </div>
+      </div>
+    );
+  }
+  
   return (
-    <div ref={mapContainerRef} className="relative w-full h-full">
-      {userLocation && (
-        <RealTimeSiqsProvider
-          isVisible={true}
-          latitude={userLocation.latitude}
-          longitude={userLocation.longitude}
-          bortleScale={4}
-          onSiqsCalculated={handleUserLocationSiqs}
-        />
-      )}
-      
-      <MapContent 
-        center={center}
-        userLocation={userLocation}
-        zoom={zoom}
-        displayLocations={displayLocations}
-        isMobile={Boolean(isMobile)}
-        activeView={activeView}
-        searchRadius={searchRadius}
-        showRadiusCircles={showRadiusCircles}
-        onMapClick={onMapClick}
-        onLocationClick={onLocationClick}
-        hoveredLocationId={hoveredLocationId}
-        onMarkerHover={onMarkerHover}
-        handleTouchStart={handleTouchStart}
-        handleTouchEnd={handleTouchEnd}
-        handleTouchMove={handleTouchMove}
-        useMobileMapFixer={useMobileMapFixer}
-        mapRef={mapRef}
-        onMapReady={handleMapReady}
-        currentSiqs={currentSiqs}
-      />
-    </div>
+    <MapContent
+      center={center}
+      userLocation={userLocation}
+      zoom={zoom}
+      displayLocations={displayLocations}
+      isMobile={isMobile}
+      activeView={activeView}
+      searchRadius={searchRadius}
+      showRadiusCircles={showRadiusCircles}
+      onMapClick={onMapClick}
+      onLocationClick={onLocationClick}
+      hoveredLocationId={hoveredLocationId}
+      onMarkerHover={onMarkerHover}
+      handleTouchStart={handleTouchStart}
+      handleTouchEnd={handleTouchEnd}
+      handleTouchMove={handleTouchMove}
+      useMobileMapFixer={useMobileMapFixer}
+      mapRef={mapRef}
+      onMapReady={handleMapReadyComplete}
+      currentSiqs={currentSiqs}
+    />
   );
 };
 

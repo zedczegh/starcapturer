@@ -5,16 +5,19 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { getCurrentPosition } from '@/utils/geolocationUtils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export const usePhotoPointsState = () => {
   const { t, language } = useLanguage();
   const location = useLocation();
+  const isMobile = useIsMobile();
   
   const [activeView, setActiveView] = useState<'certified' | 'calculated'>('calculated');
   const [showMap, setShowMap] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
   const [autoLocationRequested, setAutoLocationRequested] = useState(false);
   const [effectiveLocation, setEffectiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [forecastDay, setForecastDay] = useState(0); // Default to current day (0)
   const { 
     coords: currentPosition, 
     loading: locationLoading, 
@@ -70,6 +73,10 @@ export const usePhotoPointsState = () => {
   
   const handleRadiusChange = useCallback((value: number) => {
     setCalculatedSearchRadius(value);
+  }, []);
+  
+  const handleForecastDayChange = useCallback((value: number) => {
+    setForecastDay(value);
   }, []);
   
   const handleLocationUpdate = useCallback((latitude: number, longitude: number) => {
@@ -131,6 +138,11 @@ export const usePhotoPointsState = () => {
     if (view !== activeView) {
       console.log(`Switching to ${view} view mode`);
       setActiveView(view);
+      
+      // Reset forecast day when changing to certified view
+      if (view === 'certified') {
+        setForecastDay(0);
+      }
     }
   }, [activeView]);
   
@@ -155,7 +167,9 @@ export const usePhotoPointsState = () => {
     locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
+    forecastDay,
     handleRadiusChange,
+    handleForecastDayChange,
     handleViewChange,
     handleLocationUpdate,
     handleResetLocation,

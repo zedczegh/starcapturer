@@ -1,10 +1,9 @@
 
-import React from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import React, { useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import LazyMapContainer from './LazyMapContainer';
-import MapLegend from './MapLegend';
-import PinpointButton from './PinpointButton';
 
 interface MapContainerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -14,7 +13,7 @@ interface MapContainerProps {
   mapReady: boolean;
   handleMapReady: () => void;
   handleLocationClicked: (location: SharedAstroSpot) => void;
-  handleMapClick: (lat: number, lng: number) => void;
+  handleMapClick?: (lat: number, lng: number) => void;
   mapCenter: [number, number];
   initialZoom: number;
   mapContainerHeight: string;
@@ -22,10 +21,11 @@ interface MapContainerProps {
   hoveredLocationId: string | null;
   handleHover: (id: string | null) => void;
   handleTouchStart: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchEnd: (e: React.TouchEvent) => void;
   handleTouchMove: (e: React.TouchEvent) => void;
   handleGetLocation: () => void;
-  onLegendToggle: (isOpen: boolean) => void;
+  onLegendToggle: () => void;
+  isForecast?: boolean;
 }
 
 const MapContainer: React.FC<MapContainerProps> = ({
@@ -47,61 +47,76 @@ const MapContainer: React.FC<MapContainerProps> = ({
   handleTouchEnd,
   handleTouchMove,
   handleGetLocation,
-  onLegendToggle
+  onLegendToggle,
+  isForecast = false
 }) => {
   const { t } = useLanguage();
-
-  return (
-    <div 
-      style={{ height: mapContainerHeight }} 
-      className="w-full relative rounded-md overflow-hidden transition-all duration-300 mb-4 mt-2"
-    >
-      {!mapReady && (
-        <div className="absolute inset-0 z-20">
-          <div className="flex h-full items-center justify-center bg-background/80">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+  const isDetectedMobile = useIsMobile();
+  
+  // Use the provided isMobile or fall back to the hook detection
+  const effectiveMobile = isMobile !== undefined ? isMobile : isDetectedMobile;
+  
+  // Only show the radius circle for calculated view when not in forecast mode
+  const showRadiusCircles = activeView === 'calculated' && !isForecast;
+  
+  // Current SIQS score at user location
+  const currentSiqs = useMemo(() => {
+    // If we have no user location, return null
+    if (!userLocation) return null;
+    
+    // Find if there's a location at the exact user coordinates
+    const userLocationSpot = locations.find(loc => 
+      Math.abs(loc.latitude - userLocation.latitude) < 0.0001 && 
+      Math.abs(loc.longitude - userLocation.longitude) < 0.0001
+    );
+    
+    return userLocationSpot?.siqs || null;
+  }, [locations, userLocation]);
+  
+  // Check map loading status
+  if (!mapReady) {
+    return (
+      <div 
+        className="bg-muted/30 rounded-lg flex items-center justify-center"
+        style={{ height: mapContainerHeight }}
+      >
+        <div className="animate-pulse text-center">
+          <div className="h-6 w-24 bg-muted rounded mx-auto mb-2"></div>
+          <div className="text-xs text-muted-foreground">
+            {t("Loading map...", "加载地图中...")}
           </div>
         </div>
-      )}
-      
+      </div>
+    );
+  }
+  
+  return (
+    <div 
+      className="relative rounded-lg overflow-hidden border border-border shadow-sm"
+      style={{ height: mapContainerHeight }}
+    >
       <LazyMapContainer
         center={mapCenter}
         userLocation={userLocation}
-        locations={locations}
-        searchRadius={searchRadius}
+        zoom={initialZoom}
+        displayLocations={locations}
         activeView={activeView}
-        onMapReady={handleMapReady}
+        searchRadius={searchRadius}
         onLocationClick={handleLocationClicked}
         onMapClick={handleMapClick}
-        zoom={initialZoom}
+        isMobile={effectiveMobile}
         hoveredLocationId={hoveredLocationId}
         onMarkerHover={handleHover}
         handleTouchStart={handleTouchStart}
         handleTouchEnd={handleTouchEnd}
         handleTouchMove={handleTouchMove}
-        isMobile={isMobile}
-        useMobileMapFixer={false}
-        showRadiusCircles={activeView === 'calculated' && !isMobile}
-      />
-      
-      {/* Add MapLegend for both mobile and desktop */}
-      <MapLegend 
-        activeView={activeView} 
-        showStarLegend={activeView === 'certified'}
-        showCircleLegend={activeView === 'calculated'}
-        onToggle={onLegendToggle}
-        className="absolute top-4 right-4 z-[999]"
-      />
-      
-      {/* Update PinpointButton positioning for desktop and mobile */}
-      <PinpointButton
-        onGetLocation={handleGetLocation}
-        className={isMobile ? "absolute bottom-4 right-4 z-[999]" : "absolute bottom-4 left-4 z-[999]"}
-        shouldCenter={false}
-        hasLocation={userLocation !== null}
+        onMapReady={handleMapReady}
+        showRadiusCircles={showRadiusCircles}
+        currentSiqs={currentSiqs}
+        isForecast={isForecast}
       />
     </div>
   );
 };
 
-export default MapContainer;
+export default React.memo(MapContainer);

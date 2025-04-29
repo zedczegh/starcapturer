@@ -1,77 +1,63 @@
 
 import React from 'react';
-import { useLanguage } from "@/contexts/LanguageContext";
-import { Button } from "@/components/ui/button";
-import { Calculator, Target, RefreshCw, Search } from "lucide-react";
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, RefreshCcw, Calendar } from 'lucide-react';
+import { format, addDays } from 'date-fns';
 
 interface EmptyCalculatedStateProps {
-  searchRadius?: number;
+  searchRadius: number;
   onRefresh?: () => void;
+  isForecast?: boolean;
 }
 
-const EmptyCalculatedState: React.FC<EmptyCalculatedStateProps> = ({
-  searchRadius = 0,
-  onRefresh
+const EmptyCalculatedState: React.FC<EmptyCalculatedStateProps> = ({ 
+  searchRadius, 
+  onRefresh,
+  isForecast = false
 }) => {
   const { t } = useLanguage();
-  
+
   return (
-    <div className="text-center py-12 glassmorphism rounded-xl bg-cosmic-800/30 border border-cosmic-600/30">
-      <Calculator className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
-      <h2 className="text-xl font-semibold mb-2">
-        {t("No Recommended Locations Found", "未找到推荐地点")}
-      </h2>
-      <p className="text-muted-foreground max-w-lg mx-auto mb-2 text-sm">
-        {t(
-          "We couldn't find any locations with good viewing conditions within your search radius.",
-          "在您的搜索半径内，我们未能找到具有良好观测条件的地点。"
+    <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+      <div className="bg-yellow-100 dark:bg-yellow-900/30 rounded-full p-4 mb-4">
+        {isForecast ? (
+          <Calendar className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
+        ) : (
+          <AlertCircle className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
         )}
-      </p>
-      <div className="flex items-center justify-center gap-2 mt-4">
-        <Target className="h-4 w-4 text-primary" />
-        <p className="text-sm text-primary">
-          {searchRadius > 0 ? 
-            t(
-              `Try increasing your search radius beyond ${searchRadius}km.`,
-              `尝试将搜索半径增加到${searchRadius}公里以上。`
-            ) :
-            t(
-              "Try adjusting your search radius to find better viewing spots.",
-              "尝试调整搜索半径以找到更好的观测地点。"
-            )
-          }
-        </p>
       </div>
       
+      <h3 className="text-xl font-semibold mb-2">
+        {isForecast 
+          ? t("No forecast spots found", "未找到预测点位") 
+          : t("No calculated spots found", "未找到计算点位")
+        }
+      </h3>
+      
+      <p className="text-muted-foreground max-w-md mb-6">
+        {isForecast 
+          ? t(
+              "We couldn't find good photo spots for this forecast date. Try another day or expand your search radius.",
+              "我们无法为此预测日期找到好的拍摄点。请尝试另一天或扩大您的搜索半径。"
+            )
+          : t(
+              "We couldn't find any calculated spots within {radius}km of your location. Try expanding the search radius.",
+              "我们无法在您位置周围{radius}公里内找到任何计算点位。请尝试扩大搜索半径。",
+              { radius: searchRadius }
+            )
+        }
+      </p>
+      
       {onRefresh && (
-        <div className="mt-6 flex flex-col gap-3 items-center">
-          <Button 
-            variant="outline" 
-            onClick={onRefresh}
-            className="group border-primary/40 hover:bg-cosmic-800/50"
-          >
-            <RefreshCw className="mr-2 h-4 w-4 group-hover:animate-spin" />
-            {t("Refresh Recommendations", "刷新推荐")}
-          </Button>
-          
-          {searchRadius < 10000 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs text-muted-foreground"
-              onClick={() => {
-                // Trigger custom event to expand search radius
-                const newRadius = Math.min(10000, searchRadius + 1000);
-                document.dispatchEvent(new CustomEvent('expand-search-radius', { 
-                  detail: { radius: newRadius } 
-                }));
-              }}
-            >
-              <Search className="mr-1.5 h-3 w-3" />
-              {t("Try wider search area", "尝试更广的搜索范围")}
-            </Button>
-          )}
-        </div>
+        <Button 
+          onClick={onRefresh} 
+          className="flex items-center gap-2"
+          variant="outline"
+        >
+          <RefreshCcw className="h-4 w-4" />
+          {t("Refresh", "刷新")}
+        </Button>
       )}
     </div>
   );
