@@ -38,3 +38,17 @@ export function addVariation(baseValue: number, percentVariation: number): numbe
   const variation = (Math.random() * 2 - 1) * percentVariation;
   return baseValue * (1 + variation);
 }
+
+/**
+ * Generate a random integer between min and max (inclusive)
+ */
+export function getRandomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+/**
+ * Generate a random floating point number between min and max
+ */
+export function getRandomFloat(min: number, max: number): number {
+  return Math.random() * (max - min) + min;
+}

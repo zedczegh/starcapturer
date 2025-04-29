@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
@@ -174,7 +173,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         center={center}
         userLocation={userLocation}
         zoom={zoom}
-        displayLocations={displayLocations}
+        locations={displayLocations}
         isMobile={Boolean(isMobile)}
         activeView={activeView}
         searchRadius={searchRadius}

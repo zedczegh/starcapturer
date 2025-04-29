@@ -74,3 +74,58 @@ export function applyDistanceFilter(
     return distance <= maxDistance;
   });
 }
+
+/**
+ * Generate a random point within a specific radius around a center point
+ * @param centerLat Center latitude
+ * @param centerLng Center longitude
+ * @param radiusKm Radius in kilometers
+ * @returns Random point coordinates
+ */
+export function generateRandomPoint(
+  centerLat: number,
+  centerLng: number,
+  radiusKm: number
+): { latitude: number; longitude: number } {
+  // Earth's radius in kilometers
+  const earthRadius = 6371;
+  
+  // Convert radius from kilometers to radians
+  const radiusInRadians = radiusKm / earthRadius;
+  
+  // Generate random distance and angle
+  const u = Math.random();
+  const v = Math.random();
+  
+  // Calculate random distance within the radius
+  const w = radiusInRadians * Math.sqrt(u);
+  
+  // Calculate random angle
+  const t = 2 * Math.PI * v;
+  
+  // Calculate offsets
+  const x = w * Math.cos(t);
+  const y = w * Math.sin(t);
+  
+  // Convert to latitude and longitude offsets
+  // y is latitude offset, x is longitude offset adjusted for latitude
+  const latOffset = y * 180 / Math.PI;
+  const lngOffset = (x * 180 / Math.PI) / Math.cos(centerLat * Math.PI / 180);
+  
+  // Calculate new coordinates
+  const newLat = centerLat + latOffset;
+  const newLng = centerLng + lngOffset;
+  
+  return { latitude: newLat, longitude: newLng };
+}
+
+/**
+ * Filter locations based on various criteria
+ */
+export function filterLocations(locations: any[], criteria: any): any[] {
+  // Example filter function to be implemented as needed
+  return locations.filter(location => {
+    // Add filtering logic based on criteria
+    return true;
+  });
+}

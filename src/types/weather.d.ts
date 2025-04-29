@@ -83,5 +83,7 @@ declare module "@/types/weather" {
     timestamp?: string;
     isViable?: boolean;
     weatherScore?: number;
+    siqsResult?: SIQSData;
+    visibility?: number;
   }
 }
