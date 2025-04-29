@@ -6,8 +6,14 @@ import { isWaterLocation } from '@/utils/validation';
 import { createSpotFromPoint } from './location/spotCreationService';
 import { getWeatherScoreForDay } from '@/utils/weatherPrediction';
 
+// Extend SharedAstroSpot interface to include forecast properties
+interface ForecastSpot extends SharedAstroSpot {
+  forecastDay?: number;
+  weatherScore?: number;
+}
+
 // Cache for forecast spot predictions to avoid redundant API calls
-const forecastCache = new Map<string, {data: SharedAstroSpot[], timestamp: number}>();
+const forecastCache = new Map<string, {data: ForecastSpot[], timestamp: number}>();
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 /**
@@ -20,7 +26,7 @@ export async function generateForecastQualitySpots(
   forecastDay: number = 0, // 0 = today, 1 = tomorrow, etc.
   limit: number = 10,
   minQuality: number = 5
-): Promise<SharedAstroSpot[]> {
+): Promise<ForecastSpot[]> {
   try {
     // Check cache first
     const cacheKey = `forecast-spots-${centerLat.toFixed(4)}-${centerLng.toFixed(4)}-${radius}-${forecastDay}`;
@@ -61,7 +67,7 @@ export async function generateForecastQualitySpots(
     
     // Process points in batches
     const BATCH_SIZE = 5;
-    const validSpots: SharedAstroSpot[] = [];
+    const validSpots: ForecastSpot[] = [];
     
     // Create batches for parallel processing
     const batches = [];
@@ -82,7 +88,7 @@ export async function generateForecastQualitySpots(
         const weatherScore = getWeatherScoreForDay(forecastData, forecastDay);
         
         // Factor the weather score into the spot creation
-        const spot = await createSpotFromPoint(point, minQuality, weatherScore);
+        const spot = await createSpotFromPoint(point, minQuality) as ForecastSpot | null;
         
         // Add forecast day to the spot metadata
         if (spot) {
@@ -104,7 +110,7 @@ export async function generateForecastQualitySpots(
       });
       
       const batchResults = await Promise.all(batchPromises);
-      const validBatchSpots = batchResults.filter(Boolean) as SharedAstroSpot[];
+      const validBatchSpots = batchResults.filter(Boolean) as ForecastSpot[];
       validSpots.push(...validBatchSpots);
     }
     

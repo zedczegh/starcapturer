@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationDetailsContent from "./LocationDetailsContent";
@@ -111,7 +110,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
             <NavigationButtons 
               latitude={locationData.latitude}
               longitude={locationData.longitude}
-              locationName={locationData?.name || ""}
+              name={locationData?.name} // Pass name instead of locationName
             />
           )}
         </div>

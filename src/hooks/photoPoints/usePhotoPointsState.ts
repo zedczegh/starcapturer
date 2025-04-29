@@ -1,7 +1,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useLocationState } from '@/hooks/useLocationState';
+import { useLocationState } from '@/hooks/location/useLocationState';
 
 export const usePhotoPointsState = () => {
   const { userLocation, locationInitialized, locationLoading, handleLocationUpdate, handleResetLocation } = useLocationState();

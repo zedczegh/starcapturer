@@ -5,8 +5,6 @@ import { Map, Navigation, ChevronLeft } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import GaodeMapLink from "../maps/GaodeMapLink";
-import GoogleMapLink from "../maps/GoogleMapLink";
 
 interface NavigationButtonsProps {
   latitude: number;
@@ -15,6 +13,7 @@ interface NavigationButtonsProps {
   className?: string;
   showBackButton?: boolean;
   navigationLabel?: string;
+  name?: string; // Add name property to the props interface
 }
 
 const NavigationButtons: React.FC<NavigationButtonsProps> = ({
@@ -23,13 +22,24 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({
   compact = false,
   className = "",
   showBackButton = true,
-  navigationLabel
+  navigationLabel,
+  name
 }) => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
 
   const handleBack = () => {
     navigate(-1);
+  };
+
+  const openGaodeMap = () => {
+    const gaodeUrl = `https://uri.amap.com/navigation?to=${longitude},${latitude},${name || ''}&mode=car&src=lovableapp`;
+    window.open(gaodeUrl, '_blank');
+  };
+  
+  const openGoogleMap = () => {
+    const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+    window.open(googleUrl, '_blank');
   };
 
   return (
@@ -49,25 +59,25 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({
       <div className="flex gap-2 ml-auto">
         {/* Primary navigation buttons */}
         {language === "zh" ? (
-          <GaodeMapLink
-            latitude={latitude}
-            longitude={longitude}
-            label={navigationLabel || t("Navigate", "导航")}
+          <Button
+            onClick={openGaodeMap}
             variant="secondary"
             size="sm"
             className="bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30"
-            icon={<Navigation className="h-4 w-4 mr-1" />}
-          />
+          >
+            <Navigation className="h-4 w-4 mr-1" />
+            {navigationLabel || t("Navigate", "导航")}
+          </Button>
         ) : (
-          <GoogleMapLink
-            latitude={latitude}
-            longitude={longitude}
-            label={navigationLabel || t("Navigate", "导航")}
+          <Button
+            onClick={openGoogleMap}
             variant="secondary" 
             size="sm"
             className="bg-gradient-to-r from-blue-500/20 to-green-500/20 hover:from-blue-500/30 hover:to-green-500/30"
-            icon={<Navigation className="h-4 w-4 mr-1" />}
-          />
+          >
+            <Navigation className="h-4 w-4 mr-1" />
+            {navigationLabel || t("Navigate", "导航")}
+          </Button>
         )}
 
         {!compact && (

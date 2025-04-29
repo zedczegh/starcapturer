@@ -1,8 +1,9 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, MapPin } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { toast } from "sonner";
 
 interface CopyLocationButtonProps {
   latitude: number;
@@ -37,19 +38,32 @@ const CopyLocationButton: React.FC<CopyLocationButtonProps> = ({
     navigator.clipboard.writeText(fullText)
       .then(() => {
         setCopied(true);
-        // No toast notification
+        toast.success(t("Coordinates copied to clipboard", "坐标已复制到剪贴板"));
         
         // Reset state after 2 seconds
         setTimeout(() => setCopied(false), 2000);
       })
       .catch(err => {
         console.error("Failed to copy coordinates:", err);
-        // No toast for errors
+        toast.error(t("Failed to copy coordinates", "无法复制坐标"));
       });
   };
 
-  // Button is removed on location details page, so return null to disable usage everywhere
-  return null;
+  return (
+    <Button
+      variant={variant}
+      size={size}
+      className={className}
+      onClick={handleCopyLocation}
+    >
+      {copied ? (
+        <Check className="h-4 w-4 mr-1" />
+      ) : (
+        <Copy className="h-4 w-4 mr-1" />
+      )}
+      {t("Copy Location", "复制位置")}
+    </Button>
+  );
 };
 
 export default CopyLocationButton;
