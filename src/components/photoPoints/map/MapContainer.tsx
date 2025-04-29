@@ -5,6 +5,8 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import LazyMapContainer from './LazyMapContainer';
 import MapLegend from './MapLegend';
 import PinpointButton from './PinpointButton';
+import { Badge } from '@/components/ui/badge';
+import { CalendarClock } from 'lucide-react';
 
 interface MapContainerProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -26,6 +28,8 @@ interface MapContainerProps {
   handleTouchMove: (e: React.TouchEvent) => void;
   handleGetLocation: () => void;
   onLegendToggle: (isOpen: boolean) => void;
+  showForecast?: boolean;
+  forecastDay?: number;
 }
 
 const MapContainer: React.FC<MapContainerProps> = ({
@@ -47,7 +51,9 @@ const MapContainer: React.FC<MapContainerProps> = ({
   handleTouchEnd,
   handleTouchMove,
   handleGetLocation,
-  onLegendToggle
+  onLegendToggle,
+  showForecast = false,
+  forecastDay = 1
 }) => {
   const { t } = useLanguage();
 
@@ -61,6 +67,15 @@ const MapContainer: React.FC<MapContainerProps> = ({
           <div className="flex h-full items-center justify-center bg-background/80">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
           </div>
+        </div>
+      )}
+      
+      {showForecast && (
+        <div className="absolute top-4 left-4 z-[999]">
+          <Badge variant="secondary" className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/90 text-primary-foreground">
+            <CalendarClock className="h-3.5 w-3.5" />
+            <span>{t("Forecast Day", "预测天数")}: {forecastDay}</span>
+          </Badge>
         </div>
       )}
       
@@ -82,6 +97,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
         isMobile={isMobile}
         useMobileMapFixer={false}
         showRadiusCircles={activeView === 'calculated' && !isMobile}
+        showForecast={showForecast}
       />
       
       {/* Add MapLegend for both mobile and desktop */}
@@ -91,6 +107,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
         showCircleLegend={activeView === 'calculated'}
         onToggle={onLegendToggle}
         className="absolute top-4 right-4 z-[999]"
+        isForecastMode={showForecast}
       />
       
       {/* Update PinpointButton positioning for desktop and mobile */}

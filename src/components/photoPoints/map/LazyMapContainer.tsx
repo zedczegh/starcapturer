@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
@@ -28,6 +29,7 @@ interface LazyMapContainerProps {
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
+  showForecast?: boolean;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -47,7 +49,8 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   handleTouchMove,
   isMobile,
   useMobileMapFixer = false,
-  showRadiusCircles = false
+  showRadiusCircles = false,
+  showForecast = false
 }) => {
   const [mapReady, setMapReady] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
@@ -56,7 +59,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const isMountedRef = useRef(true);
   const previousLocations = useRef<SharedAstroSpot[]>([]);
   
-  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}`);
+  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}, forecast: ${showForecast}`);
   
   const handleUserLocationSiqs = useCallback((siqs: number | null, loading: boolean) => {
     if (!loading && siqs !== null) {
@@ -82,22 +85,28 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         return !locationIds.has(locId);
       });
       
-      const combinedLocations = activeView === 'calculated' 
+      // Don't combine locations in forecast mode to avoid showing regular spots
+      const combinedLocations = (activeView === 'calculated' && !showForecast)
         ? [...locations, ...previousToKeep] 
         : locations;
       
       previousLocations.current = combinedLocations;
     }
-  }, [locations, activeView]);
+  }, [locations, activeView, showForecast]);
   
   const filteredLocations = useCallback(() => {
     if (!previousLocations.current || previousLocations.current.length === 0) {
       return locations || [];
     }
     
+    // In forecast mode, only use the current locations without filtering by distance
+    if (showForecast) {
+      return optimizeLocationsForMobile(locations, Boolean(isMobile), activeView);
+    }
+    
     const filtered = filterLocations(previousLocations.current, userLocation, searchRadius, activeView);
     return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
-  }, [locations, userLocation, searchRadius, activeView, isMobile]);
+  }, [locations, userLocation, searchRadius, activeView, isMobile, showForecast]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -149,7 +158,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
 
   return (
     <div ref={mapContainerRef} className="relative w-full h-full">
-      {userLocation && (
+      {userLocation && !showForecast && (
         <RealTimeSiqsProvider
           isVisible={true}
           latitude={userLocation.latitude}
@@ -179,6 +188,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         mapRef={mapRef}
         onMapReady={handleMapReady}
         currentSiqs={currentSiqs}
+        showForecast={showForecast}
       />
     </div>
   );

@@ -1,179 +1,98 @@
 
-import React, { useCallback, useState, useEffect } from 'react';
-import { Marker } from 'react-leaflet';
+import React, { useCallback } from 'react';
+import { Marker, Popup } from 'react-leaflet';
+import { createCustomIcon } from './MarkerUtils';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import MarkerEventHandler from './MarkerEventHandler';
-import { getLocationMarker } from './MarkerUtils';
-import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
-import { getSiqsScore } from '@/utils/siqsHelpers';
-import LocationPopupContent from './LocationPopupContent';
-import { useMarkerState } from './hooks/useMarkerState';
-import { useNavigate } from "react-router-dom";
-import { prepareLocationForNavigation } from '@/utils/locationNavigation';
+import { getSiqsColorClass } from '@/utils/mapSiqsDisplay';
+import MapMarkerPopup from './MapMarkerPopup';
 
 interface LocationMarkerProps {
   location: SharedAstroSpot;
-  onClick: (location: SharedAstroSpot) => void;
-  isHovered: boolean;
-  onHover: (id: string | null) => void;
+  onClick?: (location: SharedAstroSpot) => void;
+  isHovered?: boolean;
+  onHover?: (id: string | null) => void;
   locationId: string;
-  isCertified: boolean;
+  isCertified?: boolean;
   activeView: 'certified' | 'calculated';
   handleTouchStart?: (e: React.TouchEvent, id: string) => void;
   handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
   handleTouchMove?: (e: React.TouchEvent) => void;
 }
 
-const LocationMarker: React.FC<LocationMarkerProps> = ({ 
-  location, 
+const LocationMarker: React.FC<LocationMarkerProps> = ({
+  location,
   onClick,
   isHovered,
   onHover,
   locationId,
-  isCertified,
+  isCertified = false,
   activeView,
   handleTouchStart,
   handleTouchEnd,
   handleTouchMove
 }) => {
-  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
-  const [siqsLoading, setSiqsLoading] = useState<boolean>(isCertified);
-  const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
-  const [forceUpdate, setForceUpdate] = useState<boolean>(false);
-
-  const { siqsScore, displayName, icon } = useMarkerState({
-    location,
-    realTimeSiqs,
-    isCertified,
-    isHovered
-  });
-
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (isCertified) {
-      setForceUpdate(true);
-      setSiqsLoading(true);
-      const timer = setTimeout(() => setForceUpdate(false), 100);
-      return () => clearTimeout(timer);
+  const handleClick = useCallback(() => {
+    if (onClick) {
+      onClick(location);
     }
-  }, [isCertified]);
+  }, [onClick, location]);
 
-  if (!location.latitude || !location.longitude || 
-      !isFinite(location.latitude) || !isFinite(location.longitude)) {
+  const handleMouseOver = useCallback(() => {
+    if (onHover) {
+      onHover(locationId);
+    }
+  }, [onHover, locationId]);
+
+  const handleMouseOut = useCallback(() => {
+    if (onHover) {
+      onHover(null);
+    }
+  }, [onHover]);
+
+  if (!location.latitude || !location.longitude) {
     return null;
   }
-  
-  const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean, confidence?: number) => {
-    setRealTimeSiqs(siqs);
-    setSiqsLoading(loading);
-    if (confidence) {
-      setSiqsConfidence(confidence);
-    }
-    if (isCertified && (siqs === null || siqs <= 0) && !loading) {
-      setSiqsLoading(true);
-      setTimeout(() => setForceUpdate(true), 2000);
-      setTimeout(() => setForceUpdate(false), 2100);
-    }
-  }, [locationId, isCertified]);
-  
-  const handleClick = useCallback(() => {
-    if (isCertified) {
-      setForceUpdate(true);
-      setTimeout(() => setForceUpdate(false), 100);
-      setSiqsLoading(true);
-    }
-    onClick(location);
-  }, [location, onClick, isCertified]);
-  
-  const handleMouseOver = useCallback(() => {
-    onHover(locationId);
-  }, [locationId, onHover]);
-  
-  const handleMouseOut = useCallback(() => {
-    onHover(null);
-  }, [onHover]);
-  
-  const handleMarkerTouchStart = useCallback((e: React.TouchEvent) => {
-    if (isCertified) {
-      setForceUpdate(true);
-      setTimeout(() => setForceUpdate(false), 100);
-      setSiqsLoading(true);
-    }
-    if (handleTouchStart) {
-      handleTouchStart(e, locationId);
-    }
-  }, [handleTouchStart, locationId, isCertified]);
-  
-  const handleMarkerTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (handleTouchEnd) {
-      handleTouchEnd(e, locationId);
-    }
-  }, [handleTouchEnd, locationId]);
-  
-  const handleMarkerTouchMove = useCallback((e: React.TouchEvent) => {
-    if (handleTouchMove) {
-      handleTouchMove(e);
-    }
-  }, [handleTouchMove]);
 
-  // Handle navigation to location details page from popup
-  const handleViewDetails = useCallback((loc: SharedAstroSpot) => {
-    try {
-      const navigationData = prepareLocationForNavigation(loc);
-      
-      if (navigationData) {
-        navigate(`/location/${navigationData.locationId}`, { 
-          state: navigationData.locationState 
-        });
-        console.log("Opening location details", navigationData.locationId);
-      }
-    } catch (error) {
-      console.error("Error navigating to location details:", error, loc);
-    }
-  }, [navigate]);
+  // Use a special icon for forecast locations
+  const isForecast = Boolean(location.isForecast);
+  
+  // Get color class based on SIQS or use default
+  const colorClass = location.siqs 
+    ? getSiqsColorClass(location.siqs) 
+    : 'bg-primary';
+  
+  // Create icon based on location type
+  const icon = createCustomIcon({
+    isHovered,
+    isCertified,
+    isDarkSkyReserve: location.isDarkSkyReserve,
+    siqs: location.siqs,
+    isForecast,
+    forecastDay: location.forecastDay
+  });
 
   return (
-    <>
-      <RealTimeSiqsProvider
-        isVisible={true}
-        latitude={location.latitude}
-        longitude={location.longitude}
-        bortleScale={location.bortleScale}
-        isCertified={isCertified}
-        isDarkSkyReserve={location.isDarkSkyReserve}
-        existingSiqs={location.siqs}
-        onSiqsCalculated={handleSiqsCalculated}
-        forceUpdate={forceUpdate || (isCertified && !realTimeSiqs)}
-      />
-      
-      <Marker
-        position={[location.latitude, location.longitude]}
-        icon={icon}
-        onClick={handleClick}
-      >
-        <MarkerEventHandler 
-          marker={null}
-          eventMap={{
-            mouseover: handleMouseOver,
-            mouseout: handleMouseOut,
-            touchstart: handleMarkerTouchStart,
-            touchend: handleMarkerTouchEnd,
-            touchmove: handleMarkerTouchMove
-          }}
+    <Marker
+      position={[location.latitude, location.longitude]}
+      icon={icon}
+      eventHandlers={{
+        click: handleClick,
+        mouseover: handleMouseOver,
+        mouseout: handleMouseOut,
+        touchstart: (e) => handleTouchStart && handleTouchStart(e, locationId),
+        touchend: (e) => handleTouchEnd && handleTouchEnd(e, locationId),
+        touchmove: handleTouchMove
+      }}
+    >
+      <Popup>
+        <MapMarkerPopup 
+          location={location} 
+          onClick={handleClick}
+          isForecast={isForecast}
         />
-        
-        <LocationPopupContent
-          location={location}
-          siqsScore={siqsScore}
-          siqsLoading={siqsLoading}
-          displayName={displayName}
-          isCertified={isCertified}
-          onViewDetails={handleViewDetails} // Use the correct navigation callback
-        />
-      </Marker>
-    </>
+      </Popup>
+    </Marker>
   );
 };
 
-export default React.memo(LocationMarker);
+export default LocationMarker;

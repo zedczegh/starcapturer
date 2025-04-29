@@ -13,6 +13,10 @@ import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocat
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
+import ForecastDaySlider from '@/components/photoPoints/ForecastDaySlider';
+import { Button } from '@/components/ui/button';
+import { SunMoon } from 'lucide-react';
+import { useForecastSpots } from '@/hooks/photoPoints/useForecastSpots';
 
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
@@ -27,11 +31,15 @@ const PhotoPointsNearby: React.FC = () => {
     locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
+    forecastDay,
+    showForecast,
     handleRadiusChange,
+    handleForecastDayChange,
     handleViewChange,
     handleLocationUpdate,
     handleResetLocation,
-    toggleMapView
+    toggleMapView,
+    toggleForecastMode
   } = usePhotoPointsState();
 
   const {
@@ -51,6 +59,18 @@ const PhotoPointsNearby: React.FC = () => {
     effectiveLocation, 
     currentSearchRadius
   );
+  
+  // Get forecast spots with the forecast hook
+  const {
+    forecastSpots,
+    loading: forecastLoading,
+    refreshForecastSpots
+  } = useForecastSpots({
+    userLocation: effectiveLocation,
+    searchRadius: calculatedSearchRadius,
+    forecastDay,
+    enabled: showForecast && activeView === 'calculated'
+  });
   
   // Get certified and calculated locations from the hook
   const { 
@@ -109,7 +129,7 @@ const PhotoPointsNearby: React.FC = () => {
       />
       
       {activeView === 'calculated' && (
-        <div className="max-w-xl mx-auto mb-6">
+        <div className="max-w-xl mx-auto mb-4">
           <DistanceRangeSlider
             currentValue={calculatedSearchRadius}
             onValueChange={handleRadiusChange}
@@ -119,6 +139,35 @@ const PhotoPointsNearby: React.FC = () => {
             loading={loading && !locationLoading}
             loadingComplete={!loading && !locationLoading}
           />
+          
+          {/* Forecast Mode Toggle Button */}
+          <div className="mt-2 mb-4 flex justify-center">
+            <Button
+              variant={showForecast ? "default" : "outline"}
+              size="sm"
+              onClick={toggleForecastMode}
+              className="gap-2"
+            >
+              <SunMoon className="h-4 w-4" />
+              {showForecast ? 
+                t("Forecast Mode: ON", "预测模式：开启") : 
+                t("Forecast Mode: OFF", "预测模式：关闭")}
+            </Button>
+          </div>
+          
+          {/* Show Forecast Day Slider when forecast mode is enabled */}
+          {showForecast && (
+            <div className="max-w-xl mx-auto mb-4">
+              <ForecastDaySlider
+                currentValue={forecastDay}
+                onValueChange={handleForecastDayChange}
+                minValue={1}
+                maxValue={15}
+                stepValue={1}
+                loading={forecastLoading}
+              />
+            </div>
+          )}
         </div>
       )}
       
@@ -138,12 +187,16 @@ const PhotoPointsNearby: React.FC = () => {
         effectiveLocation={effectiveLocation}
         certifiedLocations={certifiedLocations}
         calculatedLocations={calculatedLocations}
+        forecastLocations={forecastSpots}
         searchRadius={currentSearchRadius}
         calculatedSearchRadius={calculatedSearchRadius}
+        forecastDay={forecastDay}
+        showForecast={showForecast}
         loading={loading && !locationLoading}
+        forecastLoading={forecastLoading}
         hasMore={hasMore}
         loadMore={loadMore}
-        refreshSiqs={refreshSiqsData}
+        refreshSiqs={showForecast ? refreshForecastSpots : refreshSiqsData}
         onLocationClick={handleLocationClick}
         onLocationUpdate={handleLocationUpdate}
         canLoadMoreCalculated={canLoadMoreCalculated}

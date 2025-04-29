@@ -1,71 +1,59 @@
 
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import PhotoPointCard from '../PhotoPointCard';
-import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
+import PhotoLocationCard from '../PhotoLocationCard';
+import { motion } from 'framer-motion';
+import { CalendarClock } from 'lucide-react';
 
 interface LocationsGridProps {
   locations: SharedAstroSpot[];
   initialLoad?: boolean;
   isMobile?: boolean;
-  onViewDetails?: (location: SharedAstroSpot) => void;
+  onViewDetails: (location: SharedAstroSpot) => void;
+  isForecastMode?: boolean;
 }
 
-const LocationsGrid: React.FC<LocationsGridProps> = ({ 
+const LocationsGrid: React.FC<LocationsGridProps> = ({
   locations,
   initialLoad = false,
   isMobile = false,
-  onViewDetails
+  onViewDetails,
+  isForecastMode = false
 }) => {
-  const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
+  const staggerDelay = 0.05;
   
-  // Update locations with real-time SIQS
-  useEffect(() => {
-    if (locations.length > 0) {
-      const updateWithSiqs = async () => {
-        try {
-          // Update all locations regardless of type
-          const updated = await updateLocationsWithRealTimeSiqs(locations);
-          setEnhancedLocations(updated);
-        } catch (err) {
-          console.error("Error updating grid locations with real-time SIQS:", err);
-          // Fallback to original locations
-          setEnhancedLocations(locations);
-        }
-      };
-      
-      updateWithSiqs();
-    } else {
-      setEnhancedLocations([]);
-    }
-  }, [locations]);
-
-  const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : locations;
-  
-  // Create a handler function that wraps the onViewDetails callback
-  // to match the expected function signature
-  const handleViewDetails = (location: SharedAstroSpot) => (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent event bubbling
-    if (onViewDetails) {
-      onViewDetails(location);
-    }
+  const getForecastBadge = (location: SharedAstroSpot) => {
+    if (!isForecastMode || !location.forecastDay) return null;
+    
+    return (
+      <div className="absolute top-2 right-2 bg-primary/80 text-primary-foreground text-xs px-2 py-1 rounded-full flex items-center gap-1">
+        <CalendarClock className="h-3 w-3" />
+        <span>Day {location.forecastDay}</span>
+      </div>
+    );
   };
   
   return (
-    <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2'} gap-4 mb-6`}>
-      {locationsToDisplay.map((location, index) => (
+    <div className={`grid grid-cols-1 ${isMobile ? '' : 'sm:grid-cols-2 lg:grid-cols-3'} gap-4 pb-4`}>
+      {locations.map((location, index) => (
         <motion.div
-          key={location.id || `${location.latitude}-${location.longitude}`}
+          key={location.id || `loc-${location.latitude}-${location.longitude}-${index}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.05 }}
+          transition={{ 
+            duration: 0.3, 
+            delay: initialLoad ? staggerDelay * index : 0,
+            ease: "easeOut"
+          }}
         >
-          <PhotoPointCard
-            point={location}
-            onViewDetails={handleViewDetails(location)}
-            userLocation={null} // This doesn't use current location for distance
-          />
+          <div className="relative">
+            {getForecastBadge(location)}
+            <PhotoLocationCard
+              location={location}
+              onViewDetails={() => onViewDetails(location)}
+              isForecastMode={isForecastMode}
+            />
+          </div>
         </motion.div>
       ))}
     </div>
