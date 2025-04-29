@@ -28,6 +28,7 @@ interface MapContentProps {
   mapRef: React.RefObject<any>;
   onMapReady: () => void;
   currentSiqs: number | null;
+  isForecastMode?: boolean;
 }
 
 const MapContent: React.FC<MapContentProps> = ({
@@ -49,7 +50,8 @@ const MapContent: React.FC<MapContentProps> = ({
   useMobileMapFixer,
   mapRef,
   onMapReady,
-  currentSiqs
+  currentSiqs,
+  isForecastMode = false
 }) => {
   const tileOptions = getTileLayerOptions(Boolean(isMobile));
   
@@ -82,7 +84,6 @@ const MapContent: React.FC<MapContentProps> = ({
       className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
       whenReady={onMapReady}
       attributionControl={false}
-      worldCopyJump={true}
     >
       <TileLayer
         attribution={tileOptions.attribution}
@@ -109,7 +110,6 @@ const MapContent: React.FC<MapContentProps> = ({
         activeView={activeView}
         searchRadius={searchRadius}
         effects={['zoom-controls']} 
-        // Removed 'legend' to prevent redundant legend icon
       />
       
       {onMapClick && (
@@ -147,6 +147,7 @@ const MapContent: React.FC<MapContentProps> = ({
             handleTouchStart={handleTouchStart}
             handleTouchEnd={handleTouchEnd}
             handleTouchMove={handleTouchMove}
+            isForecast={isForecastMode || location.isForecast}
           />
         );
       })}

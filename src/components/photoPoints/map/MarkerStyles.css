@@ -1,195 +1,104 @@
 
-/* Enhanced marker styles with better mobile visibility */
-.leaflet-marker-icon {
-  transition: filter 0.15s ease-out;
-  will-change: transform;
-  transform-origin: center center !important;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
-  z-index: 600;
-}
-
-/* Hover and active state with enhanced mobile touch area */
-.leaflet-marker-icon:hover,
-.leaflet-marker-icon.hovered {
-  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.4));
-  z-index: 1000 !important;
-}
-
-/* Better popup styles for mobile */
-.leaflet-popup {
-  margin-bottom: 20px; /* Additional space for popup on mobile */
-}
-
-.leaflet-popup-content-wrapper {
-  background-color: rgba(20, 24, 39, 0.95);
-  border-radius: 8px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}
-
-.leaflet-popup-tip {
-  background-color: rgba(20, 24, 39, 0.95);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-}
-
-.leaflet-popup-content {
-  margin: 8px 10px;
-  line-height: 1.4;
-  color: #fff;
-  min-width: 120px;
-}
-
-/* Improved mobile-specific popup styles */
-@media (max-width: 768px) {
-  .leaflet-popup {
-    margin-bottom: 30px; /* More space on mobile */
-  }
-  
-  .leaflet-popup-content {
-    margin: 6px 8px;
-    font-size: 0.9em;
-  }
-  
-  /* Larger touch areas for controls on mobile */
-  .leaflet-control-zoom a {
-    width: 36px !important;
-    height: 36px !important;
-    line-height: 36px !important;
-  }
-  
-  /* Make markers appear above other elements on mobile */
-  .leaflet-marker-pane {
-    z-index: 650 !important;
-  }
-}
-
-/* Custom marker popup gradient backgrounds */
-.marker-popup-gradient {
-  background: linear-gradient(to bottom, rgba(24, 24, 27, 0.95) 0%, rgba(9, 9, 11, 0.95) 100%);
-}
-
-/* SIQS quality classes for styling */
-.siqs-excellent {
-  border-left: 3px solid #4ade80;
-}
-
-.siqs-good {
-  border-left: 3px solid #facc15;
-}
-
-.siqs-poor {
-  border-left: 3px solid #f87171;
-}
-
-/* Location radius circle styling */
-.leaflet-circle-pane path {
-  stroke-dasharray: 5, 5;
-  animation: pulse 3s infinite ease-in-out;
-  transform-origin: center center;
-  z-index: 300;
-  opacity: 0.6;
-}
-
-/* Make sure circle paths render properly */
-.leaflet-circle-pane {
-  z-index: 300 !important;
-  pointer-events: none;
-}
-
-/* Fix for mobile touch dragging issues */
-.leaflet-touch .leaflet-control-layers,
-.leaflet-touch .leaflet-bar {
-  border: 2px solid rgba(0, 0, 0, 0.2);
-  background-clip: padding-box;
-}
-
-/* Pulse animation for radius circles */
-@keyframes pulse {
-  0% { opacity: 0.4; }
-  50% { opacity: 0.7; }
-  100% { opacity: 0.4; }
-}
-
-/* Root variables for theming */
-:root {
-  --primary-rgb: 139, 92, 246; /* Default purple */
-}
-
-/* Legend tab styling */
-.legend-tab {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%) translateX(-100%);
-  height: 80px;
-  width: 28px;
+/* Base marker styles */
+.custom-marker-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-top-left-radius: 6px;
-  border-bottom-left-radius: 6px;
-  box-shadow: -3px 0 8px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: all 0.3s ease;
 }
 
-.legend-tab:hover {
+.icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  transition: all 0.2s ease-in-out;
+}
+
+.icon-container.hovered {
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.6));
+  transform: scale(1.2);
+}
+
+/* Specific marker types */
+.icon-container.certified.hovered {
+  filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.7));
+}
+
+.icon-container.dark-sky.hovered {
+  filter: drop-shadow(0 0 5px rgba(139, 92, 246, 0.7));
+}
+
+.icon-container.calculated.hovered {
+  filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.5));
+}
+
+.icon-container.forecast.hovered {
+  filter: drop-shadow(0 0 5px rgba(124, 58, 237, 0.6));
+}
+
+/* User location marker */
+.custom-user-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-marker-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-marker-icon {
+  background-color: #3b82f6;
+  border-radius: 50%;
   width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px white, 0 0 12px rgba(0, 0, 0, 0.3);
 }
 
-/* Scrollbar styling */
-.legend-content {
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
+.user-marker-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
-.legend-content::-webkit-scrollbar {
-  width: 5px;
+.user-marker-siqs {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #fff;
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+  border-radius: 10px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: bold;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.legend-content::-webkit-scrollbar-track {
-  background: transparent;
+/* Popup styles */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
-.legend-content::-webkit-scrollbar-thumb {
-  background-color: rgba(139, 92, 246, 0.3);
-  border-radius: 20px;
+.leaflet-popup-content {
+  margin: 10px 12px !important;
+  line-height: 1.5 !important;
 }
 
-/* Hover effects */
-.legend-item {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.popup-content h4 {
+  margin-top: 0;
+  margin-bottom: 4px;
 }
 
-.legend-item:hover {
-  transform: translateX(3px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-/* Animations */
-@keyframes pulse-border {
-  0% { border-color: rgba(139, 92, 246, 0.2); }
-  50% { border-color: rgba(139, 92, 246, 0.6); }
-  100% { border-color: rgba(139, 92, 246, 0.2); }
-}
-
-.pulse-border {
-  animation: pulse-border 3s infinite;
-}
-
-/* Background styling */
-.legend-pattern {
-  background-image: radial-gradient(circle at 1px 1px, rgba(139, 92, 246, 0.1) 2px, transparent 0);
-  background-size: 25px 25px;
-}
-
-/* Title styling */
-.legend-title {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 1), rgba(124, 58, 237, 1));
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.1);
+/* Custom map styles */
+.map-container.mobile-optimized .leaflet-control-zoom {
+  margin-right: 12px !important;
+  margin-bottom: 12px !important;
 }

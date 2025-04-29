@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
@@ -28,6 +29,8 @@ interface LazyMapContainerProps {
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
+  isForecastMode?: boolean;
+  selectedForecastDay?: number;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -47,7 +50,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   handleTouchMove,
   isMobile,
   useMobileMapFixer = false,
-  showRadiusCircles = false
+  showRadiusCircles = false,
+  isForecastMode = false,
+  selectedForecastDay = 0
 }) => {
   const [mapReady, setMapReady] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
@@ -56,7 +61,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const isMountedRef = useRef(true);
   const previousLocations = useRef<SharedAstroSpot[]>([]);
   
-  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}`);
+  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}, forecast: ${isForecastMode}`);
   
   const handleUserLocationSiqs = useCallback((siqs: number | null, loading: boolean) => {
     if (!loading && siqs !== null) {
@@ -78,6 +83,11 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       ));
       
       const previousToKeep = previousLocations.current.filter(loc => {
+        // Don't mix forecast and non-forecast locations
+        if (isForecastMode !== !!loc.isForecast) {
+          return false;
+        }
+        
         const locId = `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`;
         return !locationIds.has(locId);
       });
@@ -88,7 +98,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       
       previousLocations.current = combinedLocations;
     }
-  }, [locations, activeView]);
+  }, [locations, activeView, isForecastMode]);
   
   const filteredLocations = useCallback(() => {
     if (!previousLocations.current || previousLocations.current.length === 0) {
@@ -179,6 +189,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         mapRef={mapRef}
         onMapReady={handleMapReady}
         currentSiqs={currentSiqs}
+        isForecastMode={isForecastMode}
       />
     </div>
   );

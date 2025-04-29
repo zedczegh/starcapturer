@@ -26,6 +26,8 @@ interface MapContainerProps {
   handleTouchMove: (e: React.TouchEvent) => void;
   handleGetLocation: () => void;
   onLegendToggle: (isOpen: boolean) => void;
+  isForecastMode?: boolean;
+  selectedForecastDay?: number;
 }
 
 const MapContainer: React.FC<MapContainerProps> = ({
@@ -47,9 +49,24 @@ const MapContainer: React.FC<MapContainerProps> = ({
   handleTouchEnd,
   handleTouchMove,
   handleGetLocation,
-  onLegendToggle
+  onLegendToggle,
+  isForecastMode = false,
+  selectedForecastDay = 0
 }) => {
   const { t } = useLanguage();
+
+  // Format the forecast date for display in a compact format
+  const formatForecastDate = (day: number): string => {
+    if (day === 0) return t("Today", "今天");
+    
+    const date = new Date();
+    date.setDate(date.getDate() + day);
+    
+    return date.toLocaleDateString(undefined, { 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
 
   return (
     <div 
@@ -61,6 +78,13 @@ const MapContainer: React.FC<MapContainerProps> = ({
           <div className="flex h-full items-center justify-center bg-background/80">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
           </div>
+        </div>
+      )}
+      
+      {isForecastMode && (
+        <div className="absolute top-4 left-4 z-[999] bg-background/80 backdrop-blur px-3 py-1 rounded-md text-sm shadow-md">
+          <span className="font-medium">{t("Forecast", "预报")}: </span>
+          <span className="text-primary">{formatForecastDate(selectedForecastDay)}</span>
         </div>
       )}
       
@@ -82,6 +106,8 @@ const MapContainer: React.FC<MapContainerProps> = ({
         isMobile={isMobile}
         useMobileMapFixer={false}
         showRadiusCircles={activeView === 'calculated' && !isMobile}
+        isForecastMode={isForecastMode}
+        selectedForecastDay={selectedForecastDay}
       />
       
       {/* Add MapLegend for both mobile and desktop */}

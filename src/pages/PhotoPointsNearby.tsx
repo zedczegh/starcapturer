@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -13,6 +13,10 @@ import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocat
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
+import { Slider } from '@/components/ui/slider';
+import { findForecastLocations } from '@/services/location/forecastSpotService';
+import { Button } from "@/components/ui/button";
+import { Calendar, CalendarIcon } from "lucide-react";
 
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
@@ -27,12 +31,20 @@ const PhotoPointsNearby: React.FC = () => {
     locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
+    selectedForecastDay,
+    showForecast,
     handleRadiusChange,
     handleViewChange,
     handleLocationUpdate,
     handleResetLocation,
-    toggleMapView
+    toggleMapView,
+    handleForecastDayChange,
+    toggleForecastView
   } = usePhotoPointsState();
+
+  // State for forecast locations
+  const [forecastLocations, setForecastLocations] = useState<SharedAstroSpot[]>([]);
+  const [forecastLoading, setForecastLoading] = useState(false);
 
   const {
     searchRadius,
@@ -66,6 +78,34 @@ const PhotoPointsNearby: React.FC = () => {
     }
   }, [locationInitialized, effectiveLocation, currentSearchRadius, setSearchRadius, refreshSiqsData]);
   
+  // Load forecast locations when selectedForecastDay changes
+  useEffect(() => {
+    const loadForecastLocations = async () => {
+      if (!effectiveLocation || !showForecast || activeView !== 'calculated') {
+        return;
+      }
+      
+      setForecastLoading(true);
+      
+      try {
+        const forecastSpots = await findForecastLocations(effectiveLocation, {
+          day: selectedForecastDay,
+          radius: calculatedSearchRadius,
+          maxPoints: 20
+        });
+        
+        setForecastLocations(forecastSpots);
+      } catch (error) {
+        console.error("Error loading forecast locations:", error);
+        setForecastLocations([]);
+      } finally {
+        setForecastLoading(false);
+      }
+    };
+    
+    loadForecastLocations();
+  }, [effectiveLocation, selectedForecastDay, calculatedSearchRadius, showForecast, activeView]);
+  
   React.useEffect(() => {
     if (locations.length > 0) {
       console.log(`Total locations before filtering: ${locations.length}`);
@@ -90,6 +130,21 @@ const PhotoPointsNearby: React.FC = () => {
       console.error("Error navigating to location details:", error, location);
     }
   }, [navigate]);
+
+  // Format the forecast date for display
+  const formatForecastDate = (day: number): string => {
+    if (day === 0) return t("Today", "今天");
+    
+    const date = new Date();
+    date.setDate(date.getDate() + day);
+    
+    // Format as "Weekday, Month Day" (e.g., "Monday, July 3")
+    return date.toLocaleDateString(undefined, { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
   
   return (
     <PhotoPointsLayout>
@@ -119,6 +174,43 @@ const PhotoPointsNearby: React.FC = () => {
             loading={loading && !locationLoading}
             loadingComplete={!loading && !locationLoading}
           />
+          
+          {/* Forecast toggle button */}
+          <div className="mt-2 mb-3 flex justify-center">
+            <Button 
+              variant={showForecast ? "secondary" : "outline"} 
+              size="sm" 
+              onClick={toggleForecastView}
+              className="flex items-center gap-2"
+            >
+              <Calendar size={16} />
+              {showForecast 
+                ? t("Forecast Mode", "预测模式") 
+                : t("Enable Forecast", "启用预测")}
+            </Button>
+          </div>
+          
+          {/* Forecast day selector */}
+          {showForecast && (
+            <div className="mb-4 px-4">
+              <div className="text-sm text-center mb-2 text-muted-foreground">
+                {formatForecastDate(selectedForecastDay)}
+              </div>
+              <Slider
+                min={0}
+                max={14}
+                step={1}
+                value={[selectedForecastDay]}
+                onValueChange={(value) => handleForecastDayChange(value[0])}
+                className="mt-2"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                <span>{t("Today", "今天")}</span>
+                <span>7 {t("days", "天")}</span>
+                <span>14 {t("days", "天")}</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
       
@@ -137,19 +229,21 @@ const PhotoPointsNearby: React.FC = () => {
         initialLoad={initialLoad}
         effectiveLocation={effectiveLocation}
         certifiedLocations={certifiedLocations}
-        calculatedLocations={calculatedLocations}
+        calculatedLocations={showForecast ? forecastLocations : calculatedLocations}
         searchRadius={currentSearchRadius}
         calculatedSearchRadius={calculatedSearchRadius}
-        loading={loading && !locationLoading}
-        hasMore={hasMore}
+        loading={showForecast ? forecastLoading : (loading && !locationLoading)}
+        hasMore={!showForecast && hasMore}
         loadMore={loadMore}
         refreshSiqs={refreshSiqsData}
         onLocationClick={handleLocationClick}
         onLocationUpdate={handleLocationUpdate}
-        canLoadMoreCalculated={canLoadMoreCalculated}
+        canLoadMoreCalculated={!showForecast && canLoadMoreCalculated}
         loadMoreCalculated={loadMoreCalculatedLocations}
         loadMoreClickCount={loadMoreClickCount}
         maxLoadMoreClicks={maxLoadMoreClicks}
+        isForecastMode={showForecast}
+        selectedForecastDay={selectedForecastDay}
       />
     </PhotoPointsLayout>
   );

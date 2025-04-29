@@ -1,10 +1,9 @@
+
 import React, { useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
 import CalculatedLocations from './CalculatedLocations';
 import CertifiedLocations from './CertifiedLocations';
-
-// Note: Changed from lazy loading to regular import to fix "Failed to fetch" error
 
 interface PhotoPointsViewProps {
   showMap: boolean;
@@ -25,6 +24,8 @@ interface PhotoPointsViewProps {
   loadMoreCalculated?: () => void;
   loadMoreClickCount?: number;
   maxLoadMoreClicks?: number;
+  isForecastMode?: boolean;
+  selectedForecastDay?: number;
 }
 
 const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
@@ -45,7 +46,9 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   canLoadMoreCalculated = false,
   loadMoreCalculated,
   loadMoreClickCount = 0,
-  maxLoadMoreClicks = 2
+  maxLoadMoreClicks = 2,
+  isForecastMode = false,
+  selectedForecastDay = 0
 }) => {
   const handleMapLocationUpdate = useCallback((lat: number, lng: number) => {
     onLocationUpdate(lat, lng);
@@ -64,6 +67,8 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
             certifiedLocations={certifiedLocations}
             calculatedLocations={calculatedLocations}
             activeView={activeView}
+            isForecastMode={isForecastMode}
+            selectedForecastDay={selectedForecastDay}
           />
         </div>
       )}
@@ -93,6 +98,8 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           onLoadMoreCalculated={loadMoreCalculated}
           loadMoreClickCount={loadMoreClickCount}
           maxLoadMoreClicks={maxLoadMoreClicks}
+          isForecastMode={isForecastMode}
+          selectedForecastDay={selectedForecastDay}
         />
       )}
     </div>
