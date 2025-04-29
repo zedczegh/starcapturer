@@ -1,6 +1,6 @@
 
 import L from 'leaflet';
-import { SharedAstroSpot } from '@/types/weather';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 // Icon configurations
 const markerSizePx = 26;
@@ -109,4 +109,9 @@ export function getSiqsClass(score: number | null): string {
   if (score >= 6) return 'good';
   if (score >= 4) return 'fair';
   return 'poor';
+}
+
+// Add the missing createCustomIcon function
+export function createCustomIcon(location: SharedAstroSpot, isHovered: boolean) {
+  return getLocationMarker(location, location.certification != null, isHovered);
 }

@@ -62,8 +62,8 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
     <Marker 
       position={[latitude, longitude]} 
       icon={icon}
+      onClick={handleClick}
       eventHandlers={{
-        click: handleClick,
         mouseover: handleMouseOver,
         mouseout: handleMouseOut
       }}
@@ -81,7 +81,7 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
               {isDarkSkyReserve ? 'Dark Sky Reserve' : certification}
             </div>
           )}
-          <SiqsDisplay siqs={siqs} showLabel={true} className="mt-2" />
+          <SiqsDisplay siqs={siqs || 0} showLabel={true} className="mt-2" />
           <p className="text-xs text-gray-600 mt-1">
             {latitude.toFixed(6)}, {longitude.toFixed(6)}
           </p>

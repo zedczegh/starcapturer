@@ -15,8 +15,8 @@ interface LazyMapContainerProps {
   onMapClick: (lat: number, lng: number) => void;
   hoveredLocationId: string | null;
   onMarkerHover: (id: string | null) => void;
-  handleTouchStart: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchStart: (e: React.TouchEvent, id: string) => void; // Updated type
+  handleTouchEnd: (e: React.TouchEvent, id: string | null) => void; // Updated type
   handleTouchMove: (e: React.TouchEvent) => void;
   isMobile: boolean;
   useMobileMapFixer: boolean;

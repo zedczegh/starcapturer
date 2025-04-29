@@ -23,3 +23,5 @@ export const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
   
   return null; // This component doesn't render anything visible directly
 };
+
+export default MapEffectsComposer;

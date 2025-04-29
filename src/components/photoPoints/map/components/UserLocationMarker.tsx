@@ -4,32 +4,32 @@ import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
 interface UserLocationMarkerProps {
-  position: [number, number];
-  onLocationUpdate?: (lat: number, lng: number) => void;
+  userLocation: [number, number];
+  onClick: () => void;
 }
 
-const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position, onLocationUpdate }) => {
-  // Create a custom icon for the user location marker
-  const userIcon = new L.Icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-  });
-  
-  const handleMarkerClick = () => {
-    if (onLocationUpdate) {
-      onLocationUpdate(position[0], position[1]);
-    }
+const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ userLocation, onClick }) => {
+  // Create a pulsing blue dot icon for user location
+  const createUserLocationIcon = () => {
+    return L.divIcon({
+      className: 'user-location-marker',
+      html: `<div class="pulse-dot"></div>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
   };
   
   return (
-    <Marker position={position} icon={userIcon} eventHandlers={{ click: handleMarkerClick }}>
+    <Marker 
+      position={userLocation} 
+      icon={createUserLocationIcon()}
+      eventHandlers={{ click: onClick }}
+    >
       <Popup>
         <div className="p-2">
-          <h3 className="font-medium text-base">Your Location</h3>
-          <p className="text-xs text-gray-600">
-            {position[0].toFixed(6)}, {position[1].toFixed(6)}
+          <h3 className="font-medium">Your Location</h3>
+          <p className="text-xs text-gray-600 mt-1">
+            {userLocation[0].toFixed(6)}, {userLocation[1].toFixed(6)}
           </p>
         </div>
       </Popup>
