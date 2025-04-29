@@ -26,3 +26,15 @@ export function formatCoordinates(latitude: number, longitude: number): string {
   
   return `${Math.abs(latitude).toFixed(6)}° ${latDir}, ${Math.abs(longitude).toFixed(6)}° ${lonDir}`;
 }
+
+/**
+ * Check if a location is a certified dark sky location
+ */
+export function isCertifiedLocation(
+  latitude: number, 
+  longitude: number
+): boolean {
+  // This is a placeholder implementation
+  // In a real application, you would check against a database of certified locations
+  return false;
+}

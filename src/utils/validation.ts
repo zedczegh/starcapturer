@@ -6,9 +6,14 @@
  * 
  * @param latitude - Latitude coordinate
  * @param longitude - Longitude coordinate
+ * @param strict - Whether to apply strict validation (optional)
  * @returns Boolean indicating if location is likely in water
  */
-export function isWaterLocation(latitude: number, longitude: number): boolean {
+export function isWaterLocation(
+  latitude: number, 
+  longitude: number,
+  strict: boolean = false
+): boolean {
   // This is a very simplified check that could be improved with better data
   // A proper implementation would use a GeoJSON database of landmasses
   
@@ -54,7 +59,32 @@ export function isWaterLocation(latitude: number, longitude: number): boolean {
 }
 
 /**
- * More accurate water detection would require a proper dataset.
- * For example, using a reverse geocoding API or a GeoJSON database
- * of land/water boundaries. This function is just a placeholder.
+ * Check if a location is likely in coastal waters
  */
+export function isLikelyCoastalWater(
+  latitude: number, 
+  longitude: number
+): boolean {
+  // Simple implementation - could be improved with better datasets
+  // This is just a placeholder
+  return false;
+}
+
+/**
+ * Check if coordinates represent a valid astronomy location
+ * @param latitude Latitude coordinate
+ * @param longitude Longitude coordinate
+ * @returns Boolean indicating if location is suitable for astronomy
+ */
+export function isValidAstronomyLocation(
+  latitude: number, 
+  longitude: number
+): boolean {
+  // Don't allow water locations
+  if (isWaterLocation(latitude, longitude)) {
+    return false;
+  }
+  
+  // Add other validity checks as needed
+  return true;
+}

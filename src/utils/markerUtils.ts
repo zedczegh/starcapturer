@@ -1,10 +1,9 @@
-
 /**
  * Map marker utilities
  * IMPORTANT: This file contains critical marker creation and styling logic.
  */
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { isWaterLocation } from "@/utils/validation";
+import { isWaterLocation } from './validation';
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
 import { getSiqsScore } from "@/utils/siqsHelpers";
 
@@ -110,3 +109,31 @@ export const getLocationColor = (location: SharedAstroSpot): string => {
     return location.siqs ? getProgressColor(getSiqsScore(location.siqs)) : defaultColor;
   }
 };
+
+/**
+ * Check if a location is in water and how far from shore
+ * @param latitude - The latitude coordinate
+ * @param longitude - The longitude coordinate
+ * @returns Object with isWater and distanceFromShore properties
+ */
+export function checkWaterLocation(latitude: number, longitude: number) {
+  // Basic validation
+  if (!isFinite(latitude) || !isFinite(longitude)) {
+    return {
+      isWater: false,
+      distanceFromShore: Infinity
+    };
+  }
+  
+  // Use the water location detection
+  const isWater = isWaterLocation(latitude, longitude);
+  
+  // For now, we just use a placeholder for distance from shore
+  // In a real implementation, this would involve more complex calculations
+  const distanceFromShore = isWater ? 5 : 0; // Just a placeholder value
+  
+  return {
+    isWater,
+    distanceFromShore
+  };
+}

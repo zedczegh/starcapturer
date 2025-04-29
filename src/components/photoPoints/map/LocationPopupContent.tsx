@@ -7,7 +7,7 @@ import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { Star, ExternalLink } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { getSiqsClass } from '../MarkerUtils';
+import { getSiqsClass } from './MarkerUtils';
 
 interface LocationPopupContentProps {
   location: SharedAstroSpot;
