@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { getCertifiedLocationIcon, getCalculatedLocationIcon, getDarkSkyLocationIcon } from '../map/MarkerUtils';
+import { getCertifiedLocationIcon, getCalculatedLocationIcon, getDarkSkyLocationIcon } from '@/components/photoPoints/map/MarkerUtils';
 
 // Interface for useMarkerState hook
 interface MarkerStateParams {

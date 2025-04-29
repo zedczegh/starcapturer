@@ -42,30 +42,26 @@ declare module "@/types/weather" {
   }
 
   export interface SharedAstroSpot {
-    id: string;
-    name: string;
+    id?: string;
+    name?: string;
+    displayName?: string;
+    siqs?: number | { score: number; isViable: boolean };
+    bortleScale?: number;
     latitude: number;
     longitude: number;
-    bortleScale: number;
-    description?: string;
-    imageURL?: string;
-    rating?: number;
-    timestamp: string;
-    chineseName?: string;
-    siqs?: number | {
-      score: number;
-      isViable: boolean;
-    };
-    siqsResult?: SIQSData;
+    altitude?: number;
+    timezone?: string;
     distance?: number;
-    isViable?: boolean;
-    siqsFactors?: Array<{
-      name: string;
-      score: number;
-      description: string;
-    }>;
-    certification?: string;
     isDarkSkyReserve?: boolean;
+    certification?: string;
+    siqsConfidence?: number;
+    images?: string[];
+    createdAt?: string;
+    updatedAt?: string;
+    userId?: string;
+    username?: string;
+    description?: string;
+    advantages?: string[];
     type?: string;
     preferenceScore?: number;
     clearSkyRate?: number;
@@ -83,5 +79,7 @@ declare module "@/types/weather" {
     weatherData?: WeatherData;
     cloudCover?: number;
     photographer?: string;
+    chineseName?: string;
+    timestamp?: string;
   }
 }

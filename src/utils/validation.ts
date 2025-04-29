@@ -6,13 +6,11 @@
  * 
  * @param latitude - Latitude coordinate
  * @param longitude - Longitude coordinate
- * @param strict - Whether to apply strict validation (optional)
  * @returns Boolean indicating if location is likely in water
  */
 export function isWaterLocation(
   latitude: number, 
-  longitude: number,
-  strict: boolean = false
+  longitude: number
 ): boolean {
   // This is a very simplified check that could be improved with better data
   // A proper implementation would use a GeoJSON database of landmasses

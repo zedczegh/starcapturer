@@ -39,11 +39,24 @@ export interface SharedAstroSpot {
   description?: string;
   advantages?: string[];
   type?: string;
+  preferenceScore?: number;
+  clearSkyRate?: number;
+  isCertified?: boolean;
+  certificationRating?: number;
+  timeInfo?: {
+    isNighttime: boolean;
+    timeUntilNight?: number;
+    timeUntilDaylight?: number;
+  };
+  date?: string | Date;
+  user_id?: string;
   isForecast?: boolean;
-  forecastDate?: string | Date;
-  weatherScore?: number;
+  forecastDate?: string;
+  weatherData?: WeatherData;
   cloudCover?: number;
-  forecastDay?: number;
+  photographer?: string;
+  chineseName?: string;
+  timestamp?: string;
 }
 
 /**
@@ -252,13 +265,12 @@ function getCertifiedLocationsNearby(
       locations.push({
         id: `certified-${locations.length}-${Date.now()}`,
         name: location.name,
-        // Chinese name is transliteration with "Dark Sky" prefix
+        chineseName: `暗夜天空 ${location.name}`,
         displayName: `暗夜天空 ${location.name}`,
         latitude: location.coordinates[0],
         longitude: location.coordinates[1],
         bortleScale: location.bortleScale,
         siqs: siqs,
-        isViable: true,
         distance: distance,
         description: `An officially certified dark sky location designated by the International Dark-Sky Association.`,
         createdAt: new Date().toISOString(),
@@ -267,9 +279,9 @@ function getCertifiedLocationsNearby(
         username: "JohnDoe",
         altitude: 100,
         timezone: "America/New_York",
-        distance: distance,
         isDarkSkyReserve: isDarkSkyReserve,
-        certification: certification
+        certification: certification,
+        timestamp: new Date().toISOString()
       });
     }
   }
@@ -321,7 +333,7 @@ function generateCalculatedSpots(
   
   // Add existing certified locations to avoid overlap
   existingLocations.forEach(loc => {
-    const posKey = `${loc.latitude.toFixed(2)},${loc.longitude.toFixed(2)}`;
+    const posKey = `${loc.latitude?.toFixed(2)},${loc.longitude?.toFixed(2)}`;
     existingPositions.add(posKey);
   });
   
@@ -391,12 +403,12 @@ function generateCalculatedSpots(
       spots.push({
         id: `calculated-${spots.length}-${Date.now()}`,
         name: englishNames[nameIndex],
+        chineseName: chineseNames[nameIndex],
         displayName: chineseNames[nameIndex],
         latitude: randomPoint.latitude,
         longitude: randomPoint.longitude,
         bortleScale,
         siqs: siqs,
-        isViable,
         distance: randomPoint.distance,
         description: "A calculated location with potentially good conditions for astrophotography.",
         createdAt: new Date().toISOString(),
@@ -405,9 +417,9 @@ function generateCalculatedSpots(
         username: "JohnDoe",
         altitude: 100,
         timezone: "America/New_York",
-        distance: distance,
         isDarkSkyReserve: false,
-        certification: undefined
+        certification: undefined,
+        timestamp: new Date().toISOString()
       });
     }
   }

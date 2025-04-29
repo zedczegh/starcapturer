@@ -134,7 +134,11 @@ export const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
   });
 
   return (
-    <Marker position={position} icon={userIcon}>
+    <Marker 
+      position={position} 
+      icon={userIcon}
+      eventHandlers={{}}
+    >
       <Popup>
         <div className="text-sm p-1">
           <div className="font-semibold mb-1">Your Location</div>

@@ -1,151 +1,169 @@
 
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
-import { MapEffectsComposer } from '../MapComponents';
-import { useLanguage } from '@/contexts/LanguageContext';
+import React, { useEffect, useRef } from "react";
+import { MapContainer, TileLayer, ZoomControl, useMap } from "react-leaflet";
+import { SharedAstroSpot } from "@/types/weather";
+import { LocationMarker, UserLocationMarker } from "../MarkerComponents";
+import { MapEffectsComposer } from "./MapEffectsComposer";
+import SearchRadiusCircles from "./SearchRadiusCircles";
 
 interface MapContentProps {
   center: [number, number];
   zoom: number;
   userLocation: { latitude: number; longitude: number } | null;
-  locations: SharedAstroSpot[];
-  hoveredLocationId: string | null;
-  onMarkerHover: (id: string | null) => void;
-  onLocationClick: (location: SharedAstroSpot) => void;
-  onMapClick: (lat: number, lng: number) => void;
-  handleTouchStart: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd: (e: React.TouchEvent, id: string | null) => void;
-  handleTouchMove: (e: React.TouchEvent) => void;
-  activeView: 'certified' | 'calculated';
-  showRadiusCircles: boolean;
+  displayLocations: SharedAstroSpot[];
   isMobile: boolean;
-  onMapReady: () => void;
+  activeView: "certified" | "calculated";
+  searchRadius: number;
+  showRadiusCircles: boolean;
+  onMapClick?: (lat: number, lng: number) => void;
+  onLocationClick?: (location: SharedAstroSpot) => void;
+  hoveredLocationId?: string | null;
+  onMarkerHover?: (id: string | null) => void;
+  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove?: (e: React.TouchEvent) => void;
+  useMobileMapFixer?: boolean;
+  mapRef: React.MutableRefObject<any>;
+  onMapReady?: () => void;
+  currentSiqs?: number | null;
   isForecastMode?: boolean;
   selectedForecastDay?: number;
 }
+
+// Map event handler component
+const MapEvents = ({ onClick }: { onClick: (e: any) => void }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+
+    map.on("click", onClick);
+
+    return () => {
+      map.off("click", onClick);
+    };
+  }, [map, onClick]);
+
+  return null;
+};
 
 const MapContent: React.FC<MapContentProps> = ({
   center,
   zoom,
   userLocation,
-  locations,
+  displayLocations,
+  isMobile,
+  activeView,
+  searchRadius,
+  showRadiusCircles,
+  onMapClick,
+  onLocationClick,
   hoveredLocationId,
   onMarkerHover,
-  onLocationClick,
-  onMapClick,
   handleTouchStart,
   handleTouchEnd,
   handleTouchMove,
-  activeView,
-  showRadiusCircles,
-  isMobile,
+  useMobileMapFixer = false,
+  mapRef,
   onMapReady,
+  currentSiqs = null,
   isForecastMode = false,
-  selectedForecastDay = 0
+  selectedForecastDay = 0,
 }) => {
-  const { t } = useLanguage();
-  
-  // Format the forecast date for display
-  const formatForecastDate = (day: number): string => {
-    if (day === 0) return t("Today", "今天");
-    
-    const date = new Date();
-    date.setDate(date.getDate() + day);
-    
-    return date.toLocaleDateString(undefined, { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-  
-  useEffect(() => {
-    // Call onMapReady when the component mounts
-    onMapReady();
-  }, [onMapReady]);
+  // Reference to track if map is initialized
+  const isInitialized = useRef(false);
 
-  // Create location markers
-  const createLocationMarkers = () => {
-    return locations.map((location) => {
-      // Skip locations without valid coordinates
-      if (!location.latitude || !location.longitude) return null;
-      
-      // Generate a unique ID for the location
-      const locationId = `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-      
-      // Check if this is a certified location
-      const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-      
-      return (
-        <LocationMarker
-          key={locationId}
-          location={location}
-          locationId={locationId}
-          onClick={() => onLocationClick(location)}
-          isHovered={hoveredLocationId === locationId}
-          onHover={onMarkerHover}
-          isCertified={isCertified}
-          activeView={activeView}
-          handleTouchStart={handleTouchStart}
-          handleTouchEnd={handleTouchEnd}
-          handleTouchMove={handleTouchMove}
-          isForecast={isForecastMode && Boolean(location.isForecast)}
-        />
-      );
-    });
-  };
-
-  // Handle click on the map to update location
+  // Handler for map click events
   const handleMapClick = (e: any) => {
-    const { lat, lng } = e.latlng;
-    onMapClick(lat, lng);
+    if (onMapClick) {
+      const { lat, lng } = e.latlng;
+      onMapClick(lat, lng);
+    }
+  };
+
+  // Initialize map when ready
+  const handleMapInit = (map: any) => {
+    if (mapRef) {
+      mapRef.current = map;
+    }
+
+    if (!isInitialized.current && onMapReady) {
+      setTimeout(() => {
+        onMapReady();
+        isInitialized.current = true;
+      }, 100);
+    }
   };
 
   return (
     <MapContainer
       center={center}
       zoom={zoom}
-      scrollWheelZoom={true}
-      style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
-      attributionControl={true}
+      style={{ height: "100%", width: "100%" }}
+      whenReady={handleMapInit}
+      zoomControl={false}
+      attributionControl={false}
     >
-      {/* Base map tile layer */}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      
-      {/* Add attribution control */}
-      <AttributionControl position="bottomright" />
-      
-      {/* Map effects for visual enhancements */}
-      <MapEffectsComposer 
-        onMapClick={handleMapClick}
+
+      <ZoomControl position="bottomright" />
+
+      {onMapClick && <MapEvents onClick={handleMapClick} />}
+
+      {/* Custom map effects like animations or additional visuals */}
+      <MapEffectsComposer
         showRadiusCircles={showRadiusCircles}
         userLocation={userLocation}
         activeView={activeView}
         isForecastMode={isForecastMode}
+        onMapClick={handleMapClick}
       />
-      
-      {/* User location marker if available */}
-      {userLocation && (
-        <UserLocationMarker 
-          position={[userLocation.latitude, userLocation.longitude]} 
-          currentSiqs={null}
+
+      {/* Search radius circles around user location */}
+      {showRadiusCircles && userLocation && (
+        <SearchRadiusCircles
+          userLocation={userLocation}
+          searchRadius={searchRadius}
+          activeView={activeView}
+          isForecastMode={isForecastMode}
         />
       )}
-      
-      {/* Location markers */}
-      {createLocationMarkers()}
-      
-      {/* Forecast date label if in forecast mode */}
-      {isForecastMode && selectedForecastDay > 0 && (
-        <div className="absolute top-4 left-4 z-[999] bg-background/80 backdrop-blur px-3 py-1 rounded-md text-sm shadow-md">
-          <span className="text-primary">{formatForecastDate(selectedForecastDay)}</span>
-        </div>
+
+      {/* User location marker */}
+      {userLocation && (
+        <UserLocationMarker
+          position={[userLocation.latitude, userLocation.longitude]}
+          currentSiqs={currentSiqs}
+        />
       )}
+
+      {/* Location markers for all displayed locations */}
+      {displayLocations.map((loc) => {
+        // Skip locations without valid coordinates
+        if (!loc.latitude || !loc.longitude) return null;
+
+        const locationId = loc.id || `loc-${loc.latitude}-${loc.longitude}`;
+
+        return (
+          <LocationMarker
+            key={locationId}
+            location={{...loc, timestamp: loc.timestamp || new Date().toISOString()}}
+            onClick={onLocationClick}
+            isHovered={hoveredLocationId === locationId}
+            onHover={onMarkerHover}
+            locationId={locationId}
+            isCertified={Boolean(loc.certification || loc.isDarkSkyReserve)}
+            activeView={activeView}
+            handleTouchStart={handleTouchStart}
+            handleTouchEnd={handleTouchEnd}
+            handleTouchMove={handleTouchMove}
+            isForecast={isForecastMode || loc.isForecast}
+          />
+        );
+      })}
     </MapContainer>
   );
 };
