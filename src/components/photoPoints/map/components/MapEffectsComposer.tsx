@@ -41,5 +41,16 @@ export const MapEffectsComposer: React.FC<MapEffectsComposerProps> = ({
     
   }, [map, userLocation, activeView, isForecastMode]);
   
+  // Add click handler to the map
+  useEffect(() => {
+    if (!map || !onMapClick) return;
+    
+    map.on('click', onMapClick);
+    
+    return () => {
+      map.off('click', onMapClick);
+    };
+  }, [map, onMapClick]);
+  
   return null; // This is a behavior component, not a visual one
 };

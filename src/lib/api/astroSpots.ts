@@ -52,11 +52,23 @@ export interface SharedAstroSpot {
   user_id?: string;
   isForecast?: boolean;
   forecastDate?: string;
-  weatherData?: WeatherData;
+  weatherData?: {
+    temperature: number;
+    humidity: number;
+    cloudCover: number;
+    windSpeed: number;
+    precipitation: number;
+    time: string;
+    condition: string;
+    aqi?: number;
+    weatherCondition?: string | number;
+  };
   cloudCover?: number;
   photographer?: string;
   chineseName?: string;
   timestamp?: string;
+  isViable?: boolean;
+  weatherScore?: number;
 }
 
 /**

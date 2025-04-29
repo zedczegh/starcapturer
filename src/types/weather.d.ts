@@ -81,5 +81,7 @@ declare module "@/types/weather" {
     photographer?: string;
     chineseName?: string;
     timestamp?: string;
+    isViable?: boolean;
+    weatherScore?: number;
   }
 }
