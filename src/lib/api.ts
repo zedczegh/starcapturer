@@ -1,3 +1,4 @@
+
 // Main API file that re-exports all functionality from the sub-modules
 export type { Coordinates } from './api/coordinates';
 export { validateCoordinates, normalizeLongitude, calculateDistance } from './api/coordinates';
@@ -13,6 +14,10 @@ export {
   fetchForecastData,
   fetchLongRangeForecastData 
 } from './api/forecast';
+
+// New export for forecast astronomical data
+export type { AstroForecastResponse } from './api/forecastAstro';
+export { fetchAstroForecastData } from './api/forecastAstro';
 
 export { getLocationNameFromCoordinates } from './api/location';
 export { fetchLightPollutionData } from './api/pollution';
