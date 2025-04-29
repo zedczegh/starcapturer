@@ -1,9 +1,7 @@
 
-import React, { Suspense, lazy } from 'react';
-import { SharedAstroSpot } from '@/types/weather';
-
-// Import MapContent dynamically to reduce initial load time
-const MapContent = lazy(() => import('./components/MapContent'));
+import React, { useState, useEffect, useRef } from 'react';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import MapContent from './components/MapContent';
 
 interface LazyMapContainerProps {
   center: [number, number];
@@ -12,17 +10,17 @@ interface LazyMapContainerProps {
   locations: SharedAstroSpot[];
   searchRadius: number;
   activeView: 'certified' | 'calculated';
-  onMapReady?: () => void;
+  onMapReady: () => void;
   onLocationClick: (location: SharedAstroSpot) => void;
-  onMapClick?: (lat: number, lng: number) => void;
+  onMapClick: (lat: number, lng: number) => void;
   hoveredLocationId: string | null;
   onMarkerHover: (id: string | null) => void;
-  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
-  handleTouchMove?: (e: React.TouchEvent) => void;
+  handleTouchStart: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove: (e: React.TouchEvent) => void;
   isMobile: boolean;
-  useMobileMapFixer?: boolean;
-  showRadiusCircles?: boolean;
+  useMobileMapFixer: boolean;
+  showRadiusCircles: boolean;
   isForecastMode?: boolean;
   selectedForecastDay?: number;
 }
@@ -43,44 +41,55 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   handleTouchEnd,
   handleTouchMove,
   isMobile,
-  useMobileMapFixer = false,
-  showRadiusCircles = false,
+  useMobileMapFixer,
+  showRadiusCircles,
   isForecastMode = false,
   selectedForecastDay = 0
 }) => {
-  // Create a wrapper function to adapt the onMapClick signature
-  const handleMapClick = onMapClick ? (lat: number, lng: number) => {
-    onMapClick(lat, lng);
-  } : undefined;
+  const [isMapReady, setIsMapReady] = useState(false);
+  const timeoutRef = useRef<number | null>(null);
 
-  // Ensure safe defaults for the optional handlers
-  const safeTouchStart = handleTouchStart || ((e: React.TouchEvent, id: string) => {});
-  const safeTouchEnd = handleTouchEnd || ((e: React.TouchEvent, id: string | null) => {});
-  const safeTouchMove = handleTouchMove || ((e: React.TouchEvent) => {});
+  useEffect(() => {
+    // Clear timeout on component unmount
+    return () => {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  // When the map is ready
+  const handleMapReady = () => {
+    setIsMapReady(true);
+    // Use window.setTimeout instead of setTimeout directly
+    timeoutRef.current = window.setTimeout(() => {
+      onMapReady();
+    }, 300);
+  };
 
   return (
-    <Suspense fallback={<div>Loading map...</div>}>
-      <MapContent
-        center={center}
-        zoom={zoom}
-        userLocation={userLocation}
-        locations={locations}
-        searchRadius={searchRadius}
-        activeView={activeView}
-        onMarkerHover={onMarkerHover}
-        hoveredLocationId={hoveredLocationId}
-        handleTouchStart={safeTouchStart}
-        handleTouchEnd={safeTouchEnd}
-        handleTouchMove={safeTouchMove}
-        isMobile={isMobile}
-        showRadiusCircles={showRadiusCircles}
-        onLocationClick={onLocationClick}
-        onMapClick={handleMapClick}
-        isForecastMode={isForecastMode}
-        selectedForecastDay={selectedForecastDay}
-      />
-      {onMapReady && setTimeout(onMapReady, 500)}
-    </Suspense>
+    <MapContent
+      center={center}
+      zoom={zoom}
+      userLocation={userLocation}
+      locations={locations}
+      isMapReady={isMapReady}
+      onMapReady={handleMapReady}
+      onLocationClick={onLocationClick}
+      onMapClick={onMapClick}
+      searchRadius={searchRadius}
+      activeView={activeView}
+      hoveredLocationId={hoveredLocationId}
+      onMarkerHover={onMarkerHover}
+      handleTouchStart={handleTouchStart}
+      handleTouchEnd={handleTouchEnd}
+      handleTouchMove={handleTouchMove}
+      isMobile={isMobile}
+      useMobileMapFixer={useMobileMapFixer}
+      showRadiusCircles={showRadiusCircles}
+      isForecastMode={isForecastMode}
+      selectedForecastDay={selectedForecastDay}
+    />
   );
 };
 

@@ -18,57 +18,27 @@ import { isValidCoordinates } from '@/utils/validation/coordinateValidator';
  * Represents a shared astronomy spot with location details and quality metrics
  */
 export interface SharedAstroSpot {
-  id?: string;
-  name?: string;
-  displayName?: string;
-  siqs?: number | { score: number; isViable: boolean };
-  bortleScale?: number;
+  id: string;
+  name: string;
   latitude: number;
   longitude: number;
-  altitude?: number;
-  timezone?: string;
-  distance?: number;
+  siqs?: number | null;
   isDarkSkyReserve?: boolean;
   certification?: string;
-  siqsConfidence?: number;
-  images?: string[];
-  createdAt?: string;
-  updatedAt?: string;
-  userId?: string;
-  username?: string;
-  description?: string;
-  advantages?: string[];
-  type?: string;
-  preferenceScore?: number;
-  clearSkyRate?: number;
-  isCertified?: boolean;
-  certificationRating?: number;
-  timeInfo?: {
-    isNighttime: boolean;
-    timeUntilNight?: number;
-    timeUntilDaylight?: number;
-  };
-  date?: string | Date;
-  user_id?: string;
-  isForecast?: boolean;
-  forecastDate?: string;
-  weatherData?: {
-    temperature: number;
-    humidity: number;
-    cloudCover: number;
-    windSpeed: number;
-    precipitation: number;
-    time: string;
-    condition: string;
-    aqi?: number;
-    weatherCondition?: string | number;
-  };
-  cloudCover?: number;
-  photographer?: string;
-  chineseName?: string;
+  distance?: number;
   timestamp?: string;
-  isViable?: boolean;
-  weatherScore?: number;
+  visibility?: number;
+  weather?: Record<string, any>;
+  bortleScale?: number;
+  siqsDetails?: Record<string, any>;
+  clearSkyRate?: number;
+  recommendation?: string;
+  description?: string;
+  imageUrl?: string;
+  tags?: string[];
+  type?: string;
+  advantages?: string[];
+  forecastData?: any;
 }
 
 /**
@@ -334,7 +304,7 @@ function generateCalculatedSpots(
   const chineseNames = [
     "山区观测点", "山谷观景点", "高地观测点",
     "山脊观景台", "天文台址", "峡谷观景点",
-    "峰顶观测区", "高原观景台", "山坡瞭望点",
+    "峰顶观测区", "高��观景台", "山坡瞭望点",
     "草地观测点", "林间空地", "草原观景点", 
     "沙漠观测站", "岩石观景点", "乡村天文点",
     "乡间观景区", "偏远观测站", "山顶观景点"

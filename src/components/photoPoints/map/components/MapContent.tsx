@@ -1,90 +1,77 @@
 
-import React, { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, ZoomControl as LeafletZoomControl, useMap } from 'react-leaflet';
-import { SharedAstroSpot } from '@/types/weather';
-import LocationMarker from '../LocationMarker';
-import SearchRadiusCircles from './SearchRadiusCircles';
+import React, { useRef, useEffect } from 'react';
+import { MapContainer, TileLayer, useMapEvents, AttributionControl } from 'react-leaflet';
+import { LeafletMouseEvent } from 'leaflet';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { LocationMarker } from '../MarkerComponents';
 import UserLocationMarker from './UserLocationMarker';
+import SearchRadiusCircles from './SearchRadiusCircles';
 import { MapEffectsComposer } from '../effects/MapEffectsComposer';
+
+// MapEvents component to handle map clicks
+const MapEvents = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
+  const map = useMapEvents({
+    click: (event: LeafletMouseEvent) => {
+      const { lat, lng } = event.latlng;
+      onMapClick(lat, lng);
+    }
+  });
+  return null;
+};
 
 interface MapContentProps {
   center: [number, number];
   zoom: number;
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
+  isMapReady: boolean;
+  onMapReady: () => void;
+  onLocationClick: (location: SharedAstroSpot) => void;
+  onMapClick: (lat: number, lng: number) => void;
   searchRadius: number;
   activeView: 'certified' | 'calculated';
-  onMarkerHover: (id: string | null) => void;
   hoveredLocationId: string | null;
+  onMarkerHover: (id: string | null) => void;
   handleTouchStart: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchEnd: (e: React.TouchEvent) => void;
   handleTouchMove: (e: React.TouchEvent) => void;
   isMobile: boolean;
-  showRadiusCircles?: boolean;
-  onLocationClick: (location: SharedAstroSpot) => void;
-  onMapClick?: (lat: number, lng: number) => void;
+  useMobileMapFixer: boolean;
+  showRadiusCircles: boolean;
   isForecastMode?: boolean;
   selectedForecastDay?: number;
 }
-
-interface MapClickHandlerProps {
-  handleClick: (lat: number, lng: number) => void;
-}
-
-// Component to handle map clicks
-const MapClickHandler: React.FC<MapClickHandlerProps> = ({ handleClick }) => {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!map) return;
-
-    const onClick = (e: any) => {
-      const { lat, lng } = e.latlng;
-      handleClick(lat, lng);
-    };
-
-    map.on('click', onClick);
-
-    return () => {
-      map.off('click', onClick);
-    };
-  }, [map, handleClick]);
-
-  return null;
-};
 
 const MapContent: React.FC<MapContentProps> = ({
   center,
   zoom,
   userLocation,
   locations,
+  isMapReady,
+  onMapReady,
+  onLocationClick,
+  onMapClick,
   searchRadius,
   activeView,
-  onMarkerHover,
   hoveredLocationId,
+  onMarkerHover,
   handleTouchStart,
   handleTouchEnd,
   handleTouchMove,
   isMobile,
-  showRadiusCircles = false,
-  onLocationClick,
-  onMapClick,
+  useMobileMapFixer,
+  showRadiusCircles,
   isForecastMode = false,
   selectedForecastDay = 0
 }) => {
   const mapRef = useRef(null);
 
-  // Store the map instance in window for external access
   useEffect(() => {
     if (mapRef.current) {
-      (window as any).leafletMap = mapRef.current;
+      onMapReady();
     }
-    
-    return () => {
-      delete (window as any).leafletMap;
-    };
-  }, [mapRef]);
-  
+  }, [onMapReady]);
+
   return (
     <MapContainer
       center={center}
@@ -93,61 +80,49 @@ const MapContent: React.FC<MapContentProps> = ({
       style={{ height: '100%', width: '100%' }}
       ref={mapRef}
       attributionControl={false}
-      zoomControl={false}
     >
+      <AttributionControl position="bottomright" prefix={false} />
+      
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {/* Use Leaflet's built-in ZoomControl */}
-      <LeafletZoomControl position="bottomright" />
+      {/* Map Click Events Handler */}
+      <MapEvents onMapClick={onMapClick} />
       
-      {/* Add custom map click handler */}
-      {onMapClick && <MapClickHandler handleClick={onMapClick} />}
-      
-      {/* Show markers for each location */}
-      {locations.map(location => {
-        // Skip invalid locations
-        if (!location?.latitude || !location?.longitude) return null;
-        
-        // Generate a unique ID for the location
-        const locationId = location.id || `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-        const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-        
-        return (
-          <LocationMarker
-            key={locationId}
-            location={location}
-            onClick={onLocationClick}
-            isHovered={hoveredLocationId === locationId}
-            onHover={onMarkerHover}
-            locationId={locationId}
-            isCertified={isCertified}
-            activeView={activeView}
-            handleTouchStart={handleTouchStart}
-            handleTouchEnd={handleTouchEnd}
-            handleTouchMove={handleTouchMove}
-          />
-        );
-      })}
-      
-      {/* Show user location marker if available */}
+      {/* User Location Marker */}
       {userLocation && (
-        <UserLocationMarker
-          position={[userLocation.latitude, userLocation.longitude]}
+        <UserLocationMarker 
+          position={[userLocation.latitude, userLocation.longitude]} 
+          onLocationUpdate={(lat, lng) => onMapClick(lat, lng)}
         />
       )}
       
-      {/* Show search radius circles if requested and user location is available */}
+      {/* Search Radius Circle */}
       {showRadiusCircles && userLocation && (
-        <SearchRadiusCircles
-          center={[userLocation.latitude, userLocation.longitude]}
+        <SearchRadiusCircles 
+          center={[userLocation.latitude, userLocation.longitude]} 
           radius={searchRadius}
         />
       )}
       
-      {/* Add map effects composer for additional visual elements */}
+      {/* Location Markers */}
+      {locations.map(location => (
+        <LocationMarker
+          key={location.id}
+          location={location}
+          onClick={onLocationClick}
+          isHovered={location.id === hoveredLocationId}
+          onHover={onMarkerHover}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchMove={handleTouchMove}
+          isMobile={isMobile}
+        />
+      ))}
+      
+      {/* Map Effects */}
       <MapEffectsComposer
         showRadiusCircles={showRadiusCircles}
         userLocation={userLocation}

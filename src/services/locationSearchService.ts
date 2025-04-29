@@ -1,4 +1,3 @@
-
 import { SharedAstroSpot } from '@/types/weather';
 import { calculateDistance } from '@/utils/geoUtils';
 import { getRandomInt } from '@/utils/random';
@@ -76,6 +75,92 @@ export function findLocationsInArea(
 }
 
 /**
+ * Alias for findLocationsInArea for backward compatibility
+ */
+export const findLocationsWithinRadius = (
+  centerLat: number,
+  centerLon: number,
+  radiusKm: number,
+  certifiedOnly: boolean = false
+): Promise<SharedAstroSpot[]> => {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const options: LocationSearchOptions = {
+        includeWater: false,
+        maxResults: 30
+      };
+      
+      const locations = findLocationsInArea(centerLat, centerLon, radiusKm, options);
+      
+      if (certifiedOnly) {
+        const certifiedLocations = locations.filter(loc => 
+          loc.isDarkSkyReserve || (loc.certification && loc.certification.length > 0)
+        );
+        resolve(certifiedLocations);
+      } else {
+        resolve(locations);
+      }
+    }, 300);
+  });
+};
+
+/**
+ * Find calculated (non-certified) locations
+ */
+export const findCalculatedLocations = (
+  latitude: number,
+  longitude: number,
+  radius: number,
+  allowExpansion: boolean = true,
+  limit: number = 10
+): Promise<SharedAstroSpot[]> => {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const locations = findLocationsInArea(latitude, longitude, radius, {
+        includeWater: false,
+        maxResults: limit * 2
+      });
+      
+      // Filter to only include non-certified locations
+      const calculatedLocations = locations.filter(loc => 
+        !loc.isDarkSkyReserve && (!loc.certification || loc.certification.length === 0)
+      );
+      
+      resolve(calculatedLocations.slice(0, limit));
+    }, 500);
+  });
+};
+
+/**
+ * Sort locations by quality and distance
+ */
+export const sortLocationsByQuality = (locations: SharedAstroSpot[]): SharedAstroSpot[] => {
+  if (!locations || locations.length === 0) return [];
+  
+  // First sort certified locations to the top
+  return [...locations].sort((a, b) => {
+    // First prioritize certified locations
+    if ((a.isDarkSkyReserve || a.certification) && !(b.isDarkSkyReserve || b.certification)) {
+      return -1;
+    }
+    if (!(a.isDarkSkyReserve || a.certification) && (b.isDarkSkyReserve || b.certification)) {
+      return 1;
+    }
+    
+    // Then sort by SIQS
+    const aSiqs = typeof a.siqs === 'number' ? a.siqs : 0;
+    const bSiqs = typeof b.siqs === 'number' ? b.siqs : 0;
+    
+    if (aSiqs !== bSiqs) {
+      return bSiqs - aSiqs;
+    }
+    
+    // Finally sort by distance
+    return (a.distance || Infinity) - (b.distance || Infinity);
+  });
+};
+
+/**
  * Search for locations by name
  * @param query Search query
  * @param limit Maximum number of results
@@ -86,7 +171,6 @@ export function searchLocationsByName(
   limit: number = 5
 ): Promise<SharedAstroSpot[]> {
   return new Promise(resolve => {
-    // Mock implementation
     setTimeout(() => {
       const locations: SharedAstroSpot[] = [];
       
@@ -121,3 +205,27 @@ export function searchLocationsByName(
     }, 300);
   });
 }
+
+/**
+ * Export addLocationToStore for usePhotoPointsMap
+ */
+export const addLocationToStore = (location: SharedAstroSpot): void => {
+  try {
+    const key = `location_${location.id}`;
+    const locationData = JSON.stringify(location);
+    localStorage.setItem(key, locationData);
+  } catch (error) {
+    console.error("Error storing location:", error);
+  }
+};
+
+/**
+ * Find certified locations (Dark Sky Reserves, etc.)
+ */
+export const findCertifiedLocations = async (
+  latitude: number,
+  longitude: number,
+  radius: number = 10000 // Large default radius for certified locations
+): Promise<SharedAstroSpot[]> => {
+  return findLocationsWithinRadius(latitude, longitude, radius, true);
+};

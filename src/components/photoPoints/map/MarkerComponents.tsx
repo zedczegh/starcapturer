@@ -1,121 +1,94 @@
 
 import React from 'react';
 import { Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import { SharedAstroSpot } from '@/types/weather';
-import MapMarkerPopup from './MapMarkerPopup';
-import LocationPopupContent from './LocationPopupContent';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { createCustomIcon } from './MarkerUtils';
+import SiqsDisplay from './SiqsDisplay';
 
-interface MarkerComponentProps {
+interface LocationMarkerProps {
   location: SharedAstroSpot;
-  realTimeSiqs: number | null;
-  isUserMarker: boolean;
-  isCertified: boolean;
-  icon: L.Icon;
+  onClick: (location: SharedAstroSpot) => void;
   isHovered: boolean;
-  onMarkerClick: (location: SharedAstroSpot) => void;
-  onMarkerHover: (id: string | null) => void;
+  onHover: (id: string | null) => void;
+  onTouchStart: (e: React.TouchEvent, id: string) => void;
+  onTouchEnd: (e: React.TouchEvent) => void;
+  onTouchMove: (e: React.TouchEvent) => void;
   isMobile: boolean;
-  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
-  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
-  displayName: string;
-  siqsScore: number | null;
 }
 
-export const LocationMarkerComponent: React.FC<MarkerComponentProps> = ({
+export const LocationMarker: React.FC<LocationMarkerProps> = ({
   location,
-  realTimeSiqs,
-  isUserMarker,
-  isCertified,
-  icon,
+  onClick,
   isHovered,
-  onMarkerClick,
-  onMarkerHover,
-  isMobile,
-  handleTouchStart,
-  handleTouchEnd,
-  displayName,
-  siqsScore
+  onHover,
+  onTouchStart,
+  onTouchEnd,
+  onTouchMove,
+  isMobile
 }) => {
+  const { id, latitude, longitude, name, siqs, isDarkSkyReserve, certification } = location;
+  
+  // Create icon based on location type and SIQS
+  const icon = createCustomIcon(location, isHovered);
+  
+  // Handle location click
   const handleClick = () => {
-    onMarkerClick(location);
+    onClick(location);
   };
-
+  
+  // Handle mouse events
   const handleMouseOver = () => {
-    if (location.id) {
-      onMarkerHover(location.id);
-    }
+    onHover(id);
   };
-
+  
   const handleMouseOut = () => {
-    onMarkerHover(null);
+    onHover(null);
   };
-
+  
+  // Touch event handlers for mobile
   const handleTouchStartEvent = (e: React.TouchEvent) => {
-    if (handleTouchStart && location.id) {
-      handleTouchStart(e, location.id);
-    }
+    onTouchStart(e, id);
   };
-
+  
   const handleTouchEndEvent = (e: React.TouchEvent) => {
-    if (handleTouchEnd && location.id) {
-      handleTouchEnd(e, null);
-    }
+    onTouchEnd(e);
   };
-
-  // Create a default icon if none provided
-  const markerIcon = icon || new L.Icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-  });
-
+  
+  const handleTouchMoveEvent = (e: React.TouchEvent) => {
+    onTouchMove(e);
+  };
+  
   return (
-    <Marker
-      position={[location.latitude, location.longitude]}
-      icon={markerIcon}
-      // Fix: Use onClick, onMouseOver, onMouseOut instead of eventHandlers
-      onClick={handleClick}
-      onMouseOver={handleMouseOver}
-      onMouseOut={handleMouseOut}
+    <Marker 
+      position={[latitude, longitude]} 
+      icon={icon}
+      eventHandlers={{
+        click: handleClick,
+        mouseover: handleMouseOver,
+        mouseout: handleMouseOut
+      }}
     >
       <Popup>
-        <div className="p-2">
-          <h3 className="font-medium text-base">{displayName}</h3>
-          {siqsScore !== null && (
-            <div className="mt-1">SIQS Score: {siqsScore.toFixed(1)}</div>
+        <div 
+          className="p-2 min-w-[200px]"
+          onTouchStart={handleTouchStartEvent}
+          onTouchEnd={handleTouchEndEvent}
+          onTouchMove={handleTouchMoveEvent}
+        >
+          <h3 className="font-medium text-base">{name || 'Unnamed Location'}</h3>
+          {(isDarkSkyReserve || certification) && (
+            <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-medium mt-1">
+              {isDarkSkyReserve ? 'Dark Sky Reserve' : certification}
+            </div>
           )}
-          <button 
-            className="mt-2 bg-blue-500 text-white px-2 py-1 rounded text-xs"
-            onClick={handleClick}
-          >
-            View Details
-          </button>
+          <SiqsDisplay siqs={siqs} showLabel={true} className="mt-2" />
+          <p className="text-xs text-gray-600 mt-1">
+            {latitude.toFixed(6)}, {longitude.toFixed(6)}
+          </p>
         </div>
       </Popup>
     </Marker>
   );
 };
 
-interface UserMarkerProps {
-  position: [number, number];
-  icon?: L.Icon;
-  children?: React.ReactNode;
-}
-
-export const UserMarkerComponent: React.FC<UserMarkerProps> = ({ position, icon, children }) => {
-  // Create a default user icon if none provided
-  const userIcon = icon || new L.Icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-  });
-  
-  return (
-    <Marker position={position} icon={userIcon}>
-      {children}
-    </Marker>
-  );
-};
+export default LocationMarker;
