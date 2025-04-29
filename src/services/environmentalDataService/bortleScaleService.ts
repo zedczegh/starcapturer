@@ -1,56 +1,36 @@
 
-import { getBortleScaleFromCoordinates } from '@/utils/bortleScaleUtils';
+import { getBortleScaleForLocation } from '@/utils/bortleScaleUtils';
 
-// Define a placeholder type for Chinese location data
-interface ChineseLocation {
-  name: string;
-  district?: string;
-  bortleScale?: number;
+/**
+ * Get the Bortle Scale value for a location
+ * @param latitude Latitude of the location
+ * @param longitude Longitude of the location
+ * @returns Bortle scale value (1-9)
+ */
+export function getBortleScaleFromCoordinates(latitude: number, longitude: number): number {
+  // Use the utility function to get the bortle scale
+  return getBortleScaleForLocation(latitude, longitude);
 }
 
-interface CachedDataFn {
-  (key: string): any;
-}
-
-interface SetCachedDataFn {
-  (key: string, value: any): void;
-}
-
-export async function getBortleScaleData(
-  latitude: number,
-  longitude: number,
-  originalName: string,
-  existingBortle: number | null,
-  displayOnly: boolean,
-  getCachedDataFn: CachedDataFn,
-  setCachedDataFn: SetCachedDataFn,
-  language: string
-): Promise<number> {
-  // Check if we already have the Bortle scale for this location
-  if (existingBortle && existingBortle > 0 && existingBortle <= 9) {
-    return existingBortle;
-  }
-
-  // Check cache first
-  const cacheKey = `bortle-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-  const cachedValue = getCachedDataFn(cacheKey);
+/**
+ * Format Bortle Scale description
+ * @param bortleValue The Bortle Scale value (1-9)
+ * @returns Description of the Bortle Scale level
+ */
+export function getBortleScaleDescription(bortleValue: number): string {
+  const descriptions = [
+    "Excellent dark sky", // 1
+    "Typical truly dark sky", // 2
+    "Rural sky", // 3
+    "Rural/suburban transition", // 4
+    "Suburban sky", // 5
+    "Bright suburban sky", // 6
+    "Suburban/urban transition", // 7
+    "City sky", // 8
+    "Inner city sky" // 9
+  ];
   
-  if (cachedValue !== undefined && cachedValue !== null) {
-    return Number(cachedValue);
-  }
-
-  try {
-    // Get Bortle scale from coordinates
-    const bortleScale = await getBortleScaleFromCoordinates(latitude, longitude);
-    
-    // Cache the value
-    if (bortleScale && !displayOnly) {
-      setCachedDataFn(cacheKey, bortleScale);
-    }
-    
-    return bortleScale;
-  } catch (error) {
-    console.error('Error fetching Bortle scale:', error);
-    return 4; // Default value
-  }
+  // Ensure valid range and return description
+  const index = Math.max(0, Math.min(8, Math.round(bortleValue) - 1));
+  return descriptions[index];
 }

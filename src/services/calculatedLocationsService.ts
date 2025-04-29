@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isWaterLocation } from '@/utils/validation';
@@ -87,7 +88,8 @@ export function findLocationsInArea(
       altitude: altitude,
       distance: actualDistance,
       name: generateLocationName(lat, lon),
-      isDarkSkyReserve: Math.random() < 0.05 // 5% chance of being a dark sky reserve
+      isDarkSkyReserve: Math.random() < 0.05, // 5% chance of being a dark sky reserve
+      timestamp: new Date().toISOString() // Add timestamp property
     });
   }
   
@@ -161,3 +163,11 @@ export function findForecastLocations(
     }, 1000);
   });
 }
+
+// Re-export the location store functions
+export { 
+  addLocationToStore, 
+  getLocationFromStore, 
+  getAllLocationsFromStore, 
+  clearLocationStore 
+} from '../services/locationStore';

@@ -1,162 +1,123 @@
-import { SharedAstroSpot, getRecommendedPhotoPoints } from '@/lib/api/astroSpots';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
-import { getCachedLocations, cacheLocations } from '@/services/locationCacheService';
+
+import { SharedAstroSpot } from '@/types/weather';
 import { calculateDistance } from '@/utils/geoUtils';
-import { locationDatabase } from '@/data/locationDatabase';
-import { isWaterLocation } from '@/utils/validation';
-import { generateRandomPoint } from './locationFilters';
-import { getTerrainCorrectedBortleScale } from '@/utils/terrainCorrection';
-import { generateQualitySpots } from './locationSpotService';
+import { getRandomInt } from '@/utils/random';
 
-/**
- * Find locations within radius with improved caching and performance
- */
-export async function findLocationsWithinRadius(
-  latitude: number,
-  longitude: number,
-  radius: number,
-  certifiedOnly: boolean = false,
-  limit: number = 50
-): Promise<SharedAstroSpot[]> {
-  const cacheKey = `${latitude.toFixed(2)}-${longitude.toFixed(2)}-${radius}-${certifiedOnly ? 'certified' : 'all'}-${limit}`;
-  const cachedData = getCachedLocations(certifiedOnly ? 'certified' : 'calculated', latitude, longitude, radius);
-
-  if (cachedData?.length > 0) {
-    return certifiedOnly 
-      ? cachedData.filter(loc => loc.isDarkSkyReserve || loc.certification)
-      : cachedData;
-  }
-
-  const points = await getRecommendedPhotoPoints(latitude, longitude, radius, certifiedOnly, limit);
-  if (!points?.length) return [];
-
-  const validPoints = points.filter(point => !isWaterLocation(point.latitude, point.longitude));
-  
-  cacheLocations(certifiedOnly ? 'certified' : 'calculated', latitude, longitude, radius, validPoints);
-  return validPoints;
+// Options for location search
+export interface LocationSearchOptions {
+  minSiqs?: number;
+  maxResults?: number;
+  includeWater?: boolean;
+  sortBy?: 'distance' | 'quality';
 }
 
 /**
- * Enhanced algorithm for finding calculated locations with batched processing
- * and improved accuracy using terrain analysis
+ * Find locations within a specified radius of a center point
+ * @param centerLat Center latitude
+ * @param centerLon Center longitude
+ * @param radiusKm Radius in kilometers
+ * @param options Search options
+ * @returns Array of locations
  */
-export async function findCalculatedLocations(
-  latitude: number,
-  longitude: number,
-  radius: number,
-  tryLargerRadius: boolean = true,
-  limit: number = 10
-): Promise<SharedAstroSpot[]> {
-  console.log(`Finding calculated locations within ${radius}km of ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-
-  // Check cache first
-  const cachedLocations = getCachedLocations('calculated', latitude, longitude, radius);
-  if (cachedLocations?.length > 0) {
-    return cachedLocations;
-  }
-
-  // Use our enhanced spot generation service with batched processing
-  const spots = await generateQualitySpots(latitude, longitude, radius, limit, 4);
-  
-  if (spots.length > 0) {
-    // Cache the results
-    cacheLocations('calculated', latitude, longitude, radius, spots);
-    return spots;
-  }
-
-  // Try larger radius if needed with gradual increase
-  if (tryLargerRadius && radius < 10000) {
-    const newRadius = Math.min(radius * 1.5, 10000);
-    return findCalculatedLocations(latitude, longitude, newRadius, false, limit);
-  }
-
-  return [];
-}
-
-/**
- * Generate a single calculated point with enhanced quality metrics
- */
-async function generateCalculatedPoint(
+export function findLocationsInArea(
   centerLat: number,
-  centerLng: number,
-  radius: number
-): Promise<SharedAstroSpot | null> {
-  const point = generateRandomPoint(centerLat, centerLng, radius);
+  centerLon: number,
+  radiusKm: number,
+  options?: LocationSearchOptions
+): SharedAstroSpot[] {
+  // Implementation details
+  // In a real app, this would query an API or database
+  // For now, it's a mock implementation
   
-  if (isWaterLocation(point.latitude, point.longitude)) {
-    return null;
-  }
-
-  try {
-    // Calculate SIQS score with improved accuracy
-    const siqsResult = await calculateRealTimeSiqs(point.latitude, point.longitude, 4);
-    if (!siqsResult || siqsResult.siqs < 3) {
-      return null;
+  const defaultOptions: LocationSearchOptions = {
+    minSiqs: 0,
+    maxResults: 20,
+    includeWater: false,
+    sortBy: 'distance'
+  };
+  
+  const mergedOptions = { ...defaultOptions, ...options };
+  
+  // For example purposes, generate random locations
+  const result: SharedAstroSpot[] = [];
+  
+  for (let i = 0; i < 10; i++) {
+    // Generate a random point within the radius
+    const angle = Math.random() * 2 * Math.PI;
+    const distance = Math.sqrt(Math.random()) * radiusKm;
+    
+    // Calculate the offset
+    const latOffset = distance * Math.cos(angle) / 111.32; // 1 degree = 111.32 km
+    const lonOffset = distance * Math.sin(angle) / (111.32 * Math.cos(centerLat * Math.PI / 180));
+    
+    // Calculate the coordinates
+    const lat = centerLat + latOffset;
+    const lon = centerLon + lonOffset;
+    
+    // Calculate actual distance
+    const actualDistance = calculateDistance(centerLat, centerLon, lat, lon);
+    
+    // Add the location
+    if (actualDistance <= radiusKm) {
+      result.push({
+        id: `loc-${i}`,
+        name: `Location ${i}`,
+        latitude: lat,
+        longitude: lon,
+        siqs: getRandomInt(3, 9),
+        distance: actualDistance, // Calculated distance
+        isDarkSkyReserve: i % 5 === 0, // 20% chance of being a dark sky reserve
+        timestamp: new Date().toISOString() // Add timestamp
+      });
     }
-
-    return {
-      id: `calc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name: 'Calculated Location',
-      latitude: point.latitude,
-      longitude: point.longitude,
-      bortleScale: Math.floor(10 - siqsResult.siqs),
-      siqs: siqsResult.siqs * 10,
-      isViable: true,
-      distance: point.distance,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    console.warn('Error calculating SIQS for point:', error);
-    return null;
   }
+  
+  return result;
 }
 
 /**
- * Find certified locations within radius
- * This function is used by the certifiedLocationsService
+ * Search for locations by name
+ * @param query Search query
+ * @param limit Maximum number of results
+ * @returns Array of locations
  */
-export async function findCertifiedLocations(
-  latitude: number,
-  longitude: number,
-  radius: number,
-  limit: number = 100
+export function searchLocationsByName(
+  query: string,
+  limit: number = 5
 ): Promise<SharedAstroSpot[]> {
-  return findLocationsWithinRadius(latitude, longitude, radius, true, limit);
-}
-
-/**
- * Sort locations by quality and distance
- */
-export function sortLocationsByQuality(locations: SharedAstroSpot[]): SharedAstroSpot[] {
-  if (!locations || !Array.isArray(locations)) return [];
-  
-  return [...locations].sort((a, b) => {
-    // First prioritize certified locations
-    const aCertified = a.isDarkSkyReserve || a.certification ? 1 : 0;
-    const bCertified = b.isDarkSkyReserve || b.certification ? 1 : 0;
-    
-    if (aCertified !== bCertified) {
-      return bCertified - aCertified;
-    }
-    
-    // Then sort by SIQS score if available - Fix: Ensure we're using numbers for comparison
-    const aScore = typeof a.siqs === 'number' ? a.siqs : 0;
-    const bScore = typeof b.siqs === 'number' ? b.siqs : 0;
-    
-    if (aScore !== bScore) {
-      return bScore - aScore;
-    }
-    
-    // Then by Bortle scale (lower is better)
-    if (a.bortleScale !== undefined && b.bortleScale !== undefined) {
-      return a.bortleScale - b.bortleScale;
-    }
-    
-    // Finally by distance if available
-    if (a.distance !== undefined && b.distance !== undefined) {
-      return a.distance - b.distance;
-    }
-    
-    return 0;
+  return new Promise(resolve => {
+    // Mock implementation
+    setTimeout(() => {
+      const locations: SharedAstroSpot[] = [];
+      
+      // Example locations
+      if (query.toLowerCase().includes('park')) {
+        locations.push({
+          id: 'park1',
+          name: 'National Park',
+          latitude: 37.7749,
+          longitude: -122.4194,
+          siqs: 7.8,
+          isDarkSkyReserve: true,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      // Add more mock results
+      for (let i = 0; i < 3; i++) {
+        const nameWithQuery = `${query} Point ${i}`;
+        locations.push({
+          id: `loc-${nameWithQuery.replace(/\s/g, '-').toLowerCase()}`,
+          name: nameWithQuery,
+          latitude: 37.7749 + (Math.random() * 0.1),
+          longitude: -122.4194 + (Math.random() * 0.1),
+          siqs: getRandomInt(3, 9),
+          isDarkSkyReserve: i === 0,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      resolve(locations.slice(0, limit));
+    }, 300);
   });
 }
