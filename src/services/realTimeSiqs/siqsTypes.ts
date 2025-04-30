@@ -1,3 +1,4 @@
+
 /**
  * Options for SIQS calculation service
  */
@@ -246,6 +247,29 @@ export interface BatchSiqsOptions extends SiqsCalculationOptions {
   
   /** Max runtime in ms before returning partial results */
   timeout?: number;
+}
+
+/**
+ * Interface for batch location data with additional forecast properties
+ */
+export interface BatchLocationData {
+  /** Location latitude */
+  latitude: number;
+  
+  /** Location longitude */
+  longitude: number;
+  
+  /** Optional location name */
+  name?: string;
+  
+  /** Optional bortle scale value */
+  bortleScale?: number;
+  
+  /** Forecast day index (0-15) */
+  forecastDay: number;
+  
+  /** Processing priority (higher value = higher priority) */
+  priority: number;
 }
 
 // For compatibility with existing code

@@ -1,4 +1,3 @@
-
 /**
  * Enhanced Forecast Astro Service
  * 
@@ -457,4 +456,3 @@ export const enhancedForecastAstroService = {
     return areForecastServicesReliable();
   }
 };
-
