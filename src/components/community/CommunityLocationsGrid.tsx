@@ -25,7 +25,8 @@ const CommunityLocationsGrid: React.FC<CommunityLocationsGridProps> = ({
     handleSiqsError,
     handleCardInView,
     attemptedSiqs,
-    calculationQueue
+    calculationQueue,
+    realTimeSiqs
   } = useCommunityLocationsSiqs(locations);
 
   // Debug to check loaded locations
@@ -37,6 +38,11 @@ const CommunityLocationsGrid: React.FC<CommunityLocationsGridProps> = ({
       });
     }
   }, [locations]);
+
+  // Debug SIQS values
+  React.useEffect(() => {
+    console.log("Current SIQS values:", realTimeSiqs);
+  }, [realTimeSiqs]);
 
   if (!locations || locations.length === 0) {
     return <CommunityLocationsEmpty />;

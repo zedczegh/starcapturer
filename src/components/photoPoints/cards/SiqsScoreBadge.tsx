@@ -31,6 +31,11 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   // Create unique key for caching that includes language
   const cacheKey = `${score}-${compact}-${isCertified}-${loading}-${confidenceScore}-${language}`;
   
+  // Log for debugging
+  React.useEffect(() => {
+    console.log(`SiqsScoreBadge rendering with score: ${score}, loading: ${loading}, isCertified: ${isCertified}`);
+  }, [score, loading, isCertified]);
+  
   // Use memoization to prevent unnecessary re-renders
   const badgeContent = useMemo(() => {
     // Check cache first

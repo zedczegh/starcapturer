@@ -31,6 +31,12 @@ const CommunityLocationCard: React.FC<CommunityLocationCardProps> = ({
   inQueue
 }) => {
   const { t } = useLanguage();
+  const siqsValue = getSiqs(spot);
+  
+  // Debug SIQS display for this card
+  React.useEffect(() => {
+    console.log(`Card ${spot.id} - SIQS: ${siqsValue}, Raw siqs: ${JSON.stringify(spot.siqs)}, Attempted: ${attempted.has(spot.id)}, InQueue: ${inQueue}`);
+  }, [spot.id, siqsValue, spot.siqs, attempted, inQueue]);
   
   return (
     <motion.button
@@ -52,9 +58,10 @@ const CommunityLocationCard: React.FC<CommunityLocationCardProps> = ({
           longitude={spot.longitude}
           bortleScale={spot.bortleScale || 4}
           existingSiqs={spot.siqs}
-          onSiqsCalculated={(siqs, loading) =>
-            onSiqsCalculated(spot.id, siqs, loading)
-          }
+          onSiqsCalculated={(siqs, loading) => {
+            console.log(`SIQS calculated for ${spot.id}: ${siqs}, loading: ${loading}`);
+            onSiqsCalculated(spot.id, siqs, loading);
+          }}
           onError={(error) => onSiqsError(error, spot.id)}
           forceUpdate={!attempted.has(spot.id) && inQueue}
         />
@@ -64,7 +71,7 @@ const CommunityLocationCard: React.FC<CommunityLocationCardProps> = ({
             name={spot.name}
             latitude={spot.latitude}
             longitude={spot.longitude}
-            siqs={getSiqs(spot)}
+            siqs={siqsValue}
             timestamp={spot.timestamp}
             isCertified={!!spot.certification || !!spot.isDarkSkyReserve}
             username={spot.username || t('Anonymous Stargazer', '匿名观星者')}
