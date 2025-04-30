@@ -17,6 +17,7 @@ interface LocationCardProps {
   timestamp?: string;
   isCertified?: boolean;
   username?: string;
+  hideSiqs?: boolean;
 }
 
 const LocationCard: React.FC<LocationCardProps> = ({
@@ -27,7 +28,8 @@ const LocationCard: React.FC<LocationCardProps> = ({
   siqs,
   timestamp,
   isCertified = false,
-  username = 'Anonymous Stargazer'
+  username = 'Anonymous Stargazer',
+  hideSiqs = false
 }) => {
   const { t } = useLanguage();
   
@@ -46,22 +48,24 @@ const LocationCard: React.FC<LocationCardProps> = ({
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-gray-50 truncate pr-2">{name}</h3>
-          <div className="flex-shrink-0">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <SiqsScoreBadge 
-                    score={numericSiqs} 
-                    isCertified={isCertified} 
-                    compact={true}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t("Sky quality score", "天空质量评分")}
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          {!hideSiqs && numericSiqs !== null && (
+            <div className="flex-shrink-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <SiqsScoreBadge 
+                      score={numericSiqs} 
+                      isCertified={isCertified} 
+                      compact={true}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t("Sky quality score", "天空质量评分")}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
         </div>
         <div className="space-y-2 text-sm text-gray-400">
           <div className="flex items-center">

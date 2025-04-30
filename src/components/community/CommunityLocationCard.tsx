@@ -5,38 +5,21 @@ import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import LocationCard from "@/components/LocationCard";
-import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 
 interface CommunityLocationCardProps {
   spot: SharedAstroSpot;
   index: number;
   onClick: (id: string) => void;
   onInView: (spotId: string) => void;
-  onSiqsCalculated: (spotId: string, siqs: number | null, loading: boolean) => void;
-  onSiqsError: (error: any, spotId: string) => void;
-  getSiqs: (spot: SharedAstroSpot) => number | null;
-  attempted: Set<string>;
-  inQueue: boolean;
 }
 
 const CommunityLocationCard: React.FC<CommunityLocationCardProps> = ({
   spot,
   index,
   onClick,
-  onInView,
-  onSiqsCalculated,
-  onSiqsError,
-  getSiqs,
-  attempted,
-  inQueue
+  onInView
 }) => {
   const { t } = useLanguage();
-  const siqsValue = getSiqs(spot);
-  
-  // Debug SIQS display for this card
-  React.useEffect(() => {
-    console.log(`Card ${spot.id} - SIQS: ${siqsValue}, Raw siqs: ${JSON.stringify(spot.siqs)}, Attempted: ${attempted.has(spot.id)}, InQueue: ${inQueue}`);
-  }, [spot.id, siqsValue, spot.siqs, attempted, inQueue]);
   
   return (
     <motion.button
@@ -51,30 +34,17 @@ const CommunityLocationCard: React.FC<CommunityLocationCardProps> = ({
       transition={{ duration: 0.4, delay: index * 0.1, ease: "easeOut" }}
     >
       <div className="w-full h-full">
-        <RealTimeSiqsProvider
-          key={`siqs-provider-${spot.id}`}
-          isVisible={attempted.has(spot.id) || inQueue}
-          latitude={spot.latitude}
-          longitude={spot.longitude}
-          bortleScale={spot.bortleScale || 4}
-          existingSiqs={spot.siqs}
-          onSiqsCalculated={(siqs, loading) => {
-            console.log(`SIQS calculated for ${spot.id}: ${siqs}, loading: ${loading}`);
-            onSiqsCalculated(spot.id, siqs, loading);
-          }}
-          onError={(error) => onSiqsError(error, spot.id)}
-          forceUpdate={!attempted.has(spot.id) && inQueue}
-        />
         <div className="transform transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg rounded-xl">
           <LocationCard
             id={spot.id}
             name={spot.name}
             latitude={spot.latitude}
             longitude={spot.longitude}
-            siqs={siqsValue}
+            siqs={null} // Set to null to hide the SIQS badge
             timestamp={spot.timestamp}
             isCertified={!!spot.certification || !!spot.isDarkSkyReserve}
             username={spot.username || t('Anonymous Stargazer', '匿名观星者')}
+            hideSiqs={true} // Add a prop to hide SIQS badge
           />
         </div>
         <div className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/10" />
