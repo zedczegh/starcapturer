@@ -1,93 +1,98 @@
 
-/**
- * Location validator for forecast services
- * Checks if locations are valid (not water, etc.)
- */
-import { BatchLocationData } from "../types/forecastTypes";
-
-// Cache for validated locations
-const validationCache = new Map<string, {
-  isValid: boolean;
-  isWater: boolean;
-  timestamp: number;
-}>();
-
-// Cache duration (24 hours in milliseconds)
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
+import { isWaterLocation } from '@/utils/locationWaterCheck';
+import { calculateDistance } from '@/utils/geoUtils';
+import { toast } from 'sonner';
+import { BatchLocationData } from '../types/forecastTypes';
 
 /**
- * Validates if a location is suitable for forecasting
- * Checks if it's on land (not water) and performs other validations
- * 
- * @param location Location data to validate
- * @returns Promise resolving to validation result
+ * Validates if a location is suitable for astronomical observations
+ * Checks for water locations, proximity to existing locations, etc.
  */
-export const validateForecastLocation = async (
-  location: BatchLocationData
-): Promise<{
-  isValid: boolean;
-  isWater: boolean;
-}> => {
-  // Generate cache key from coordinates
-  const cacheKey = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+export class LocationValidator {
+  private static readonly MIN_DISTANCE_BETWEEN_POINTS = 0.5; // in km
   
-  // Check cache first
-  const cachedValidation = validationCache.get(cacheKey);
-  if (cachedValidation && Date.now() - cachedValidation.timestamp < CACHE_DURATION_MS) {
-    return {
-      isValid: cachedValidation.isValid,
-      isWater: cachedValidation.isWater
+  /**
+   * Check if a location is valid for astronomical observations
+   * @param location The location to validate
+   * @returns A validated location with additional properties
+   */
+  static async validateLocation(location: BatchLocationData): Promise<BatchLocationData> {
+    console.log(`Validating location at ${location.latitude}, ${location.longitude}`);
+    
+    // Check if this is a water location
+    let isWater = false;
+    try {
+      isWater = await isWaterLocation(location.latitude, location.longitude);
+    } catch (error) {
+      console.error("Error checking water location:", error);
+      // Continue with validation, assuming it's not water in case of error
+    }
+    
+    // Create a validated location object with additional properties
+    const validatedLocation: BatchLocationData = {
+      ...location,
+      isValidated: true,
+      isWater
     };
+    
+    if (isWater) {
+      console.log(`Location at ${location.latitude}, ${location.longitude} is in water`);
+    }
+    
+    return validatedLocation;
   }
   
-  // Mock implementation - in real world would check APIs
-  const isWater = false; // Assume it's not water
-  const isValid = true;  // Assume it's valid
-  
-  // Cache the result
-  validationCache.set(cacheKey, {
-    isValid,
-    isWater,
-    timestamp: Date.now()
-  });
-  
-  return { isValid, isWater };
-};
-
-/**
- * Filter an array of locations to only include valid ones
- * 
- * @param locations Array of locations to filter
- * @returns Promise resolving to array of valid locations
- */
-export const filterValidLocations = async (
-  locations: BatchLocationData[]
-): Promise<BatchLocationData[]> => {
-  // Process all locations in parallel
-  const validationResults = await Promise.all(
-    locations.map(async loc => {
-      // Skip validation if already validated
-      if (loc.isValidated !== undefined) {
-        return {
-          location: loc,
-          isValid: !loc.isWater // If we know it's not water, it's valid
-        };
+  /**
+   * Validate multiple locations in batch
+   * @param locations Array of locations to validate
+   * @returns Array of validated locations
+   */
+  static async validateBatchLocations(locations: BatchLocationData[]): Promise<BatchLocationData[]> {
+    const validatedLocations: BatchLocationData[] = [];
+    const invalidLocations: BatchLocationData[] = [];
+    
+    // Process each location
+    for (const location of locations) {
+      try {
+        const validatedLocation = await this.validateLocation(location);
+        
+        // Don't add water locations
+        if (validatedLocation.isWater) {
+          invalidLocations.push(validatedLocation);
+        } else {
+          // Check if this location is too close to any previously validated location
+          const isTooClose = validatedLocations.some(prevLoc => {
+            const distance = calculateDistance(
+              prevLoc.latitude, prevLoc.longitude, 
+              validatedLocation.latitude, validatedLocation.longitude
+            );
+            return distance < this.MIN_DISTANCE_BETWEEN_POINTS;
+          });
+          
+          if (isTooClose) {
+            invalidLocations.push(validatedLocation);
+          } else {
+            validatedLocations.push(validatedLocation);
+          }
+        }
+      } catch (error) {
+        console.error(`Error validating location: ${location.name || 'unnamed'}`, error);
+      }
+    }
+    
+    if (invalidLocations.length > 0) {
+      const waterCount = invalidLocations.filter(loc => loc.isWater).length;
+      
+      if (waterCount > 0) {
+        toast.warning(`Skipped ${waterCount} water locations`);
       }
       
-      const validation = await validateForecastLocation(loc);
-      return {
-        location: {
-          ...loc,
-          isValidated: true, // Mark as validated
-          isWater: validation.isWater
-        },
-        isValid: validation.isValid
-      };
-    })
-  );
-  
-  // Return only valid locations
-  return validationResults
-    .filter(result => result.isValid)
-    .map(result => result.location);
-};
+      const tooCloseCount = invalidLocations.length - waterCount;
+      if (tooCloseCount > 0) {
+        toast.info(`Skipped ${tooCloseCount} locations that were too close to others`);
+      }
+    }
+    
+    return validatedLocations;
+  }
+}

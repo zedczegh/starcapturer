@@ -42,6 +42,8 @@ export interface BatchLocationData {
   name?: string;
   bortleScale?: number;
   forecastDay?: number;
+  isValidated?: boolean;
+  isWater?: boolean;
 }
 
 // Define batch forecast request type

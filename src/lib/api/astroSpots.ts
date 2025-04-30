@@ -6,10 +6,10 @@ export interface SharedAstroSpot {
   chineseName?: string;
   latitude: number;
   longitude: number;
-  bortleScale: number; // Make this required for type compatibility
+  bortleScale: number; // Required for type compatibility
   certification?: string;
   isDarkSkyReserve?: boolean;
-  timestamp?: string;
+  timestamp: string; // Changed from optional to required
   siqsTimestamp?: string;
   siqs?: number | { score: number; isViable: boolean };
   isViable?: boolean;
@@ -17,7 +17,7 @@ export interface SharedAstroSpot {
   imageUrl?: string;
   createdBy?: string;
   userDisplayName?: string;
-  description?: string; // Add this property that was missing
+  description?: string;
   type?: string;
   photographer?: string;
   
