@@ -1,3 +1,4 @@
+
 /**
  * Enhanced Forecast Astro Service
  * 
@@ -10,32 +11,7 @@ import { SiqsCalculationOptions, SiqsResult } from "../realTimeSiqs/siqsTypes";
 import { areForecastServicesReliable } from "./forecastHealthMonitor";
 import { processBatchSiqs } from "../realTimeSiqs/batchProcessor";
 import { toast } from "sonner";
-import { BatchLocationData, ForecastDayAstroData } from "./types/forecastTypes";
-import { forecastCache } from "./utils/forecastCache";
-
-/**
- * Interface for forecast day astronomical data
- */
-export interface ForecastDayAstroData {
-  date: string;
-  dayIndex: number;
-  cloudCover: number;
-  siqs: number | null;
-  isViable: boolean;
-  temperature: {
-    min: number;
-    max: number;
-  };
-  precipitation: {
-    probability: number;
-    amount: number | null;
-  };
-  humidity: number;
-  windSpeed: number;
-  weatherCode: number;
-  siqsResult?: SiqsResult | null;
-  reliability?: number;
-}
+import { BatchLocationData, ForecastDayAstroData, BatchForecastResult } from "./types/forecastTypes";
 
 /**
  * Cache implementation for forecast results
@@ -79,18 +55,7 @@ class ForecastCache {
 }
 
 // Create singleton cache instance
-const forecastCache = new ForecastCache();
-
-// Define interface for batch location data with additional forecast properties
-interface BatchLocationData {
-  latitude: number;
-  longitude: number;
-  bortleScale?: number;
-  name?: string;
-  forecastDay: number;
-  priority: number;
-  cloudCover?: number;
-}
+export const forecastCache = new ForecastCache();
 
 /**
  * Enhanced service for extracting astronomical scores from 15-day forecast data
@@ -339,7 +304,7 @@ export const enhancedForecastAstroService = {
   batchProcessLocations: async (
     locations: Array<{ latitude: number; longitude: number; bortleScale?: number; name?: string }>,
     dayIndex?: number
-  ): Promise<BatchProcessingResult[]> => {
+  ): Promise<BatchForecastResult[]> => {
     // Use batch processor directly for best performance
     try {
       if (dayIndex !== undefined) {

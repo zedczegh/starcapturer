@@ -1,4 +1,3 @@
-
 /**
  * Optimized forecast data processing service
  */

@@ -69,4 +69,3 @@ export interface BatchForecastResult {
 export interface ExtendedSiqsResult extends SiqsResult {
   bortleScale?: number;
 }
-
