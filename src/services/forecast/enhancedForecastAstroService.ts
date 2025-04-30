@@ -10,7 +10,7 @@ import { SiqsCalculationOptions, SiqsResult } from "../realTimeSiqs/siqsTypes";
 import { areForecastServicesReliable } from "./forecastHealthMonitor";
 import { processBatchSiqs } from "../realTimeSiqs/batchProcessor";
 import { toast } from "sonner";
-import { BatchLocationData, ForecastDayAstroData, BatchForecastResult } from "./types/forecastTypes";
+import { BatchLocationData, ForecastDayAstroData, BatchForecastResult, ExtendedSiqsResult } from "./types/forecastTypes";
 import { forecastCache } from "./utils/forecastCache";
 
 /**
@@ -67,7 +67,7 @@ export const enhancedForecastAstroService = {
         longitude,
         bortleScale: bortleScale || 4,
         priority: daily.time.length - i, // Higher priority for closer dates
-        forecastDay: i,
+        forecastDay: i, // This is the missing property we need to add
         cloudCover: daily.cloud_cover_mean[i] || 0
       }));
       

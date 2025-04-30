@@ -1,13 +1,13 @@
 
 /**
- * Types for forecast services
+ * Forecast service type definitions
  */
 
-import { SiqsResult } from "../../realTimeSiqs/siqsTypes";
+export interface ForecastCacheItem {
+  data: any;
+  timestamp: number;
+}
 
-/**
- * Interface for forecast day astronomical data
- */
 export interface ForecastDayAstroData {
   date: string;
   dayIndex: number;
@@ -20,52 +20,42 @@ export interface ForecastDayAstroData {
   };
   precipitation: {
     probability: number;
-    amount: number | null;
+    amount: number;
   };
   humidity: number;
   windSpeed: number;
   weatherCode: number;
-  siqsResult?: SiqsResult | null;
-  reliability?: number;
+  siqsResult: ExtendedSiqsResult | null;
+  reliability: number;
 }
 
-/**
- * Interface for batch location data with additional forecast properties
- */
 export interface BatchLocationData {
   latitude: number;
   longitude: number;
   bortleScale?: number;
   name?: string;
-  forecastDay: number;
-  priority: number;
+  priority?: number;
+  forecastDay?: number;
   cloudCover?: number;
 }
 
-/**
- * Interface for forecast caching
- */
-export interface ForecastCacheItem {
-  data: any;
-  timestamp: number;
-}
-
-/**
- * Interface for batch processing result
- */
 export interface BatchForecastResult {
-  location: { 
-    latitude: number; 
-    longitude: number; 
-    name?: string 
+  location: {
+    latitude: number;
+    longitude: number;
+    bortleScale?: number;
+    name?: string;
   };
   forecast: ForecastDayAstroData[] | ForecastDayAstroData | null;
   success: boolean;
 }
 
-/**
- * Extended SiqsResult with additional properties used in map integration
- */
-export interface ExtendedSiqsResult extends SiqsResult {
-  bortleScale?: number;
+export interface ExtendedSiqsResult {
+  siqs: number;
+  isViable: boolean;
+  bortleScale: number;
+  cloudCover: number;
+  timestamp: number;
+  confidence?: number;
+  [key: string]: any;
 }
