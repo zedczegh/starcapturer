@@ -35,14 +35,24 @@ export async function fetchCommunityAstroSpots() {
     }
 
     // Then fetch usernames separately to avoid join issues
-    const userIds = spots.map(spot => spot.user_id).filter(Boolean);
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, username, avatar_url")
-      .in("id", userIds);
+    // Make sure spots exist and have user_ids before trying to filter
+    const userIds = spots && spots.length > 0 
+      ? spots.map(spot => spot.user_id).filter(Boolean)
+      : [];
+      
+    // Only fetch profiles if there are user IDs to fetch
+    let profiles = [];
+    if (userIds.length > 0) {
+      const { data: profileData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", userIds);
 
-    if (profilesError) {
-      console.error("Error fetching user profiles:", profilesError);
+      if (profilesError) {
+        console.error("Error fetching user profiles:", profilesError);
+      } else if (profileData) {
+        profiles = profileData;
+      }
     }
 
     // Create a map of user IDs to usernames and avatars
@@ -57,7 +67,7 @@ export async function fetchCommunityAstroSpots() {
     }
 
     const formattedData = (spots || []).map((spot: any) => {
-      const profile = profileMap.get(spot.user_id) || { username: 'Anonymous Stargazer', avatar_url: null };
+      const profile = spot.user_id && profileMap.get(spot.user_id) || { username: 'Anonymous Stargazer', avatar_url: null };
       
       return {
         id: spot.id,
