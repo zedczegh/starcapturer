@@ -1,38 +1,40 @@
 
 /**
- * Format a distance number into a human-readable string
- * @param distance Distance in kilometers
+ * Format distance in kilometers with appropriate units
+ * @param distance - Distance in kilometers
  * @returns Formatted distance string
  */
-export const formatDistance = (distance: number | undefined): string => {
-  if (distance === undefined) return "";
+export const formatDistance = (distance: number): string => {
+  if (distance === undefined || distance === null) return '';
   
+  // For small distances, show in meters
   if (distance < 1) {
-    // Convert to meters if less than 1km
-    return `${Math.round(distance * 1000)}m`;
+    const meters = Math.round(distance * 1000);
+    return `${meters} m`;
   }
   
+  // For medium distances, show with 1 decimal
   if (distance < 10) {
-    // Show one decimal for distances under 10km
-    return `${distance.toFixed(1)}km`;
+    return `${distance.toFixed(1)} km`;
   }
   
-  // Round to nearest integer for larger distances
-  return `${Math.round(distance)}km`;
+  // For larger distances, show as whole number
+  return `${Math.round(distance)} km`;
 };
 
 /**
- * Format a date string into a human-readable format
- * @param dateStr Date string
+ * Format a date to a user-friendly string
+ * @param date - Date string or Date object
  * @returns Formatted date string
  */
-export const formatDate = (dateStr: string | undefined): string => {
-  if (!dateStr) return "";
+export const formatDate = (date: string | Date): string => {
+  if (!date) return '';
   
-  try {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString();
-  } catch (e) {
-    return dateStr;
-  }
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  return dateObj.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  });
 };

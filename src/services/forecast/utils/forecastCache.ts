@@ -1,75 +1,79 @@
 
-
 /**
- * Simple forecast data cache
+ * Cache utility for forecast data
  */
-import { ForecastDayAstroData } from "../types/forecastTypes";
 
-// Cache duration in milliseconds (30 minutes)
-const CACHE_DURATION_MS = 30 * 60 * 1000;
-
-// Interface for cache items
-interface CacheItem<T> {
-  data: T;
-  timestamp: number;
-}
-
-// Cache storage
-const cache: Record<string, CacheItem<any>> = {};
-
-export const forecastCache = {
-  // Store forecast data in cache
-  cacheForecast: (key: string, data: ForecastDayAstroData[] | ForecastDayAstroData): void => {
-    cache[key] = {
-      data,
-      timestamp: Date.now()
-    };
-  },
+class ForecastCache {
+  private cache: Map<string, any> = new Map();
+  private timestamps: Map<string, number> = new Map();
+  private defaultTTL = 60 * 60 * 1000; // 1 hour in milliseconds
   
-  // Get cached forecast data if valid
-  getCachedForecast: <T>(key: string): T | null => {
-    const item = cache[key];
-    
-    if (!item) return null;
-    
-    const isValid = Date.now() - item.timestamp < CACHE_DURATION_MS;
-    
-    return isValid ? item.data : null;
-  },
-  
-  // Clear specific item from cache
-  clearCache: (key: string): void => {
-    delete cache[key];
-  },
-  
-  // Clear all cache items
-  clearAllCache: () => {
-    Object.keys(cache).forEach(key => {
-      delete cache[key];
-    });
-  },
-  
-  // For compatibility with enhancedForecastAstroAdapter
-  invalidateCache: (pattern?: string): void => {
-    if (pattern) {
-      Object.keys(cache).forEach(key => {
-        if (key.includes(pattern)) {
-          delete cache[key];
-        }
-      });
-    } else {
-      Object.keys(cache).forEach(key => {
-        delete cache[key];
-      });
+  /**
+   * Get cached forecast data if available and not expired
+   * @param key - Cache key
+   * @param ttl - Time to live in milliseconds
+   */
+  public getCachedForecast<T>(key: string, ttl: number = this.defaultTTL): T | null {
+    if (!this.cache.has(key)) {
+      return null;
     }
-  },
+    
+    const timestamp = this.timestamps.get(key) || 0;
+    const now = Date.now();
+    
+    // Check if cache is expired
+    if (now - timestamp > ttl) {
+      // Remove expired cache entry
+      this.cache.delete(key);
+      this.timestamps.delete(key);
+      return null;
+    }
+    
+    return this.cache.get(key) as T;
+  }
   
-  // Alternative name for cacheForecast - for compatibility
-  setCachedForecast: (key: string, data: ForecastDayAstroData[] | ForecastDayAstroData): void => {
-    cache[key] = {
-      data,
-      timestamp: Date.now()
+  /**
+   * Set forecast data in cache
+   * @param key - Cache key
+   * @param data - Data to cache
+   */
+  public setCachedForecast<T>(key: string, data: T): void {
+    this.cache.set(key, data);
+    this.timestamps.set(key, Date.now());
+  }
+  
+  /**
+   * Invalidate cache entries
+   * @param pattern - Optional string pattern to match against keys
+   */
+  public invalidateCache(pattern?: string): void {
+    if (!pattern) {
+      // Clear entire cache
+      this.cache.clear();
+      this.timestamps.clear();
+      return;
+    }
+    
+    // Clear entries matching the pattern
+    for (const key of this.cache.keys()) {
+      if (key.includes(pattern)) {
+        this.cache.delete(key);
+        this.timestamps.delete(key);
+      }
+    }
+  }
+  
+  /**
+   * Get cache statistics
+   */
+  public getCacheStats() {
+    return {
+      size: this.cache.size,
+      keys: Array.from(this.cache.keys()),
+      memoryUsageEstimate: JSON.stringify(Array.from(this.cache.entries())).length / 1024
     };
   }
-};
+}
 
+export const forecastCache = new ForecastCache();
+export default forecastCache;

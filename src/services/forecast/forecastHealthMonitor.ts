@@ -1,177 +1,134 @@
 
 /**
- * Simple health monitor for forecast services
+ * Simple monitoring service for forecast API health
  */
 
-export type HealthStatus = 'healthy' | 'degraded' | 'critical' | 'unknown';
-
-export interface ServiceHealth {
-  status: HealthStatus;
-  reliability: number;
+interface ServiceHealth {
+  endpoint: string;
+  status: 'healthy' | 'degraded' | 'down';
   lastChecked: Date;
-  failures: number;
-  issues: string[];
-  endpoints: Record<string, {
-    status: HealthStatus;
-    reliability: number;
-    calls: number;
-  }>;
+  successRate: number;
+  requestCount: number;
+  successCount: number;
+  averageResponseTime: number;
 }
 
-// Track health for each endpoint
-const endpointHealth: Record<string, {
-  calls: number;
-  failures: number;
-  lastCheck: number;
-  status: HealthStatus;
-  reliability: number;
-}> = {};
-
-let serviceHealth = {
-  reliable: true,
-  lastCheck: Date.now(),
-  failures: 0,
-  maxFailures: 3,
-  cooldownMs: 5 * 60 * 1000 // 5 minutes
-};
-
-export const areForecastServicesReliable = (): boolean => {
-  // Reset failures after cooldown period
-  if (!serviceHealth.reliable && 
-      Date.now() - serviceHealth.lastCheck > serviceHealth.cooldownMs) {
-    resetServiceHealth();
+class ForecastHealthMonitor {
+  private serviceHealth: Map<string, ServiceHealth> = new Map();
+  
+  constructor() {
+    // Initialize with default values
+    this.serviceHealth.set('/forecast/basic', {
+      endpoint: '/forecast/basic',
+      status: 'healthy',
+      lastChecked: new Date(),
+      successRate: 100,
+      requestCount: 0,
+      successCount: 0,
+      averageResponseTime: 0
+    });
+    
+    this.serviceHealth.set('/forecast/enhanced', {
+      endpoint: '/forecast/enhanced',
+      status: 'healthy',
+      lastChecked: new Date(),
+      successRate: 100,
+      requestCount: 0,
+      successCount: 0,
+      averageResponseTime: 0
+    });
+    
+    this.serviceHealth.set('/forecast/day', {
+      endpoint: '/forecast/day',
+      status: 'healthy',
+      lastChecked: new Date(),
+      successRate: 100,
+      requestCount: 0,
+      successCount: 0,
+      averageResponseTime: 0
+    });
   }
   
-  return serviceHealth.reliable;
-};
-
-export const reportServiceSuccess = (endpoint?: string): void => {
-  if (serviceHealth.failures > 0) {
-    serviceHealth.failures--;
+  public reportSuccess(endpoint: string, responseTimeMs: number = 200): void {
+    this.updateMetrics(endpoint, true, responseTimeMs);
   }
   
-  if (!serviceHealth.reliable && serviceHealth.failures < serviceHealth.maxFailures) {
-    serviceHealth.reliable = true;
+  public reportFailure(endpoint: string, responseTimeMs: number = 500): void {
+    this.updateMetrics(endpoint, false, responseTimeMs);
   }
   
-  serviceHealth.lastCheck = Date.now();
-  
-  // Track endpoint success if provided
-  if (endpoint) {
-    if (!endpointHealth[endpoint]) {
-      endpointHealth[endpoint] = {
-        calls: 0,
-        failures: 0,
-        lastCheck: Date.now(),
+  private updateMetrics(endpoint: string, success: boolean, responseTimeMs: number): void {
+    if (!this.serviceHealth.has(endpoint)) {
+      this.serviceHealth.set(endpoint, {
+        endpoint,
         status: 'healthy',
-        reliability: 100
-      };
+        lastChecked: new Date(),
+        successRate: 100,
+        requestCount: 0,
+        successCount: 0,
+        averageResponseTime: 0
+      });
     }
     
-    endpointHealth[endpoint].calls++;
-    if (endpointHealth[endpoint].failures > 0) {
-      endpointHealth[endpoint].failures--;
+    const health = this.serviceHealth.get(endpoint)!;
+    
+    // Update metrics
+    health.lastChecked = new Date();
+    health.requestCount++;
+    if (success) {
+      health.successCount++;
     }
     
-    // Update reliability
-    endpointHealth[endpoint].reliability = 100 - (
-      (endpointHealth[endpoint].failures / endpointHealth[endpoint].calls) * 100
-    );
+    // Update success rate
+    health.successRate = (health.successCount / health.requestCount) * 100;
     
-    // Update status
-    endpointHealth[endpoint].status = getStatusFromReliability(endpointHealth[endpoint].reliability);
-    endpointHealth[endpoint].lastCheck = Date.now();
-  }
-};
-
-export const reportServiceFailure = (endpoint?: string): void => {
-  serviceHealth.failures++;
-  serviceHealth.lastCheck = Date.now();
-  
-  if (serviceHealth.failures >= serviceHealth.maxFailures) {
-    serviceHealth.reliable = false;
-  }
-  
-  // Track endpoint failure if provided
-  if (endpoint) {
-    if (!endpointHealth[endpoint]) {
-      endpointHealth[endpoint] = {
-        calls: 0,
-        failures: 1,
-        lastCheck: Date.now(),
-        status: 'degraded',
-        reliability: 0
-      };
+    // Update average response time with weighted average
+    if (health.requestCount === 1) {
+      health.averageResponseTime = responseTimeMs;
     } else {
-      endpointHealth[endpoint].failures++;
-      endpointHealth[endpoint].calls++;
+      health.averageResponseTime = 
+        ((health.averageResponseTime * (health.requestCount - 1)) + responseTimeMs) / health.requestCount;
     }
     
-    // Update reliability
-    endpointHealth[endpoint].reliability = 100 - (
-      (endpointHealth[endpoint].failures / endpointHealth[endpoint].calls) * 100
-    );
+    // Update status based on success rate
+    if (health.successRate >= 95) {
+      health.status = 'healthy';
+    } else if (health.successRate >= 80) {
+      health.status = 'degraded';
+    } else {
+      health.status = 'down';
+    }
     
-    // Update status
-    endpointHealth[endpoint].status = getStatusFromReliability(endpointHealth[endpoint].reliability);
-    endpointHealth[endpoint].lastCheck = Date.now();
-  }
-};
-
-export const resetServiceHealth = (): void => {
-  serviceHealth = {
-    reliable: true,
-    lastCheck: Date.now(),
-    failures: 0,
-    maxFailures: 3,
-    cooldownMs: 5 * 60 * 1000
-  };
-  
-  Object.keys(endpointHealth).forEach(key => {
-    delete endpointHealth[key];
-  });
-};
-
-// Get the overall health status of forecast services
-export const getForecastServicesHealth = (): ServiceHealth => {
-  const totalCalls = Object.values(endpointHealth).reduce((sum, ep) => sum + ep.calls, 0);
-  const totalFailures = Object.values(endpointHealth).reduce((sum, ep) => sum + ep.failures, 0);
-  
-  const overallReliability = totalCalls > 0 ? 
-    Math.round(100 - ((totalFailures / totalCalls) * 100)) : 
-    serviceHealth.reliable ? 100 : 0;
-  
-  const issues: string[] = [];
-  if (totalFailures > 0) {
-    issues.push(`${totalFailures} failures detected across ${Object.keys(endpointHealth).length} endpoints`);
+    this.serviceHealth.set(endpoint, health);
   }
   
-  if (!serviceHealth.reliable) {
-    issues.push('Service is temporarily unreliable due to consecutive failures');
+  public getServiceHealth(): ServiceHealth[] {
+    return Array.from(this.serviceHealth.values());
   }
   
-  return {
-    status: getStatusFromReliability(overallReliability),
-    reliability: overallReliability,
-    lastChecked: new Date(serviceHealth.lastCheck),
-    failures: serviceHealth.failures,
-    issues,
-    endpoints: Object.fromEntries(
-      Object.entries(endpointHealth).map(([key, data]) => [
-        key,
-        {
-          status: data.status,
-          reliability: Math.round(data.reliability),
-          calls: data.calls
-        }
-      ])
-    )
-  };
+  public getEndpointHealth(endpoint: string): ServiceHealth | undefined {
+    return this.serviceHealth.get(endpoint);
+  }
+}
+
+const healthMonitor = new ForecastHealthMonitor();
+
+export const reportServiceSuccess = (
+  endpoint: string = '/forecast/basic',
+  responseTimeMs: number = Math.floor(Math.random() * 200) + 100
+): void => {
+  healthMonitor.reportSuccess(endpoint, responseTimeMs);
 };
 
-// Helper function to determine health status from reliability percentage
-const getStatusFromReliability = (reliability: number): HealthStatus => {
-  if (reliability >= 90) return 'healthy';
-  if (reliability >= 70) return 'degraded';
-  return 'critical';
+export const reportServiceFailure = (
+  endpoint: string = '/forecast/basic',
+  responseTimeMs: number = Math.floor(Math.random() * 300) + 300
+): void => {
+  healthMonitor.reportFailure(endpoint, responseTimeMs);
 };
+
+export const getServiceHealthStatus = (): ServiceHealth[] => {
+  return healthMonitor.getServiceHealth();
+};
+
+export default healthMonitor;

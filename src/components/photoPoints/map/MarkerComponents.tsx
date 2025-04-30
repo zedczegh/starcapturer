@@ -7,7 +7,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Calendar, MapPin } from "lucide-react";
 import { formatDistance } from "@/utils/formatters";
 import { formatSiqsScore } from "@/utils/siqsHelpers";
-import MarkerEventHandler from "./MarkerEventHandler";
 
 // Create custom marker icons
 const createMarkerIcon = (isActive: boolean = false, isCertified: boolean = false) => {
@@ -52,19 +51,18 @@ export const LocationMarker: React.FC<{
     }
   };
   
+  const eventHandlers = {
+    click: handleClick,
+    mouseover: handleMouseOver,
+    mouseout: handleMouseOut
+  };
+  
   return (
     <Marker 
       position={[location.latitude, location.longitude]} 
       icon={icon}
+      eventHandlers={eventHandlers}
     >
-      <MarkerEventHandler 
-        marker={null}
-        eventMap={{
-          click: handleClick,
-          mouseover: handleMouseOver,
-          mouseout: handleMouseOut
-        }}
-      />
       <Popup>
         <div className="flex flex-col">
           <div className="font-semibold">{location.name}</div>
@@ -109,19 +107,18 @@ export const ForecastMarker: React.FC<{
     }
   };
   
+  const eventHandlers = {
+    click: handleClick,
+    mouseover: handleMouseOver,
+    mouseout: handleMouseOut
+  };
+  
   return (
     <Marker 
       position={[location.latitude, location.longitude]} 
       icon={icon}
+      eventHandlers={eventHandlers}
     >
-      <MarkerEventHandler 
-        marker={null}
-        eventMap={{
-          click: handleClick,
-          mouseover: handleMouseOver,
-          mouseout: handleMouseOut
-        }}
-      />
       <Popup>
         <div className="flex flex-col">
           <div className="font-semibold">{location.name}</div>
@@ -149,6 +146,8 @@ export const UserLocationMarker: React.FC<{
   position: [number, number];
   onClick?: () => void;
 }> = ({ position, onClick }) => {
+  const eventHandlers = onClick ? { click: onClick } : {};
+  
   return (
     <Marker 
       position={position}
@@ -158,11 +157,8 @@ export const UserLocationMarker: React.FC<{
         iconAnchor: [12, 12],
         popupAnchor: [0, -12]
       })}
+      eventHandlers={eventHandlers}
     >
-      <MarkerEventHandler 
-        marker={null}
-        eventMap={{ click: onClick }}
-      />
       <Popup>
         <div className="flex items-center">
           <MapPin className="h-4 w-4 mr-2 text-blue-500" />

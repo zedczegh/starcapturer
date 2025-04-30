@@ -1,44 +1,10 @@
 
 /**
- * Geographic utilities
- * IMPORTANT: These functions perform critical calculations.
- * Any changes should be carefully tested against edge cases.
- */
-
-/**
- * Earth's radius in kilometers
- */
-export const EARTH_RADIUS = 6371; 
-
-/**
- * Convert degrees to radians
- */
-export const degToRad = (degrees: number): number => {
-  return degrees * (Math.PI / 180);
-};
-
-// Alias for degToRad for backward compatibility
-export const deg2rad = degToRad;
-
-/**
- * Format distance in kilometers
- * @param distance Distance in kilometers
- * @returns Formatted distance string
- */
-export const formatDistance = (distance: number): string => {
-  if (distance < 1) {
-    return `${(distance * 1000).toFixed(0)} m`;
-  } else {
-    return `${distance.toFixed(1)} km`;
-  }
-};
-
-/**
- * Calculate distance between two coordinates using Haversine formula
- * @param lat1 Latitude of first point in degrees
- * @param lon1 Longitude of first point in degrees
- * @param lat2 Latitude of second point in degrees
- * @param lon2 Longitude of second point in degrees
+ * Calculate the distance between two points using the Haversine formula
+ * @param lat1 Latitude of the first point
+ * @param lon1 Longitude of the first point
+ * @param lat2 Latitude of the second point
+ * @param lon2 Longitude of the second point
  * @returns Distance in kilometers
  */
 export const calculateDistance = (
@@ -47,48 +13,47 @@ export const calculateDistance = (
   lat2: number,
   lon2: number
 ): number => {
-  const R = EARTH_RADIUS; // Earth's radius in kilometers
-  const dLat = degToRad(lat2 - lat1);
-  const dLon = degToRad(lon2 - lon1);
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(degToRad(lat1)) * Math.cos(degToRad(lat2)) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c; // Distance in km
+  
+  return distance;
 };
 
 /**
- * Helper functions for SIQS score handling
+ * Convert degrees to radians
+ * @param deg Degrees
+ * @returns Radians
  */
-
-/**
- * Get a safe SIQS score regardless of input format
- */
-export const getSafeScore = (siqs?: number | { score: number; isViable: boolean }): number => {
-  if (siqs === undefined) return 0;
-  if (typeof siqs === 'number') return siqs;
-  if (typeof siqs === 'object' && siqs !== null && 'score' in siqs) {
-    return siqs.score;
-  }
-  return 0;
+const deg2rad = (deg: number): number => {
+  return deg * (Math.PI / 180);
 };
 
 /**
- * Format SIQS score for display
+ * Check if a location is within a specific radius of another location
+ * @param centerLat Center point latitude
+ * @param centerLon Center point longitude
+ * @param pointLat Point to check latitude
+ * @param pointLon Point to check longitude
+ * @param radiusKm Radius in kilometers
+ * @returns Boolean indicating if the point is within the radius
  */
-export const formatSIQSScore = (
-  siqs?: number | { score: number; isViable: boolean }, 
-  decimals: number = 1
-): string => {
-  const score = getSafeScore(siqs);
-  return score ? score.toFixed(decimals) : 'N/A';
-};
-
-/**
- * Check if a location is in water
- */
-export const isWaterLocation = (lat: number, lon: number, checkCoastal: boolean = true): boolean => {
-  // Import replaced with direct implementation
-  return false; // Simplified implementation
+export const isWithinRadius = (
+  centerLat: number,
+  centerLon: number,
+  pointLat: number,
+  pointLon: number,
+  radiusKm: number
+): boolean => {
+  const distance = calculateDistance(centerLat, centerLon, pointLat, pointLon);
+  return distance <= radiusKm;
 };

@@ -1,61 +1,41 @@
 
-import React from "react";
-import { TileLayer, Circle, useMap } from "react-leaflet";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { LocationMarker, ForecastMarker, UserLocationMarker } from "../MarkerComponents";
+import React, { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Circle, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import LocationMarker from '../LocationMarker';
+import { UserLocationMarker, ForecastMarker } from '../MarkerComponents';
+import L from 'leaflet';
 
-interface MapContentProps {
+export interface MapContentProps {
   center: [number, number];
-  zoom: number;
-  locations: SharedAstroSpot[];
+  zoom?: number;
   userLocation: { latitude: number; longitude: number } | null;
-  searchRadius: number;
-  activeView: 'certified' | 'calculated';
-  onMarkerClick: (location: SharedAstroSpot) => void;
-  onMapClick?: (lat: number, lng: number) => void;
-  selectedLocationId?: string | null;
+  displayLocations: SharedAstroSpot[];
   isMobile: boolean;
-  forecastLocations?: SharedAstroSpot[];
+  activeView: 'certified' | 'calculated';
+  searchRadius: number;
+  showRadiusCircles?: boolean;
+  onMapClick?: (lat: number, lng: number) => void;
+  onLocationClick?: (location: SharedAstroSpot) => void;
+  hoveredLocationId?: string | null;
+  onMarkerHover?: (id: string | null) => void;
+  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove?: (e: React.TouchEvent) => void;
+  useMobileMapFixer?: boolean;
+  mapRef: React.RefObject<L.Map>;
+  onMapReady?: () => void;
+  currentSiqs?: number | null;
   showForecast?: boolean;
+  forecastDay?: number;
 }
 
-// Helper to divide locations into certified and regular
-const separateLocations = (locations: SharedAstroSpot[]) => {
-  const certified: SharedAstroSpot[] = [];
-  const regular: SharedAstroSpot[] = [];
-  
-  locations.forEach(location => {
-    if (location.isDarkSkyReserve || location.certification) {
-      certified.push(location);
-    } else {
-      regular.push(location);
-    }
-  });
-  
-  return { certified, regular };
-};
-
-const MapContent: React.FC<MapContentProps> = ({
-  center,
-  zoom,
-  locations,
-  userLocation,
-  searchRadius,
-  activeView,
-  onMarkerClick,
-  onMapClick,
-  selectedLocationId,
-  isMobile,
-  forecastLocations = [],
-  showForecast = false
-}) => {
+// Helper component to handle map events
+const MapEvents = ({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }) => {
   const map = useMap();
-  const { certified, regular } = separateLocations(locations);
   
-  console.log(`Processing locations - activeView: ${activeView}, certified: ${certified.length}, regular: ${regular.length}`);
-  
-  // Handle map clicks
-  React.useEffect(() => {
+  useEffect(() => {
     if (!onMapClick) return;
     
     const handleClick = (e: L.LeafletMouseEvent) => {
@@ -68,109 +48,107 @@ const MapContent: React.FC<MapContentProps> = ({
     };
   }, [map, onMapClick]);
   
-  // Center map when location changes
-  React.useEffect(() => {
-    if (center && zoom) {
-      map.setView(center, zoom);
+  return null;
+};
+
+const MapContent: React.FC<MapContentProps> = ({
+  center,
+  zoom = 10,
+  userLocation,
+  displayLocations,
+  isMobile,
+  activeView,
+  searchRadius,
+  showRadiusCircles = false,
+  onMapClick,
+  onLocationClick,
+  hoveredLocationId,
+  onMarkerHover,
+  handleTouchStart,
+  handleTouchEnd,
+  handleTouchMove,
+  useMobileMapFixer = false,
+  mapRef,
+  onMapReady,
+  currentSiqs,
+  showForecast = false,
+  forecastDay = 0
+}) => {
+
+  // Set up map when component mounts
+  useEffect(() => {
+    if (onMapReady) {
+      onMapReady();
     }
-  }, [center, zoom, map]);
-  
-  // Memoize markers to prevent unnecessary re-renders
-  const regularMarkers = React.useMemo(() => {
-    return regular.map((location) => {
-      const isActive = selectedLocationId === location.id;
-      const handleMarkerClick = () => {
-        onMarkerClick(location);
-      };
-      
-      return (
-        <LocationMarker
-          key={`reg-${location.id || `${location.latitude}-${location.longitude}`}`}
-          location={location}
-          isActive={isActive}
-          onClick={handleMarkerClick}
-        />
-      );
-    });
-  }, [regular, selectedLocationId, onMarkerClick]);
-  
-  const certifiedMarkers = React.useMemo(() => {
-    return certified.map((location) => {
-      const isActive = selectedLocationId === location.id;
-      const handleMarkerClick = () => {
-        onMarkerClick(location);
-      };
-      
-      return (
-        <LocationMarker
-          key={`cert-${location.id || `${location.latitude}-${location.longitude}`}`}
-          location={location}
-          isActive={isActive}
-          onClick={handleMarkerClick}
-        />
-      );
-    });
-  }, [certified, selectedLocationId, onMarkerClick]);
-  
-  // Render forecast markers if enabled
-  const forecastMarkersComponent = React.useMemo(() => {
-    if (!showForecast || forecastLocations.length === 0) return null;
-    
-    return forecastLocations.map((location) => {
-      if (!location.isForecast) return null;
-      
-      const isActive = selectedLocationId === location.id;
-      const handleMarkerClick = () => {
-        onMarkerClick(location);
-      };
-      
-      return (
-        <ForecastMarker
-          key={`forecast-${location.id || `${location.latitude}-${location.longitude}`}`}
-          location={location}
-          isActive={isActive}
-          onClick={handleMarkerClick}
-        />
-      );
-    });
-  }, [forecastLocations, showForecast, selectedLocationId, onMarkerClick]);
+  }, [onMapReady]);
   
   return (
-    <>
+    <MapContainer
+      center={center}
+      zoom={zoom}
+      scrollWheelZoom={true}
+      style={{ height: '100%', width: '100%' }}
+      ref={mapRef}
+      className="z-0"
+    >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {/* Display user's location if available */}
-      {userLocation && (
-        <UserLocationMarker position={[userLocation.latitude, userLocation.longitude]} />
-      )}
-      
-      {/* Display search radius for calculated view */}
-      {userLocation && activeView === 'calculated' && (
-        <Circle
-          center={[userLocation.latitude, userLocation.longitude]}
+      {/* Show search radius circle */}
+      {userLocation && showRadiusCircles && (
+        <Circle 
+          center={[userLocation.latitude, userLocation.longitude]} 
           radius={searchRadius * 1000} // Convert km to meters
           pathOptions={{ 
-            color: '#2563eb',
-            fillColor: '#3b82f6',
-            fillOpacity: 0.05,
+            color: 'rgba(66, 133, 244, 0.6)',
             weight: 1,
-            dashArray: '5, 5'
-          }}
+            fillOpacity: 0.05
+          }} 
         />
       )}
       
-      {/* Render regular markers */}
-      {regularMarkers}
+      {/* User's current location marker */}
+      {userLocation && (
+        <UserLocationMarker 
+          position={[userLocation.latitude, userLocation.longitude]}
+          onClick={() => console.log('Current location clicked')}
+        />
+      )}
       
-      {/* Render certified markers always on top */}
-      {certifiedMarkers}
+      {/* Regular location markers */}
+      {displayLocations.filter(location => !location.isForecast).map(location => (
+        <LocationMarker 
+          key={`${location.latitude}-${location.longitude}`}
+          location={location}
+          onClick={onLocationClick ? (loc) => onLocationClick(loc) : () => {}}
+          isHovered={hoveredLocationId === location.id}
+          onHover={onMarkerHover ? (id) => onMarkerHover(id) : () => {}}
+          locationId={location.id || `loc-${location.latitude}-${location.longitude}`}
+          isCertified={Boolean(location.isDarkSkyReserve || location.certification)}
+          activeView={activeView}
+          handleTouchStart={handleTouchStart}
+          handleTouchEnd={handleTouchEnd}
+          handleTouchMove={handleTouchMove}
+        />
+      ))}
       
-      {/* Render forecast markers if enabled */}
-      {forecastMarkersComponent}
-    </>
+      {/* Forecast location markers */}
+      {showForecast && displayLocations.filter(location => location.isForecast && location.forecastDay === forecastDay).map(location => (
+        <ForecastMarker 
+          key={`forecast-${location.latitude}-${location.longitude}`}
+          location={location}
+          onClick={onLocationClick ? (loc) => onLocationClick(loc) : () => {}}
+          onMouseOver={onMarkerHover ? (id) => onMarkerHover(id) : () => {}}
+          onMouseOut={onMarkerHover ? () => onMarkerHover(null) : () => {}}
+          isActive={hoveredLocationId === location.id}
+        />
+      ))}
+      
+      {/* Map event handlers */}
+      {onMapClick && <MapEvents onMapClick={onMapClick} />}
+    </MapContainer>
   );
 };
 

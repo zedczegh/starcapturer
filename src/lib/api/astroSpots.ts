@@ -1,7 +1,7 @@
 
 // Add the forecast properties to the SharedAstroSpot interface
 export interface SharedAstroSpot {
-  id?: string;
+  id: string; // Changed from optional to required
   name: string;
   chineseName?: string;
   latitude: number;
