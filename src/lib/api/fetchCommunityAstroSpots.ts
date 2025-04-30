@@ -22,7 +22,9 @@ export async function fetchCommunityAstroSpots() {
         siqs,
         description,
         created_at,
-        user_id
+        user_id,
+        default_price,
+        currency
       `)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -36,32 +38,42 @@ export async function fetchCommunityAstroSpots() {
     const userIds = spots.map(spot => spot.user_id).filter(Boolean);
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
-      .select("id, username")
+      .select("id, username, avatar_url")
       .in("id", userIds);
 
     if (profilesError) {
       console.error("Error fetching user profiles:", profilesError);
     }
 
-    // Create a map of user IDs to usernames
-    const usernameMap = new Map();
+    // Create a map of user IDs to usernames and avatars
+    const profileMap = new Map();
     if (profiles && profiles.length > 0) {
       profiles.forEach(profile => {
-        usernameMap.set(profile.id, profile.username);
+        profileMap.set(profile.id, {
+          username: profile.username,
+          avatar_url: profile.avatar_url
+        });
       });
     }
 
-    const formattedData = (spots || []).map((spot: any) => ({
-      id: spot.id,
-      name: spot.name,
-      latitude: Number(spot.latitude),
-      longitude: Number(spot.longitude),
-      bortleScale: spot.bortlescale ?? 4,
-      siqs: spot.siqs,
-      description: spot.description,
-      timestamp: spot.created_at,
-      username: usernameMap.get(spot.user_id) || 'Anonymous Stargazer'
-    }));
+    const formattedData = (spots || []).map((spot: any) => {
+      const profile = profileMap.get(spot.user_id) || { username: 'Anonymous Stargazer', avatar_url: null };
+      
+      return {
+        id: spot.id,
+        name: spot.name,
+        latitude: Number(spot.latitude),
+        longitude: Number(spot.longitude),
+        bortleScale: spot.bortlescale ?? 4,
+        siqs: spot.siqs,
+        description: spot.description,
+        timestamp: spot.created_at,
+        username: profile.username || 'Anonymous Stargazer',
+        user_id: spot.user_id, // Include the user_id for avatar lookup
+        default_price: spot.default_price,
+        currency: spot.currency
+      };
+    });
 
     spotCacheService.cacheSpots(0, 0, 0, 50, formattedData);
     return formattedData;

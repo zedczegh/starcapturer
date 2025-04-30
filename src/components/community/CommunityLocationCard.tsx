@@ -1,9 +1,12 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import LocationCard from "@/components/LocationCard";
+import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { User } from "lucide-react";
 
 interface CommunityLocationCardProps {
   spot: SharedAstroSpot;
@@ -19,6 +22,30 @@ const CommunityLocationCard: React.FC<CommunityLocationCardProps> = ({
   onInView
 }) => {
   const { t } = useLanguage();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  
+  // Fetch user avatar when spot changes
+  useEffect(() => {
+    const fetchUserAvatar = async () => {
+      if (!spot.user_id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', spot.user_id)
+          .maybeSingle();
+        
+        if (data && data.avatar_url) {
+          setAvatarUrl(data.avatar_url);
+        }
+      } catch (error) {
+        console.error("Error fetching user avatar:", error);
+      }
+    };
+    
+    fetchUserAvatar();
+  }, [spot.user_id]);
   
   return (
     <motion.button
@@ -42,7 +69,20 @@ const CommunityLocationCard: React.FC<CommunityLocationCardProps> = ({
             siqs={spot.siqs}
             timestamp={spot.timestamp}
             isCertified={!!spot.certification || !!spot.isDarkSkyReserve}
-            username={spot.username || t('Anonymous Stargazer', '匿名观星者')}
+            username={
+              <div className="flex items-center gap-2">
+                <Avatar className="h-5 w-5">
+                  {avatarUrl ? (
+                    <AvatarImage src={avatarUrl} alt={spot.username || t('Anonymous', '匿名')} />
+                  ) : (
+                    <AvatarFallback className="bg-primary/20 text-primary">
+                      <User className="h-3 w-3" />
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <span>{spot.username || t('Anonymous Stargazer', '匿名观星者')}</span>
+              </div>
+            }
             hideSiqs={true}
             price={spot.default_price}
             currency={spot.currency || '$'}
