@@ -1,127 +1,109 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import L from 'leaflet';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * Manages marker creation, updates, and cleanup for map components
+ * MarkerManager class for handling map marker operations
  */
 class MarkerManager {
   private markers: Map<string, L.Marker> = new Map();
+  private markerLayer: L.LayerGroup | null = null;
   private map: L.Map | null = null;
   
   /**
-   * Set the map instance for this marker manager
+   * Initialize the marker manager with a map
    */
-  setMap(map: L.Map): void {
+  initialize(map: L.Map) {
     this.map = map;
+    this.markerLayer = L.layerGroup().addTo(map);
+    return this;
   }
   
   /**
-   * Create markers for all locations and add them to the map
+   * Create a marker for a location
    */
-  createMarkers(
-    locations: SharedAstroSpot[],
-    createMarkerFn: (location: SharedAstroSpot) => L.Marker
-  ): void {
-    if (!this.map) return;
+  createMarker(location: SharedAstroSpot, icon: L.Icon): L.Marker {
+    if (!location.latitude || !location.longitude) {
+      throw new Error('Invalid location coordinates');
+    }
     
-    // Clear existing markers
-    this.clearMarkers();
+    const marker = L.marker([location.latitude, location.longitude], { icon });
+    const locationId = location.id || `${location.latitude}-${location.longitude}`;
     
-    // Create new markers
-    locations.forEach(location => {
-      const marker = createMarkerFn(location);
-      
-      if (marker) {
-        const key = this.getLocationKey(location);
-        this.markers.set(key, marker);
-        marker.addTo(this.map!);
-      }
-    });
+    this.markers.set(locationId, marker);
+    
+    if (this.markerLayer) {
+      marker.addTo(this.markerLayer);
+    }
+    
+    return marker;
   }
   
   /**
-   * Update existing markers based on new locations
+   * Get a marker by location ID
    */
-  updateMarkers(
-    locations: SharedAstroSpot[],
-    createMarkerFn: (location: SharedAstroSpot) => L.Marker
-  ): void {
-    if (!this.map) return;
-    
-    // Track which markers should be removed
-    const existingKeys = new Set(this.markers.keys());
-    
-    // Update or add markers for each location
-    locations.forEach(location => {
-      const key = this.getLocationKey(location);
-      existingKeys.delete(key);
-      
-      // Update or create marker
-      if (this.markers.has(key)) {
-        // Update existing marker if needed
-        const existingMarker = this.markers.get(key);
-        existingMarker?.setLatLng([location.latitude, location.longitude]);
-      } else {
-        // Create new marker
-        const marker = createMarkerFn(location);
-        if (marker) {
-          this.markers.set(key, marker);
-          marker.addTo(this.map!);
-        }
-      }
-    });
-    
-    // Remove any markers that are no longer needed
-    existingKeys.forEach(key => {
-      const marker = this.markers.get(key);
-      if (marker) {
-        marker.remove();
-        this.markers.delete(key);
-      }
-    });
+  getMarker(locationId: string): L.Marker | undefined {
+    return this.markers.get(locationId);
   }
   
   /**
-   * Remove all markers from the map and clear the markers collection
+   * Remove a marker by location ID
+   */
+  removeMarker(locationId: string): boolean {
+    const marker = this.markers.get(locationId);
+    
+    if (marker && this.markerLayer) {
+      this.markerLayer.removeLayer(marker);
+      this.markers.delete(locationId);
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Clear all markers
    */
   clearMarkers(): void {
-    this.markers.forEach(marker => {
-      marker.remove();
-    });
+    if (this.markerLayer) {
+      this.markerLayer.clearLayers();
+    }
     this.markers.clear();
   }
   
   /**
-   * Get a unique key for a location to use in the markers map
+   * Update marker icon
    */
-  private getLocationKey(location: SharedAstroSpot): string {
-    return location.id || `${location.latitude}-${location.longitude}`;
+  updateMarkerIcon(locationId: string, icon: L.Icon): boolean {
+    const marker = this.markers.get(locationId);
+    
+    if (marker) {
+      marker.setIcon(icon);
+      return true;
+    }
+    
+    return false;
   }
   
   /**
-   * Get number of active markers
+   * Get all markers
    */
-  getMarkerCount(): number {
-    return this.markers.size;
+  getAllMarkers(): L.Marker[] {
+    return Array.from(this.markers.values());
   }
   
   /**
-   * Check if a marker exists for a location
+   * Destroy the manager
    */
-  hasMarker(location: SharedAstroSpot): boolean {
-    const key = this.getLocationKey(location);
-    return this.markers.has(key);
-  }
-  
-  /**
-   * Get a marker for a location if it exists
-   */
-  getMarker(location: SharedAstroSpot): L.Marker | undefined {
-    const key = this.getLocationKey(location);
-    return this.markers.get(key);
+  destroy(): void {
+    if (this.markerLayer && this.map) {
+      this.map.removeLayer(this.markerLayer);
+    }
+    
+    this.markers.clear();
+    this.markerLayer = null;
+    this.map = null;
   }
 }
 
-// Export the MarkerManager class as default
 export default MarkerManager;

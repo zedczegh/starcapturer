@@ -3,10 +3,10 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { LocationMarker } from '../LocationMarker';
+import LocationMarker from '../LocationMarker';
 import { ForecastMarker } from '../MarkerComponents';
-import { UserLocationMarker } from './UserLocationMarker';
-import { RadiusCircles } from './RadiusCircles';
+import UserLocationMarker from './UserLocationMarker';
+import RadiusCircles from './RadiusCircles';
 
 // Helper component for map interaction
 const MapInteraction = ({
@@ -127,7 +127,6 @@ const MapContent: React.FC<MapContentProps> = ({
       zoom={zoom}
       style={{ height: '100%', width: '100%' }}
       attributionControl={false}
-      zoomControl={!isMobile}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

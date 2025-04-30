@@ -34,3 +34,4 @@ const RadiusCircles: React.FC<RadiusCirclesProps> = ({ center, searchRadius }) =
 };
 
 export default RadiusCircles;
+export { RadiusCircles };

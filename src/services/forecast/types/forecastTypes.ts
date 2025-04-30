@@ -83,3 +83,10 @@ export interface EnhancedLocation {
   bortleScale?: number;
   forecastDay?: number;
 }
+
+// Define a cache interface for forecast data
+export interface ForecastCache {
+  getCachedForecast: (key: string) => ForecastDayAstroData | null;
+  cacheForecast: (key: string, data: ForecastDayAstroData) => void;
+  clearAllCache: () => void;
+}

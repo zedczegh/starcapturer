@@ -56,10 +56,8 @@ export const LocationMarker: React.FC<{
       position={[location.latitude, location.longitude]} 
       icon={icon}
       onClick={handleClick} 
-      eventHandlers={{
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut
-      }}
+      onMouseover={handleMouseOver}
+      onMouseout={handleMouseOut}
     >
       <Popup>
         <div className="flex flex-col">
@@ -110,10 +108,8 @@ export const ForecastMarker: React.FC<{
       position={[location.latitude, location.longitude]} 
       icon={icon}
       onClick={handleClick}
-      eventHandlers={{
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut
-      }}
+      onMouseover={handleMouseOver}
+      onMouseout={handleMouseOut}
     >
       <Popup>
         <div className="flex flex-col">
@@ -142,6 +138,10 @@ export const UserLocationMarker: React.FC<{
   position: [number, number];
   onClick?: () => void;
 }> = ({ position, onClick }) => {
+  const handleClick = () => {
+    if (onClick) onClick();
+  };
+  
   return (
     <Marker 
       position={position}
@@ -151,7 +151,7 @@ export const UserLocationMarker: React.FC<{
         iconAnchor: [12, 12],
         popupAnchor: [0, -12]
       })}
-      onClick={onClick}
+      onClick={handleClick}
     >
       <Popup>
         <div className="flex items-center">

@@ -45,3 +45,4 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position, curre
 };
 
 export default UserLocationMarker;
+export { UserLocationMarker };
