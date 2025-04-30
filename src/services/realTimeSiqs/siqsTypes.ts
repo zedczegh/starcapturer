@@ -41,3 +41,173 @@ export interface SiqsCalculationResponse {
   /** Timestamp of calculation */
   timestamp: string;
 }
+
+/**
+ * Weather data with clear sky information
+ */
+export interface WeatherDataWithClearSky {
+  /** Cloud cover percentage (0-100) */
+  cloudCover: number;
+  
+  /** Temperature in celsius */
+  temperature?: number;
+  
+  /** Humidity percentage (0-100) */
+  humidity?: number;
+  
+  /** Wind speed in km/h */
+  windSpeed?: number;
+  
+  /** Precipitation amount in mm */
+  precipitation?: number;
+  
+  /** Weather condition descriptor */
+  weatherCondition?: string;
+  
+  /** Annual clear sky rate percentage */
+  clearSkyRate?: number;
+  
+  /** Air Quality Index */
+  aqi?: number;
+  
+  /** Latitude of data point */
+  latitude: number;
+  
+  /** Longitude of data point */
+  longitude: number;
+  
+  /** Nighttime cloud data */
+  nighttimeCloudData?: {
+    /** Average cloud cover percentage during night */
+    average: number | null;
+    
+    /** Evening cloud cover percentage */
+    evening?: number | null;
+    
+    /** Morning cloud cover percentage */
+    morning?: number | null;
+    
+    /** Time range for data */
+    timeRange?: string;
+    
+    /** Source of data (forecast, calculated, historical) */
+    sourceType?: 'forecast' | 'calculated' | 'historical';
+  };
+  
+  /** Forecast data for calculations */
+  _forecast?: any;
+}
+
+/**
+ * Result of SIQS calculation
+ */
+export interface SiqsResult {
+  /** SIQS score (0-10, higher is better) */
+  siqs: number;
+  
+  /** Whether conditions are viable for astrophotography */
+  isViable: boolean;
+  
+  /** Individual factor results */
+  factors?: {
+    /** Factor name */
+    name: string;
+    
+    /** Factor score (0-10 scale) */
+    score: number;
+    
+    /** Description of the factor */
+    description: string;
+    
+    /** Nighttime data if available */
+    nighttimeData?: any;
+  }[];
+  
+  /** Weather data used for calculation */
+  weatherData?: WeatherDataWithClearSky;
+  
+  /** Forecast data used for calculation */
+  forecastData?: any;
+  
+  /** Additional metadata */
+  metadata?: {
+    /** When calculation was performed */
+    calculatedAt: string;
+    
+    /** Data sources used */
+    sources?: {
+      /** Whether weather data was used */
+      weather: boolean;
+      
+      /** Whether forecast data was used */
+      forecast: boolean;
+      
+      /** Whether clear sky data was used */
+      clearSky: boolean;
+      
+      /** Whether light pollution data was used */
+      lightPollution: boolean;
+      
+      /** Whether terrain correction was applied */
+      terrainCorrected: boolean;
+      
+      /** Whether climate data was used */
+      climate: boolean;
+      
+      /** Whether single hour sampling was used */
+      singleHourSampling: boolean;
+    };
+  };
+}
+
+/**
+ * Moon phase information
+ */
+export interface MoonPhaseInfo {
+  /** Moon phase (0-1, 0=new moon, 0.5=full moon) */
+  phase: number;
+  
+  /** Moon phase name */
+  name: string;
+  
+  /** Illumination percentage */
+  illumination: number;
+  
+  /** Whether conditions are good for astronomy */
+  isGoodForAstronomy: boolean;
+}
+
+/**
+ * Moonless night information for astronomical viewing
+ */
+export interface MoonlessNightInfo {
+  /** Duration in hours */
+  duration: number;
+  
+  /** Start time (string format) */
+  startTime: string;
+  
+  /** End time (string format) */
+  endTime: string;
+  
+  /** Moonrise time */
+  moonrise: Date | string;
+  
+  /** Moonset time */
+  moonset: Date | string;
+  
+  /** Date of next new moon */
+  nextNewMoon: string;
+  
+  /** Days until next new moon */
+  daysUntilNewMoon: number;
+  
+  /** Start of astronomical night */
+  astronomicalNightStart: string;
+  
+  /** End of astronomical night */
+  astronomicalNightEnd: string;
+  
+  /** Duration of astronomical night in hours */
+  astronomicalNightDuration: number;
+}
