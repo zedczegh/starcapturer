@@ -16,7 +16,7 @@ interface LocationCardProps {
   siqs: number | { score: number; isViable: boolean } | null | undefined;
   timestamp?: string;
   isCertified?: boolean;
-  username?: string;
+  username?: React.ReactNode; // Change from string to ReactNode
   hideSiqs?: boolean;
   price?: number;
   currency?: string;

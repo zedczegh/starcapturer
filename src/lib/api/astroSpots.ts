@@ -8,6 +8,7 @@ export interface SharedAstroSpot {
   longitude: number;
   timestamp: string;
   username?: string;
+  user_id?: string; // Add user_id property
   bortleScale: number; // Changed from optional to required to match weather.d.ts
   siqs?: number | null | { score: number; isViable: boolean };
   certification?: string;
