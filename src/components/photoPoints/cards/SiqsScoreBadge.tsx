@@ -1,147 +1,114 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Star } from 'lucide-react';
-import { getSiqsScore, normalizeToSiqsScale } from '@/utils/siqsHelpers';
-import ScoreBadgeContainer from '@/components/siqs/score/ScoreBadgeContainer';
-import { formatSiqsForDisplay } from '@/utils/siqsHelpers';
-import { motion } from 'framer-motion';
+import React, { useMemo } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { getSiqsColorClass, formatSiqs, getSiqsQuality } from '@/utils/forecast/forecastSiqsUtils';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { cn } from '@/lib/utils';
 
 interface SiqsScoreBadgeProps {
-  score: number | string | { score: number; isViable: boolean } | any;
-  loading?: boolean;
+  score: number | null;
   compact?: boolean;
   isCertified?: boolean;
   forceCertified?: boolean;
+  loading?: boolean;
   confidenceScore?: number;
 }
 
-const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({ 
-  score, 
-  loading = false,
+// Cache badge content for identical scores to reduce re-rendering
+const contentCache = new Map<string, JSX.Element>();
+
+const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
+  score,
   compact = false,
   isCertified = false,
-  forceCertified = false
+  forceCertified = false,
+  loading = false,
+  confidenceScore = 10
 }) => {
-  const [displayedScore, setDisplayedScore] = useState<number | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [loadingState, setLoadingState] = useState(loading);
-  const stableScoreRef = useRef<number | null>(null);
-  const loadingTimeoutRef = useRef<number | null>(null);
-  const loadingRetryCountRef = useRef(0);
+  const { t } = useLanguage();
   
-  // Parse score to numeric value, handling different formats
-  const numericScore = score === null ? 0 : getSiqsScore(score);
-
-  // SIQS values of 0 are likely invalid, so treat as undefined unless forceCertified
-  const validNumericScore = (numericScore > 0 || forceCertified) ? numericScore : null;
-  const showLoading = loading && !stableScoreRef.current && loadingRetryCountRef.current < 3;
-
-  const clearTimeouts = () => {
-    if (loadingTimeoutRef.current !== null) {
-      window.clearTimeout(loadingTimeoutRef.current);
-      loadingTimeoutRef.current = null;
-    }
-  };
-
-  useEffect(() => {
-    // Always update stable score if we have a valid value
-    if (numericScore > 0) {
-      stableScoreRef.current = numericScore;
+  // Create unique key for caching
+  const cacheKey = `${score}-${compact}-${isCertified}-${loading}-${confidenceScore}`;
+  
+  // Use memoization to prevent unnecessary re-renders
+  const badgeContent = useMemo(() => {
+    // Check cache first
+    if (contentCache.has(cacheKey)) {
+      return contentCache.get(cacheKey);
     }
     
-    if (showLoading) {
-      setLoadingState(true);
-      clearTimeouts();
+    let content: JSX.Element;
+    
+    if (loading) {
+      content = (
+        <Badge variant="outline" className="animate-pulse bg-cosmic-900/30 text-xs font-medium whitespace-nowrap">
+          {t("Calculating...", "计算中...")}
+        </Badge>
+      );
+    } else if (score === null) {
+      content = (
+        <Badge variant="outline" className="bg-cosmic-900/30 text-xs font-medium">
+          {t("No data", "无数据")}
+        </Badge>
+      );
+    } else {
+      const formattedScore = formatSiqs(score);
+      const quality = getSiqsQuality(score);
+      const colorClass = getSiqsColorClass(score);
       
-      loadingTimeoutRef.current = window.setTimeout(() => {
-        loadingRetryCountRef.current += 1;
-        
-        if (numericScore > 0) {
-          setDisplayedScore(numericScore);
-          setLoadingState(false);
-        } else if (stableScoreRef.current) {
-          setDisplayedScore(stableScoreRef.current);
-          setLoadingState(false);
-        } else {
-          if (loadingRetryCountRef.current >= 3) {
-            setDisplayedScore(null);
-            setLoadingState(false);
-          } else {
-            setLoadingState(true);
-          }
-        }
-      }, 800);
+      const bgClass = `${colorClass} text-black`;
       
-      return clearTimeouts;
+      // Adjust badge appearance based on confidence score
+      const confidenceOpacity = confidenceScore >= 7 ? 1 : (confidenceScore >= 5 ? 0.85 : 0.7);
+      
+      content = (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge 
+              className={cn(
+                "text-xs font-bold", 
+                bgClass,
+                "transition-all duration-300",
+                compact ? "py-0.5 px-1" : "py-1 px-2",
+                { "opacity-90": confidenceOpacity < 1 }
+              )}
+              style={{ opacity: confidenceOpacity }}
+            >
+              {compact ? formattedScore : `SIQS: ${formattedScore} - ${t(quality, '')}`}
+              {(isCertified || forceCertified) && (
+                <span className="ml-1">★</span>
+              )}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={5}>
+            <p>
+              {t("Sky quality score: ", "天空质量评分: ")}
+              <span className="font-bold">{formattedScore}</span> 
+              {" - "}
+              <span>{t(quality, "")}</span>
+            </p>
+            {(isCertified || forceCertified) && (
+              <p className="text-xs mt-1 text-amber-400">
+                {t("Certified location", "认证地点")}
+              </p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      );
     }
-
-    // For certified locations or when we have a valid score, update display
-    if (validNumericScore !== null || isCertified || forceCertified) {
-      if (displayedScore === null || (validNumericScore && Math.abs((displayedScore || 0) - validNumericScore) >= 0.2)) {
-        setIsTransitioning(true);
-        const transitionTimer = setTimeout(() => {
-          setDisplayedScore(validNumericScore);
-          setIsTransitioning(false);
-        }, 300);
-        
-        return () => clearTimeout(transitionTimer);
-      } else if (validNumericScore && displayedScore !== validNumericScore) {
-        setDisplayedScore(validNumericScore);
-      }
+    
+    // Store in cache
+    if (contentCache.size > 50) {
+      // Clear cache if it gets too large
+      contentCache.clear();
     }
-  }, [numericScore, showLoading, displayedScore, isCertified, forceCertified, validNumericScore]);
-
-  useEffect(() => {
-    return clearTimeouts;
-  }, []);
-
-  // Debug logging
-  useEffect(() => {
-    console.log(`SiqsScoreBadge - score: ${JSON.stringify(score)}, numericScore: ${numericScore}, displayed: ${displayedScore}, stable: ${stableScoreRef.current}`);
-  }, [score, numericScore, displayedScore]);
-
-  // Early returns for cases where we shouldn't display a badge
-  if ((numericScore <= 0 && !loadingState && !forceCertified && !isCertified && !stableScoreRef.current)) {
-    console.log("SiqsScoreBadge - early return: no valid score");
-    return null;
-  }
-
-  if (loadingState && !stableScoreRef.current) {
-    return (
-      <motion.div 
-        className="flex items-center bg-cosmic-700/50 text-muted-foreground px-2 py-0.5 rounded-full border border-cosmic-600/30"
-        layout
-        animate={{ opacity: [0.6, 0.8, 0.6] }}
-        transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
-      >
-        <Star className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-gray-400 mr-1`} fill="#475569" />
-        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>...</span>
-      </motion.div>
-    );
-  }
-
-  // Fallbacks to ensure we always have a score to display
-  const scoreToDisplay = displayedScore ?? stableScoreRef.current ?? (numericScore > 0 ? numericScore : null);
+    contentCache.set(cacheKey, content);
+    
+    return content;
+  }, [score, compact, isCertified, forceCertified, loading, confidenceScore, t, cacheKey]);
   
-  // If after all fallbacks we still don't have a score, return null
-  if (scoreToDisplay === null) {
-    console.log("SiqsScoreBadge - final return: no score to display");
-    return null;
-  }
-
-  const formattedScore = formatSiqsForDisplay(scoreToDisplay);
-
-  return (
-    <ScoreBadgeContainer score={scoreToDisplay} isTransitioning={isTransitioning}>
-      <Star 
-        className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-yellow-400 mr-1`} 
-        fill="#facc15" 
-      />
-      <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
-        {formattedScore}
-      </span>
-    </ScoreBadgeContainer>
-  );
+  return badgeContent;
 };
 
 export default React.memo(SiqsScoreBadge);

@@ -1,298 +1,116 @@
 
 import { calculateRealTimeSiqs } from './siqsCalculator';
-import { BatchSiqsOptions, BatchSiqsResult, SiqsResult } from './siqsTypes';
+import { SiqsResult } from './siqsTypes';
+
+// Control simultaneous calculations
+const MAX_BATCH_SIZE = 5;
+const BATCH_DELAY_MS = 250;
 
 /**
- * Intelligent SIQS batch processor with priority queue and smart resource management
- */
-class SiqsBatchProcessor {
-  private queue: Array<{
-    priority: number;
-    task: () => Promise<any>;
-    resolve: (value: any) => void;
-    reject: (reason?: any) => void;
-    abortController: AbortController;
-  }> = [];
-  
-  private running = 0;
-  private maxConcurrent = 3;
-  private isProcessing = false;
-  
-  /**
-   * Process a batch of locations for SIQS calculation efficiently
-   * 
-   * @param locations Array of location data to process
-   * @param options Batch processing options
-   * @returns Promise resolving to an array of locations with SIQS results
-   */
-  async processBatch(
-    locations: Array<{ latitude: number; longitude: number; bortleScale?: number; priority?: number }>,
-    options: BatchSiqsOptions = {}
-  ): Promise<BatchSiqsResult[]> {
-    if (!locations || locations.length === 0) {
-      return [];
-    }
-    
-    const {
-      concurrencyLimit = 3,
-      timeout = 30000,
-      ...calculationOptions
-    } = options;
-    
-    this.maxConcurrent = concurrencyLimit;
-    console.log(`Batch calculating SIQS for ${locations.length} locations with concurrency ${concurrencyLimit}`);
-    
-    // Use a timeout to ensure we return results even if not all locations are processed
-    const timeoutPromise = new Promise<BatchSiqsResult[]>(resolve => {
-      setTimeout(() => {
-        const partialResults = this.collectPartialResults(locations);
-        console.warn(`Batch processing timed out after ${timeout}ms, returning ${partialResults.length} results`);
-        resolve(partialResults);
-      }, timeout);
-    });
-    
-    try {
-      // Sort locations by priority if specified
-      const sortedLocations = [...locations].sort((a, b) => {
-        const priorityA = a.priority !== undefined ? a.priority : 1;
-        const priorityB = b.priority !== undefined ? b.priority : 1;
-        return priorityB - priorityA; // Higher priority first
-      });
-      
-      // Create tasks for each location
-      const taskPromises = sortedLocations.map((location, index) => {
-        const priority = location.priority !== undefined ? location.priority : 1;
-        
-        return new Promise<BatchSiqsResult>((resolve, reject) => {
-          const abortController = new AbortController();
-          
-          this.queue.push({
-            priority,
-            abortController,
-            resolve,
-            reject,
-            task: async () => {
-              try {
-                const startTime = Date.now();
-                
-                // Signal to task if we need to abort
-                const signal = abortController.signal;
-                if (signal.aborted) {
-                  throw new Error('Task aborted');
-                }
-                
-                const siqsResult = await calculateRealTimeSiqs(
-                  location.latitude,
-                  location.longitude,
-                  location.bortleScale || 5,
-                  calculationOptions
-                );
-                
-                const processingTime = Date.now() - startTime;
-                console.log(`Processed location ${index + 1}/${locations.length} in ${processingTime}ms`);
-                
-                return {
-                  location,
-                  siqsResult,
-                  timestamp: Date.now(),
-                  confidence: 8 // High confidence for direct calculation
-                };
-              } catch (error) {
-                console.error(`Error processing location ${index + 1}/${locations.length}:`, error);
-                return {
-                  location,
-                  siqsResult: { 
-                    siqs: 0, 
-                    isViable: false,
-                    factors: [{
-                      name: 'Error',
-                      score: 0,
-                      description: 'Failed to calculate SIQS'
-                    }]
-                  },
-                  timestamp: Date.now(),
-                  confidence: 0
-                };
-              }
-            }
-          });
-        });
-      });
-      
-      // Start processing the queue
-      this.processQueue();
-      
-      // Race between normal processing and timeout
-      return Promise.race([
-        Promise.all(taskPromises),
-        timeoutPromise
-      ]);
-    } catch (error) {
-      console.error("Error in batch SIQS calculation:", error);
-      return locations.map(location => ({
-        location,
-        siqsResult: { 
-          siqs: 0, 
-          isViable: false,
-          factors: [{
-            name: 'Error',
-            score: 0,
-            description: 'Failed to calculate SIQS'
-          }]
-        },
-        timestamp: Date.now(),
-        confidence: 0
-      }));
-    }
-  }
-  
-  /**
-   * Process items from the queue according to priority
-   */
-  private processQueue() {
-    if (this.isProcessing) return;
-    this.isProcessing = true;
-    
-    const processNext = () => {
-      if (this.running >= this.maxConcurrent || this.queue.length === 0) {
-        this.isProcessing = false;
-        return;
-      }
-      
-      // Sort queue by priority
-      this.queue.sort((a, b) => b.priority - a.priority);
-      
-      // Get highest priority task
-      const item = this.queue.shift();
-      if (!item) {
-        this.isProcessing = false;
-        return;
-      }
-      
-      this.running++;
-      
-      // Execute the task
-      item.task()
-        .then(result => item.resolve(result))
-        .catch(error => item.reject(error))
-        .finally(() => {
-          this.running--;
-          // Process next item
-          processNext();
-        });
-    };
-    
-    // Start processing items
-    while (this.running < this.maxConcurrent && this.queue.length > 0) {
-      processNext();
-    }
-    
-    this.isProcessing = false;
-  }
-  
-  /**
-   * Collect partial results for locations that haven't been processed yet
-   */
-  private collectPartialResults(locations: Array<{ latitude: number; longitude: number; bortleScale?: number; priority?: number }>): BatchSiqsResult[] {
-    // Create placeholder results for unprocessed locations
-    return locations.map(location => ({
-      location,
-      siqsResult: { 
-        siqs: 0, 
-        isViable: false,
-        factors: [{
-          name: 'Timeout',
-          score: 0,
-          description: 'Processing timed out'
-        }]
-      },
-      timestamp: Date.now(),
-      confidence: 0
-    }));
-  }
-  
-  /**
-   * Cancel all pending tasks in the queue
-   */
-  cancelAll() {
-    this.queue.forEach(item => {
-      item.abortController.abort();
-      item.reject(new Error('Task cancelled'));
-    });
-    this.queue = [];
-  }
-}
-
-// Create singleton instance
-const batchProcessor = new SiqsBatchProcessor();
-
-/**
- * Process a batch of locations for SIQS calculation efficiently
+ * Process multiple SIQS calculations in optimized batches
  * 
- * @param locations Array of location data to process
- * @param options Batch processing options
- * @returns Promise resolving to an array of locations with SIQS results
+ * @param locations Array of locations to calculate SIQS for
+ * @param bortleScale Optional bortle scale to use for all locations
+ * @returns Array of results with location index and SIQS result
  */
 export async function processBatchSiqs(
-  locations: Array<{ latitude: number; longitude: number; bortleScale?: number; priority?: number }>,
-  options: BatchSiqsOptions = {}
-): Promise<BatchSiqsResult[]> {
-  return batchProcessor.processBatch(locations, options);
+  locations: Array<{ latitude: number; longitude: number; bortleScale?: number }>,
+  defaultBortleScale: number = 4
+): Promise<Array<{ index: number; result: SiqsResult | null }>> {
+  // Avoid overloading with too many calculations
+  if (locations.length > 25) {
+    console.warn(`Large batch of ${locations.length} SIQS calculations requested. Limiting to 25.`);
+    locations = locations.slice(0, 25);
+  }
+  
+  const results: Array<{ index: number; result: SiqsResult | null }> = [];
+  const batches = splitIntoBatches(locations, MAX_BATCH_SIZE);
+  
+  // Process each batch with a delay between batches
+  for (let i = 0; i < batches.length; i++) {
+    const batch = batches[i];
+    const batchOffset = i * MAX_BATCH_SIZE;
+    
+    // Process batch in parallel
+    const batchPromises = batch.map((location, batchIndex) => {
+      const globalIndex = batchOffset + batchIndex;
+      return calculateBatchItem(location, globalIndex, defaultBortleScale);
+    });
+    
+    // Wait for current batch to complete
+    const batchResults = await Promise.all(batchPromises);
+    results.push(...batchResults);
+    
+    // Add delay between batches except for last batch
+    if (i < batches.length - 1) {
+      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+    }
+  }
+  
+  return results;
 }
 
 /**
- * Cancel all pending batch operations
- */
-export function cancelBatchOperations(): void {
-  batchProcessor.cancelAll();
-}
-
-/**
- * Legacy function for compatibility
+ * Calculate SIQS for multiple locations with optimized settings
+ * 
+ * @param locations Array of locations with bortle scale
+ * @param options Additional calculation options
+ * @returns Array of SIQS results
  */
 export async function batchCalculateSiqs(
-  locations: any[]
-): Promise<any[]> {
-  if (!locations || locations.length === 0) {
-    return [];
+  locations: Array<{ latitude: number; longitude: number; bortleScale?: number }>,
+  options?: {
+    skipCache?: boolean;
+    useForecasting?: boolean;
+    prioritizeDarkSkyReserves?: boolean;
+  }
+): Promise<SiqsResult[]> {
+  // Sort locations by priority if needed
+  if (options?.prioritizeDarkSkyReserves) {
+    locations = [...locations].sort((a, b) => {
+      const aPriority = (a as any).isDarkSkyReserve ? 1 : 0;
+      const bPriority = (b as any).isDarkSkyReserve ? 1 : 0;
+      return bPriority - aPriority;
+    });
   }
   
-  console.log(`Legacy batch calculating SIQS for ${locations.length} locations`);
+  const results = await processBatchSiqs(locations, 4);
   
+  // Filter out nulls and sort back to original order
+  return results
+    .filter(item => item.result !== null)
+    .sort((a, b) => a.index - b.index)
+    .map(item => item.result) as SiqsResult[];
+}
+
+// Helper functions
+async function calculateBatchItem(
+  location: { latitude: number; longitude: number; bortleScale?: number },
+  index: number,
+  defaultBortleScale: number
+): Promise<{ index: number; result: SiqsResult | null }> {
   try {
-    // Process locations in parallel for efficiency but with a concurrency limit
-    const results = await Promise.all(
-      locations.map(async location => {
-        const siqsResult = await calculateRealTimeSiqs(
-          location.latitude, 
-          location.longitude, 
-          location.bortleScale || 5
-        );
-        
-        // Merge SIQS results with the original location data
-        return {
-          ...location,
-          siqs: siqsResult.siqs,
-          isViable: siqsResult.isViable,
-          siqsResult: {
-            score: siqsResult.siqs,
-            isViable: siqsResult.isViable,
-            factors: siqsResult.factors || []
-          }
-        };
-      })
+    const result = await calculateRealTimeSiqs(
+      location.latitude,
+      location.longitude,
+      location.bortleScale || defaultBortleScale,
+      {
+        useSingleHourSampling: true,
+        targetHour: 1,
+        cacheDurationMins: 5
+      }
     );
-    
-    return results;
+    return { index, result };
   } catch (error) {
-    console.error("Error in batch SIQS calculation:", error);
-    return locations.map(location => ({
-      ...location,
-      siqs: 0, 
-      isViable: false
-    }));
+    console.error(`Error calculating SIQS for location ${index}:`, error);
+    return { index, result: null };
   }
 }
 
-// Export as alias for backward compatibility
-export const batchCalculateRealTimeSiqs = batchCalculateSiqs;
+function splitIntoBatches<T>(array: T[], batchSize: number): T[][] {
+  const batches: T[][] = [];
+  for (let i = 0; i < array.length; i += batchSize) {
+    batches.push(array.slice(i, i + batchSize));
+  }
+  return batches;
+}
