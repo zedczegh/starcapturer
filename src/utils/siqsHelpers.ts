@@ -129,4 +129,3 @@ export const normalizeToSiqsScale = (
   // Normalize to target range
   return toMin + ((clampedValue - fromMin) * (toMax - toMin)) / (fromMax - fromMin);
 };
-
