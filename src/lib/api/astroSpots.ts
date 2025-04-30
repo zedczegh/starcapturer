@@ -36,6 +36,7 @@ export interface SharedAstroSpot {
   cloudCover?: number;
   visibility?: number;
   type?: string;
+  username?: string; // Added username property
   timeInfo?: {
     isNighttime: boolean;
     timeUntilNight?: number;

@@ -29,7 +29,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
     if (locations) {
       console.log(`Loaded ${locations.length} community locations`);
       locations.forEach(loc => {
-        console.log(`Location: ${loc.name}, SIQS: ${typeof loc.siqs === 'object' ? JSON.stringify(loc.siqs) : loc.siqs}`);
+        console.log(`Location: ${loc.name}, SIQS: ${typeof loc.siqs === 'object' ? JSON.stringify(loc.siqs) : loc.siqs}, Username: ${loc.username || 'Not set'}`);
       });
     }
   }, [locations]);
@@ -196,7 +196,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
                   longitude={spot.longitude}
                   siqs={getSiqsForSpot(spot)}
                   timestamp={spot.timestamp}
-                  isCertified={false}
+                  isCertified={!!spot.certification || !!spot.isDarkSkyReserve}
                   username={spot.username || 'Anonymous Stargazer'}
                 />
               </div>
