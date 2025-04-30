@@ -82,3 +82,56 @@ export function getSiqsQuality(score: number | null): string {
   if (score >= 2.5) return "Poor";
   return "Very Poor";
 }
+
+/**
+ * Normalize a score to the 0-10 SIQS scale
+ * Some systems might use different scales (0-100, 0-1, etc.)
+ * @param score - Input score in any scale
+ * @returns Normalized score on 0-10 scale
+ */
+export function normalizeToSiqsScale(score: number): number {
+  // Handle invalid input
+  if (score === null || score === undefined || isNaN(score)) {
+    return 0;
+  }
+  
+  // If score is already in 0-10 range, return as is
+  if (score >= 0 && score <= 10) {
+    return score;
+  }
+  
+  // If score is in 0-100 range (percentage), convert to 0-10
+  if (score > 10 && score <= 100) {
+    return score / 10;
+  }
+  
+  // If score is in 0-1 range (normalized), convert to 0-10
+  if (score >= 0 && score < 1) {
+    return score * 10;
+  }
+  
+  // For any other range, clamp between 0-10
+  return Math.max(0, Math.min(10, score));
+}
+
+/**
+ * Check if a SIQS value is greater than a threshold
+ * @param siqs - SIQS value in any format
+ * @param threshold - Threshold to compare against
+ * @returns Boolean indicating if SIQS is greater than threshold
+ */
+export function isSiqsGreaterThan(siqs: any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score !== null && score > threshold;
+}
+
+/**
+ * Check if a SIQS value is at least a threshold value
+ * @param siqs - SIQS value in any format
+ * @param threshold - Threshold to compare against
+ * @returns Boolean indicating if SIQS is at least the threshold
+ */
+export function isSiqsAtLeast(siqs: any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score !== null && score >= threshold;
+}
