@@ -165,7 +165,7 @@ export const enhancedForecastAstroAdapter = {
           longitude: loc.longitude,
           bortleScale: loc.bortleScale,
           name: loc.name,
-          forecastDay: dayIndex, // Explicitly set the forecastDay property
+          forecastDay: dayIndex,
           priority: 10 // High priority
         }));
         
