@@ -1,4 +1,3 @@
-
 /**
  * Options for SIQS calculation service
  */
@@ -222,6 +221,7 @@ export interface BatchSiqsResult {
     longitude: number;
     name?: string;
     bortleScale?: number;
+    forecastDay?: number;
   };
   
   /** SIQS calculation result */
