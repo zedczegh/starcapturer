@@ -88,7 +88,7 @@ export interface WeatherDataWithClearSky {
     morning?: number | null;
     
     /** Time range for data */
-    timeRange?: string;
+    timeRange: string;
     
     /** Source of data (forecast, calculated, historical, optimized) */
     sourceType?: 'forecast' | 'calculated' | 'historical' | 'optimized';

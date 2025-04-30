@@ -47,7 +47,7 @@ function improveCalculatedLocationSIQS(initialScore: number, location: any): num
 
 function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { 
   average: number | null; 
-  timeRange: string; 
+  timeRange?: string; 
   sourceType?: 'forecast' | 'calculated' | 'historical' | 'optimized' 
 }) {
   if (!nighttimeData || nighttimeData.average === null) return cloudCover;
@@ -72,6 +72,9 @@ export async function calculateRealTimeSiqs(
     useSingleHourSampling?: boolean;
     targetHour?: number;
     cacheDurationMins?: number;
+    useForecasting?: boolean;
+    forecastDay?: number;
+    forecastData?: any;
   } = {}
 ): Promise<SiqsResult> {
   if (!isFinite(latitude) || !isFinite(longitude)) {
@@ -83,7 +86,10 @@ export async function calculateRealTimeSiqs(
   const {
     useSingleHourSampling = true,
     targetHour = 1, // Default to 1 AM for best astronomical viewing
-    cacheDurationMins = 15
+    cacheDurationMins = 15,
+    useForecasting = false,
+    forecastDay = 0,
+    forecastData = null
   } = options;
   
   // Generate a cache key
@@ -116,10 +122,10 @@ export async function calculateRealTimeSiqs(
   
   try {
     // Use Promise.all for parallel API calls
-    const [enhancedLocation, climateRegion, forecastData] = await Promise.all([
+    const [enhancedLocation, climateRegion, actualForecastData] = await Promise.all([
       findClosestEnhancedLocation(latitude, longitude),
       findClimateRegion(latitude, longitude),
-      fetchForecastData({ latitude, longitude, days: 2 }).catch(() => null)
+      forecastData ? Promise.resolve(forecastData) : fetchForecastData({ latitude, longitude, days: 2 }).catch(() => null)
     ]);
     
     // Only fetch these if needed and after initial forecast check
@@ -151,12 +157,12 @@ export async function calculateRealTimeSiqs(
       clearSkyRate: clearSkyData?.annualRate || enhancedLocation?.clearSkyRate,
       latitude,
       longitude,
-      _forecast: forecastData
+      _forecast: actualForecastData
     };
     
     // Apply single hour cloud cover sampling if enabled and forecast is available
-    if (useSingleHourSampling && forecastData?.hourly) {
-      const singleHourCloudCover = extractSingleHourCloudCover(forecastData, targetHour);
+    if (useSingleHourSampling && actualForecastData?.hourly) {
+      const singleHourCloudCover = extractSingleHourCloudCover(actualForecastData, targetHour);
       
       if (singleHourCloudCover !== null) {
         weatherDataWithClearSky.cloudCover = singleHourCloudCover;
@@ -175,10 +181,13 @@ export async function calculateRealTimeSiqs(
         sourceType?: 'forecast' | 'calculated' | 'historical' | 'optimized'; 
       } | undefined;
       
+      // Ensure we provide a default timeRange if it's missing
+      const defaultTimeRange = "18:00-06:00";
+      
       weatherDataWithClearSky.nighttimeCloudData = {
         average: nighttimeData?.average || 0,
-        timeRange: nighttimeData?.timeRange || "18:00-06:00",
-        sourceType: (nighttimeData?.sourceType as "forecast" | "calculated" | "historical" | "optimized") || 'calculated'
+        timeRange: nighttimeData?.timeRange || defaultTimeRange,
+        sourceType: nighttimeData?.sourceType || 'calculated'
       };
     }
     
@@ -203,7 +212,7 @@ export async function calculateRealTimeSiqs(
       finalBortleScale,
       seeingConditions,
       moonPhase,
-      forecastData
+      actualForecastData
     );
     
     // Apply adjustments to the raw score
@@ -231,7 +240,7 @@ export async function calculateRealTimeSiqs(
       siqs: finalScore,
       isViable: finalScore >= 3.0,
       weatherData: weatherDataWithClearSky,
-      forecastData,
+      forecastData: actualForecastData,
       factors: siqsResult.factors.map(factor => ({
         ...factor,
         // Normalize any factor scores as well
@@ -241,12 +250,12 @@ export async function calculateRealTimeSiqs(
         calculatedAt: new Date().toISOString(),
         sources: {
           weather: true,
-          forecast: !!forecastData,
+          forecast: !!actualForecastData,
           clearSky: !!clearSkyData,
           lightPollution: !!pollutionData,
           terrainCorrected: !!terrainCorrectedScale,
           climate: !!climateRegion,
-          singleHourSampling: useSingleHourSampling && forecastData?.hourly ? true : false
+          singleHourSampling: useSingleHourSampling && actualForecastData?.hourly ? true : false
         }
       }
     };

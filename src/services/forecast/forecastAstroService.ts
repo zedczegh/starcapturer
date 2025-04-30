@@ -2,7 +2,7 @@
 import { fetchLongRangeForecastData } from "@/lib/api/forecast";
 import { SIQSResult } from "@/lib/siqs/types";
 import { calculateRealTimeSiqs } from "../realTimeSiqs/siqsCalculator";
-import { SiqsCalculationOptions } from "../realTimeSiqs/siqsTypes";
+import { SiqsCalculationOptions, SiqsResult } from "../realTimeSiqs/siqsTypes";
 
 /**
  * Interface for forecast day astronomical data
@@ -24,7 +24,7 @@ export interface ForecastDayAstroData {
   humidity: number;
   windSpeed: number;
   weatherCode: number;
-  siqsResult?: SIQSResult | null;
+  siqsResult?: SiqsResult | null;
 }
 
 /**
@@ -76,7 +76,7 @@ export const forecastAstroService = {
         const date = daily.time[i];
         
         // Calculate SIQS for this forecast day
-        let siqsResult: SIQSResult | null = null;
+        let siqsResult: SiqsResult | null = null;
         
         try {
           // Use specialized options for forecast calculation
