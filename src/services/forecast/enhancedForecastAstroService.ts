@@ -11,9 +11,84 @@ import { SiqsCalculationOptions, SiqsResult } from "../realTimeSiqs/siqsTypes";
 import { areForecastServicesReliable } from "./forecastHealthMonitor";
 import { processBatchSiqs } from "../realTimeSiqs/batchProcessor";
 import { toast } from "sonner";
-import { BatchLocationData, ForecastDayAstroData, BatchForecastResult, ExtendedSiqsResult } from "./types/forecastTypes";
-import { forecastCache } from "./utils/forecastCache";
-import { validateForecastLocation, filterValidLocations } from "./utils/locationValidator";
+
+/**
+ * Interface for forecast day astronomical data
+ */
+export interface ForecastDayAstroData {
+  date: string;
+  dayIndex: number;
+  cloudCover: number;
+  siqs: number | null;
+  isViable: boolean;
+  temperature: {
+    min: number;
+    max: number;
+  };
+  precipitation: {
+    probability: number;
+    amount: number | null;
+  };
+  humidity: number;
+  windSpeed: number;
+  weatherCode: number;
+  siqsResult?: SiqsResult | null;
+  reliability?: number;
+}
+
+/**
+ * Cache implementation for forecast results
+ */
+class ForecastCache {
+  private cache = new Map<string, {
+    data: any;
+    timestamp: number;
+  }>();
+  
+  private static CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+  
+  getCachedForecast(key: string): any | null {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < ForecastCache.CACHE_DURATION) {
+      return cached.data;
+    }
+    return null;
+  }
+  
+  setCachedForecast(key: string, data: any): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
+  }
+  
+  invalidateCache(keyPattern?: string): void {
+    if (keyPattern) {
+      // Delete matching keys
+      for (const key of this.cache.keys()) {
+        if (key.includes(keyPattern)) {
+          this.cache.delete(key);
+        }
+      }
+    } else {
+      // Clear all cache
+      this.cache.clear();
+    }
+  }
+}
+
+// Create singleton cache instance
+const forecastCache = new ForecastCache();
+
+// Define interface for batch location data with additional forecast properties
+interface BatchLocationData {
+  latitude: number;
+  longitude: number;
+  bortleScale?: number;
+  name?: string;
+  forecastDay: number;
+  priority: number;
+}
 
 /**
  * Enhanced service for extracting astronomical scores from 15-day forecast data
@@ -45,18 +120,6 @@ export const enhancedForecastAstroService = {
       if (cachedData) {
         return cachedData;
       }
-
-      // First validate location to avoid processing water locations
-      const validationResult = await validateForecastLocation({
-        latitude,
-        longitude,
-        bortleScale: bortleScale || 4
-      });
-      
-      if (!validationResult.isValid) {
-        console.log(`Location [${latitude}, ${longitude}] is invalid (likely water). Skipping forecast.`);
-        return [];
-      }
       
       // Fetch the long range forecast data (16 days)
       const enhancedForecast = await fetchEnhancedLongRangeForecastData({ 
@@ -76,15 +139,13 @@ export const enhancedForecastAstroService = {
       const { daily } = enhancedForecast.forecast;
       
       // Process days in optimal batch size for performance
-      const locations: BatchLocationData[] = Array.from({ length: daily.time.length }, (_, i) => ({
+      const locations = Array.from({ length: daily.time.length }, (_, i) => ({
         latitude,
         longitude,
         bortleScale: bortleScale || 4,
         priority: daily.time.length - i, // Higher priority for closer dates
-        forecastDay: i, // Explicitly set the forecastDay property 
-        cloudCover: daily.cloud_cover_mean[i] || 0,
-        isValidated: true, // Skip validation since we already validated
-        isWater: false // Not water since we checked earlier
+        forecastDay: i,
+        cloudCover: daily.cloud_cover_mean[i] || 0
       }));
       
       // Use batch processor for efficient parallel calculation
@@ -233,30 +294,18 @@ export const enhancedForecastAstroService = {
       
       // Use optimized calculation options
       options.forecastData = enhancedForecast.forecast;
-      
       const siqsResult = await calculateRealTimeSiqs(
         latitude,
         longitude,
         defaultBortleScale,
         options
       );
-
-      // Create a properly formatted ExtendedSiqsResult if needed
-      const extendedSiqsResult: ExtendedSiqsResult | null = siqsResult ? {
-        siqs: siqsResult.siqs || 0, // Access using siqs not score
-        isViable: siqsResult.isViable,
-        bortleScale: defaultBortleScale, 
-        cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
-        timestamp: Date.now(),
-        confidence: 0.8,
-        factors: siqsResult.factors
-      } : null;
       
       return {
         date: daily.time[dayIndex],
         dayIndex,
         cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
-        siqs: siqsResult ? siqsResult.siqs || 0 : null, // Access using siqs not score
+        siqs: siqsResult ? siqsResult.siqs : null,
         isViable: siqsResult ? siqsResult.isViable : false,
         temperature: {
           min: daily.temperature_2m_min[dayIndex],
@@ -269,7 +318,7 @@ export const enhancedForecastAstroService = {
         humidity: daily.relative_humidity_2m_mean[dayIndex] || 0,
         windSpeed: daily.wind_speed_10m_max[dayIndex] || 0,
         weatherCode: daily.weather_code[dayIndex],
-        siqsResult: extendedSiqsResult,
+        siqsResult,
         reliability: enhancedForecast.reliability * 0.01 * 8
       };
     } catch (error) {
@@ -288,39 +337,22 @@ export const enhancedForecastAstroService = {
   batchProcessLocations: async (
     locations: Array<{ latitude: number; longitude: number; bortleScale?: number; name?: string }>,
     dayIndex?: number
-  ): Promise<BatchForecastResult[]> => {
+  ): Promise<Array<{ location: { latitude: number; longitude: number; name?: string }, forecast: ForecastDayAstroData[] | ForecastDayAstroData | null, success: boolean }>> => {
     // Use batch processor directly for best performance
     try {
       if (dayIndex !== undefined) {
-        // First validate all locations to filter out water locations
-        const validLocations = await Promise.all(
-          locations.map(async loc => {
-            const validation = await validateForecastLocation({
-              latitude: loc.latitude,
-              longitude: loc.longitude,
-              bortleScale: loc.bortleScale
-            });
-            return { ...loc, isValid: validation.isValid };
-          })
-        );
-        
-        // Filter out invalid locations
-        const filteredLocations = validLocations.filter(loc => loc.isValid);
-        console.log(`Filtered ${locations.length - filteredLocations.length} water/invalid locations out of ${locations.length} total`);
-        
         // Transform locations into BatchLocationData array with explicit type annotation
-        const batchLocations: BatchLocationData[] = filteredLocations.map(loc => {
-          // Create a new object with all required properties including forecastDay
-          return {
+        const batchLocations = locations.map(loc => {
+          // Create a new object with all properties we need
+          const batchLocation: BatchLocationData = {
             latitude: loc.latitude,
             longitude: loc.longitude,
             bortleScale: loc.bortleScale,
             name: loc.name,
-            forecastDay: dayIndex, // Explicitly set the forecastDay property
-            priority: 10, // High priority
-            isValidated: true, // Already validated
-            isWater: false // Not water since we filtered
+            forecastDay: dayIndex,
+            priority: 10 // High priority
           };
+          return batchLocation;
         });
         
         // Use SIQS batch processor for parallel processing
@@ -333,20 +365,8 @@ export const enhancedForecastAstroService = {
           timeout: 30000 // 30 second timeout
         });
         
-        // Map batch results back to the expected format, including original invalid locations
+        // Map batch results back to the expected format
         return await Promise.all(locations.map(async location => {
-          const isValid = validLocations.find(
-            loc => loc.latitude === location.latitude && loc.longitude === location.longitude
-          )?.isValid;
-          
-          if (!isValid) {
-            return { 
-              location, 
-              forecast: null, 
-              success: false 
-            };
-          }
-          
           const batchResult = batchResults.find(
             r => r.location.latitude === location.latitude && 
                 r.location.longitude === location.longitude
@@ -385,36 +405,7 @@ export const enhancedForecastAstroService = {
         }));
       } else {
         // For all days, process each location sequentially but with internal parallelism
-        // First validate all locations
-        const validationResults = await Promise.all(
-          locations.map(loc => validateForecastLocation({
-            latitude: loc.latitude,
-            longitude: loc.longitude,
-            bortleScale: loc.bortleScale
-          }))
-        );
-        
-        // Create a map of valid locations
-        const validLocationMap = new Map();
-        locations.forEach((loc, index) => {
-          validLocationMap.set(
-            `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`, 
-            validationResults[index].isValid
-          );
-        });
-        
         return await Promise.all(locations.map(async location => {
-          const locationKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
-          const isValid = validLocationMap.get(locationKey);
-          
-          if (!isValid) {
-            return { 
-              location, 
-              forecast: [], 
-              success: false 
-            };
-          }
-          
           try {
             const forecast = await enhancedForecastAstroService.getFullForecastAstroData(
               location.latitude,
