@@ -7,7 +7,6 @@ import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { Star, ExternalLink } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 import { formatDistance } from '@/utils/geoUtils';
 import { getSiqsClass } from './MarkerUtils';
 
@@ -47,28 +46,26 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
       autoClose={false}
       offset={[0, 10]}
       direction="bottom"
+      className="custom-popup location-popup"
     >
       <div 
-        className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}
-        onClick={() => {
-          // Force refresh on popup click if desired
-        }}
+        className={`py-3 px-3 max-w-[260px] rounded-lg bg-gradient-to-b from-gray-800/95 to-gray-900/95 shadow-lg border border-gray-700/50 ${siqsClass}`}
       >
-        <div className="font-medium text-sm mb-1.5 flex items-center">
+        <div className="font-medium text-sm mb-2 flex items-center">
           {isCertified && (
-            <Star className="h-3.5 w-3.5 mr-1 text-primary fill-primary" />
+            <Star className="h-4 w-4 mr-1.5 text-primary fill-primary" />
           )}
           <span className="text-gray-100">{displayName}</span>
         </div>
         
         {isCertified && location.certification && (
-          <div className="mt-1 text-xs font-medium text-primary flex items-center">
+          <div className="mt-1.5 text-xs font-medium text-primary flex items-center">
             <Star className="h-3 w-3 mr-1" />
             {location.certification}
           </div>
         )}
         
-        <div className="mt-2 flex items-center justify-between">
+        <div className="mt-2 py-2 border-t border-b border-gray-700/30 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <SiqsScoreBadge 
               score={hasValidScore ? (stabilizedScore || siqsScore) : null} 
@@ -86,15 +83,15 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
           )}
         </div>
         
-        <div className="mt-2 text-center">
+        <div className="mt-3">
           <button 
             onClick={(e) => {
               e.stopPropagation();
               onViewDetails(location);
             }}
-            className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
+            className="text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground py-2 px-2.5 rounded transition-colors"
           >
-            <ExternalLink className="h-3 w-3 mr-1" />
+            <ExternalLink className="h-3 w-3 mr-1.5" />
             {t("View Details", "查看详情")}
           </button>
         </div>
