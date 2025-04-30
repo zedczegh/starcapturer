@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { useIsMobile } from './use-mobile';
 
 interface ConversationPartner {
@@ -13,13 +14,6 @@ interface ConversationPartner {
 export function useMessageNavigation() {
   const [activeConversation, setActiveConversation] = useState<ConversationPartner | null>(null);
   const isMobile = useIsMobile();
-  
-  // Reset conversation when switching to mobile view from desktop with active conversation
-  useEffect(() => {
-    // If moving from desktop to mobile with a conversation already open,
-    // keep the conversation open
-    // This is handled automatically by the component state
-  }, [isMobile]);
 
   const handleSelectConversation = (conversation: ConversationPartner) => {
     setActiveConversation(conversation);

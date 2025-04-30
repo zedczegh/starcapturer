@@ -7,12 +7,11 @@ import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
 import WeatherAlerts from "@/components/weather/WeatherAlerts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import LocationDetailsHeader from "./LocationDetailsHeader";
-import { Search, RefreshCcw, Layers } from "lucide-react";
+import { Search, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import LocationSearch from "./LocationSearch";
 import NavigationButtons from "./navigation/NavigationButtons";
-import { motion } from "framer-motion";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -21,7 +20,7 @@ interface LocationDetailsViewportProps {
   messageType: "info" | "error" | "success" | null;
   setStatusMessage: React.Dispatch<React.SetStateAction<string | null>>;
   handleUpdateLocation: (updatedData: any) => Promise<void>;
-  onRefresh?: () => void;
+  onRefresh?: () => void; // Add this prop for refresh handling
 }
 
 const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
@@ -61,11 +60,11 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     }
   }, [handleUpdateLocation, setStatusMessage, t]);
   
-  // Dynamic padding based on mobile status
-  const paddingTop = isMobile ? 'pt-20' : 'pt-16';
+  const paddingTop = isMobile ? 'pt-16' : 'pt-14';
   const weatherAlerts = locationData?.weatherData?.alerts || [];
 
-  // Improved Refresh Button Functionality
+  // --- Improved Refresh Button Functionality ---
+  // Manual refresh that triggers actual data refresh
   const handleManualRefresh = useCallback(() => {
     if (refreshing) return;
     setRefreshing(true);
@@ -85,6 +84,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         dom.dispatchEvent(new CustomEvent('forceRefresh', {
           detail: { timestamp: new Date().toISOString() }
         }));
+        console.log("Force refresh event dispatched with timestamp");
       }
       
       // Add minimum duration for button spinner feedback
@@ -98,29 +98,15 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     }, 120);
   }, [refreshing, onRefresh, setStatusMessage, t]);
 
-  // Animation variants for UI elements
-  const fadeInUp = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
-  };
-
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      className={`container mx-auto px-3 sm:px-4 py-6 sm:py-8 ${paddingTop} relative z-10`}
+    <div 
+      className={`container mx-auto px-4 py-8 ${paddingTop} relative z-10`}
       data-refresh-trigger="true"
       ref={detailsContainerRef}
-      variants={{
-        hidden: { opacity: 0 },
-        visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-      }}
     >
-      <motion.div 
-        variants={fadeInUp}
-        className="flex justify-between items-center mb-5 gap-2"
-      >
+      <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
+          {/* Navigation app picker button */}
           {locationData?.latitude && locationData?.longitude && (
             <NavigationButtons 
               latitude={locationData.latitude}
@@ -129,33 +115,31 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
             />
           )}
         </div>
-        <div className="flex gap-1 sm:gap-2">
+        <div className="flex gap-2">
           <Button 
             variant="outline" 
-            size={isMobile ? "sm" : "default"}
-            className="flex items-center gap-1 font-medium bg-cosmic-800/40 border-cosmic-700/40 hover:bg-cosmic-700/60"
+            className="flex items-center gap-1 font-medium"
             onClick={handleManualRefresh}
             disabled={refreshing}
             title={t("Refresh", "刷新")}
           >
-            <RefreshCcw className={`h-4 w-4 ${refreshing ? 'animate-spin text-primary' : 'text-cosmic-300'}`} />
-            <span className="hidden sm:inline">{t("Refresh", "刷新")}</span>
+            <RefreshCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {t("Refresh", "刷新")}
           </Button>
           <Button 
-            variant="outline"
-            size={isMobile ? "sm" : "default"} 
+            variant="outline" 
             onClick={() => setSearchDialogOpen(true)}
-            className="flex items-center gap-1 font-medium bg-cosmic-800/40 border-cosmic-700/40 hover:bg-cosmic-700/60"
+            className="flex items-center gap-1 font-medium"
           >
-            <Search className="h-4 w-4 text-cosmic-300" />
-            <span className="hidden sm:inline">{t("Search", "搜索")}</span>
+            <Search className="h-4 w-4" />
+            {t("Search", "搜索")}
           </Button>
         </div>
-      </motion.div>
+      </div>
       
       {/* Search Dialog */}
       <Dialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen}>
-        <DialogContent className="sm:max-w-md glassmorphism-strong border-cosmic-700/40">
+        <DialogContent className="sm:max-w-md">
           <LocationSearch onSelectLocation={onLocationUpdate} />
         </DialogContent>
       </Dialog>
@@ -166,34 +150,30 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       />
       
       {/* Add the enhanced location details header */}
-      <motion.div variants={fadeInUp}>
-        <LocationDetailsHeader 
-          name={locationData?.name}
-          latitude={locationData?.latitude}
-          longitude={locationData?.longitude}
-          timestamp={locationData?.timestamp}
-        />
-      </motion.div>
+      <LocationDetailsHeader 
+        name={locationData?.name}
+        latitude={locationData?.latitude}
+        longitude={locationData?.longitude}
+        timestamp={locationData?.timestamp}
+      />
       
       {weatherAlerts && weatherAlerts.length > 0 && (
-        <motion.div variants={fadeInUp} className="mb-6">
+        <div className="mb-8">
           <WeatherAlerts 
             alerts={weatherAlerts}
             formatTime={formatTime}
             formatDate={formatDate}
           />
-        </motion.div>
+        </div>
       )}
       
-      <motion.div variants={fadeInUp}>
-        <LocationDetailsContent 
-          locationData={locationData}
-          setLocationData={setLocationData}
-          onLocationUpdate={onLocationUpdate}
-          showFaultedMessage={true}
-        />
-      </motion.div>
-    </motion.div>
+      <LocationDetailsContent 
+        locationData={locationData}
+        setLocationData={setLocationData}
+        onLocationUpdate={onLocationUpdate}
+        showFaultedMessage={true}
+      />
+    </div>
   );
 };
 

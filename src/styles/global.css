@@ -92,63 +92,9 @@
     box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
   }
   
-  .glassmorphism-strong {
-    background: linear-gradient(to bottom right, rgba(43, 35, 70, 0.85), rgba(23, 19, 36, 0.9));
-    backdrop-filter: blur(12px);
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
-  }
-  
   .shadow-glow {
     box-shadow: 0 0 20px rgba(124, 58, 237, 0.15), 
                 0 0 60px rgba(139, 92, 246, 0.08);
-  }
-  
-  /* Mobile navigation styling */
-  .mobile-nav-bar {
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
-  }
-  
-  .mobile-nav-item.active .icon-container {
-    box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
-  }
-  
-  .pulse-glow {
-    animation: pulse-animation 2s infinite;
-  }
-  
-  @keyframes pulse-animation {
-    0% {
-      box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4);
-    }
-    70% {
-      box-shadow: 0 0 0 10px rgba(124, 58, 237, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
-    }
-  }
-
-  /* Enhanced mobile cards and data displays */
-  .location-card-mobile {
-    @apply bg-gradient-to-br from-cosmic-800/60 to-cosmic-900/80;
-    @apply border border-cosmic-700/30;
-    @apply rounded-xl backdrop-blur-md;
-    @apply transition-all duration-300;
-  }
-  
-  .data-chip {
-    @apply inline-flex items-center px-2 py-1;
-    @apply bg-cosmic-800/50 text-cosmic-100;
-    @apply border border-cosmic-700/40 rounded-full;
-    @apply text-xs font-medium;
-  }
-  
-  .time-chip {
-    @apply bg-gradient-to-r from-purple-800/40 to-indigo-800/30;
-    @apply border-l-2 border-primary/50;
-    @apply rounded-l-none rounded-r-lg;
-    @apply pl-2 pr-3 py-1;
-    @apply text-xs font-mono;
   }
   
   /* Other existing styles */
@@ -165,30 +111,5 @@
     background: linear-gradient(90deg, rgba(55,41,85,0.90) 50%, rgba(17,15,29,0.99) 100%);
     border-radius: 0.5rem 0.5rem 0 0;
     margin-bottom: 0.5rem;
-  }
-
-  /* Mobile enhancement classes for location details */
-  .location-panel {
-    @apply rounded-xl overflow-hidden;
-    @apply backdrop-blur-md bg-cosmic-900/30;
-    @apply border border-cosmic-700/30;
-    @apply shadow-lg;
-  }
-
-  .panel-header {
-    @apply bg-gradient-to-r from-cosmic-800/90 to-cosmic-800/70;
-    @apply border-b border-cosmic-700/40;
-    @apply px-4 py-3;
-  }
-
-  .panel-content {
-    @apply p-4;
-  }
-
-  .data-badge {
-    @apply inline-flex items-center gap-1;
-    @apply bg-cosmic-800/70 text-cosmic-200;
-    @apply border border-cosmic-700/40 rounded-lg;
-    @apply px-2.5 py-1 text-sm;
   }
 }
