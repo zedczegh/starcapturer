@@ -14,7 +14,7 @@ interface CommunityLocationCardProps {
   onInView: (spotId: string) => void;
   onSiqsCalculated: (spotId: string, siqs: number | null, loading: boolean) => void;
   onSiqsError: (error: any, spotId: string) => void;
-  getSiqs: (spot: SharedAstroSpot) => number | null | undefined;
+  getSiqs: (spot: SharedAstroSpot) => number | null;
   attempted: Set<string>;
   inQueue: boolean;
 }
@@ -67,7 +67,7 @@ const CommunityLocationCard: React.FC<CommunityLocationCardProps> = ({
             siqs={getSiqs(spot)}
             timestamp={spot.timestamp}
             isCertified={!!spot.certification || !!spot.isDarkSkyReserve}
-            username={spot.username || 'Anonymous Stargazer'}
+            username={spot.username || t('Anonymous Stargazer', '匿名观星者')}
           />
         </div>
         <div className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/10" />

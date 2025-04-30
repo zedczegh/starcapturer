@@ -1,6 +1,7 @@
 import React from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useDebouncedCallback } from "@/hooks/useDebounce";
+import { getSiqsScore } from "@/utils/siqsHelpers";
 
 export function useCommunityLocationsSiqs(locations: SharedAstroSpot[] | null) {
   const [realTimeSiqs, setRealTimeSiqs] = React.useState<Record<string, number | null>>({});
@@ -20,11 +21,7 @@ export function useCommunityLocationsSiqs(locations: SharedAstroSpot[] | null) {
     const initialSiqs: Record<string, number | null> = {};
     locations.forEach(spot => {
       if (spot.siqs) {
-        if (typeof spot.siqs === 'number') {
-          initialSiqs[spot.id] = spot.siqs;
-        } else if (typeof spot.siqs === 'object' && 'score' in spot.siqs) {
-          initialSiqs[spot.id] = spot.siqs.score;
-        }
+        initialSiqs[spot.id] = getSiqsScore(spot.siqs);
       }
     });
     setRealTimeSiqs(prev => ({...prev, ...initialSiqs}));
@@ -95,7 +92,7 @@ export function useCommunityLocationsSiqs(locations: SharedAstroSpot[] | null) {
   }, [attemptedSiqs, calculationQueue]);
 
   // Get SIQS value for a spot (from real-time calculation or fallback to original)
-  const getSiqsForSpot = React.useCallback((spot: SharedAstroSpot) => {
+  const getSiqsForSpot = React.useCallback((spot: SharedAstroSpot): number | null => {
     const realTimeSiqsValue = realTimeSiqs[spot.id];
     
     // Use real-time SIQS if available
@@ -103,8 +100,8 @@ export function useCommunityLocationsSiqs(locations: SharedAstroSpot[] | null) {
       return realTimeSiqsValue;
     }
     
-    // Fall back to the original SIQS from the spot data
-    return spot.siqs;
+    // Fall back to the original SIQS from the spot data but ensure it's a number
+    return getSiqsScore(spot.siqs);
   }, [realTimeSiqs]);
 
   return {
