@@ -1,4 +1,3 @@
-
 /**
  * Enhanced Forecast Astro Service
  * 
@@ -334,7 +333,7 @@ export const enhancedForecastAstroService = {
         // For specific day, transform into batch format
         const batchLocations = locations.map(loc => ({
           ...loc,
-          forecastDay: dayIndex,
+          forecastDay: dayIndex, // Add this property to the transformed object
           priority: 10 // High priority
         }));
         
