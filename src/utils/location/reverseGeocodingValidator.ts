@@ -44,8 +44,8 @@ export async function validateLocationWithReverseGeocoding(
     
     // Location is invalid if it's water or doesn't have proper location data
     const isValid = !details.isWater && Boolean(
-      details.formattedName && 
-      !details.formattedName.includes("°") && // Not just coordinates
+      (details.formattedName || details.formattedAddress) && 
+      !(details.formattedName || details.formattedAddress || "").includes("°") && // Not just coordinates
       (details.townName || details.cityName || details.countyName || details.stateName)
     );
     

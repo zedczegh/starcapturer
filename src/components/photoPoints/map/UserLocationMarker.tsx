@@ -44,7 +44,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
       setIsLoadingLocation(true);
       try {
         const details = await getEnhancedLocationDetails(position[0], position[1], language === 'zh' ? 'zh' : 'en');
-        setLocationName(details.formattedName || '');
+        setLocationName(details.formattedName || details.displayName || details.formattedAddress || '');
       } catch (error) {
         console.error('Error fetching location name:', error);
       } finally {
