@@ -1,3 +1,4 @@
+
 /**
  * Optimized forecast data processing service
  */
@@ -7,6 +8,7 @@ import { processBatchSiqs } from "../../realTimeSiqs/batchProcessor";
 import { calculateRealTimeSiqs } from "../../realTimeSiqs/siqsCalculator";
 import { SiqsCalculationOptions } from "../../realTimeSiqs/siqsTypes";
 import { fetchEnhancedLongRangeForecastData } from "@/lib/api/enhancedForecast";
+import { validateForecastLocation, filterValidLocations } from "../utils/locationValidator";
 
 /**
  * Process forecast data for a location and extract astronomical quality metrics
@@ -29,9 +31,16 @@ export async function processForecastData(
     longitude,
     bortleScale,
     priority: daily.time.length - i, // Higher priority for closer dates
-    forecastDay: i, // This is the property we need to ensure exists
+    forecastDay: i, // Explicitly set the forecastDay property
     cloudCover: daily.cloud_cover_mean[i] || 0
   }));
+  
+  // Validate location to ensure it's not water before processing
+  const validationResult = await validateForecastLocation(locations[0]);
+  if (!validationResult.isValid) {
+    console.log(`Location [${latitude}, ${longitude}] is invalid (likely water). Skipping forecast processing.`);
+    return [];
+  }
   
   // Process in optimized batch
   const batchResults = await processBatchSiqs(locations, {
@@ -156,8 +165,17 @@ export const enhancedForecastProcessor = {
       targetHour?: number;
       cacheDurationMins?: number;
       concurrencyLimit?: number;
+      validateLocations?: boolean;
     }
   ) => {
+    // Filter out water locations if requested
+    let processLocations = locations;
+    
+    if (options?.validateLocations) {
+      processLocations = await filterValidLocations(locations);
+      console.log(`Filtered ${locations.length - processLocations.length} invalid/water locations out of ${locations.length} total`);
+    }
+    
     const processOptions = {
       concurrencyLimit: options?.concurrencyLimit || 5,
       useSingleHourSampling: true,
@@ -167,7 +185,7 @@ export const enhancedForecastProcessor = {
       timeout: 30000
     };
     
-    return await processBatchSiqs(locations, processOptions);
+    return await processBatchSiqs(processLocations, processOptions);
   },
   
   /**
