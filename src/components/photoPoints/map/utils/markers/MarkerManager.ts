@@ -1,59 +1,55 @@
 
-import L from 'leaflet';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-
 /**
- * Manages markers on the map for better performance
+ * MarkerManager class for handling map marker operations
  */
-export default class MarkerManager {
-  private markers: Map<string, L.Marker> = new Map();
-  private activeMarkers: Set<string> = new Set();
+class MarkerManager {
+  private markers: Map<string, any>;
   
-  /**
-   * Add or update a marker on the map
-   * @param id Unique identifier for the marker
-   * @param marker The Leaflet marker
-   */
-  addMarker(id: string, marker: L.Marker): void {
-    this.markers.set(id, marker);
-    this.activeMarkers.add(id);
+  constructor() {
+    this.markers = new Map();
   }
   
   /**
-   * Remove a marker from the map
-   * @param id Marker identifier
+   * Add a marker to the manager
+   * @param id Unique marker ID
+   * @param marker The marker object
+   */
+  addMarker(id: string, marker: any): void {
+    this.markers.set(id, marker);
+  }
+  
+  /**
+   * Get a marker by ID
+   * @param id Marker ID
+   * @returns The marker object or undefined
+   */
+  getMarker(id: string): any {
+    return this.markers.get(id);
+  }
+  
+  /**
+   * Remove a marker from the manager
+   * @param id Marker ID
    */
   removeMarker(id: string): void {
     this.markers.delete(id);
-    this.activeMarkers.delete(id);
   }
   
   /**
    * Check if a marker exists
-   * @param id Marker identifier
+   * @param id Marker ID
+   * @returns True if marker exists
    */
   hasMarker(id: string): boolean {
     return this.markers.has(id);
   }
   
   /**
-   * Get a marker by id
-   * @param id Marker identifier
+   * Get all markers
+   * @returns Array of all markers
    */
-  getMarker(id: string): L.Marker | undefined {
-    return this.markers.get(id);
-  }
-  
-  /**
-   * Update marker position
-   * @param id Marker identifier
-   * @param position New position
-   */
-  updateMarkerPosition(id: string, position: L.LatLngExpression): void {
-    const marker = this.markers.get(id);
-    if (marker) {
-      marker.setLatLng(position);
-    }
+  getAllMarkers(): any[] {
+    return Array.from(this.markers.values());
   }
   
   /**
@@ -61,20 +57,7 @@ export default class MarkerManager {
    */
   clearMarkers(): void {
     this.markers.clear();
-    this.activeMarkers.clear();
-  }
-  
-  /**
-   * Get all marker ids
-   */
-  getAllMarkerIds(): string[] {
-    return Array.from(this.markers.keys());
-  }
-  
-  /**
-   * Get count of active markers
-   */
-  getActiveCount(): number {
-    return this.activeMarkers.size;
   }
 }
+
+export default MarkerManager;

@@ -9,7 +9,7 @@ export interface SharedAstroSpot {
   bortleScale: number; // Required for type compatibility
   certification?: string;
   isDarkSkyReserve?: boolean;
-  timestamp: string; // Changed from optional to required
+  timestamp: string; // Required field
   siqsTimestamp?: string;
   siqs?: number | { score: number; isViable: boolean };
   isViable?: boolean;

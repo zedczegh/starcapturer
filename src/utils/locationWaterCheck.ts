@@ -1,60 +1,57 @@
 
 /**
- * Check if a location is in water
- * 
- * @param latitude The latitude to check
- * @param longitude The longitude to check
- * @returns Promise that resolves to true if location is water, false otherwise
+ * Utility to check if a location is in water
  */
-export const isWaterLocation = async (
-  latitude: number, 
-  longitude: number
-): Promise<boolean> => {
-  // This is a simplified mock implementation
-  // In a real app, this would call a geographic API
 
-  // Mock some known water locations
-  const knownWaterLocations = [
-    // Pacific Ocean
-    { minLat: 20, maxLat: 45, minLng: -150, maxLng: -115 },
-    // Atlantic Ocean
-    { minLat: 20, maxLat: 45, minLng: -80, maxLng: -50 },
-    // Mediterranean Sea
-    { minLat: 30, maxLat: 45, minLng: -5, maxLng: 35 },
-    // South China Sea
-    { minLat: 5, maxLat: 25, minLng: 105, maxLng: 120 },
-  ];
-  
-  // Check if location falls in any of these water areas
-  for (const area of knownWaterLocations) {
-    if (latitude >= area.minLat && latitude <= area.maxLat &&
-        longitude >= area.minLng && longitude <= area.maxLng) {
-      // Add some randomness to make it more realistic
-      if (Math.random() > 0.3) {
-        return true;
-      }
-    }
-  }
-  
-  // Default: 10% chance of any location being water for testing purposes
-  return Math.random() < 0.1;
-};
-
-// Export a simpler function that doesn't use the API
-export const isWaterLocationSimple = (
-  latitude: number, 
-  longitude: number
-): boolean => {
-  // Simply check if the location is close to known water coordinates
+/**
+ * Check if a location is in water
+ * @param lat Latitude of the location
+ * @param lng Longitude of the location
+ * @returns Boolean indicating if location is in water
+ */
+export const isWaterLocation = (lat: number, lng: number): boolean => {
+  // Ocean detection (simple version)
   // Pacific Ocean
-  if (latitude > 20 && latitude < 45 && longitude > -150 && longitude < -115) {
-    return true;
-  }
-  // Atlantic Ocean
-  if (latitude > 20 && latitude < 45 && longitude > -80 && longitude < -50) {
+  if ((lat > 20 && lat < 60 && lng > -180 && lng < -115) ||
+      (lat > -60 && lat < 20 && lng > -180 && lng < -70)) {
     return true;
   }
   
-  // Default return
+  // Atlantic Ocean
+  if ((lat > 20 && lat < 65 && lng > -80 && lng < -10) ||
+      (lat > -50 && lat < 20 && lng > -60 && lng < 20)) {
+    return true;
+  }
+  
+  // Indian Ocean
+  if (lat > -60 && lat < 20 && lng > 40 && lng < 120) {
+    return true;
+  }
+  
+  // Check for some large lakes and inland seas
+  // Caspian Sea
+  if (lat > 36 && lat < 47 && lng > 46 && lng < 55) {
+    return true;
+  }
+  // Great Lakes
+  if (lat > 41 && lat < 49 && lng > -93 && lng < -76) {
+    return true;
+  }
+
   return false;
 };
+
+/**
+ * Asynchronous version of isWaterLocation that returns a Promise
+ * @param lat Latitude of the location
+ * @param lng Longitude of the location
+ * @returns Promise resolving to boolean indicating if location is in water
+ */
+export const isWaterLocationAsync = async (
+  lat: number,
+  lng: number
+): Promise<boolean> => {
+  return isWaterLocation(lat, lng);
+};
+
+export default isWaterLocation;

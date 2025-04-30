@@ -1,6 +1,7 @@
 
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { isWaterLocationSync } from '@/utils/validation';
 
 // Cache for validation results to prevent repeated API calls
 const VALIDATION_CACHE = new Map<string, { result: boolean, timestamp: number }>();

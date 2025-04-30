@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
@@ -159,6 +160,9 @@ export const UserLocationMarker = React.memo(({
   );
 });
 
+/**
+ * Standard location marker with event handlers
+ */
 export const LocationMarker: React.FC<{
   location: SharedAstroSpot;
   isActive: boolean;
@@ -191,10 +195,15 @@ export const LocationMarker: React.FC<{
     <Marker 
       position={[location.latitude, location.longitude]} 
       icon={icon}
-      onClick={handleClick} 
-      onMouseover={handleMouseOver}
-      onMouseout={handleMouseOut}
     >
+      <MarkerEventHandler 
+        marker={null}
+        eventMap={{
+          click: handleClick,
+          mouseover: handleMouseOver,
+          mouseout: handleMouseOut
+        }}
+      />
       <Popup>
         <div className="flex flex-col">
           <div className="font-semibold">{location.name}</div>
@@ -207,6 +216,9 @@ export const LocationMarker: React.FC<{
   );
 };
 
+/**
+ * Specialized marker for forecast locations
+ */
 export const ForecastMarker: React.FC<{
   location: SharedAstroSpot;
   isActive: boolean;
@@ -243,10 +255,15 @@ export const ForecastMarker: React.FC<{
     <Marker 
       position={[location.latitude, location.longitude]} 
       icon={icon}
-      onClick={handleClick}
-      onMouseover={handleMouseOver}
-      onMouseout={handleMouseOut}
     >
+      <MarkerEventHandler 
+        marker={null}
+        eventMap={{
+          click: handleClick,
+          mouseover: handleMouseOver,
+          mouseout: handleMouseOut
+        }}
+      />
       <Popup>
         <div className="flex flex-col">
           <div className="font-semibold">{location.name}</div>
