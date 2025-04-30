@@ -1,5 +1,5 @@
 
-import { calculateRealTimeSiqs, batchCalculateSiqs } from './siqsCalculator';
+import { calculateRealTimeSiqs } from './siqsCalculator';
 import { BatchSiqsOptions, BatchSiqsResult, SiqsResult } from './siqsTypes';
 
 /**
