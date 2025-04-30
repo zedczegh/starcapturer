@@ -108,7 +108,7 @@ const ForecastSpotDemo: React.FC<ForecastSpotDemoProps> = ({
                 <CardHeader>
                   <CardTitle>{selectedSpot.name}</CardTitle>
                   <CardDescription>
-                    {t("Quality Score", "质量评分")}: {(selectedSpot.siqs / 10).toFixed(1)}/10
+                    {t("Quality Score", "质量评分")}: {(typeof selectedSpot.siqs === 'number' ? selectedSpot.siqs : 0) / 10}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -127,7 +127,7 @@ const ForecastSpotDemo: React.FC<ForecastSpotDemoProps> = ({
                       <div>{selectedSpot.isViable ? t("Yes", "是") : t("No", "否")}</div>
                       
                       <div className="font-medium">{t("Distance", "距离")}:</div>
-                      <div>{selectedSpot.distance.toFixed(1)} km</div>
+                      <div>{selectedSpot.distance?.toFixed(1)} km</div>
                     </div>
                   </div>
                 </CardContent>

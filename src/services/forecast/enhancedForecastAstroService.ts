@@ -1,3 +1,4 @@
+
 /**
  * Enhanced Forecast Astro Service
  * 
@@ -217,18 +218,30 @@ export const enhancedForecastAstroService = {
       
       // Use optimized calculation options
       options.forecastData = enhancedForecast.forecast;
+      
       const siqsResult = await calculateRealTimeSiqs(
         latitude,
         longitude,
         defaultBortleScale,
         options
       );
+
+      // Create a properly formatted ExtendedSiqsResult if needed
+      const extendedSiqsResult: ExtendedSiqsResult | null = siqsResult ? {
+        siqs: siqsResult.score,
+        isViable: siqsResult.isViable,
+        bortleScale: defaultBortleScale, 
+        cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
+        timestamp: Date.now(),
+        confidence: 0.8,
+        factors: siqsResult.factors
+      } : null;
       
       return {
         date: daily.time[dayIndex],
         dayIndex,
         cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
-        siqs: siqsResult ? siqsResult.siqs : null,
+        siqs: siqsResult ? siqsResult.score : null,
         isViable: siqsResult ? siqsResult.isViable : false,
         temperature: {
           min: daily.temperature_2m_min[dayIndex],
@@ -241,7 +254,7 @@ export const enhancedForecastAstroService = {
         humidity: daily.relative_humidity_2m_mean[dayIndex] || 0,
         windSpeed: daily.wind_speed_10m_max[dayIndex] || 0,
         weatherCode: daily.weather_code[dayIndex],
-        siqsResult,
+        siqsResult: extendedSiqsResult,
         reliability: enhancedForecast.reliability * 0.01 * 8
       };
     } catch (error) {

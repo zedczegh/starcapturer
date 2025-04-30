@@ -12,6 +12,7 @@ import { ForecastDayAstroData } from "../types/forecastTypes";
 import { getLocationColor, getCertificationColor, getSiqsClass } from "@/utils/markerUtils";
 import { forecastMapService } from "../integration/mapIntegration";
 import { enhancedForecastAstroService } from "../enhancedForecastAstroAdapter";
+import { getSiqsScore } from "@/utils/siqsHelpers";
 
 /**
  * Service for creating map markers from forecast data
@@ -214,7 +215,7 @@ export const forecastMarkerService = {
     location: SharedAstroSpot,
     forecast?: ForecastDayAstroData
   ): string => {
-    const siqsScore = location.siqs ? Math.round(location.siqs) / 10 : 0;
+    const siqsScore = getSiqsScore(location.siqs) / 10;
     const siqsClass = getSiqsClass(siqsScore);
     
     let weatherInfo = '';

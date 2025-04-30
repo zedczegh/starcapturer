@@ -111,11 +111,22 @@ export async function processSpecificDay(
     options
   );
   
+  // Create extended SIQS result with required properties
+  const extendedSiqsResult = siqsResult ? {
+    siqs: siqsResult.score,
+    isViable: siqsResult.isViable,
+    bortleScale,
+    cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
+    timestamp: Date.now(),
+    confidence: 0.8,
+    factors: siqsResult.factors
+  } : null;
+  
   return {
     date: daily.time[dayIndex],
     dayIndex,
     cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
-    siqs: siqsResult ? siqsResult.siqs : null,
+    siqs: siqsResult ? siqsResult.score : null,
     isViable: siqsResult ? siqsResult.isViable : false,
     temperature: {
       min: daily.temperature_2m_min[dayIndex],
@@ -128,7 +139,7 @@ export async function processSpecificDay(
     humidity: daily.relative_humidity_2m_mean[dayIndex] || 0,
     windSpeed: daily.wind_speed_10m_max[dayIndex] || 0,
     weatherCode: daily.weather_code[dayIndex],
-    siqsResult,
+    siqsResult: extendedSiqsResult,
     reliability: enhancedForecast.reliability * 0.01 * 8
   };
 }
