@@ -1,8 +1,8 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { MapPin, ExternalLink } from 'lucide-react';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
@@ -27,15 +27,6 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-
-  // Create a custom red marker icon
-  const icon = new L.Icon({
-    iconUrl: '/user-location.png',
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12],
-    className: 'red-pulse-marker'
-  });
 
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(siqs);
@@ -109,24 +100,21 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
       
       <Marker 
         position={position} 
-        icon={icon}
-        eventHandlers={{
-          click: togglePopup
-        }}
+        icon={createCustomMarker('#e11d48')}
+        onClick={togglePopup}
       >
         {isPopupOpen && (
           <Popup 
             closeOnClick={false} 
             autoClose={false}
-            className="custom-popup user-location-popup"
           >
-            <div className="p-3 min-w-[240px]">
-              <div className="font-medium text-sm mb-2 flex items-center text-primary">
-                <MapPin className="h-4 w-4 mr-1.5" />
+            <div className="p-2 min-w-[200px]">
+              <div className="font-medium text-sm mb-2 flex items-center">
+                <MapPin className="h-4 w-4 mr-1 text-primary" />
                 {t("Your Location", "您的位置")}
               </div>
               
-              <div className="mb-3 border-b border-gray-200/20 pb-3">
+              <div className="mb-2">
                 {isLoadingLocation ? (
                   <div className="text-sm text-muted-foreground animate-pulse">
                     {t("Loading location...", "正在加载位置...")}
@@ -136,7 +124,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
                     {locationName}
                   </div>
                 ) : null}
-                <div className="text-xs text-muted-foreground mt-1.5">
+                <div className="text-xs text-muted-foreground mt-1">
                   {position[0].toFixed(4)}, {position[1].toFixed(4)}
                 </div>
               </div>

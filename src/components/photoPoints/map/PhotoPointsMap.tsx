@@ -19,20 +19,18 @@ interface PhotoPointsMapProps {
   showForecast?: boolean;
 }
 
-const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => { 
-  const { 
-    userLocation,
-    locations = [],
-    onLocationClick,
-    onLocationUpdate,
-    searchRadius = 100,
-    certifiedLocations = [],
-    calculatedLocations = [],
-    activeView = 'certified',
-    forecastDay = 0,
-    showForecast = false
-  } = props;
-  
+const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({ 
+  userLocation, 
+  locations = [], 
+  onLocationClick, 
+  onLocationUpdate,
+  searchRadius = 100,
+  certifiedLocations = [],
+  calculatedLocations = [],
+  activeView = 'certified',
+  forecastDay = 0,
+  showForecast = false,
+}) => { 
   console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
   
   // Get forecast locations if forecast is enabled
