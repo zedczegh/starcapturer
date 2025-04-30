@@ -211,3 +211,42 @@ export interface MoonlessNightInfo {
   /** Duration of astronomical night in hours */
   astronomicalNightDuration: number;
 }
+
+/**
+ * Batch SIQS calculation result interface for multiple locations
+ */
+export interface BatchSiqsResult {
+  /** Location processed */
+  location: {
+    latitude: number;
+    longitude: number;
+    name?: string;
+    bortleScale?: number;
+  };
+  
+  /** SIQS calculation result */
+  siqsResult: SiqsResult;
+  
+  /** Calculation timestamp */
+  timestamp: number;
+  
+  /** Calculation confidence (0-10) */
+  confidence?: number;
+}
+
+/**
+ * Options for batch SIQS calculations
+ */
+export interface BatchSiqsOptions extends SiqsCalculationOptions {
+  /** Maximum concurrent calculations */
+  concurrencyLimit?: number;
+  
+  /** Prioritize accuracy over speed */
+  prioritizeAccuracy?: boolean;
+  
+  /** Max runtime in ms before returning partial results */
+  timeout?: number;
+}
+
+// For compatibility with existing code
+export type { SiqsResult as SIQSResult };

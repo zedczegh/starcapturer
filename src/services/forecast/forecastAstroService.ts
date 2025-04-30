@@ -1,8 +1,8 @@
 
 import { fetchLongRangeForecastData } from "@/lib/api/forecast";
-import { SIQSResult } from "@/lib/siqs/types";
+import { SiqsResult } from "../realTimeSiqs/siqsTypes";
 import { calculateRealTimeSiqs } from "../realTimeSiqs/siqsCalculator";
-import { SiqsCalculationOptions, SiqsResult } from "../realTimeSiqs/siqsTypes";
+import { SiqsCalculationOptions } from "../realTimeSiqs/siqsTypes";
 
 /**
  * Interface for forecast day astronomical data
@@ -60,8 +60,8 @@ export const forecastAstroService = {
       const { daily } = longRangeForecast;
       const result: ForecastDayAstroData[] = [];
 
-      // Process each day in the forecast
-      for (let i = 0; i < daily.time.length; i++) {
+      // Process all days in parallel for better performance
+      const processPromises = Array.from({ length: daily.time.length }, async (_, i) => {
         const defaultBortleScale = bortleScale || 4;
         
         // Extract daily weather parameters
@@ -102,8 +102,8 @@ export const forecastAstroService = {
           console.error(`Error calculating SIQS for forecast day ${i}:`, err);
         }
         
-        // Add to result array
-        result.push({
+        // Return forecast data for this day
+        return {
           date,
           dayIndex: i,
           cloudCover,
@@ -121,7 +121,15 @@ export const forecastAstroService = {
           windSpeed,
           weatherCode,
           siqsResult
-        });
+        };
+      });
+      
+      // Wait for all days to process, but with concurrency limit
+      const chunkSize = 5; // Process 5 days at a time
+      for (let i = 0; i < processPromises.length; i += chunkSize) {
+        const chunk = processPromises.slice(i, i + chunkSize);
+        const chunkResults = await Promise.all(chunk);
+        result.push(...chunkResults);
       }
       
       return result;
@@ -182,12 +190,125 @@ export const forecastAstroService = {
       return null;
     }
     
-    const allDays = await forecastAstroService.getFullForecastAstroData(
-      latitude,
-      longitude,
-      bortleScale
-    );
+    // Optimize for single day fetch by adding a parameter to only calculate for one specific day
+    const options: SiqsCalculationOptions = {
+      useForecasting: true,
+      forecastDay: dayIndex,
+      useSingleHourSampling: true,
+      targetHour: 1,
+      cacheDurationMins: 60
+    };
     
-    return allDays[dayIndex] || null;
+    try {
+      const longRangeForecast = await fetchLongRangeForecastData({ 
+        latitude, 
+        longitude, 
+        days: 16
+      });
+      
+      if (!longRangeForecast || !longRangeForecast.daily || !longRangeForecast.daily.time[dayIndex]) {
+        console.error("Failed to fetch forecast data for the specified day");
+        return null;
+      }
+      
+      const { daily } = longRangeForecast;
+      const defaultBortleScale = bortleScale || 4;
+      
+      // Extract data for the specific day
+      const cloudCover = daily.cloud_cover_mean[dayIndex] || 0;
+      const minTemp = daily.temperature_2m_min[dayIndex];
+      const maxTemp = daily.temperature_2m_max[dayIndex];
+      const precipProb = daily.precipitation_probability_max[dayIndex] || 0;
+      const precipAmount = daily.precipitation_sum[dayIndex] || 0;
+      const humidity = daily.relative_humidity_2m_mean[dayIndex] || 0;
+      const windSpeed = daily.wind_speed_10m_max[dayIndex] || 0;
+      const weatherCode = daily.weather_code[dayIndex];
+      const date = daily.time[dayIndex];
+      
+      // Calculate SIQS with forecast data already loaded
+      options.forecastData = longRangeForecast;
+      const siqsResult = await calculateRealTimeSiqs(
+        latitude,
+        longitude,
+        defaultBortleScale,
+        options
+      );
+      
+      return {
+        date,
+        dayIndex,
+        cloudCover,
+        siqs: siqsResult ? siqsResult.siqs : null,
+        isViable: siqsResult ? siqsResult.isViable : false,
+        temperature: {
+          min: minTemp,
+          max: maxTemp,
+        },
+        precipitation: {
+          probability: precipProb,
+          amount: precipAmount,
+        },
+        humidity,
+        windSpeed,
+        weatherCode,
+        siqsResult
+      };
+    } catch (error) {
+      console.error(`Error fetching specific day (${dayIndex}) data:`, error);
+      return null;
+    }
+  },
+  
+  /**
+   * Batch process multiple locations for forecast data
+   * 
+   * @param locations Array of location coordinates with bortle scale
+   * @param dayIndex Optional specific day to forecast (all days if not specified)
+   * @returns Promise resolving to array of forecast results by location
+   */
+  batchProcessLocations: async (
+    locations: Array<{ latitude: number; longitude: number; bortleScale?: number }>,
+    dayIndex?: number
+  ): Promise<Array<{ location: { latitude: number; longitude: number }, forecast: ForecastDayAstroData[] | ForecastDayAstroData | null }>> => {
+    // Use a concurrency limit to prevent overloading APIs
+    const concurrencyLimit = 3;
+    const results = [];
+    
+    // Process locations in batches
+    for (let i = 0; i < locations.length; i += concurrencyLimit) {
+      const batch = locations.slice(i, i + concurrencyLimit);
+      const batchPromises = batch.map(async location => {
+        try {
+          if (dayIndex !== undefined) {
+            // Process specific day only
+            const forecast = await forecastAstroService.getSpecificDayAstroData(
+              location.latitude,
+              location.longitude,
+              dayIndex,
+              location.bortleScale
+            );
+            
+            return { location, forecast };
+          } else {
+            // Process all days
+            const forecast = await forecastAstroService.getFullForecastAstroData(
+              location.latitude,
+              location.longitude,
+              location.bortleScale
+            );
+            
+            return { location, forecast };
+          }
+        } catch (error) {
+          console.error(`Error processing location (${location.latitude}, ${location.longitude}):`, error);
+          return { location, forecast: null };
+        }
+      });
+      
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+    }
+    
+    return results;
   }
 };
