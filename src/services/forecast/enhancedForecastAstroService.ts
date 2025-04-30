@@ -330,11 +330,19 @@ export const enhancedForecastAstroService = {
     // Use batch processor directly for best performance
     try {
       if (dayIndex !== undefined) {
-        // For specific day, transform into batch format
+        // For specific day, transform into batch format with explicit type definition
         const batchLocations = locations.map(loc => ({
           ...loc,
-          forecastDay: dayIndex, // Add this property to the transformed object
+          // Add forecast day property to the transformed object
+          forecastDay: dayIndex,
           priority: 10 // High priority
+        } as { 
+          latitude: number; 
+          longitude: number; 
+          bortleScale?: number; 
+          name?: string;
+          forecastDay: number;
+          priority: number;
         }));
         
         // Use SIQS batch processor for parallel processing
@@ -423,9 +431,6 @@ export const enhancedForecastAstroService = {
   
   /**
    * Clear forecast cache
-   * 
-   * @param latitude Optional latitude to clear specific location
-   * @param longitude Optional longitude to clear specific location
    */
   clearCache: (latitude?: number, longitude?: number) => {
     if (latitude !== undefined && longitude !== undefined) {
