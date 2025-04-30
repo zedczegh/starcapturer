@@ -1,3 +1,4 @@
+
 // Import the correct type
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useState, useEffect, useCallback } from 'react';

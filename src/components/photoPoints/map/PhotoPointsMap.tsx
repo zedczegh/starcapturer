@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
@@ -18,7 +19,7 @@ interface PhotoPointsMapProps {
   showForecast?: boolean;
 }
 
-const PhotoPointsMap = ({ 
+const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({ 
   userLocation, 
   locations = [], 
   onLocationClick, 
@@ -29,31 +30,7 @@ const PhotoPointsMap = ({
   activeView = 'certified',
   forecastDay = 0,
   showForecast = false,
-}: { 
-  userLocation: { latitude: number; longitude: number } | null; 
-  locations: SharedAstroSpot[]; 
-  onLocationClick: (location: SharedAstroSpot) => void;
-  onLocationUpdate: (lat: number, lng: number) => void;
-  searchRadius?: number;
-  certifiedLocations?: SharedAstroSpot[];
-  calculatedLocations?: SharedAstroSpot[];
-  activeView?: 'certified' | 'calculated';
-  forecastDay?: number;
-  showForecast?: boolean;
 }) => { 
-  const { 
-    userLocation,
-    locations,
-    certifiedLocations,
-    calculatedLocations,
-    activeView,
-    searchRadius,
-    onLocationClick,
-    onLocationUpdate,
-    forecastDay = 0,
-    showForecast = false
-  } = props;
-  
   console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
   
   // Get forecast locations if forecast is enabled
