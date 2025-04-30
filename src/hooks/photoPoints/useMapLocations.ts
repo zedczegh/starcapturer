@@ -31,12 +31,12 @@ export function useMapLocations({
   }, [forecastDay]);
 
   // Ensure timestamp is added if needed
-  const processLocation = (location: any): SharedAstroSpot => {
+  const processLocation = useCallback((location: any): SharedAstroSpot => {
     return {
       ...location,
       timestamp: location.timestamp || new Date().toISOString()
     };
-  };
+  }, []);
 
   useEffect(() => {
     if (showForecast && userLocation) {

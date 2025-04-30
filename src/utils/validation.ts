@@ -1,7 +1,7 @@
 
 import { isWaterLocation as checkWaterLocation } from './locationWaterCheck';
-import { isWaterLocation as validationWaterCheck } from './utils/validation/waterLocationValidator';
-import { isValidAstronomyLocation as checkAstronomyLocation } from './utils/validation/astronomyLocationValidator';
+import { isWaterLocation as validationWaterCheck } from './validation/waterLocationValidator';
+import { isValidAstronomyLocation as checkAstronomyLocation } from './validation/astronomyLocationValidator';
 
 /**
  * Basic validation helpers

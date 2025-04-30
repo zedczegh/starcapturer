@@ -48,9 +48,26 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
   // Combine locations with forecast locations if needed
   const combinedLocations = React.useMemo(() => {
     if (showForecast && activeView === 'calculated' && forecastLocations.length > 0) {
-      return [...locations, ...forecastLocations];
+      // Process forecast locations to ensure they have required timestamp
+      const processedForecastLocations = forecastLocations.map(loc => ({
+        ...loc,
+        timestamp: loc.timestamp || new Date().toISOString()
+      }));
+      
+      // Process regular locations to ensure they have required timestamp
+      const processedLocations = locations.map(loc => ({
+        ...loc,
+        timestamp: loc.timestamp || new Date().toISOString()
+      }));
+      
+      return [...processedLocations, ...processedForecastLocations];
     }
-    return locations;
+    
+    // Ensure all locations have timestamps
+    return locations.map(loc => ({
+      ...loc,
+      timestamp: loc.timestamp || new Date().toISOString()
+    }));
   }, [locations, forecastLocations, showForecast, activeView]);
   
   const {
@@ -103,7 +120,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           siqs: loc.siqs,
           isDarkSkyReserve: loc.isDarkSkyReserve,
           certification: loc.certification,
-          distance: loc.distance
+          distance: loc.distance,
+          timestamp: loc.timestamp || new Date().toISOString()
         }));
         
         let combinedLocations = simplifiedLocations;
