@@ -115,25 +115,12 @@ const CommunityAstroSpots: React.FC = () => {
             </div>
           </Suspense>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.6 }}
-          >
-            <motion.h2 
-              className="flex items-center gap-2 text-xl font-bold mb-6 bg-gradient-to-r from-blue-300 to-purple-400 bg-clip-text text-transparent"
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-            >
-              <Circle className="h-4 w-4 text-primary animate-pulse" />
-              <span>{t("All Community Astrospots", "全部社区地点")}</span>
-            </motion.h2>
+          <h2 className="font-bold text-xl mt-12 mb-5 flex items-center gap-2 text-gradient-blue">
+            <Circle className="h-4 w-4 text-primary" />
+            <span>{t("All Community Astrospots", "全部社区地点")}</span>
+          </h2>
 
-            <div className="glassmorphism-strong p-6 rounded-xl shadow-glow">
-              <CommunityLocationsList locations={astrospots} isLoading={isLoading} />
-            </div>
-          </motion.div>
+          <CommunityLocationsList locations={astrospots} isLoading={isLoading} />
         </div>
       </PhotoPointsLayout>
     </TooltipProvider>

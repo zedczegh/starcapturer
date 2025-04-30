@@ -1,7 +1,6 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import LocationCard from "@/components/LocationCard";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
@@ -101,23 +100,15 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
 
   return (
     <TooltipProvider>
-      <motion.div 
-        className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        {locations.map((spot: any, index: number) => (
-          <motion.button
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+        {locations.map((spot: any) => (
+          <button
             key={spot.id}
-            className="relative text-left group focus:outline-none rounded-xl transition duration-300 ease-in-out hover:shadow-xl border-2 border-transparent hover:border-primary/70"
+            className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
             onClick={() => handleCardClick(spot.id)}
             aria-label={spot.name}
             style={{ background: "none", padding: 0 }}
             onMouseEnter={() => handleCardInView(spot.id)}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: index * 0.1, ease: "easeOut" }}
           >
             <div className="w-full h-full">
               <RealTimeSiqsProvider
@@ -132,7 +123,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
                 }
                 forceUpdate={!attemptedSiqs.has(spot.id) && calculationQueue.includes(spot.id)}
               />
-              <div className="transform transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg rounded-xl">
+              <div className="transition-shadow group-hover:shadow-xl group-hover:ring-2 group-hover:ring-primary rounded-xl">
                 <LocationCard
                   id={spot.id}
                   name={spot.name}
@@ -144,11 +135,11 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
                   username={spot.username}
                 />
               </div>
-              <div className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/10" />
+              <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />
             </div>
-          </motion.button>
+          </button>
         ))}
-      </motion.div>
+      </div>
     </TooltipProvider>
   );
 };
