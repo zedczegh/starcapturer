@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -214,11 +213,6 @@ const AstroSpotProfile = () => {
     return <LocationDetailsLoading />;
   }
 
-  // Determine if we should show bookings
-  // 1. Always show to creator when managing their spot
-  // 2. Only show to visitors when viewing from community page
-  const shouldShowBookings = isCreator || comingFromCommunity;
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
@@ -263,9 +257,7 @@ const AstroSpotProfile = () => {
               advantages={spot.astro_spot_advantages}
             />
             
-            {shouldShowBookings && (
-              <TimeSlotManager spotId={id!} isCreator={isCreator} />
-            )}
+            <TimeSlotManager spotId={id!} isCreator={isCreator} />
             
             <SpotImageGallery
               spotId={id!}

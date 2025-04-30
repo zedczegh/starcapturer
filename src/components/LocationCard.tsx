@@ -3,21 +3,20 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatTime, calculateAstronomicalNight } from '@/utils/astronomy/nightTimeCalculator';
+import { siqsToColor } from '@/lib/siqs/utils';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import SiqsScoreBadge from './photoPoints/cards/SiqsScoreBadge';
 import { Star, Clock, User } from 'lucide-react';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface LocationCardProps {
   id: string;
   name: string;
   latitude: number;
   longitude: number;
-  siqs: number | { score: number; isViable: boolean } | null | undefined;
+  siqs: number | { score: number; isViable: boolean } | undefined;
   timestamp?: string;
   isCertified?: boolean;
   username?: string;
-  hideSiqs?: boolean;
 }
 
 const LocationCard: React.FC<LocationCardProps> = ({
@@ -28,16 +27,11 @@ const LocationCard: React.FC<LocationCardProps> = ({
   siqs,
   timestamp,
   isCertified = false,
-  username = 'Anonymous Stargazer',
-  hideSiqs = false
+  username = 'Anonymous Stargazer'
 }) => {
   const { t } = useLanguage();
   
-  // Convert SIQS to a number regardless of its format
-  const numericSiqs = React.useMemo(() => {
-    return getSiqsScore(siqs);
-  }, [siqs]);
-  
+  const numericSiqs = getSiqsScore(siqs);
   const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
   const nightTimeStr = `${formatTime(nightStart)}-${formatTime(nightEnd)}`;
   
@@ -48,24 +42,9 @@ const LocationCard: React.FC<LocationCardProps> = ({
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-gray-50 truncate pr-2">{name}</h3>
-          {!hideSiqs && numericSiqs !== null && (
-            <div className="flex-shrink-0">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <SiqsScoreBadge 
-                      score={numericSiqs} 
-                      isCertified={isCertified} 
-                      compact={true}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t("Sky quality score", "天空质量评分")}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          )}
+          <div className="flex-shrink-0">
+            <SiqsScoreBadge score={numericSiqs} isCertified={isCertified} />
+          </div>
         </div>
         <div className="space-y-2 text-sm text-gray-400">
           <div className="flex items-center">

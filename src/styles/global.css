@@ -151,42 +151,23 @@
     @apply text-xs font-mono;
   }
   
-  /* Additional mobile typography utilities */
-  .mobile-heading-lg {
-    @apply text-2xl sm:text-xl font-bold;
-  }
+  /* Other existing styles */
   
-  .mobile-heading-md {
-    @apply text-xl sm:text-lg font-semibold;
+  /* Cosmic glassmorphism dropdown */
+  .cosmic-dropdown {
+    @apply glassmorphism;
+    background: linear-gradient(135deg, rgba(33,21,50,0.97) 60%, rgba(29,30,51,0.97) 100%);
+    box-shadow: 0 8px 32px 0 rgba(104, 117, 255, 0.15), 0 2px 8px rgba(0,0,0,0.30) !important;
+    border: 1px solid rgba(104, 117, 255, 0.06);
+    backdrop-filter: blur(12px);
   }
-  
-  .mobile-heading-sm {
-    @apply text-lg sm:text-base font-medium;
+  .glass-dropdown-label {
+    background: linear-gradient(90deg, rgba(55,41,85,0.90) 50%, rgba(17,15,29,0.99) 100%);
+    border-radius: 0.5rem 0.5rem 0 0;
+    margin-bottom: 0.5rem;
   }
-  
-  .mobile-text-base {
-    @apply text-base sm:text-sm;
-  }
-  
-  .mobile-text-sm {
-    @apply text-sm sm:text-xs;
-  }
-  
-  /* Mobile-specific spacing utilities */
-  .mobile-section-spacing {
-    @apply space-y-4 sm:space-y-3;
-  }
-  
-  .mobile-card-padding {
-    @apply p-5 sm:p-4;
-  }
-  
-  /* Enhanced mobile touch targets */
-  .mobile-touch-target {
-    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
-  }
-  
-  /* Additional location panel enhancements */
+
+  /* Mobile enhancement classes for location details */
   .location-panel {
     @apply rounded-xl overflow-hidden;
     @apply backdrop-blur-md bg-cosmic-900/30;
@@ -209,19 +190,5 @@
     @apply bg-cosmic-800/70 text-cosmic-200;
     @apply border border-cosmic-700/40 rounded-lg;
     @apply px-2.5 py-1 text-sm;
-  }
-  
-  /* Location stat items with improved mobile spacing */
-  .location-stat-item {
-    @apply flex flex-col gap-1 p-3;
-    @apply bg-cosmic-800/40 rounded-lg border border-cosmic-700/30;
-  }
-  
-  .location-stat-label {
-    @apply text-xs text-cosmic-300 font-medium;
-  }
-  
-  .location-stat-value {
-    @apply font-mono text-lg sm:text-base text-cosmic-100;
   }
 }

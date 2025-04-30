@@ -33,11 +33,11 @@ const LocationMetadata: React.FC<LocationMetadataProps> = ({
   const showCoordinates = latitude !== undefined && longitude !== undefined;
   
   return (
-    <div className="space-y-2 text-sm sm:text-xs">
+    <div className="space-y-2 text-xs">
       {/* Date information if available */}
       {formattedDate && (
         <div className="flex items-center text-muted-foreground">
-          <Calendar className="h-4 w-4 sm:h-3.5 sm:w-3.5 mr-1.5" />
+          <Calendar className="h-3.5 w-3.5 mr-1.5" />
           <span>{formattedDate}</span>
         </div>
       )}
@@ -45,7 +45,7 @@ const LocationMetadata: React.FC<LocationMetadataProps> = ({
       {/* Location with coordinates */}
       {showCoordinates && (
         <div className="flex items-center text-muted-foreground">
-          <MapPin className="h-4 w-4 sm:h-3.5 sm:w-3.5 mr-1.5 flex-shrink-0" />
+          <MapPin className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
           <span className="break-all">
             {latitude?.toFixed(4)}, {longitude?.toFixed(4)}
           </span>

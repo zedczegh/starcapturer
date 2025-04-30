@@ -31,11 +31,6 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   // Create unique key for caching that includes language
   const cacheKey = `${score}-${compact}-${isCertified}-${loading}-${confidenceScore}-${language}`;
   
-  // Log for debugging
-  React.useEffect(() => {
-    console.log(`SiqsScoreBadge rendering with score: ${score}, loading: ${loading}, isCertified: ${isCertified}`);
-  }, [score, loading, isCertified]);
-  
   // Use memoization to prevent unnecessary re-renders
   const badgeContent = useMemo(() => {
     // Check cache first
@@ -51,7 +46,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
           {t("Calculating...", "计算中...")}
         </Badge>
       );
-    } else if (score === null || score === undefined) {
+    } else if (score === null) {
       content = (
         <Badge variant="outline" className="bg-cosmic-900/30 text-xs font-medium">
           {t("No data", "无数据")}

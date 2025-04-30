@@ -45,10 +45,10 @@ const TimeZoneDisplay = ({ latitude, longitude }: TimeZoneDisplayProps) => {
   }, [latitude, longitude]);
 
   return (
-    <div className="flex items-center gap-1.5 text-cosmic-200 mt-1">
-      <Globe2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-cosmic-400" />
-      <span className="text-sm sm:text-xs flex items-center gap-1.5">
-        <span className="font-mono text-base sm:text-sm">{localTime}</span>
+    <div className="flex items-center gap-1.5 text-cosmic-200 mt-0.5">
+      <Globe2 className="w-3.5 h-3.5 text-cosmic-400" />
+      <span className="text-xs flex items-center gap-1">
+        <span className="font-mono">{localTime}</span>
         <span className="text-cosmic-400 font-medium">{timeZone}</span>
       </span>
     </div>

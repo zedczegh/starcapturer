@@ -12,7 +12,6 @@ interface RealTimeSiqsProviderProps {
   isDarkSkyReserve?: boolean;
   existingSiqs?: number | any;
   onSiqsCalculated: (siqs: number | null, loading: boolean, confidence?: number) => void;
-  onError?: (error: any) => void;
   forceUpdate?: boolean;
   skipCache?: boolean;
   priority?: number; // Higher number = higher priority (1-10)
@@ -30,7 +29,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   isDarkSkyReserve = false,
   existingSiqs,
   onSiqsCalculated,
-  onError,
   forceUpdate = false,
   skipCache = false,
   priority = 1 // Default to lowest priority
@@ -95,13 +93,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       
       timeoutRef.current = window.setTimeout(() => {
         calculateSiqs(latitude, longitude, bortleScale)
-          .catch(error => {
-            if (onError) {
-              onError(error);
-            } else {
-              console.error("SIQS calculation error:", error);
-            }
-          })
           .finally(() => {
             pendingCalculations.delete(calculationKey);
           });
@@ -109,18 +100,11 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       }, delay);
     } else {
       calculateSiqs(latitude, longitude, bortleScale)
-        .catch(error => {
-          if (onError) {
-            onError(error);
-          } else {
-            console.error("SIQS calculation error:", error);
-          }
-        })
         .finally(() => {
           pendingCalculations.delete(calculationKey);
         });
     }
-  }, [latitude, longitude, bortleScale, calculateSiqs, forceUpdate, refreshInterval, isVisible, effectivePriority, skipCache, onError]);
+  }, [latitude, longitude, bortleScale, calculateSiqs, forceUpdate, refreshInterval, isVisible, effectivePriority, skipCache]);
   
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -160,36 +144,16 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     hasNotifiedRef.current = true;
   }, [siqsScore, loading, onSiqsCalculated, forceUpdate]);
   
-  // Handle existing SIQS data properly
+  // Send existing SIQS if available while loading
   useEffect(() => {
     if (loading && !hasNotifiedRef.current && existingSiqs) {
-      let staticSiqs: number | null = null;
-      
-      // Handle different formats of existing SIQS
-      if (typeof existingSiqs === 'number') {
-        staticSiqs = existingSiqs;
-      } else if (existingSiqs && typeof existingSiqs === 'object') {
-        if ('score' in existingSiqs) {
-          staticSiqs = existingSiqs.score;
-        }
-      } else {
-        // Try using the helper function as fallback
-        staticSiqs = getSiqsScore(existingSiqs);
-      }
-      
+      const staticSiqs = getSiqsScore(existingSiqs);
       if (staticSiqs !== null && staticSiqs > 0) {
         onSiqsCalculated(staticSiqs, false, 5);
         hasNotifiedRef.current = true;
       }
     }
   }, [loading, existingSiqs, onSiqsCalculated]);
-
-  // Debug the SIQS data
-  useEffect(() => {
-    const staticSiqs = getSiqsScore(existingSiqs);
-    console.log(`RealTimeSiqsProvider debug - existingSiqs:`, existingSiqs, 
-                `parsed: ${staticSiqs}, realTime: ${siqsScore}, loading: ${loading}`);
-  }, [existingSiqs, siqsScore, loading]);
   
   return null;
 };
