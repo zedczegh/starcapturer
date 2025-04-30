@@ -10,6 +10,7 @@ import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverse
 import { useNavigate } from 'react-router-dom';
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import L from 'leaflet';
 
 interface UserLocationMarkerProps {
   position: [number, number];
@@ -37,6 +38,21 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     setForceUpdate(true);
     setTimeout(() => setForceUpdate(false), 100);
   };
+
+  // Custom red pulsing marker
+  const userIcon = L.divIcon({
+    className: "user-location-marker-custom",
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -17],
+    html: `
+      <div class="relative w-full h-full">
+        <div class="absolute inset-0 bg-red-500 rounded-full opacity-30 animate-ping"></div>
+        <div class="absolute inset-0 bg-red-500 rounded-full opacity-50 scale-75 animate-ping animation-delay-300"></div>
+        <div class="absolute inset-1 bg-red-500 rounded-full shadow-lg border border-white"></div>
+      </div>
+    `
+  });
 
   // Fetch location name when position changes
   useEffect(() => {
@@ -81,7 +97,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     setIsDialogOpen(false);
   }, []);
 
-  const togglePopup = useCallback(() => {
+  const handleTogglePopup = useCallback(() => {
     setIsPopupOpen(!isPopupOpen);
     if (!isPopupOpen) {
       handleRefreshSiqs();
@@ -100,31 +116,31 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
       
       <Marker 
         position={position} 
-        icon={createCustomMarker('#e11d48')}
-        onClick={togglePopup}
+        icon={userIcon}
+        onClick={handleTogglePopup}
       >
         {isPopupOpen && (
           <Popup 
             closeOnClick={false} 
             autoClose={false}
           >
-            <div className="p-2 min-w-[200px]">
-              <div className="font-medium text-sm mb-2 flex items-center">
-                <MapPin className="h-4 w-4 mr-1 text-primary" />
+            <div className="p-2 min-w-[200px] bg-gradient-to-b from-gray-800/90 to-gray-900/95 rounded border border-primary/20 shadow-lg">
+              <div className="font-medium text-sm mb-2 flex items-center text-white">
+                <MapPin className="h-4 w-4 mr-1 text-red-500" />
                 {t("Your Location", "您的位置")}
               </div>
               
               <div className="mb-2">
                 {isLoadingLocation ? (
-                  <div className="text-sm text-muted-foreground animate-pulse">
+                  <div className="text-sm text-gray-300 animate-pulse">
                     {t("Loading location...", "正在加载位置...")}
                   </div>
                 ) : locationName ? (
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-gray-300">
                     {locationName}
                   </div>
                 ) : null}
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-xs text-gray-400 mt-1">
                   {position[0].toFixed(4)}, {position[1].toFixed(4)}
                 </div>
               </div>

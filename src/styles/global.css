@@ -97,7 +97,57 @@
                 0 0 60px rgba(139, 92, 246, 0.08);
   }
   
-  /* Other existing styles */
+  /* Enhanced user location marker with pulsing effect */
+  .user-location-marker-custom {
+    z-index: 1000 !important;
+  }
+  
+  .user-location-marker-custom .animate-ping {
+    animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  
+  .user-location-marker-custom .animation-delay-300 {
+    animation-delay: 0.3s;
+  }
+  
+  @keyframes ping {
+    75%, 100% {
+      transform: scale(2);
+      opacity: 0;
+    }
+  }
+  
+  /* Enhanced popup styles */
+  .leaflet-popup-content-wrapper {
+    padding: 0;
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  }
+  
+  .leaflet-popup-tip {
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.25);
+  }
+  
+  /* Popup gradients for different SIQS classes */
+  .marker-popup-gradient {
+    background: linear-gradient(to bottom, rgba(38, 38, 45, 0.95), rgba(28, 28, 35, 0.98));
+  }
+  
+  .marker-popup-gradient.siqs-excellent {
+    background: linear-gradient(to bottom, rgba(38, 45, 38, 0.95), rgba(28, 35, 28, 0.98));
+    border-left: 3px solid rgba(34, 197, 94, 0.7);
+  }
+  
+  .marker-popup-gradient.siqs-good {
+    background: linear-gradient(to bottom, rgba(45, 45, 38, 0.95), rgba(35, 35, 28, 0.98));
+    border-left: 3px solid rgba(250, 204, 21, 0.7);
+  }
+  
+  .marker-popup-gradient.siqs-poor {
+    background: linear-gradient(to bottom, rgba(45, 38, 38, 0.95), rgba(35, 28, 28, 0.98));
+    border-left: 3px solid rgba(234, 88, 12, 0.7);
+  }
   
   /* Cosmic glassmorphism dropdown */
   .cosmic-dropdown {

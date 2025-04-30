@@ -18,19 +18,27 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  const icon = new L.Icon({
-    iconUrl: '/user-location.png',
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12]
+  // Create a custom red marker icon with pulse effect
+  const icon = L.divIcon({
+    className: "custom-user-location",
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15],
+    html: `
+      <div class="relative w-full h-full">
+        <div class="absolute inset-0 bg-red-500 rounded-full opacity-30 animate-ping"></div>
+        <div class="absolute inset-0 bg-red-500 rounded-full opacity-50 scale-75 animate-ping animation-delay-300"></div>
+        <div class="absolute inset-1 bg-red-500 rounded-full shadow-lg border border-white"></div>
+      </div>
+    `
   });
   
   return (
-    <Marker position={position} icon={icon}>
+    <Marker position={position} icon={icon} onClick={() => onLocationUpdate && onLocationUpdate(position[0], position[1])}>
       <Popup>
         <div className="flex flex-col gap-1 min-w-[180px] p-1">
           <div className="flex items-center">
-            <MapPin className="h-4 w-4 mr-1.5 text-blue-500" />
+            <MapPin className="h-4 w-4 mr-1.5 text-red-500" />
             <span className="font-medium">
               {t("Your Location", "您的位置")}
             </span>
@@ -40,7 +48,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
           </div>
           {currentSiqs !== null && (
             <div className="text-xs">
-              SIQS: <span className="font-semibold">{currentSiqs.toFixed(1)}</span>
+              SIQS: <span className="font-semibold">{currentSiqs?.toFixed(1)}</span>
             </div>
           )}
         </div>

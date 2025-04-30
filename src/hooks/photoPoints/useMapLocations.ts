@@ -6,12 +6,12 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { getForecast } from '@/services/weather/getForecast';
 
 interface UseMapLocationsProps {
-  locations: any[];
+  locations: SharedAstroSpot[];
   activeView: 'certified' | 'calculated';
   userLocation: { latitude: number; longitude: number } | null;
   searchRadius: number;
-  showForecast: boolean;
-  forecastDay: number;
+  showForecast?: boolean;
+  forecastDay?: number;
 }
 
 export function useMapLocations({
@@ -19,25 +19,42 @@ export function useMapLocations({
   activeView,
   userLocation,
   searchRadius,
-  showForecast,
-  forecastDay
+  showForecast = false,
+  forecastDay = 0
 }: UseMapLocationsProps) {
   const { t } = useLanguage();
   const [forecastData, setForecastData] = useState<any>(null);
   const [selectedDay, setSelectedDay] = useState(0);
+  const [processedLocations, setProcessedLocations] = useState<SharedAstroSpot[]>([]);
 
   useEffect(() => {
-    setSelectedDay(forecastDay);
+    setSelectedDay(forecastDay || 0);
   }, [forecastDay]);
 
   // Ensure timestamp is added if needed
-  const processLocation = useCallback((location: any): SharedAstroSpot => {
+  const processLocation = useCallback((location: SharedAstroSpot): SharedAstroSpot => {
     return {
       ...location,
       timestamp: location.timestamp || new Date().toISOString()
     };
   }, []);
 
+  // Process locations when they change
+  useEffect(() => {
+    if (locations && Array.isArray(locations)) {
+      const processed = locations.map(loc => {
+        const processedLoc = processLocation(loc);
+        return {
+          ...processedLoc,
+          isForecast: !!loc.isForecast,
+          forecastDay: loc.forecastDay || selectedDay
+        };
+      });
+      setProcessedLocations(processed);
+    }
+  }, [locations, processLocation, selectedDay]);
+
+  // Fetch forecast data when needed
   useEffect(() => {
     if (showForecast && userLocation) {
       const fetchForecast = async () => {
@@ -55,15 +72,7 @@ export function useMapLocations({
     }
   }, [showForecast, userLocation]);
 
-  const locationsWithForecast = locations.map(loc => {
-    const processedLocation = processLocation(loc);
-    return {
-      ...processedLocation,
-      isForecast: showForecast,
-      forecastDay: selectedDay
-    };
-  });
-
+  // Get cloud cover for a location
   const getCloudCover = useCallback((location: SharedAstroSpot) => {
     if (!showForecast || !forecastData || !location.forecastDay) {
       return null;
@@ -78,7 +87,7 @@ export function useMapLocations({
   }, [forecastData, showForecast]);
 
   return {
-    locationsWithForecast,
+    processedLocations,
     getCloudCover
   };
 }
