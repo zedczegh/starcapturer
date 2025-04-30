@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { SharedAstroSpot } from "@/types/weather";
 import { Button } from "./ui/button";
 import { ChevronRight, Loader2, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";

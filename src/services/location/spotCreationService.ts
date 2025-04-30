@@ -1,5 +1,5 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import { calculateRealTimeSiqs } from '../realTimeSiqs/siqsCalculator';
 import { isWaterLocation } from '@/utils/validation';
 import { getEnhancedLocationDetails } from '../geocoding/enhancedReverseGeocoding';
