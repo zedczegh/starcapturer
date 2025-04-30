@@ -1,4 +1,3 @@
-
 /**
  * Enhanced Forecast Astro Service
  * 

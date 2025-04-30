@@ -58,6 +58,10 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     }
   };
 
+  // Convert SIQS to string safely to prevent type errors
+  const siqsScore = getSiqsScore(point.siqs);
+  const formattedSiqs = formatSiqsScore(siqsScore);
+
   return (
     <div
       className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
@@ -71,7 +75,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         />
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
-          <span className="text-xs font-medium">{formatSiqsScore(point.siqs)}</span>
+          <span className="text-xs font-medium">{formattedSiqs}</span>
         </div>
       </div>
       
@@ -108,4 +112,3 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
 };
 
 export default PhotoPointCard;
-

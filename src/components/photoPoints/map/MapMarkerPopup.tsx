@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
@@ -47,8 +46,10 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
     (location.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜天空保护区") : 
       (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
   
+  // Extract static SIQS score safely using getSiqsScore helper
+  const staticSiqs = getSiqsScore(location.siqs);
+  
   // Use our unified display SIQS function - no default scores for certified locations
-  const staticSiqs = getSiqsScore(location);
   const displaySiqs = getDisplaySiqs({
     realTimeSiqs,
     staticSiqs,

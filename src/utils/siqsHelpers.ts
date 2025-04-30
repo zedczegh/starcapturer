@@ -8,7 +8,7 @@
  * @param siqs - SIQS value which could be a number, object with score property, or null
  * @returns numeric SIQS score or 0 if unavailable
  */
-export const getSiqsScore = (siqs: number | { score: number; isViable: boolean; } | { siqs: number; isViable: boolean; } | null | undefined): number => {
+export const getSiqsScore = (siqs: number | { score: number; isViable: boolean; } | { siqs: number; isViable: boolean; } | any): number => {
   if (siqs === null || siqs === undefined) {
     return 0;
   }
@@ -17,12 +17,20 @@ export const getSiqsScore = (siqs: number | { score: number; isViable: boolean; 
     return siqs;
   }
   
-  if ('score' in siqs) {
-    return siqs.score;
-  }
-  
-  if ('siqs' in siqs) {
-    return siqs.siqs;
+  if (typeof siqs === 'object') {
+    // Handle SharedAstroSpot objects which have siqs property
+    if (siqs.siqs !== undefined) {
+      // If siqs itself is an object with score
+      if (typeof siqs.siqs === 'object' && siqs.siqs !== null && 'score' in siqs.siqs) {
+        return siqs.siqs.score;
+      }
+      return typeof siqs.siqs === 'number' ? siqs.siqs : 0;
+    }
+    
+    // Handle direct objects with score property
+    if ('score' in siqs) {
+      return siqs.score;
+    }
   }
   
   return 0;
@@ -53,7 +61,7 @@ export const isViewingViable = (siqs: number | { score: number; isViable: boolea
 export const getQualityLevelText = (score: number): string => {
   if (score < 3) return 'Poor';
   if (score < 5) return 'Fair';
-  if (score < 5) return 'Good';
+  if (score < 7) return 'Good'; // Fixed incorrect threshold
   if (score < 9) return 'Very Good';
   return 'Excellent';
 };

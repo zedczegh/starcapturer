@@ -1,4 +1,3 @@
-
 /**
  * Optimized forecast data processing service
  */
@@ -30,7 +29,7 @@ export async function processForecastData(
     longitude,
     bortleScale,
     priority: daily.time.length - i, // Higher priority for closer dates
-    forecastDay: i, // This is the missing property we need to add
+    forecastDay: i, // This is the property we need to ensure exists
     cloudCover: daily.cloud_cover_mean[i] || 0
   }));
   
