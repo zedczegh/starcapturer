@@ -15,8 +15,6 @@ interface RealTimeSiqsProviderProps {
   forceUpdate?: boolean;
   skipCache?: boolean;
   priority?: number; // Higher number = higher priority (1-10)
-  // Add the onError prop
-  onError?: (error: string) => void;
 }
 
 // Global map to track pending calculations across components
@@ -33,8 +31,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   onSiqsCalculated,
   forceUpdate = false,
   skipCache = false,
-  priority = 1, // Default to lowest priority
-  onError
+  priority = 1 // Default to lowest priority
 }) => {
   const positionRef = useRef<string>('');
   const lastCalculationRef = useRef<number>(0);
@@ -96,14 +93,6 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       
       timeoutRef.current = window.setTimeout(() => {
         calculateSiqs(latitude, longitude, bortleScale)
-          .then()
-          .catch(err => {
-            if (onError) {
-              onError(err.message || String(err));
-            } else {
-              console.error("SIQS calculation error:", err);
-            }
-          })
           .finally(() => {
             pendingCalculations.delete(calculationKey);
           });
@@ -111,19 +100,11 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       }, delay);
     } else {
       calculateSiqs(latitude, longitude, bortleScale)
-        .then()
-        .catch(err => {
-          if (onError) {
-            onError(err.message || String(err));
-          } else {
-            console.error("SIQS calculation error:", err);
-          }
-        })
         .finally(() => {
           pendingCalculations.delete(calculationKey);
         });
     }
-  }, [latitude, longitude, bortleScale, calculateSiqs, forceUpdate, refreshInterval, isVisible, effectivePriority, skipCache, onError]);
+  }, [latitude, longitude, bortleScale, calculateSiqs, forceUpdate, refreshInterval, isVisible, effectivePriority, skipCache]);
   
   // Cleanup timeout on unmount
   useEffect(() => {
