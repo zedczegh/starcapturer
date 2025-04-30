@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
@@ -7,6 +6,9 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Calendar, MapPin } from "lucide-react";
 import { formatDistance } from "@/utils/formatters";
 import { formatSiqsScore } from "@/utils/siqsHelpers";
+import { getLocationMarker } from './MarkerUtils';
+import MarkerEventHandler from './MarkerEventHandler';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 // Create custom marker icons
 const createMarkerIcon = (isActive: boolean = false, isCertified: boolean = false) => {
@@ -22,6 +24,140 @@ const createMarkerIcon = (isActive: boolean = false, isCertified: boolean = fals
     popupAnchor: [0, -32]
   });
 };
+
+/**
+ * Marker for certified dark sky locations with special styling
+ */
+export const CertifiedLocationMarker = React.memo(({
+  location, 
+  onClick,
+  onHover,
+  isHovered
+}: {
+  location: SharedAstroSpot;
+  onClick: (location: SharedAstroSpot) => void;
+  onHover: (id: string | null) => void;
+  isHovered: boolean;
+}) => {
+  const { t } = useLanguage();
+  const icon = getLocationMarker(location, true, isHovered, false);
+  const locationId = location.id || `${location.latitude}-${location.longitude}`;
+  
+  const handleClick = () => onClick(location);
+  const handleMouseOver = () => onHover(locationId);
+  const handleMouseOut = () => onHover(null);
+  
+  return (
+    <Marker
+      position={[location.latitude, location.longitude]}
+      icon={icon}
+    >
+      <MarkerEventHandler 
+        marker={null}
+        eventMap={{
+          click: handleClick,
+          mouseover: handleMouseOver,
+          mouseout: handleMouseOut
+        }}
+      />
+      <Popup>
+        <div className="flex flex-col">
+          <div className="font-semibold">{location.name}</div>
+          <div className="text-xs text-muted-foreground">
+            {location.distance ? formatDistance(location.distance) : ''}
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  );
+});
+
+/**
+ * Marker for calculated (non-certified) locations
+ */
+export const CalculatedLocationMarker = React.memo(({
+  location, 
+  onClick,
+  onHover,
+  isHovered
+}: {
+  location: SharedAstroSpot;
+  onClick: (location: SharedAstroSpot) => void;
+  onHover: (id: string | null) => void;
+  isHovered: boolean;
+}) => {
+  const { t } = useLanguage();
+  const icon = getLocationMarker(location, false, isHovered, false);
+  const locationId = location.id || `${location.latitude}-${location.longitude}`;
+  
+  const handleClick = () => onClick(location);
+  const handleMouseOver = () => onHover(locationId);
+  const handleMouseOut = () => onHover(null);
+  
+  return (
+    <Marker
+      position={[location.latitude, location.longitude]}
+      icon={icon}
+    >
+      <MarkerEventHandler 
+        marker={null}
+        eventMap={{
+          click: handleClick,
+          mouseover: handleMouseOver,
+          mouseout: handleMouseOut
+        }}
+      />
+      <Popup>
+        <div className="flex flex-col">
+          <div className="font-semibold">{location.name}</div>
+          <div className="text-xs text-muted-foreground">
+            {location.distance ? formatDistance(location.distance) : ''}
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  );
+});
+
+/**
+ * Marker for user's current location
+ */
+export const UserLocationMarker = React.memo(({
+  position,
+  onClick
+}: {
+  position: [number, number];
+  onClick?: () => void;
+}) => {
+  const handleClick = onClick || (() => {});
+  
+  const icon = new L.Icon({
+    iconUrl: '/user-location.png',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12]
+  });
+  
+  return (
+    <Marker
+      position={position}
+      icon={icon}
+    >
+      <MarkerEventHandler 
+        marker={null}
+        eventMap={{
+          click: handleClick
+        }}
+      />
+      <Popup>
+        <div className="flex items-center">
+          <MapPin className="h-4 w-4 mr-2 text-blue-500" />
+          <span className="font-medium">Your Location</span>
+        </div>
+      </Popup>
+    </Marker>
+  );
+});
 
 export const LocationMarker: React.FC<{
   location: SharedAstroSpot;
@@ -128,35 +264,6 @@ export const ForecastMarker: React.FC<{
           <div className="text-xs text-muted-foreground">
             {location.distance ? formatDistance(location.distance) : ''}
           </div>
-        </div>
-      </Popup>
-    </Marker>
-  );
-};
-
-export const UserLocationMarker: React.FC<{
-  position: [number, number];
-  onClick?: () => void;
-}> = ({ position, onClick }) => {
-  const handleClick = () => {
-    if (onClick) onClick();
-  };
-  
-  return (
-    <Marker 
-      position={position}
-      icon={new L.Icon({
-        iconUrl: '/user-location.png',
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
-        popupAnchor: [0, -12]
-      })}
-      onClick={handleClick}
-    >
-      <Popup>
-        <div className="flex items-center">
-          <MapPin className="h-4 w-4 mr-2 text-blue-500" />
-          <span className="font-medium">Your Location</span>
         </div>
       </Popup>
     </Marker>

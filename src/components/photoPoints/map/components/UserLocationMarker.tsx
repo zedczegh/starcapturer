@@ -8,9 +8,14 @@ import { useLanguage } from '@/contexts/LanguageContext';
 interface UserLocationMarkerProps {
   position: [number, number];
   currentSiqs?: number | null;
+  onLocationUpdate?: (lat: number, lng: number) => void;
 }
 
-const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position, currentSiqs }) => {
+const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ 
+  position, 
+  currentSiqs,
+  onLocationUpdate 
+}) => {
   const { t } = useLanguage();
   
   const icon = new L.Icon({

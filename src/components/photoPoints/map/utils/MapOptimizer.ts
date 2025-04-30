@@ -2,6 +2,7 @@
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { filterLocations } from "../MapUtils";
 import MarkerManager from "./markers/MarkerManager";
+import { getSiqsScore } from "@/utils/siqsHelpers";
 
 /**
  * Optimize locations for display on map
@@ -29,7 +30,8 @@ export const optimizeLocationsForDisplay = (
     
     // Then get high quality calculated locations (SIQS > 5)
     const highQuality = locations.filter(
-      loc => !loc.isDarkSkyReserve && !loc.certification && loc.siqs && loc.siqs > 5
+      loc => !loc.isDarkSkyReserve && !loc.certification && 
+             loc.siqs && getSiqsScore(loc.siqs) > 5
     );
     
     // Combine, but limit total number for better performance

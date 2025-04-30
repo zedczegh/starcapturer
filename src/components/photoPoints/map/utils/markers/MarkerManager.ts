@@ -3,107 +3,78 @@ import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * MarkerManager class for handling map marker operations
+ * Manages markers on the map for better performance
  */
-class MarkerManager {
+export default class MarkerManager {
   private markers: Map<string, L.Marker> = new Map();
-  private markerLayer: L.LayerGroup | null = null;
-  private map: L.Map | null = null;
+  private activeMarkers: Set<string> = new Set();
   
   /**
-   * Initialize the marker manager with a map
+   * Add or update a marker on the map
+   * @param id Unique identifier for the marker
+   * @param marker The Leaflet marker
    */
-  initialize(map: L.Map) {
-    this.map = map;
-    this.markerLayer = L.layerGroup().addTo(map);
-    return this;
+  addMarker(id: string, marker: L.Marker): void {
+    this.markers.set(id, marker);
+    this.activeMarkers.add(id);
   }
   
   /**
-   * Create a marker for a location
+   * Remove a marker from the map
+   * @param id Marker identifier
    */
-  createMarker(location: SharedAstroSpot, icon: L.Icon): L.Marker {
-    if (!location.latitude || !location.longitude) {
-      throw new Error('Invalid location coordinates');
-    }
-    
-    const marker = L.marker([location.latitude, location.longitude], { icon });
-    const locationId = location.id || `${location.latitude}-${location.longitude}`;
-    
-    this.markers.set(locationId, marker);
-    
-    if (this.markerLayer) {
-      marker.addTo(this.markerLayer);
-    }
-    
-    return marker;
+  removeMarker(id: string): void {
+    this.markers.delete(id);
+    this.activeMarkers.delete(id);
   }
   
   /**
-   * Get a marker by location ID
+   * Check if a marker exists
+   * @param id Marker identifier
    */
-  getMarker(locationId: string): L.Marker | undefined {
-    return this.markers.get(locationId);
+  hasMarker(id: string): boolean {
+    return this.markers.has(id);
   }
   
   /**
-   * Remove a marker by location ID
+   * Get a marker by id
+   * @param id Marker identifier
    */
-  removeMarker(locationId: string): boolean {
-    const marker = this.markers.get(locationId);
-    
-    if (marker && this.markerLayer) {
-      this.markerLayer.removeLayer(marker);
-      this.markers.delete(locationId);
-      return true;
+  getMarker(id: string): L.Marker | undefined {
+    return this.markers.get(id);
+  }
+  
+  /**
+   * Update marker position
+   * @param id Marker identifier
+   * @param position New position
+   */
+  updateMarkerPosition(id: string, position: L.LatLngExpression): void {
+    const marker = this.markers.get(id);
+    if (marker) {
+      marker.setLatLng(position);
     }
-    
-    return false;
   }
   
   /**
    * Clear all markers
    */
   clearMarkers(): void {
-    if (this.markerLayer) {
-      this.markerLayer.clearLayers();
-    }
     this.markers.clear();
+    this.activeMarkers.clear();
   }
   
   /**
-   * Update marker icon
+   * Get all marker ids
    */
-  updateMarkerIcon(locationId: string, icon: L.Icon): boolean {
-    const marker = this.markers.get(locationId);
-    
-    if (marker) {
-      marker.setIcon(icon);
-      return true;
-    }
-    
-    return false;
+  getAllMarkerIds(): string[] {
+    return Array.from(this.markers.keys());
   }
   
   /**
-   * Get all markers
+   * Get count of active markers
    */
-  getAllMarkers(): L.Marker[] {
-    return Array.from(this.markers.values());
-  }
-  
-  /**
-   * Destroy the manager
-   */
-  destroy(): void {
-    if (this.markerLayer && this.map) {
-      this.map.removeLayer(this.markerLayer);
-    }
-    
-    this.markers.clear();
-    this.markerLayer = null;
-    this.map = null;
+  getActiveCount(): number {
+    return this.activeMarkers.size;
   }
 }
-
-export default MarkerManager;

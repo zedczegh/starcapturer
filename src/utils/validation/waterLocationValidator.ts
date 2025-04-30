@@ -1,4 +1,3 @@
-
 import { isWaterLocation as checkWaterLocation } from "@/utils/locationWaterCheck";
 
 /**
@@ -16,7 +15,7 @@ export const isWaterLocation = (
   if (isCertified) return false;
   
   // First check: Basic water detection
-  if (checkWaterLocation(latitude, longitude, false)) {
+  if (checkWaterLocation(latitude, longitude)) {
     return true;
   }
   
