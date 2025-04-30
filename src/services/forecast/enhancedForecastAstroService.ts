@@ -88,6 +88,7 @@ interface BatchLocationData {
   name?: string;
   forecastDay: number;
   priority: number;
+  cloudCover?: number;
 }
 
 /**
@@ -342,9 +343,9 @@ export const enhancedForecastAstroService = {
     try {
       if (dayIndex !== undefined) {
         // Transform locations into BatchLocationData array with explicit type annotation
-        const batchLocations = locations.map(loc => {
+        const batchLocations: BatchLocationData[] = locations.map(loc => {
           // Create a new object with all properties we need
-          const batchLocation: BatchLocationData = {
+          return {
             latitude: loc.latitude,
             longitude: loc.longitude,
             bortleScale: loc.bortleScale,
@@ -352,7 +353,6 @@ export const enhancedForecastAstroService = {
             forecastDay: dayIndex,
             priority: 10 // High priority
           };
-          return batchLocation;
         });
         
         // Use SIQS batch processor for parallel processing
