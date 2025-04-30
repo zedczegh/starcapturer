@@ -113,7 +113,7 @@ export async function processSpecificDay(
   
   // Create extended SIQS result with required properties
   const extendedSiqsResult = siqsResult ? {
-    siqs: siqsResult.score,
+    siqs: siqsResult.siqs || 0, // Use siqs instead of score
     isViable: siqsResult.isViable,
     bortleScale,
     cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
@@ -126,7 +126,7 @@ export async function processSpecificDay(
     date: daily.time[dayIndex],
     dayIndex,
     cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
-    siqs: siqsResult ? siqsResult.score : null,
+    siqs: siqsResult ? siqsResult.siqs || 0 : null, // Use siqs instead of score
     isViable: siqsResult ? siqsResult.isViable : false,
     temperature: {
       min: daily.temperature_2m_min[dayIndex],

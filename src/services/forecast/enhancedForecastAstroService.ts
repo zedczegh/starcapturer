@@ -228,7 +228,7 @@ export const enhancedForecastAstroService = {
 
       // Create a properly formatted ExtendedSiqsResult if needed
       const extendedSiqsResult: ExtendedSiqsResult | null = siqsResult ? {
-        siqs: siqsResult.score,
+        siqs: siqsResult.siqs || 0, // Access using siqs not score
         isViable: siqsResult.isViable,
         bortleScale: defaultBortleScale, 
         cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
@@ -241,7 +241,7 @@ export const enhancedForecastAstroService = {
         date: daily.time[dayIndex],
         dayIndex,
         cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
-        siqs: siqsResult ? siqsResult.score : null,
+        siqs: siqsResult ? siqsResult.siqs || 0 : null, // Access using siqs not score
         isViable: siqsResult ? siqsResult.isViable : false,
         temperature: {
           min: daily.temperature_2m_min[dayIndex],
@@ -285,7 +285,7 @@ export const enhancedForecastAstroService = {
             longitude: loc.longitude,
             bortleScale: loc.bortleScale,
             name: loc.name,
-            forecastDay: dayIndex, // Set the forecastDay property
+            forecastDay: dayIndex, // Explicitly set the forecastDay property
             priority: 10 // High priority
           };
         });

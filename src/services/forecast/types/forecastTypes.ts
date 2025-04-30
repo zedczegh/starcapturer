@@ -35,7 +35,7 @@ export interface BatchLocationData {
   bortleScale?: number;
   name?: string;
   priority?: number;
-  forecastDay?: number;
+  forecastDay?: number; // Added this property
   cloudCover?: number;
 }
 
@@ -59,4 +59,3 @@ export interface ExtendedSiqsResult {
   confidence?: number;
   [key: string]: any;
 }
-

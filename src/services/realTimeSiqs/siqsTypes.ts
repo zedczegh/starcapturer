@@ -103,7 +103,7 @@ export interface WeatherDataWithClearSky {
  */
 export interface SiqsResult {
   /** SIQS score (0-10, higher is better) */
-  siqs: number;
+  siqs: number; // Ensure siqs property exists
   
   /** Whether conditions are viable for astrophotography */
   isViable: boolean;
