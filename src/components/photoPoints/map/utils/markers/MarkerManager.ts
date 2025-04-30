@@ -1,143 +1,132 @@
-// Add the necessary import at the top of the file
-import { getSiqsScore } from '@/utils/siqsHelpers';
+
+import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { getLocationMarker } from '../../MarkerUtils';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 /**
- * Utility functions for managing map markers and related calculations
+ * Manages map markers for photo points with optimized rendering
  */
-
-/**
- * Calculate the center of a set of locations
- * @param locations Array of SharedAstroSpot locations
- * @returns [latitude, longitude] of the center
- */
-export const calculateCenter = (locations: SharedAstroSpot[]): [number, number] => {
-  if (!locations || locations.length === 0) {
-    return [0, 0];
+export class MarkerManager {
+  private markers: Map<string, L.Marker> = new Map();
+  private map: L.Map | null = null;
+  private selectedMarkerId: string | null = null;
+  
+  /**
+   * Initialize the manager with a Leaflet map
+   */
+  public initialize(map: L.Map): void {
+    this.map = map;
   }
   
-  let sumLat = 0;
-  let sumLng = 0;
-  
-  for (const loc of locations) {
-    sumLat += loc.latitude || 0;
-    sumLng += loc.longitude || 0;
-  }
-  
-  const avgLat = sumLat / locations.length;
-  const avgLng = sumLng / locations.length;
-  
-  return [avgLat, avgLng];
-};
-
-/**
- * Calculate the bounds of a set of locations
- * @param locations Array of SharedAstroSpot locations
- * @returns [[southWestLat, southWestLng], [northEastLat, northEastLng]] bounds
- */
-export const calculateBounds = (locations: SharedAstroSpot[]): [[number, number], [number, number]] | null => {
-  if (!locations || locations.length === 0) {
-    return null;
-  }
-  
-  let minLat = locations[0].latitude || 0;
-  let maxLat = locations[0].latitude || 0;
-  let minLng = locations[0].longitude || 0;
-  let maxLng = locations[0].longitude || 0;
-  
-  for (const loc of locations) {
-    minLat = Math.min(minLat, loc.latitude || 0);
-    maxLat = Math.max(maxLat, loc.latitude || 0);
-    minLng = Math.min(minLng, loc.longitude || 0);
-    maxLng = Math.max(maxLng, loc.longitude || 0);
-  }
-  
-  return [[minLat, minLng], [maxLat, maxLng]];
-};
-
-/**
- * Get the ideal zoom level to fit all locations within the map view
- * @param mapRef React ref to the Leaflet map instance
- * @param locations Array of SharedAstroSpot locations
- * @returns Zoom level that fits all locations
- */
-export const getZoomLevel = (mapRef: any, locations: SharedAstroSpot[]): number => {
-  if (!mapRef || !mapRef.current || !locations || locations.length === 0) {
-    return 5;
-  }
-  
-  try {
-    const bounds = calculateBounds(locations);
-    if (!bounds) return 5;
+  /**
+   * Clear all markers from the map
+   */
+  public clearMarkers(): void {
+    if (!this.map) return;
     
-    return mapRef.current.getBoundsZoom(bounds);
-  } catch (error) {
-    console.error("Error calculating zoom level:", error);
-    return 5;
-  }
-};
-
-/**
- * Get the initial map center based on user location or calculated center
- * @param userLocation User's location { latitude, longitude }
- * @param calculatedCenter Calculated center of locations [latitude, longitude]
- * @returns [latitude, longitude] for initial map center
- */
-export const getInitialMapCenter = (
-  userLocation: { latitude: number; longitude: number } | null,
-  calculatedCenter: [number, number]
-): [number, number] => {
-  if (userLocation) {
-    return [userLocation.latitude, userLocation.longitude];
+    this.markers.forEach(marker => {
+      marker.remove();
+    });
+    
+    this.markers.clear();
+    this.selectedMarkerId = null;
   }
   
-  return calculatedCenter;
-};
-
-/**
- * Get the initial zoom level based on whether user location is available
- * @param userLocation User's location { latitude, longitude }
- * @param zoomLevel Calculated zoom level to fit all locations
- * @returns Initial zoom level for the map
- */
-export const getInitialZoom = (
-  userLocation: { latitude: number; longitude: number } | null,
-  zoomLevel: number
-): number => {
-  return userLocation ? 9 : zoomLevel;
-};
-
-/**
- * Get the appropriate map container height based on screen size
- * @param isMobile Boolean indicating if the screen is mobile-sized
- * @returns String representing the map container height
- */
-export const getMapContainerHeight = (isMobile: boolean): string => {
-  return isMobile ? '40vh' : '50vh';
-};
-
-/**
- * Get the location ID for a given SharedAstroSpot
- * @param location SharedAstroSpot object
- * @returns String representing the location ID
- */
-export const getLocationId = (location: SharedAstroSpot): string => {
-  if (!location || !location.latitude || !location.longitude) return 'no-location';
-  return location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-};
-
-/**
- * Get the maximum SIQS score from a list of locations
- */
-export const getMaxSiqsScore = (locations: SharedAstroSpot[]): number => {
-  let maxSiqs = 0;
-  
-  for (const location of locations) {
-    const siqs = getSiqsScore(location.siqs);
-    if (siqs > maxSiqs) {
-      maxSiqs = siqs;
-    }
+  /**
+   * Render markers for locations
+   * 
+   * @param locations - Array of locations to render
+   * @param selectedId - Optional ID of selected location
+   * @param visibleBounds - Optional bounds to filter visible locations
+   */
+  public renderMarkers(
+    locations: SharedAstroSpot[], 
+    selectedId?: string,
+    visibleBounds?: L.LatLngBounds
+  ): void {
+    if (!this.map) return;
+    
+    const currentMarkerIds = new Set<string>();
+    
+    // Process each location
+    locations.forEach(location => {
+      if (!location.latitude || !location.longitude) return;
+      
+      // Create a unique ID for each location
+      const markerId = `marker-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+      currentMarkerIds.add(markerId);
+      
+      // If marker already exists, update it if needed
+      if (this.markers.has(markerId)) {
+        const existingMarker = this.markers.get(markerId)!;
+        
+        // Update marker if it's now selected or was previously selected
+        if ((selectedId && markerId === `marker-${selectedId}`) || 
+            (this.selectedMarkerId && markerId === this.selectedMarkerId)) {
+          existingMarker.setIcon(this.createMarkerIcon(location, true));
+        }
+        
+        return;
+      }
+      
+      // Skip rendering markers outside visible bounds to improve performance
+      if (visibleBounds && !visibleBounds.contains(L.latLng(location.latitude, location.longitude))) {
+        return;
+      }
+      
+      // Determine if this is the selected marker
+      const isSelected = selectedId && markerId === `marker-${selectedId}`;
+      if (isSelected) {
+        this.selectedMarkerId = markerId;
+      }
+      
+      // Create marker with location-specific icon
+      const marker = L.marker(
+        [location.latitude, location.longitude],
+        {
+          icon: this.createMarkerIcon(location, isSelected),
+          riseOnHover: true
+        }
+      );
+      
+      // Add popup with location information if needed
+      if (location.name) {
+        const popupContent = `
+          <div class="text-sm font-semibold">${location.name}</div>
+          ${location.description ? `<div class="text-xs mt-1">${location.description}</div>` : ''}
+          ${location.siqs ? `<div class="text-xs mt-1 font-medium">SIQS: ${getSiqsScore(location.siqs).toFixed(1)}</div>` : ''}
+        `;
+        marker.bindPopup(popupContent);
+      }
+      
+      // Add marker to map and collection
+      marker.addTo(this.map);
+      this.markers.set(markerId, marker);
+    });
+    
+    // Remove markers that are no longer in the locations array
+    this.markers.forEach((marker, id) => {
+      if (!currentMarkerIds.has(id)) {
+        marker.remove();
+        this.markers.delete(id);
+      }
+    });
   }
   
-  return maxSiqs;
-};
+  /**
+   * Create a marker icon based on location properties
+   */
+  private createMarkerIcon(location: SharedAstroSpot, isSelected: boolean): L.Icon {
+    const isCertified = Boolean(location.certification || location.isDarkSkyReserve);
+    return getLocationMarker(location, isCertified, isSelected, false);
+  }
+  
+  /**
+   * Clean up resources
+   */
+  public destroy(): void {
+    this.clearMarkers();
+    this.map = null;
+  }
+}

@@ -35,7 +35,7 @@ export interface BatchLocationData {
   bortleScale?: number;
   name?: string;
   priority?: number;
-  forecastDay?: number; // Ensure this property exists
+  forecastDay?: number;
   cloudCover?: number;
 }
 
