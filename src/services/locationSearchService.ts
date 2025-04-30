@@ -1,4 +1,4 @@
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot, getRecommendedPhotoPoints } from '@/lib/api/astroSpots';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { getCachedLocations, cacheLocations } from '@/services/locationCacheService';
 import { calculateDistance } from '@/utils/geoUtils';
@@ -27,35 +27,10 @@ export async function findLocationsWithinRadius(
       : cachedData;
   }
 
-  // Mock implementation that generates locations instead of calling API
-  const generatedPoints: SharedAstroSpot[] = [];
-  for (let i = 0; i < Math.min(limit, 10); i++) {
-    const offsetLat = (Math.random() - 0.5) * (radius / 111);
-    const offsetLng = (Math.random() - 0.5) * (radius / (111 * Math.cos(latitude * Math.PI / 180)));
-    
-    const lat = latitude + offsetLat;
-    const lng = longitude + offsetLng;
-    
-    if (!isWaterLocation(lat, lng)) {
-      const distance = calculateDistance(latitude, longitude, lat, lng);
-      if (distance <= radius) {
-        generatedPoints.push({
-          id: `gen-${Date.now()}-${i}`,
-          name: `Generated Location ${i+1}`,
-          latitude: lat,
-          longitude: lng,
-          timestamp: new Date().toISOString(),
-          bortleScale: Math.floor(Math.random() * 5) + 2,
-          siqs: Math.floor(Math.random() * 50) + 50,
-          isDarkSkyReserve: i === 0 && certifiedOnly, // Make the first one certified if we're looking for certified
-          certification: i === 1 && certifiedOnly ? "International Dark Sky Park" : undefined,
-          distance
-        });
-      }
-    }
-  }
-  
-  const validPoints = generatedPoints.filter(point => !isWaterLocation(point.latitude, point.longitude));
+  const points = await getRecommendedPhotoPoints(latitude, longitude, radius, certifiedOnly, limit);
+  if (!points?.length) return [];
+
+  const validPoints = points.filter(point => !isWaterLocation(point.latitude, point.longitude));
   
   cacheLocations(certifiedOnly ? 'certified' : 'calculated', latitude, longitude, radius, validPoints);
   return validPoints;
