@@ -9,6 +9,7 @@ import { useDebouncedCallback } from "@/hooks/useDebounce";
 import { useLanguage } from "@/contexts/LanguageContext";
 import CommunityLocationsSkeleton from "./CommunityLocationsSkeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 interface CommunityLocationsListProps {
   locations: SharedAstroSpot[] | null;
@@ -22,6 +23,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
   const [loadingSiqs, setLoadingSiqs] = React.useState<Record<string, boolean>>({});
   const [attemptedSiqs, setAttemptedSiqs] = React.useState<Set<string>>(new Set());
   const [calculationQueue, setCalculationQueue] = React.useState<string[]>([]);
+  const [processingErrors, setProcessingErrors] = React.useState<Record<string, string>>({});
 
   // Batch SIQS updates with priority queue
   React.useEffect(() => {
@@ -37,9 +39,6 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
         ...prev,
         [spotId]: true
       }));
-      
-      // We don't need to do anything else here - the RealTimeSiqsProvider
-      // for this spot will handle the calculation when it becomes visible
     }, 250);
     
     return () => clearTimeout(timer);
@@ -49,6 +48,8 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
   React.useEffect(() => {
     if (!locations) return;
     
+    console.log("Initializing calculations for locations:", locations.length);
+    
     // Queue up initial calculations with a small delay
     // so they don't all start at once
     const initialSpots = locations.slice(0, 6).map(spot => spot.id);
@@ -56,6 +57,8 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
   }, [locations]);
 
   const debouncedSiqsUpdate = useDebouncedCallback((spotId: string, siqs: number | null, loading: boolean) => {
+    console.log(`SIQS update for ${spotId}:`, { siqs, loading });
+    
     setRealTimeSiqs(prev => ({
       ...prev,
       [spotId]: siqs
@@ -86,6 +89,41 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
       setCalculationQueue(prev => [...prev, spotId]);
     }
   }, [attemptedSiqs, calculationQueue]);
+
+  // Handle SIQS calculation errors
+  const handleSiqsError = React.useCallback((spotId: string, error: string) => {
+    setProcessingErrors(prev => ({
+      ...prev,
+      [spotId]: error
+    }));
+    
+    // Mark as attempted to prevent retries
+    setAttemptedSiqs(prev => {
+      const updated = new Set(prev);
+      updated.add(spotId);
+      return updated;
+    });
+    
+    // Clear loading state
+    setLoadingSiqs(prev => ({
+      ...prev,
+      [spotId]: false
+    }));
+  }, []);
+
+  // Utility function to get the SIQS score to display
+  const getDisplaySiqs = React.useCallback((spot: SharedAstroSpot): number | null => {
+    // First try to use real-time SIQS if available
+    if (realTimeSiqs[spot.id] !== undefined) {
+      return realTimeSiqs[spot.id];
+    }
+    
+    // Fall back to stored SIQS from the database
+    return spot.siqs !== undefined ? (
+      typeof spot.siqs === 'number' ? spot.siqs : 
+      typeof spot.siqs === 'object' && spot.siqs && 'score' in spot.siqs ? spot.siqs.score : null
+    ) : null;
+  }, [realTimeSiqs]);
 
   if (isLoading) {
     return <CommunityLocationsSkeleton />;
@@ -130,6 +168,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
                 onSiqsCalculated={(siqs, loading) =>
                   debouncedSiqsUpdate(spot.id, siqs, loading)
                 }
+                onError={(error) => handleSiqsError(spot.id, error)}
                 forceUpdate={!attemptedSiqs.has(spot.id) && calculationQueue.includes(spot.id)}
               />
               <div className="transform transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg rounded-xl">
@@ -138,7 +177,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
                   name={spot.name}
                   latitude={spot.latitude}
                   longitude={spot.longitude}
-                  siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                  siqs={getDisplaySiqs(spot)}
                   timestamp={spot.timestamp}
                   isCertified={false}
                   username={spot.username}

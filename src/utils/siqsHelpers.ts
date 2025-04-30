@@ -5,7 +5,7 @@
  * @param siqs The SIQS value that could be a number or an object
  * @returns A number representing the SIQS score, or null if no valid score exists
  */
-export function getSiqsScore(siqs: number | { score: number; isViable: boolean; } | undefined): number | null {
+export function getSiqsScore(siqs: number | { score: number; isViable: boolean; } | undefined | null): number | null {
   if (siqs === undefined || siqs === null) {
     return null;
   }
@@ -29,7 +29,7 @@ export function getSiqsScore(siqs: number | { score: number; isViable: boolean; 
  * @returns True if the SIQS score is greater than the threshold, false otherwise
  */
 export function isSiqsGreaterThan(
-  siqs: number | { score: number; isViable: boolean; } | undefined, 
+  siqs: number | { score: number; isViable: boolean; } | undefined | null, 
   threshold: number
 ): boolean {
   const score = getSiqsScore(siqs);
@@ -44,7 +44,7 @@ export function isSiqsGreaterThan(
  * @returns True if the SIQS score is at least the threshold, false otherwise
  */
 export function isSiqsAtLeast(
-  siqs: number | { score: number; isViable: boolean; } | undefined, 
+  siqs: number | { score: number; isViable: boolean; } | undefined | null, 
   threshold: number
 ): boolean {
   const score = getSiqsScore(siqs);
@@ -76,7 +76,9 @@ export function normalizeToSiqsScale(siqs: number): number {
  * @param score The SIQS score to format
  * @returns A formatted string representation of the SIQS score
  */
-export function formatSiqsForDisplay(score: number): string {
+export function formatSiqsForDisplay(score: number | null): string {
+  if (score === null) return "N/A";
+  
   if (score >= 10) {
     return "10"; // Cap at 10
   }
@@ -92,6 +94,6 @@ export function formatSiqsForDisplay(score: number): string {
 /**
  * Alias for formatSiqsForDisplay for backward compatibility
  */
-export function formatSiqsScore(score: number): string {
+export function formatSiqsScore(score: number | null): string {
   return formatSiqsForDisplay(score);
 }

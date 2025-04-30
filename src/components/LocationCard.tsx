@@ -13,7 +13,7 @@ interface LocationCardProps {
   name: string;
   latitude: number;
   longitude: number;
-  siqs: number | { score: number; isViable: boolean } | undefined;
+  siqs: number | { score: number; isViable: boolean } | undefined | null;
   timestamp?: string;
   isCertified?: boolean;
   username?: string;
