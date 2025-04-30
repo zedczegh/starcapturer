@@ -1,5 +1,7 @@
 
 import { isWaterLocation as checkWaterLocation } from './locationWaterCheck';
+import { isWaterLocation as validationWaterCheck } from './utils/validation/waterLocationValidator';
+import { isValidAstronomyLocation as checkAstronomyLocation } from './utils/validation/astronomyLocationValidator';
 
 /**
  * Basic validation helpers
@@ -94,26 +96,5 @@ export const isValidAstronomyLocation = (
   longitude: number,
   name?: string
 ): boolean => {
-  // Skip validation for locations without coordinates
-  if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) {
-    return false;
-  }
-  
-  // Filter out obvious water names
-  if (name) {
-    const lowerName = name.toLowerCase();
-    if (
-      lowerName.includes('sea') || 
-      lowerName.includes('ocean') || 
-      lowerName.includes('bay') ||
-      lowerName.includes('lake') ||
-      lowerName.includes('lagoon') ||
-      lowerName.includes('gulf') ||
-      lowerName.includes('strait')
-    ) {
-      return false;
-    }
-  }
-  
-  return true;
+  return checkAstronomyLocation(latitude, longitude, name);
 };

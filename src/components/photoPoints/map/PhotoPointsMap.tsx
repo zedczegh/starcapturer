@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
 import { useForecastMapMarkers } from '@/hooks/photoPoints/useForecastMapMarkers';
@@ -19,7 +18,29 @@ interface PhotoPointsMapProps {
   showForecast?: boolean;
 }
 
-const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => { 
+const PhotoPointsMap = ({ 
+  userLocation, 
+  locations = [], 
+  onLocationClick, 
+  onLocationUpdate,
+  searchRadius = 100,
+  certifiedLocations = [],
+  calculatedLocations = [],
+  activeView = 'certified',
+  forecastDay = 0,
+  showForecast = false,
+}: { 
+  userLocation: { latitude: number; longitude: number } | null; 
+  locations: SharedAstroSpot[]; 
+  onLocationClick: (location: SharedAstroSpot) => void;
+  onLocationUpdate: (lat: number, lng: number) => void;
+  searchRadius?: number;
+  certifiedLocations?: SharedAstroSpot[];
+  calculatedLocations?: SharedAstroSpot[];
+  activeView?: 'certified' | 'calculated';
+  forecastDay?: number;
+  showForecast?: boolean;
+}) => { 
   const { 
     userLocation,
     locations,
@@ -198,4 +219,4 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   );
 };
 
-export default PhotoPointsMap;
+export default memo(PhotoPointsMap);

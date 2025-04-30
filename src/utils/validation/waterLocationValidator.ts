@@ -50,6 +50,42 @@ export const isWaterLocation = (
 };
 
 /**
+ * Check if a location is likely to be coastal water
+ * This helps catch areas near coastlines that might be in water
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Boolean indicating if location is likely coastal water
+ */
+export const isLikelyCoastalWater = (
+  latitude: number,
+  longitude: number
+): boolean => {
+  // This is a simplified check for coastal waters
+  // In a real implementation, this would use more sophisticated algorithms
+  // or external data sources to determine coastal regions
+  
+  // Example check for some common coastal areas
+  // Gulf of Mexico coastal region
+  if (latitude > 18 && latitude < 30 && longitude > -98 && longitude < -80) {
+    // Check if we're likely in water and not on land
+    // This is just a rough approximation
+    return true;
+  }
+  
+  // Mediterranean coastal waters
+  if (latitude > 30 && latitude < 45 && longitude > 0 && longitude < 30) {
+    return true;
+  }
+  
+  // East China Sea coastal waters
+  if (latitude > 25 && latitude < 35 && longitude > 120 && longitude < 130) {
+    return true;
+  }
+  
+  return false;
+};
+
+/**
  * Asynchronous version of isWaterLocation that returns a Promise
  * @param latitude Location latitude
  * @param longitude Location longitude
