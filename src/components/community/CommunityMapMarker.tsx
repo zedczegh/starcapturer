@@ -10,6 +10,7 @@ import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsPro
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 import { getSiqsScore } from "@/utils/siqsHelpers";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.DivIcon {
   const size = isMobile ? (isHovered ? 28 : 20) : (isHovered ? 32 : 26);
