@@ -1,3 +1,4 @@
+
 /**
  * Enhanced Forecast Astro Service
  * 
@@ -78,6 +79,16 @@ class ForecastCache {
 
 // Create singleton cache instance
 const forecastCache = new ForecastCache();
+
+// Define interface for batch location data with additional forecast properties
+interface BatchLocationData {
+  latitude: number;
+  longitude: number;
+  bortleScale?: number;
+  name?: string;
+  forecastDay: number;
+  priority: number;
+}
 
 /**
  * Enhanced service for extracting astronomical scores from 15-day forecast data
@@ -330,16 +341,6 @@ export const enhancedForecastAstroService = {
     // Use batch processor directly for best performance
     try {
       if (dayIndex !== undefined) {
-        // Define interface for batch location data with required properties
-        interface BatchLocationData {
-          latitude: number;
-          longitude: number; 
-          bortleScale?: number;
-          name?: string;
-          forecastDay: number;
-          priority: number;
-        }
-        
         // Transform locations into BatchLocationData array with explicit type annotation
         const batchLocations = locations.map(loc => {
           // Create a new object with all properties we need
