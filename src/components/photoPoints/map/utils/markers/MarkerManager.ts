@@ -1,7 +1,7 @@
 
 import L, { Icon, Marker } from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getSiqsScore, formatSiqsScore } from '@/utils/siqsHelpers';
+import { getSiqsScore, formatSiqsForDisplay } from '@/utils/siqsHelpers';
 
 /**
  * Manages marker creation, rendering, and cleanup for the map
@@ -147,7 +147,8 @@ export class MarkerManager {
   private createMarker(location: SharedAstroSpot, isSelected: boolean): L.Marker {
     const isCertified = location.isDarkSkyReserve === true || 
       (typeof location.certification === 'string' && location.certification !== '');
-    const siqs = location.siqs || 0;
+    const siqsValue = getSiqsScore(location.siqs);
+    const siqs = siqsValue !== null ? siqsValue : 0;
     
     // Choose icon based on location type
     const icon = this.getMarkerIcon(isCertified, siqs, isSelected);
@@ -156,7 +157,7 @@ export class MarkerManager {
     const marker = L.marker([location.latitude, location.longitude], { icon });
     
     // Add tooltip
-    marker.bindTooltip(`${location.name || 'Unknown Location'} (SIQS: ${formatSiqsScore(siqs)})`);
+    marker.bindTooltip(`${location.name || 'Unknown Location'} (SIQS: ${formatSiqsForDisplay(siqs)})`);
     
     return marker;
   }
@@ -166,25 +167,22 @@ export class MarkerManager {
    */
   private getMarkerIcon(
     isCertified: boolean, 
-    siqs: number | { score: number; isViable: boolean }, 
+    siqs: number, 
     isSelected: boolean
   ): Icon {
     // Default icon properties
     let iconUrl = '/markers/marker-default.svg';
     let iconSize: [number, number] = [30, 30];
-    
-    // Get numeric siqs score
-    const siqsScore = getSiqsScore(siqs);
-    
+        
     // Select icon based on location type and SIQS
     if (isCertified) {
       iconUrl = '/markers/marker-certified.svg';
       iconSize = [36, 36];
-    } else if (siqsScore >= 8) {
+    } else if (siqs >= 8) {
       iconUrl = '/markers/marker-excellent.svg';
-    } else if (siqsScore >= 6) {
+    } else if (siqs >= 6) {
       iconUrl = '/markers/marker-good.svg';
-    } else if (siqsScore >= 4) {
+    } else if (siqs >= 4) {
       iconUrl = '/markers/marker-average.svg';
     } else {
       iconUrl = '/markers/marker-poor.svg';

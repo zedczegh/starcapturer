@@ -1,5 +1,4 @@
 
-
 /**
  * Safely extracts a numeric SIQS score from either a number or an object with a score property
  * 
@@ -96,4 +95,3 @@ export function formatSiqsForDisplay(score: number): string {
 export function formatSiqsScore(score: number): string {
   return formatSiqsForDisplay(score);
 }
-

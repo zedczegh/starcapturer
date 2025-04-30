@@ -6,6 +6,7 @@ import { getEnhancedLocationDetails } from '../geocoding/enhancedReverseGeocodin
 import { getLocationTimeInfo } from '@/utils/timezone/timeZoneCalculator';
 import { SiqsCalculationOptions } from '../realTimeSiqs/siqsTypes';
 import { WeatherDataService } from '../weatherDataService';
+import { EnhancedLocationDetails } from '../geocoding/types/enhancedLocationTypes';
 
 export const createSpotFromPoint = async (
   point: { latitude: number; longitude: number; distance: number },
@@ -33,10 +34,15 @@ export const createSpotFromPoint = async (
       point.longitude
     );
     
-    // Enhanced bortle scale detection based on location
-    const defaultBortleScale = 
-      locationDetails.citySize === 'urban' ? 6 : 
-      locationDetails.citySize === 'suburban' ? 5 : 4;
+    // Enhanced bortle scale detection based on locationDetails
+    let defaultBortleScale = 4; // Default
+    if (locationDetails.citySize) {
+      if (locationDetails.citySize === 'urban') {
+        defaultBortleScale = 6;
+      } else if (locationDetails.citySize === 'suburban') {
+        defaultBortleScale = 5;
+      }
+    }
     
     // Enhanced calculation options with improved accuracy
     const options: SiqsCalculationOptions = {
@@ -58,7 +64,7 @@ export const createSpotFromPoint = async (
     if (siqsResult && siqsResult.siqs >= minQuality) {
       const result: SharedAstroSpot = {
         id: `calc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name: locationDetails.name || locationDetails.displayName || 'Calculated Location',
+        name: locationDetails.name || (locationDetails.displayName || 'Calculated Location'),
         latitude: point.latitude,
         longitude: point.longitude,
         bortleScale: defaultBortleScale,
@@ -77,7 +83,8 @@ export const createSpotFromPoint = async (
       if (weatherMetrics?.weather || siqsResult.weatherData) {
         result.weatherData = {
           ...(weatherMetrics?.weather || {}),
-          ...(siqsResult.weatherData || {})
+          ...(siqsResult.weatherData || {}),
+          cloudCover: (weatherMetrics?.weather?.cloudCover || siqsResult.weatherData?.cloudCover || 0)
         };
       }
 

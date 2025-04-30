@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isWaterLocation } from '@/utils/validation';
 import { generateDistributedPoints } from './location/pointGenerationService';
@@ -116,8 +117,8 @@ function isSpotMeaningful(spot: SharedAstroSpot): boolean {
 
 function sortByQualityAndDistance(spots: SharedAstroSpot[]): SharedAstroSpot[] {
   return [...spots].sort((a, b) => {
-    const aScore = typeof a.siqs === 'number' ? a.siqs : 0;
-    const bScore = typeof b.siqs === 'number' ? b.siqs : 0;
+    const aScore = getSiqsScore(a.siqs) || 0;
+    const bScore = getSiqsScore(b.siqs) || 0;
     
     // Improved algorithm that better balances quality vs. distance
     // More weight to quality for farther spots that are exceptional

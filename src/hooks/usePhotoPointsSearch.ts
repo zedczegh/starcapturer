@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
@@ -135,8 +136,8 @@ export const usePhotoPointsSearch = ({
         }
         
         // Then sort by SIQS score and distance using weighted formula
-        const aScore = typeof a.siqs === 'number' ? a.siqs : 0;
-        const bScore = typeof b.siqs === 'number' ? b.siqs : 0;
+        const aScore = getSiqsScore(a.siqs) || 0;
+        const bScore = getSiqsScore(b.siqs) || 0;
         
         const aQuality = (aScore * 0.7) - ((a.distance || 0) * 0.3);
         const bQuality = (bScore * 0.7) - ((b.distance || 0) * 0.3);
@@ -204,7 +205,7 @@ export const usePhotoPointsSearch = ({
       }
       
       // Include spots with higher quality despite distance
-      const qualityDistanceRatio = siqsScore / 10 - (loc.distance || 0) / 100;
+      const qualityDistanceRatio = (siqsScore || 0) / 10 - (loc.distance || 0) / 100;
       if (qualityDistanceRatio > 0.5) {
         return true;
       }
