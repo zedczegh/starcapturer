@@ -1,3 +1,4 @@
+
 /**
  * Service for efficiently retrieving Dark Sky locations
  * Provides optimized access to the dark sky locations database
@@ -118,9 +119,12 @@ export function convertToSharedAstroSpot(
       certification: (entry as any).certification || 'International Dark Sky Association',
       description: `${entry.name} is a certified dark sky location with excellent viewing conditions (Bortle scale ${entry.bortleScale}).`,
       distance: distance,
-      cloudCover: 0, // Will be calculated by SIQS service
+      // Remove the cloudCover property as it's now part of weatherData
       timestamp: new Date().toISOString(),
-      chineseName: entry.chineseName
+      chineseName: entry.chineseName,
+      weatherData: {
+        cloudCover: 0 // Move cloudCover here where it belongs
+      }
     };
   } catch (error) {
     console.error(`Error converting location entry to AstroSpot: ${entry.name}`, error);

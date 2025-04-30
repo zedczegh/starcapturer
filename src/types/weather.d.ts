@@ -41,6 +41,7 @@ declare module "@/types/weather" {
     } | null;
   }
 
+  // Updated to match src/lib/api/astroSpots.ts
   export interface SharedAstroSpot {
     id: string;
     name: string;
@@ -55,7 +56,7 @@ declare module "@/types/weather" {
     siqs?: number | {
       score: number;
       isViable: boolean;
-    };
+    } | null;
     siqsResult?: SIQSData;
     distance?: number;
     isViable?: boolean;
@@ -78,7 +79,10 @@ declare module "@/types/weather" {
     };
     date?: string | Date;
     user_id?: string;
-    username?: string; // Added username property
+    username?: string;
+    default_price?: number;
+    currency?: string;
+    cloudCover?: number;
     weatherData?: {
       temperature?: number;
       humidity?: number;
@@ -90,5 +94,6 @@ declare module "@/types/weather" {
         annualRate?: number;
       };
     };
+    photographer?: string;
   }
 }

@@ -8,7 +8,7 @@ export interface SharedAstroSpot {
   longitude: number;
   timestamp: string;
   username?: string;
-  bortleScale?: number;
+  bortleScale: number; // Changed from optional to required to match weather.d.ts
   siqs?: number | null | { score: number; isViable: boolean };
   certification?: string;
   isDarkSkyReserve?: boolean;
@@ -20,6 +20,7 @@ export interface SharedAstroSpot {
   isViable?: boolean;
   description?: string;
   photographer?: string;
+  cloudCover?: number; // Added to match usage in darkSkyLocationService.ts
 }
 
 export interface SharingResponse {
