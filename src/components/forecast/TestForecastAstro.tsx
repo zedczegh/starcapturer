@@ -1,346 +1,284 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { forecastAstroService, ForecastDayAstroData } from '@/services/forecast/forecastAstroService';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader, RefreshCw, AlertTriangle, Star } from 'lucide-react';
-import { getSiqsColorClass, formatSiqs, getSiqsQuality } from '@/utils/forecast/forecastSiqsUtils';
-import { Button } from '../ui/button';
-import { toast } from 'sonner';
-
-// Demo locations
-const LOCATIONS = [
-  { name: "New York City", lat: 40.7128, lng: -74.0060, bortle: 8 },
-  { name: "Death Valley", lat: 36.2333, lng: -116.8833, bortle: 2 },
-  { name: "Tokyo", lat: 35.6895, lng: 139.6917, bortle: 9 },
-  { name: "Namibian Desert", lat: -24.7255, lng: 15.2799, bortle: 1 }
-];
+import { Button } from '@/components/ui/button';
+import { enhancedForecastAstroService } from '@/services/forecast/enhancedForecastAstroService';
+import { Loader, RefreshCw, Calendar, Star } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ForecastApiHealth from './ForecastApiHealth';
 
 export default function TestForecastAstro() {
   const [loading, setLoading] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(5); // Default to day 5
+  const [forecastData, setForecastData] = useState<any[]>([]);
+  const [bestDays, setBestDays] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [forecastData, setForecastData] = useState<ForecastDayAstroData[]>([]);
-  const [selectedDay, setSelectedDay] = useState(5); // Default to 5 days from now
-  const [selectedLocation, setSelectedLocation] = useState(0); // Default to NYC
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
-  // Batch processing state
-  const [batchResults, setBatchResults] = useState<any[]>([]);
-  const [batchLoading, setBatchLoading] = useState(false);
-
-  // Function to fetch the forecast data
-  const fetchForecastData = async (locationIndex = 0) => {
+  // NYC coordinates for demo
+  const latitude = 40.7128;
+  const longitude = -74.006;
+  
+  const fetchForecast = async () => {
     setLoading(true);
     setError(null);
     
-    const location = LOCATIONS[locationIndex];
-    
     try {
-      const data = await forecastAstroService.getFullForecastAstroData(
-        location.lat,
-        location.lng,
-        location.bortle
+      // Get all forecast days
+      const allDays = await enhancedForecastAstroService.getFullForecastAstroData(
+        latitude,
+        longitude,
+        4 // Bortle scale
       );
       
-      setForecastData(data);
-      console.log(`Fetched forecast data for ${location.name}:`, data);
-      toast.success(`Forecast data loaded for ${location.name}`, {
-        description: `Retrieved ${data.length} days of astronomical forecast data`
-      });
+      setForecastData(allDays);
+      
+      // Get best days for astronomy
+      const bestAstroDays = await enhancedForecastAstroService.getBestAstroDays(
+        latitude,
+        longitude,
+        4, // Bortle scale
+        5  // Min quality threshold
+      );
+      
+      setBestDays(bestAstroDays);
+      setLastUpdated(new Date());
     } catch (err) {
       console.error("Error fetching forecast data:", err);
-      setError(`Failed to fetch forecast data for ${location.name}. See console for details.`);
-      toast.error(`Failed to load forecast for ${location.name}`);
+      setError("Failed to load forecast data. Please try again.");
     } finally {
       setLoading(false);
     }
   };
-
-  // Function to fetch batch forecast data for all locations
-  const fetchBatchForecast = async () => {
-    setBatchLoading(true);
-    
-    try {
-      const batchLocations = LOCATIONS.map(loc => ({ 
-        latitude: loc.lat, 
-        longitude: loc.lng,
-        bortleScale: loc.bortle
-      }));
-      
-      // Use the new batch processing capability
-      const results = await forecastAstroService.batchProcessLocations(batchLocations, selectedDay);
-      
-      setBatchResults(results);
-      console.log("Batch results:", results);
-      toast.success("Batch processing complete", {
-        description: `Processed ${results.length} locations for day ${selectedDay}`
-      });
-    } catch (err) {
-      console.error("Error in batch processing:", err);
-      toast.error("Batch processing failed", {
-        description: "See console for details"
-      });
-    } finally {
-      setBatchLoading(false);
-    }
+  
+  useEffect(() => {
+    fetchForecast();
+  }, []);
+  
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+  
+  const renderSiqsScore = (score: number | null) => {
+    if (score === null) return 'N/A';
+    return score.toFixed(1);
   };
 
-  // Load data when component mounts or location changes
-  useEffect(() => {
-    fetchForecastData(selectedLocation);
-  }, [selectedLocation]);
-
-  const selectedForecast = useMemo(() => forecastData[selectedDay], [forecastData, selectedDay]);
-  
-  // Best day calculation
-  const bestDay = useMemo(() => {
-    if (!forecastData.length) return null;
-    
-    const viableDays = forecastData.filter(day => day.isViable && day.siqs !== null);
-    if (!viableDays.length) return null;
-    
-    return viableDays.reduce((best, current) => 
-      (current.siqs || 0) > (best.siqs || 0) ? current : best
-    );
-  }, [forecastData]);
-  
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="mb-6">
-        <div className="flex flex-wrap gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Location:</label>
-            <select 
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(Number(e.target.value))}
-              className="border rounded px-3 py-2"
-              disabled={loading}
-            >
-              {LOCATIONS.map((loc, idx) => (
-                <option key={idx} value={idx}>
-                  {loc.name} (Bortle: {loc.bortle})
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium mb-1">Day:</label>
-            <select 
-              value={selectedDay}
-              onChange={(e) => setSelectedDay(Number(e.target.value))}
-              className="border rounded px-3 py-2"
-              disabled={loading || forecastData.length === 0}
-            >
-              {forecastData.map((day, index) => (
-                <option key={index} value={index}>
-                  Day {index}: {new Date(day.date).toLocaleDateString()}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="flex items-end">
-            <Button 
-              variant="outline" 
-              onClick={() => fetchForecastData(selectedLocation)}
-              disabled={loading}
-              className="flex items-center gap-2"
-            >
-              {loading && <Loader size={16} className="animate-spin" />}
-              <RefreshCw size={16} />
-              Refresh Data
-            </Button>
-          </div>
-          
-          <div className="flex items-end">
-            <Button
-              variant="secondary"
-              onClick={fetchBatchForecast}
-              disabled={batchLoading || forecastData.length === 0}
-              className="flex items-center gap-2"
-            >
-              {batchLoading && <Loader size={16} className="animate-spin" />}
-              Test Batch Processing
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center items-center h-40">
-          <Loader className="animate-spin h-8 w-8" />
-          <span className="ml-2">Loading forecast data...</span>
-        </div>
-      ) : error ? (
-        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded">
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={20} />
-            <p>{error}</p>
-          </div>
-        </div>
-      ) : forecastData.length === 0 ? (
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded">
-          No forecast data available.
-        </div>
-      ) : selectedForecast ? (
-        <>
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>
-                  {LOCATIONS[selectedLocation].name} - {new Date(selectedForecast.date).toLocaleDateString()}
-                </span>
-                {bestDay && selectedForecast.date === bestDay.date && (
-                  <span className="flex items-center text-amber-500 text-sm">
-                    <Star size={16} className="mr-1" fill="currentColor" />
-                    Best Day
-                  </span>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <div className="text-center p-3 rounded-lg mb-4" style={{ 
-                    backgroundColor: getSiqsColorClass(selectedForecast.siqs).replace('bg-', 'rgb(var(--')
-                    .replace('500', '500))')
-                    .replace('400', '400))') 
-                  }}>
-                    <span className="text-3xl font-bold text-white">
-                      {formatSiqs(selectedForecast.siqs)}
-                    </span>
-                    <p className="text-white mt-1">
-                      {getSiqsQuality(selectedForecast.siqs)} Conditions
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Cloud Cover:</span>
-                    <span className="font-medium">{selectedForecast.cloudCover}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Temperature:</span>
-                    <span className="font-medium">
-                      {selectedForecast.temperature.min}° - {selectedForecast.temperature.max}°C
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Humidity:</span>
-                    <span className="font-medium">{selectedForecast.humidity}%</span>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span>Precipitation:</span>
-                    <span className="font-medium">{selectedForecast.precipitation.probability}% chance</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Wind Speed:</span>
-                    <span className="font-medium">{selectedForecast.windSpeed} km/h</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Viable for Astronomy:</span>
-                    <span className={`font-medium ${selectedForecast.isViable ? 'text-green-600' : 'text-red-600'}`}>
-                      {selectedForecast.isViable ? 'Yes' : 'No'}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="col-span-2 mt-4 pt-4 border-t">
-                  <h3 className="font-bold mb-2">Technical Details:</h3>
-                  <pre className="bg-gray-50 p-3 rounded text-xs overflow-auto max-h-40">
-                    {JSON.stringify(selectedForecast.siqsResult, null, 2)}
-                  </pre>
-                </div>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Forecast for New York City
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            </CardContent>
-          </Card>
-          
-          {/* Show batch processing results if available */}
-          {batchResults.length > 0 && (
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Batch Processing Results - Day {selectedDay}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {batchResults.map((result, index) => (
-                    <Card key={index} className="h-full">
-                      <CardContent className="p-4">
-                        <h3 className="font-bold">{LOCATIONS[index].name}</h3>
-                        {result.forecast ? (
-                          <div className="mt-2">
-                            <div className={`inline-block px-3 py-1 rounded-full text-white ${
-                              getSiqsColorClass(result.forecast.siqs)
-                            }`}>
-                              SIQS: {formatSiqs(result.forecast.siqs)}
+            ) : error ? (
+              <div className="text-center py-8 text-red-500">{error}</div>
+            ) : (
+              <Tabs defaultValue="allDays">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="allDays">All Days</TabsTrigger>
+                  <TabsTrigger value="bestDays">Best Days</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="allDays" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-4 gap-2 mb-2">
+                    {forecastData.slice(0, 8).map((day, index) => (
+                      <Button
+                        key={index}
+                        variant={selectedDay === index ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSelectedDay(index)}
+                        className="text-xs"
+                      >
+                        Day {index + 1}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="space-y-4">
+                    {forecastData.length > 0 && selectedDay < forecastData.length ? (
+                      <div>
+                        <h3 className="text-lg font-medium mb-2">
+                          {formatDate(forecastData[selectedDay].date)}
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">SIQS Score:</span>
+                              <span className="font-medium">
+                                {renderSiqsScore(forecastData[selectedDay].siqs)}
+                              </span>
                             </div>
-                            <div className="mt-2 space-y-1 text-sm">
-                              <div>Cloud Cover: {result.forecast.cloudCover}%</div>
-                              <div>Viable: {result.forecast.isViable ? 'Yes' : 'No'}</div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Viable:</span>
+                              <span className="font-medium">
+                                {forecastData[selectedDay].isViable ? 'Yes' : 'No'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Reliability:</span>
+                              <span className="font-medium">
+                                {forecastData[selectedDay].reliability ? 
+                                  `${Math.round(forecastData[selectedDay].reliability * 100)}%` : 
+                                  'N/A'}
+                              </span>
                             </div>
                           </div>
-                        ) : (
-                          <p className="text-red-500 text-sm mt-2">
-                            Failed to process
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* All Days Summary */}
-          <div className="mt-8">
-            <h3 className="text-xl font-bold mb-2">15-Day Forecast Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              {forecastData.map((day, index) => (
-                <Card 
-                  key={index}
-                  className={`cursor-pointer ${selectedDay === index ? 'border-2 border-primary' : ''} ${
-                    bestDay && day.date === bestDay.date ? 'bg-amber-50' : ''
-                  }`}
-                  onClick={() => setSelectedDay(index)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <p className="font-bold">{new Date(day.date).toLocaleDateString()}</p>
-                      {bestDay && day.date === bestDay.date && (
-                        <Star size={16} fill="gold" stroke="gold" />
-                      )}
+                          <div className="space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Cloud Cover:</span>
+                              <span className="font-medium">{forecastData[selectedDay].cloudCover}%</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Temperature:</span>
+                              <span className="font-medium">
+                                {forecastData[selectedDay].temperature.min}°C - {forecastData[selectedDay].temperature.max}°C
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Precipitation:</span>
+                              <span className="font-medium">
+                                {forecastData[selectedDay].precipitation.probability}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">No forecast data available</div>
+                    )}
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="bestDays" className="mt-4">
+                  {bestDays.length > 0 ? (
+                    <div className="space-y-4">
+                      {bestDays.slice(0, 3).map((day, index) => (
+                        <div key={index} className="border rounded-md p-3 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <h3 className="font-medium">{formatDate(day.date)}</h3>
+                            <div className="flex items-center gap-1 text-yellow-500">
+                              <Star className="h-4 w-4 fill-current" />
+                              <span className="font-semibold">{renderSiqsScore(day.siqs)}</span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Cloud Cover:</span>
+                              <span>{day.cloudCover}%</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Temp:</span>
+                              <span>{day.temperature.min}°C - {day.temperature.max}°C</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex justify-between items-center mt-2">
-                      <span>SIQS:</span>
-                      <span className={`font-medium px-2 py-1 rounded ${getSiqsColorClass(day.siqs)} text-white`}>
-                        {formatSiqs(day.siqs)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span>Cloud Cover:</span>
-                      <span>{day.cloudCover}%</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span>Viable:</span>
-                      <span className={day.isViable ? 'text-green-600' : 'text-red-600'}>
-                        {day.isViable ? 'Yes' : 'No'}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  ) : (
+                    <div className="text-center py-4">No best days found</div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            )}
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <div className="text-xs text-muted-foreground">
+              {lastUpdated && `Last updated: ${lastUpdated.toLocaleTimeString()}`}
+            </div>
+            <Button variant="outline" size="sm" onClick={fetchForecast} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        <ForecastApiHealth />
+      </div>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Batch Processing Test</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Button 
+                variant="outline"
+                onClick={async () => {
+                  setLoading(true);
+                  
+                  try {
+                    // Test batch processing with 5 locations
+                    const batchLocations = [
+                      { latitude: 40.7128, longitude: -74.006, name: "New York" },
+                      { latitude: 34.0522, longitude: -118.2437, name: "Los Angeles" },
+                      { latitude: 41.8781, longitude: -87.6298, name: "Chicago" },
+                      { latitude: 29.7604, longitude: -95.3698, name: "Houston" },
+                      { latitude: 33.4484, longitude: -112.0740, name: "Phoenix" }
+                    ];
+                    
+                    await enhancedForecastAstroService.batchProcessLocations(batchLocations, 0);
+                    
+                    alert("Batch test for specific day completed successfully!");
+                  } catch (err) {
+                    console.error("Batch test error:", err);
+                    alert("Batch test encountered an error. See console for details.");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+              >
+                Test Single Day Batch
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  setLoading(true);
+                  
+                  try {
+                    // Test batch processing with full forecast
+                    const batchLocations = [
+                      { latitude: 40.7128, longitude: -74.006, name: "New York" },
+                      { latitude: 34.0522, longitude: -118.2437, name: "Los Angeles" },
+                    ];
+                    
+                    await enhancedForecastAstroService.batchProcessLocations(batchLocations);
+                    
+                    alert("Batch test for full forecast completed successfully!");
+                  } catch (err) {
+                    console.error("Batch test error:", err);
+                    alert("Batch test encountered an error. See console for details.");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+              >
+                Test Full Forecast Batch
+              </Button>
+            </div>
+            
+            <div className="text-sm text-muted-foreground">
+              Note: Batch processing tests write to console logs. Check browser console for detailed results.
             </div>
           </div>
-        </>
-      ) : (
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded">
-          Selected day not available. Please select a different day.
-        </div>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
