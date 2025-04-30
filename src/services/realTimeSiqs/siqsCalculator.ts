@@ -45,8 +45,12 @@ function improveCalculatedLocationSIQS(initialScore: number, location: any): num
   return initialScore;
 }
 
-function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { average: number; timeRange: string; sourceType?: string }) {
-  if (!nighttimeData) return cloudCover;
+function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { 
+  average: number | null; 
+  timeRange: string; 
+  sourceType?: 'forecast' | 'calculated' | 'historical' | 'optimized' 
+}) {
+  if (!nighttimeData || nighttimeData.average === null) return cloudCover;
   
   const difference = Math.abs(cloudCover - nighttimeData.average);
   if (difference > 20) {
@@ -166,15 +170,15 @@ export async function calculateRealTimeSiqs(
     // Use traditional nighttime cloud data if available
     else if (weatherData && 'nighttimeCloudData' in weatherData) {
       const nighttimeData = weatherData.nighttimeCloudData as { 
-        average?: number; 
+        average?: number | null; 
         timeRange?: string; 
-        sourceType?: string; 
+        sourceType?: 'forecast' | 'calculated' | 'historical' | 'optimized'; 
       } | undefined;
       
       weatherDataWithClearSky.nighttimeCloudData = {
         average: nighttimeData?.average || 0,
         timeRange: nighttimeData?.timeRange || "18:00-06:00",
-        sourceType: (nighttimeData?.sourceType as "forecast" | "calculated" | "historical") || 'calculated'
+        sourceType: (nighttimeData?.sourceType as "forecast" | "calculated" | "historical" | "optimized") || 'calculated'
       };
     }
     

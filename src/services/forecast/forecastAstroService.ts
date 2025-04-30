@@ -97,7 +97,7 @@ export const forecastAstroService = {
             options
           );
           
-          siqsResult = siqsData?.siqsResult || null;
+          siqsResult = siqsData || null;
         } catch (err) {
           console.error(`Error calculating SIQS for forecast day ${i}:`, err);
         }
@@ -107,7 +107,7 @@ export const forecastAstroService = {
           date,
           dayIndex: i,
           cloudCover,
-          siqs: siqsResult ? siqsResult.score : null,
+          siqs: siqsResult ? siqsResult.siqs : null,
           isViable: siqsResult ? siqsResult.isViable : false,
           temperature: {
             min: minTemp,

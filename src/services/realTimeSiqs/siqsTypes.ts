@@ -90,8 +90,8 @@ export interface WeatherDataWithClearSky {
     /** Time range for data */
     timeRange?: string;
     
-    /** Source of data (forecast, calculated, historical) */
-    sourceType?: 'forecast' | 'calculated' | 'historical';
+    /** Source of data (forecast, calculated, historical, optimized) */
+    sourceType?: 'forecast' | 'calculated' | 'historical' | 'optimized';
   };
   
   /** Forecast data for calculations */

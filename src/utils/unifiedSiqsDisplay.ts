@@ -231,11 +231,10 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
                 weather: true,
                 forecast: false,
                 clearSky: false,
-                lightPollution: true
-              },
-              reliability: {
-                score: 7,
-                issues: ["Using simplified calculation"]
+                lightPollution: true,
+                terrainCorrected: false,
+                climate: false,
+                singleHourSampling: false
               }
             }
           });
