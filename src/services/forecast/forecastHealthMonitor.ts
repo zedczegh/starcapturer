@@ -1,10 +1,17 @@
 
 /**
- * Simple monitoring service for forecast API health
+ * Forecast Health Monitoring Service
+ * 
+ * Tracks API reliability, data quality, and performance metrics
+ * for the forecast services.
  */
 
+import { getApiMetricsSummary, getEndpointReliabilityScore } from '@/utils/api/apiMetricsTracker';
+
+// Health check status types
 export type HealthStatus = 'healthy' | 'degraded' | 'critical' | 'unknown';
 
+// Service health interface
 export interface ServiceHealth {
   status: HealthStatus;
   reliability: number;
@@ -14,200 +21,108 @@ export interface ServiceHealth {
     status: HealthStatus;
     reliability: number;
     calls: number;
+    failures: number;
+    averageResponseTime: number;
   }>;
 }
 
-interface EndpointHealth {
-  endpoint: string;
-  status: 'healthy' | 'degraded' | 'down';
-  lastChecked: Date;
-  successRate: number;
-  requestCount: number;
-  successCount: number;
-  averageResponseTime: number;
-}
-
-class ForecastHealthMonitor {
-  private serviceHealth: Map<string, EndpointHealth> = new Map();
+/**
+ * Get the current health status of forecast services
+ */
+export function getForecastServicesHealth(): ServiceHealth {
+  const metrics = getApiMetricsSummary();
+  const forecasterEndpoints = Object.keys(metrics).filter(
+    endpoint => endpoint.includes('open-meteo')
+  );
   
-  constructor() {
-    // Initialize with default values
-    this.serviceHealth.set('/forecast/basic', {
-      endpoint: '/forecast/basic',
-      status: 'healthy',
-      lastChecked: new Date(),
-      successRate: 100,
-      requestCount: 0,
-      successCount: 0,
-      averageResponseTime: 0
-    });
+  // Default health status
+  const health: ServiceHealth = {
+    status: 'unknown',
+    reliability: 100,
+    lastChecked: new Date(),
+    issues: [],
+    endpoints: {}
+  };
+  
+  if (forecasterEndpoints.length === 0) {
+    return health;
+  }
+  
+  // Process each forecast-related endpoint
+  let overallReliability = 0;
+  let criticalEndpoints = 0;
+  let degradedEndpoints = 0;
+  
+  for (const endpoint of forecasterEndpoints) {
+    const summary = metrics[endpoint];
+    const reliability = getEndpointReliabilityScore(endpoint);
     
-    this.serviceHealth.set('/forecast/enhanced', {
-      endpoint: '/forecast/enhanced',
-      status: 'healthy',
-      lastChecked: new Date(),
-      successRate: 100,
-      requestCount: 0,
-      successCount: 0,
-      averageResponseTime: 0
-    });
-    
-    this.serviceHealth.set('/forecast/day', {
-      endpoint: '/forecast/day',
-      status: 'healthy',
-      lastChecked: new Date(),
-      successRate: 100,
-      requestCount: 0,
-      successCount: 0,
-      averageResponseTime: 0
-    });
-  }
-  
-  public reportSuccess(endpoint: string, responseTimeMs: number = 200): void {
-    this.updateMetrics(endpoint, true, responseTimeMs);
-  }
-  
-  public reportFailure(endpoint: string, responseTimeMs: number = 500): void {
-    this.updateMetrics(endpoint, false, responseTimeMs);
-  }
-  
-  private updateMetrics(endpoint: string, success: boolean, responseTimeMs: number): void {
-    if (!this.serviceHealth.has(endpoint)) {
-      this.serviceHealth.set(endpoint, {
-        endpoint,
-        status: 'healthy',
-        lastChecked: new Date(),
-        successRate: 100,
-        requestCount: 0,
-        successCount: 0,
-        averageResponseTime: 0
-      });
+    let status: HealthStatus = 'healthy';
+    if (reliability < 50) {
+      status = 'critical';
+      criticalEndpoints++;
+    } else if (reliability < 80) {
+      status = 'degraded';
+      degradedEndpoints++;
     }
     
-    const health = this.serviceHealth.get(endpoint)!;
-    
-    // Update metrics
-    health.lastChecked = new Date();
-    health.requestCount++;
-    if (success) {
-      health.successCount++;
-    }
-    
-    // Update success rate
-    health.successRate = (health.successCount / health.requestCount) * 100;
-    
-    // Update average response time with weighted average
-    if (health.requestCount === 1) {
-      health.averageResponseTime = responseTimeMs;
-    } else {
-      health.averageResponseTime = 
-        ((health.averageResponseTime * (health.requestCount - 1)) + responseTimeMs) / health.requestCount;
-    }
-    
-    // Update status based on success rate
-    if (health.successRate >= 95) {
-      health.status = 'healthy';
-    } else if (health.successRate >= 80) {
-      health.status = 'degraded';
-    } else {
-      health.status = 'down';
-    }
-    
-    this.serviceHealth.set(endpoint, health);
-  }
-  
-  public getServiceHealth(): EndpointHealth[] {
-    return Array.from(this.serviceHealth.values());
-  }
-  
-  public getEndpointHealth(endpoint: string): EndpointHealth | undefined {
-    return this.serviceHealth.get(endpoint);
-  }
-  
-  public getForecastServicesHealth(): ServiceHealth {
-    const endpointStatuses = this.getServiceHealth();
-    
-    // Calculate overall health
-    let totalReliability = 0;
-    let criticalIssueCount = 0;
-    const issues: string[] = [];
-    const endpoints: Record<string, {status: HealthStatus; reliability: number; calls: number}> = {};
-    
-    endpointStatuses.forEach(endpoint => {
-      // Convert status
-      const status: HealthStatus = 
-        endpoint.status === 'healthy' ? 'healthy' :
-        endpoint.status === 'degraded' ? 'degraded' : 'critical';
-      
-      // Add to endpoints object
-      endpoints[endpoint.endpoint] = {
-        status,
-        reliability: endpoint.successRate,
-        calls: endpoint.requestCount
-      };
-      
-      // Add to reliability calculation if endpoint has been called
-      if (endpoint.requestCount > 0) {
-        totalReliability += endpoint.successRate;
-      }
-      
-      // Check for issues
-      if (endpoint.status === 'degraded') {
-        issues.push(`${endpoint.endpoint} endpoint is experiencing degraded performance (${endpoint.successRate.toFixed(0)}% success rate)`);
-      }
-      
-      if (endpoint.status === 'down') {
-        issues.push(`${endpoint.endpoint} endpoint is down (${endpoint.successRate.toFixed(0)}% success rate)`);
-        criticalIssueCount++;
-      }
-    });
-    
-    // Calculate overall reliability as average of endpoint reliabilities
-    const avgReliability = endpointStatuses.length > 0 && endpointStatuses.some(e => e.requestCount > 0)
-      ? totalReliability / endpointStatuses.filter(e => e.requestCount > 0).length
-      : 100;
-    
-    // Determine overall status
-    let overallStatus: HealthStatus = 'healthy';
-    
-    if (criticalIssueCount > 0) {
-      overallStatus = 'critical';
-    } else if (issues.length > 0 || avgReliability < 95) {
-      overallStatus = 'degraded';
-    }
-    
-    return {
-      status: overallStatus,
-      reliability: Math.round(avgReliability),
-      lastChecked: new Date(),
-      issues,
-      endpoints
+    health.endpoints[endpoint] = {
+      status,
+      reliability,
+      calls: summary.totalCalls,
+      failures: summary.failureCount,
+      averageResponseTime: summary.averageDuration
     };
+    
+    overallReliability += reliability;
+    
+    // Track issues for degraded or critical endpoints
+    if (status !== 'healthy' && summary.lastFailure) {
+      const hoursSince = (Date.now() - summary.lastFailure.timestamp) / (60 * 60 * 1000);
+      health.issues.push(
+        `Endpoint ${endpoint} is ${status}: ${summary.lastFailure.error} (${hoursSince.toFixed(1)}h ago)`
+      );
+    }
   }
+  
+  // Calculate overall health status
+  health.reliability = Math.round(overallReliability / forecasterEndpoints.length);
+  
+  if (criticalEndpoints > 0) {
+    health.status = 'critical';
+  } else if (degradedEndpoints > 0) {
+    health.status = 'degraded';
+  } else {
+    health.status = 'healthy';
+  }
+  
+  return health;
 }
 
-const healthMonitor = new ForecastHealthMonitor();
+/**
+ * Determine if forecast services are available and reliable
+ */
+export function areForecastServicesReliable(): boolean {
+  const health = getForecastServicesHealth();
+  return health.status !== 'critical' && health.reliability > 70;
+}
 
-export const reportServiceSuccess = (
-  endpoint: string = '/forecast/basic',
-  responseTimeMs: number = Math.floor(Math.random() * 200) + 100
-): void => {
-  healthMonitor.reportSuccess(endpoint, responseTimeMs);
-};
-
-export const reportServiceFailure = (
-  endpoint: string = '/forecast/basic',
-  responseTimeMs: number = Math.floor(Math.random() * 300) + 300
-): void => {
-  healthMonitor.reportFailure(endpoint, responseTimeMs);
-};
-
-export const getServiceHealthStatus = (): EndpointHealth[] => {
-  return healthMonitor.getServiceHealth();
-};
-
-export const getForecastServicesHealth = (): ServiceHealth => {
-  return healthMonitor.getForecastServicesHealth();
-};
-
-export default healthMonitor;
+/**
+ * Get the best available forecast endpoint based on reliability
+ */
+export function getBestForecastEndpoint(): string | null {
+  const health = getForecastServicesHealth();
+  
+  // Find the most reliable endpoint
+  let bestEndpoint: string | null = null;
+  let bestReliability = 0;
+  
+  for (const [endpoint, metrics] of Object.entries(health.endpoints)) {
+    if (metrics.reliability > bestReliability) {
+      bestReliability = metrics.reliability;
+      bestEndpoint = endpoint;
+    }
+  }
+  
+  return bestEndpoint;
+}

@@ -7,15 +7,12 @@ import PhotoPointsLayout from '@/components/photoPoints/PhotoPointsLayout';
 import PhotoPointsHeader from '@/components/photoPoints/PhotoPointsHeader';
 import ViewToggle from '@/components/photoPoints/ViewToggle';
 import DistanceRangeSlider from '@/components/photoPoints/DistanceRangeSlider';
-import ForecastDaySlider from '@/components/photoPoints/ForecastDaySlider';
 import PhotoPointsView from '@/components/photoPoints/PhotoPointsView';
 import { usePhotoPointsState } from '@/hooks/photoPoints/usePhotoPointsState';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
-import { Button } from '@/components/ui/button';
-import { Calendar } from 'lucide-react';
 
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
@@ -30,15 +27,11 @@ const PhotoPointsNearby: React.FC = () => {
     locationInitialized,
     calculatedSearchRadius,
     currentSearchRadius,
-    forecastDay,
-    showForecast,
     handleRadiusChange,
     handleViewChange,
     handleLocationUpdate,
     handleResetLocation,
-    toggleMapView,
-    toggleForecastView,
-    handleForecastDayChange
+    toggleMapView
   } = usePhotoPointsState();
 
   const {
@@ -116,7 +109,7 @@ const PhotoPointsNearby: React.FC = () => {
       />
       
       {activeView === 'calculated' && (
-        <div className="max-w-xl mx-auto mb-4">
+        <div className="max-w-xl mx-auto mb-6">
           <DistanceRangeSlider
             currentValue={calculatedSearchRadius}
             onValueChange={handleRadiusChange}
@@ -126,32 +119,6 @@ const PhotoPointsNearby: React.FC = () => {
             loading={loading && !locationLoading}
             loadingComplete={!loading && !locationLoading}
           />
-          
-          {showMap && (
-            <div className="flex justify-center mt-2 mb-1">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={toggleForecastView}
-                className={`${showForecast ? 'bg-primary/20 border-primary/40' : ''}`}
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                {showForecast ? 
-                  t("Hide Forecast", "隐藏天气预报") : 
-                  t("Show Forecast", "显示天气预报")
-                }
-              </Button>
-            </div>
-          )}
-          
-          {showMap && showForecast && (
-            <ForecastDaySlider
-              currentValue={forecastDay}
-              onValueChange={handleForecastDayChange}
-              loading={loading}
-              loadingComplete={!loading}
-            />
-          )}
         </div>
       )}
       
@@ -179,8 +146,6 @@ const PhotoPointsNearby: React.FC = () => {
         refreshSiqs={refreshSiqsData}
         onLocationClick={handleLocationClick}
         onLocationUpdate={handleLocationUpdate}
-        forecastDay={forecastDay}
-        showForecast={showForecast}
         canLoadMoreCalculated={canLoadMoreCalculated}
         loadMoreCalculated={loadMoreCalculatedLocations}
         loadMoreClickCount={loadMoreClickCount}

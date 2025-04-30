@@ -10,7 +10,6 @@ import AstroSpotsHeader from '@/components/astro-spots/AstroSpotsHeader';
 import EmptyAstroSpotsState from '@/components/astro-spots/EmptyAstroSpotsState';
 import AstroSpotGrid from '@/components/astro-spots/AstroSpotGrid';
 import { useAstroSpots } from '@/hooks/astro-spots/useAstroSpots';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 const ManageAstroSpots = () => {
   const { user } = useAuth();
@@ -26,15 +25,6 @@ const ManageAstroSpots = () => {
     realTimeSiqs,
     handleSiqsCalculated
   } = useAstroSpots();
-
-  // Ensure spots have timestamp (required by SharedAstroSpot)
-  const validSpots: SharedAstroSpot[] = React.useMemo(() => {
-    if (!spots) return [];
-    return spots.map(spot => ({
-      ...spot,
-      timestamp: spot.timestamp || new Date().toISOString()
-    }));
-  }, [spots]);
 
   if (!user) {
     return (
@@ -69,7 +59,7 @@ const ManageAstroSpots = () => {
       <NavBar />
       <div className="relative z-10 container py-10 px-2 md:px-6">
         <AstroSpotsHeader
-          spotsCount={validSpots?.length || 0}
+          spotsCount={spots?.length || 0}
           editMode={editMode}
           onToggleEditMode={() => setEditMode(!editMode)}
         />
@@ -77,9 +67,9 @@ const ManageAstroSpots = () => {
         <div className="bg-cosmic-900/60 glassmorphism rounded-2xl border border-cosmic-700/40 shadow-glow px-4 py-8 md:py-10">
           {isLoading ? (
             <AstroSpotsLoadingSkeleton />
-          ) : validSpots && validSpots.length > 0 ? (
+          ) : spots && spots.length > 0 ? (
             <AstroSpotGrid
-              spots={validSpots}
+              spots={spots}
               editMode={editMode}
               onDelete={handleDelete}
               onSiqsCalculated={handleSiqsCalculated}

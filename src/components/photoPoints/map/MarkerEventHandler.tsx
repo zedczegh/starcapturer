@@ -1,29 +1,45 @@
 
-import { useEffect } from 'react';
-import { useMap } from 'react-leaflet';
+import React, { useEffect } from 'react';
 import L from 'leaflet';
+
+interface EventMap {
+  mouseover?: () => void;
+  mouseout?: () => void;
+  touchstart?: (e: any) => void;
+  touchend?: (e: any) => void;
+  touchmove?: (e: any) => void;
+}
 
 interface MarkerEventHandlerProps {
   marker: L.Marker | null;
-  eventMap: Record<string, (e?: any) => void>;
+  eventMap: EventMap;
 }
 
-/**
- * Component to handle marker events outside the Leaflet context
- */
 const MarkerEventHandler: React.FC<MarkerEventHandlerProps> = ({ marker, eventMap }) => {
-  const map = useMap();
-  
   useEffect(() => {
-    // This component is expected to be used as a child of a Marker
-    // When used this way, we can't use the marker prop directly
-    // Instead, we rely on the parent context of the component
-    // This is a workaround since the latest version requires eventHandlers prop
+    if (!marker) return;
+
+    // Get the element from the marker
+    const el = marker.getElement();
+    if (!el) return;
+
+    // Add all event listeners
+    Object.entries(eventMap).forEach(([event, handler]) => {
+      if (handler) {
+        el.addEventListener(event, handler);
+      }
+    });
+
+    // Clean up event listeners
     return () => {
-      // Clean up function if needed
+      Object.entries(eventMap).forEach(([event, handler]) => {
+        if (handler) {
+          el.removeEventListener(event, handler);
+        }
+      });
     };
-  }, [marker, map, eventMap]);
-  
+  }, [marker, eventMap]);
+
   return null;
 };
 

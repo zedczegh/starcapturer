@@ -1,136 +1,249 @@
 
-import { ForecastDayAstroData, BatchLocationData, BatchForecastResult } from '../types/forecastTypes';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
-import { getSiqsScore } from '@/utils/siqsHelpers';
+/**
+ * Optimized forecast data processing service
+ */
 
-// Define the ForecastCache interface to match its actual methods
-interface ForecastCache {
-  getCachedForecast: (key: string) => ForecastDayAstroData | null;
-  setCachedForecast: (key: string, data: ForecastDayAstroData) => void;
-  clearCache: () => void;
+import { ForecastDayAstroData, BatchLocationData } from "../types/forecastTypes";
+import { processBatchSiqs } from "../../realTimeSiqs/batchProcessor";
+import { calculateRealTimeSiqs } from "../../realTimeSiqs/siqsCalculator";
+import { SiqsCalculationOptions } from "../../realTimeSiqs/siqsTypes";
+import { fetchEnhancedLongRangeForecastData } from "@/lib/api/enhancedForecast";
+import { validateForecastLocation, filterValidLocations } from "../utils/locationValidator";
+
+/**
+ * Process forecast data for a location and extract astronomical quality metrics
+ */
+export async function processForecastData(
+  latitude: number,
+  longitude: number,
+  enhancedForecast: any,
+  bortleScale: number = 4
+): Promise<ForecastDayAstroData[]> {
+  if (!enhancedForecast?.forecast?.daily) {
+    return [];
+  }
+  
+  const { daily } = enhancedForecast.forecast;
+  
+  // Prepare batch locations for processing with proper typing
+  const locations: BatchLocationData[] = Array.from({ length: daily.time.length }, (_, i) => ({
+    latitude,
+    longitude,
+    bortleScale,
+    priority: daily.time.length - i, // Higher priority for closer dates
+    forecastDay: i, // Explicitly set the forecastDay property
+    cloudCover: daily.cloud_cover_mean[i] || 0
+  }));
+  
+  // Validate location to ensure it's not water before processing
+  const validationResult = await validateForecastLocation(locations[0]);
+  if (!validationResult.isValid) {
+    console.log(`Location [${latitude}, ${longitude}] is invalid (likely water). Skipping forecast processing.`);
+    return [];
+  }
+  
+  // Process in optimized batch
+  const batchResults = await processBatchSiqs(locations, {
+    concurrencyLimit: 5,
+    useSingleHourSampling: true,
+    targetHour: 1,
+    cacheDurationMins: 60,
+    useForecasting: true,
+    timeout: 15000
+  });
+  
+  // Map processed results to forecast data structure
+  return daily.time.map((date: string, i: number) => {
+    const batchResult = batchResults.find(r => 
+      r.location.latitude === latitude && 
+      r.location.longitude === longitude && 
+      r.location.forecastDay === i
+    );
+    
+    const siqsResult = batchResult?.siqsResult || null;
+    const reliability = enhancedForecast.reliability * 0.01 * (batchResult?.confidence || 5) / 10;
+    
+    return {
+      date,
+      dayIndex: i,
+      cloudCover: daily.cloud_cover_mean[i] || 0,
+      siqs: siqsResult ? siqsResult.siqs : null,
+      isViable: siqsResult ? siqsResult.isViable : false,
+      temperature: {
+        min: daily.temperature_2m_min[i],
+        max: daily.temperature_2m_max[i],
+      },
+      precipitation: {
+        probability: daily.precipitation_probability_max[i] || 0,
+        amount: daily.precipitation_sum[i] || 0,
+      },
+      humidity: daily.relative_humidity_2m_mean[i] || 0,
+      windSpeed: daily.wind_speed_10m_max[i] || 0,
+      weatherCode: daily.weather_code[i],
+      siqsResult,
+      reliability
+    };
+  });
 }
 
-// Implement the cache utility
-const forecastCache: ForecastCache = {
-  getCachedForecast(key: string): ForecastDayAstroData | null {
-    try {
-      const cached = localStorage.getItem(`forecast_${key}`);
-      if (cached) {
-        return JSON.parse(cached);
-      }
-    } catch (error) {
-      console.error('Error retrieving cached forecast:', error);
-    }
+/**
+ * Process a specific day's forecast data
+ */
+export async function processSpecificDay(
+  latitude: number,
+  longitude: number,
+  dayIndex: number,
+  enhancedForecast: any,
+  bortleScale: number = 4
+): Promise<ForecastDayAstroData | null> {
+  if (!enhancedForecast?.forecast?.daily?.time[dayIndex]) {
     return null;
-  },
+  }
   
-  setCachedForecast(key: string, data: ForecastDayAstroData): void {
-    try {
-      localStorage.setItem(`forecast_${key}`, JSON.stringify(data));
-    } catch (error) {
-      console.error('Error caching forecast:', error);
+  const { daily } = enhancedForecast.forecast;
+  
+  // Setup optimized calculation options
+  const options: SiqsCalculationOptions = {
+    useForecasting: true,
+    forecastDay: dayIndex,
+    useSingleHourSampling: true,
+    targetHour: 1,
+    cacheDurationMins: 60,
+    forecastData: enhancedForecast.forecast
+  };
+  
+  const siqsResult = await calculateRealTimeSiqs(
+    latitude,
+    longitude,
+    bortleScale,
+    options
+  );
+  
+  // Create extended SIQS result with required properties
+  const extendedSiqsResult = siqsResult ? {
+    siqs: siqsResult.siqs || 0, // Use siqs instead of score
+    isViable: siqsResult.isViable,
+    bortleScale,
+    cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
+    timestamp: Date.now(),
+    confidence: 0.8,
+    factors: siqsResult.factors
+  } : null;
+  
+  return {
+    date: daily.time[dayIndex],
+    dayIndex,
+    cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
+    siqs: siqsResult ? siqsResult.siqs || 0 : null, // Use siqs instead of score
+    isViable: siqsResult ? siqsResult.isViable : false,
+    temperature: {
+      min: daily.temperature_2m_min[dayIndex],
+      max: daily.temperature_2m_max[dayIndex],
+    },
+    precipitation: {
+      probability: daily.precipitation_probability_max[dayIndex] || 0,
+      amount: daily.precipitation_sum[dayIndex] || 0,
+    },
+    humidity: daily.relative_humidity_2m_mean[dayIndex] || 0,
+    windSpeed: daily.wind_speed_10m_max[dayIndex] || 0,
+    weatherCode: daily.weather_code[dayIndex],
+    siqsResult: extendedSiqsResult,
+    reliability: enhancedForecast.reliability * 0.01 * 8
+  };
+}
+
+/**
+ * Create an enhanced forecast service with support for future map applications
+ */
+export const enhancedForecastProcessor = {
+  /**
+   * Process batch locations for map applications with optimized parallel processing
+   */
+  processBatchForMap: async (
+    locations: BatchLocationData[],
+    options?: {
+      targetHour?: number;
+      cacheDurationMins?: number;
+      concurrencyLimit?: number;
+      validateLocations?: boolean;
     }
+  ) => {
+    // Filter out water locations if requested
+    let processLocations = locations;
+    
+    if (options?.validateLocations) {
+      processLocations = await filterValidLocations(locations);
+      console.log(`Filtered ${locations.length - processLocations.length} invalid/water locations out of ${locations.length} total`);
+    }
+    
+    const processOptions = {
+      concurrencyLimit: options?.concurrencyLimit || 5,
+      useSingleHourSampling: true,
+      targetHour: options?.targetHour || 1,
+      cacheDurationMins: options?.cacheDurationMins || 60,
+      useForecasting: true,
+      timeout: 30000
+    };
+    
+    return await processBatchSiqs(processLocations, processOptions);
   },
   
-  clearCache(): void {
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('forecast_')) {
-        keysToRemove.push(key);
+  /**
+   * Get forecast data for a specified area (useful for map-based applications)
+   */
+  getForecastForArea: async (
+    centerLat: number,
+    centerLng: number,
+    radiusKm: number,
+    gridSize: number = 3,
+    dayIndex: number = 0
+  ): Promise<Array<{ 
+    latitude: number; 
+    longitude: number; 
+    forecast: ForecastDayAstroData | null 
+  }>> => {
+    // Generate a grid of points in the specified area
+    const gridPoints: Array<{ latitude: number; longitude: number }> = [];
+    
+    // Simple grid generation algorithm (can be improved for specific map applications)
+    const latStep = (radiusKm / 111) / (gridSize - 1);
+    const lngStep = (radiusKm / (111 * Math.cos(centerLat * Math.PI / 180))) / (gridSize - 1);
+    
+    for (let i = 0; i < gridSize; i++) {
+      for (let j = 0; j < gridSize; j++) {
+        const lat = centerLat - (radiusKm / 222) + (latStep * i);
+        const lng = centerLng - (radiusKm / (222 * Math.cos(centerLat * Math.PI / 180))) + (lngStep * j);
+        gridPoints.push({ latitude: lat, longitude: lng });
       }
     }
     
-    keysToRemove.forEach(key => localStorage.removeItem(key));
+    // Process each point in the grid
+    const results = await Promise.all(gridPoints.map(async point => {
+      try {
+        const forecast = await fetchEnhancedLongRangeForecastData({ 
+          latitude: point.latitude, 
+          longitude: point.longitude,
+          days: dayIndex + 1
+        });
+        
+        if (!forecast) {
+          return { latitude: point.latitude, longitude: point.longitude, forecast: null };
+        }
+        
+        const forecastDay = await processSpecificDay(
+          point.latitude,
+          point.longitude,
+          dayIndex,
+          forecast
+        );
+        
+        return { latitude: point.latitude, longitude: point.longitude, forecast: forecastDay };
+      } catch (error) {
+        console.error('Error processing area forecast point:', error);
+        return { latitude: point.latitude, longitude: point.longitude, forecast: null };
+      }
+    }));
+    
+    return results;
   }
 };
-
-/**
- * Process a forecast for a single location
- * @param location The location to process
- * @returns Processed forecast data
- */
-export async function processForecast(
-  location: BatchLocationData
-): Promise<ForecastDayAstroData> {
-  const cacheKey = `${location.latitude}_${location.longitude}_${location.forecastDay || 0}`;
-  
-  // Try to get cached forecast first
-  const cachedForecast = forecastCache.getCachedForecast(cacheKey);
-  if (cachedForecast) {
-    console.log(`Using cached forecast for ${location.name || 'location'}`);
-    return cachedForecast;
-  }
-  
-  // Mock implementation - simulate forecast data
-  console.log(`Processing forecast for ${location.name || 'location'}`);
-  
-  // Create a mock forecast result
-  const mockForecast: ForecastDayAstroData = {
-    date: new Date().toISOString().split('T')[0],
-    dayIndex: location.forecastDay || 0,
-    cloudCover: Math.random() * 0.4, // 0-40% cloud cover
-    siqs: Math.round(Math.random() * 70 + 20), // 20-90 siqs
-    moonPhase: Math.random(),
-    moonIllumination: Math.random() * 100,
-    temperature: { 
-      min: Math.round(Math.random() * 10 + 10), 
-      max: Math.round(Math.random() * 10 + 20) 
-    },
-    humidity: Math.round(Math.random() * 60 + 20),
-    windSpeed: Math.round(Math.random() * 20),
-    isViable: Math.random() > 0.3, // 70% chance of being viable
-    qualityDescription: 'Generated mock data',
-    predictedSeeing: Math.random() * 5,
-    precipitation: {
-      probability: Math.random() * 0.3,
-      amount: Math.random() * 5,
-    },
-    weatherCode: Math.floor(Math.random() * 10),
-    reliability: Math.random() * 0.5 + 0.5, // 0.5-1.0 reliability
-  };
-  
-  // Cache the forecast
-  forecastCache.setCachedForecast(cacheKey, mockForecast);
-  
-  return mockForecast;
-}
-
-/**
- * Process forecasts for multiple locations in batch
- * @param locations Array of locations to process
- * @returns Array of processed forecasts with location data
- */
-export async function processBatchForecasts(
-  locations: BatchLocationData[]
-): Promise<BatchForecastResult[]> {
-  const results: BatchForecastResult[] = [];
-  
-  for (const location of locations) {
-    try {
-      const forecast = await processForecast(location);
-      
-      results.push({
-        location,
-        success: true,
-        forecast
-      });
-    } catch (error) {
-      console.error(`Error processing forecast for location: ${location.name || 'unnamed'}`, error);
-      results.push({
-        location,
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }
-  
-  return results;
-}
-
-/**
- * Clear all cached forecasts
- */
-export function clearForecasts(): void {
-  forecastCache.clearCache();
-}

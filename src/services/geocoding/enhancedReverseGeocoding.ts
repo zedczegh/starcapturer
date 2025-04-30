@@ -5,7 +5,7 @@ import { fetchLocationDetails } from './providers/nominatimGeocodingProvider';
 import { GeocodeCache, addToCache, getFromCache } from './cache/geocodingCache';
 import { normalizeCoordinates } from './utils/coordinateUtils';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
-import { isWaterLocationSync } from '@/utils/validation';
+import { isWaterLocation } from '@/utils/locationWaterCheck';
 import { formatAddressComponents } from './formatters/addressFormatter';
 import { formatDistance } from '@/utils/location/formatDistance';
 
@@ -28,7 +28,7 @@ export async function getEnhancedLocationDetails(
     if (cachedResult) {
       return {
         ...cachedResult,
-        isWater: isWaterLocationSync(normalizedLat, normalizedLng) // Use synchronous version
+        isWater: isWaterLocation(normalizedLat, normalizedLng, false) // Less strict check from cache
       };
     }
     
@@ -80,7 +80,7 @@ export async function getEnhancedLocationDetails(
     
     // If API couldn't determine land status, use our local water detection
     // with more strict checking for better accuracy
-    const isWater = isWaterLocationSync(normalizedLat, normalizedLng);
+    const isWater = isWaterLocation(normalizedLat, normalizedLng, true);
     
     // Get nearest town info for context even if it's water
     const nearestTownInfo = findNearestTown(normalizedLat, normalizedLng, language);

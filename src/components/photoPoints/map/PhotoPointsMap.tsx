@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
-import { useForecastMapMarkers } from '@/hooks/photoPoints/useForecastMapMarkers';
 import MapContainer from './MapContainer';
 import PageLoader from '@/components/loaders/PageLoader';
 
@@ -15,64 +14,24 @@ interface PhotoPointsMapProps {
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
-  forecastDay?: number;
-  showForecast?: boolean;
 }
 
-const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({ 
-  userLocation, 
-  locations = [], 
-  onLocationClick, 
-  onLocationUpdate,
-  searchRadius = 100,
-  certifiedLocations = [],
-  calculatedLocations = [],
-  activeView = 'certified',
-  forecastDay = 0,
-  showForecast = false,
-}) => { 
-  console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
-  
-  // Get forecast locations if forecast is enabled
+const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => { 
   const { 
-    forecastLocations, 
-    loading: forecastLoading 
-  } = useForecastMapMarkers({
     userLocation,
+    locations,
+    certifiedLocations,
+    calculatedLocations,
+    activeView,
     searchRadius,
-    forecastDay,
-    showForecast,
-    activeView
-  });
+    onLocationClick,
+    onLocationUpdate
+  } = props;
   
-  // Combine locations with forecast locations if needed
-  const combinedLocations = React.useMemo(() => {
-    if (showForecast && activeView === 'calculated' && forecastLocations.length > 0) {
-      // Process forecast locations to ensure they have required timestamp
-      const processedForecastLocations = forecastLocations.map(loc => ({
-        ...loc,
-        timestamp: loc.timestamp || new Date().toISOString()
-      }));
-      
-      // Process regular locations to ensure they have required timestamp
-      const processedLocations = locations.map(loc => ({
-        ...loc,
-        timestamp: loc.timestamp || new Date().toISOString()
-      }));
-      
-      return [...processedLocations, ...processedForecastLocations] as SharedAstroSpot[];
-    }
-    
-    // Ensure all locations have timestamps
-    return locations.map(loc => ({
-      ...loc,
-      timestamp: loc.timestamp || new Date().toISOString()
-    })) as SharedAstroSpot[];
-  }, [locations, forecastLocations, showForecast, activeView]);
+  console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
   
   const {
     mapContainerHeight,
-    legendOpen,
     mapReady,
     handleMapReady,
     optimizedLocations,
@@ -90,7 +49,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
     isMobile
   } = usePhotoPointsMapContainer({
     userLocation,
-    locations: combinedLocations,
+    locations,
     certifiedLocations,
     calculatedLocations,
     activeView,
@@ -120,8 +79,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
           siqs: loc.siqs,
           isDarkSkyReserve: loc.isDarkSkyReserve,
           certification: loc.certification,
-          distance: loc.distance,
-          timestamp: loc.timestamp || new Date().toISOString()
+          distance: loc.distance
         }));
         
         let combinedLocations = simplifiedLocations;
@@ -207,11 +165,8 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
       handleTouchMove={handleTouchMove}
       handleGetLocation={handleGetLocation}
       onLegendToggle={handleLegendToggle}
-      showForecast={showForecast}
-      forecastDay={forecastDay}
-      forecastLoading={forecastLoading}
     />
   );
 };
 
-export default memo(PhotoPointsMap);
+export default PhotoPointsMap;

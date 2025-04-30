@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
@@ -29,8 +28,6 @@ interface LazyMapContainerProps {
   isMobile?: boolean;
   useMobileMapFixer?: boolean;
   showRadiusCircles?: boolean;
-  showForecast?: boolean;
-  forecastDay?: number;
 }
 
 const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
@@ -50,9 +47,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   handleTouchMove,
   isMobile,
   useMobileMapFixer = false,
-  showRadiusCircles = false,
-  showForecast = false,
-  forecastDay = 0
+  showRadiusCircles = false
 }) => {
   const [mapReady, setMapReady] = useState(false);
   const [currentSiqs, setCurrentSiqs] = useState<number | null>(null);
@@ -100,29 +95,9 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       return locations || [];
     }
     
-    // Separate forecast locations and regular locations
-    const forecastLocs: SharedAstroSpot[] = [];
-    const regularLocs: SharedAstroSpot[] = [];
-    
-    previousLocations.current.forEach(loc => {
-      if (loc.isForecast) {
-        // Only include forecast locations if showForecast is true and day matches
-        if (showForecast && loc.forecastDay === forecastDay) {
-          forecastLocs.push(loc);
-        }
-      } else {
-        regularLocs.push(loc);
-      }
-    });
-    
-    // Filter regular locations normally
-    const filteredRegular = filterLocations(regularLocs, userLocation, searchRadius, activeView);
-    
-    // Combine filtered regular locations with forecast locations
-    const combined = [...filteredRegular, ...forecastLocs];
-    
-    return optimizeLocationsForMobile(combined, Boolean(isMobile), activeView);
-  }, [locations, userLocation, searchRadius, activeView, isMobile, showForecast, forecastDay]);
+    const filtered = filterLocations(previousLocations.current, userLocation, searchRadius, activeView);
+    return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
+  }, [locations, userLocation, searchRadius, activeView, isMobile]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -204,8 +179,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         mapRef={mapRef}
         onMapReady={handleMapReady}
         currentSiqs={currentSiqs}
-        showForecast={showForecast}
-        forecastDay={forecastDay}
       />
     </div>
   );

@@ -20,8 +20,8 @@ export const isValidAstronomyLocation = (
     return false;
   }
   
-  // Check if it's a water location
-  if (isWaterLocation(latitude, longitude)) {
+  // Check if it's a water location - passing false to ensure certified locations aren't filtered
+  if (isWaterLocation(latitude, longitude, false)) {
     return false;
   }
   

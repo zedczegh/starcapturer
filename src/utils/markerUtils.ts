@@ -1,98 +1,112 @@
 
+/**
+ * Map marker utilities
+ * IMPORTANT: This file contains critical marker creation and styling logic.
+ */
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { isWaterLocation } from "@/utils/validation";
+import { getProgressColor } from "@/components/siqs/utils/progressColor";
+import { getSiqsScore } from "@/utils/siqsHelpers";
 
 /**
- * Get CSS class for SIQS value
+ * Get SIQS quality class for styling
  * @param siqs SIQS score
- * @returns CSS class name
+ * @returns CSS class name based on SIQS quality
  */
-export const getSiqsClass = (siqs: number | { score: number; isViable: boolean } | undefined): string => {
+export const getSiqsClass = (siqs?: number | null | { score: number; isViable: boolean }): string => {
   if (siqs === undefined || siqs === null) return '';
   
-  let score: number;
-  if (typeof siqs === 'number') {
-    score = siqs;
-  } else if (typeof siqs === 'object' && 'score' in siqs) {
-    score = siqs.score;
-  } else {
-    return '';
-  }
+  // Use our enhanced getSiqsScore utility if the input is not already a number
+  const score = typeof siqs === 'number' ? siqs : getSiqsScore(siqs);
   
-  // If score is on a scale of 0-100, convert to 0-10
-  if (score > 10) {
-    score = score / 10;
-  }
-  
+  if (score === 0) return '';
   if (score >= 7.5) return 'siqs-excellent';
-  if (score >= 5) return 'siqs-good';
-  if (score > 0) return 'siqs-poor';
-  return '';
+  if (score >= 5.5) return 'siqs-good';
+  return 'siqs-poor';
 };
 
 /**
- * Get color for certification badge
- * @param certification Certification name
- * @returns Hex color code
+ * Determines if a location is a water spot (for filtering)
+ * @param location Location to check
+ * @returns boolean indicating if location is a water spot
  */
-export const getCertificationColor = (certification: string | undefined): string => {
-  if (!certification) return '#6366f1';
-  
-  // Different colors based on certification type
-  if (certification.includes('International')) return '#10b981';
-  if (certification.includes('National')) return '#f59e0b';
-  if (certification.includes('State') || certification.includes('Provincial')) return '#8b5cf6';
-  return '#6366f1'; // Default
-};
-
-/**
- * Get marker color based on location properties
- * @param location Location data
- * @returns Hex color code
- */
-export const getLocationColor = (location: SharedAstroSpot): string => {
+export const isWaterSpot = (location: SharedAstroSpot): boolean => {
+  // Never filter out certified locations
   if (location.isDarkSkyReserve || location.certification) {
-    return '#10b981'; // Green for certified
+    return false;
   }
   
-  const siqs = location.siqs;
-  if (!siqs) return 'rgba(99, 102, 241, 0.8)'; // Default
-  
-  let score: number;
-  if (typeof siqs === 'number') {
-    score = siqs;
-  } else if (typeof siqs === 'object' && 'score' in siqs) {
-    score = siqs.score;
-  } else {
-    return 'rgba(99, 102, 241, 0.8)';
-  }
-  
-  // If score is on a scale of 0-100, convert to 0-10
-  if (score > 10) {
-    score = score / 10;
-  }
-  
-  if (score >= 7.5) return 'rgba(34, 197, 94, 0.9)'; // Green
-  if (score >= 5) return 'rgba(250, 204, 21, 0.9)'; // Yellow
-  return 'rgba(234, 88, 12, 0.9)'; // Orange/Red
+  // Use enhanced water detection
+  return isWaterLocation(
+    location.latitude, 
+    location.longitude, 
+    Boolean(location.isDarkSkyReserve || location.certification)
+  );
 };
 
 /**
- * Check if a marker should be shown
- * @param location Location data
- * @param isCertified Is this a certified location
- * @param activeView Current view mode
- * @returns True if marker should be shown
+ * Get certification type based color for markers
+ * @param location Location to get color for
+ * @returns RGBA color string with transparency
+ */
+export const getCertificationColor = (location: SharedAstroSpot): string => {
+  if (!location.isDarkSkyReserve && !location.certification) {
+    return 'rgba(74, 222, 128, 0.85)'; // Default green with transparency
+  }
+  
+  const certification = (location.certification || '').toLowerCase();
+  
+  // IMPORTANT: Ensure communities use gold/yellow color
+  if (certification.includes('community')) {
+    return 'rgba(255, 215, 0, 0.85)'; // Gold for Dark Sky Community #FFD700
+  } else if (certification.includes('reserve') || certification.includes('sanctuary') || location.isDarkSkyReserve) {
+    return 'rgba(155, 135, 245, 0.85)'; // Purple for reserves #9b87f5
+  } else if (certification.includes('park')) {
+    return 'rgba(74, 222, 128, 0.85)'; // Green for Dark Sky Park #4ADE80
+  } else if (certification.includes('urban') || certification.includes('night sky place')) {
+    return 'rgba(30, 174, 219, 0.85)'; // Blue for Urban Night Sky #1EAEDB
+  } else if (certification.includes('lodging')) {
+    return 'rgba(0, 0, 128, 0.85)'; // Navy blue for Dark Sky Lodging
+  } else {
+    return 'rgba(155, 135, 245, 0.85)'; // Default to reserve color
+  }
+};
+
+/**
+ * Determine if a location should be shown based on the active view
+ * @param location Location to check
+ * @param isCertified Whether location is certified
+ * @param activeView Current active view
+ * @returns boolean indicating if location should be shown
  */
 export const shouldShowLocationMarker = (
-  location: SharedAstroSpot,
+  location: SharedAstroSpot, 
   isCertified: boolean,
   activeView: 'certified' | 'calculated'
 ): boolean => {
-  // Show certified locations only in certified view
-  if (activeView === 'certified') {
-    return isCertified;
+  // IMPORTANT: Skip rendering calculated locations in certified view
+  if (activeView === 'certified' && !isCertified) {
+    return false;
   }
   
-  // In calculated view, show non-certified locations
-  return !isCertified;
+  // Skip water locations for calculated spots (never skip certified)
+  if (!isCertified && isWaterSpot(location)) {
+    return false;
+  }
+  
+  return true;
+};
+
+/**
+ * Get marker color based on location type and SIQS score
+ * @param location Location to get color for
+ * @returns Hex color string
+ */
+export const getLocationColor = (location: SharedAstroSpot): string => {
+  if (location.isDarkSkyReserve || location.certification) {
+    return getCertificationColor(location);
+  } else {
+    const defaultColor = '#4ADE80'; // Bright green fallback
+    return location.siqs ? getProgressColor(getSiqsScore(location.siqs)) : defaultColor;
+  }
 };

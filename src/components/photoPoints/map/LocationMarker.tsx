@@ -169,13 +169,11 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
           siqsLoading={siqsLoading}
           displayName={displayName}
           isCertified={isCertified}
-          onViewDetails={handleViewDetails}
+          onViewDetails={handleViewDetails} // Use the correct navigation callback
         />
       </Marker>
     </>
   );
 };
 
-// Export both as default and named export
 export default React.memo(LocationMarker);
-export { LocationMarker };

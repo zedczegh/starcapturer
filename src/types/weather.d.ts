@@ -1,4 +1,3 @@
-
 declare module "@/types/weather" {
   export interface WeatherData {
     temperature: number;
@@ -50,7 +49,7 @@ declare module "@/types/weather" {
     description?: string;
     imageURL?: string;
     rating?: number;
-    timestamp: string; // Changed to required to match the astroSpots definition
+    timestamp: string;
     chineseName?: string;
     siqs?: number | {
       score: number;
@@ -78,11 +77,5 @@ declare module "@/types/weather" {
     };
     date?: string | Date;
     user_id?: string;
-    // Adding forecast-related properties
-    isForecast?: boolean;
-    forecastDay?: number;
-    forecastDate?: string;
-    cloudCover?: number;
-    siqsTimestamp?: string;
   }
 }

@@ -1,68 +1,14 @@
 
-import React, { useCallback, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, useMap } from 'react-leaflet';
-import L from 'leaflet';
+import React from 'react';
+import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import LocationMarker from '../LocationMarker';
-import { ForecastMarker } from '../MarkerComponents';
-import UserLocationMarker from './UserLocationMarker';
-import RadiusCircles from './RadiusCircles';
+import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
+import { MapEffectsComposer } from '../MapComponents';
+import MapController from '../MapController';
+import MobileMapFixer from '../MobileMapFixer';
+import { getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
 
-// Helper component for map interaction
-const MapInteraction = ({
-  center,
-  zoom,
-  onMapClick,
-  mapRef,
-  onMapReady,
-}: {
-  center: [number, number];
-  zoom: number;
-  onMapClick?: (lat: number, lng: number) => void;
-  mapRef: React.MutableRefObject<L.Map | null>;
-  onMapReady?: () => void;
-}) => {
-  const map = useMap();
-  
-  // Store the map instance in the ref
-  useEffect(() => {
-    if (map) {
-      mapRef.current = map;
-      if (onMapReady) onMapReady();
-    }
-    
-    return () => {
-      mapRef.current = null;
-    };
-  }, [map, mapRef, onMapReady]);
-  
-  // Pan to new center when it changes
-  useEffect(() => {
-    if (map) {
-      map.setView(center, zoom);
-    }
-  }, [center, map, zoom]);
-  
-  // Set up map click handler
-  useEffect(() => {
-    if (!map || !onMapClick) return;
-    
-    const handleClick = (e: L.LeafletMouseEvent) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    };
-    
-    map.on('click', handleClick);
-    
-    return () => {
-      map.off('click', handleClick);
-    };
-  }, [map, onMapClick]);
-  
-  return null;
-};
-
-// Props for the MapContent component
-export interface MapContentProps {
+interface MapContentProps {
   center: [number, number];
   userLocation: { latitude: number; longitude: number } | null;
   zoom: number;
@@ -78,12 +24,10 @@ export interface MapContentProps {
   handleTouchStart?: (e: React.TouchEvent, id: string) => void;
   handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
   handleTouchMove?: (e: React.TouchEvent) => void;
-  useMobileMapFixer?: boolean;
-  mapRef: React.MutableRefObject<L.Map | null>;
-  onMapReady?: () => void;
-  currentSiqs?: number | null;
-  showForecast?: boolean;
-  forecastDay?: number;
+  useMobileMapFixer: boolean;
+  mapRef: React.RefObject<any>;
+  onMapReady: () => void;
+  currentSiqs: number | null;
 }
 
 const MapContent: React.FC<MapContentProps> = ({
@@ -102,80 +46,100 @@ const MapContent: React.FC<MapContentProps> = ({
   handleTouchStart,
   handleTouchEnd,
   handleTouchMove,
-  useMobileMapFixer = false,
+  useMobileMapFixer,
   mapRef,
   onMapReady,
-  currentSiqs,
-  showForecast = false,
-  forecastDay = 0
+  currentSiqs
 }) => {
-  // Separate forecast locations from regular locations
-  const regularLocations = displayLocations.filter(loc => !loc.isForecast);
-  const forecastLocations = showForecast 
-    ? displayLocations.filter(
-        loc => loc.isForecast && loc.forecastDay === forecastDay
-      ) 
-    : [];
+  const tileOptions = getTileLayerOptions(Boolean(isMobile));
   
-  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
-    if (onLocationClick) onLocationClick(location);
+  const getDefaultZoom = () => {
+    if (activeView === 'calculated') {
+      return isMobile ? 3 : 4;
+    }
+    return isMobile ? zoom - 1 : zoom;
+  };
+
+  const stableOnLocationClick = React.useCallback((location: SharedAstroSpot) => {
+    if (onLocationClick) {
+      onLocationClick(location);
+    }
   }, [onLocationClick]);
-  
+
+  const stableOnMapClick = React.useCallback((lat: number, lng: number) => {
+    if (onMapClick) {
+      onMapClick(lat, lng);
+    }
+  }, [onMapClick]);
+
   return (
     <MapContainer
       center={center}
-      zoom={zoom}
-      style={{ height: '100%', width: '100%' }}
+      zoom={getDefaultZoom()}
+      style={{ height: "100%", width: "100%" }}
+      scrollWheelZoom={!isMobile}
+      ref={mapRef}
+      className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
+      whenReady={onMapReady}
       attributionControl={false}
+      worldCopyJump={true}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution={tileOptions.attribution}
+        url={tileOptions.url}
+        maxZoom={isMobile ? tileOptions.maxZoom - 2 : tileOptions.maxZoom}
       />
       
-      <MapInteraction 
-        center={center} 
-        zoom={zoom} 
-        onMapClick={onMapClick}
-        mapRef={mapRef}
-        onMapReady={onMapReady}
+      {showRadiusCircles && userLocation && !isMobile && (
+        <Circle
+          center={[userLocation.latitude, userLocation.longitude]}
+          pathOptions={{
+            color: 'rgb(99, 102, 241)',
+            fillColor: 'rgb(99, 102, 241)',
+            fillOpacity: 0.05,
+            weight: 1,
+            dashArray: '5, 5',
+          }}
+          radius={searchRadius * 1000}
+        />
+      )}
+      
+      <MapEffectsComposer 
+        userLocation={userLocation}
+        activeView={activeView}
+        searchRadius={searchRadius}
+        effects={['zoom-controls']} 
+        // Removed 'legend' to prevent redundant legend icon
       />
+      
+      {onMapClick && (
+        <MapController 
+          userLocation={userLocation} 
+          searchRadius={searchRadius} 
+          onMapClick={stableOnMapClick}
+        />
+      )}
       
       {userLocation && (
         <UserLocationMarker 
-          position={[userLocation.latitude, userLocation.longitude]}
+          position={[userLocation.latitude, userLocation.longitude]} 
           currentSiqs={currentSiqs}
         />
       )}
       
-      {/* Render radius circles if enabled */}
-      {showRadiusCircles && userLocation && (
-        <RadiusCircles 
-          center={[userLocation.latitude, userLocation.longitude]} 
-          searchRadius={searchRadius}
-        />
-      )}
-      
-      {/* Render regular locations */}
-      {regularLocations.map((location) => {
+      {displayLocations.map(location => {
+        if (!location || !location.latitude || !location.longitude) return null;
+        
         const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-        const isCalculated = !isCertified;
-        
-        // Only show certified locations in certified view, and non-certified in calculated view
-        if ((activeView === 'certified' && !isCertified) || 
-            (activeView === 'calculated' && isCertified && regularLocations.length > 30)) {
-          return null;
-        }
-        
-        // Generate a unique ID for the location if it doesn't have one
-        const locationId = location.id || `${location.latitude}-${location.longitude}`;
+        const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
+        const isHovered = hoveredLocationId === locationId;
         
         return (
           <LocationMarker
             key={locationId}
             location={location}
-            onClick={handleLocationClick}
-            isHovered={hoveredLocationId === locationId}
+            onClick={stableOnLocationClick}
+            isHovered={isHovered}
             onHover={onMarkerHover || (() => {})}
             locationId={locationId}
             isCertified={isCertified}
@@ -187,24 +151,9 @@ const MapContent: React.FC<MapContentProps> = ({
         );
       })}
       
-      {/* Render forecast locations if enabled */}
-      {showForecast && forecastLocations.map((location) => {
-        // Generate a unique ID for the forecast location
-        const locationId = location.id || `forecast-${location.latitude}-${location.longitude}-${forecastDay}`;
-        
-        return (
-          <ForecastMarker
-            key={locationId}
-            location={location}
-            isActive={hoveredLocationId === locationId}
-            onClick={handleLocationClick}
-            onMouseOver={id => onMarkerHover?.(id)}
-            onMouseOut={() => onMarkerHover?.(null)}
-          />
-        );
-      })}
+      {useMobileMapFixer && isMobile && <MobileMapFixer />}
     </MapContainer>
   );
 };
 
-export default MapContent;
+export default React.memo(MapContent);

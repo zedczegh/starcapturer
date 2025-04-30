@@ -26,9 +26,6 @@ interface MapContainerProps {
   handleTouchMove: (e: React.TouchEvent) => void;
   handleGetLocation: () => void;
   onLegendToggle: (isOpen: boolean) => void;
-  showForecast?: boolean;
-  forecastDay?: number;
-  forecastLoading?: boolean;
 }
 
 const MapContainer: React.FC<MapContainerProps> = ({
@@ -50,10 +47,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
   handleTouchEnd,
   handleTouchMove,
   handleGetLocation,
-  onLegendToggle,
-  showForecast = false,
-  forecastDay = 0,
-  forecastLoading = false
+  onLegendToggle
 }) => {
   const { t } = useLanguage();
 
@@ -67,22 +61,6 @@ const MapContainer: React.FC<MapContainerProps> = ({
           <div className="flex h-full items-center justify-center bg-background/80">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
           </div>
-        </div>
-      )}
-
-      {forecastLoading && showForecast && (
-        <div className="absolute inset-0 z-10 pointer-events-none">
-          <div className="flex h-full items-center justify-center bg-background/30">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary/60"></div>
-          </div>
-        </div>
-      )}
-      
-      {showForecast && (
-        <div className="absolute top-16 left-4 z-[999] bg-background/80 px-3 py-1.5 rounded-md text-xs font-medium border border-primary/30 shadow-md">
-          {t("Forecast", "预报")}: {forecastDay === 0 ? t("Today", "今天") : 
-                                    forecastDay === 1 ? t("Tomorrow", "明天") : 
-                                    `${t("Day", "天")} ${forecastDay + 1}`}
         </div>
       )}
       
@@ -104,8 +82,6 @@ const MapContainer: React.FC<MapContainerProps> = ({
         isMobile={isMobile}
         useMobileMapFixer={false}
         showRadiusCircles={activeView === 'calculated' && !isMobile}
-        showForecast={showForecast}
-        forecastDay={forecastDay}
       />
       
       {/* Add MapLegend for both mobile and desktop */}

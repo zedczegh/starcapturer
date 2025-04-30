@@ -1,126 +1,471 @@
+/**
+ * Enhanced Forecast Astro Service
+ * 
+ * Improved version with better reliability, performance tracking, and batch processing
+ */
 
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { ForecastDayAstroData, BatchLocationData, BatchForecastResult } from "./types/forecastTypes";
+import { fetchEnhancedLongRangeForecastData } from "@/lib/api/enhancedForecast";
+import { calculateRealTimeSiqs } from "../realTimeSiqs/siqsCalculator";
+import { SiqsCalculationOptions, SiqsResult } from "../realTimeSiqs/siqsTypes";
+import { areForecastServicesReliable } from "./forecastHealthMonitor";
+import { processBatchSiqs } from "../realTimeSiqs/batchProcessor";
+import { toast } from "sonner";
+import { BatchLocationData, ForecastDayAstroData, BatchForecastResult, ExtendedSiqsResult } from "./types/forecastTypes";
+import { forecastCache } from "./utils/forecastCache";
+import { validateForecastLocation, filterValidLocations } from "./utils/locationValidator";
 
-class EnhancedForecastAstroService {
-  async batchProcessLocations(
-    locations: BatchLocationData[], 
-    forecastDay: number = 0
-  ): Promise<BatchForecastResult[]> {
-    console.log(`Processing ${locations.length} locations for forecast day ${forecastDay}`);
-    
-    // Process each location and return the results
-    const results: BatchForecastResult[] = [];
-    
-    for (const location of locations) {
-      try {
-        // Add the forecast day to the location data
-        const locationWithDay = {
-          ...location,
-          forecastDay: forecastDay
-        };
-        
-        // Generate mock forecast data
-        const forecast = this.generateMockForecast(locationWithDay, forecastDay);
-        
-        results.push({
-          location: locationWithDay,
-          success: true,
-          forecast
-        });
-      } catch (error) {
-        console.error("Error processing location for forecast:", error);
-        results.push({
-          location,
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error"
-        });
-      }
-    }
-    
-    return results;
-  }
-  
-  async getFullForecastAstroData(
+/**
+ * Enhanced service for extracting astronomical scores from 15-day forecast data
+ * with improved reliability and batch processing
+ */
+export const enhancedForecastAstroService = {
+  /**
+   * Extracts astronomical data for each day in the 15-day forecast
+   * 
+   * @param latitude - Location latitude
+   * @param longitude - Location longitude
+   * @param bortleScale - Optional bortle scale value (1-9)
+   * @returns Promise resolving to array of forecast day astronomical data
+   */
+  getFullForecastAstroData: async (
     latitude: number,
     longitude: number,
-    bortleScale: number = 4
-  ): Promise<ForecastDayAstroData[]> {
-    console.log(`Getting full forecast for ${latitude}, ${longitude}`);
-    
-    // Generate mock forecast data for 15 days
-    const forecasts: ForecastDayAstroData[] = [];
-    
-    for (let i = 0; i < 15; i++) {
-      const location: BatchLocationData = {
+    bortleScale?: number
+  ): Promise<ForecastDayAstroData[]> => {
+    try {
+      // Check service reliability before making request
+      if (!areForecastServicesReliable()) {
+        console.warn("Forecast services currently unreliable, using cached data if available");
+      }
+      
+      // Check cache first
+      const cacheKey = `forecast-astro-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+      const cachedData = forecastCache.getCachedForecast(cacheKey);
+      if (cachedData) {
+        return cachedData;
+      }
+
+      // First validate location to avoid processing water locations
+      const validationResult = await validateForecastLocation({
+        latitude,
+        longitude,
+        bortleScale: bortleScale || 4,
+        forecastDay: 0  // Explicitly set forecastDay even for validation
+      });
+      
+      if (!validationResult.isValid) {
+        console.log(`Location [${latitude}, ${longitude}] is invalid (likely water). Skipping forecast.`);
+        return [];
+      }
+      
+      // Fetch the long range forecast data (16 days)
+      const enhancedForecast = await fetchEnhancedLongRangeForecastData({ 
         latitude, 
+        longitude, 
+        days: 16  // Ensure we get full forecast
+      });
+
+      if (!enhancedForecast || !enhancedForecast.forecast || !enhancedForecast.forecast.daily) {
+        console.error("Failed to fetch long range forecast data");
+        toast.error("Couldn't retrieve forecast data", {
+          description: "Using estimated values instead"
+        });
+        return [];
+      }
+
+      const { daily } = enhancedForecast.forecast;
+      
+      // Process days in optimal batch size for performance
+      const locations: BatchLocationData[] = Array.from({ length: daily.time.length }, (_, i) => ({
+        latitude,
+        longitude,
+        bortleScale: bortleScale || 4,
+        priority: daily.time.length - i, // Higher priority for closer dates
+        forecastDay: i, // Explicitly set the forecastDay property 
+        cloudCover: daily.cloud_cover_mean[i] || 0,
+        isValidated: true, // Skip validation since we already validated
+        isWater: false // Not water since we checked earlier
+      }));
+      
+      // Use batch processor for efficient parallel calculation
+      const batchResults = await processBatchSiqs(locations, {
+        concurrencyLimit: 5,
+        useSingleHourSampling: true,
+        targetHour: 1,
+        cacheDurationMins: 60,
+        useForecasting: true,
+        timeout: 15000 // 15 second timeout for batch
+      });
+      
+      // Map batch results to forecast days
+      const result: ForecastDayAstroData[] = daily.time.map((date: string, i: number) => {
+        // Find corresponding batch result
+        const batchResult = batchResults.find(r => 
+          r.location.latitude === latitude && 
+          r.location.longitude === longitude && 
+          r.location.forecastDay === i
+        );
+        
+        const siqsResult = batchResult?.siqsResult || null;
+        const reliability = enhancedForecast.reliability * 0.01 * (batchResult?.confidence || 5) / 10;
+        
+        return {
+          date,
+          dayIndex: i,
+          cloudCover: daily.cloud_cover_mean[i] || 0,
+          siqs: siqsResult ? siqsResult.siqs : null,
+          isViable: siqsResult ? siqsResult.isViable : false,
+          temperature: {
+            min: daily.temperature_2m_min[i],
+            max: daily.temperature_2m_max[i],
+          },
+          precipitation: {
+            probability: daily.precipitation_probability_max[i] || 0,
+            amount: daily.precipitation_sum[i] || 0,
+          },
+          humidity: daily.relative_humidity_2m_mean[i] || 0,
+          windSpeed: daily.wind_speed_10m_max[i] || 0,
+          weatherCode: daily.weather_code[i],
+          siqsResult,
+          reliability
+        };
+      });
+      
+      // Cache the results
+      forecastCache.setCachedForecast(cacheKey, result);
+      
+      return result;
+    } catch (error) {
+      console.error("Error fetching enhanced forecast astro data:", error);
+      toast.error("Error getting forecast data", {
+        description: "There was a problem retrieving the forecast"
+      });
+      return [];
+    }
+  },
+  
+  /**
+   * Get the best astronomical viewing days from the forecast
+   * 
+   * @param latitude - Location latitude
+   * @param longitude - Location longitude
+   * @param bortleScale - Optional bortle scale value (1-9)
+   * @param minQuality - Minimum quality threshold (0-10)
+   * @returns Promise resolving to array of best forecast days
+   */
+  getBestAstroDays: async (
+    latitude: number,
+    longitude: number,
+    bortleScale?: number,
+    minQuality: number = 5
+  ): Promise<ForecastDayAstroData[]> => {
+    const allDays = await enhancedForecastAstroService.getFullForecastAstroData(
+      latitude,
+      longitude,
+      bortleScale
+    );
+    
+    // Filter and sort by quality
+    return allDays
+      .filter(day => day.siqs !== null && day.siqs >= minQuality)
+      .sort((a, b) => {
+        const siqsA = a.siqs || 0;
+        const siqsB = b.siqs || 0;
+        return siqsB - siqsA; // Sort by highest quality first
+      });
+  },
+  
+  /**
+   * Get forecast data for a specific day with improved reliability
+   * 
+   * @param latitude - Location latitude
+   * @param longitude - Location longitude 
+   * @param dayIndex - Index of the day (0-15)
+   * @param bortleScale - Optional bortle scale value (1-9)
+   * @returns Promise resolving to forecast day astronomical data
+   */
+  getSpecificDayAstroData: async (
+    latitude: number,
+    longitude: number,
+    dayIndex: number,
+    bortleScale?: number
+  ): Promise<ForecastDayAstroData | null> => {
+    if (dayIndex < 0 || dayIndex > 15) {
+      console.error("Day index out of range (0-15):", dayIndex);
+      return null;
+    }
+    
+    try {
+      // Try to get from full forecast data first (more efficient)
+      const allDays = await enhancedForecastAstroService.getFullForecastAstroData(
+        latitude,
         longitude,
         bortleScale
+      );
+      
+      if (allDays && allDays.length > dayIndex) {
+        return allDays[dayIndex];
+      }
+      
+      // Fallback to direct calculation if full forecast failed
+      const options: SiqsCalculationOptions = {
+        useForecasting: true,
+        forecastDay: dayIndex,
+        useSingleHourSampling: true,
+        targetHour: 1,
+        cacheDurationMins: 60
       };
       
-      forecasts.push(this.generateMockForecast(location, i));
-    }
-    
-    return forecasts;
-  }
-  
-  async getBestAstroDays(
-    latitude: number,
-    longitude: number,
-    bortleScale: number = 4,
-    minQuality: number = 5
-  ): Promise<ForecastDayAstroData[]> {
-    // Get all forecasts first
-    const allForecasts = await this.getFullForecastAstroData(latitude, longitude, bortleScale);
-    
-    // Filter and sort by best quality
-    return allForecasts
-      .filter(day => day.siqs >= minQuality)
-      .sort((a, b) => b.siqs - a.siqs);
-  }
-  
-  private generateMockForecast(location: BatchLocationData, dayIndex: number): ForecastDayAstroData {
-    // Generate a date for the forecast
-    const date = new Date();
-    date.setDate(date.getDate() + dayIndex);
-    
-    // Generate random cloud cover between 0 and 1
-    const cloudCover = Math.random() * 0.7; // 0 to 0.7 (70% max)
-    
-    // Calculate SIQS score based on cloud cover and bortle scale
-    const bortleScale = location.bortleScale || 4;
-    const siqs = Math.max(1, Math.min(10, 10 - cloudCover * 10 - bortleScale * 0.5));
-    
-    // Generate mock moon data
-    const moonPhase = Math.random();
-    const moonIllumination = Math.random();
-    
-    const forecast: ForecastDayAstroData = {
-      date: date.toISOString().split('T')[0],
-      dayIndex,
-      cloudCover,
-      siqs,
-      moonPhase,
-      moonIllumination,
-      temperature: {
-        min: 15 + Math.random() * 10,
-        max: 15 + Math.random() * 20
-      },
-      humidity: 50 + Math.random() * 30,
-      windSpeed: Math.random() * 20,
-      isViable: siqs > 5,
-      qualityDescription: siqs > 7 ? "Excellent" : siqs > 5 ? "Good" : siqs > 3 ? "Fair" : "Poor",
-      predictedSeeing: 3 + Math.random() * 2,
-      precipitation: {
-        probability: Math.round(cloudCover * 100),
-        amount: cloudCover > 0.4 ? Math.random() * 10 : 0
-      },
-      weatherCode: Math.floor(cloudCover * 4),
-      reliability: Math.max(10, 100 - dayIndex * 7)
-    };
-    
-    return forecast;
-  }
-}
+      // Fetch forecast data
+      const enhancedForecast = await fetchEnhancedLongRangeForecastData({ 
+        latitude, 
+        longitude, 
+        days: 16
+      });
+      
+      if (!enhancedForecast?.forecast?.daily?.time[dayIndex]) {
+        console.error("Failed to fetch forecast data for the specified day");
+        return null;
+      }
+      
+      const { daily } = enhancedForecast.forecast;
+      const defaultBortleScale = bortleScale || 4;
+      
+      // Use optimized calculation options
+      options.forecastData = enhancedForecast.forecast;
+      
+      const siqsResult = await calculateRealTimeSiqs(
+        latitude,
+        longitude,
+        defaultBortleScale,
+        options
+      );
 
-export const enhancedForecastAstroService = new EnhancedForecastAstroService();
+      // Create a properly formatted ExtendedSiqsResult if needed
+      const extendedSiqsResult: ExtendedSiqsResult | null = siqsResult ? {
+        siqs: siqsResult.siqs || 0, // Access using siqs not score
+        isViable: siqsResult.isViable,
+        bortleScale: defaultBortleScale, 
+        cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
+        timestamp: Date.now(),
+        confidence: 0.8,
+        factors: siqsResult.factors
+      } : null;
+      
+      return {
+        date: daily.time[dayIndex],
+        dayIndex,
+        cloudCover: daily.cloud_cover_mean[dayIndex] || 0,
+        siqs: siqsResult ? siqsResult.siqs || 0 : null, // Access using siqs not score
+        isViable: siqsResult ? siqsResult.isViable : false,
+        temperature: {
+          min: daily.temperature_2m_min[dayIndex],
+          max: daily.temperature_2m_max[dayIndex],
+        },
+        precipitation: {
+          probability: daily.precipitation_probability_max[dayIndex] || 0,
+          amount: daily.precipitation_sum[dayIndex] || 0,
+        },
+        humidity: daily.relative_humidity_2m_mean[dayIndex] || 0,
+        windSpeed: daily.wind_speed_10m_max[dayIndex] || 0,
+        weatherCode: daily.weather_code[dayIndex],
+        siqsResult: extendedSiqsResult,
+        reliability: enhancedForecast.reliability * 0.01 * 8
+      };
+    } catch (error) {
+      console.error(`Error fetching specific day (${dayIndex}) data:`, error);
+      return null;
+    }
+  },
+  
+  /**
+   * Batch process multiple locations for forecast data with improved reliability
+   * 
+   * @param locations Array of location coordinates with bortle scale
+   * @param dayIndex Optional specific day to forecast (all days if not specified)
+   * @returns Promise resolving to array of forecast results by location
+   */
+  batchProcessLocations: async (
+    locations: Array<{ latitude: number; longitude: number; bortleScale?: number; name?: string }>,
+    dayIndex?: number
+  ): Promise<BatchForecastResult[]> => {
+    // Use batch processor directly for best performance
+    try {
+      if (dayIndex !== undefined) {
+        // First validate all locations to filter out water locations
+        const validLocations = await Promise.all(
+          locations.map(async loc => {
+            const validation = await validateForecastLocation({
+              latitude: loc.latitude,
+              longitude: loc.longitude,
+              bortleScale: loc.bortleScale,
+              forecastDay: dayIndex  // Explicitly set forecastDay for validation
+            });
+            return { ...loc, isValid: validation.isValid };
+          })
+        );
+        
+        // Filter out invalid locations
+        const filteredLocations = validLocations.filter(loc => loc.isValid);
+        console.log(`Filtered ${locations.length - filteredLocations.length} water/invalid locations out of ${locations.length} total`);
+        
+        // Transform locations into BatchLocationData array with explicit type annotation
+        const batchLocations: BatchLocationData[] = filteredLocations.map(loc => {
+          // Create a new object with all required properties including forecastDay
+          return {
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            bortleScale: loc.bortleScale,
+            name: loc.name,
+            forecastDay: dayIndex, // Explicitly set the forecastDay property
+            priority: 10, // High priority
+            isValidated: true, // Already validated
+            isWater: false // Not water since we filtered
+          };
+        });
+        
+        // Use SIQS batch processor for parallel processing
+        const batchResults = await processBatchSiqs(batchLocations, {
+          concurrencyLimit: 5,
+          useSingleHourSampling: true,
+          targetHour: 1,
+          cacheDurationMins: 60,
+          useForecasting: true,
+          timeout: 30000 // 30 second timeout
+        });
+        
+        // Map batch results back to the expected format, including original invalid locations
+        return await Promise.all(locations.map(async location => {
+          const isValid = validLocations.find(
+            loc => loc.latitude === location.latitude && loc.longitude === location.longitude
+          )?.isValid;
+          
+          if (!isValid) {
+            return { 
+              location, 
+              forecast: null, 
+              success: false 
+            };
+          }
+          
+          const batchResult = batchResults.find(
+            r => r.location.latitude === location.latitude && 
+                r.location.longitude === location.longitude
+          );
+          
+          if (!batchResult) {
+            return { 
+              location, 
+              forecast: null, 
+              success: false 
+            };
+          }
+          
+          try {
+            // Get specific day data using the batch result
+            const forecast = await enhancedForecastAstroService.getSpecificDayAstroData(
+              location.latitude,
+              location.longitude,
+              dayIndex,
+              location.bortleScale
+            );
+            
+            return { 
+              location, 
+              forecast, 
+              success: !!forecast 
+            };
+          } catch (error) {
+            console.error(`Error processing location specific day:`, error);
+            return { 
+              location, 
+              forecast: null, 
+              success: false 
+            };
+          }
+        }));
+      } else {
+        // For all days, process each location sequentially but with internal parallelism
+        // First validate all locations
+        const validationResults = await Promise.all(
+          locations.map(loc => validateForecastLocation({
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            bortleScale: loc.bortleScale,
+            forecastDay: 0  // Default to day 0 for validation when dayIndex is undefined
+          }))
+        );
+        
+        // Create a map of valid locations
+        const validLocationMap = new Map();
+        locations.forEach((loc, index) => {
+          validLocationMap.set(
+            `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`, 
+            validationResults[index].isValid
+          );
+        });
+        
+        return await Promise.all(locations.map(async location => {
+          const locationKey = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+          const isValid = validLocationMap.get(locationKey);
+          
+          if (!isValid) {
+            return { 
+              location, 
+              forecast: [], 
+              success: false 
+            };
+          }
+          
+          try {
+            const forecast = await enhancedForecastAstroService.getFullForecastAstroData(
+              location.latitude,
+              location.longitude,
+              location.bortleScale
+            );
+            
+            return { 
+              location, 
+              forecast, 
+              success: forecast.length > 0 
+            };
+          } catch (error) {
+            console.error(`Error processing location full forecast:`, error);
+            return { 
+              location, 
+              forecast: [], 
+              success: false 
+            };
+          }
+        }));
+      }
+    } catch (error) {
+      console.error(`Error in batch processing locations:`, error);
+      // Return failed results
+      return locations.map(location => ({
+        location,
+        forecast: null,
+        success: false
+      }));
+    }
+  },
+  
+  /**
+   * Clear forecast cache
+   */
+  clearCache: (latitude?: number, longitude?: number) => {
+    if (latitude !== undefined && longitude !== undefined) {
+      const keyPattern = `forecast-astro-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+      forecastCache.invalidateCache(keyPattern);
+    } else {
+      forecastCache.invalidateCache();
+    }
+  },
+  
+  /**
+   * Get current forecast system health metrics
+   */
+  getServiceHealth: () => {
+    return areForecastServicesReliable();
+  }
+};

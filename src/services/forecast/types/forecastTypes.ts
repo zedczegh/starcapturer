@@ -1,92 +1,63 @@
 
-// Define forecast data structure
+/**
+ * Forecast service type definitions
+ */
+
+export interface ForecastCacheItem {
+  data: any;
+  timestamp: number;
+}
+
 export interface ForecastDayAstroData {
   date: string;
   dayIndex: number;
   cloudCover: number;
-  siqs: number;
-  moonPhase: number;
-  moonIllumination: number;
-  temperature: number | { min: number; max: number; };
+  siqs: number | null;
+  isViable: boolean;
+  temperature: {
+    min: number;
+    max: number;
+  };
+  precipitation: {
+    probability: number;
+    amount: number;
+  };
   humidity: number;
   windSpeed: number;
-  isViable: boolean;
-  qualityDescription: string;
-  predictedSeeing: number;
-  precipitation?: {
-    probability: number;
-    amount: number | null;
-  };
-  weatherCode?: number;
-  reliability?: number;
-  siqsResult?: any;
+  weatherCode: number;
+  siqsResult: ExtendedSiqsResult | null;
+  reliability: number;
 }
 
-// Define forecast map point type
-export interface ForecastMapPoint {
-  id: string;
+export interface BatchLocationData {
   latitude: number;
   longitude: number;
-  name: string;
-  siqs: number;
-  cloudCover: number;
-  forecastDay: number;
-  forecastDate: string;
-  isViable: boolean;
-}
-
-// Define batch location data interface
-export interface BatchLocationData {
-  latitude: number; 
-  longitude: number;
-  name?: string;
   bortleScale?: number;
-  forecastDay?: number;
-  isValidated?: boolean;
-  isWater?: boolean;
+  name?: string;
+  priority?: number;
+  forecastDay?: number;  // Explicitly define the forecastDay property
+  cloudCover?: number;
+  isValidated?: boolean; // Track if location has been validated
+  isWater?: boolean;     // Track if location is a water location
 }
 
-// Define batch forecast request type
-export interface BatchForecastRequest {
-  locations: Array<{
+export interface BatchForecastResult {
+  location: {
     latitude: number;
     longitude: number;
-    name?: string;
     bortleScale?: number;
-  }>;
-  forecastDay: number;
-}
-
-// Define batch result interface
-export interface BatchForecastResult {
-  location: BatchLocationData;
+    name?: string;
+  };
+  forecast: ForecastDayAstroData[] | ForecastDayAstroData | null;
   success: boolean;
-  forecast?: ForecastDayAstroData;
-  error?: string;
 }
 
-// Define extended SIQS result
 export interface ExtendedSiqsResult {
   siqs: number;
   isViable: boolean;
   bortleScale: number;
   cloudCover: number;
   timestamp: number;
-}
-
-// Define EnhancedLocation interface
-export interface EnhancedLocation {
-  id?: string;
-  latitude: number;
-  longitude: number;
-  name?: string;
-  bortleScale?: number;
-  forecastDay?: number;
-}
-
-// Define a cache interface for forecast data
-export interface ForecastCache {
-  getCachedForecast: (key: string) => ForecastDayAstroData | null;
-  cacheForecast: (key: string, data: ForecastDayAstroData) => void;
-  clearAllCache: () => void;
+  confidence?: number;
+  [key: string]: any;
 }

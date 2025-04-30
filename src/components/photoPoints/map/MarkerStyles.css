@@ -1,209 +1,195 @@
 
-.location-marker {
-  position: relative;
-  cursor: pointer;
-  transition: transform 0.2s ease;
+/* Enhanced marker styles with better mobile visibility */
+.leaflet-marker-icon {
+  transition: filter 0.15s ease-out;
+  will-change: transform;
+  transform-origin: center center !important;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+  z-index: 600;
 }
 
-.location-marker.hovered {
-  transform: scale(1.2);
-  z-index: 500 !important;
+/* Hover and active state with enhanced mobile touch area */
+.leaflet-marker-icon:hover,
+.leaflet-marker-icon.hovered {
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.4));
+  z-index: 1000 !important;
 }
 
-.location-marker div {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+/* Better popup styles for mobile */
+.leaflet-popup {
+  margin-bottom: 20px; /* Additional space for popup on mobile */
 }
 
-.location-marker.star-marker div {
-  clip-path: polygon(
-    50% 0%,
-    61% 35%,
-    98% 35%,
-    68% 57%,
-    79% 91%,
-    50% 70%,
-    21% 91%,
-    32% 57%,
-    2% 35%,
-    39% 35%
-  );
-  border-radius: 0;
+.leaflet-popup-content-wrapper {
+  background-color: rgba(20, 24, 39, 0.95);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
-/* User location marker with pulse effect */
-.user-location-marker {
-  z-index: 400 !important;
+.leaflet-popup-tip {
+  background-color: rgba(20, 24, 39, 0.95);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
-.user-location-marker .pulse-circle {
-  width: 100%;
-  height: 100%;
-  background-color: rgba(99, 102, 241, 0.6);
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
-  animation: pulse 2s infinite;
+.leaflet-popup-content {
+  margin: 8px 10px;
+  line-height: 1.4;
+  color: #fff;
+  min-width: 120px;
 }
 
-.user-location-marker .center-dot {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
-  background-color: rgb(99, 102, 241);
-  border-radius: 50%;
-  border: 2px solid white;
-  z-index: 10;
+/* Improved mobile-specific popup styles */
+@media (max-width: 768px) {
+  .leaflet-popup {
+    margin-bottom: 30px; /* More space on mobile */
+  }
+  
+  .leaflet-popup-content {
+    margin: 6px 8px;
+    font-size: 0.9em;
+  }
+  
+  /* Larger touch areas for controls on mobile */
+  .leaflet-control-zoom a {
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+  }
+  
+  /* Make markers appear above other elements on mobile */
+  .leaflet-marker-pane {
+    z-index: 650 !important;
+  }
 }
 
-.user-location-marker .center-dot.with-score {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 10px;
-  color: white;
-  background-color: rgb(99, 102, 241);
+/* Custom marker popup gradient backgrounds */
+.marker-popup-gradient {
+  background: linear-gradient(to bottom, rgba(24, 24, 27, 0.95) 0%, rgba(9, 9, 11, 0.95) 100%);
 }
 
-/* Colors for SIQS classes */
-.siqs-excellent div {
-  background-color: rgba(34, 197, 94, 0.9) !important;
+/* SIQS quality classes for styling */
+.siqs-excellent {
+  border-left: 3px solid #4ade80;
 }
 
-.siqs-good div {
-  background-color: rgba(250, 204, 21, 0.9) !important;
+.siqs-good {
+  border-left: 3px solid #facc15;
 }
 
-.siqs-poor div {
-  background-color: rgba(234, 88, 12, 0.9) !important;
+.siqs-poor {
+  border-left: 3px solid #f87171;
 }
 
-/* Forecast marker styles */
-.forecast-marker {
-  position: relative;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-  z-index: 350 !important;
+/* Location radius circle styling */
+.leaflet-circle-pane path {
+  stroke-dasharray: 5, 5;
+  animation: pulse 3s infinite ease-in-out;
+  transform-origin: center center;
+  z-index: 300;
+  opacity: 0.6;
 }
 
-.forecast-marker.hovered {
-  transform: scale(1.2);
-  z-index: 500 !important;
+/* Make sure circle paths render properly */
+.leaflet-circle-pane {
+  z-index: 300 !important;
+  pointer-events: none;
 }
 
-.forecast-marker .forecast-diamond {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: rotate(45deg);
+/* Fix for mobile touch dragging issues */
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  background-clip: padding-box;
 }
 
-.forecast-marker .diamond-inner {
-  width: 80%;
-  height: 80%;
-  background-color: rgba(139, 92, 246, 0.8);
-  border: 2px solid rgba(255, 255, 255, 0.8);
-}
-
-.forecast-marker .diamond-pulse {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border: 2px solid rgba(139, 92, 246, 0.4);
-  animation: diamond-pulse 2s infinite;
-}
-
-.forecast-marker.siqs-excellent .diamond-inner {
-  background-color: rgba(34, 197, 94, 0.8);
-}
-
-.forecast-marker.siqs-excellent .diamond-pulse {
-  border-color: rgba(34, 197, 94, 0.4);
-}
-
-.forecast-marker.siqs-good .diamond-inner {
-  background-color: rgba(250, 204, 21, 0.8);
-}
-
-.forecast-marker.siqs-good .diamond-pulse {
-  border-color: rgba(250, 204, 21, 0.4);
-}
-
-.forecast-marker.siqs-poor .diamond-inner {
-  background-color: rgba(234, 88, 12, 0.8);
-}
-
-.forecast-marker.siqs-poor .diamond-pulse {
-  border-color: rgba(234, 88, 12, 0.4);
-}
-
+/* Pulse animation for radius circles */
 @keyframes pulse {
-  0% {
-    transform: scale(0.8);
-    opacity: 1;
-  }
-  70% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(0.8);
-    opacity: 0;
-  }
+  0% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.4; }
 }
 
-@keyframes diamond-pulse {
-  0% {
-    transform: scale(0.8);
-    opacity: 1;
-  }
-  70% {
-    transform: scale(1.3);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(0.8);
-    opacity: 0;
-  }
+/* Root variables for theming */
+:root {
+  --primary-rgb: 139, 92, 246; /* Default purple */
 }
 
-/* Popup customizations */
-.location-popup .leaflet-popup-content-wrapper {
-  background-color: rgba(23, 25, 35, 0.9);
-  color: #fff;
-  border: 1px solid rgba(139, 92, 246, 0.4);
-  border-radius: 8px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+/* Legend tab styling */
+.legend-tab {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(-100%);
+  height: 80px;
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  box-shadow: -3px 0 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.location-popup .leaflet-popup-tip {
-  background-color: rgba(23, 25, 35, 0.9);
-  border: 1px solid rgba(139, 92, 246, 0.4);
+.legend-tab:hover {
+  width: 32px;
 }
 
-.forecast-popup .leaflet-popup-content-wrapper {
-  background-color: rgba(23, 25, 35, 0.9);
-  color: #fff;
-  border: 1px solid rgba(139, 92, 246, 0.4);
-  border-radius: 8px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+/* Scrollbar styling */
+.legend-content {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
 }
 
-.forecast-popup .leaflet-popup-tip {
-  background-color: rgba(23, 25, 35, 0.9);
-  border: 1px solid rgba(139, 92, 246, 0.4);
+.legend-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.legend-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.legend-content::-webkit-scrollbar-thumb {
+  background-color: rgba(139, 92, 246, 0.3);
+  border-radius: 20px;
+}
+
+/* Hover effects */
+.legend-item {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.legend-item:hover {
+  transform: translateX(3px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Animations */
+@keyframes pulse-border {
+  0% { border-color: rgba(139, 92, 246, 0.2); }
+  50% { border-color: rgba(139, 92, 246, 0.6); }
+  100% { border-color: rgba(139, 92, 246, 0.2); }
+}
+
+.pulse-border {
+  animation: pulse-border 3s infinite;
+}
+
+/* Background styling */
+.legend-pattern {
+  background-image: radial-gradient(circle at 1px 1px, rgba(139, 92, 246, 0.1) 2px, transparent 0);
+  background-size: 25px 25px;
+}
+
+/* Title styling */
+.legend-title {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 1), rgba(124, 58, 237, 1));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.1);
 }
