@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -60,19 +59,29 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     
     const fetchExistingBookings = async () => {
       try {
-        const { data, error } = await supabase
-          .from('astro_spot_timeslots')
-          .select('start_time, end_time')
-          .eq('spot_id', spotId);
+        // Use fetch to directly access the Supabase API
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const response = await fetch(
+          `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/astro_spot_timeslots?spot_id=eq.${spotId}`,
+          {
+            headers: {
+              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y',
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
           
-        if (error) {
-          console.error("Error fetching existing bookings:", error);
+        if (!response.ok) {
+          console.error("Error fetching existing bookings:", response.statusText);
           return;
         }
         
+        const data = await response.json();
+        
         if (data) {
           // Extract all booked dates
-          const dates = data.flatMap(slot => {
+          const dates = data.flatMap((slot: any) => {
             const start = new Date(slot.start_time);
             const end = new Date(slot.end_time);
             

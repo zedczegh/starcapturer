@@ -20,9 +20,6 @@ const CommunityLocationCard: React.FC<CommunityLocationCardProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  // Extract price if available
-  const price = spot.default_price || undefined;
-  
   return (
     <motion.button
       key={spot.id}
@@ -47,7 +44,8 @@ const CommunityLocationCard: React.FC<CommunityLocationCardProps> = ({
             isCertified={!!spot.certification || !!spot.isDarkSkyReserve}
             username={spot.username || t('Anonymous Stargazer', '匿名观星者')}
             hideSiqs={true}
-            price={price}
+            price={spot.default_price}
+            currency={spot.currency || '$'}
           />
         </div>
         <div className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/10" />
