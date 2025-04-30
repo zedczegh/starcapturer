@@ -34,9 +34,12 @@ export const calculateDistance = (
  * @param deg Degrees
  * @returns Radians
  */
-const deg2rad = (deg: number): number => {
+export const deg2rad = (deg: number): number => {
   return deg * (Math.PI / 180);
 };
+
+// Alias for backward compatibility
+export const degToRad = deg2rad;
 
 /**
  * Check if a location is within a specific radius of another location
@@ -56,4 +59,27 @@ export const isWithinRadius = (
 ): boolean => {
   const distance = calculateDistance(centerLat, centerLon, pointLat, pointLon);
   return distance <= radiusKm;
+};
+
+/**
+ * Format distance in kilometers with appropriate units
+ * @param distance - Distance in kilometers
+ * @returns Formatted distance string
+ */
+export const formatDistance = (distance: number): string => {
+  if (distance === undefined || distance === null) return '';
+  
+  // For small distances, show in meters
+  if (distance < 1) {
+    const meters = Math.round(distance * 1000);
+    return `${meters} m`;
+  }
+  
+  // For medium distances, show with 1 decimal
+  if (distance < 10) {
+    return `${distance.toFixed(1)} km`;
+  }
+  
+  // For larger distances, show as whole number
+  return `${Math.round(distance)} km`;
 };

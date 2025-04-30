@@ -1,12 +1,12 @@
 
 // Add the forecast properties to the SharedAstroSpot interface
 export interface SharedAstroSpot {
-  id: string; // Changed from optional to required
+  id: string; // Required field
   name: string;
   chineseName?: string;
   latitude: number;
   longitude: number;
-  bortleScale?: number;
+  bortleScale: number; // Make this required for type compatibility
   certification?: string;
   isDarkSkyReserve?: boolean;
   timestamp?: string;
@@ -17,7 +17,7 @@ export interface SharedAstroSpot {
   imageUrl?: string;
   createdBy?: string;
   userDisplayName?: string;
-  description?: string;
+  description?: string; // Add this property that was missing
   type?: string;
   photographer?: string;
   

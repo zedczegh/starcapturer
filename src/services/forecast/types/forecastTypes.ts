@@ -71,3 +71,13 @@ export interface ExtendedSiqsResult {
   cloudCover: number;
   timestamp: number;
 }
+
+// Define EnhancedLocation interface
+export interface EnhancedLocation {
+  id?: string;
+  latitude: number;
+  longitude: number;
+  name?: string;
+  bortleScale?: number;
+  forecastDay?: number;
+}
