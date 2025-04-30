@@ -1,5 +1,4 @@
 
-
 /**
  * Format a distance number into a human-readable string
  * @param distance Distance in kilometers
@@ -37,4 +36,3 @@ export const formatDate = (dateStr: string | undefined): string => {
     return dateStr;
   }
 };
-

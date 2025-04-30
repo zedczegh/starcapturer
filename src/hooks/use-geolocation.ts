@@ -1,60 +1,74 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
-interface GeolocationHookReturnType {
-  location: {latitude: number, longitude: number} | null;
-  error: GeolocationPositionError | null;
-  loading: boolean;
-  getPosition: () => void;
+interface UseGeolocationOptions {
+  enableHighAccuracy?: boolean;
+  timeout?: number;
+  maximumAge?: number;
 }
 
-export const useGeolocation = (): GeolocationHookReturnType => {
-  const [location, setLocation] = useState<{latitude: number, longitude: number} | null>(null);
-  const [error, setError] = useState<GeolocationPositionError | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+interface GeolocationState {
+  latitude: number | null;
+  longitude: number | null;
+  accuracy: number | null;
+  error: GeolocationPositionError | null;
+  loading: boolean;
+  timestamp: number | null;
+}
 
-  const handleSuccess = useCallback((position: GeolocationPosition) => {
-    setLocation({
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude
-    });
-    setError(null);
-    setLoading(false);
-  }, []);
-
-  const handleError = useCallback((error: GeolocationPositionError) => {
-    setError(error);
-    setLoading(false);
-    console.error('Error getting location:', error.message);
-  }, []);
-
-  const getPosition = useCallback(() => {
-    if (!navigator.geolocation) {
-      setError({
-        code: 0,
-        message: 'Geolocation not supported',
-        PERMISSION_DENIED: 1,
-        POSITION_UNAVAILABLE: 2,
-        TIMEOUT: 3
-      });
-      return;
-    }
-    
-    setLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      handleSuccess,
-      handleError,
-      {
-        enableHighAccuracy: true,
-        timeout: 10000, // 10 seconds
-        maximumAge: 60000 // 1 minute
-      }
-    );
-  }, [handleSuccess, handleError]);
+export function useGeolocation(options: UseGeolocationOptions = {}) {
+  const [state, setState] = useState<GeolocationState>({
+    latitude: null,
+    longitude: null,
+    accuracy: null,
+    error: null,
+    loading: true,
+    timestamp: null,
+  });
 
   useEffect(() => {
-    getPosition();
-  }, [getPosition]);
+    if (!navigator.geolocation) {
+      setState(s => ({
+        ...s,
+        error: {
+          code: 0,
+          message: 'Geolocation is not supported',
+          PERMISSION_DENIED: 1,
+          POSITION_UNAVAILABLE: 2,
+          TIMEOUT: 3
+        } as GeolocationPositionError,
+        loading: false,
+      }));
+      return;
+    }
 
-  return { location, error, loading, getPosition };
-};
+    const geoWatchId = navigator.geolocation.watchPosition(
+      position => {
+        setState({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          error: null,
+          loading: false,
+          timestamp: position.timestamp,
+        });
+      },
+      error => {
+        setState(s => ({
+          ...s,
+          error,
+          loading: false,
+        }));
+      },
+      options
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(geoWatchId);
+    };
+  }, [options]);
+
+  return state;
+}
+
+export default useGeolocation;

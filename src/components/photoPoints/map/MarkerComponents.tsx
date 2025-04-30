@@ -7,6 +7,7 @@ import { MapPin, Star, Calendar } from 'lucide-react';
 import { getSiqsScore, formatSiqs } from '@/utils/siqsHelpers';
 import { formatDistance } from '@/utils/formatters';
 import L from 'leaflet';
+import MarkerEventHandler from './MarkerEventHandler';
 
 interface ForecastMarkerProps {
   location: SharedAstroSpot;
@@ -15,6 +16,11 @@ interface ForecastMarkerProps {
   onMouseOut?: () => void;
   showTooltip?: boolean;
   isHovered?: boolean;
+  locationId?: string;
+  forecastDay?: number;
+  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove?: (e: React.TouchEvent) => void;
 }
 
 export const ForecastMarker: React.FC<ForecastMarkerProps> = ({
@@ -24,6 +30,10 @@ export const ForecastMarker: React.FC<ForecastMarkerProps> = ({
   onMouseOut,
   showTooltip = true,
   isHovered = false,
+  locationId = '',
+  handleTouchStart,
+  handleTouchEnd,
+  handleTouchMove
 }) => {
   const { t, language } = useLanguage();
   const siqsScore = getSiqsScore(location.siqs);
@@ -49,9 +59,20 @@ export const ForecastMarker: React.FC<ForecastMarkerProps> = ({
         mouseout: onMouseOut
       }}
     >
+      <MarkerEventHandler 
+        marker={null}
+        eventMap={{
+          mouseover: onHover,
+          mouseout: onMouseOut,
+          touchstart: handleTouchStart ? (e) => handleTouchStart(e, locationId) : undefined,
+          touchend: handleTouchEnd ? (e) => handleTouchEnd(e, locationId) : undefined,
+          touchmove: handleTouchMove
+        }}
+      />
+      
       {showTooltip && (
-        <Popup closeButton={false} autoPan={false} className="forecast-popup">
-          <div className="p-2">
+        <Popup>
+          <div className="p-2 forecast-popup">
             <div className="font-medium mb-1">{location.name}</div>
             
             {location.forecastDate && (
@@ -92,6 +113,10 @@ interface LocationMarkerProps {
   onHover?: () => void;
   onMouseOut?: () => void;
   isHovered?: boolean;
+  locationId?: string;
+  handleTouchStart?: (e: React.TouchEvent, id: string) => void;
+  handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
+  handleTouchMove?: (e: React.TouchEvent) => void;
 }
 
 export const LocationMarker: React.FC<LocationMarkerProps> = ({
@@ -100,6 +125,10 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
   onHover,
   onMouseOut,
   isHovered = false,
+  locationId = '',
+  handleTouchStart,
+  handleTouchEnd,
+  handleTouchMove
 }) => {
   const { t } = useLanguage();
   const siqsScore = getSiqsScore(location.siqs);
@@ -123,7 +152,18 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
         mouseout: onMouseOut
       }}
     >
-      <Popup closeButton={false} autoPan={false}>
+      <MarkerEventHandler 
+        marker={null}
+        eventMap={{
+          mouseover: onHover,
+          mouseout: onMouseOut,
+          touchstart: handleTouchStart ? (e) => handleTouchStart(e, locationId) : undefined,
+          touchend: handleTouchEnd ? (e) => handleTouchEnd(e, locationId) : undefined,
+          touchmove: handleTouchMove
+        }}
+      />
+      
+      <Popup>
         <div className="p-2">
           <div className="font-medium mb-1">{location.name}</div>
           
@@ -144,6 +184,44 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
             <MapPin className="h-3 w-3 inline mr-1" />
             {t("View details", "查看详情")}
           </div>
+        </div>
+      </Popup>
+    </Marker>
+  );
+};
+
+interface UserLocationMarkerProps {
+  position: [number, number];
+  currentSiqs?: number | null;
+}
+
+export const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ 
+  position,
+  currentSiqs
+}) => {
+  const { t } = useLanguage();
+  
+  const icon = L.divIcon({
+    className: 'user-location-marker',
+    html: `<div class="user-location-marker-inner"></div>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+  });
+  
+  return (
+    <Marker position={position} icon={icon}>
+      <Popup>
+        <div className="p-2">
+          <div className="font-medium mb-1">{t("Your Location", "您的位置")}</div>
+          <div className="text-xs">
+            {position[0].toFixed(5)}, {position[1].toFixed(5)}
+          </div>
+          {currentSiqs !== null && currentSiqs !== undefined && (
+            <div className="flex items-center mt-1">
+              <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
+              <span className="text-sm">{formatSiqs(currentSiqs)}</span>
+            </div>
+          )}
         </div>
       </Popup>
     </Marker>

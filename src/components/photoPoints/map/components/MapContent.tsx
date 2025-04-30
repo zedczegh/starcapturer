@@ -76,6 +76,12 @@ const MapContent: React.FC<MapContentProps> = ({
     }
   }, [onMapClick]);
 
+  const handleMarkerHover = React.useCallback((id: string | null) => {
+    if (onMarkerHover) {
+      onMarkerHover(id);
+    }
+  }, [onMarkerHover]);
+
   return (
     <MapContainer
       center={center}
@@ -113,7 +119,6 @@ const MapContent: React.FC<MapContentProps> = ({
         activeView={activeView}
         searchRadius={searchRadius}
         effects={['zoom-controls']} 
-        // Removed 'legend' to prevent redundant legend icon
       />
       
       {onMapClick && (
@@ -145,9 +150,10 @@ const MapContent: React.FC<MapContentProps> = ({
             <ForecastMarker
               key={locationId}
               location={location}
-              onClick={stableOnLocationClick}
+              onClick={() => stableOnLocationClick(location)}
+              onHover={() => handleMarkerHover(locationId)}
+              onMouseOut={() => handleMarkerHover(null)}
               isHovered={isHovered}
-              onHover={onMarkerHover || (() => {})}
               locationId={locationId}
               forecastDay={forecastDay}
               handleTouchStart={handleTouchStart}
@@ -166,12 +172,11 @@ const MapContent: React.FC<MapContentProps> = ({
           <LocationMarker
             key={locationId}
             location={location}
-            onClick={stableOnLocationClick}
+            onClick={() => stableOnLocationClick(location)}
+            onHover={() => handleMarkerHover(locationId)}
+            onMouseOut={() => handleMarkerHover(null)}
             isHovered={isHovered}
-            onHover={onMarkerHover || (() => {})}
             locationId={locationId}
-            isCertified={isCertified}
-            activeView={activeView}
             handleTouchStart={handleTouchStart}
             handleTouchEnd={handleTouchEnd}
             handleTouchMove={handleTouchMove}

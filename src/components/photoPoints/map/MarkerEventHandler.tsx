@@ -1,13 +1,10 @@
 
 import React, { useEffect } from 'react';
+import { useLeafletContext } from '@react-leaflet/core';
 import L from 'leaflet';
 
 interface EventMap {
-  mouseover?: () => void;
-  mouseout?: () => void;
-  touchstart?: (e: any) => void;
-  touchend?: (e: any) => void;
-  touchmove?: (e: any) => void;
+  [key: string]: ((e: any) => void) | undefined;
 }
 
 interface MarkerEventHandlerProps {
@@ -16,29 +13,28 @@ interface MarkerEventHandlerProps {
 }
 
 const MarkerEventHandler: React.FC<MarkerEventHandlerProps> = ({ marker, eventMap }) => {
+  const context = useLeafletContext();
+
   useEffect(() => {
-    if (!marker) return;
+    const container = context.layerContainer || context.map;
+    const instance = marker || container;
 
-    // Get the element from the marker
-    const el = marker.getElement();
-    if (!el) return;
-
-    // Add all event listeners
+    // Add event handlers
     Object.entries(eventMap).forEach(([event, handler]) => {
       if (handler) {
-        el.addEventListener(event, handler);
+        instance.on(event, handler);
       }
     });
 
-    // Clean up event listeners
+    // Clean up
     return () => {
       Object.entries(eventMap).forEach(([event, handler]) => {
         if (handler) {
-          el.removeEventListener(event, handler);
+          instance.off(event, handler);
         }
       });
     };
-  }, [marker, eventMap]);
+  }, [context, marker, eventMap]);
 
   return null;
 };

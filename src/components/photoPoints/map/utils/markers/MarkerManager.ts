@@ -1,132 +1,224 @@
 
 import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getLocationMarker } from '../../MarkerUtils';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 
-/**
- * Manages map markers for photo points with optimized rendering
- */
-export class MarkerManager {
-  private markers: Map<string, L.Marker> = new Map();
-  private map: L.Map | null = null;
-  private selectedMarkerId: string | null = null;
+// Marker type definitions
+export enum MarkerType {
+  USER_LOCATION = 'userLocation',
+  CERTIFIED = 'certified',
+  OBSERVATION = 'observation',
+  FORECAST = 'forecast',
+  STANDARD = 'standard'
+}
+
+export interface CustomMarker {
+  id: string;
+  type: MarkerType;
+  location: SharedAstroSpot;
+  marker: L.Marker;
+}
+
+class MarkerManager {
+  private markers: Map<string, CustomMarker> = new Map();
+  private hoveredMarkerId: string | null = null;
   
   /**
-   * Initialize the manager with a Leaflet map
+   * Create a marker for a location
+   * @param location Location data
+   * @param options Additional marker options
+   * @returns Marker instance
    */
-  public initialize(map: L.Map): void {
-    this.map = map;
+  createMarker(location: SharedAstroSpot, options: {
+    type?: MarkerType;
+    isHovered?: boolean;
+    onClick?: (location: SharedAstroSpot) => void;
+    onHover?: (id: string) => void;
+    onMouseOut?: (id: string | null) => void;
+  } = {}): CustomMarker {
+    const {
+      type = MarkerType.STANDARD,
+      isHovered = false,
+      onClick,
+      onHover,
+      onMouseOut
+    } = options;
+    
+    // Create a unique ID for the marker
+    const id = location.id || `marker-${type}-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    
+    // Check if marker already exists
+    if (this.markers.has(id)) {
+      const existingMarker = this.markers.get(id)!;
+      
+      // Update marker if needed
+      if (isHovered) {
+        this.highlightMarker(existingMarker);
+      } else if (this.hoveredMarkerId === id) {
+        this.unhighlightMarker(existingMarker);
+      }
+      
+      return existingMarker;
+    }
+    
+    // Generate marker icon based on type and SIQS score
+    const icon = this.createMarkerIcon(location, type, isHovered);
+    
+    // Create marker instance
+    const marker = L.marker([location.latitude, location.longitude], { icon });
+    
+    // Create custom marker object
+    const customMarker: CustomMarker = {
+      id,
+      type,
+      location,
+      marker
+    };
+    
+    // Add event handlers
+    if (onClick) {
+      marker.on('click', () => onClick(location));
+    }
+    
+    if (onHover) {
+      marker.on('mouseover', () => onHover(id));
+    }
+    
+    if (onMouseOut) {
+      marker.on('mouseout', () => onMouseOut(null));
+    }
+    
+    // Store marker in collection
+    this.markers.set(id, customMarker);
+    
+    return customMarker;
   }
   
   /**
-   * Clear all markers from the map
+   * Create marker icon based on location type and SIQS score
+   * @param location Location data
+   * @param type Marker type
+   * @param isHovered Whether marker is currently hovered
+   * @returns L.DivIcon instance
    */
-  public clearMarkers(): void {
-    if (!this.map) return;
+  private createMarkerIcon(location: SharedAstroSpot, type: MarkerType, isHovered: boolean): L.DivIcon {
+    const siqsScore = getSiqsScore(location.siqs);
+    const qualityClass = siqsScore > 7 ? 'high-quality' : siqsScore > 5 ? 'medium-quality' : 'low-quality';
     
+    switch (type) {
+      case MarkerType.USER_LOCATION:
+        return L.divIcon({
+          className: 'user-location-marker',
+          html: `<div class="user-location-marker-inner ${isHovered ? 'hovered' : ''}"></div>`,
+          iconSize: [12, 12],
+          iconAnchor: [6, 6]
+        });
+        
+      case MarkerType.CERTIFIED:
+        return L.divIcon({
+          className: `certified-marker ${qualityClass}`,
+          html: `<div class="certified-marker-inner ${isHovered ? 'hovered' : ''}"></div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
+        
+      case MarkerType.FORECAST:
+        return L.divIcon({
+          className: `forecast-marker ${qualityClass}`,
+          html: `<div class="forecast-marker-inner ${isHovered ? 'hovered' : ''}">
+            <div class="forecast-marker-label">${siqsScore.toFixed(1)}</div>
+          </div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
+        
+      default:
+        return L.divIcon({
+          className: `location-marker ${qualityClass}`,
+          html: `<div class="location-marker-inner ${isHovered ? 'hovered' : ''}"></div>`,
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+        });
+    }
+  }
+  
+  /**
+   * Highlight a marker
+   * @param marker Marker to highlight
+   */
+  highlightMarker(marker: CustomMarker): void {
+    // Update hover state
+    this.hoveredMarkerId = marker.id;
+    
+    // Generate new icon with hover state
+    const newIcon = this.createMarkerIcon(marker.location, marker.type, true);
+    marker.marker.setIcon(newIcon);
+    
+    // Bring to front
+    marker.marker.setZIndexOffset(1000);
+  }
+  
+  /**
+   * Remove highlight from a marker
+   * @param marker Marker to unhighlight
+   */
+  unhighlightMarker(marker: CustomMarker): void {
+    // Clear hover state if this is the currently hovered marker
+    if (this.hoveredMarkerId === marker.id) {
+      this.hoveredMarkerId = null;
+    }
+    
+    // Generate new icon without hover state
+    const newIcon = this.createMarkerIcon(marker.location, marker.type, false);
+    marker.marker.setIcon(newIcon);
+    
+    // Reset z-index
+    marker.marker.setZIndexOffset(0);
+  }
+  
+  /**
+   * Remove a marker from the map and collection
+   * @param id Marker ID to remove
+   */
+  removeMarker(id: string): void {
+    const marker = this.markers.get(id);
+    if (marker) {
+      marker.marker.remove();
+      this.markers.delete(id);
+      
+      if (this.hoveredMarkerId === id) {
+        this.hoveredMarkerId = null;
+      }
+    }
+  }
+  
+  /**
+   * Clear all markers
+   */
+  clearMarkers(): void {
     this.markers.forEach(marker => {
-      marker.remove();
+      marker.marker.remove();
     });
-    
     this.markers.clear();
-    this.selectedMarkerId = null;
+    this.hoveredMarkerId = null;
   }
   
   /**
-   * Render markers for locations
-   * 
-   * @param locations - Array of locations to render
-   * @param selectedId - Optional ID of selected location
-   * @param visibleBounds - Optional bounds to filter visible locations
+   * Get a marker by ID
+   * @param id Marker ID
+   * @returns Marker or undefined if not found
    */
-  public renderMarkers(
-    locations: SharedAstroSpot[], 
-    selectedId?: string,
-    visibleBounds?: L.LatLngBounds
-  ): void {
-    if (!this.map) return;
-    
-    const currentMarkerIds = new Set<string>();
-    
-    // Process each location
-    locations.forEach(location => {
-      if (!location.latitude || !location.longitude) return;
-      
-      // Create a unique ID for each location
-      const markerId = `marker-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
-      currentMarkerIds.add(markerId);
-      
-      // If marker already exists, update it if needed
-      if (this.markers.has(markerId)) {
-        const existingMarker = this.markers.get(markerId)!;
-        
-        // Update marker if it's now selected or was previously selected
-        if ((selectedId && markerId === `marker-${selectedId}`) || 
-            (this.selectedMarkerId && markerId === this.selectedMarkerId)) {
-          existingMarker.setIcon(this.createMarkerIcon(location, true));
-        }
-        
-        return;
-      }
-      
-      // Skip rendering markers outside visible bounds to improve performance
-      if (visibleBounds && !visibleBounds.contains(L.latLng(location.latitude, location.longitude))) {
-        return;
-      }
-      
-      // Determine if this is the selected marker
-      const isSelected = selectedId && markerId === `marker-${selectedId}`;
-      if (isSelected) {
-        this.selectedMarkerId = markerId;
-      }
-      
-      // Create marker with location-specific icon
-      const marker = L.marker(
-        [location.latitude, location.longitude],
-        {
-          icon: this.createMarkerIcon(location, isSelected),
-          riseOnHover: true
-        }
-      );
-      
-      // Add popup with location information if needed
-      if (location.name) {
-        const popupContent = `
-          <div class="text-sm font-semibold">${location.name}</div>
-          ${location.description ? `<div class="text-xs mt-1">${location.description}</div>` : ''}
-          ${location.siqs ? `<div class="text-xs mt-1 font-medium">SIQS: ${getSiqsScore(location.siqs).toFixed(1)}</div>` : ''}
-        `;
-        marker.bindPopup(popupContent);
-      }
-      
-      // Add marker to map and collection
-      marker.addTo(this.map);
-      this.markers.set(markerId, marker);
-    });
-    
-    // Remove markers that are no longer in the locations array
-    this.markers.forEach((marker, id) => {
-      if (!currentMarkerIds.has(id)) {
-        marker.remove();
-        this.markers.delete(id);
-      }
-    });
+  getMarker(id: string): CustomMarker | undefined {
+    return this.markers.get(id);
   }
   
   /**
-   * Create a marker icon based on location properties
+   * Get all markers
+   * @returns Array of all markers
    */
-  private createMarkerIcon(location: SharedAstroSpot, isSelected: boolean): L.Icon {
-    const isCertified = Boolean(location.certification || location.isDarkSkyReserve);
-    return getLocationMarker(location, isCertified, isSelected, false);
-  }
-  
-  /**
-   * Clean up resources
-   */
-  public destroy(): void {
-    this.clearMarkers();
-    this.map = null;
+  getAllMarkers(): CustomMarker[] {
+    return Array.from(this.markers.values());
   }
 }
+
+export default new MarkerManager();
