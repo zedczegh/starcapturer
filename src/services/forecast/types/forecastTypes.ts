@@ -35,7 +35,7 @@ export interface BatchLocationData {
   bortleScale?: number;
   name?: string;
   priority?: number;
-  forecastDay?: number;  // Added forecastDay property to fix TypeScript errors
+  forecastDay?: number;  // Explicitly define the forecastDay property
   cloudCover?: number;
   isValidated?: boolean; // Track if location has been validated
   isWater?: boolean;     // Track if location is a water location
