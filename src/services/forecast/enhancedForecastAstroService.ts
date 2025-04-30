@@ -1,4 +1,3 @@
-
 /**
  * Enhanced Forecast Astro Service
  * 
@@ -12,50 +11,7 @@ import { areForecastServicesReliable } from "./forecastHealthMonitor";
 import { processBatchSiqs } from "../realTimeSiqs/batchProcessor";
 import { toast } from "sonner";
 import { BatchLocationData, ForecastDayAstroData, BatchForecastResult } from "./types/forecastTypes";
-
-/**
- * Cache implementation for forecast results
- */
-class ForecastCache {
-  private cache = new Map<string, {
-    data: any;
-    timestamp: number;
-  }>();
-  
-  private static CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
-  
-  getCachedForecast(key: string): any | null {
-    const cached = this.cache.get(key);
-    if (cached && Date.now() - cached.timestamp < ForecastCache.CACHE_DURATION) {
-      return cached.data;
-    }
-    return null;
-  }
-  
-  setCachedForecast(key: string, data: any): void {
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now()
-    });
-  }
-  
-  invalidateCache(keyPattern?: string): void {
-    if (keyPattern) {
-      // Delete matching keys
-      for (const key of this.cache.keys()) {
-        if (key.includes(keyPattern)) {
-          this.cache.delete(key);
-        }
-      }
-    } else {
-      // Clear all cache
-      this.cache.clear();
-    }
-  }
-}
-
-// Create singleton cache instance
-export const forecastCache = new ForecastCache();
+import { forecastCache } from "./utils/forecastCache";
 
 /**
  * Enhanced service for extracting astronomical scores from 15-day forecast data
@@ -310,13 +266,13 @@ export const enhancedForecastAstroService = {
       if (dayIndex !== undefined) {
         // Transform locations into BatchLocationData array with explicit type annotation
         const batchLocations: BatchLocationData[] = locations.map(loc => {
-          // Create a new object with all properties we need
+          // Create a new object with all required properties including forecastDay
           return {
             latitude: loc.latitude,
             longitude: loc.longitude,
             bortleScale: loc.bortleScale,
             name: loc.name,
-            forecastDay: dayIndex,
+            forecastDay: dayIndex, // Set the forecastDay property
             priority: 10 // High priority
           };
         });
