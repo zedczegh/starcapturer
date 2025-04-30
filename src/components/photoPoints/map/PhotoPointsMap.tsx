@@ -60,14 +60,14 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = ({
         timestamp: loc.timestamp || new Date().toISOString()
       }));
       
-      return [...processedLocations, ...processedForecastLocations] as SharedAstroSpot[];
+      return [...processedLocations, ...processedForecastLocations];
     }
     
     // Ensure all locations have timestamps
     return locations.map(loc => ({
       ...loc,
       timestamp: loc.timestamp || new Date().toISOString()
-    })) as SharedAstroSpot[];
+    }));
   }, [locations, forecastLocations, showForecast, activeView]);
   
   const {

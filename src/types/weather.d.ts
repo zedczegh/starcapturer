@@ -50,7 +50,7 @@ declare module "@/types/weather" {
     description?: string;
     imageURL?: string;
     rating?: number;
-    timestamp: string; // Changed to required to match the astroSpots definition
+    timestamp?: string; // Make this optional to match the API interface
     chineseName?: string;
     siqs?: number | {
       score: number;
