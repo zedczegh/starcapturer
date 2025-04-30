@@ -7,6 +7,7 @@ import { siqsToColor } from '@/lib/siqs/utils';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import SiqsScoreBadge from './photoPoints/cards/SiqsScoreBadge';
 import { Star, Clock, User } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface LocationCardProps {
   id: string;
@@ -43,7 +44,21 @@ const LocationCard: React.FC<LocationCardProps> = ({
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-gray-50 truncate pr-2">{name}</h3>
           <div className="flex-shrink-0">
-            <SiqsScoreBadge score={numericSiqs} isCertified={isCertified} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <SiqsScoreBadge 
+                    score={numericSiqs} 
+                    isCertified={isCertified} 
+                    compact={true}
+                    loading={false}
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t("Sky quality score", "天空质量评分")}
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
         <div className="space-y-2 text-sm text-gray-400">

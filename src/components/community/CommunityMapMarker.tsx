@@ -62,6 +62,12 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     setLoadingSiqs(loading);
   };
 
+  // Handler for SIQS calculation errors
+  const handleSiqsError = (error: any) => {
+    console.error("SIQS calculation error:", error);
+    setLoadingSiqs(false);
+  };
+
   const handleClick = () => {
     if (onMarkerClick) {
       onMarkerClick(spot);
@@ -93,6 +99,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
               <SiqsScoreBadge 
                 score={siqsScore} 
                 loading={loadingSiqs} 
+                compact={false}
               />
             </div>
             
@@ -117,6 +124,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
               bortleScale={spot.bortleScale}
               existingSiqs={spot.siqs}
               onSiqsCalculated={handleSiqsCalculated}
+              onError={handleSiqsError}
               priority={3} // Medium priority for community markers
             />
           </div>

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -9,6 +8,7 @@ import { useDebouncedCallback } from "@/hooks/useDebounce";
 import { useLanguage } from "@/contexts/LanguageContext";
 import CommunityLocationsSkeleton from "./CommunityLocationsSkeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 interface CommunityLocationsListProps {
   locations: SharedAstroSpot[] | null;
@@ -51,7 +51,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
     
     // Queue up initial calculations with a small delay
     // so they don't all start at once
-    const initialSpots = locations.slice(0, 6).map(spot => spot.id);
+    const initialSpots = locations.slice(0, 8).map(spot => spot.id);
     setCalculationQueue(initialSpots);
   }, [locations]);
 
@@ -86,6 +86,24 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
       setCalculationQueue(prev => [...prev, spotId]);
     }
   }, [attemptedSiqs, calculationQueue]);
+  
+  // Handle SIQS calculation errors
+  const handleSiqsError = React.useCallback((error: any, spotId: string) => {
+    console.error(`SIQS calculation error for spot ${spotId}:`, error);
+    toast.error(t("Could not calculate sky quality for this location", "无法计算此位置的天空质量"));
+    
+    // Mark as attempted so we don't keep trying
+    setAttemptedSiqs(prev => {
+      const updated = new Set(prev);
+      updated.add(spotId);
+      return updated;
+    });
+    
+    setLoadingSiqs(prev => ({
+      ...prev,
+      [spotId]: false
+    }));
+  }, [t]);
 
   if (isLoading) {
     return <CommunityLocationsSkeleton />;
@@ -130,6 +148,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
                 onSiqsCalculated={(siqs, loading) =>
                   debouncedSiqsUpdate(spot.id, siqs, loading)
                 }
+                onError={(error) => handleSiqsError(error, spot.id)}
                 forceUpdate={!attemptedSiqs.has(spot.id) && calculationQueue.includes(spot.id)}
               />
               <div className="transform transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg rounded-xl">
