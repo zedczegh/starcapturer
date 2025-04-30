@@ -48,29 +48,29 @@ const LocationDetailsHeader: React.FC<LocationDetailsHeaderProps> = ({
       <div className="absolute -bottom-8 -left-8 w-16 h-16 bg-indigo-500/10 rounded-full blur-lg"></div>
       
       <div className="relative z-10">
-        <h1 className="text-xl sm:text-2xl font-bold text-cosmic-50 mb-2 line-clamp-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-cosmic-50 mb-2.5 line-clamp-2">
           {name || t("Unnamed Location", "未命名位置")}
         </h1>
         
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4 text-base sm:text-sm">
           <div className="flex items-center gap-1.5 text-cosmic-200">
-            <MapPin className="h-3.5 w-3.5 text-primary/80" />
-            <span className="flex-1">{formattedCoordinates}</span>
+            <MapPin className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-primary/80" />
+            <span className="flex-1 text-base sm:text-sm">{formattedCoordinates}</span>
             <Button 
               size="icon"
               variant="ghost" 
-              className="h-6 w-6 p-0.5 text-cosmic-300 hover:text-primary hover:bg-cosmic-700/30"
+              className="h-7 w-7 sm:h-6 sm:w-6 p-0.5 text-cosmic-300 hover:text-primary hover:bg-cosmic-700/30"
               onClick={handleCopyCoordinates}
               title={t("Copy coordinates", "复制坐标")}
             >
-              <Copy className="h-3.5 w-3.5" />
+              <Copy className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
             </Button>
           </div>
           
           {timestamp && (
             <div className="flex items-center gap-1.5 text-cosmic-300">
-              <Clock className="h-3.5 w-3.5 text-cosmic-400" />
-              <span className="text-xs">{formattedTimestamp}</span>
+              <Clock className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-cosmic-400" />
+              <span className="text-sm sm:text-xs">{formattedTimestamp}</span>
             </div>
           )}
         </div>

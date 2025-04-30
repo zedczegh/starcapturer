@@ -12,13 +12,13 @@ interface TimeItemProps {
 const TimeItem = ({ label, value, highlight = false }: TimeItemProps) => {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[11px] text-cosmic-300 font-medium">{label}</span>
+      <span className="text-xs sm:text-[11px] text-cosmic-300 font-medium">{label}</span>
       <div className={cn(
-        "flex items-center gap-1 text-sm",
+        "flex items-center gap-1 text-sm sm:text-sm",
         highlight ? "text-cosmic-50" : "text-cosmic-200"
       )}>
         <span className={cn(
-          "font-mono",
+          "font-mono text-base sm:text-sm",
           highlight && "font-medium"
         )}>{value}</span>
       </div>
