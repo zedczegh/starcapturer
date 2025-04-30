@@ -1,3 +1,4 @@
+
 import React, { useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
@@ -21,6 +22,8 @@ interface PhotoPointsViewProps {
   refreshSiqs?: () => void;
   onLocationClick: (location: SharedAstroSpot) => void;
   onLocationUpdate: (lat: number, lng: number) => void;
+  forecastDay?: number;
+  showForecast?: boolean;
   canLoadMoreCalculated?: boolean;
   loadMoreCalculated?: () => void;
   loadMoreClickCount?: number;
@@ -42,6 +45,8 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   refreshSiqs,
   onLocationClick,
   onLocationUpdate,
+  forecastDay = 0,
+  showForecast = false,
   canLoadMoreCalculated = false,
   loadMoreCalculated,
   loadMoreClickCount = 0,
@@ -64,6 +69,8 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
             certifiedLocations={certifiedLocations}
             calculatedLocations={calculatedLocations}
             activeView={activeView}
+            forecastDay={forecastDay}
+            showForecast={showForecast}
           />
         </div>
       )}

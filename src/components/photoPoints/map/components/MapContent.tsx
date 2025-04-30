@@ -2,7 +2,7 @@
 import React from 'react';
 import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
+import { LocationMarker, UserLocationMarker, ForecastMarker } from '../MarkerComponents';
 import { MapEffectsComposer } from '../MapComponents';
 import MapController from '../MapController';
 import MobileMapFixer from '../MobileMapFixer';
@@ -28,6 +28,8 @@ interface MapContentProps {
   mapRef: React.RefObject<any>;
   onMapReady: () => void;
   currentSiqs: number | null;
+  showForecast?: boolean;
+  forecastDay?: number;
 }
 
 const MapContent: React.FC<MapContentProps> = ({
@@ -49,7 +51,9 @@ const MapContent: React.FC<MapContentProps> = ({
   useMobileMapFixer,
   mapRef,
   onMapReady,
-  currentSiqs
+  currentSiqs,
+  showForecast = false,
+  forecastDay = 0
 }) => {
   const tileOptions = getTileLayerOptions(Boolean(isMobile));
   
@@ -130,9 +134,33 @@ const MapContent: React.FC<MapContentProps> = ({
       {displayLocations.map(location => {
         if (!location || !location.latitude || !location.longitude) return null;
         
+        const isForecastMarker = Boolean(location.isForecast);
         const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
         const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
         const isHovered = hoveredLocationId === locationId;
+        
+        // Use different marker component for forecast locations
+        if (isForecastMarker && showForecast) {
+          return (
+            <ForecastMarker
+              key={locationId}
+              location={location}
+              onClick={stableOnLocationClick}
+              isHovered={isHovered}
+              onHover={onMarkerHover || (() => {})}
+              locationId={locationId}
+              forecastDay={forecastDay}
+              handleTouchStart={handleTouchStart}
+              handleTouchEnd={handleTouchEnd}
+              handleTouchMove={handleTouchMove}
+            />
+          );
+        }
+        
+        // Skip forecast markers if forecast view is not active
+        if (isForecastMarker && !showForecast) {
+          return null;
+        }
         
         return (
           <LocationMarker
