@@ -130,7 +130,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     setIsDialogOpen(false);
   }, []);
 
-  const togglePopup = useCallback(() => {
+  const handleMarkerClick = useCallback(() => {
     setIsPopupOpen(!isPopupOpen);
     if (!isPopupOpen) {
       handleRefreshSiqs();
@@ -155,9 +155,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
       <Marker 
         position={position} 
         icon={markerIcon}
-        eventHandlers={{ 
-          click: togglePopup 
-        }}
+        onClick={handleMarkerClick} // Use onClick instead of eventHandlers
       >
         {isPopupOpen && (
           <Popup 

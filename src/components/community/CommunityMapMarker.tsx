@@ -79,7 +79,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       <Marker
         position={[spot.latitude, spot.longitude]}
         icon={icon}
-        eventHandlers={{ click: handleClick }}
+        onClick={handleClick} // Use onClick instead of eventHandlers
       >
         <Popup>
           <div className="community-popup px-1 py-2">
