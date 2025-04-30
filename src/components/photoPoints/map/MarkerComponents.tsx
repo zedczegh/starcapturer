@@ -33,7 +33,7 @@ export const UserLocationMarker = ({
 
   return (
     <Marker position={position} icon={userIcon}>
-      <Popup className="location-popup">
+      <Popup>
         <div>
           <h4 className="text-sm font-medium">{t("Your Location", "您的位置")}</h4>
           {currentSiqs !== null && (
@@ -120,15 +120,15 @@ export const LocationMarker = ({
     <Marker 
       position={[location.latitude, location.longitude]}
       icon={markerIcon}
-      eventHandlers={{
-        click: handleClick,
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut,
-        popupopen: handlePopupOpen,
-        popupclose: handlePopupClose,
-      }}
+      // Fix: Use eventHandlers through onClick, onMouseOver, etc. props instead
+      onClick={handleClick}
+      onMouseOver={handleMouseOver}
+      onMouseOut={handleMouseOut}
     >
-      <Popup className="location-popup">
+      <Popup
+        onOpen={handlePopupOpen}
+        onClose={handlePopupClose}
+      >
         <div 
           onTouchStart={handleTouchStart ? (e) => handleTouchStart(e, locationId) : undefined}
           onTouchEnd={handleTouchEnd ? (e) => handleTouchEnd(e, null) : undefined}
@@ -231,15 +231,15 @@ export const ForecastMarker = ({
     <Marker 
       position={[location.latitude, location.longitude]}
       icon={markerIcon}
-      eventHandlers={{
-        click: handleClick,
-        mouseover: handleMouseOver,
-        mouseout: handleMouseOut,
-        popupopen: handlePopupOpen,
-        popupclose: handlePopupClose,
-      }}
+      // Fix: Use individual event props instead of eventHandlers
+      onClick={handleClick}
+      onMouseOver={handleMouseOver}
+      onMouseOut={handleMouseOut}
     >
-      <Popup className="forecast-popup">
+      <Popup
+        onOpen={handlePopupOpen}
+        onClose={handlePopupClose}
+      >
         <div 
           onTouchStart={handleTouchStart ? (e) => handleTouchStart(e, locationId) : undefined}
           onTouchEnd={handleTouchEnd ? (e) => handleTouchEnd(e, null) : undefined}

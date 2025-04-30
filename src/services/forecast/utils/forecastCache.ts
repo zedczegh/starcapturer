@@ -1,47 +1,50 @@
 
 /**
- * Forecast cache implementation
+ * Simple forecast data cache
  */
+import { ForecastDayAstroData } from "../types/forecastTypes";
 
-import { ForecastCacheItem } from "../types/forecastTypes";
+// Cache duration in milliseconds (30 minutes)
+const CACHE_DURATION_MS = 30 * 60 * 1000;
 
-/**
- * Cache implementation for forecast results
- */
-class ForecastCache {
-  private cache = new Map<string, ForecastCacheItem>();
-  
-  private static CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
-  
-  getCachedForecast(key: string): any | null {
-    const cached = this.cache.get(key);
-    if (cached && Date.now() - cached.timestamp < ForecastCache.CACHE_DURATION) {
-      return cached.data;
-    }
-    return null;
-  }
-  
-  setCachedForecast(key: string, data: any): void {
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now()
-    });
-  }
-  
-  invalidateCache(keyPattern?: string): void {
-    if (keyPattern) {
-      // Delete matching keys
-      for (const key of this.cache.keys()) {
-        if (key.includes(keyPattern)) {
-          this.cache.delete(key);
-        }
-      }
-    } else {
-      // Clear all cache
-      this.cache.clear();
-    }
-  }
+// Interface for cache items
+interface CacheItem<T> {
+  data: T;
+  timestamp: number;
 }
 
-// Create singleton cache instance
-export const forecastCache = new ForecastCache();
+// Cache storage
+const cache: Record<string, CacheItem<any>> = {};
+
+export const forecastCache = {
+  // Store forecast data in cache
+  cacheForecast: (key: string, data: ForecastDayAstroData[] | ForecastDayAstroData): void => {
+    cache[key] = {
+      data,
+      timestamp: Date.now()
+    };
+  },
+  
+  // Get cached forecast data if valid
+  getCachedForecast: <T>(key: string): T | null => {
+    const item = cache[key];
+    
+    if (!item) return null;
+    
+    const isValid = Date.now() - item.timestamp < CACHE_DURATION_MS;
+    
+    return isValid ? item.data : null;
+  },
+  
+  // Clear specific item from cache
+  clearCache: (key: string): void => {
+    delete cache[key];
+  },
+  
+  // Clear all cache items
+  clearAllCache: (): void => {
+    Object.keys(cache).forEach(key => {
+      delete cache[key];
+    });
+  }
+};

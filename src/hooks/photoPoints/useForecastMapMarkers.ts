@@ -109,6 +109,8 @@ export const useForecastMapMarkers = ({
           longitude: result.location.longitude,
           name: result.location.name || `Forecast Spot (${result.location.latitude.toFixed(3)}, ${result.location.longitude.toFixed(3)})`,
           siqs: forecastResult.siqs || 0,
+          bortleScale: result.location.bortleScale || 4,
+          timestamp: new Date().toISOString(),
           siqsTimestamp: new Date().toISOString(),
           isForecast: true,
           forecastDay: forecastDay,

@@ -47,6 +47,7 @@ export interface BatchForecastResult {
     longitude: number;
     bortleScale?: number;
     name?: string;
+    forecastDay?: number; // Add here as well
   };
   forecast: ForecastDayAstroData[] | ForecastDayAstroData | null;
   success: boolean;
