@@ -99,7 +99,7 @@ export default function TestForecastAstro() {
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <div className="text-center p-3 rounded-lg mb-4" style={{ 
-                  backgroundColor: getSiqsColorClass(selectedForecast.siqs).replace('bg-', 'rgb(var(--'))
+                  backgroundColor: getSiqsColorClass(selectedForecast.siqs).replace('bg-', 'rgb(var(--')
                   .replace('500', '500))')
                   .replace('400', '400))') 
                 }}>
