@@ -1,4 +1,3 @@
-
 import React from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useDebouncedCallback } from "@/hooks/useDebounce";
@@ -9,11 +8,6 @@ export function useCommunityLocationsSiqs(locations: SharedAstroSpot[] | null) {
   const [loadingSiqs, setLoadingSiqs] = React.useState<Record<string, boolean>>({});
   const [attemptedSiqs, setAttemptedSiqs] = React.useState<Set<string>>(new Set());
   const [calculationQueue, setCalculationQueue] = React.useState<string[]>([]);
-
-  // Debug
-  React.useEffect(() => {
-    console.log('Current SIQS state:', { realTimeSiqs, loadingSiqs, attempted: [...attemptedSiqs], queue: calculationQueue });
-  }, [realTimeSiqs, loadingSiqs, attemptedSiqs, calculationQueue]);
 
   // Initialize visible spots for SIQS calculation
   React.useEffect(() => {
@@ -27,29 +21,11 @@ export function useCommunityLocationsSiqs(locations: SharedAstroSpot[] | null) {
     const initialSiqs: Record<string, number | null> = {};
     locations.forEach(spot => {
       if (spot.siqs) {
-        const siqsValue = getSiqsScore(spot.siqs);
-        if (siqsValue !== null) {
-          console.log(`Pre-populating SIQS for ${spot.id}: ${siqsValue}`);
-          initialSiqs[spot.id] = siqsValue;
-        }
+        initialSiqs[spot.id] = getSiqsScore(spot.siqs);
       }
     });
     setRealTimeSiqs(prev => ({...prev, ...initialSiqs}));
   }, [locations]);
-
-  // Force queue all spots that don't have SIQS yet
-  React.useEffect(() => {
-    if (!locations) return;
-    
-    const missingDataSpotIds = locations
-      .filter(spot => !realTimeSiqs[spot.id] && !attemptedSiqs.has(spot.id) && !calculationQueue.includes(spot.id))
-      .map(spot => spot.id);
-    
-    if (missingDataSpotIds.length > 0) {
-      console.log(`Queueing ${missingDataSpotIds.length} spots with missing SIQS data`);
-      setCalculationQueue(prev => [...prev, ...missingDataSpotIds]);
-    }
-  }, [locations, realTimeSiqs, attemptedSiqs, calculationQueue]);
 
   // Batch SIQS updates with priority queue
   React.useEffect(() => {
@@ -65,8 +41,6 @@ export function useCommunityLocationsSiqs(locations: SharedAstroSpot[] | null) {
         ...prev,
         [spotId]: true
       }));
-      
-      console.log(`Processing SIQS calculation for spot ${spotId}`);
       
     }, 250);
     
@@ -113,7 +87,6 @@ export function useCommunityLocationsSiqs(locations: SharedAstroSpot[] | null) {
 
   const handleCardInView = React.useCallback((spotId: string) => {
     if (!attemptedSiqs.has(spotId) && !calculationQueue.includes(spotId)) {
-      console.log(`Adding spot ${spotId} to calculation queue because it's in view`);
       setCalculationQueue(prev => [...prev, spotId]);
     }
   }, [attemptedSiqs, calculationQueue]);

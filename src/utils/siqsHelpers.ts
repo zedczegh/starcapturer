@@ -1,3 +1,4 @@
+
 /**
  * Helper functions for working with SIQS (Sky Quality Score) data
  */
