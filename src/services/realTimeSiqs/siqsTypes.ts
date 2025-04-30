@@ -20,6 +20,15 @@ export interface SiqsCalculationOptions {
   
   /** Forecast data if already available */
   forecastData?: any;
+  
+  /** Maximum concurrent calculations */
+  concurrencyLimit?: number;
+  
+  /** Prioritize accuracy over speed */
+  prioritizeAccuracy?: boolean;
+  
+  /** Max runtime in ms before returning partial results */
+  timeout?: number;
 }
 
 /**
@@ -158,6 +167,21 @@ export interface SiqsResult {
       singleHourSampling: boolean;
     };
   };
+  
+  /** Whether this is a dark sky reserve location */
+  isDarkSkyReserve?: boolean;
+  
+  /** Light pollution data */
+  lightPollutionData?: {
+    /** Whether the location has high light pollution */
+    isHighPollution?: boolean;
+    
+    /** Light pollution level */
+    level?: string;
+    
+    /** Bortle scale value */
+    bortleScale?: number;
+  };
 }
 
 /**
@@ -270,6 +294,9 @@ export interface BatchLocationData {
   
   /** Processing priority (higher value = higher priority) */
   priority: number;
+  
+  /** Cloud cover percentage if available */
+  cloudCover?: number;
 }
 
 // For compatibility with existing code

@@ -25,7 +25,9 @@ export function detectAndFixAnomalies(
   }
   
   // Fix unrealistically low SIQS scores for dark sky reserves or remote areas
-  if (result.isDarkSkyReserve && result.siqs < 5) {
+  // Check if the property exists before accessing it
+  const isDarkSkyReserve = (result as any)?.isDarkSkyReserve || false;
+  if (isDarkSkyReserve && result.siqs < 5) {
     corrected.siqs = Math.max(result.siqs, 5);
   }
   
@@ -37,7 +39,10 @@ export function detectAndFixAnomalies(
     }
     
     // Cloud cover is very low but SIQS is low
-    if (weatherData.cloudCover < 20 && corrected.siqs < 5 && !result.lightPollutionData?.isHighPollution) {
+    const lightPollutionData = (result as any)?.lightPollutionData;
+    const isHighPollution = lightPollutionData?.isHighPollution;
+    
+    if (weatherData.cloudCover < 20 && corrected.siqs < 5 && !isHighPollution) {
       corrected.siqs = Math.max(corrected.siqs, 5);
     }
   }

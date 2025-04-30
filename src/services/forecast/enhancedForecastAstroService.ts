@@ -6,7 +6,7 @@
 
 import { fetchEnhancedLongRangeForecastData } from "@/lib/api/enhancedForecast";
 import { calculateRealTimeSiqs } from "../realTimeSiqs/siqsCalculator";
-import { SiqsCalculationOptions, SiqsResult } from "../realTimeSiqs/siqsTypes";
+import { SiqsCalculationOptions, SiqsResult, BatchLocationData } from "../realTimeSiqs/siqsTypes";
 import { areForecastServicesReliable } from "./forecastHealthMonitor";
 import { processBatchSiqs } from "../realTimeSiqs/batchProcessor";
 import { toast } from "sonner";
@@ -79,16 +79,6 @@ class ForecastCache {
 // Create singleton cache instance
 const forecastCache = new ForecastCache();
 
-// Define interface for batch location data with additional forecast properties
-interface BatchLocationData {
-  latitude: number;
-  longitude: number;
-  bortleScale?: number;
-  name?: string;
-  forecastDay: number;
-  priority: number;
-}
-
 /**
  * Enhanced service for extracting astronomical scores from 15-day forecast data
  * with improved reliability and batch processing
@@ -138,7 +128,7 @@ export const enhancedForecastAstroService = {
       const { daily } = enhancedForecast.forecast;
       
       // Process days in optimal batch size for performance
-      const locations = Array.from({ length: daily.time.length }, (_, i) => ({
+      const locations: BatchLocationData[] = Array.from({ length: daily.time.length }, (_, i) => ({
         latitude,
         longitude,
         bortleScale: bortleScale || 4,
@@ -148,26 +138,27 @@ export const enhancedForecastAstroService = {
       }));
       
       // Use batch processor for efficient parallel calculation
-      const batchResults = await processBatchSiqs(locations, {
+      const calculationOptions: SiqsCalculationOptions = {
         concurrencyLimit: 5,
         useSingleHourSampling: true,
         targetHour: 1,
         cacheDurationMins: 60,
         useForecasting: true,
         timeout: 15000 // 15 second timeout for batch
-      });
+      };
+      
+      const batchResults = await processBatchSiqs(locations, calculationOptions);
       
       // Map batch results to forecast days
       const result: ForecastDayAstroData[] = daily.time.map((date: string, i: number) => {
         // Find corresponding batch result
-        const batchResult = batchResults.find(r => 
-          r.location.latitude === latitude && 
-          r.location.longitude === longitude && 
-          r.location.forecastDay === i
-        );
+        const batchResult = batchResults.find(r => r.index === i);
+        const siqsResult = batchResult?.result || null;
         
-        const siqsResult = batchResult?.siqsResult || null;
-        const reliability = enhancedForecast.reliability * 0.01 * (batchResult?.confidence || 5) / 10;
+        // Calculate reliability based on forecast reliability and SIQS confidence
+        // Default confidence to 5 if not available
+        const siqsConfidence = 5;
+        const reliability = enhancedForecast.reliability * 0.01 * siqsConfidence / 10;
         
         return {
           date,
@@ -354,21 +345,20 @@ export const enhancedForecastAstroService = {
         });
         
         // Use SIQS batch processor for parallel processing
-        const batchResults = await processBatchSiqs(batchLocations, {
+        const calculationOptions: SiqsCalculationOptions = {
           concurrencyLimit: 5,
           useSingleHourSampling: true,
           targetHour: 1,
           cacheDurationMins: 60,
           useForecasting: true,
           timeout: 30000 // 30 second timeout
-        });
+        };
+        
+        const batchResults = await processBatchSiqs(batchLocations, calculationOptions);
         
         // Map batch results back to the expected format
-        return await Promise.all(locations.map(async location => {
-          const batchResult = batchResults.find(
-            r => r.location.latitude === location.latitude && 
-                r.location.longitude === location.longitude
-          );
+        return await Promise.all(locations.map(async (location, index) => {
+          const batchResult = batchResults.find(r => r.index === index);
           
           if (!batchResult) {
             return { 

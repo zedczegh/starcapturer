@@ -1,3 +1,4 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateDistance } from "@/data/utils/distanceCalculator";
 import { findLocationsWithinRadius } from "./locationSearchService";
@@ -102,8 +103,22 @@ export async function findBestViewingLocations(
       ? sortedByDistance // Process all certified locations
       : sortedByDistance.slice(0, limit * 3);
     
-    // Calculate SIQS for each location
-    const locationsWithSiqs = await batchCalculateSiqs(locationsToProcess);
+    // Calculate SIQS for each location and map results back to SharedAstroSpot objects
+    const siqsResults = await batchCalculateSiqs(locationsToProcess);
+    
+    // Map SIQS results to the original locations
+    const locationsWithSiqs = locationsToProcess.map((location, index) => {
+      const siqsResult = siqsResults[index];
+      if (siqsResult) {
+        return {
+          ...location,
+          siqs: siqsResult.siqs,
+          isViable: siqsResult.isViable,
+          siqsFactors: siqsResult.factors
+        };
+      }
+      return location;
+    });
     
     // Sort by SIQS (highest first) and limit to requested number
     const sortedLocations = locationsWithSiqs
