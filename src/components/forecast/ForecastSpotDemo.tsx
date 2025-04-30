@@ -79,7 +79,7 @@ const ForecastSpotDemo: React.FC<ForecastSpotDemoProps> = ({
               </div>
               
               <div className="space-y-2">
-                <Label>{t("Forecast Day", "预测日期")} ({dayIndex === 0 ? t("Today", "今天") : `+${dayIndex} ${t("days", "天")}`)}</Label>
+                <Label>{t("Forecast Day", "预测日期")} ({dayIndex === 0 ? t("Today", "今天") : `+${dayIndex} ${t("days", "天")}`})</Label>
                 <Slider 
                   value={[dayIndex]} 
                   min={0} 
