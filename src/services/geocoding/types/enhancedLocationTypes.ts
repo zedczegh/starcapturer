@@ -18,7 +18,9 @@ export interface EnhancedLocationDetails {
   latitude: number;
   longitude: number;
   detailedName?: string;
+  displayName?: string;
   isWater?: boolean; // Flag to indicate if location is in water
+  citySize?: 'urban' | 'suburban' | 'rural' | 'remote'; // Add city size property
 }
 
 /**

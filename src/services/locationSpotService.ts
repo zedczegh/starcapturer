@@ -1,10 +1,10 @@
-
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { isWaterLocation } from '@/utils/validation';
 import { generateDistributedPoints } from './location/pointGenerationService';
 import { getCachedSpots, cacheSpots } from './location/spotCacheService';
 import { createSpotFromPoint } from './location/spotCreationService';
 import { getEffectiveCloudCover } from '@/lib/siqs/weatherDataUtils';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 const BATCH_SIZE = 5;
 
@@ -74,7 +74,8 @@ export async function generateQualitySpots(
  */
 function isSpotMeaningful(spot: SharedAstroSpot): boolean {
   // Spots must have a valid SIQS score
-  if (!spot.siqs || spot.siqs < 55) {
+  const siqsScore = getSiqsScore(spot.siqs);
+  if (siqsScore === null || siqsScore < 55) {
     return false;
   }
   
@@ -104,7 +105,8 @@ function isSpotMeaningful(spot: SharedAstroSpot): boolean {
   }
   
   // Include spots with higher quality despite distance
-  const qualityDistanceRatio = (spot.siqs / 10) - (spot.distance / 100);
+  const siqsValue = getSiqsScore(spot.siqs) || 0;
+  const qualityDistanceRatio = siqsValue / 10 - (spot.distance || 0) / 100;
   if (qualityDistanceRatio > 0.5) {
     return true;
   }

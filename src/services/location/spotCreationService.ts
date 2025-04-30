@@ -34,8 +34,9 @@ export const createSpotFromPoint = async (
     );
     
     // Enhanced bortle scale detection based on location
-    const defaultBortleScale = locationDetails.citySize === 'urban' ? 6 : 
-                               locationDetails.citySize === 'suburban' ? 5 : 4;
+    const defaultBortleScale = 
+      locationDetails.citySize === 'urban' ? 6 : 
+      locationDetails.citySize === 'suburban' ? 5 : 4;
     
     // Enhanced calculation options with improved accuracy
     const options: SiqsCalculationOptions = {
@@ -55,7 +56,7 @@ export const createSpotFromPoint = async (
     
     // Enhanced quality threshold check
     if (siqsResult && siqsResult.siqs >= minQuality) {
-      return {
+      const result: SharedAstroSpot = {
         id: `calc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name: locationDetails.name || locationDetails.displayName || 'Calculated Location',
         latitude: point.latitude,
@@ -69,10 +70,30 @@ export const createSpotFromPoint = async (
           isNighttime: timeInfo.isNighttime,
           timeUntilNight: timeInfo.timeUntilNight,
           timeUntilDaylight: timeInfo.timeUntilDaylight
-        },
-        weatherData: weatherMetrics?.weather || siqsResult.weatherData,
-        clearSkyRate: weatherMetrics?.clearSky?.annualRate
+        }
       };
+
+      // Only add weatherData if it exists
+      if (weatherMetrics?.weather || siqsResult.weatherData) {
+        result.weatherData = {
+          ...(weatherMetrics?.weather || {}),
+          ...(siqsResult.weatherData || {})
+        };
+      }
+
+      // Add clearSkyRate if available
+      if (weatherMetrics?.clearSky?.annualRate) {
+        if (!result.weatherData) {
+          result.weatherData = { cloudCover: 0 };
+        }
+        if (!result.weatherData.clearSky) {
+          result.weatherData.clearSky = {};
+        }
+        result.weatherData.clearSky.annualRate = weatherMetrics.clearSky.annualRate;
+        result.clearSkyRate = weatherMetrics.clearSky.annualRate;
+      }
+
+      return result;
     }
     
     return null;

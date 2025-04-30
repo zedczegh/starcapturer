@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
@@ -8,6 +7,7 @@ import { isWaterLocation } from '@/utils/validation';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isCertifiedLocation } from '@/utils/locationFiltering';
 import { getEffectiveCloudCover } from '@/lib/siqs/weatherDataUtils';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface UsePhotoPointsSearchProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -173,7 +173,8 @@ export const usePhotoPointsSearch = ({
       }
       
       // Ensure SIQS score meets minimum quality threshold
-      if (!loc.siqs || loc.siqs < 50) {
+      const siqsScore = getSiqsScore(loc.siqs);
+      if (siqsScore === null || siqsScore < 50) {
         return false;
       }
       
@@ -203,7 +204,7 @@ export const usePhotoPointsSearch = ({
       }
       
       // Include spots with higher quality despite distance
-      const qualityDistanceRatio = (loc.siqs / 10) - (loc.distance || 0) / 100;
+      const qualityDistanceRatio = siqsScore / 10 - (loc.distance || 0) / 100;
       if (qualityDistanceRatio > 0.5) {
         return true;
       }

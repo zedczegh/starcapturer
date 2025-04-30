@@ -12,6 +12,7 @@ import { currentSiqsStore } from "./index/CalculatorSection";
 import CurrentLocationReminder from "./photoPoints/CurrentLocationReminder";
 import { updateLocationsWithRealTimeSiqs } from "@/services/realTimeSiqsService/locationUpdateService";
 import { getEffectiveCloudCover } from "@/lib/siqs/weatherDataUtils";
+import { getSiqsScore } from "@/utils/siqsHelpers";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint?: (point: SharedAstroSpot) => void;
@@ -103,7 +104,8 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
       }
       
       // Ensure SIQS score meets minimum quality threshold
-      if (!loc.siqs || loc.siqs < 50) {
+      const siqsScore = getSiqsScore(loc.siqs);
+      if (siqsScore === null || siqsScore < 50) {
         return false;
       }
       
