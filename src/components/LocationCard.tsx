@@ -32,7 +32,22 @@ const LocationCard: React.FC<LocationCardProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  const numericSiqs = getSiqsScore(siqs);
+  // Convert SIQS to a number regardless of its format
+  const numericSiqs = React.useMemo(() => {
+    // Check if siqs is a number
+    if (typeof siqs === 'number') {
+      return siqs;
+    }
+    
+    // Check if siqs is an object with a score property
+    if (siqs && typeof siqs === 'object' && 'score' in siqs) {
+      return siqs.score;
+    }
+    
+    // Return null if we can't determine the SIQS
+    return null;
+  }, [siqs]);
+  
   const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
   const nightTimeStr = `${formatTime(nightStart)}-${formatTime(nightEnd)}`;
   
@@ -52,6 +67,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
                     isCertified={isCertified} 
                     compact={true}
                     loading={false}
+                    forceCertified={false}
                   />
                 </div>
               </TooltipTrigger>

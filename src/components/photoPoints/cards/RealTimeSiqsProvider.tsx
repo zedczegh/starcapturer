@@ -160,16 +160,36 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     hasNotifiedRef.current = true;
   }, [siqsScore, loading, onSiqsCalculated, forceUpdate]);
   
-  // Send existing SIQS if available while loading
+  // Handle existing SIQS data properly
   useEffect(() => {
     if (loading && !hasNotifiedRef.current && existingSiqs) {
-      const staticSiqs = getSiqsScore(existingSiqs);
+      let staticSiqs: number | null = null;
+      
+      // Handle different formats of existing SIQS
+      if (typeof existingSiqs === 'number') {
+        staticSiqs = existingSiqs;
+      } else if (existingSiqs && typeof existingSiqs === 'object') {
+        if ('score' in existingSiqs) {
+          staticSiqs = existingSiqs.score;
+        }
+      } else {
+        // Try using the helper function as fallback
+        staticSiqs = getSiqsScore(existingSiqs);
+      }
+      
       if (staticSiqs !== null && staticSiqs > 0) {
         onSiqsCalculated(staticSiqs, false, 5);
         hasNotifiedRef.current = true;
       }
     }
   }, [loading, existingSiqs, onSiqsCalculated]);
+
+  // Debug the SIQS data
+  useEffect(() => {
+    const staticSiqs = getSiqsScore(existingSiqs);
+    console.log(`RealTimeSiqsProvider debug - existingSiqs:`, existingSiqs, 
+                `parsed: ${staticSiqs}, realTime: ${siqsScore}, loading: ${loading}`);
+  }, [existingSiqs, siqsScore, loading]);
   
   return null;
 };

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -23,6 +24,16 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
   const [attemptedSiqs, setAttemptedSiqs] = React.useState<Set<string>>(new Set());
   const [calculationQueue, setCalculationQueue] = React.useState<string[]>([]);
 
+  // Debug to check loaded locations
+  React.useEffect(() => {
+    if (locations) {
+      console.log(`Loaded ${locations.length} community locations`);
+      locations.forEach(loc => {
+        console.log(`Location: ${loc.name}, SIQS: ${typeof loc.siqs === 'object' ? JSON.stringify(loc.siqs) : loc.siqs}`);
+      });
+    }
+  }, [locations]);
+
   // Batch SIQS updates with priority queue
   React.useEffect(() => {
     if (!locations || locations.length === 0 || calculationQueue.length === 0) return;
@@ -38,8 +49,6 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
         [spotId]: true
       }));
       
-      // We don't need to do anything else here - the RealTimeSiqsProvider
-      // for this spot will handle the calculation when it becomes visible
     }, 250);
     
     return () => clearTimeout(timer);
@@ -50,16 +59,31 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
     if (!locations) return;
     
     // Queue up initial calculations with a small delay
-    // so they don't all start at once
     const initialSpots = locations.slice(0, 8).map(spot => spot.id);
     setCalculationQueue(initialSpots);
+    
+    // Pre-populate with existing SIQS data from locations
+    const initialSiqs: Record<string, number | null> = {};
+    locations.forEach(spot => {
+      if (spot.siqs) {
+        if (typeof spot.siqs === 'number') {
+          initialSiqs[spot.id] = spot.siqs;
+        } else if (typeof spot.siqs === 'object' && 'score' in spot.siqs) {
+          initialSiqs[spot.id] = spot.siqs.score;
+        }
+      }
+    });
+    setRealTimeSiqs(prev => ({...prev, ...initialSiqs}));
   }, [locations]);
 
   const debouncedSiqsUpdate = useDebouncedCallback((spotId: string, siqs: number | null, loading: boolean) => {
+    console.log(`SIQS update for ${spotId}: ${siqs}, loading: ${loading}`);
+    
     setRealTimeSiqs(prev => ({
       ...prev,
       [spotId]: siqs
     }));
+    
     setLoadingSiqs(prev => ({
       ...prev,
       [spotId]: loading
@@ -105,6 +129,19 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
     }));
   }, [t]);
 
+  // Get SIQS value for a spot (from real-time calculation or fallback to original)
+  const getSiqsForSpot = React.useCallback((spot: SharedAstroSpot) => {
+    const realTimeSiqsValue = realTimeSiqs[spot.id];
+    
+    // Use real-time SIQS if available
+    if (realTimeSiqsValue !== undefined) {
+      return realTimeSiqsValue;
+    }
+    
+    // Fall back to the original SIQS from the spot data
+    return spot.siqs;
+  }, [realTimeSiqs]);
+
   if (isLoading) {
     return <CommunityLocationsSkeleton />;
   }
@@ -125,7 +162,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        {locations.map((spot: any, index: number) => (
+        {locations.map((spot: SharedAstroSpot, index: number) => (
           <motion.button
             key={spot.id}
             className="relative text-left group focus:outline-none rounded-xl transition duration-300 ease-in-out hover:shadow-xl border-2 border-transparent hover:border-primary/70"
@@ -157,7 +194,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
                   name={spot.name}
                   latitude={spot.latitude}
                   longitude={spot.longitude}
-                  siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                  siqs={getSiqsForSpot(spot)}
                   timestamp={spot.timestamp}
                   isCertified={false}
                   username={spot.username}
