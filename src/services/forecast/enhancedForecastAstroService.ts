@@ -1,3 +1,4 @@
+
 /**
  * Enhanced Forecast Astro Service
  * 
@@ -49,8 +50,7 @@ export const enhancedForecastAstroService = {
       const validationResult = await validateForecastLocation({
         latitude,
         longitude,
-        bortleScale: bortleScale || 4,
-        forecastDay: 0  // Explicitly set forecastDay even for validation
+        bortleScale: bortleScale || 4
       });
       
       if (!validationResult.isValid) {
@@ -298,8 +298,7 @@ export const enhancedForecastAstroService = {
             const validation = await validateForecastLocation({
               latitude: loc.latitude,
               longitude: loc.longitude,
-              bortleScale: loc.bortleScale,
-              forecastDay: dayIndex  // Explicitly set forecastDay for validation
+              bortleScale: loc.bortleScale
             });
             return { ...loc, isValid: validation.isValid };
           })
@@ -391,8 +390,7 @@ export const enhancedForecastAstroService = {
           locations.map(loc => validateForecastLocation({
             latitude: loc.latitude,
             longitude: loc.longitude,
-            bortleScale: loc.bortleScale,
-            forecastDay: 0  // Default to day 0 for validation when dayIndex is undefined
+            bortleScale: loc.bortleScale
           }))
         );
         
