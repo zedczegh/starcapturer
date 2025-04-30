@@ -18,6 +18,8 @@ interface LocationCardProps {
   isCertified?: boolean;
   username?: string;
   hideSiqs?: boolean;
+  price?: number;
+  currency?: string;
 }
 
 const LocationCard: React.FC<LocationCardProps> = ({
@@ -29,7 +31,9 @@ const LocationCard: React.FC<LocationCardProps> = ({
   timestamp,
   isCertified = false,
   username = 'Anonymous Stargazer',
-  hideSiqs = false
+  hideSiqs = false,
+  price,
+  currency = '$'
 }) => {
   const { t } = useLanguage();
   
@@ -68,6 +72,13 @@ const LocationCard: React.FC<LocationCardProps> = ({
           )}
         </div>
         <div className="space-y-2 text-sm text-gray-400">
+          {price !== undefined && (
+            <div className="flex items-center text-primary font-medium">
+              <span>{currency}{price}</span>
+              <span className="text-gray-400 ml-1">{t(" / night", " / 晚")}</span>
+            </div>
+          )}
+          
           <div className="flex items-center">
             <User className="h-4 w-4 mr-2 text-cosmic-400" />
             <span>{t("Shared by", "分享者")}: {username}</span>

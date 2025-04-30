@@ -9,8 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Calendar } from '@/components/ui/calendar';
-import { format, addDays, addHours, setHours, setMinutes } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { format, addDays, addHours, setHours, setMinutes, isSameDay, isAfter, isBefore } from 'date-fns';
+import { Loader2, DollarSign } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -46,6 +46,62 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     existingTimeSlot.description || '' : '');
   const [maxCapacity, setMaxCapacity] = useState(isEditing ? 
     existingTimeSlot.max_capacity : 1);
+  const [price, setPrice] = useState(isEditing ? 
+    existingTimeSlot.price || 0 : 0);
+  const [currency, setCurrency] = useState(isEditing ? 
+    existingTimeSlot.currency || '$' : '$');
+
+  // Track already booked dates to show in calendar
+  const [bookedDates, setBookedDates] = useState<Date[]>([]);
+  
+  // Fetch existing bookings for this spot
+  React.useEffect(() => {
+    if (!spotId) return;
+    
+    const fetchExistingBookings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('astro_spot_timeslots')
+          .select('start_time, end_time')
+          .eq('spot_id', spotId);
+          
+        if (error) {
+          console.error("Error fetching existing bookings:", error);
+          return;
+        }
+        
+        if (data) {
+          // Extract all booked dates
+          const dates = data.flatMap(slot => {
+            const start = new Date(slot.start_time);
+            const end = new Date(slot.end_time);
+            
+            // If multi-day booking, include all days between start and end
+            const result = [];
+            let current = new Date(start);
+            
+            while (isBefore(current, end) || isSameDay(current, end)) {
+              result.push(new Date(current));
+              current.setDate(current.getDate() + 1);
+            }
+            
+            return result;
+          });
+          
+          setBookedDates(dates);
+        }
+      } catch (err) {
+        console.error("Error loading bookings:", err);
+      }
+    };
+    
+    fetchExistingBookings();
+  }, [spotId]);
+
+  // Calendar date modifiers for booked dates
+  const isDayBooked = (date: Date) => {
+    return bookedDates.some(bookedDate => isSameDay(date, bookedDate));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,19 +150,24 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
           }
         }
         
+        // Add pricing information to the parameters
+        const params = {
+          ...(isEditing ? { p_id: existingTimeSlot.id } : {}),
+          p_spot_id: spotId,
+          p_creator_id: user.id,
+          p_start_time: startDateTime.toISOString(),
+          p_end_time: endDateTime.toISOString(),
+          p_max_capacity: maxCapacity,
+          p_description: description.trim(),
+          p_price: price,
+          p_currency: currency
+        };
+
         // Call the edge function to create a new time slot
         const { data, error } = await supabase.functions.invoke('call-rpc', {
           body: {
             function: isEditing ? 'update_astro_spot_timeslot' : 'insert_astro_spot_timeslot',
-            params: {
-              ...(isEditing ? { p_id: existingTimeSlot.id } : {}),
-              p_spot_id: spotId,
-              p_creator_id: user.id,
-              p_start_time: startDateTime.toISOString(),
-              p_end_time: endDateTime.toISOString(),
-              p_max_capacity: maxCapacity,
-              p_description: description.trim()
-            }
+            params: params
           }
         });
 
@@ -185,7 +246,11 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                   mode="single"
                   selected={selectedDate}
                   onSelect={(date) => date && setSelectedDate(date)}
-                  disabled={(date) => date < new Date()}
+                  disabled={(date) => date < new Date() || isDayBooked(date)}
+                  modifiers={{ booked: isDayBooked }}
+                  modifiersClassNames={{
+                    booked: "bg-red-600/20 text-gray-500 opacity-50"
+                  }}
                   className="bg-cosmic-800/30 rounded-lg pointer-events-auto"
                 />
               </div>
@@ -222,6 +287,26 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                   {t("For overnight sessions, set end time earlier than start time", "对于通宵会话，请将结束时间设置为早于开始时间")}
                 </p>
               </div>
+              
+              <div>
+                <Label htmlFor="price" className="block text-sm text-gray-300 mb-1">
+                  {t("Price per Night", "每晚价格")}
+                </Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <DollarSign className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <Input
+                    id="price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                    className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200 pl-10"
+                  />
+                </div>
+              </div>
             </div>
           </TabsContent>
           
@@ -235,7 +320,11 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                   mode="multiple"
                   selected={selectedDates}
                   onSelect={setSelectedDates}
-                  disabled={(date) => date < new Date()}
+                  disabled={(date) => date < new Date() || isDayBooked(date)}
+                  modifiers={{ booked: isDayBooked }}
+                  modifiersClassNames={{
+                    booked: "bg-red-600/20 text-gray-500 opacity-50"
+                  }}
                   className="bg-cosmic-800/30 rounded-lg pointer-events-auto"
                 />
               </div>
@@ -272,6 +361,26 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                   required
                 />
               </div>
+              
+              <div>
+                <Label htmlFor="price" className="block text-sm text-gray-300 mb-1">
+                  {t("Price per Night", "每晚价格")}
+                </Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <DollarSign className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <Input
+                    id="price-multi"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                    className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200 pl-10"
+                  />
+                </div>
+              </div>
             </div>
           </TabsContent>
           
@@ -285,7 +394,11 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                   mode="single"
                   selected={selectedDate}
                   onSelect={(date) => date && setSelectedDate(date)}
-                  disabled={(date) => date < new Date()}
+                  disabled={(date) => date < new Date() || isDayBooked(date)}
+                  modifiers={{ booked: isDayBooked }}
+                  modifiersClassNames={{
+                    booked: "bg-red-600/20 text-gray-500 opacity-50"
+                  }}
                   className="bg-cosmic-800/30 rounded-lg pointer-events-auto"
                 />
               </div>
@@ -330,6 +443,26 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div>
+                <Label htmlFor="price" className="block text-sm text-gray-300 mb-1">
+                  {t("Price per Night", "每晚价格")}
+                </Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <DollarSign className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <Input
+                    id="price-duration"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                    className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200 pl-10"
+                  />
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
@@ -349,6 +482,27 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
               className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
               required
             />
+          </div>
+          
+          <div>
+            <Label htmlFor="currency" className="block text-sm text-gray-300 mb-1">
+              {t("Currency", "货币")}
+            </Label>
+            <Select 
+              value={currency} 
+              onValueChange={setCurrency}
+            >
+              <SelectTrigger className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200">
+                <SelectValue placeholder={t("Select currency", "选择货币")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="$">USD ($)</SelectItem>
+                <SelectItem value="€">EUR (€)</SelectItem>
+                <SelectItem value="£">GBP (£)</SelectItem>
+                <SelectItem value="¥">CNY (¥)</SelectItem>
+                <SelectItem value="₹">INR (₹)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         

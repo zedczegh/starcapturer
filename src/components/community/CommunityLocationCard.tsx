@@ -1,7 +1,6 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import LocationCard from "@/components/LocationCard";
@@ -20,6 +19,9 @@ const CommunityLocationCard: React.FC<CommunityLocationCardProps> = ({
   onInView
 }) => {
   const { t } = useLanguage();
+  
+  // Extract price if available
+  const price = spot.default_price || undefined;
   
   return (
     <motion.button
@@ -40,11 +42,12 @@ const CommunityLocationCard: React.FC<CommunityLocationCardProps> = ({
             name={spot.name}
             latitude={spot.latitude}
             longitude={spot.longitude}
-            siqs={null} // Set to null to hide the SIQS badge
+            siqs={null}
             timestamp={spot.timestamp}
             isCertified={!!spot.certification || !!spot.isDarkSkyReserve}
             username={spot.username || t('Anonymous Stargazer', '匿名观星者')}
-            hideSiqs={true} // Add a prop to hide SIQS badge
+            hideSiqs={true}
+            price={price}
           />
         </div>
         <div className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/10" />

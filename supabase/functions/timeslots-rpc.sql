@@ -9,7 +9,9 @@ CREATE OR REPLACE FUNCTION public.insert_astro_spot_timeslot(
   p_start_time TIMESTAMP WITH TIME ZONE,
   p_end_time TIMESTAMP WITH TIME ZONE,
   p_max_capacity INTEGER DEFAULT 1,
-  p_description TEXT DEFAULT NULL
+  p_description TEXT DEFAULT NULL,
+  p_price NUMERIC DEFAULT 0,
+  p_currency TEXT DEFAULT '$'
 ) RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -23,14 +25,18 @@ BEGIN
     start_time,
     end_time,
     max_capacity,
-    description
+    description,
+    price,
+    currency
   ) VALUES (
     p_spot_id,
     p_creator_id,
     p_start_time,
     p_end_time,
     p_max_capacity,
-    p_description
+    p_description,
+    p_price,
+    p_currency
   )
   RETURNING id INTO v_id;
   
@@ -46,7 +52,9 @@ CREATE OR REPLACE FUNCTION public.update_astro_spot_timeslot(
   p_start_time TIMESTAMP WITH TIME ZONE,
   p_end_time TIMESTAMP WITH TIME ZONE,
   p_max_capacity INTEGER DEFAULT 1,
-  p_description TEXT DEFAULT NULL
+  p_description TEXT DEFAULT NULL,
+  p_price NUMERIC DEFAULT 0,
+  p_currency TEXT DEFAULT '$'
 ) RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -58,6 +66,8 @@ BEGIN
     end_time = p_end_time,
     max_capacity = p_max_capacity,
     description = p_description,
+    price = p_price,
+    currency = p_currency,
     updated_at = NOW()
   WHERE 
     id = p_id
