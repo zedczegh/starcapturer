@@ -14,6 +14,7 @@ interface RealTimeSiqsProviderProps {
   onSiqsCalculated: (siqs: number | null, loading: boolean, confidence?: number) => void;
   forceUpdate?: boolean;
   skipCache?: boolean;
+  priority?: number; // Higher number = higher priority (1-10)
 }
 
 // Global map to track pending calculations across components
@@ -29,7 +30,8 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   existingSiqs,
   onSiqsCalculated,
   forceUpdate = false,
-  skipCache = false
+  skipCache = false,
+  priority = 1 // Default to lowest priority
 }) => {
   const positionRef = useRef<string>('');
   const lastCalculationRef = useRef<number>(0);
@@ -39,13 +41,13 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   // Configuration based on location type
   const refreshInterval = isCertified ? 300000 : 900000; // 5 mins for certified, 15 for others
   
-  // Calculate priority based on certification status
-  const priority = isDarkSkyReserve ? 10 : (isCertified ? 5 : 1);
+  // Calculate priority based on certification status if not specified
+  const effectivePriority = priority || (isDarkSkyReserve ? 8 : (isCertified ? 5 : 1));
   
   const { siqsScore, loading, calculateSiqs } = useRealTimeSiqs({
     skipCache: skipCache || forceUpdate,
     refreshInterval,
-    priority
+    priority: effectivePriority
   });
   
   // Only perform calculation if the component is visible and we have coordinates
@@ -80,7 +82,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     
     // Calculate delay based on priority and pending calculations
     let delay = 0;
-    if (pendingCount > 3 && priority < 5) {
+    if (pendingCount > 3 && effectivePriority < 5) {
       delay = Math.min(pendingCount * 50, 400);
     }
     
@@ -102,7 +104,7 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
           pendingCalculations.delete(calculationKey);
         });
     }
-  }, [latitude, longitude, bortleScale, calculateSiqs, forceUpdate, refreshInterval, isVisible, priority, skipCache]);
+  }, [latitude, longitude, bortleScale, calculateSiqs, forceUpdate, refreshInterval, isVisible, effectivePriority, skipCache]);
   
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -117,13 +119,17 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   useEffect(() => {
     if (!isVisible) return;
     
-    // Use a small random delay to prevent all calculations starting simultaneously
+    // Use a priority-based delay to prevent all calculations starting simultaneously
+    // Higher priority = lower delay
+    const priorityDelay = Math.max(10, 250 - (effectivePriority * 20));
+    const randomDelay = Math.random() * 50; // Small random component to avoid exact timing collisions
+    
     const timer = window.setTimeout(() => {
       performSiqsCalculation();
-    }, Math.random() * 150);
+    }, priorityDelay + randomDelay);
     
     return () => window.clearTimeout(timer);
-  }, [isVisible, performSiqsCalculation, forceUpdate]);
+  }, [isVisible, performSiqsCalculation, forceUpdate, effectivePriority]);
   
   // Notify parent of SIQS updates
   useEffect(() => {

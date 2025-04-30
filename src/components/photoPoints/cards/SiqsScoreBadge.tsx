@@ -26,10 +26,10 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   loading = false,
   confidenceScore = 10
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
-  // Create unique key for caching
-  const cacheKey = `${score}-${compact}-${isCertified}-${loading}-${confidenceScore}`;
+  // Create unique key for caching that includes language
+  const cacheKey = `${score}-${compact}-${isCertified}-${loading}-${confidenceScore}-${language}`;
   
   // Use memoization to prevent unnecessary re-renders
   const badgeContent = useMemo(() => {
@@ -98,7 +98,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
       );
     }
     
-    // Store in cache
+    // Store in cache (limit cache size)
     if (contentCache.size > 50) {
       // Clear cache if it gets too large
       contentCache.clear();
@@ -106,7 +106,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     contentCache.set(cacheKey, content);
     
     return content;
-  }, [score, compact, isCertified, forceCertified, loading, confidenceScore, t, cacheKey]);
+  }, [score, compact, isCertified, forceCertified, loading, confidenceScore, t, cacheKey, language]);
   
   return badgeContent;
 };

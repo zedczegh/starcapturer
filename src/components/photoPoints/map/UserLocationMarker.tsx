@@ -10,6 +10,8 @@ import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverse
 import { useNavigate } from 'react-router-dom';
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { getSiqsScore } from '@/utils/siqsHelpers';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface UserLocationMarkerProps {
   position: [number, number];
@@ -58,7 +60,9 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     }, 300);
   }, []);
 
-  // Fetch location name when position changes
+  // Fetch location name when position changes - with cache
+  const locationCache = useMemo(() => new Map<string, string>(), []);
+  
   useEffect(() => {
     const currentPositionKey = `${position[0].toFixed(5)},${position[1].toFixed(5)}`;
     
@@ -70,10 +74,20 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     prevPositionRef.current = currentPositionKey;
     setIsLoadingLocation(true);
     
+    // Check cache first
+    if (locationCache.has(currentPositionKey)) {
+      setLocationName(locationCache.get(currentPositionKey) || '');
+      setIsLoadingLocation(false);
+      return;
+    }
+    
     const fetchLocationName = async () => {
       try {
         const details = await getEnhancedLocationDetails(position[0], position[1], language === 'zh' ? 'zh' : 'en');
-        setLocationName(details.formattedName || details.displayName || details.formattedAddress || '');
+        const name = details.formattedName || details.displayName || details.formattedAddress || '';
+        
+        setLocationName(name);
+        locationCache.set(currentPositionKey, name);
       } catch (error) {
         console.error('Error fetching location name:', error);
       } finally {
@@ -82,7 +96,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
     };
 
     fetchLocationName();
-  }, [position, language]);
+  }, [position, language, locationCache]);
 
   // Force refresh SIQS data when position changes
   useEffect(() => {
@@ -135,12 +149,15 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position }) => 
         onSiqsCalculated={handleSiqsCalculated}
         forceUpdate={forceUpdate}
         skipCache={forceUpdate}
+        priority={5} // Higher priority for user location
       />
       
       <Marker 
         position={position} 
         icon={markerIcon}
-        onClick={togglePopup}
+        eventHandlers={{ 
+          click: togglePopup 
+        }}
       >
         {isPopupOpen && (
           <Popup 
