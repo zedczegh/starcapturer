@@ -1,4 +1,3 @@
-
 /**
  * Enhanced Forecast Astro Service
  * 
@@ -11,6 +10,8 @@ import { SiqsCalculationOptions, SiqsResult } from "../realTimeSiqs/siqsTypes";
 import { areForecastServicesReliable } from "./forecastHealthMonitor";
 import { processBatchSiqs } from "../realTimeSiqs/batchProcessor";
 import { toast } from "sonner";
+import { BatchLocationData, ForecastDayAstroData } from "./types/forecastTypes";
+import { forecastCache } from "./utils/forecastCache";
 
 /**
  * Interface for forecast day astronomical data
@@ -140,7 +141,7 @@ export const enhancedForecastAstroService = {
       const { daily } = enhancedForecast.forecast;
       
       // Process days in optimal batch size for performance
-      const locations = Array.from({ length: daily.time.length }, (_, i) => ({
+      const locations: BatchLocationData[] = Array.from({ length: daily.time.length }, (_, i) => ({
         latitude,
         longitude,
         bortleScale: bortleScale || 4,
@@ -338,7 +339,7 @@ export const enhancedForecastAstroService = {
   batchProcessLocations: async (
     locations: Array<{ latitude: number; longitude: number; bortleScale?: number; name?: string }>,
     dayIndex?: number
-  ): Promise<Array<{ location: { latitude: number; longitude: number; name?: string }, forecast: ForecastDayAstroData[] | ForecastDayAstroData | null, success: boolean }>> => {
+  ): Promise<BatchProcessingResult[]> => {
     // Use batch processor directly for best performance
     try {
       if (dayIndex !== undefined) {

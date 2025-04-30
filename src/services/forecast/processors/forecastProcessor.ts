@@ -24,7 +24,7 @@ export async function processForecastData(
   
   const { daily } = enhancedForecast.forecast;
   
-  // Prepare batch locations for processing
+  // Prepare batch locations for processing with proper typing
   const locations: BatchLocationData[] = Array.from({ length: daily.time.length }, (_, i) => ({
     latitude,
     longitude,

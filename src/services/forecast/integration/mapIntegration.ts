@@ -4,7 +4,7 @@
  * Makes it easier to generate spot data for maps
  */
  
-import { ForecastDayAstroData, BatchLocationData } from "../types/forecastTypes";
+import { ForecastDayAstroData, BatchLocationData, ExtendedSiqsResult } from "../types/forecastTypes";
 import { enhancedForecastProcessor } from "../processors/forecastProcessor";
 import { forecastCache } from "../utils/forecastCache";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
@@ -21,7 +21,9 @@ export function createSpotFromForecastData(
   name?: string
 ): SharedAstroSpot {
   const timeInfo = getLocationTimeInfo(latitude, longitude);
-  const bortleScale = forecastData.siqsResult?.bortleScale || 4;
+  // Use our extended type or a default value to ensure type safety
+  const siqsResult = forecastData.siqsResult as ExtendedSiqsResult;
+  const bortleScale = siqsResult?.bortleScale || 4;
   
   return {
     id: `forecast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,

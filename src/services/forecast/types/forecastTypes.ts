@@ -62,3 +62,11 @@ export interface BatchForecastResult {
   forecast: ForecastDayAstroData[] | ForecastDayAstroData | null;
   success: boolean;
 }
+
+/**
+ * Extended SiqsResult with additional properties used in map integration
+ */
+export interface ExtendedSiqsResult extends SiqsResult {
+  bortleScale?: number;
+}
+
