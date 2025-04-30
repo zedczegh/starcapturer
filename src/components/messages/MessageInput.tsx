@@ -21,7 +21,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   };
 
   return (
-    <div className="p-4 border-t border-cosmic-800/50 bg-cosmic-900/30">
+    <div className="p-3 md:p-4 border-t border-cosmic-800/50 bg-cosmic-900/30">
       <div className="flex gap-2">
         <Input
           placeholder={t("Type a message...", "输入消息...")}
@@ -35,15 +35,16 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
         <Button 
           onClick={handleSend} 
           disabled={!message.trim() || sending}
-          className="px-6 bg-primary hover:bg-primary/90 text-white shadow-lg
+          className="px-4 md:px-6 bg-primary hover:bg-primary/90 text-white shadow-lg
             disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          size={window.innerWidth < 640 ? "icon" : "default"}
         >
           {sending ? (
             <div className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
           ) : (
             <>
-              <Send className="h-4 w-4 mr-2" />
-              {t("Send", "发送")}
+              <Send className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">{t("Send", "发送")}</span>
             </>
           )}
         </Button>

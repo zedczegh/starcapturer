@@ -6,7 +6,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import TimeSlotForm from './TimeSlotForm';
 import TimeSlotItem from './TimeSlotItem';
@@ -133,11 +132,17 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
     );
   }
 
+  // If user is not the creator and coming from community page, only show bookings
+  const isVisitor = !isCreator;
+  const title = isVisitor 
+    ? t("Available Bookings", "可用预订") 
+    : t("Availability & Bookings", "可用性和预订");
+
   return (
     <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
       <h2 className="text-xl font-semibold text-gray-200 mb-3 flex items-center">
         <span className="w-2 h-6 bg-blue-500 rounded-sm mr-2.5"></span>
-        {t("Availability & Bookings", "可用性和预订")}
+        {title}
       </h2>
       
       {isCreator && (
@@ -168,7 +173,7 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
             mode="single"
             selected={selectedDate}
             onSelect={setSelectedDate}
-            className="bg-cosmic-800/40 rounded-lg"
+            className="bg-cosmic-800/40 rounded-lg pointer-events-auto"
           />
         </div>
         {selectedDate && (
