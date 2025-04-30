@@ -7,7 +7,6 @@ import { siqsToColor } from '@/lib/siqs/utils';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import SiqsScoreBadge from './photoPoints/cards/SiqsScoreBadge';
 import { Star, Clock, User } from 'lucide-react';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface LocationCardProps {
   id: string;
@@ -32,22 +31,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  // Convert SIQS to a number regardless of its format
-  const numericSiqs = React.useMemo(() => {
-    // Check if siqs is a number
-    if (typeof siqs === 'number') {
-      return siqs;
-    }
-    
-    // Check if siqs is an object with a score property
-    if (siqs && typeof siqs === 'object' && 'score' in siqs) {
-      return siqs.score;
-    }
-    
-    // Return null if we can't determine the SIQS
-    return null;
-  }, [siqs]);
-  
+  const numericSiqs = getSiqsScore(siqs);
   const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
   const nightTimeStr = `${formatTime(nightStart)}-${formatTime(nightEnd)}`;
   
@@ -59,22 +43,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-gray-50 truncate pr-2">{name}</h3>
           <div className="flex-shrink-0">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <SiqsScoreBadge 
-                    score={numericSiqs} 
-                    isCertified={isCertified} 
-                    compact={true}
-                    loading={false}
-                    forceCertified={false}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t("Sky quality score", "天空质量评分")}
-              </TooltipContent>
-            </Tooltip>
+            <SiqsScoreBadge score={numericSiqs} isCertified={isCertified} />
           </div>
         </div>
         <div className="space-y-2 text-sm text-gray-400">

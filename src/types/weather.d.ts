@@ -78,7 +78,6 @@ declare module "@/types/weather" {
     };
     date?: string | Date;
     user_id?: string;
-    username?: string; // Added username property
     weatherData?: {
       temperature?: number;
       humidity?: number;

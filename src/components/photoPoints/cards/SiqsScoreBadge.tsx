@@ -46,7 +46,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
           {t("Calculating...", "计算中...")}
         </Badge>
       );
-    } else if (score === null || score === undefined) {
+    } else if (score === null) {
       content = (
         <Badge variant="outline" className="bg-cosmic-900/30 text-xs font-medium">
           {t("No data", "无数据")}

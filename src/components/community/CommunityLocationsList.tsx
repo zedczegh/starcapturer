@@ -9,7 +9,6 @@ import { useDebouncedCallback } from "@/hooks/useDebounce";
 import { useLanguage } from "@/contexts/LanguageContext";
 import CommunityLocationsSkeleton from "./CommunityLocationsSkeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { toast } from "sonner";
 
 interface CommunityLocationsListProps {
   locations: SharedAstroSpot[] | null;
@@ -23,16 +22,6 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
   const [loadingSiqs, setLoadingSiqs] = React.useState<Record<string, boolean>>({});
   const [attemptedSiqs, setAttemptedSiqs] = React.useState<Set<string>>(new Set());
   const [calculationQueue, setCalculationQueue] = React.useState<string[]>([]);
-
-  // Debug to check loaded locations
-  React.useEffect(() => {
-    if (locations) {
-      console.log(`Loaded ${locations.length} community locations`);
-      locations.forEach(loc => {
-        console.log(`Location: ${loc.name}, SIQS: ${typeof loc.siqs === 'object' ? JSON.stringify(loc.siqs) : loc.siqs}, Username: ${loc.username || 'Not set'}`);
-      });
-    }
-  }, [locations]);
 
   // Batch SIQS updates with priority queue
   React.useEffect(() => {
@@ -49,6 +38,8 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
         [spotId]: true
       }));
       
+      // We don't need to do anything else here - the RealTimeSiqsProvider
+      // for this spot will handle the calculation when it becomes visible
     }, 250);
     
     return () => clearTimeout(timer);
@@ -59,31 +50,16 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
     if (!locations) return;
     
     // Queue up initial calculations with a small delay
-    const initialSpots = locations.slice(0, 8).map(spot => spot.id);
+    // so they don't all start at once
+    const initialSpots = locations.slice(0, 6).map(spot => spot.id);
     setCalculationQueue(initialSpots);
-    
-    // Pre-populate with existing SIQS data from locations
-    const initialSiqs: Record<string, number | null> = {};
-    locations.forEach(spot => {
-      if (spot.siqs) {
-        if (typeof spot.siqs === 'number') {
-          initialSiqs[spot.id] = spot.siqs;
-        } else if (typeof spot.siqs === 'object' && 'score' in spot.siqs) {
-          initialSiqs[spot.id] = spot.siqs.score;
-        }
-      }
-    });
-    setRealTimeSiqs(prev => ({...prev, ...initialSiqs}));
   }, [locations]);
 
   const debouncedSiqsUpdate = useDebouncedCallback((spotId: string, siqs: number | null, loading: boolean) => {
-    console.log(`SIQS update for ${spotId}: ${siqs}, loading: ${loading}`);
-    
     setRealTimeSiqs(prev => ({
       ...prev,
       [spotId]: siqs
     }));
-    
     setLoadingSiqs(prev => ({
       ...prev,
       [spotId]: loading
@@ -110,37 +86,6 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
       setCalculationQueue(prev => [...prev, spotId]);
     }
   }, [attemptedSiqs, calculationQueue]);
-  
-  // Handle SIQS calculation errors
-  const handleSiqsError = React.useCallback((error: any, spotId: string) => {
-    console.error(`SIQS calculation error for spot ${spotId}:`, error);
-    toast.error(t("Could not calculate sky quality for this location", "无法计算此位置的天空质量"));
-    
-    // Mark as attempted so we don't keep trying
-    setAttemptedSiqs(prev => {
-      const updated = new Set(prev);
-      updated.add(spotId);
-      return updated;
-    });
-    
-    setLoadingSiqs(prev => ({
-      ...prev,
-      [spotId]: false
-    }));
-  }, [t]);
-
-  // Get SIQS value for a spot (from real-time calculation or fallback to original)
-  const getSiqsForSpot = React.useCallback((spot: SharedAstroSpot) => {
-    const realTimeSiqsValue = realTimeSiqs[spot.id];
-    
-    // Use real-time SIQS if available
-    if (realTimeSiqsValue !== undefined) {
-      return realTimeSiqsValue;
-    }
-    
-    // Fall back to the original SIQS from the spot data
-    return spot.siqs;
-  }, [realTimeSiqs]);
 
   if (isLoading) {
     return <CommunityLocationsSkeleton />;
@@ -162,7 +107,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        {locations.map((spot: SharedAstroSpot, index: number) => (
+        {locations.map((spot: any, index: number) => (
           <motion.button
             key={spot.id}
             className="relative text-left group focus:outline-none rounded-xl transition duration-300 ease-in-out hover:shadow-xl border-2 border-transparent hover:border-primary/70"
@@ -185,7 +130,6 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
                 onSiqsCalculated={(siqs, loading) =>
                   debouncedSiqsUpdate(spot.id, siqs, loading)
                 }
-                onError={(error) => handleSiqsError(error, spot.id)}
                 forceUpdate={!attemptedSiqs.has(spot.id) && calculationQueue.includes(spot.id)}
               />
               <div className="transform transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg rounded-xl">
@@ -194,10 +138,10 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
                   name={spot.name}
                   latitude={spot.latitude}
                   longitude={spot.longitude}
-                  siqs={getSiqsForSpot(spot)}
+                  siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
                   timestamp={spot.timestamp}
-                  isCertified={!!spot.certification || !!spot.isDarkSkyReserve}
-                  username={spot.username || 'Anonymous Stargazer'}
+                  isCertified={false}
+                  username={spot.username}
                 />
               </div>
               <div className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/10" />
