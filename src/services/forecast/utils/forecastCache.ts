@@ -1,4 +1,5 @@
 
+
 /**
  * Simple forecast data cache
  */
@@ -42,9 +43,33 @@ export const forecastCache = {
   },
   
   // Clear all cache items
-  clearAllCache: (): void => {
+  clearAllCache: () => {
     Object.keys(cache).forEach(key => {
       delete cache[key];
     });
+  },
+  
+  // For compatibility with enhancedForecastAstroAdapter
+  invalidateCache: (pattern?: string): void => {
+    if (pattern) {
+      Object.keys(cache).forEach(key => {
+        if (key.includes(pattern)) {
+          delete cache[key];
+        }
+      });
+    } else {
+      Object.keys(cache).forEach(key => {
+        delete cache[key];
+      });
+    }
+  },
+  
+  // Alternative name for cacheForecast - for compatibility
+  setCachedForecast: (key: string, data: ForecastDayAstroData[] | ForecastDayAstroData): void => {
+    cache[key] = {
+      data,
+      timestamp: Date.now()
+    };
   }
 };
+

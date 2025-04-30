@@ -5,7 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Star, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatSiqsScore, getSiqsScore } from "@/utils/siqsHelpers";
+import { formatSiqs, getSiqsScore } from "@/utils/siqsHelpers";
 import { getCertificationInfo, getLocalizedCertText } from "./cards/CertificationBadge";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -60,7 +60,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
 
   // Convert SIQS to string safely to prevent type errors
   const siqsScore = getSiqsScore(point.siqs);
-  const formattedSiqs = formatSiqsScore(siqsScore);
+  const formattedSiqs = formatSiqs(siqsScore);
 
   return (
     <div
