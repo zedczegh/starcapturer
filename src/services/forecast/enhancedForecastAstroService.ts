@@ -330,7 +330,7 @@ export const enhancedForecastAstroService = {
     // Use batch processor directly for best performance
     try {
       if (dayIndex !== undefined) {
-        // Define appropriate interface for batch locations
+        // Define interface for batch location data with required properties
         interface BatchLocationData {
           latitude: number;
           longitude: number; 
@@ -340,12 +340,19 @@ export const enhancedForecastAstroService = {
           priority: number;
         }
         
-        // For specific day, transform into batch format with proper typing
-        const batchLocations: BatchLocationData[] = locations.map(loc => ({
-          ...loc,
-          forecastDay: dayIndex,
-          priority: 10 // High priority
-        }));
+        // Transform locations into BatchLocationData array with explicit type annotation
+        const batchLocations = locations.map(loc => {
+          // Create a new object with all properties we need
+          const batchLocation: BatchLocationData = {
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            bortleScale: loc.bortleScale,
+            name: loc.name,
+            forecastDay: dayIndex,
+            priority: 10 // High priority
+          };
+          return batchLocation;
+        });
         
         // Use SIQS batch processor for parallel processing
         const batchResults = await processBatchSiqs(batchLocations, {
