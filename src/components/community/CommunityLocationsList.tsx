@@ -1,7 +1,6 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { SharedAstroSpot } from "@/types/weather";
 import LocationCard from "@/components/LocationCard";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import useDebounce, { useDebouncedCallback } from "@/hooks/useDebounce"; // Fixed import
