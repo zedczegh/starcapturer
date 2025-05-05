@@ -6,7 +6,13 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { LocationDetailsHeaderProps } from '@/types/location';
+
+interface LocationDetailsHeaderProps {
+  name: string;
+  latitude: number;
+  longitude: number;
+  timestamp?: string;
+}
 
 const LocationDetailsHeader: React.FC<LocationDetailsHeaderProps> = ({
   name,

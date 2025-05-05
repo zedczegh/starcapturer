@@ -1,11 +1,17 @@
 
-import React, { useState, useEffect, useRef } from "react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { useEnhancedLocation } from "@/hooks/useEnhancedLocation";
-import LocationDetailsContent from "./LocationDetailsContent";
-import LocationDetailsHeader from "./LocationDetailsHeader";
-import { getEnhancedLocationDetails } from "@/services/geocoding/enhancedReverseGeocoding";
-import { LocationDetailsMainProps } from "@/types/location";
+import React from "react";
+import { useLocationDetails } from "@/hooks/useLocationDetails";
+import LocationDetailsViewport from "./LocationDetailsViewport";
+import { useRefreshManager } from "@/hooks/location/useRefreshManager";
+
+interface LocationDetailsMainProps {
+  locationData: any;
+  setLocationData: (data: any) => void;
+  statusMessage: string | null;
+  messageType: "info" | "error" | "success" | null;
+  setStatusMessage: React.Dispatch<React.SetStateAction<string | null>>;
+  handleUpdateLocation: (updatedData: any) => Promise<void>;
+}
 
 const LocationDetailsMain: React.FC<LocationDetailsMainProps> = ({
   locationData,
@@ -13,101 +19,66 @@ const LocationDetailsMain: React.FC<LocationDetailsMainProps> = ({
   statusMessage,
   messageType,
   setStatusMessage,
-  handleUpdateLocation,
+  handleUpdateLocation
 }) => {
-  const { t, language } = useLanguage();
-  const [showHeader, setShowHeader] = useState(true);
-  const detailsInitializedRef = useRef(false);
+  // Use the location details hook to handle data fetching and state
+  const {
+    forecastData,
+    longRangeForecast,
+    loading,
+    forecastLoading,
+    longRangeLoading,
+    gettingUserLocation,
+    setStatusMessage: setDetailsStatusMessage,
+    setGettingUserLocation,
+    handleRefreshAll,
+    handleRefreshForecast,
+    handleRefreshLongRangeForecast,
+    weatherAlerts
+  } = useLocationDetails(locationData, setLocationData);
   
-  // Get enhanced location details for more accurate naming
-  const { locationDetails } = useEnhancedLocation({
-    latitude: locationData?.latitude,
-    longitude: locationData?.longitude,
-    skip: !locationData
-  });
+  // Use the refresh manager to control refresh logic
+  const { shouldRefresh, markRefreshComplete, refreshCount } = useRefreshManager(locationData);
   
-  // Use the enhanced location details to update the location name
-  useEffect(() => {
-    if (!locationData || !setLocationData || detailsInitializedRef.current) return;
-    
-    const updateLocationDetails = async () => {
-      try {
-        // Get enhanced location details with street-level information
-        const enhancedDetails = await getEnhancedLocationDetails(
-          locationData.latitude, 
-          locationData.longitude, 
-          language
-        );
-        
-        // Only update if we got a detailed name with multiple components
-        if (enhancedDetails.formattedName && 
-            ((enhancedDetails.streetName && enhancedDetails.townName) || 
-             enhancedDetails.formattedName.includes(',') || 
-             enhancedDetails.formattedName.includes('，'))) {
-          
-          setLocationData({
-            ...locationData,
-            name: enhancedDetails.formattedName
-          });
-          
-          detailsInitializedRef.current = true;
-        }
-      } catch (error) {
-        console.error("Error updating location details:", error);
+  // Forward status messages to parent component
+  const handleSetStatusMessage = (message: string | null) => {
+    setStatusMessage(message);
+    setDetailsStatusMessage(message);
+  };
+
+  // Enhanced refresh handler that triggers all data updates
+  const handleCompleteRefresh = () => {
+    console.log("Triggering complete refresh of location data");
+    if (locationData?.latitude && locationData?.longitude) {
+      // Trigger a full refresh of all data
+      handleRefreshAll();
+      
+      // Mark as complete in the refresh manager
+      if (markRefreshComplete) {
+        markRefreshComplete();
       }
-    };
-    
-    updateLocationDetails();
-  }, [locationData, setLocationData, language]);
-  
-  // Additional update when locationDetails is loaded from the hook
-  useEffect(() => {
-    if (!locationData || !setLocationData || !locationDetails || detailsInitializedRef.current) return;
-    
-    // Check if we have a detailed name from the hook result
-    if (locationDetails.formattedName && 
-        (locationDetails.formattedName.includes(',') || 
-         locationDetails.formattedName.includes('，'))) {
-      
-      // Update location data with the detailed name
-      setLocationData({
-        ...locationData,
-        name: locationDetails.formattedName
-      });
-      
-      detailsInitializedRef.current = true;
     }
-  }, [locationData, setLocationData, locationDetails]);
-  
-  // Reset the initialization flag when location changes
-  useEffect(() => {
-    if (locationData) {
-      const locationKey = `${locationData.latitude}-${locationData.longitude}`;
-      return () => {
-        // Reset when unmounting with this location
-        if (locationData && `${locationData.latitude}-${locationData.longitude}` === locationKey) {
-          detailsInitializedRef.current = false;
-        }
-      };
-    }
-  }, [locationData]);
+  };
+
+  // Set additional props for location data
+  const enhancedLocationData = {
+    ...locationData,
+    forecastData,
+    longRangeForecast,
+    weatherAlerts,
+    refreshCount
+  };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-5xl">
-      {showHeader && locationData && (
-        <LocationDetailsHeader
-          name={locationData.name || t("Unnamed Location", "未命名位置")}
-          latitude={locationData.latitude}
-          longitude={locationData.longitude}
-          timestamp={locationData.timestamp}
-        />
-      )}
-      <LocationDetailsContent
-        locationData={locationData}
-        setLocationData={setLocationData}
-        onLocationUpdate={handleUpdateLocation}
-      />
-    </div>
+    <LocationDetailsViewport
+      locationData={enhancedLocationData}
+      setLocationData={setLocationData}
+      statusMessage={statusMessage}
+      messageType={messageType}
+      setStatusMessage={handleSetStatusMessage}
+      handleUpdateLocation={handleUpdateLocation}
+      onRefresh={handleCompleteRefresh}
+    />
   );
 };
 

@@ -3,7 +3,6 @@ import { getLocationNameForCoordinates } from "@/components/location/map/Locatio
 import { LocationCacheService } from "@/components/location/map/LocationNameService";
 import { Language } from "@/services/geocoding/types";
 import { identifyRemoteRegion, enhanceRemoteLocationName } from "@/services/geocoding/remoteRegionResolver";
-import { getEnhancedLocationDetails } from "@/services/geocoding/enhancedReverseGeocoding";
 
 /**
  * Optimized function to update location names with improved geocoding
@@ -20,32 +19,6 @@ export async function updateLocationName(
     // Skip processing invalid coordinates
     if (!isFinite(latitude) || !isFinite(longitude)) {
       return currentName || (language === 'en' ? 'Unknown Location' : '未知位置');
-    }
-    
-    // Always try to get the most detailed location name possible
-    try {
-      // Use enhanced location details to get the most detailed name
-      const enhancedDetails = await getEnhancedLocationDetails(latitude, longitude, language);
-      
-      // If we got a detailed name that includes street-level or multiple components
-      if (enhancedDetails.formattedName && 
-          (enhancedDetails.streetName || 
-           enhancedDetails.formattedName.includes(',') || 
-           enhancedDetails.formattedName.includes('，'))) {
-        // Cache this detailed name
-        if (cacheService && cacheService.setCachedData) {
-          const cacheKey = `location_name_${latitude.toFixed(4)}_${longitude.toFixed(4)}_${language}`;
-          cacheService.setCachedData(cacheKey, { 
-            name: enhancedDetails.formattedName, 
-            timestamp: Date.now() 
-          });
-        }
-        
-        return enhancedDetails.formattedName;
-      }
-    } catch (error) {
-      console.error("Error getting enhanced location details:", error);
-      // Continue with other methods if enhanced details failed
     }
     
     // Check if we're in a remote region that needs special handling
