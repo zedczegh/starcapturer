@@ -69,11 +69,6 @@ export const MobileNavButton: React.FC<MobileNavButtonProps> = ({
       >
         {label}
       </span>
-      {active && (
-        <div 
-          className="w-1.5 h-1.5 bg-primary rounded-full mt-1"
-        />
-      )}
     </Link>
   );
 };
