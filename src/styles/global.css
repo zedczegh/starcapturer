@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -103,13 +102,30 @@
                 0 0 60px rgba(139, 92, 246, 0.08);
   }
   
-  /* Mobile navigation styling */
+  /* Enhanced Mobile navigation styling */
   .mobile-nav-bar {
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(180deg, rgba(18, 51, 65, 0.95), rgba(14, 31, 48, 0.97));
+    border-top: 1px solid rgba(146, 109, 222, 0.2);
   }
   
   .mobile-nav-item.active .icon-container {
-    box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
+    background: rgba(124, 58, 237, 0.25);
+    transform: translateY(-2px);
+  }
+  
+  .mobile-nav-item .icon-container {
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  
+  .mobile-nav-item:hover .icon-container {
+    transform: translateY(-2px);
+    background: rgba(124, 58, 237, 0.15);
+  }
+  
+  .mobile-nav-item.active span {
+    font-weight: 500;
   }
   
   .pulse-glow {
@@ -151,20 +167,42 @@
     @apply text-xs font-mono;
   }
   
-  /* Other existing styles */
-  
-  /* Cosmic glassmorphism dropdown */
+  /* Cosmic glassmorphism dropdown - enhanced */
   .cosmic-dropdown {
     @apply glassmorphism;
     background: linear-gradient(135deg, rgba(33,21,50,0.97) 60%, rgba(29,30,51,0.97) 100%);
     box-shadow: 0 8px 32px 0 rgba(104, 117, 255, 0.15), 0 2px 8px rgba(0,0,0,0.30) !important;
-    border: 1px solid rgba(104, 117, 255, 0.06);
+    border: 1px solid rgba(104, 117, 255, 0.12);
     backdrop-filter: blur(12px);
   }
+  
   .glass-dropdown-label {
-    background: linear-gradient(90deg, rgba(55,41,85,0.90) 50%, rgba(17,15,29,0.99) 100%);
+    background: linear-gradient(90deg, rgba(55,41,85,0.95) 50%, rgba(17,15,29,0.99) 100%);
     border-radius: 0.5rem 0.5rem 0 0;
     margin-bottom: 0.5rem;
+  }
+  
+  .interactive-button {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .interactive-button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 0;
+    height: 100%;
+    background: rgba(124, 58, 237, 0.08);
+    transform: translateY(-50%);
+    transition: width 0.3s ease;
+    z-index: -1;
+    border-radius: 0.25rem;
+  }
+  
+  .interactive-button:hover::before {
+    width: 100%;
   }
 
   /* Mobile enhancement classes for location details */

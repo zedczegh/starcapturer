@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Telescope, Map, Smartphone, Link2, Info, Users, MessageCircle } from "lucide-react";
+import { Telescope, Map, Smartphone, Users } from "lucide-react";
 import { MobileNavButton } from "./NavButtons";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
@@ -75,31 +75,10 @@ const MobileNav: React.FC<MobileNavProps> = ({
         />
         
         <MobileNavButton 
-          to="/messages" 
-          icon={<MessageCircle className="h-5 w-5" />} 
-          label={t("Messages", "消息")} 
-          active={location.pathname === "/messages"} 
-        />
-
-        <MobileNavButton 
           to="/share" 
           icon={<Smartphone className="h-5 w-5" />} 
           label={t("Bortle", "光污染")} 
           active={location.pathname === "/share"} 
-        />
-        
-        <MobileNavButton 
-          to="/useful-links" 
-          icon={<Link2 className="h-5 w-5" />} 
-          label={t("Links", "资源")} 
-          active={location.pathname === "/useful-links"} 
-        />
-        
-        <MobileNavButton 
-          to="/about" 
-          icon={<Info className="h-5 w-5" />} 
-          label={t("About", "关于")} 
-          active={location.pathname === "/about"} 
         />
       </div>
     </motion.div>

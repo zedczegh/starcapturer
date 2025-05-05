@@ -50,22 +50,22 @@ export const MobileNavButton: React.FC<MobileNavButtonProps> = ({
       to={to}
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center px-2 py-1 rounded-lg transition-all duration-300 mobile-nav-item",
+        "flex flex-col items-center px-3 py-1 rounded-lg transition-all duration-300 mobile-nav-item",
         active ? "active text-primary" : "text-cosmic-300 hover:text-cosmic-100"
       )}
     >
       <motion.div 
         className={cn(
-          "icon-container p-1.5 rounded-full transition-all duration-300",
-          active ? "bg-primary/25" : "bg-transparent hover:bg-cosmic-100/10"
+          "icon-container p-2 rounded-full transition-all duration-300",
+          active ? "bg-primary/15" : "bg-transparent"
         )}
-        whileHover={{ scale: 1.1 }}
+        whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
         {icon}
       </motion.div>
       <motion.span 
-        className={`text-xs mt-1 ${language === 'zh' ? 'font-medium' : ''} ${active ? 'font-medium' : ''}`}
+        className={`text-xs mt-1.5 ${language === 'zh' ? 'font-medium' : ''} ${active ? 'font-medium' : ''}`}
         initial={{ opacity: 0.7 }}
         animate={{ opacity: active ? 1 : 0.7 }}
       >
