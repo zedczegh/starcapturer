@@ -15,7 +15,6 @@ interface AuthDialogProps {
 
 const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = React.useState("login");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -34,30 +33,18 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
           </motion.div>
           <div className="space-y-2">
             <DialogTitle className="text-2xl font-bold">
-              {activeTab === "login" 
-                ? t("Welcome Back", "欢迎回来") 
-                : t("Join the Stargazing Community", "加入观星社区")}
+              {t("Join the Stargazing Community", "加入观星社区")}
             </DialogTitle>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              {activeTab === "login" 
-                ? t(
-                    "Sign in to access your saved observation spots, share your experiences, and continue your stargazing journey.",
-                    "登录以访问您保存的观测点，分享您的经验，继续您的观星之旅。"
-                  )
-                : t(
-                    "Sign up to save your favorite observation spots, share your experiences, and connect with fellow stargazers.",
-                    "注册以保存您喜爱的观星地点，分享您的经验，并与其他观星者交流。"
-                  )}
+              {t(
+                "Sign up to save your favorite observation spots, share your experiences, and connect with fellow stargazers.",
+                "注册以保存您喜爱的观星地点，分享您的经验，并与其他观星者交流。"
+              )}
             </p>
           </div>
         </DialogHeader>
 
-        <Tabs 
-          defaultValue="login" 
-          value={activeTab} 
-          onValueChange={setActiveTab} 
-          className="w-full"
-        >
+        <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="login" className="text-base py-3">
               {t("Sign In", "登录")}
@@ -67,7 +54,6 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             </TabsTrigger>
           </TabsList>
           <motion.div
-            key={activeTab}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}

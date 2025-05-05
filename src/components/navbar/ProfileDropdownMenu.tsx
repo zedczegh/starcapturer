@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, LogIn, UserPlus } from 'lucide-react';
+import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, ExternalLink } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -17,7 +17,6 @@ interface ProfileDropdownMenuProps {
   profile: { username: string | null } | null;
   onSignOut: () => void;
   email: string | null;
-  onOpenAuthDialog: () => void;
 }
 
 const menuItemVariants = {
@@ -35,8 +34,7 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
   user,
   profile,
   onSignOut,
-  email,
-  onOpenAuthDialog
+  email
 }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -53,81 +51,40 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.2 }}
       >
-        {user && (
-          <>
-            <DropdownMenuLabel className="glass-dropdown-label px-4 pt-3 pb-2 flex flex-col border-none rounded-t-xl">
-              <span className="font-bold text-lg text-primary/90">
-                {profile && profile.username ? profile.username : t('Account', '账户')}
-              </span>
-              <span className="text-xs text-cosmic-400 truncate">{email}</span>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            
-            <DropdownMenuGroup>
-              {[
-                { icon: MessageCircle, label: t('Messages', '消息'), path: '/messages' },
-                { icon: User, label: t('Profile', '个人资料'), path: '/profile' },
-                { icon: BookmarkPlus, label: t('My Collections', '我的收藏'), path: '/collections' },
-                { icon: MapPin, label: t('My AstroSpots', '我的观星点'), path: '/manage-astro-spots' },
-              ].map(({ icon: Icon, label, path }, i) => (
-                <motion.div
-                  key={path}
-                  custom={i}
-                  initial="hidden"
-                  animate="visible"
-                  variants={menuItemVariants}
-                >
-                  <DropdownMenuItem
-                    onClick={() => navigate(path)}
-                    className="interactive-button px-4 py-2 flex gap-2 items-center hover:!bg-primary/10 hover:text-primary rounded-md transition-all duration-300"
-                  >
-                    <Icon className="h-4 w-4 text-primary" />
-                    <span>{label}</span>
-                  </DropdownMenuItem>
-                </motion.div>
-              ))}
-            </DropdownMenuGroup>
-            
-            <DropdownMenuSeparator className="my-1" />
-          </>
-        )}
+        <DropdownMenuLabel className="glass-dropdown-label px-4 pt-3 pb-2 flex flex-col border-none rounded-t-xl">
+          <span className="font-bold text-lg text-primary/90">
+            {profile && profile.username ? profile.username : t('Account', '账户')}
+          </span>
+          <span className="text-xs text-cosmic-400 truncate">{email}</span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
         
-        {!user && (
-          <>
-            <DropdownMenuLabel className="glass-dropdown-label px-4 pt-3 pb-2 flex flex-col border-none rounded-t-xl">
-              <span className="font-bold text-lg text-primary/90">
-                {t('Welcome', '欢迎')}
-              </span>
-              <span className="text-xs text-cosmic-400">{t('Sign in to access all features', '登录以使用所有功能')}</span>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            
-            <DropdownMenuGroup>
-              {[
-                { icon: LogIn, label: t('Sign In', '登录'), action: onOpenAuthDialog },
-                { icon: UserPlus, label: t('Sign Up', '注册'), action: onOpenAuthDialog },
-              ].map(({ icon: Icon, label, action }, i) => (
-                <motion.div
-                  key={label}
-                  custom={i}
-                  initial="hidden"
-                  animate="visible"
-                  variants={menuItemVariants}
-                >
-                  <DropdownMenuItem
-                    onClick={action}
-                    className="interactive-button px-4 py-2 flex gap-2 items-center hover:!bg-primary/10 hover:text-primary rounded-md transition-all duration-300"
-                  >
-                    <Icon className="h-4 w-4 text-primary" />
-                    <span>{label}</span>
-                  </DropdownMenuItem>
-                </motion.div>
-              ))}
-            </DropdownMenuGroup>
-            
-            <DropdownMenuSeparator className="my-1" />
-          </>
-        )}
+        <DropdownMenuGroup>
+          {[
+            { icon: MessageCircle, label: t('Messages', '消息'), path: '/messages' },
+            { icon: User, label: t('Profile', '个人资料'), path: '/profile' },
+            { icon: BookmarkPlus, label: t('My Collections', '我的收藏'), path: '/collections' },
+            { icon: MapPin, label: t('My AstroSpots', '我的观星点'), path: '/manage-astro-spots' },
+          ].map(({ icon: Icon, label, path }, i) => (
+            <motion.div
+              key={path}
+              custom={i}
+              initial="hidden"
+              animate="visible"
+              variants={menuItemVariants}
+            >
+              <DropdownMenuItem
+                onClick={() => navigate(path)}
+                className="interactive-button px-4 py-2 flex gap-2 items-center hover:!bg-primary/10 hover:text-primary rounded-md transition-all duration-300"
+              >
+                <Icon className="h-4 w-4 text-primary" />
+                <span>{label}</span>
+              </DropdownMenuItem>
+            </motion.div>
+          ))}
+        </DropdownMenuGroup>
+        
+        <DropdownMenuSeparator className="my-1" />
         
         <DropdownMenuLabel className="px-4 py-1 text-xs text-cosmic-400">
           {t('Resources & Settings', '资源与设置')}
@@ -157,26 +114,22 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
           ))}
         </DropdownMenuGroup>
         
-        {user && (
-          <>
-            <DropdownMenuSeparator />
-            
-            <motion.div
-              custom={9}
-              initial="hidden"
-              animate="visible"
-              variants={menuItemVariants}
-            >
-              <DropdownMenuItem
-                onClick={onSignOut}
-                className="interactive-button mt-2 mx-2 px-4 py-2 flex gap-2 items-center !text-white !bg-red-500 hover:!bg-red-400 hover:!text-white font-semibold rounded-xl transition-all duration-300 shadow-lg"
-              >
-                <LogOut className="mr-2 h-5 w-5" />
-                <span>{t('Sign Out', '登出')}</span>
-              </DropdownMenuItem>
-            </motion.div>
-          </>
-        )}
+        <DropdownMenuSeparator />
+        
+        <motion.div
+          custom={9}
+          initial="hidden"
+          animate="visible"
+          variants={menuItemVariants}
+        >
+          <DropdownMenuItem
+            onClick={onSignOut}
+            className="interactive-button mt-2 mx-2 px-4 py-2 flex gap-2 items-center !text-white !bg-red-500 hover:!bg-red-400 hover:!text-white font-semibold rounded-xl transition-all duration-300 shadow-lg"
+          >
+            <LogOut className="mr-2 h-5 w-5" />
+            <span>{t('Sign Out', '登出')}</span>
+          </DropdownMenuItem>
+        </motion.div>
       </motion.div>
     </DropdownMenuContent>
   );

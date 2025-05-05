@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, CheckCircle2, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Loader2 } from '@/components/ui/loader';
 
@@ -21,25 +20,15 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
   const form = useForm();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = React.useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
   const onSubmit = async (data: any) => {
     try {
-      if (data.password !== data.confirmPassword) {
-        form.setError("confirmPassword", {
-          type: "manual",
-          message: t("Passwords do not match", "密码不匹配")
-        });
-        return;
-      }
-      
       setIsLoading(true);
       await signUp(data.email, data.password);
       onSuccess();
       navigate('/photo-points');
     } catch (error: any) {
-      // Error handling is in AuthContext
     } finally {
       setIsLoading(false);
     }
@@ -124,52 +113,9 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="confirmPassword"
-          rules={{
-            required: t("Please confirm your password", "请确认您的密码"),
-            validate: (value, formValues) => 
-              value === formValues.password || t("Passwords do not match", "密码不匹配")
-          }}
-          render={({ field }) => (
-            <FormItem>
-              <div className="relative">
-                <FormControl>
-                  <Input 
-                    {...field} 
-                    id="signup_confirm_password"
-                    type={showConfirmPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    placeholder={t("Confirm your password", "确认密码")}
-                    className="pl-10 pr-10 h-11 text-base"
-                    disabled={isLoading}
-                  />
-                </FormControl>
-                <CheckCircle2 className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={isLoading}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </Button>
-              </div>
-              <FormMessage className="text-xs" />
-            </FormItem>
-          )}
-        />
-
         <Button 
           type="submit" 
-          className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90 mt-6"
+          className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90"
           disabled={isLoading}
         >
           {isLoading ? (
@@ -178,10 +124,7 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
               {t("Creating Account...", "创建帐户中...")}
             </>
           ) : (
-            <>
-              <UserPlus className="mr-2 h-5 w-5" />
-              {t("Create Account", "创建帐户")}
-            </>
+            t("Create Account", "创建帐户")
           )}
         </Button>
       </form>

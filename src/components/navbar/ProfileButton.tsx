@@ -42,63 +42,70 @@ const ProfileButton = () => {
     navigate('/photo-points');
   };
 
-  const handleOpenAuthDialog = () => {
-    setShowAuthDialog(true);
-  };
+  if (!user) {
+    return (
+      <>
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAuthDialog(true)}
+            className="text-primary hover:text-primary hover:bg-primary/10 rounded-full flex items-center justify-center gap-2 px-4 py-2 bg-primary/5 border-primary/20"
+            aria-label="Login"
+          >
+            <UserRound className="h-5 w-5" />
+            <span className="hidden sm:inline text-sm font-medium">
+              {t("Sign In", "登录")}
+            </span>
+          </Button>
+        </motion.div>
+        <AuthDialog
+          open={showAuthDialog}
+          onOpenChange={setShowAuthDialog}
+        />
+      </>
+    );
+  }
 
   return (
     <AnimatePresence>
       <DropdownMenu modal>
         <DropdownMenuTrigger asChild>
           <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            {user ? (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="relative rounded-full p-0 border border-primary/30 hover:border-primary shadow-glow focus:ring-2 focus:ring-primary group transition-all duration-300" 
-                aria-label="Profile"
-              >
-                <Avatar className="h-9 w-9 transition-transform duration-300 group-hover:scale-105">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
-                  ) : (
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {user.email?.[0]?.toUpperCase() || "?"}
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full border-2 border-background"></span>
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-primary hover:text-primary hover:bg-primary/10 rounded-full flex items-center justify-center gap-2 px-4 py-2 bg-primary/5 border-primary/20"
-                aria-label="Login"
-              >
-                <UserRound className="h-5 w-5" />
-                <span className="hidden sm:inline text-sm font-medium">
-                  {t("Sign In", "登录")}
-                </span>
-              </Button>
-            )}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="relative rounded-full p-0 border border-primary/30 hover:border-primary shadow-glow focus:ring-2 focus:ring-primary group transition-all duration-300" 
+              aria-label="Profile"
+            >
+              <Avatar className="h-9 w-9 transition-transform duration-300 group-hover:scale-105">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {user.email?.[0]?.toUpperCase() || "?"}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full border-2 border-background"></span>
+            </Button>
           </motion.div>
         </DropdownMenuTrigger>
         <ProfileDropdownMenu
           user={user}
           profile={profile}
           onSignOut={handleSignOut}
-          email={user?.email || null}
-          onOpenAuthDialog={handleOpenAuthDialog}
+          email={user.email}
         />
       </DropdownMenu>
-      <AuthDialog
-        open={showAuthDialog}
-        onOpenChange={setShowAuthDialog}
-      />
     </AnimatePresence>
   );
 };
