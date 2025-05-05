@@ -10,6 +10,7 @@ export interface ReliableFetchOptions extends RequestInit {
   retryBackoffFactor?: number;
   timeout?: number;
   endpointName?: string;
+  retryStatusCodes?: number[];
 }
 
 /**
@@ -25,6 +26,7 @@ export async function reliableFetch<T = any>(
     retryBackoffFactor = 1.5,
     timeout = 10000,
     endpointName = extractEndpointName(url),
+    retryStatusCodes = [408, 429, 500, 502, 503, 504],
     ...fetchOptions
   } = options;
 
@@ -41,7 +43,7 @@ export async function reliableFetch<T = any>(
       // Add signal to request options
       const requestOptions = {
         ...fetchOptions,
-        signal: controller.signal,
+        signal: fetchOptions.signal ? fetchOptions.signal : controller.signal,
       };
       
       // Perform fetch
@@ -55,12 +57,25 @@ export async function reliableFetch<T = any>(
       
       if (!response.ok) {
         // Log non-successful responses
-        const errorText = await response.text();
+        let errorText;
+        try {
+          errorText = await response.text();
+        } catch (textError) {
+          errorText = "Could not read error response";
+          console.error("Error reading error response:", textError);
+        }
+        
         const errorDetails = `HTTP ${response.status}: ${errorText}`;
         
-        if (attempt < maxRetries) {
+        // Check if we should retry based on status code
+        const shouldRetry = attempt < maxRetries && 
+          (retryStatusCodes.includes(response.status) || response.status >= 500);
+        
+        if (shouldRetry) {
           lastError = new Error(errorDetails);
-          await waitForRetry(retryDelay * Math.pow(retryBackoffFactor, attempt));
+          const delayTime = retryDelay * Math.pow(retryBackoffFactor, attempt);
+          console.log(`Retrying request to ${url} after ${delayTime}ms (attempt ${attempt + 1}/${maxRetries})`);
+          await waitForRetry(delayTime);
           attempt++;
           continue;
         }
@@ -71,7 +86,23 @@ export async function reliableFetch<T = any>(
       }
       
       // Parse and return successful response
-      const data = await response.json() as T;
+      let data;
+      try {
+        data = await response.json() as T;
+      } catch (jsonError) {
+        // Handle case where response cannot be parsed as JSON
+        console.error("Error parsing JSON response:", jsonError);
+        
+        if (attempt < maxRetries) {
+          lastError = new Error(`Invalid JSON response: ${jsonError.message}`);
+          await waitForRetry(retryDelay * Math.pow(retryBackoffFactor, attempt));
+          attempt++;
+          continue;
+        }
+        
+        recordApiCall(endpointName, false, duration, `JSON parse error: ${jsonError.message}`, attempt);
+        throw new Error(`Invalid JSON response: ${jsonError.message} (after ${attempt} retries)`);
+      }
       
       // Record successful API call
       recordApiCall(endpointName, true, duration, undefined, attempt > 0 ? attempt : undefined);
@@ -98,8 +129,16 @@ export async function reliableFetch<T = any>(
         throw new Error("Request aborted by user");
       }
       
-      if (attempt < maxRetries) {
-        await waitForRetry(retryDelay * Math.pow(retryBackoffFactor, attempt));
+      // Determine if we should retry
+      const isNetworkError = !navigator.onLine || 
+        errorMessage.includes('network') || 
+        errorMessage.includes('failed to fetch') ||
+        errorMessage.includes('NetworkError');
+      
+      if (attempt < maxRetries && (error instanceof TypeError || isNetworkError || error.name === 'AbortError')) {
+        const delayTime = retryDelay * Math.pow(retryBackoffFactor, attempt);
+        console.log(`Network error, retrying request to ${url} after ${delayTime}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await waitForRetry(delayTime);
         attempt++;
         continue;
       }

@@ -18,6 +18,7 @@ export function useWeatherAutoRefresh({
 }) {
   const retryCountRef = useRef(0);
   const isRefreshingRef = useRef(false);
+  const timerRef = useRef<number | null>(null);
 
   // Simple weather data validity check: must exist and have a temperature/humidity/cloudCover fields present
   function isWeatherDataValid(data: any): boolean {
@@ -25,6 +26,15 @@ export function useWeatherAutoRefresh({
     if (typeof data.temperature !== "number" || typeof data.humidity !== "number" || typeof data.cloudCover !== "number") return false;
     return true;
   }
+
+  useEffect(() => {
+    // Clean up the timer on component unmount
+    return () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     // If valid, reset retry count
@@ -37,13 +47,29 @@ export function useWeatherAutoRefresh({
     // If not valid, and we haven't exceeded retries, try to refresh
     if (!isRefreshingRef.current && retryCountRef.current < maxRetries) {
       isRefreshingRef.current = true;
+      
+      // Clear any existing timer
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+      }
+      
+      // Set a new timer
       const timer = setTimeout(() => {
         retryCountRef.current += 1;
+        console.log(`Auto-refreshing weather data (attempt ${retryCountRef.current}/${maxRetries})`);
         refreshFn();
         isRefreshingRef.current = false;
       }, retryDelay);
+      
+      // Store the timer ID
+      timerRef.current = timer as unknown as number;
 
-      return () => clearTimeout(timer);
+      return () => {
+        if (timerRef.current !== null) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+      };
     }
   }, [weatherData, refreshFn, maxRetries, retryDelay]);
 }

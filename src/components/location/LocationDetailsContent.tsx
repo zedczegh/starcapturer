@@ -1,11 +1,12 @@
 
-import React, { memo, Suspense, useEffect, useState } from "react";
+import React, { memo, Suspense, useEffect, useState, useCallback } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import LocationContentLoader from "./LocationContentLoader";
 import LocationFaultedMessage from "./LocationFaultedMessage";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 // Lazy load the grid component for faster initial load
 const LocationContentGrid = React.lazy(() => import("./LocationContentGrid"));
@@ -26,6 +27,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
 }) => {
   const { t } = useLanguage();
   const [contentVisible, setContentVisible] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const {
     containerRef,
@@ -57,8 +59,21 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       }, 100);
       return () => clearTimeout(timer);
     }
+    
+    // Reset visibility when loading changes
+    if (loading) {
+      setContentVisible(false);
+    }
+    
     return undefined;
   }, [loading, contentLoaded]);
+
+  // Handle Suspense errors
+  const handleContentError = useCallback((error: Error) => {
+    console.error("Error loading content grid:", error);
+    setLoadError(`Failed to load content: ${error.message}`);
+    setFaulted(true);
+  }, [setFaulted]);
 
   // Fix for cases where SIQS is unavailable – show manual refresh button when loaded but no SIQS
   const shouldShowManualRefresh = 
@@ -67,13 +82,16 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     contentLoaded &&
     (!memoizedLocationData.siqsResult || typeof memoizedLocationData.siqsResult.score !== "number");
 
-  const handleManualRefresh = () => {
+  const handleManualRefresh = useCallback(() => {
     resetUpdateState();
+    setLoadError(null);
+    
     if (locationData?.latitude && locationData?.longitude) {
+      toast.info(t("Refreshing location data...", "正在刷新位置数据..."));
       handleRefreshForecast(locationData.latitude, locationData.longitude);
       handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
     }
-  };
+  }, [locationData, handleRefreshForecast, handleRefreshLongRangeForecast, resetUpdateState, t]);
 
   if (!memoizedLocationData) {
     return (
@@ -84,8 +102,20 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     );
   }
 
-  if (faulted && showFaultedMessage) {
-    return <LocationFaultedMessage show />;
+  if ((faulted && showFaultedMessage) || loadError) {
+    return (
+      <>
+        <LocationFaultedMessage show />
+        {loadError && (
+          <div className="mt-4 text-center">
+            <p className="text-red-400 mb-4">{loadError}</p>
+            <Button variant="outline" onClick={handleManualRefresh}>
+              {t("Try Again", "重试")}
+            </Button>
+          </div>
+        )}
+      </>
+    );
   }
 
   return (
