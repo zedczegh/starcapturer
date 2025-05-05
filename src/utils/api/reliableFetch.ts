@@ -1,6 +1,6 @@
 
 /**
- * Reliable API fetch utility with automatic retries and metrics
+ * Reliable API fetch utility with automatic retries, metrics, and improved error handling
  */
 import { recordApiCall } from './apiMetricsTracker';
 
@@ -10,6 +10,8 @@ export interface ReliableFetchOptions extends RequestInit {
   retryBackoffFactor?: number;
   timeout?: number;
   endpointName?: string;
+  retryStatusCodes?: number[];
+  onProgress?: (attempt: number, maxRetries: number) => void;
 }
 
 /**
@@ -25,6 +27,8 @@ export async function reliableFetch<T = any>(
     retryBackoffFactor = 1.5,
     timeout = 10000,
     endpointName = extractEndpointName(url),
+    retryStatusCodes = [408, 429, 500, 502, 503, 504],
+    onProgress,
     ...fetchOptions
   } = options;
 
@@ -38,10 +42,19 @@ export async function reliableFetch<T = any>(
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
-      // Add signal to request options
+      // Notify progress if callback provided
+      if (onProgress) {
+        onProgress(attempt, maxRetries);
+      }
+      
+      // Add signal to request options, preserving any existing signal
+      const signal = fetchOptions.signal 
+        ? composeAbortSignals(fetchOptions.signal, controller.signal) 
+        : controller.signal;
+        
       const requestOptions = {
         ...fetchOptions,
-        signal: controller.signal,
+        signal,
       };
       
       // Perform fetch
@@ -55,28 +68,33 @@ export async function reliableFetch<T = any>(
       
       if (!response.ok) {
         // Log non-successful responses
-        const errorText = await response.text();
+        const errorText = await safeReadResponseText(response);
         const errorDetails = `HTTP ${response.status}: ${errorText}`;
         
-        if (attempt < maxRetries) {
+        // Check if we should retry based on status code
+        const shouldRetry = retryStatusCodes.includes(response.status) && attempt < maxRetries;
+        
+        if (shouldRetry) {
           lastError = new Error(errorDetails);
-          await waitForRetry(retryDelay * Math.pow(retryBackoffFactor, attempt));
+          const currentDelay = retryDelay * Math.pow(retryBackoffFactor, attempt);
+          console.warn(`Retrying fetch due to status ${response.status} in ${currentDelay}ms (attempt ${attempt + 1}/${maxRetries})`);
+          await waitForRetry(currentDelay);
           attempt++;
           continue;
         }
         
         // Record failed API call after all retries
         recordApiCall(endpointName, false, duration, errorDetails, attempt);
-        throw new Error(`${errorDetails} (after ${attempt} retries)`);
+        throw new Error(`${errorDetails} (after ${attempt > 0 ? attempt : 0} retries)`);
       }
       
       // Parse and return successful response
-      const data = await response.json() as T;
+      const data = await safeParseJson(response);
       
       // Record successful API call
       recordApiCall(endpointName, true, duration, undefined, attempt > 0 ? attempt : undefined);
       
-      return data;
+      return data as T;
     } catch (error) {
       // Clear timeout to prevent leaks
       clearTimeout(timeoutId);
@@ -99,7 +117,9 @@ export async function reliableFetch<T = any>(
       }
       
       if (attempt < maxRetries) {
-        await waitForRetry(retryDelay * Math.pow(retryBackoffFactor, attempt));
+        const currentDelay = retryDelay * Math.pow(retryBackoffFactor, attempt);
+        console.warn(`Retrying fetch due to error: ${errorMessage} in ${currentDelay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await waitForRetry(currentDelay);
         attempt++;
         continue;
       }
@@ -140,4 +160,46 @@ function extractEndpointName(url: string): string {
     // If URL parsing fails, use the full URL (might be a relative path)
     return url;
   }
+}
+
+/**
+ * Safely read response text with error handling
+ */
+async function safeReadResponseText(response: Response): Promise<string> {
+  try {
+    return await response.text();
+  } catch (error) {
+    return `[Failed to read response body: ${error}]`;
+  }
+}
+
+/**
+ * Safely parse JSON with error handling
+ */
+async function safeParseJson(response: Response): Promise<any> {
+  try {
+    return await response.json();
+  } catch (error) {
+    throw new Error(`Failed to parse response as JSON: ${error}`);
+  }
+}
+
+/**
+ * Compose multiple AbortSignals into one that aborts when any signal aborts
+ */
+function composeAbortSignals(...signals: AbortSignal[]): AbortSignal {
+  const controller = new AbortController();
+  
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort(signal.reason);
+      break;
+    }
+    
+    signal.addEventListener('abort', () => {
+      controller.abort(signal.reason);
+    }, { once: true });
+  }
+  
+  return controller.signal;
 }

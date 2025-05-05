@@ -70,7 +70,15 @@ function validateForecastData(data: any): { isValid: boolean; issues?: string[] 
       issues.push('Invalid or empty daily time data');
     }
     
-    // Similar checks for daily data fields could be added here
+    // Check matching array lengths for daily data
+    if (Array.isArray(data.daily.time) && data.daily.time.length > 0) {
+      const timeLength = data.daily.time.length;
+      for (const key in data.daily) {
+        if (Array.isArray(data.daily[key]) && data.daily[key].length !== timeLength) {
+          issues.push(`Mismatched array lengths for daily.${key}`);
+        }
+      }
+    }
   }
   
   return { 
@@ -96,7 +104,9 @@ export async function fetchEnhancedForecastData(
     // Use our reliable fetch utility with retries
     const data = await reliableFetch(url, {
       signal,
-      maxRetries: 2,
+      maxRetries: 3,
+      retryBackoffFactor: 2,
+      timeout: 15000, // Increased timeout for better reliability
       endpointName: 'open-meteo/forecast'
     });
     
@@ -142,10 +152,12 @@ export async function fetchEnhancedLongRangeForecastData(
       `wind_speed_10m_max,relative_humidity_2m_mean,cloud_cover_mean,weather_code` +
       `&forecast_days=${validCoords.days || 16}&timezone=auto`;
     
-    // Use reliable fetch with retries
+    // Use reliable fetch with improved retries and timeout
     const data = await reliableFetch(url, {
       signal,
-      maxRetries: 2,
+      maxRetries: 3,
+      retryBackoffFactor: 2,
+      timeout: 15000, // Increased timeout
       endpointName: 'open-meteo/long-range-forecast'
     });
     
@@ -166,11 +178,50 @@ export async function fetchEnhancedLongRangeForecastData(
     }
     console.error("Error fetching enhanced long range forecast data:", error);
     
-    // Notify user of the error
+    // Notify user of the error with more helpful message
     toast.error('Failed to fetch long-range weather forecast', {
-      description: 'The system will automatically retry when possible'
+      description: 'Please check your network connection and try again later'
     });
     
+    return null;
+  }
+}
+
+/**
+ * Fall back to alternative weather API if main API fails
+ * Acts as a backup data source for critical weather information
+ */
+export async function fetchFallbackForecastData(
+  coordinates: Coordinates,
+  signal?: AbortSignal
+): Promise<EnhancedForecastResponse | null> {
+  try {
+    const validCoords = validateCoordinates(coordinates);
+    
+    // Use alternative API endpoint for fallback
+    const url = `https://api.open-meteo.com/v1/gfs?latitude=${validCoords.latitude}&longitude=${validCoords.longitude}` +
+      `&hourly=temperature_2m,relative_humidity_2m,precipitation,cloud_cover,wind_speed_10m` +
+      `&forecast_days=3&timezone=auto`;
+    
+    const data = await reliableFetch(url, {
+      signal,
+      maxRetries: 2,
+      timeout: 10000,
+      endpointName: 'open-meteo/gfs-fallback'
+    });
+    
+    return {
+      forecast: data,
+      reliability: 60, // Lower reliability score for fallback data
+      source: 'open-meteo-gfs',
+      timestamp: Date.now(),
+      validationResults: {
+        isValid: true,
+        issues: ['Using fallback data source with reduced accuracy']
+      }
+    };
+  } catch (error) {
+    console.error("Fallback forecast also failed:", error);
     return null;
   }
 }
