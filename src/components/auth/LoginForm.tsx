@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, LogIn } from 'lucide-react';
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -114,7 +115,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
         <Button 
           type="submit" 
-          className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90"
+          className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90 mt-6"
           disabled={processing}
         >
           {processing ? (
@@ -123,7 +124,10 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
               {t("Signing in...", "登录中...")}
             </>
           ) : (
-            t("Sign In", "登录")
+            <>
+              <LogIn className="mr-2 h-5 w-5" />
+              {t("Sign In", "登录")}
+            </>
           )}
         </Button>
       </form>
