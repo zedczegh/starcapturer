@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions from "@/components/WeatherConditions";
@@ -93,6 +92,13 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     return locationData?.historicalData?.clearestMonths || [];
   }, [locationData?.historicalData]);
 
+  // Handle refreshing weather data
+  const handleRefreshWeather = () => {
+    if (locationData?.latitude && locationData?.longitude) {
+      onRefreshForecast();
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 transition-all">
       <div className="lg:col-span-7 space-y-5">
@@ -103,6 +109,9 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
             bortleScale={bortleScale}
             seeingConditions={seeingConditionsString}
             forecastData={forecastData}
+            latitude={locationData?.latitude}
+            longitude={locationData?.longitude}
+            onRefresh={handleRefreshWeather}
           />
         </div>
         
