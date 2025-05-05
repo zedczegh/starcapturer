@@ -94,11 +94,12 @@ const LocationDetailsMain: React.FC<LocationDetailsMainProps> = ({
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl">
-      {showHeader && (
+      {showHeader && locationData && (
         <LocationDetailsHeader
-          locationData={locationData}
-          statusMessage={statusMessage}
-          messageType={messageType}
+          name={locationData.name || t("Unnamed Location", "未命名位置")}
+          latitude={locationData.latitude}
+          longitude={locationData.longitude}
+          timestamp={locationData.timestamp}
         />
       )}
       <LocationDetailsContent
