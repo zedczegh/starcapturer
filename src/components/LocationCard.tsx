@@ -6,6 +6,8 @@ import { formatTime, calculateAstronomicalNight } from '@/utils/astronomy/nightT
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import SiqsScoreBadge from './photoPoints/cards/SiqsScoreBadge';
 import { Star, Clock, User } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from 'react-router-dom';
 
 interface LocationCardProps {
   id: string;
@@ -29,6 +31,8 @@ const LocationCard: React.FC<LocationCardProps> = ({
   username = 'Anonymous Stargazer'
 }) => {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const location = useLocation();
   
   // Memoize these expensive calculations
   const numericSiqs = React.useMemo(() => getSiqsScore(siqs), [siqs]);
@@ -57,6 +61,15 @@ const LocationCard: React.FC<LocationCardProps> = ({
     }
   }, [timestamp]);
 
+  // Display appropriate username based on context
+  // If viewing own spots, show "You" instead of username
+  const displayUsername = React.useMemo(() => {
+    if (location.pathname.includes('/manage-astro-spots') && user) {
+      return t("You", "您");
+    }
+    return username;
+  }, [username, user, t, location.pathname]);
+
   return (
     <Card className="bg-cosmic-900/70 backdrop-blur-md border border-cosmic-700/50 hover:border-cosmic-600/70 transition-colors duration-300 shadow-md hover:shadow-lg">
       <CardContent className="p-4">
@@ -69,7 +82,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
         <div className="space-y-2 text-sm text-gray-400">
           <div className="flex items-center">
             <User className="h-4 w-4 mr-2 text-cosmic-400" />
-            <span>{t("Shared by", "分享者")}: {username}</span>
+            <span>{t("Shared by", "分享者")}: {displayUsername}</span>
           </div>
           
           <div className="flex items-center">
