@@ -57,19 +57,19 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
   };
   
   return (
-    <div className="grid grid-cols-1 gap-4">
+    <div className="grid grid-cols-1 gap-3">
       <TooltipProvider>
         {/* Temperature */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
+        <div className="flex items-center justify-between p-2.5 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
           <div className="flex items-center">
-            <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
-              <ThermometerSun className="h-5 w-5 text-cosmic-200" />
+            <div className="p-1.5 rounded-full bg-cosmic-700/40 mr-2">
+              <ThermometerSun className="h-4 w-4 text-cosmic-200" />
             </div>
-            <span className="font-medium">{t("Temperature", "温度")}</span>
+            <span className="font-medium text-xs">{t("Temperature", "温度")}</span>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className={`font-bold text-lg ${getTemperatureColor(temperature)}`}>
+              <span className={`font-bold text-sm ${getTemperatureColor(temperature)}`}>
                 {temperature.toFixed(1)}°C
               </span>
             </TooltipTrigger>
@@ -82,16 +82,16 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
         </div>
         
         {/* Humidity */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
+        <div className="flex items-center justify-between p-2.5 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
           <div className="flex items-center">
-            <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
-              <Droplets className="h-5 w-5 text-cosmic-200" />
+            <div className="p-1.5 rounded-full bg-cosmic-700/40 mr-2">
+              <Droplets className="h-4 w-4 text-cosmic-200" />
             </div>
-            <span className="font-medium">{t("Humidity", "湿度")}</span>
+            <span className="font-medium text-xs">{t("Humidity", "湿度")}</span>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className={`font-bold text-lg ${getHumidityColor(humidity)}`}>
+              <span className={`font-bold text-sm ${getHumidityColor(humidity)}`}>
                 {humidity}%
               </span>
             </TooltipTrigger>
@@ -104,16 +104,16 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
         </div>
         
         {/* Wind Speed */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
+        <div className="flex items-center justify-between p-2.5 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
           <div className="flex items-center">
-            <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
-              <Wind className="h-5 w-5 text-cosmic-200" />
+            <div className="p-1.5 rounded-full bg-cosmic-700/40 mr-2">
+              <Wind className="h-4 w-4 text-cosmic-200" />
             </div>
-            <span className="font-medium">{t("Wind Speed", "风速")}</span>
+            <span className="font-medium text-xs">{t("Wind Speed", "风速")}</span>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className={`font-bold text-lg ${getWindColor(windSpeed)}`}>
+              <span className={`font-bold text-sm ${getWindColor(windSpeed)}`}>
                 {windSpeed} {t("km/h", "公里/小时")}
               </span>
             </TooltipTrigger>
@@ -126,16 +126,16 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
         </div>
         
         {/* Seeing Conditions */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
+        <div className="flex items-center justify-between p-2.5 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
           <div className="flex items-center">
-            <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
-              <Eye className="h-5 w-5 text-cosmic-200" />
+            <div className="p-1.5 rounded-full bg-cosmic-700/40 mr-2">
+              <Eye className="h-4 w-4 text-cosmic-200" />
             </div>
-            <span className="font-medium">{t("Seeing Conditions", "视宁度")}</span>
+            <span className="font-medium text-xs">{t("Seeing Conditions", "视宁度")}</span>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className={`font-bold text-lg ${getSeeingColor(seeingConditions)}`}>
+              <span className={`font-bold text-sm ${getSeeingColor(seeingConditions)}`}>
                 {seeingConditions}
               </span>
             </TooltipTrigger>

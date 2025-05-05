@@ -223,7 +223,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <motion.div variants={itemVariants}>
-                <h3 className="text-xs font-semibold mb-3 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
+                <h3 className="text-xs font-semibold mb-2 text-cosmic-100 border-b border-cosmic-700/30 pb-1.5">
                   {t("Observing Conditions", "观测条件")}
                 </h3>
                 <PrimaryConditions
@@ -235,7 +235,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
               </motion.div>
               
               <motion.div variants={itemVariants}>
-                <h3 className="text-xs font-semibold mb-3 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
+                <h3 className="text-xs font-semibold mb-2 text-cosmic-100 border-b border-cosmic-700/30 pb-1.5">
                   {t("Sky Conditions", "天空状况")}
                 </h3>
                 <SecondaryConditions

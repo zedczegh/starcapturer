@@ -33,7 +33,7 @@ const ConditionItem: React.FC<ConditionItemProps> = ({
           </h3>
           
           {badgeText && (
-            <span className="ml-2 px-1.5 py-0.5 text-xs rounded-sm bg-blue-500/30 text-blue-300 border border-blue-500/20">
+            <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-sm bg-blue-500/30 text-blue-300 border border-blue-500/20">
               {badgeText}
             </span>
           )}
@@ -51,7 +51,7 @@ const ConditionItem: React.FC<ConditionItemProps> = ({
             </TooltipProvider>
           )}
         </div>
-        <div className="mt-0.5 text-primary-foreground">{value}</div>
+        <div className="mt-0.5 text-xs text-primary-foreground">{value}</div>
       </div>
     </div>
   );
