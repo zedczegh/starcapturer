@@ -45,23 +45,33 @@ const ProfileButton = () => {
   if (!user) {
     return (
       <>
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAuthDialog(true)}
-            className="text-primary hover:text-primary hover:bg-primary/10 rounded-full flex items-center justify-center gap-2 px-4 py-2 bg-primary/5 border-primary/20"
-            aria-label="Login"
-          >
-            <UserRound className="h-5 w-5" />
-            <span className="hidden sm:inline text-sm font-medium">
-              {t("Sign In", "登录")}
-            </span>
-          </Button>
-        </motion.div>
+        <DropdownMenu modal>
+          <DropdownMenuTrigger asChild>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAuthDialog(true)}
+                className="text-primary hover:text-primary hover:bg-primary/10 rounded-full flex items-center justify-center gap-2 px-4 py-2 bg-primary/5 border-primary/20"
+                aria-label="Login"
+              >
+                <UserRound className="h-5 w-5" />
+                <span className="hidden sm:inline text-sm font-medium">
+                  {t("Sign In", "登录")}
+                </span>
+              </Button>
+            </motion.div>
+          </DropdownMenuTrigger>
+          <ProfileDropdownMenu
+            user={null}
+            profile={null}
+            onSignOut={() => {}}
+            email={null}
+          />
+        </DropdownMenu>
         <AuthDialog
           open={showAuthDialog}
           onOpenChange={setShowAuthDialog}
