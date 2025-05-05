@@ -18,6 +18,7 @@ interface LocationCardProps {
   timestamp?: string;
   isCertified?: boolean;
   username?: string | React.ReactNode;
+  chineseName?: string;
 }
 
 const LocationCard: React.FC<LocationCardProps> = ({
@@ -28,9 +29,10 @@ const LocationCard: React.FC<LocationCardProps> = ({
   siqs,
   timestamp,
   isCertified = false,
-  username = 'Anonymous Stargazer'
+  username = 'Anonymous Stargazer',
+  chineseName
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user } = useAuth();
   const location = useLocation();
   
@@ -62,7 +64,6 @@ const LocationCard: React.FC<LocationCardProps> = ({
   }, [timestamp]);
 
   // Display appropriate username based on context
-  // If viewing own spots, show "You" instead of username
   const displayUsername = React.useMemo(() => {
     if (location.pathname.includes('/manage-astro-spots') && user) {
       return t("You", "您");
@@ -70,11 +71,19 @@ const LocationCard: React.FC<LocationCardProps> = ({
     return username;
   }, [username, user, t, location.pathname]);
 
+  // Use the appropriate name based on language
+  const displayName = React.useMemo(() => {
+    if (language === 'zh' && chineseName) {
+      return chineseName;
+    }
+    return name;
+  }, [name, chineseName, language]);
+
   return (
     <Card className="bg-cosmic-900/70 backdrop-blur-md border border-cosmic-700/50 hover:border-cosmic-600/70 transition-colors duration-300 shadow-md hover:shadow-lg">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-gray-50 truncate pr-2">{name}</h3>
+          <h3 className="text-lg font-semibold text-gray-50 truncate pr-2">{displayName}</h3>
           <div className="flex-shrink-0">
             <SiqsScoreBadge score={numericSiqs} isCertified={isCertified} />
           </div>

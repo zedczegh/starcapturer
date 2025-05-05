@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { updateLocationName } from "@/lib/locationNameUpdater";
 import { identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
+import { getEnhancedLocationDetails } from "@/services/geocoding/enhancedReverseGeocoding";
 
 interface UseLocationNameTranslationProps {
   locationData: any;
@@ -78,20 +79,63 @@ export function useLocationNameTranslation({
             console.log("Initial render detected, updating location name for:", locationData.name);
           }
           
-          const newName = await updateLocationName(
+          // Get enhanced location details for better language support
+          const enhancedDetails = await getEnhancedLocationDetails(
             locationData.latitude,
             locationData.longitude,
-            locationData.name,
-            language === 'zh' ? 'zh' : 'en',
-            { setCachedData, getCachedData }
+            language === 'zh' ? 'zh' : 'en'
           );
           
-          if (newName && newName !== locationData.name) {
-            console.log(`Location name updated: "${locationData.name}" -> "${newName}"`);
-            setLocationData({
-              ...locationData,
-              name: newName
-            });
+          // Update the location data with enhanced details
+          if (enhancedDetails) {
+            // For Chinese language, update the Chinese name
+            if (language === 'zh') {
+              if (enhancedDetails.formattedName && enhancedDetails.formattedName !== '偏远地区') {
+                console.log(`Location name updated for Chinese: "${locationData.name}" -> "${enhancedDetails.formattedName}"`);
+                
+                setLocationData({
+                  ...locationData,
+                  name: enhancedDetails.formattedName,
+                  chineseName: enhancedDetails.formattedName
+                });
+              }
+            } else {
+              // For English language, update the name
+              if (enhancedDetails.formattedName && enhancedDetails.formattedName !== 'Remote area') {
+                console.log(`Location name updated for English: "${locationData.name}" -> "${enhancedDetails.formattedName}"`);
+                
+                setLocationData({
+                  ...locationData,
+                  name: enhancedDetails.formattedName
+                });
+              }
+            }
+          } else {
+            // Fallback to the old update method if enhanced details fail
+            const newName = await updateLocationName(
+              locationData.latitude,
+              locationData.longitude,
+              locationData.name,
+              language === 'zh' ? 'zh' : 'en',
+              { setCachedData, getCachedData }
+            );
+            
+            if (newName && newName !== locationData.name) {
+              console.log(`Location name updated: "${locationData.name}" -> "${newName}"`);
+              
+              if (language === 'zh') {
+                setLocationData({
+                  ...locationData,
+                  name: newName,
+                  chineseName: newName
+                });
+              } else {
+                setLocationData({
+                  ...locationData,
+                  name: newName
+                });
+              }
+            }
           }
           
           // Mark this combination as processed

@@ -67,6 +67,7 @@ const AstroSpotGrid: React.FC<AstroSpotGridProps> = ({
               siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
               timestamp={spot.timestamp}
               username={t("You", "您")}
+              chineseName={spot.chineseName}
             />
           </button>
         </div>

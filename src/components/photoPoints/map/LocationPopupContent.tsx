@@ -10,6 +10,7 @@ import { getSiqsScore } from '@/utils/siqsHelpers';
 import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 import { formatDistance } from '@/utils/geoUtils';
 import { getSiqsClass } from './MarkerUtils';
+import { useDisplayName } from '../cards/DisplayNameResolver';
 
 interface LocationPopupContentProps {
   location: SharedAstroSpot;
@@ -28,9 +29,20 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
   isCertified,
   onViewDetails,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const isMobile = useIsMobile();
   const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
+  
+  // Get proper language-specific display name
+  const { displayName: resolvedName } = useDisplayName({
+    location,
+    language,
+    locationCounter: null
+  });
+  
+  // Use resolved name if available, otherwise fall back to the provided displayName
+  const finalDisplayName = resolvedName || 
+    (language === 'zh' && location.chineseName ? location.chineseName : displayName);
   
   useEffect(() => {
     if (siqsScore !== null && siqsScore > 0) {
@@ -58,7 +70,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
           {isCertified && (
             <Star className="h-3.5 w-3.5 mr-1 text-primary fill-primary" />
           )}
-          <span className="text-gray-100">{displayName}</span>
+          <span className="text-gray-100">{finalDisplayName}</span>
         </div>
         
         {isCertified && location.certification && (
@@ -81,7 +93,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
           
           {typeof location.distance === 'number' && isFinite(location.distance) && (
             <span className="text-xs text-gray-300 flex items-center justify-end">
-              {formatDistance(location.distance)}
+              {formatDistance(location.distance, language)}
             </span>
           )}
         </div>

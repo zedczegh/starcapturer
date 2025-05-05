@@ -62,6 +62,9 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
         !isLoading) {
       // Use enhanced name from our new service for Chinese
       displayName = enhancedLocation.formattedName;
+    } else if (enhancedLocation?.chineseName) {
+      // Use Chinese name from enhanced location if available
+      displayName = enhancedLocation.chineseName;
     } else if (nearestTownInfo?.detailedName && 
                nearestTownInfo.detailedName !== '偏远地区') {
       // Use detailed name from our enhanced database for Chinese
