@@ -173,7 +173,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
                   siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
                   timestamp={spot.timestamp}
                   isCertified={false}
-                  username={spot.user_id ? 'Anonymous Stargazer' : 'Anonymous Stargazer'} // Fixed username access
+                  username={spot.username || 'Anonymous Stargazer'}
                 />
               </div>
               <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />

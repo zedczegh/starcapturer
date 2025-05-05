@@ -88,6 +88,7 @@ export async function fetchCommunityAstroSpots() {
       siqs: spot.siqs,
       description: spot.description,
       timestamp: spot.created_at,
+      user_id: spot.user_id,
       username: spot.user_id ? (usernameMap.get(spot.user_id) || 'Anonymous Stargazer') : 'Anonymous Stargazer'
     }));
     console.timeEnd('formatData');
