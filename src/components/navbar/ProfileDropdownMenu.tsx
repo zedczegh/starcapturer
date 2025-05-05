@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, ExternalLink } from 'lucide-react';
+import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, LogIn, UserPlus } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -17,6 +17,7 @@ interface ProfileDropdownMenuProps {
   profile: { username: string | null } | null;
   onSignOut: () => void;
   email: string | null;
+  onOpenAuthDialog: () => void;
 }
 
 const menuItemVariants = {
@@ -34,7 +35,8 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
   user,
   profile,
   onSignOut,
-  email
+  email,
+  onOpenAuthDialog
 }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -77,6 +79,43 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
                 >
                   <DropdownMenuItem
                     onClick={() => navigate(path)}
+                    className="interactive-button px-4 py-2 flex gap-2 items-center hover:!bg-primary/10 hover:text-primary rounded-md transition-all duration-300"
+                  >
+                    <Icon className="h-4 w-4 text-primary" />
+                    <span>{label}</span>
+                  </DropdownMenuItem>
+                </motion.div>
+              ))}
+            </DropdownMenuGroup>
+            
+            <DropdownMenuSeparator className="my-1" />
+          </>
+        )}
+        
+        {!user && (
+          <>
+            <DropdownMenuLabel className="glass-dropdown-label px-4 pt-3 pb-2 flex flex-col border-none rounded-t-xl">
+              <span className="font-bold text-lg text-primary/90">
+                {t('Welcome', '欢迎')}
+              </span>
+              <span className="text-xs text-cosmic-400">{t('Sign in to access all features', '登录以使用所有功能')}</span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            
+            <DropdownMenuGroup>
+              {[
+                { icon: LogIn, label: t('Sign In', '登录'), action: onOpenAuthDialog },
+                { icon: UserPlus, label: t('Sign Up', '注册'), action: onOpenAuthDialog },
+              ].map(({ icon: Icon, label, action }, i) => (
+                <motion.div
+                  key={label}
+                  custom={i}
+                  initial="hidden"
+                  animate="visible"
+                  variants={menuItemVariants}
+                >
+                  <DropdownMenuItem
+                    onClick={action}
                     className="interactive-button px-4 py-2 flex gap-2 items-center hover:!bg-primary/10 hover:text-primary rounded-md transition-all duration-300"
                   >
                     <Icon className="h-4 w-4 text-primary" />
