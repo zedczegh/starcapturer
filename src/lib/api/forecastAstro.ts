@@ -42,7 +42,9 @@ export async function fetchAstroForecastData(
     const validCoords = validateCoordinates(coordinates);
     
     // First, get the basic weather forecast
-    const forecastData = await fetchLongRangeForecastData(validCoords, signal);
+    const forecastData = await fetchLongRangeForecastData(validCoords, {
+      signal
+    });
     
     if (!forecastData) {
       throw new Error("Failed to fetch base forecast data");

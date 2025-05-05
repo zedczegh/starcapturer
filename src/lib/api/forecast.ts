@@ -1,7 +1,7 @@
 
 import { Coordinates, validateCoordinates } from './coordinates';
 
-interface FetchOptions {
+export interface FetchOptions {
   signal?: AbortSignal;
   timeout?: number;
 }
