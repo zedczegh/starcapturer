@@ -19,22 +19,41 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const { t } = useLanguage ? useLanguage() : { t: (en: string, zh: string) => en };
 
   useEffect(() => {
+    // First set up the auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state changed:", event, session?.user?.email);
+        
+        // Only update state with synchronous operations here
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // For any subsequent data fetching, use setTimeout to avoid auth deadlocks
+        if (session?.user && event === 'SIGNED_IN') {
+          setTimeout(() => {
+            console.log("User signed in, performing additional actions if needed");
+            // Any additional actions after sign in can be done here
+          }, 0);
+        }
       }
     );
 
+    // Then check for existing session
     (async () => {
-      const sessionResult = await supabase.auth.getSession();
-      setSession(sessionResult.data.session);
-      setUser(sessionResult.data.session?.user ?? null);
-      setIsLoading(false);
+      try {
+        const sessionResult = await supabase.auth.getSession();
+        console.log("Initial session check:", sessionResult.data.session?.user?.email);
+        setSession(sessionResult.data.session);
+        setUser(sessionResult.data.session?.user ?? null);
+      } catch (error) {
+        console.error("Error getting session:", error);
+      } finally {
+        setIsLoading(false);
+      }
     })();
 
     return () => subscription.unsubscribe();
@@ -49,11 +68,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         redirectTo = 'https://siqs.astroai.top';
       }
 
+      // Ensure the redirect URL ends with a path
+      if (!redirectTo.endsWith('/photo-points')) {
+        redirectTo = `${redirectTo}/photo-points`;
+      }
+
+      console.log("Sign up with redirect to:", redirectTo);
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: redirectTo + '/photo-points'
+          emailRedirectTo: redirectTo
         }
       });
 
@@ -106,6 +132,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      console.log("Attempting to sign in:", email);
       const { error } = await supabase.auth.signInWithPassword({ 
         email, 
         password
@@ -128,8 +155,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           description: t(errorMessage, "请检查您的邮箱和密码"),
           position: "top-center"
         });
+        console.error("Sign in error:", error.message);
+      } else {
+        console.log("Sign in successful");
       }
     } catch (error: any) {
+      console.error("Unknown sign in error:", error);
       toast.error(t("Sign in error", "登录错误"), {
         description: t("An unknown error occurred. Please try again.", "发生未知错误，请重试。"),
         position: "top-center"
@@ -142,12 +173,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     setIsLoading(true);
     try {
+      console.log("Signing out");
       const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+      
+      // Explicitly reset state on sign out to ensure clean state
       setUser(null);
       setSession(null);
-
-      if (error) throw error;
+      
+      console.log("Sign out successful");
     } catch (error: any) {
+      console.error("Sign out error:", error);
       toast.error(t("Sign out issue", "登出问题"), {
         description: t("Please try again in a moment", "请稍后重试"),
         position: "top-center"
@@ -156,6 +193,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(false);
     }
   };
+
+  // Additional debugging for component renders
+  console.log("AuthProvider rendering, user state:", user?.email);
 
   return (
     <AuthContext.Provider value={{ user, session, signUp, signIn, signOut, isLoading }}>

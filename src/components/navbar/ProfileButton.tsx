@@ -10,7 +10,7 @@ import { UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import ProfileDropdownMenu from './ProfileDropdownMenu';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const ProfileButton = () => {
   const { user, signOut } = useAuth();
@@ -23,17 +23,25 @@ const ProfileButton = () => {
   useEffect(() => {
     if (user) {
       const fetchProfile = async () => {
-        const { data } = await supabase
-          .from('profiles')
-          .select('avatar_url, username')
-          .eq('id', user.id)
-          .single();
-        if (data) {
-          if (data.avatar_url) setAvatarUrl(data.avatar_url);
-          setProfile({ username: data.username || null });
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('avatar_url, username')
+            .eq('id', user.id)
+            .single();
+          if (data) {
+            if (data.avatar_url) setAvatarUrl(data.avatar_url);
+            setProfile({ username: data.username || null });
+          }
+        } catch (error) {
+          console.error("Error fetching profile:", error);
         }
       };
       fetchProfile();
+    } else {
+      // Reset profile when user logs out
+      setAvatarUrl(null);
+      setProfile(null);
     }
   }, [user]);
 
@@ -47,7 +55,7 @@ const ProfileButton = () => {
   };
 
   return (
-    <AnimatePresence>
+    <>
       <DropdownMenu modal>
         <DropdownMenuTrigger asChild>
           <motion.div
@@ -95,11 +103,12 @@ const ProfileButton = () => {
           onOpenAuthDialog={handleOpenAuthDialog}
         />
       </DropdownMenu>
+      
       <AuthDialog
         open={showAuthDialog}
         onOpenChange={setShowAuthDialog}
       />
-    </AnimatePresence>
+    </>
   );
 };
 

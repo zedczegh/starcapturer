@@ -121,3 +121,64 @@ export function validateRequiredProperties(data: any, requiredProps: string[]): 
   
   return true;
 }
+
+/**
+ * Validates weather data to ensure it contains necessary properties and has valid values
+ */
+export function validateWeatherData(data: any): boolean {
+  if (!data) return false;
+  
+  // Check for minimum required weather properties
+  const requiredProps = ['temperature', 'humidity', 'cloudCover', 'windSpeed'];
+  if (!validateRequiredProperties(data, requiredProps)) {
+    return false;
+  }
+  
+  // Check for valid values in key properties
+  if (typeof data.temperature !== 'number' || isNaN(data.temperature)) {
+    return false;
+  }
+  
+  if (typeof data.humidity !== 'number' || data.humidity < 0 || data.humidity > 100 || isNaN(data.humidity)) {
+    return false;
+  }
+  
+  if (typeof data.cloudCover !== 'number' || data.cloudCover < 0 || data.cloudCover > 100 || isNaN(data.cloudCover)) {
+    return false;
+  }
+  
+  if (typeof data.windSpeed !== 'number' || data.windSpeed < 0 || isNaN(data.windSpeed)) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Validates SIQS data to ensure it has the required structure and values
+ */
+export function validateSIQSData(data: any): boolean {
+  if (!data) return false;
+  
+  // Check for minimum required SIQS properties
+  if (typeof data.score !== 'number' || isNaN(data.score)) {
+    return false;
+  }
+  
+  // Check for valid score range (typically 0-10, but could be higher before normalization)
+  if (data.score < 0) {
+    return false;
+  }
+  
+  // Check if isViable is a boolean type if it exists
+  if ('isViable' in data && typeof data.isViable !== 'boolean') {
+    return false;
+  }
+  
+  // Check if factors array exists if it's specified
+  if ('factors' in data && !Array.isArray(data.factors)) {
+    return false;
+  }
+  
+  return true;
+}
