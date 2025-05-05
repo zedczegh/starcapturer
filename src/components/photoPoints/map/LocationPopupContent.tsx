@@ -92,7 +92,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
           
           {typeof location.distance === 'number' && isFinite(location.distance) && (
             <span className="text-xs text-gray-300 flex items-center justify-end">
-              {formatDistance(location.distance, language)}
+              {formatDistance(location.distance)}
             </span>
           )}
         </div>

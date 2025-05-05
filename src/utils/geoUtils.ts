@@ -1,4 +1,3 @@
-
 /**
  * Geographic utilities
  * IMPORTANT: These functions perform critical calculations.
