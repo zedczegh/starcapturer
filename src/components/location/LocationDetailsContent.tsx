@@ -75,21 +75,6 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     }
   };
 
-  // Utility function to handle an all-data refresh
-  const handleRefreshAll = () => {
-    if (locationData?.latitude && locationData?.longitude) {
-      handleRefreshForecast(locationData.latitude, locationData.longitude);
-      handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
-      resetUpdateState();
-      
-      // Create a synthetic event to force refresh other components
-      const forceRefreshEvent = new CustomEvent('forceRefresh');
-      if (containerRef.current) {
-        containerRef.current.dispatchEvent(forceRefreshEvent);
-      }
-    }
-  };
-
   if (!memoizedLocationData) {
     return (
       <div className="p-8 text-center">
@@ -132,7 +117,11 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
             onLocationUpdate={onLocUpdate}
             setGettingUserLocation={setGettingUserLocation}
             setStatusMessage={setStatusMessage}
-            onRefreshForecast={handleRefreshAll} // Updated to use the full refresh handler
+            onRefreshForecast={() => {
+              if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
+                handleRefreshForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
+              }
+            }}
             onRefreshLongRange={() => {
               if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
                 handleRefreshLongRangeForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);

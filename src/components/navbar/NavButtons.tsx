@@ -64,11 +64,22 @@ export const MobileNavButton: React.FC<MobileNavButtonProps> = ({
       >
         {icon}
       </motion.div>
-      <span 
+      <motion.span 
         className={`text-xs mt-1.5 ${language === 'zh' ? 'font-medium' : ''} ${active ? 'font-medium' : ''}`}
+        initial={{ opacity: 0.7 }}
+        animate={{ opacity: active ? 1 : 0.7 }}
       >
         {label}
-      </span>
+      </motion.span>
+      {active && (
+        <motion.div 
+          className="absolute bottom-0 w-1.5 h-1.5 bg-primary rounded-full"
+          layoutId="activeIndicator"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        />
+      )}
     </Link>
   );
 };

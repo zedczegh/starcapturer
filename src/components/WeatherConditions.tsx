@@ -1,10 +1,8 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import PrimaryConditions from "@/components/weather/PrimaryConditions";
 import SecondaryConditions from "@/components/weather/SecondaryConditions";
-import { normalizeMoonPhase } from "@/utils/weather/moonPhaseUtils";
 import { getSeeingConditionInChinese } from "@/utils/weatherUtils";
 import { motion } from "framer-motion";
 import { validateWeatherData, validateWeatherAgainstForecast } from "@/utils/validation/dataValidation";
@@ -12,9 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { getMoonInfo } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import { calculateTonightCloudCover } from "@/utils/nighttimeSIQS";
 import { calculateAstronomicalNight, formatTime } from "@/utils/astronomy/nightTimeCalculator";
-import { Cloud, Loader2, AlertTriangle, RefreshCw } from "lucide-react";
-import { detectSuspiciousWeatherData, getWeatherIssueMessage } from "@/utils/validation/weatherValidation";
-import { Button } from "@/components/ui/button";
+import { Cloud, Loader2 } from "lucide-react";
 
 interface WeatherConditionsProps {
   weatherData: {
@@ -33,7 +29,6 @@ interface WeatherConditionsProps {
   forecastData?: any;
   latitude?: number;
   longitude?: number;
-  onRefresh?: () => void;
 }
 
 const WeatherConditions: React.FC<WeatherConditionsProps> = ({
@@ -43,13 +38,11 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
   seeingConditions,
   forecastData,
   latitude = 0,
-  longitude = 0,
-  onRefresh
+  longitude = 0
 }) => {
   const { language, t } = useLanguage();
   const [stableWeatherData, setStableWeatherData] = useState(weatherData);
   const [isLoading, setIsLoading] = useState(true);
-  const [dataIssues, setDataIssues] = useState<string[]>([]);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -62,21 +55,8 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
       
     setIsLoading(!hasValidWeatherData);
     
-    // Check for suspicious weather data
     if (hasValidWeatherData) {
-      const validationResult = detectSuspiciousWeatherData(weatherData);
-      setDataIssues(validationResult.issues);
       setStableWeatherData(weatherData);
-      
-      // Show toast warning if serious issues detected
-      if (validationResult.issues.includes('too-many-zeros')) {
-        toast({
-          title: t("Weather Data Issue", "天气数据问题"),
-          description: getWeatherIssueMessage(['too-many-zeros'], language as 'en' | 'zh'),
-          variant: "destructive",
-          duration: 4000,
-        });
-      }
     }
     
     const timer = setTimeout(() => {
@@ -84,7 +64,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     }, 3000);
     
     return () => clearTimeout(timer);
-  }, [weatherData, isLoading, toast, t, language]);
+  }, [weatherData, isLoading]);
   
   const nighttimeCloudData = useMemo(() => {
     if (!forecastData || !forecastData.hourly) return null;
@@ -221,29 +201,6 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     visible: { opacity: 1, y: 0 }
   };
 
-  // Determine if we have suspicious data with too many zeros
-  const hasTooManyZeros = dataIssues.includes('too-many-zeros');
-  const hasDataIssues = dataIssues.length > 0;
-
-  const handleRefresh = () => {
-    if (onRefresh) {
-      // Clear issues until new data arrives
-      setDataIssues([]);
-      // Show loading state
-      setIsLoading(true);
-      // Trigger refresh
-      onRefresh();
-      
-      toast({
-        title: t("Refreshing Data", "正在刷新数据"),
-        description: t(
-          "Fetching the latest weather information...",
-          "正在获取最新的天气信息..."
-        ),
-      });
-    }
-  };
-
   return (
     <motion.div
       initial="hidden"
@@ -252,20 +209,9 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     >
       <Card className="backdrop-blur-sm border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden hover:shadow-cosmic-600/10">
         <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-          <CardTitle className="text-sm flex items-center justify-between gap-2">
-            <div className="flex items-center">
-              <Cloud className="w-4 h-4 text-blue-400 mr-1" />
-              {t("Current Conditions", "当前状况")}
-            </div>
-            
-            {hasDataIssues && (
-              <div className="flex items-center text-amber-400">
-                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-                <span className="text-xs">
-                  {t("Data issue detected", "检测到数据问题")}
-                </span>
-              </div>
-            )}
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Cloud className="w-4 h-4 text-blue-400" />
+            {t("Current Conditions", "当前状况")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
@@ -273,31 +219,6 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
             <div className="min-h-[200px] flex items-center justify-center">
               <Loader2 className="h-5 w-5 animate-spin text-cosmic-400" />
               <span className="ml-2 text-cosmic-300 text-xs">{t("Loading weather data...", "加载天气数据中...")}</span>
-            </div>
-          ) : hasTooManyZeros ? (
-            <div className="min-h-[200px] flex flex-col items-center justify-center gap-4">
-              <div className="text-center">
-                <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
-                <p className="text-sm text-cosmic-300 mb-1">
-                  {getWeatherIssueMessage(['too-many-zeros'], language as 'en' | 'zh')}
-                </p>
-                <p className="text-xs text-cosmic-400">
-                  {t(
-                    "Multiple weather values showing as zero may indicate data issues.",
-                    "多个天气值显示为零可能表示数据问题。"
-                  )}
-                </p>
-              </div>
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-2 bg-cosmic-800/50"
-                onClick={handleRefresh}
-              >
-                <RefreshCw className="h-3.5 w-3.5 mr-2" />
-                {t("Refresh Weather Data", "刷新天气数据")}
-              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -314,18 +235,8 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
               </motion.div>
               
               <motion.div variants={itemVariants}>
-                <h3 className="text-xs font-semibold mb-2 text-cosmic-100 border-b border-cosmic-700/30 pb-1.5 flex justify-between items-center">
-                  <span>{t("Sky Conditions", "天空状况")}</span>
-                  {hasDataIssues && !hasTooManyZeros && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6 text-cosmic-400 hover:text-cosmic-200"
-                      onClick={handleRefresh}
-                    >
-                      <RefreshCw className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
+                <h3 className="text-xs font-semibold mb-2 text-cosmic-100 border-b border-cosmic-700/30 pb-1.5">
+                  {t("Sky Conditions", "天空状况")}
                 </h3>
                 <SecondaryConditions
                   cloudCover={stableWeatherData.cloudCover}

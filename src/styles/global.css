@@ -128,8 +128,22 @@
     font-weight: 500;
   }
   
-  /* Removing all mobile nav dot indicator related styles */
+  .pulse-glow {
+    animation: pulse-animation 2s infinite;
+  }
   
+  @keyframes pulse-animation {
+    0% {
+      box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(124, 58, 237, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
+    }
+  }
+
   /* Enhanced mobile cards and data displays */
   .location-card-mobile {
     @apply bg-gradient-to-br from-cosmic-800/60 to-cosmic-900/80;
