@@ -1,15 +1,11 @@
 
 import React, { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
-import L from 'leaflet';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 /**
  * Component to apply mobile-specific fixes for common map issues
- * - Fixes marker positioning during zoom/pan
- * - Improves touch responsiveness
- * - Fixes iOS Safari rendering issues
- * - Handles _leaflet_pos errors
+ * Optimized for better performance on low-end devices
  */
 export const MobileMapFixer: React.FC = () => {
   const map = useMap();
@@ -28,104 +24,95 @@ export const MobileMapFixer: React.FC = () => {
         if (markerPane) {
           markerPane.style.willChange = 'transform';
           markerPane.style.transform = 'translate3d(0,0,0)';
-          
-          // Force a repaint to fix positioning
           setTimeout(() => {
             if (markerPane) {
-              // Toggle a property to force a repaint
               markerPane.style.zIndex = String(parseInt(markerPane.style.zIndex || '600') + 1);
               setTimeout(() => {
-                if (markerPane) {
-                  markerPane.style.zIndex = '600';
-                }
-              }, 10);
+                if (markerPane) markerPane.style.zIndex = '600';
+              }, 5);
             }
-          }, 100);
+          }, 50);
         }
       } catch (error) {
-        console.error("Error fixing marker positioning:", error);
+        // Silent catch to prevent errors
       }
     };
     
-    // Ensure map is properly sized to prevent _leaflet_pos errors
+    // More efficient map size validation
     const ensureMapSize = () => {
       try {
-        // Force the map to recalculate its dimensions
         map.invalidateSize({ animate: false, pan: false });
         
-        // Check if container size is valid
         const container = map.getContainer();
         if (container && (container.clientWidth === 0 || container.clientHeight === 0)) {
-          console.warn("Map container has zero width or height");
-          
-          // Try again after a delay
-          setTimeout(() => map.invalidateSize(), 200);
+          setTimeout(() => map.invalidateSize(), 100);
         }
       } catch (error) {
-        console.error("Error ensuring map size:", error);
+        // Silent catch to prevent errors
       }
     };
     
-    // Run size check on initialization
-    ensureMapSize();
+    // Run size check on initialization but with delay to ensure DOM is ready
+    setTimeout(ensureMapSize, 50);
     
-    // Re-render markers after zoom to fix positions
-    map.on('zoomanim', fixMarkerPositioning);
-    map.on('zoomend', fixMarkerPositioning);
-    map.on('moveend', fixMarkerPositioning);
-    map.on('resize', ensureMapSize);
+    // More efficient event listeners with throttling
+    const throttledFix = throttle(fixMarkerPositioning, 100);
+    const throttledSize = throttle(ensureMapSize, 200);
     
-    // iOS Safari specific fixes
+    map.on('zoomanim', throttledFix);
+    map.on('zoomend', throttledFix);
+    map.on('moveend', throttledFix);
+    map.on('resize', throttledSize);
+    
+    // iOS Safari specific fixes with fewer DOM manipulations
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     if (isIOS) {
-      // Fix flickering tiles on iOS
       try {
-        const tilePane = map._panes.tilePane;
-        if (tilePane) {
-          tilePane.style.webkitBackfaceVisibility = 'hidden';
+        // Apply one-time style fixes
+        if (map._panes.tilePane) {
+          map._panes.tilePane.style.webkitBackfaceVisibility = 'hidden';
         }
-      } catch (error) {
-        console.error("Error applying iOS tile pane fix:", error);
-      }
-      
-      // Fix for markers not appearing after zoom on iOS
-      map.on('zoom', () => {
-        try {
-          if (map._panes && map._panes.markerPane) {
-            // Toggle visibility to force iOS to redraw markers
-            map._panes.markerPane.style.display = 'none';
+        
+        // Simplified marker refresh for iOS
+        const iosZoomFix = throttle(() => {
+          if (map._panes?.markerPane) {
+            const opacity = map._panes.markerPane.style.opacity || '1';
+            map._panes.markerPane.style.opacity = '0.99';
             setTimeout(() => {
-              if (map._panes.markerPane) {
-                map._panes.markerPane.style.display = '';
-              }
-            }, 10);
+              if (map._panes?.markerPane) map._panes.markerPane.style.opacity = opacity;
+            }, 5);
           }
-        } catch (error) {
-          console.error("Error handling iOS zoom fix:", error);
-        }
-      });
+        }, 150);
+        
+        map.on('zoom', iosZoomFix);
+      } catch (error) {
+        // Silent catch to prevent errors
+      }
     }
     
-    // Apply the initial fixes
-    fixMarkerPositioning();
-    
-    // Periodically check map size in case container resizes
-    const sizeInterval = setInterval(ensureMapSize, 2000);
-    
     return () => {
-      // Clean up event listeners
-      map.off('zoomanim', fixMarkerPositioning);
-      map.off('zoomend', fixMarkerPositioning);
-      map.off('moveend', fixMarkerPositioning);
-      map.off('resize', ensureMapSize);
-      map.off('zoom');
-      
-      // Clear interval
-      clearInterval(sizeInterval);
+      // Clean up all event listeners
+      map.off('zoomanim', throttledFix);
+      map.off('zoomend', throttledFix);
+      map.off('moveend', throttledFix);
+      map.off('resize', throttledSize);
+      if (isIOS) map.off('zoom');
     };
   }, [map, isMobile]);
   
   return null;
 };
 
-export default MobileMapFixer;
+// Simple throttle implementation
+function throttle(func: Function, limit: number) {
+  let inThrottle: boolean = false;
+  return function(...args: any[]) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+}
+
+export default React.memo(MobileMapFixer);

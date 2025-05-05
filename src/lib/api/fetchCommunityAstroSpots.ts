@@ -32,15 +32,28 @@ export async function fetchCommunityAstroSpots() {
       throw spotsError;
     }
 
-    // Then fetch usernames separately to avoid join issues
-    const userIds = spots.map(spot => spot.user_id).filter(Boolean);
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, username")
-      .in("id", userIds);
+    if (!spots || spots.length === 0) {
+      return [];
+    }
 
-    if (profilesError) {
-      console.error("Error fetching user profiles:", profilesError);
+    // Then fetch usernames separately to avoid join issues
+    const userIds = spots
+      .map(spot => spot.user_id)
+      .filter(Boolean);
+      
+    // Only fetch profiles if there are valid user IDs
+    let profiles = [];
+    if (userIds && userIds.length > 0) {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, username")
+        .in("id", userIds);
+        
+      if (!profilesError && profilesData) {
+        profiles = profilesData;
+      } else if (profilesError) {
+        console.error("Error fetching user profiles:", profilesError);
+      }
     }
 
     // Create a map of user IDs to usernames
@@ -51,7 +64,7 @@ export async function fetchCommunityAstroSpots() {
       });
     }
 
-    const formattedData = (spots || []).map((spot: any) => ({
+    const formattedData = (spots || []).map((spot) => ({
       id: spot.id,
       name: spot.name,
       latitude: Number(spot.latitude),
