@@ -1,8 +1,9 @@
+
 import { useMemo } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { getLocationMarker } from '../MarkerUtils';
+import { getLocationMarker } from '@/components/photoPoints/map/MarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface UseMarkerStateProps {
