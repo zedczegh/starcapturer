@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { SharedAstroSpot } from "@/types/weather";
@@ -91,7 +92,8 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
     });
   }, [locations, visibleSpots]);
 
-  const debouncedSiqsUpdate = useDebounce((spotId: string, siqs: number | null, loading: boolean) => {
+  // Create a properly memoized debounced function using useDebouncedCallback
+  const debouncedSiqsUpdate = useDebouncedCallback((spotId: string, siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(prev => ({
       ...prev,
       [spotId]: siqs
