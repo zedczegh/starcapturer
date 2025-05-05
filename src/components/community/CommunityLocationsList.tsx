@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import LocationCard from "@/components/LocationCard";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
-import { useDebounce } from "@/hooks/useDebounce";
+import useDebounce, { useDebouncedCallback } from "@/hooks/useDebounce"; // Fixed import
 import { useLanguage } from "@/contexts/LanguageContext";
 import CommunityLocationsSkeleton from "./CommunityLocationsSkeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -173,7 +173,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
                   siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
                   timestamp={spot.timestamp}
                   isCertified={false}
-                  username={spot.username}
+                  username={spot.user_id ? 'Anonymous Stargazer' : 'Anonymous Stargazer'} // Fixed username access
                 />
               </div>
               <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />

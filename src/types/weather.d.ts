@@ -78,6 +78,7 @@ declare module "@/types/weather" {
     };
     date?: string | Date;
     user_id?: string;
+    username?: string | React.ReactNode; // Added username property
     weatherData?: {
       temperature?: number;
       humidity?: number;
