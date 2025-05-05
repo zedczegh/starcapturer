@@ -1,3 +1,4 @@
+
 import { Language } from './types';
 import { EnhancedLocationDetails, GeocodingResult } from './types/enhancedLocationTypes';
 import { fetchLocationDetails } from './providers/nominatimGeocodingProvider';
@@ -22,9 +23,11 @@ export async function getEnhancedLocationDetails(
     const [normalizedLat, normalizedLng] = normalizeCoordinates(latitude, longitude);
     const cacheKey = `geocode_${normalizedLat}_${normalizedLng}_${language}`;
     
-    // Check cache first for fast response
+    // Check cache first for fast response, but only if it's a full detailed result
     const cachedResult = getFromCache(cacheKey);
-    if (cachedResult) {
+    if (cachedResult && 
+        ((cachedResult.streetName && cachedResult.formattedName) || 
+         (cachedResult.detailedName && cachedResult.detailedName.includes(',')))) {
       return {
         ...cachedResult,
         isWater: isWaterLocation(normalizedLat, normalizedLng, false) // Less strict check from cache
@@ -41,21 +44,68 @@ export async function getEnhancedLocationDetails(
       // Continue with local detection if API fails
     }
     
+    // Get nearest town info regardless of water status
+    const nearestTownInfo = findNearestTown(normalizedLat, normalizedLng, language);
+    
     // If we have detailed location data that indicates this is not water, trust it
     if (geocodingResult && 
-        (geocodingResult.townName || 
-         geocodingResult.cityName || 
-         geocodingResult.streetName)) {
+        (geocodingResult.streetName || 
+         geocodingResult.townName || 
+         geocodingResult.cityName)) {
       // Strong evidence this is not a water location
       const isWater = false;
       
-      // Get nearest town info for non-water locations
-      const nearestTownInfo = findNearestTown(normalizedLat, normalizedLng, language);
+      // Create the most detailed formatted name possible
+      let detailedFormattedName = "";
+      const nameParts = [];
+      
+      // Always include the most specific location information first
+      if (geocodingResult.streetName) {
+        nameParts.push(geocodingResult.streetName);
+      }
+      
+      if (geocodingResult.townName && 
+          (!geocodingResult.streetName || !geocodingResult.streetName.includes(geocodingResult.townName))) {
+        nameParts.push(geocodingResult.townName);
+      }
+      
+      if (geocodingResult.cityName && 
+          !nameParts.some(part => part.includes(geocodingResult.cityName))) {
+        nameParts.push(geocodingResult.cityName);
+      }
+      
+      if (geocodingResult.countyName && 
+          !nameParts.some(part => part.includes(geocodingResult.countyName))) {
+        nameParts.push(geocodingResult.countyName);
+      }
+      
+      if (geocodingResult.stateName && 
+          !nameParts.some(part => part.includes(geocodingResult.stateName))) {
+        nameParts.push(geocodingResult.stateName);
+      }
+      
+      if (geocodingResult.countryName && 
+          !nameParts.some(part => part.includes(geocodingResult.countryName))) {
+        nameParts.push(geocodingResult.countryName);
+      }
+      
+      // Join parts with appropriate separator based on language
+      detailedFormattedName = nameParts.join(language === 'en' ? ', ' : '，');
+      
+      // Fallback to geocoding result's formatted name if our construction is empty
+      if (!detailedFormattedName && geocodingResult.formattedName) {
+        detailedFormattedName = geocodingResult.formattedName;
+      }
+      
+      // Further fallback to nearest town info if still empty
+      if (!detailedFormattedName && nearestTownInfo.detailedName) {
+        detailedFormattedName = nearestTownInfo.detailedName;
+      }
       
       // Build our result with the API data and nearest town info
       const result: EnhancedLocationDetails = {
         name: geocodingResult.name || nearestTownInfo.townName || "Unknown",
-        formattedName: geocodingResult.formattedName || nearestTownInfo.detailedName || nearestTownInfo.townName || "Unknown",
+        formattedName: detailedFormattedName || nearestTownInfo.detailedName || "Unknown",
         chineseName: language === 'zh' ? (geocodingResult.chineseName || nearestTownInfo.townName) : undefined,
         townName: geocodingResult.townName || nearestTownInfo.townName,
         cityName: geocodingResult.cityName || nearestTownInfo.city,
@@ -66,16 +116,16 @@ export async function getEnhancedLocationDetails(
         postalCode: geocodingResult.postalCode,
         distance: nearestTownInfo.distance,
         formattedDistance: formatDistance(nearestTownInfo.distance, language),
-        detailedName: geocodingResult.formattedName || nearestTownInfo.detailedName,
+        detailedName: detailedFormattedName || nearestTownInfo.detailedName,
         latitude: normalizedLat,
         longitude: normalizedLng,
         isWater: isWater,
         // Required by the new interface
-        address: geocodingResult.formattedName || nearestTownInfo.detailedName || "Unknown",
+        address: detailedFormattedName || nearestTownInfo.detailedName || "Unknown",
         country: geocodingResult.countryName || "Unknown",
         countryCode: "Unknown",
         region: geocodingResult.stateName || "Unknown",
-        formattedAddress: geocodingResult.formattedName || nearestTownInfo.detailedName || "Unknown",
+        formattedAddress: detailedFormattedName || nearestTownInfo.detailedName || "Unknown",
         timezone: "Unknown"
       };
       
@@ -87,9 +137,6 @@ export async function getEnhancedLocationDetails(
     // If API couldn't determine land status, use our local water detection
     // with more strict checking for better accuracy
     const isWater = isWaterLocation(normalizedLat, normalizedLng, true);
-    
-    // Get nearest town info for context even if it's water
-    const nearestTownInfo = findNearestTown(normalizedLat, normalizedLng, language);
     
     // Start building our result with the nearest town info
     const result: EnhancedLocationDetails = {
@@ -131,22 +178,74 @@ export async function getEnhancedLocationDetails(
       result.countryName = geocodingResult.countryName;
       result.postalCode = geocodingResult.postalCode;
       
-      if (geocodingResult.formattedName) {
-        // If we're marked as water but have a good formatted name, reconsider
-        if (isWater && geocodingResult.formattedName && 
-            !geocodingResult.formattedName.includes("Water") && 
-            !geocodingResult.formattedName.includes("Ocean") && 
-            !geocodingResult.formattedName.includes("Sea")) {
-          result.isWater = false; // Override water detection if we have a proper place name
-          result.formattedName = geocodingResult.formattedName;
-          result.name = geocodingResult.name || result.name;
-        } else if (!isWater) {
-          result.formattedName = geocodingResult.formattedName;
+      // Create the most detailed formatted name possible
+      if (geocodingResult.streetName || 
+          geocodingResult.townName || 
+          geocodingResult.cityName ||
+          geocodingResult.formattedName) {
+        
+        let detailedFormattedName = "";
+        const nameParts = [];
+        
+        if (geocodingResult.streetName) {
+          nameParts.push(geocodingResult.streetName);
+        }
+        
+        if (geocodingResult.townName && 
+            (!geocodingResult.streetName || !geocodingResult.streetName.includes(geocodingResult.townName))) {
+          nameParts.push(geocodingResult.townName);
+        }
+        
+        if (geocodingResult.cityName && 
+            !nameParts.some(part => part.includes(geocodingResult.cityName))) {
+          nameParts.push(geocodingResult.cityName);
+        }
+        
+        if (geocodingResult.countyName && 
+            !nameParts.some(part => part.includes(geocodingResult.countyName))) {
+          nameParts.push(geocodingResult.countyName);
+        }
+        
+        if (geocodingResult.stateName && 
+            !nameParts.some(part => part.includes(geocodingResult.stateName))) {
+          nameParts.push(geocodingResult.stateName);
+        }
+        
+        if (geocodingResult.countryName && 
+            !nameParts.some(part => part.includes(geocodingResult.countryName))) {
+          nameParts.push(geocodingResult.countryName);
+        }
+        
+        // Join parts with appropriate separator based on language
+        detailedFormattedName = nameParts.join(language === 'en' ? ', ' : '，');
+        
+        // Fallback to geocoding result's formatted name if our construction is empty
+        if (!detailedFormattedName && geocodingResult.formattedName) {
+          detailedFormattedName = geocodingResult.formattedName;
+        }
+        
+        if (detailedFormattedName) {
+          // If we're marked as water but have a good formatted name, reconsider
+          if (isWater && 
+              !detailedFormattedName.includes("Water") && 
+              !detailedFormattedName.includes("Ocean") && 
+              !detailedFormattedName.includes("Sea")) {
+            result.isWater = false; // Override water detection if we have a proper place name
+          }
+          
+          result.formattedName = detailedFormattedName;
+          result.detailedName = detailedFormattedName;
+          result.formattedAddress = detailedFormattedName;
+          result.address = detailedFormattedName;
         }
       }
       
       if (geocodingResult.chineseName) {
         result.chineseName = geocodingResult.chineseName;
+      }
+      
+      if (geocodingResult.name) {
+        result.name = geocodingResult.name;
       }
     }
     
