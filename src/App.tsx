@@ -25,14 +25,11 @@ import ProfileMini from "./pages/ProfileMini";
 import Messages from './pages/Messages';
 import './App.css';
 
-// Create a query client with optimized settings
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60 * 1000, // 1 minute
-      gcTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1, // Only retry once
-      refetchOnWindowFocus: false, // Don't refetch on window focus
+      refetchOnWindowFocus: false,
+      retry: false
     },
   },
 });
@@ -40,10 +37,9 @@ const queryClient = new QueryClient({
 const App = () => {
   return (
     <HelmetProvider>
-      <ThemeProvider>
-        <LanguageProvider>
-          {/* Move QueryClientProvider to wrap AuthProvider to avoid re-renders */}
-          <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <LanguageProvider>
             <Router>
               <AuthProvider>
                 <TooltipProvider>
@@ -70,9 +66,9 @@ const App = () => {
                 </TooltipProvider>
               </AuthProvider>
             </Router>
-          </QueryClientProvider>
-        </LanguageProvider>
-      </ThemeProvider>
+          </LanguageProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </HelmetProvider>
   );
 };

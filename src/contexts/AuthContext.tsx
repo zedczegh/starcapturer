@@ -19,44 +19,22 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const { t } = useLanguage ? useLanguage() : { t: (en: string, zh: string) => en };
 
   useEffect(() => {
-    // First set up the auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log("Auth state changed:", event, session?.user?.email);
-        
-        // Only update state with synchronous operations here
-        // IMPORTANT: We're avoiding any async Supabase calls inside this callback to prevent deadlocks
         setSession(session);
         setUser(session?.user ?? null);
       }
     );
 
-    // Then check for existing session
     (async () => {
-      try {
-        setIsLoading(true);
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Error getting session:", error.message);
-          return;
-        }
-        
-        console.log("Initial session check:", data.session?.user?.email);
-        
-        if (data.session) {
-          setSession(data.session);
-          setUser(data.session.user);
-        }
-      } catch (error) {
-        console.error("Error getting session:", error);
-      } finally {
-        setIsLoading(false);
-      }
+      const sessionResult = await supabase.auth.getSession();
+      setSession(sessionResult.data.session);
+      setUser(sessionResult.data.session?.user ?? null);
+      setIsLoading(false);
     })();
 
     return () => subscription.unsubscribe();
@@ -71,18 +49,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         redirectTo = 'https://siqs.astroai.top';
       }
 
-      // Ensure the redirect URL ends with a path
-      if (!redirectTo.endsWith('/photo-points')) {
-        redirectTo = `${redirectTo}/photo-points`;
-      }
-
-      console.log("Sign up with redirect to:", redirectTo);
-
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: redirectTo
+          emailRedirectTo: redirectTo + '/photo-points'
         }
       });
 
@@ -135,8 +106,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      console.log("Attempting to sign in:", email);
-      const { data, error } = await supabase.auth.signInWithPassword({ 
+      const { error } = await supabase.auth.signInWithPassword({ 
         email, 
         password
       });
@@ -158,12 +128,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           description: t(errorMessage, "请检查您的邮箱和密码"),
           position: "top-center"
         });
-        console.error("Sign in error:", error.message);
-      } else {
-        console.log("Sign in successful");
       }
     } catch (error: any) {
-      console.error("Unknown sign in error:", error);
       toast.error(t("Sign in error", "登录错误"), {
         description: t("An unknown error occurred. Please try again.", "发生未知错误，请重试。"),
         position: "top-center"
@@ -176,18 +142,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     setIsLoading(true);
     try {
-      console.log("Signing out");
       const { error } = await supabase.auth.signOut();
-      
-      if (error) throw error;
-      
-      // Explicitly reset state on sign out to ensure clean state
       setUser(null);
       setSession(null);
-      
-      console.log("Sign out successful");
+
+      if (error) throw error;
     } catch (error: any) {
-      console.error("Sign out error:", error);
       toast.error(t("Sign out issue", "登出问题"), {
         description: t("Please try again in a moment", "请稍后重试"),
         position: "top-center"

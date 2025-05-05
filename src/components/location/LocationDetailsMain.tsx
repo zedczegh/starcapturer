@@ -1,10 +1,8 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import LocationDetailsViewport from "./LocationDetailsViewport";
 import { useRefreshManager } from "@/hooks/location/useRefreshManager";
-import { useWeatherSynchronizer } from "@/hooks/locationDetails/useWeatherSynchronizer";
-import { toast } from "sonner";
 
 interface LocationDetailsMainProps {
   locationData: any;
@@ -42,9 +40,6 @@ const LocationDetailsMain: React.FC<LocationDetailsMainProps> = ({
   // Use the refresh manager to control refresh logic
   const { shouldRefresh, markRefreshComplete, refreshCount } = useRefreshManager(locationData);
   
-  // Use the weather synchronizer to ensure data consistency
-  const { syncWeatherWithForecast } = useWeatherSynchronizer();
-  
   // Forward status messages to parent component
   const handleSetStatusMessage = (message: string | null) => {
     setStatusMessage(message);
@@ -53,13 +48,8 @@ const LocationDetailsMain: React.FC<LocationDetailsMainProps> = ({
 
   // Enhanced refresh handler that triggers all data updates
   const handleCompleteRefresh = () => {
-    if (!locationData?.latitude || !locationData?.longitude) {
-      toast.error("Cannot refresh: Invalid location coordinates");
-      return;
-    }
-
-    try {
-      console.log("Triggering complete refresh of location data");
+    console.log("Triggering complete refresh of location data");
+    if (locationData?.latitude && locationData?.longitude) {
       // Trigger a full refresh of all data
       handleRefreshAll();
       
@@ -67,30 +57,8 @@ const LocationDetailsMain: React.FC<LocationDetailsMainProps> = ({
       if (markRefreshComplete) {
         markRefreshComplete();
       }
-      
-      toast.success("Location data refreshed successfully");
-    } catch (error) {
-      console.error("Error refreshing location data:", error);
-      toast.error("Failed to refresh location data");
     }
   };
-
-  // Sync weather data with forecast when both are available
-  useEffect(() => {
-    if (forecastData && locationData?.weatherData) {
-      const wasSynced = syncWeatherWithForecast(forecastData, locationData, setLocationData);
-      if (wasSynced) {
-        console.log("Weather data synchronized with forecast");
-      }
-    }
-  }, [forecastData, locationData, setLocationData, syncWeatherWithForecast]);
-
-  // Auto-refresh when the shouldRefresh flag is true
-  useEffect(() => {
-    if (shouldRefresh && locationData?.latitude && locationData?.longitude) {
-      handleCompleteRefresh();
-    }
-  }, [shouldRefresh, locationData?.latitude, locationData?.longitude]);
 
   // Set additional props for location data
   const enhancedLocationData = {
