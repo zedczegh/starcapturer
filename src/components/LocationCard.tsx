@@ -3,7 +3,6 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatTime, calculateAstronomicalNight } from '@/utils/astronomy/nightTimeCalculator';
-import { siqsToColor } from '@/lib/siqs/utils';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import SiqsScoreBadge from './photoPoints/cards/SiqsScoreBadge';
 import { Star, Clock, User } from 'lucide-react';
@@ -16,7 +15,7 @@ interface LocationCardProps {
   siqs: number | { score: number; isViable: boolean } | undefined;
   timestamp?: string;
   isCertified?: boolean;
-  username?: string;
+  username?: string | React.ReactNode;
 }
 
 const LocationCard: React.FC<LocationCardProps> = ({
@@ -31,11 +30,32 @@ const LocationCard: React.FC<LocationCardProps> = ({
 }) => {
   const { t } = useLanguage();
   
-  const numericSiqs = getSiqsScore(siqs);
-  const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
-  const nightTimeStr = `${formatTime(nightStart)}-${formatTime(nightEnd)}`;
+  // Memoize these expensive calculations
+  const numericSiqs = React.useMemo(() => getSiqsScore(siqs), [siqs]);
+  const { start: nightStart, end: nightEnd } = React.useMemo(
+    () => calculateAstronomicalNight(latitude, longitude),
+    [latitude, longitude]
+  );
+  const nightTimeStr = React.useMemo(
+    () => `${formatTime(nightStart)}-${formatTime(nightEnd)}`,
+    [nightStart, nightEnd]
+  );
   
-  const formattedTimestamp = timestamp ? new Date(timestamp).toLocaleString() : 'N/A';
+  const formattedTimestamp = React.useMemo(() => {
+    if (!timestamp) return 'N/A';
+    
+    try {
+      return new Date(timestamp).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return timestamp;
+    }
+  }, [timestamp]);
 
   return (
     <Card className="bg-cosmic-900/70 backdrop-blur-md border border-cosmic-700/50 hover:border-cosmic-600/70 transition-colors duration-300 shadow-md hover:shadow-lg">
@@ -67,4 +87,4 @@ const LocationCard: React.FC<LocationCardProps> = ({
   );
 };
 
-export default LocationCard;
+export default React.memo(LocationCard);

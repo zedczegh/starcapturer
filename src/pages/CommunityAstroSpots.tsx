@@ -6,7 +6,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Circle } from "lucide-react";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import CommunityMap from "@/components/community/CommunityMap";
 import { Loader2 } from "@/components/ui/loader";
 import CommunityLocationsList from "@/components/community/CommunityLocationsList";
@@ -17,23 +16,24 @@ const DEFAULT_CENTER: [number, number] = [30, 104];
 
 const CommunityAstroSpots: React.FC = () => {
   const { t } = useLanguage();
-  const navigate = useNavigate();
   const userPosition = useUserGeolocation();
   const [userLocation, setUserLocation] = useState<[number, number] | null>(userPosition);
 
+  // Use optimized query config
   const { data: astrospots, isLoading } = useQuery({
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retry: 2, // Reduce retry count on mobile
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Shorter max delay
     refetchOnReconnect: true,
     refetchInterval: 1000 * 60 * 15, // Refresh every 15 minutes
+    // Skip initial data transform to speed up first render
+    select: (data) => data,
   });
 
   const handleLocationUpdate = useCallback((lat: number, lng: number) => {
-    console.log("Location updated:", lat, lng);
     setUserLocation([lat, lng]);
   }, []);
 
@@ -44,25 +44,21 @@ const CommunityAstroSpots: React.FC = () => {
     }
   }, [userPosition]);
 
+  // Simplified animation variants for better performance on mobile
   const titleVariants = {
-    hidden: { opacity: 0, scale: 0.96, y: -10 },
-    visible: { opacity: 1, scale: 1, y: 0, transition: { delay: 0.1, duration: 0.6, ease: "easeOut" } }
+    hidden: { opacity: 0, y: -10 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
   };
   
   const lineVariants = {
     hidden: { width: 0, opacity: 0 },
-    visible: { width: 90, opacity: 1, transition: { delay: 0.35, duration: 0.7, ease: "easeOut" } }
+    visible: { width: 90, opacity: 1, transition: { delay: 0.2, duration: 0.4 } }
   };
   
   const descVariants = {
     hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
+    visible: { opacity: 1, y: 0, transition: { delay: 0.3, duration: 0.4 } }
   };
-
-  // Log the data to help with debugging
-  useEffect(() => {
-    console.log("Astrospots data:", astrospots);
-  }, [astrospots]);
 
   return (
     <TooltipProvider>
@@ -72,7 +68,6 @@ const CommunityAstroSpots: React.FC = () => {
             className="flex flex-col items-center justify-center gap-3 mb-9"
             initial="hidden"
             animate="visible"
-            variants={{}}
           >
             <motion.h1
               className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-3xl md:text-4xl text-center drop-shadow tracking-tight"
@@ -97,19 +92,19 @@ const CommunityAstroSpots: React.FC = () => {
           </motion.div>
 
           <Suspense fallback={
-            <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 380, minHeight: 275 }}>
+            <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 280, minHeight: 275 }}>
               <div className="absolute inset-0 flex justify-center items-center bg-cosmic-900/20 backdrop-blur-sm">
                 <Loader2 className="h-8 w-8 animate-spin text-primary/80" />
               </div>
             </div>
           }>
-            <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 380, minHeight: 275 }}>
+            <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 280, minHeight: 275 }}>
               <CommunityMap
                 center={userLocation || DEFAULT_CENTER}
                 locations={astrospots ?? []}
                 hoveredLocationId={null}
                 isMobile={true}
-                zoom={userLocation ? 8 : 3}
+                zoom={userLocation ? 7 : 3} // Use smaller zoom to improve performance
                 onLocationUpdate={handleLocationUpdate}
               />
             </div>

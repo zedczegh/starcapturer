@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import LocationCard from "@/components/LocationCard";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
-import { useDebouncedCallback } from "@/hooks/useDebounce";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useLanguage } from "@/contexts/LanguageContext";
 import CommunityLocationsSkeleton from "./CommunityLocationsSkeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,7 +20,41 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
   const [realTimeSiqs, setRealTimeSiqs] = React.useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = React.useState<Record<string, boolean>>({});
   const [attemptedSiqs, setAttemptedSiqs] = React.useState<Set<string>>(new Set());
+  const [visibleSpots, setVisibleSpots] = React.useState<number>(6); // Start with fewer spots
   const [calculationQueue, setCalculationQueue] = React.useState<string[]>([]);
+  
+  // Use refs to prevent unnecessary re-renders
+  const locationsRef = React.useRef<SharedAstroSpot[] | null>(null);
+  React.useEffect(() => {
+    locationsRef.current = locations;
+  }, [locations]);
+
+  // Load more spots as the user scrolls
+  const handleLoadMore = React.useCallback(() => {
+    if (locationsRef.current && visibleSpots < locationsRef.current.length) {
+      setVisibleSpots(prev => Math.min(prev + 6, locationsRef.current?.length || 0));
+    }
+  }, [visibleSpots]);
+
+  // Set up intersection observer for infinite scrolling
+  React.useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !isLoading) {
+        handleLoadMore();
+      }
+    }, { threshold: 0.1 });
+    
+    const loadMoreTrigger = document.getElementById('load-more-trigger');
+    if (loadMoreTrigger) {
+      observer.observe(loadMoreTrigger);
+    }
+    
+    return () => {
+      if (loadMoreTrigger) {
+        observer.unobserve(loadMoreTrigger);
+      }
+    };
+  }, [handleLoadMore, isLoading]);
 
   // Batch SIQS updates with priority queue
   React.useEffect(() => {
@@ -49,12 +83,16 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
     if (!locations) return;
     
     // Queue up initial calculations with a small delay
-    // so they don't all start at once
-    const initialSpots = locations.slice(0, 6).map(spot => spot.id);
-    setCalculationQueue(initialSpots);
-  }, [locations]);
+    // so they don't all start at once - only queue the first visible spots
+    const initialSpots = locations.slice(0, visibleSpots).map(spot => spot.id);
+    setCalculationQueue(prev => {
+      // Filter out spots that are already in the queue
+      const newSpots = initialSpots.filter(id => !prev.includes(id));
+      return [...prev, ...newSpots];
+    });
+  }, [locations, visibleSpots]);
 
-  const debouncedSiqsUpdate = useDebouncedCallback((spotId: string, siqs: number | null, loading: boolean) => {
+  const debouncedSiqsUpdate = useDebounce((spotId: string, siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(prev => ({
       ...prev,
       [spotId]: siqs
@@ -98,10 +136,13 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
     );
   }
 
+  // Only render the visible number of spots
+  const visibleLocations = locations.slice(0, visibleSpots);
+
   return (
     <TooltipProvider>
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-        {locations.map((spot: any) => (
+        {visibleLocations.map((spot: SharedAstroSpot) => (
           <button
             key={spot.id}
             className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
@@ -140,8 +181,13 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({ locatio
           </button>
         ))}
       </div>
+      
+      {/* Invisible element that triggers loading more spots when it comes into view */}
+      {visibleSpots < (locations?.length || 0) && (
+        <div id="load-more-trigger" className="h-10 w-full mt-4" />
+      )}
     </TooltipProvider>
   );
 };
 
-export default CommunityLocationsList;
+export default React.memo(CommunityLocationsList);

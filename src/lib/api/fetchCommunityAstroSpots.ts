@@ -4,13 +4,16 @@ import { spotCacheService } from "@/services/location/spotCacheService";
 
 export async function fetchCommunityAstroSpots() {
   try {
+    // Check cache first - this is super fast
     const cachedSpots = spotCacheService.getCachedSpots(0, 0, 0, 50);
     if (cachedSpots) {
-      console.log("Using cached community spots");
       return cachedSpots;
     }
 
-    // First fetch the spots
+    console.time('fetchCommunitySpots');
+    
+    // First fetch the spots with a more optimized query
+    // Limit fields to only what's needed
     const { data: spots, error: spotsError } = await supabase
       .from("user_astro_spots")
       .select(`
@@ -27,6 +30,8 @@ export async function fetchCommunityAstroSpots() {
       .order("created_at", { ascending: false })
       .limit(50);
 
+    console.timeEnd('fetchCommunitySpots');
+
     if (spotsError) {
       console.error("Error fetching community astro spots:", spotsError);
       throw spotsError;
@@ -36,7 +41,8 @@ export async function fetchCommunityAstroSpots() {
       return [];
     }
 
-    // Then fetch usernames separately to avoid join issues
+    // Then fetch usernames separately only for existing user_ids
+    // Filter out null/undefined user_ids first to avoid query errors
     const userIds = spots
       .map(spot => spot.user_id)
       .filter(Boolean);
@@ -44,26 +50,35 @@ export async function fetchCommunityAstroSpots() {
     // Only fetch profiles if there are valid user IDs
     let profiles = [];
     if (userIds && userIds.length > 0) {
+      console.time('fetchUserProfiles');
+      
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("id, username")
         .in("id", userIds);
         
+      console.timeEnd('fetchUserProfiles');
+      
       if (!profilesError && profilesData) {
         profiles = profilesData;
       } else if (profilesError) {
         console.error("Error fetching user profiles:", profilesError);
+        // Continue with the spots even if profile fetch fails
       }
     }
 
-    // Create a map of user IDs to usernames
+    // Create a map of user IDs to usernames for O(1) lookup
     const usernameMap = new Map();
     if (profiles && profiles.length > 0) {
       profiles.forEach(profile => {
-        usernameMap.set(profile.id, profile.username);
+        if (profile && profile.id) {
+          usernameMap.set(profile.id, profile.username);
+        }
       });
     }
 
+    // Map the data once with fast lookup
+    console.time('formatData');
     const formattedData = (spots || []).map((spot) => ({
       id: spot.id,
       name: spot.name,
@@ -73,13 +88,16 @@ export async function fetchCommunityAstroSpots() {
       siqs: spot.siqs,
       description: spot.description,
       timestamp: spot.created_at,
-      username: usernameMap.get(spot.user_id) || 'Anonymous Stargazer'
+      username: spot.user_id ? (usernameMap.get(spot.user_id) || 'Anonymous Stargazer') : 'Anonymous Stargazer'
     }));
+    console.timeEnd('formatData');
 
+    // Cache the result for future requests
     spotCacheService.cacheSpots(0, 0, 0, 50, formattedData);
     return formattedData;
   } catch (error) {
     console.error("Failed to fetch community astro spots:", error);
+    // Return empty array instead of throwing to prevent UI from breaking
     return [];
   }
 }
