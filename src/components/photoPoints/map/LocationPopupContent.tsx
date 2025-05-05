@@ -32,9 +32,10 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
   const isMobile = useIsMobile();
   const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
   
-  // For certified locations, prioritize original name over geocoded name
+  // For certified locations, prioritize appropriate name based on language
   const finalDisplayName = isCertified ? 
-    (location.name || displayName) : 
+    (language === 'zh' && location.chineseName ? location.chineseName : 
+     (location.name || displayName)) : 
     (language === 'zh' && location.chineseName ? location.chineseName : displayName);
   
   useEffect(() => {
@@ -45,6 +46,30 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
 
   const siqsClass = getSiqsClass(stabilizedScore || siqsScore);
   const hasValidScore = stabilizedScore !== null || (siqsScore !== null && siqsScore > 0);
+
+  // Get certification text based on language
+  const getCertificationText = () => {
+    if (!location.certification && !location.isDarkSkyReserve) return null;
+    
+    if (location.isDarkSkyReserve) {
+      return t("Dark Sky Reserve", "暗夜保护区");
+    }
+    
+    if (!location.certification) return null;
+    
+    const cert = location.certification.toLowerCase();
+    if (cert.includes('park')) {
+      return t("Dark Sky Park", "暗夜公园");
+    } else if (cert.includes('community')) {
+      return t("Dark Sky Community", "暗夜社区");
+    } else if (cert.includes('urban')) {
+      return t("Urban Night Sky", "城市夜空");
+    } else if (cert.includes('lodging')) {
+      return t("Dark Sky Lodging", "暗夜住宿");
+    } else {
+      return t("Certified Location", "认证地点");
+    }
+  };
 
   return (
     <Popup 
@@ -63,10 +88,10 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
           <span className="text-gray-100">{finalDisplayName}</span>
         </div>
         
-        {isCertified && location.certification && (
+        {isCertified && (location.certification || location.isDarkSkyReserve) && (
           <div className="mt-1 text-xs font-medium text-primary flex items-center">
             <Star className="h-3 w-3 mr-1" />
-            {location.certification}
+            {getCertificationText()}
           </div>
         )}
         
