@@ -87,7 +87,6 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
               compact={true} 
               loading={siqsLoading}
               isCertified={isCertified}
-              forceCertified={false}
             />
           </div>
           
