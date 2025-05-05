@@ -8,7 +8,7 @@ import {
   CloudSun
 } from "lucide-react";
 import ConditionItem from "./ConditionItem";
-import { getBortleDescription } from "@/utils/bortleDescriptions";
+import { getBortleDescription } from "@/utils/weather/bortleScaleUtils";
 
 interface SecondaryConditionsProps {
   cloudCover: number;
@@ -113,7 +113,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
       <ConditionItem
         icon={<Moon className="h-4 w-4" />}
         label={t("Moon Phase", "月相")}
-        value={<span>{moonPhase}</span>}
+        value={<span className="text-xs">{moonPhase}</span>}
         tooltip={getMoonTooltip()}
       />
       
@@ -121,7 +121,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
         <ConditionItem
           icon={<BadgeInfo className="h-4 w-4" />}
           label={t("Bortle Scale", "波特尔等级")}
-          value={<span>{bortleScale}/9</span>}
+          value={<span className="text-xs">{bortleScale}/9</span>}
           tooltip={getBortleDescription(bortleScale)}
         />
       )}
@@ -130,7 +130,7 @@ const SecondaryConditions = memo<SecondaryConditionsProps>(({
         <ConditionItem
           icon={<BadgeInfo className="h-4 w-4" />}
           label={t("Air Quality", "空气质量")}
-          value={<span>{aqi}</span>}
+          value={<span className="text-xs">{aqi}</span>}
           tooltip={t("Air Quality Index", "空气质量指数")}
         />
       )}
