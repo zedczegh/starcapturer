@@ -108,7 +108,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     <motion.div
       initial="hidden"
       animate="visible"
-      className={`container mx-auto px-3 sm:px-4 py-6 sm:py-8 ${paddingTop} relative z-10`}
+      className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 ${paddingTop} relative z-10 max-w-5xl`}
       data-refresh-trigger="true"
       ref={detailsContainerRef}
       variants={{
@@ -118,7 +118,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     >
       <motion.div 
         variants={fadeInUp}
-        className="flex justify-between items-center mb-5 gap-2"
+        className="flex justify-between items-center mb-4 gap-2"
       >
         <div className="flex items-center gap-2">
           {locationData?.latitude && locationData?.longitude && (
@@ -176,7 +176,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       </motion.div>
       
       {weatherAlerts && weatherAlerts.length > 0 && (
-        <motion.div variants={fadeInUp} className="mb-6">
+        <motion.div variants={fadeInUp} className="mb-4">
           <WeatherAlerts 
             alerts={weatherAlerts}
             formatTime={formatTime}

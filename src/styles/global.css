@@ -229,4 +229,12 @@
     @apply border border-cosmic-700/40 rounded-lg;
     @apply px-2.5 py-1 text-sm;
   }
+  
+  /* New panel container style for consistent UI */
+  .panel-container {
+    @apply bg-cosmic-800/30 backdrop-blur-sm rounded-lg;
+    @apply border border-cosmic-700/30;
+    @apply shadow-sm transition-all duration-300;
+    @apply hover:shadow-glow-light;
+  }
 }

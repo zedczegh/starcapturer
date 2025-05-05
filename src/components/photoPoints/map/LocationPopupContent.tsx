@@ -93,7 +93,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
               e.stopPropagation();
               onViewDetails(location);
             }}
-            className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
+            className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-2.5' : 'py-1.5'} px-2 rounded transition-colors`}
           >
             <ExternalLink className="h-3 w-3 mr-1" />
             {t("View Details", "查看详情")}
