@@ -29,26 +29,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Auth state changed:", event, session?.user?.email);
         
         // Only update state with synchronous operations here
+        // IMPORTANT: We're avoiding any async Supabase calls inside this callback to prevent deadlocks
         setSession(session);
         setUser(session?.user ?? null);
-        
-        // For any subsequent data fetching, use setTimeout to avoid auth deadlocks
-        if (session?.user && event === 'SIGNED_IN') {
-          setTimeout(() => {
-            console.log("User signed in, performing additional actions if needed");
-            // Any additional actions after sign in can be done here
-          }, 0);
-        }
       }
     );
 
     // Then check for existing session
     (async () => {
       try {
-        const sessionResult = await supabase.auth.getSession();
-        console.log("Initial session check:", sessionResult.data.session?.user?.email);
-        setSession(sessionResult.data.session);
-        setUser(sessionResult.data.session?.user ?? null);
+        setIsLoading(true);
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error getting session:", error.message);
+          return;
+        }
+        
+        console.log("Initial session check:", data.session?.user?.email);
+        
+        if (data.session) {
+          setSession(data.session);
+          setUser(data.session.user);
+        }
       } catch (error) {
         console.error("Error getting session:", error);
       } finally {
@@ -133,7 +136,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     try {
       console.log("Attempting to sign in:", email);
-      const { error } = await supabase.auth.signInWithPassword({ 
+      const { data, error } = await supabase.auth.signInWithPassword({ 
         email, 
         password
       });
@@ -193,9 +196,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(false);
     }
   };
-
-  // Additional debugging for component renders
-  console.log("AuthProvider rendering, user state:", user?.email);
 
   return (
     <AuthContext.Provider value={{ user, session, signUp, signIn, signOut, isLoading }}>
