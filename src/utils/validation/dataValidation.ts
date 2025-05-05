@@ -180,3 +180,52 @@ export function validateCoordinateObject(obj: any): {
   
   return { isValid, latitude, longitude };
 }
+
+/**
+ * Validates SIQS data structure and values
+ */
+export function validateSIQSData(siqsData: any): boolean {
+  if (!siqsData || typeof siqsData !== 'object') {
+    return false;
+  }
+  
+  // Check if score exists and is a number
+  if (typeof siqsData.score !== 'number' || isNaN(siqsData.score)) {
+    return false;
+  }
+  
+  // Check if isViable property exists
+  if (typeof siqsData.isViable !== 'boolean') {
+    return false;
+  }
+  
+  // Check if factors is an array (optional check)
+  if (siqsData.factors !== undefined && !Array.isArray(siqsData.factors)) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Validates weather data structure and values
+ */
+export function validateWeatherData(weatherData: any): boolean {
+  if (!weatherData || typeof weatherData !== 'object') {
+    return false;
+  }
+  
+  // Define required weather fields
+  const requiredFields = ['temperature', 'humidity', 'cloudCover', 'windSpeed'];
+  let requiredFieldsPresent = true;
+  
+  for (const field of requiredFields) {
+    // Check if field exists and is a number
+    if (typeof weatherData[field] !== 'number' || isNaN(weatherData[field])) {
+      requiredFieldsPresent = false;
+      break;
+    }
+  }
+  
+  return requiredFieldsPresent;
+}

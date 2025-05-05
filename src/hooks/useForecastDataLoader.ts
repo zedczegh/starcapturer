@@ -50,15 +50,13 @@ export const useForecastDataLoader = (
           latitude: latitude!, 
           longitude: longitude! 
         }, { 
-          signal,
-          timeout: 15000 // 15 second timeout
+          signal 
         }),
         fetchLongRangeForecastData({ 
           latitude: latitude!, 
           longitude: longitude!
         }, {
-          signal,
-          timeout: 15000 // 15 second timeout
+          signal
         })
       ]);
 

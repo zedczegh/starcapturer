@@ -1,10 +1,15 @@
 
 import { Coordinates, validateCoordinates } from './coordinates';
 
+interface FetchOptions {
+  signal?: AbortSignal;
+  timeout?: number;
+}
+
 /**
  * Fetches forecast data for a specific location
  */
-export async function fetchForecastData(coordinates: Coordinates, signal?: AbortSignal): Promise<any | null> {
+export async function fetchForecastData(coordinates: Coordinates, options?: FetchOptions): Promise<any | null> {
   try {
     const validCoords = validateCoordinates(coordinates);
     
@@ -12,7 +17,7 @@ export async function fetchForecastData(coordinates: Coordinates, signal?: Abort
       `&hourly=temperature_2m,relative_humidity_2m,precipitation,cloud_cover,wind_speed_10m,weather_code` +
       `&forecast_days=${validCoords.days || 3}&timezone=auto`;
     
-    const response = await fetch(url, { signal });
+    const response = await fetch(url, { signal: options?.signal });
     
     if (!response.ok) {
       throw new Error(`Forecast API responded with status ${response.status}`);
@@ -32,7 +37,7 @@ export async function fetchForecastData(coordinates: Coordinates, signal?: Abort
 /**
  * Fetches long range forecast data for a specific location
  */
-export async function fetchLongRangeForecastData(coordinates: Coordinates, signal?: AbortSignal): Promise<any | null> {
+export async function fetchLongRangeForecastData(coordinates: Coordinates, options?: FetchOptions): Promise<any | null> {
   try {
     const validCoords = validateCoordinates(coordinates);
     
@@ -41,7 +46,7 @@ export async function fetchLongRangeForecastData(coordinates: Coordinates, signa
       `wind_speed_10m_max,relative_humidity_2m_mean,cloud_cover_mean,weather_code` +
       `&forecast_days=${validCoords.days || 16}&timezone=auto`;
     
-    const response = await fetch(url, { signal });
+    const response = await fetch(url, { signal: options?.signal });
     
     if (!response.ok) {
       throw new Error(`Long range forecast API responded with status ${response.status}`);
