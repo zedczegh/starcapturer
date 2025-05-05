@@ -18,10 +18,13 @@ const MapLocationPopup: React.FC<MapLocationPopupProps> = ({
 }) => {
   const { t } = useLanguage();
   
+  // Always use the provided name for certified locations
+  const displayName = name || t("Selected Location", "所选位置");
+  
   return (
     <Popup>
       <div className="p-1">
-        <strong>{name || t("Selected Location", "所选位置")}</strong>
+        <strong>{displayName}</strong>
         <div className="text-xs mt-1">
           {position[0].toFixed(5)}, {position[1].toFixed(5)}
         </div>

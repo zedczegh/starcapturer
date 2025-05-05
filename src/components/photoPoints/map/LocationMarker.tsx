@@ -41,12 +41,16 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
   const [forceUpdate, setForceUpdate] = useState<boolean>(false);
 
-  const { siqsScore, displayName, icon } = useMarkerState({
+  // Get marker state but prioritize certified location original name
+  const { siqsScore, displayName: geocodedName, icon } = useMarkerState({
     location,
     realTimeSiqs,
     isCertified,
     isHovered
   });
+  
+  // For certified locations, prioritize original location name
+  const displayName = isCertified ? (location.name || geocodedName) : geocodedName;
 
   const navigate = useNavigate();
 
@@ -169,7 +173,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
           siqsLoading={siqsLoading}
           displayName={displayName}
           isCertified={isCertified}
-          onViewDetails={handleViewDetails} // Use the correct navigation callback
+          onViewDetails={handleViewDetails}
         />
       </Marker>
     </>

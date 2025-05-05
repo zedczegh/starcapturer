@@ -10,7 +10,6 @@ import { getSiqsScore } from '@/utils/siqsHelpers';
 import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 import { formatDistance } from '@/utils/geoUtils';
 import { getSiqsClass } from './MarkerUtils';
-import { useDisplayName } from '../cards/DisplayNameResolver';
 
 interface LocationPopupContentProps {
   location: SharedAstroSpot;
@@ -33,15 +32,9 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
   const isMobile = useIsMobile();
   const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
   
-  // Get proper language-specific display name
-  const { displayName: resolvedName } = useDisplayName({
-    location,
-    language,
-    locationCounter: null
-  });
-  
-  // Use resolved name if available, otherwise fall back to the provided displayName
-  const finalDisplayName = resolvedName || 
+  // For certified locations, prioritize original name over geocoded name
+  const finalDisplayName = isCertified ? 
+    (location.name || displayName) : 
     (language === 'zh' && location.chineseName ? location.chineseName : displayName);
   
   useEffect(() => {
@@ -62,9 +55,6 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
     >
       <div 
         className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}
-        onClick={() => {
-          // Force refresh on popup click if desired
-        }}
       >
         <div className="font-medium text-sm mb-1.5 flex items-center">
           {isCertified && (
