@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useForecastManager } from "./locationDetails/useForecastManager";
 import { useWeatherUpdater } from "./useWeatherUpdater";
@@ -12,6 +11,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
   const initialLoadCompleteRef = useRef(false);
   const lastLocationRef = useRef<string | null>(null);
   const dataSyncTimerRef = useRef<number | null>(null);
+  const preserveDetailedNameRef = useRef<boolean>(true); // New ref to preserve detailed names
   
   const { syncWeatherWithForecast } = useWeatherSynchronizer();
   const { updateSIQSWithForecast, resetUpdateState } = useSIQSUpdater();
@@ -45,6 +45,7 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
       clearForecastCache(); // Clear cache when location changes
       initialLoadCompleteRef.current = false; // Reset to trigger a refresh
       resetUpdateState(); // Reset SIQS update flag
+      preserveDetailedNameRef.current = true; // Reset name preservation flag
       
       // Clear any existing sync timer
       if (dataSyncTimerRef.current) {
@@ -76,8 +77,33 @@ export const useLocationDetails = (locationData: any, setLocationData: (data: an
   // Update SIQS score when forecast data is available and ensure data consistency
   useEffect(() => {
     if (forecastData && !forecastLoading && locationData) {
-      // Sync weather data with forecast data
-      syncWeatherWithForecast(forecastData, locationData, setLocationData);
+      // Preserve the detailed location name before sync
+      const detailedName = locationData.formattedName;
+      const isDetailedName = detailedName && 
+                            !detailedName.includes('°') && 
+                            !detailedName.includes('Location at') &&
+                            !detailedName.includes('Remote area') &&
+                            detailedName.length > 5;
+      
+      // Sync weather data with forecast data while preserving detailed name
+      syncWeatherWithForecast(forecastData, locationData, (updatedData) => {
+        // Preserve detailed location name if we have one and if we're still in preservation mode
+        if (preserveDetailedNameRef.current && isDetailedName) {
+          updatedData.formattedName = detailedName;
+          
+          // After the first few seconds, we can allow name updates
+          // This ensures initial detailed name is preserved but allows future updates
+          if (!dataSyncTimerRef.current) {
+            dataSyncTimerRef.current = window.setTimeout(() => {
+              preserveDetailedNameRef.current = false;
+              console.log("Detailed name preservation period ended");
+              dataSyncTimerRef.current = null;
+            }, 10000); // Preserve detailed name for 10 seconds
+          }
+        }
+        
+        setLocationData(updatedData);
+      });
       
       // Update SIQS using forecast data
       updateSIQSWithForecast(locationData, forecastData, forecastLoading, setLocationData);
