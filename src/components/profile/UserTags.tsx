@@ -48,6 +48,9 @@ const UserTags: React.FC<UserTagsProps> = ({
     try {
       setIsAdding(true);
       await onAddTag(tagName.trim());
+      setShowAddForm(false); // Close the form after adding
+    } catch (error) {
+      console.error("Error adding tag:", error);
     } finally {
       setIsAdding(false);
     }
@@ -86,6 +89,7 @@ const UserTags: React.FC<UserTagsProps> = ({
               <button
                 className="ml-1.5 text-current opacity-80 hover:opacity-100"
                 onClick={() => onRemoveTag(tag.id)}
+                aria-label={`Remove ${tag.name} tag`}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -111,7 +115,7 @@ const UserTags: React.FC<UserTagsProps> = ({
           <div className="mb-2">
             <TagSelector 
               onSelect={handleAddTag}
-              selectedTags={tagNames}
+              selectedTags={tagNames || []}
               disabled={isAdding}
             />
           </div>

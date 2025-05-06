@@ -90,7 +90,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
   const availableTags = COMMON_TAGS.filter(tag => 
     !selectedTags.includes(tag.value) && 
     !selectedTags.includes(tag.label)
-  );
+  ) || [];
 
   return (
     <div className="flex flex-col space-y-2">
@@ -139,7 +139,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
               </div>
             </CommandEmpty>
             <CommandGroup>
-              {availableTags.map((tag) => (
+              {availableTags.length > 0 && availableTags.map((tag) => (
                 <CommandItem
                   key={tag.value}
                   value={tag.value}
