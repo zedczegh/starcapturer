@@ -13,6 +13,8 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import LocationSearch from "./LocationSearch";
 import NavigationButtons from "./navigation/NavigationButtons";
 import { motion } from "framer-motion";
+import { useForecastDataLoader } from "@/hooks/useForecastDataLoader";
+import { useLocationDetails } from "@/hooks/useLocationDetails";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -40,6 +42,27 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const isMobile = useIsMobile();
   const detailsContainerRef = useRef<HTMLDivElement>(null);
 
+  // Get forecast data
+  const { 
+    forecastData,
+    longRangeForecastData: longRangeForecast,
+    loading,
+    reloadForecast 
+  } = useForecastDataLoader(
+    locationData?.latitude,
+    locationData?.longitude
+  );
+
+  // Use location details
+  const {
+    forecastLoading,
+    longRangeLoading,
+    weatherAlerts = [],
+    handleRefreshForecast,
+    handleRefreshLongRangeForecast,
+    handleRefreshAll
+  } = useLocationDetails(locationData, setLocationData);
+
   // Check if we came from a redirect
   const isRedirect = locationData?.fromPhotoPoints || locationData?.fromCalculator;
 
@@ -59,11 +82,11 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       console.error("Error updating location:", error);
       setStatusMessage(t ? t("Failed to update location", "更新位置失败") : "Failed to update location");
     }
+    return Promise.resolve();
   }, [handleUpdateLocation, setStatusMessage, t]);
   
   // Dynamic padding based on mobile status
   const paddingTop = isMobile ? 'pt-20' : 'pt-16';
-  const weatherAlerts = locationData?.weatherData?.alerts || [];
 
   // Improved Refresh Button Functionality
   const handleManualRefresh = useCallback(() => {
@@ -189,6 +212,21 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         <LocationDetailsContent 
           locationData={locationData}
           setLocationData={setLocationData}
+          forecastData={forecastData}
+          longRangeForecast={longRangeForecast}
+          loading={loading}
+          forecastLoading={forecastLoading || false}
+          longRangeLoading={longRangeLoading || false}
+          onRefreshForecast={() => 
+            locationData?.latitude && locationData?.longitude && 
+            handleRefreshForecast(locationData.latitude, locationData.longitude)
+          }
+          onRefreshLongRange={() => 
+            locationData?.latitude && locationData?.longitude && 
+            handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude)
+          }
+          onRefreshAll={handleRefreshAll || reloadForecast}
+          weatherAlerts={weatherAlerts || []}
           onLocationUpdate={onLocationUpdate}
           showFaultedMessage={true}
         />

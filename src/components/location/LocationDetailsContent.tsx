@@ -24,7 +24,7 @@ interface LocationDetailsContentProps {
   onRefreshLongRange: () => void;
   onRefreshAll: () => void;
   weatherAlerts: any[];
-  onLocationUpdate: (location: { name: string; latitude: number; longitude: number }) => void;
+  onLocationUpdate: (location: { name: string; latitude: number; longitude: number; }) => Promise<void>;
   showFaultedMessage?: boolean;
 }
 

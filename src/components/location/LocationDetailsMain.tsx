@@ -99,13 +99,18 @@ const LocationDetailsMain: React.FC<LocationDetailsMainProps> = ({
         <title>{pageTitle}</title>
       </Helmet>
       <LocationHeader
-        onRefresh={handleRefreshAll}
+        name={locationData?.formattedName || locationData?.name || ''}
+        latitude={locationData?.latitude || 0}
+        longitude={locationData?.longitude || 0}
+        timestamp={locationData?.timestamp ? new Date(locationData.timestamp).getTime() : undefined}
         loading={loading}
         statusMessage={statusMessage}
         messageType={messageType}
         setStatusMessage={setStatusMessage}
         handleUpdateLocation={handleUpdateLocation}
         locationData={locationData}
+        bortleScale={locationData?.bortleScale}
+        siqs={locationData?.siqsResult?.score}
       />
       <LocationDetailsContent
         locationData={locationData}
@@ -126,7 +131,12 @@ const LocationDetailsMain: React.FC<LocationDetailsMainProps> = ({
         }
         onRefreshAll={handleRefreshAll}
         weatherAlerts={weatherAlerts}
-        onLocationUpdate={(loc) => handleUpdateLocation && handleUpdateLocation()}
+        onLocationUpdate={async (loc) => {
+          if (handleUpdateLocation) {
+            handleUpdateLocation();
+          }
+          return Promise.resolve();
+        }}
       />
     </div>
   );

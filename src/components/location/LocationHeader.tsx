@@ -15,6 +15,12 @@ interface LocationHeaderProps {
   loading?: boolean;
   bortleScale?: number;
   siqs?: number;
+  onRefresh?: () => Promise<void>;
+  statusMessage?: string | null;
+  messageType?: "success" | "error" | "warning" | "info";
+  setStatusMessage?: (message: string | null) => void;
+  handleUpdateLocation?: () => void;
+  locationData?: any;
 }
 
 const LocationHeader = ({ 
@@ -24,7 +30,13 @@ const LocationHeader = ({
   timestamp,
   loading,
   bortleScale,
-  siqs
+  siqs,
+  onRefresh,
+  statusMessage,
+  messageType,
+  setStatusMessage,
+  handleUpdateLocation,
+  locationData
 }: LocationHeaderProps) => {
   const navigate = useNavigate();
   const { t, language } = useLanguage();

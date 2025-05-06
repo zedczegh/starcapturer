@@ -100,7 +100,7 @@ const LocationDetails = () => {
           statusMessage={statusMessage}
           messageType={messageType}
           setStatusMessage={setStatusMessage}
-          handleUpdateLocation={() => handleUpdateLocation && handleUpdateLocation()}
+          handleUpdateLocation={() => handleUpdateLocation && handleUpdateLocation(locationData)}
         />
       )}
     </>
