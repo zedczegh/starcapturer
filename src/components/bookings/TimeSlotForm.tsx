@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -8,8 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Calendar } from '@/components/ui/calendar';
-import { format, addHours, setHours, setMinutes } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { format, addDays, isSameDay } from 'date-fns';
+import { Loader2, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface TimeSlotFormProps {
   spotId: string;
@@ -31,7 +33,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
   const isEditing = !!existingTimeSlot;
   const initialDate = isEditing ? new Date(existingTimeSlot.start_time) : new Date();
   
-  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
+  const [selectedDates, setSelectedDates] = useState<Date[]>(isEditing ? [initialDate] : [new Date()]);
   const [startTime, setStartTime] = useState(isEditing ? 
     format(new Date(existingTimeSlot.start_time), 'HH:mm') : '20:00');
   const [endTime, setEndTime] = useState(isEditing ? 
@@ -49,75 +51,106 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
       return;
     }
     
+    if (selectedDates.length === 0) {
+      toast.error(t("Please select at least one date", "请至少选择一个日期"));
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      // Parse the date and times
+      // Parse the time strings
       const [startHour, startMinute] = startTime.split(':').map(Number);
       const [endHour, endMinute] = endTime.split(':').map(Number);
       
-      const startDateTime = new Date(selectedDate);
-      startDateTime.setHours(startHour, startMinute, 0, 0);
-      
-      const endDateTime = new Date(selectedDate);
-      endDateTime.setHours(endHour, endMinute, 0, 0);
-      
-      // Check that end time is after start time
-      if (endDateTime <= startDateTime) {
-        if (endHour < startHour) {
-          // Assume end time is next day if hours indicate so
+      const createTimeSlotsPromises = selectedDates.map(async (selectedDate) => {
+        const startDateTime = new Date(selectedDate);
+        startDateTime.setHours(startHour, startMinute, 0, 0);
+        
+        const endDateTime = new Date(selectedDate);
+        endDateTime.setHours(endHour, endMinute, 0, 0);
+        
+        // If end time is earlier than start time, assume it's the next day
+        if (endDateTime <= startDateTime) {
           endDateTime.setDate(endDateTime.getDate() + 1);
-        } else {
-          toast.error(t("End time must be after start time", "结束时间必须晚于开始时间"));
-          setIsSubmitting(false);
-          return;
         }
+        
+        if (isEditing && isSameDay(selectedDate, initialDate)) {
+          // Update the existing time slot if it's on the initial date
+          return supabase.functions.invoke('call-rpc', {
+            body: {
+              function: 'update_astro_spot_timeslot',
+              params: {
+                p_id: existingTimeSlot.id,
+                p_spot_id: spotId,
+                p_creator_id: user.id,
+                p_start_time: startDateTime.toISOString(),
+                p_end_time: endDateTime.toISOString(),
+                p_max_capacity: maxCapacity,
+                p_description: description.trim()
+              }
+            }
+          });
+        } else {
+          // Create a new time slot for this date
+          return supabase.functions.invoke('call-rpc', {
+            body: {
+              function: 'insert_astro_spot_timeslot',
+              params: {
+                p_spot_id: spotId,
+                p_creator_id: user.id,
+                p_start_time: startDateTime.toISOString(),
+                p_end_time: endDateTime.toISOString(),
+                p_max_capacity: maxCapacity,
+                p_description: description.trim()
+              }
+            }
+          });
+        }
+      });
+      
+      const results = await Promise.all(createTimeSlotsPromises);
+      
+      // Check if any operations failed
+      const errors = results.filter(result => result.error).map(result => result.error);
+      if (errors.length > 0) {
+        console.error("Errors creating time slots:", errors);
+        throw new Error(t("Some time slots could not be created", "部分时间段无法创建"));
       }
       
-      if (isEditing) {
-        // Call the edge function to update the time slot
-        const { data, error } = await supabase.functions.invoke('call-rpc', {
-          body: {
-            function: 'update_astro_spot_timeslot',
-            params: {
-              p_id: existingTimeSlot.id,
-              p_spot_id: spotId,
-              p_creator_id: user.id,
-              p_start_time: startDateTime.toISOString(),
-              p_end_time: endDateTime.toISOString(),
-              p_max_capacity: maxCapacity,
-              p_description: description.trim()
-            }
-          }
-        });
-
-        if (error) throw error;
+      if (selectedDates.length > 1) {
+        toast.success(
+          t(
+            `${selectedDates.length} time slots have been created successfully`, 
+            `已成功创建 ${selectedDates.length} 个时间段`
+          )
+        );
       } else {
-        // Call the edge function to create a new time slot
-        const { data, error } = await supabase.functions.invoke('call-rpc', {
-          body: {
-            function: 'insert_astro_spot_timeslot',
-            params: {
-              p_spot_id: spotId,
-              p_creator_id: user.id,
-              p_start_time: startDateTime.toISOString(),
-              p_end_time: endDateTime.toISOString(),
-              p_max_capacity: maxCapacity,
-              p_description: description.trim()
-            }
-          }
-        });
-
-        if (error) throw error;
+        toast.success(
+          isEditing 
+            ? t("Time slot updated successfully", "时间段已成功更新") 
+            : t("Time slot created successfully", "时间段已成功创建")
+        );
       }
       
       onSuccess();
     } catch (error) {
-      console.error("Error saving time slot:", error);
-      toast.error(t("Failed to save time slot", "保存时间段失败"));
+      console.error("Error saving time slots:", error);
+      toast.error(t("Failed to save time slots", "保存时间段失败"));
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCalendarSelect = (dates: Date[] | undefined) => {
+    if (!dates) return;
+    setSelectedDates(dates);
+  };
+
+  const removeDateBadge = (dateToRemove: Date) => {
+    setSelectedDates(selectedDates.filter(date => 
+      !isSameDay(date, dateToRemove)
+    ));
   };
 
   return (
@@ -133,17 +166,54 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="date" className="block text-sm text-gray-300 mb-1">
-              {t("Date", "日期")}
+              {isEditing
+                ? t("Date", "日期")
+                : t("Select Dates", "选择日期")
+              }
+              <span className="text-xs ml-1 text-gray-400">
+                {isEditing ? "" : t("(multiple allowed)", "（可多选）")}
+              </span>
             </Label>
             <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
               <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
+                mode={isEditing ? "single" : "multiple"}
+                selected={isEditing ? selectedDates[0] : selectedDates}
+                onSelect={isEditing 
+                  ? (date) => date && setSelectedDates([date])
+                  : handleCalendarSelect
+                }
                 disabled={(date) => date < new Date()}
                 className="bg-cosmic-800/30 rounded-lg"
               />
             </div>
+            
+            {!isEditing && selectedDates.length > 0 && (
+              <div className="mt-2">
+                <Label className="block text-sm text-gray-300 mb-1">
+                  {t("Selected Dates", "已选择日期")} ({selectedDates.length})
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {selectedDates.map((date, index) => (
+                    <Badge 
+                      key={index} 
+                      variant="secondary"
+                      className="pl-2 pr-1 py-1 flex items-center gap-1 bg-cosmic-800/60"
+                    >
+                      {format(date, 'MMM dd, yyyy')}
+                      <Button 
+                        type="button"
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-5 w-5 ml-1 rounded-full hover:bg-cosmic-700/50"
+                        onClick={() => removeDateBadge(date)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="space-y-4">
@@ -220,7 +290,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || selectedDates.length === 0}
           >
             {isSubmitting ? (
               <>

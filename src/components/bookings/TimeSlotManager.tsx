@@ -122,7 +122,7 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
   const handleAddSuccess = () => {
     setShowAddForm(false);
     refetch();
-    toast.success(t("Time slot added successfully", "时间段添加成功"));
+    toast.success(t("Time slots added successfully", "时间段添加成功"));
   };
 
   if (isLoading) {
