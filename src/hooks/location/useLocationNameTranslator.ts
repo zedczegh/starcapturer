@@ -2,6 +2,7 @@
 import { useCallback, useState } from "react";
 import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { convertToSimplifiedChinese } from "@/utils/chineseCharacterConverter";
 
 interface UseLocationNameTranslatorProps {
   onLocationUpdate: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
@@ -41,12 +42,17 @@ export const useLocationNameTranslator = ({
     
     try {
       setIsProcessingLanguageChange(true);
-      const locationName = await getLocationNameForCoordinates(
+      let locationName = await getLocationNameForCoordinates(
         currentLocation.latitude,
         currentLocation.longitude,
         language,
         { setCachedData, getCachedData }
       );
+      
+      // Ensure Chinese names are in simplified format
+      if (language === 'zh' && locationName) {
+        locationName = convertToSimplifiedChinese(locationName);
+      }
       
       // Only update if the name changed to avoid unnecessary re-renders
       if (locationName && locationName !== currentLocation.name) {

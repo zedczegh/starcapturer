@@ -8,6 +8,7 @@ import { findNearestTown } from '@/utils/nearestTownCalculator';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
 import { formatAddressComponents } from './formatters/addressFormatter';
 import { formatDistance } from '@/utils/location/formatDistance';
+import { convertToSimplifiedChinese } from '@/utils/chineseCharacterConverter';
 
 export async function getEnhancedLocationDetails(
   latitude: number,
@@ -81,6 +82,11 @@ export async function getEnhancedLocationDetails(
         detailedName = geocodingResult.formattedName;
       }
       
+      // Convert to simplified Chinese if needed
+      if (language === 'zh' && detailedName) {
+        detailedName = convertToSimplifiedChinese(detailedName);
+      }
+      
       // If we have street name, town name, or city name, it's unlikely to be water
       if (geocodingResult.streetName || geocodingResult.townName || geocodingResult.cityName) {
         isWater = false;
@@ -92,6 +98,11 @@ export async function getEnhancedLocationDetails(
       // If no geocoding result, use nearest town info and check if it's water
       isWater = isWaterLocation(normalizedLat, normalizedLng, true);
       detailedName = nearestTownInfo.detailedName || "";
+      
+      // Convert to simplified Chinese if needed
+      if (language === 'zh' && detailedName) {
+        detailedName = convertToSimplifiedChinese(detailedName);
+      }
     }
     
     // For water locations, create specific formatting
@@ -101,7 +112,7 @@ export async function getEnhancedLocationDetails(
       
       detailedName = language === 'en' 
         ? `Water near ${nearestLocation}` 
-        : `水域靠近${nearestLocation}`;
+        : convertToSimplifiedChinese(`水域靠近${nearestLocation}`);
     }
     
     // Build the final result object with all available information

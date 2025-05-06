@@ -4,6 +4,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { findNearestTown } from '@/utils/nearestTownCalculator';
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { Language } from '@/services/geocoding/types';
+import { convertToSimplifiedChinese } from '@/utils/chineseCharacterConverter';
 
 interface DisplayNameResolverProps {
   location: SharedAstroSpot;
@@ -55,26 +56,26 @@ export function useDisplayName({ location, language, locationCounter }: DisplayN
   if (language === 'zh') {
     // For Chinese, prioritize the explicit Chinese name first
     if (location.chineseName) {
-      // Use explicit Chinese name if available
-      displayName = location.chineseName;
+      // Use explicit Chinese name if available, ensuring it's simplified Chinese
+      displayName = convertToSimplifiedChinese(location.chineseName);
     } else if (enhancedLocation?.formattedName && 
         enhancedLocation.formattedName !== '偏远地区' && 
         !isLoading) {
-      // Use enhanced name from our new service for Chinese
-      displayName = enhancedLocation.formattedName;
+      // Use enhanced name from our new service for Chinese, converting to simplified if needed
+      displayName = convertToSimplifiedChinese(enhancedLocation.formattedName);
     } else if (enhancedLocation?.chineseName) {
-      // Use Chinese name from enhanced location if available
-      displayName = enhancedLocation.chineseName;
+      // Use Chinese name from enhanced location if available, converting to simplified
+      displayName = convertToSimplifiedChinese(enhancedLocation.chineseName);
     } else if (nearestTownInfo?.detailedName && 
                nearestTownInfo.detailedName !== '偏远地区') {
-      // Use detailed name from our enhanced database for Chinese
-      displayName = nearestTownInfo.detailedName;
+      // Use detailed name from our enhanced database for Chinese, converting to simplified
+      displayName = convertToSimplifiedChinese(nearestTownInfo.detailedName);
     } else if (!location.id && !location.certification && !location.isDarkSkyReserve && locationCounter) {
       // Fallback for potential ideal dark sites in Chinese
       displayName = `潜在理想暗夜地点 ${locationCounter}`;
     } else {
-      // Last resort fallback to original name
-      displayName = location.name;
+      // Last resort fallback to original name, converting to simplified if needed
+      displayName = convertToSimplifiedChinese(location.name);
     }
   } else {
     // For English, use the default name

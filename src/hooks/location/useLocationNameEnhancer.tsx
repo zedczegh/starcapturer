@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { fetchWithCache } from "@/utils/fetchWithCache";
+import { convertToSimplifiedChinese } from "@/utils/chineseCharacterConverter";
 
 interface UseLocationNameEnhancerProps {
   latitude?: number;
@@ -37,7 +38,13 @@ export function useLocationNameEnhancer({ latitude, longitude, language }: UseLo
           if (data.countryName) locationParts.push(data.countryName);
           
           const detailedLocation = locationParts.join(', ');
-          setLocationDetails(detailedLocation || null);
+          
+          // Convert to simplified Chinese if language is Chinese
+          if (language === 'zh') {
+            setLocationDetails(convertToSimplifiedChinese(detailedLocation) || null);
+          } else {
+            setLocationDetails(detailedLocation || null);
+          }
           
           // For the enhanced name, use a shorter version
           const enhancedNameParts = [];
@@ -48,11 +55,14 @@ export function useLocationNameEnhancer({ latitude, longitude, language }: UseLo
           
           // Set the enhanced name based on available data
           if (enhancedNameParts.length > 0) {
-            setEnhancedName(enhancedNameParts.join(', '));
+            const enhancedNameString = enhancedNameParts.join(', ');
             
-            // If language is Chinese, set Chinese name as the enhanced name
             if (language === 'zh') {
-              setChineseName(enhancedNameParts.join(', '));
+              const simplifiedName = convertToSimplifiedChinese(enhancedNameString);
+              setEnhancedName(simplifiedName);
+              setChineseName(simplifiedName);
+            } else {
+              setEnhancedName(enhancedNameString);
             }
           }
           
@@ -67,7 +77,8 @@ export function useLocationNameEnhancer({ latitude, longitude, language }: UseLo
             }
             
             if (chineseNameParts.length > 0 && language === 'zh') {
-              setChineseName(chineseNameParts.join(', '));
+              const simplifiedName = convertToSimplifiedChinese(chineseNameParts.join(', '));
+              setChineseName(simplifiedName);
             }
           }
         }

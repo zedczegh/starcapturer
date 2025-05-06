@@ -4,6 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { updateLocationName } from "@/lib/locationNameUpdater";
 import { identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
 import { getEnhancedLocationDetails } from "@/services/geocoding/enhancedReverseGeocoding";
+import { convertToSimplifiedChinese } from "@/utils/chineseCharacterConverter";
 
 interface UseLocationNameTranslationProps {
   locationData: any;
@@ -86,12 +87,14 @@ export function useLocationNameTranslation({
             // For Chinese language, update the Chinese name
             if (language === 'zh') {
               if (enhancedDetails.formattedName && enhancedDetails.formattedName !== '偏远地区') {
-                console.log(`Location name updated for Chinese: "${locationData.name}" -> "${enhancedDetails.formattedName}"`);
+                // Convert to simplified Chinese if needed
+                const simplifiedName = convertToSimplifiedChinese(enhancedDetails.formattedName);
+                console.log(`Location name updated for Chinese: "${locationData.name}" -> "${simplifiedName}"`);
                 
                 setLocationData({
                   ...locationData,
-                  name: enhancedDetails.formattedName,
-                  chineseName: enhancedDetails.formattedName
+                  name: simplifiedName,
+                  chineseName: simplifiedName
                 });
               }
             } else {
@@ -107,13 +110,18 @@ export function useLocationNameTranslation({
             }
           } else {
             // Fallback to the old update method if enhanced details fail
-            const newName = await updateLocationName(
+            let newName = await updateLocationName(
               locationData.latitude,
               locationData.longitude,
               locationData.name,
               language === 'zh' ? 'zh' : 'en',
               { setCachedData, getCachedData }
             );
+            
+            // Ensure Chinese names are in simplified format
+            if (language === 'zh' && newName) {
+              newName = convertToSimplifiedChinese(newName);
+            }
             
             if (newName && newName !== locationData.name) {
               console.log(`Location name updated: "${locationData.name}" -> "${newName}"`);
