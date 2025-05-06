@@ -15,31 +15,13 @@ import { useLocationContentManager } from "./useLocationContentManager";
 interface LocationDetailsContentProps {
   locationData: any;
   setLocationData: (data: any) => void;
-  forecastData: any;
-  longRangeForecast: any;
-  loading: boolean;
-  forecastLoading: boolean;
-  longRangeLoading: boolean;
-  onRefreshForecast: () => void;
-  onRefreshLongRange: () => void;
-  onRefreshAll: () => void;
-  weatherAlerts: any[];
-  onLocationUpdate: (location: { name: string; latitude: number; longitude: number; }) => Promise<void>;
+  onLocationUpdate: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
   showFaultedMessage?: boolean;
 }
 
 const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   locationData,
   setLocationData,
-  forecastData,
-  longRangeForecast,
-  loading,
-  forecastLoading,
-  longRangeLoading,
-  onRefreshForecast,
-  onRefreshLongRange,
-  onRefreshAll,
-  weatherAlerts,
   onLocationUpdate,
   showFaultedMessage = false
 }) => {
@@ -54,8 +36,17 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     setFaulted,
     statusMessage,
     setStatusMessage,
+    loading,
+    memoizedLocationData,
+    forecastData,
+    longRangeForecast,
+    forecastLoading,
+    longRangeLoading,
     gettingUserLocation,
     setGettingUserLocation,
+    handleRefreshForecast,
+    handleRefreshLongRangeForecast,
+    onLocationUpdate: onLocUpdate,
     resetUpdateState
   } = useLocationContentManager(locationData, setLocationData, onLocationUpdate);
 
@@ -86,10 +77,10 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
 
   // Fix for cases where SIQS is unavailable – show manual refresh button when loaded but no SIQS
   const shouldShowManualRefresh = 
-    locationData &&
+    memoizedLocationData &&
     !loading &&
     contentLoaded &&
-    (!locationData.siqsResult || typeof locationData.siqsResult.score !== "number");
+    (!memoizedLocationData.siqsResult || typeof memoizedLocationData.siqsResult.score !== "number");
 
   const handleManualRefresh = useCallback(() => {
     resetUpdateState();
@@ -97,12 +88,12 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     
     if (locationData?.latitude && locationData?.longitude) {
       toast.info(t("Refreshing location data...", "正在刷新位置数据..."));
-      onRefreshForecast();
-      onRefreshLongRange();
+      handleRefreshForecast(locationData.latitude, locationData.longitude);
+      handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
     }
-  }, [locationData, onRefreshForecast, onRefreshLongRange, resetUpdateState, t]);
+  }, [locationData, handleRefreshForecast, handleRefreshLongRangeForecast, resetUpdateState, t]);
 
-  if (!locationData) {
+  if (!memoizedLocationData) {
     return (
       <div className="p-8 text-center">
         <Loader className="animate-spin h-8 w-8 mx-auto mb-4" />
@@ -147,17 +138,25 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       ) : (
         <Suspense fallback={<LocationContentLoader />}>
           <LocationContentGrid 
-            locationData={locationData}
+            locationData={memoizedLocationData}
             forecastData={forecastData}
             longRangeForecast={longRangeForecast}
             forecastLoading={forecastLoading}
             longRangeLoading={longRangeLoading}
             gettingUserLocation={gettingUserLocation}
-            onLocationUpdate={onLocationUpdate}
+            onLocationUpdate={onLocUpdate}
             setGettingUserLocation={setGettingUserLocation}
             setStatusMessage={setStatusMessage}
-            onRefreshForecast={onRefreshForecast}
-            onRefreshLongRange={onRefreshLongRange}
+            onRefreshForecast={() => {
+              if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
+                handleRefreshForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
+              }
+            }}
+            onRefreshLongRange={() => {
+              if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
+                handleRefreshLongRangeForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
+              }
+            }}
           />
         </Suspense>
       )}

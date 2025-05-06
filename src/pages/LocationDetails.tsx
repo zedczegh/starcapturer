@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataCache } from "@/hooks/useLocationData";
@@ -100,7 +99,7 @@ const LocationDetails = () => {
           statusMessage={statusMessage}
           messageType={messageType}
           setStatusMessage={setStatusMessage}
-          handleUpdateLocation={() => handleUpdateLocation && handleUpdateLocation(locationData)}
+          handleUpdateLocation={handleUpdateLocation}
         />
       )}
     </>
