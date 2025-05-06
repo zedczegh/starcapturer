@@ -1,4 +1,3 @@
-
 // Helper functions for category and type translations
 export function translateCategory(category: string): string {
   const categoryMap: Record<string, string> = {
@@ -17,7 +16,7 @@ export function translateCategory(category: string): string {
     "Community": "社区",
     // Location advantages translations
     "Low Light Pollution Region": "低光污染地区",
-    "Low Air Pollution Region": "低空气污染地区",
+    "Low Air Pollution Region": "低空气污染��区",
     "Lodging available": "可住宿",
     "Stable and Low Wind Gusts": "风力稳定且小",
     "High Annual Clear Nights Rate(>100 Days a year)": "高年晴朗夜晚率(>100天/年)",
@@ -26,7 +25,11 @@ export function translateCategory(category: string): string {
     "Parking available": "有停车场",
     "Well-paved roads to location": "通往该地点的道路铺设良好",
     "No local interruptions": "无局部干扰",
-    "Hard Soil or Concrete floor": "坚硬的土壤或混凝土地面"
+    "Hard Soil or Concrete floor": "坚硬的土壤或混凝土地面",
+    "Power supplies available": "电源可用",
+    "Mobile battery available": "移动电源可用",
+    "Friendly host": "友好的主人", 
+    "Wi-Fi available": "Wi-Fi可用"
   };
   return categoryMap[category] || category;
 }
