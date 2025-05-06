@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -9,8 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Calendar } from '@/components/ui/calendar';
-import { format, addDays, isSameDay, eachDayOfInterval } from 'date-fns';
-import { Loader2, Trash2 } from 'lucide-react';
+import { format, addDays, isSameDay, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { Loader2, Trash2, Check, CalendarRange } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface TimeSlotFormProps {
@@ -43,6 +42,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
   const [maxCapacity, setMaxCapacity] = useState(isEditing ? 
     existingTimeSlot.max_capacity : 1);
   const [lastSelectedDate, setLastSelectedDate] = useState<Date | null>(null);
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,7 +143,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     }
   };
 
-  // Handle calendar date selection with auto range selection
+  // Improved calendar date selection with auto range selection
   const handleCalendarSelect = (dates: Date[] | undefined) => {
     if (!dates || dates.length === 0) {
       setSelectedDates([]);
@@ -151,30 +151,57 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
       return;
     }
     
-    // If we already have a lastSelectedDate and this is a single new date selection
-    if (lastSelectedDate && dates.length === 1) {
-      const newDate = dates[0];
-      
-      // Check if the new date is more than 1 day away from the last selected date
-      const dateDifference = Math.abs(newDate.getTime() - lastSelectedDate.getTime());
-      const daysDifference = Math.floor(dateDifference / (1000 * 60 * 60 * 24));
-      
-      if (daysDifference > 1) {
+    // Get the latest selected date
+    const latestDate = dates[dates.length - 1];
+    
+    // If we already have a lastSelectedDate and this is a new date selection
+    if (lastSelectedDate && !dates.some(date => isSameDay(date, lastSelectedDate))) {
+      // Check if the new date is different from the lastSelectedDate
+      if (!isSameDay(latestDate, lastSelectedDate)) {
         // Create range selection by adding all dates between the last selected and new date
-        const startDate = new Date(Math.min(lastSelectedDate.getTime(), newDate.getTime()));
-        const endDate = new Date(Math.max(lastSelectedDate.getTime(), newDate.getTime()));
+        const startDate = new Date(Math.min(lastSelectedDate.getTime(), latestDate.getTime()));
+        const endDate = new Date(Math.max(lastSelectedDate.getTime(), latestDate.getTime()));
         
         // Generate array of all dates in the interval (inclusive)
         const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
-        setSelectedDates(dateRange);
-        setLastSelectedDate(newDate);
+        
+        // Combine the date range with previously selected dates that aren't in the range
+        const previousDates = selectedDates.filter(date => 
+          !dateRange.some(rangeDate => isSameDay(rangeDate, date))
+        );
+        
+        setSelectedDates([...previousDates, ...dateRange]);
+        setLastSelectedDate(latestDate);
         return;
       }
     }
     
     // Regular date selection handling
     setSelectedDates(dates);
-    setLastSelectedDate(dates[dates.length - 1]);
+    setLastSelectedDate(latestDate);
+  };
+
+  // Handle selecting all dates in current month
+  const selectAllDatesInMonth = () => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    
+    // Create array of all dates in the current month
+    const allDatesInMonth = eachDayOfInterval({ start, end }).filter(date => {
+      // Filter out dates in the past
+      return date >= new Date();
+    });
+    
+    setSelectedDates(allDatesInMonth);
+    if (allDatesInMonth.length > 0) {
+      setLastSelectedDate(allDatesInMonth[allDatesInMonth.length - 1]);
+    }
+  };
+
+  // Handle removing all selected dates
+  const removeAllDates = () => {
+    setSelectedDates([]);
+    setLastSelectedDate(null);
   };
 
   const removeDateBadge = (dateToRemove: Date) => {
@@ -187,6 +214,11 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
       const remainingDates = selectedDates.filter(date => !isSameDay(date, dateToRemove));
       setLastSelectedDate(remainingDates.length > 0 ? remainingDates[remainingDates.length - 1] : null);
     }
+  };
+
+  // Keep track of the current month when calendar navigation happens
+  const handleMonthChange = (month: Date) => {
+    setCurrentMonth(month);
   };
 
   return (
@@ -220,13 +252,39 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                   className="bg-cosmic-800/30 rounded-lg"
                 />
               ) : (
-                <Calendar
-                  mode="multiple"
-                  selected={selectedDates}
-                  onSelect={handleCalendarSelect}
-                  disabled={(date) => date < new Date()}
-                  className="bg-cosmic-800/30 rounded-lg"
-                />
+                <>
+                  <div className="flex justify-between mb-2">
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      variant="outline"
+                      onClick={selectAllDatesInMonth}
+                      className="flex items-center gap-1 text-xs bg-cosmic-800/70"
+                    >
+                      <Check className="h-3 w-3" />
+                      {t("Select All", "全选")}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      variant="outline"
+                      onClick={removeAllDates}
+                      className="flex items-center gap-1 text-xs bg-cosmic-800/70"
+                      disabled={selectedDates.length === 0}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      {t("Clear All", "清除全部")}
+                    </Button>
+                  </div>
+                  <Calendar
+                    mode="multiple"
+                    selected={selectedDates}
+                    onSelect={handleCalendarSelect}
+                    disabled={(date) => date < new Date()}
+                    className="bg-cosmic-800/30 rounded-lg"
+                    onMonthChange={handleMonthChange}
+                  />
+                </>
               )}
             </div>
             
