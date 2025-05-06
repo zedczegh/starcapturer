@@ -175,16 +175,23 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
               </span>
             </Label>
             <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
-              <Calendar
-                mode={isEditing ? "single" : "multiple"}
-                selected={isEditing ? selectedDates[0] : selectedDates}
-                onSelect={isEditing 
-                  ? (date) => date && setSelectedDates([date])
-                  : handleCalendarSelect
-                }
-                disabled={(date) => date < new Date()}
-                className="bg-cosmic-800/30 rounded-lg"
-              />
+              {isEditing ? (
+                <Calendar
+                  mode="single"
+                  selected={selectedDates[0]}
+                  onSelect={(date) => date && setSelectedDates([date])}
+                  disabled={(date) => date < new Date()}
+                  className="bg-cosmic-800/30 rounded-lg"
+                />
+              ) : (
+                <Calendar
+                  mode="multiple"
+                  selected={selectedDates}
+                  onSelect={handleCalendarSelect}
+                  disabled={(date) => date < new Date()}
+                  className="bg-cosmic-800/30 rounded-lg"
+                />
+              )}
             </div>
             
             {!isEditing && selectedDates.length > 0 && (
