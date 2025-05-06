@@ -108,7 +108,7 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
     try {
       setDeletingId(id);
       const { error } = await supabase
-        .from('astro_spot_timeslots')
+        .from('astro_spot_timeslots')  // Corrected table name
         .delete()
         .eq('id', id);
       

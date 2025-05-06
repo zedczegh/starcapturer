@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,7 +16,7 @@ interface TimeSlotItemProps {
   timeSlot: any;
   isCreator: boolean;
   onUpdate: () => void;
-  onDelete: (id: string) => Promise<void>; // Added missing onDelete prop
+  onDelete: (id: string) => Promise<void>;
 }
 
 const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpdate, onDelete }) => {
@@ -106,10 +107,17 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
     });
   }
   
-  function handleDeleteTimeSlot() {
+  // Add the async keyword here to fix the build error
+  async function handleDeleteTimeSlot() {
     try {
       // Use fetch to make a direct delete request to the supabase API
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+      
       const response = await fetch(
         `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/astro_spot_timeslots?id=eq.${timeSlot.id}`,
         {

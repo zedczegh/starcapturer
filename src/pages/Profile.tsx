@@ -11,6 +11,7 @@ import ProfileLoader from '@/components/profile/ProfileLoader';
 import ProfileMain from '@/components/profile/ProfileMain';
 import { useProfile } from '@/hooks/profile/useProfile';
 import AboutFooter from '@/components/about/AboutFooter';
+import { ensureAvatarsBucketExists } from '../../public/storage-init';
 
 interface ProfileFormValues {
   username: string;
@@ -23,6 +24,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [storageReady, setStorageReady] = useState(false);
 
   const {
     profile,
@@ -58,6 +60,10 @@ const Profile = () => {
           return;
         }
         await fetchProfile(session.user.id, setValue);
+        
+        // Check storage bucket
+        const isStorageReady = await ensureAvatarsBucketExists();
+        setStorageReady(isStorageReady);
       } catch (error) {
         setProfile({
           username: null,
@@ -95,32 +101,36 @@ const Profile = () => {
       let newAvatarUrl = avatarUrl;
       if (avatarFile) {
         setUploadingAvatar(true);
-        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-        if (bucketsError) {
-          toast.error(t("Storage error", "存储错误"), { description: bucketsError.message });
-          setUploadingAvatar(false);
-          setSaving(false);
-          return;
-        }
-
-        const avatarsBucketExists = buckets.some(bucket => bucket.name === 'avatars');
-        if (!avatarsBucketExists) {
-          toast.error(t("Avatar upload not available", "头像上传功能不可用"), {
-            description: t("Storage not configured. Profile saved without avatar.", "存储未配置。个人资料已保存，但未包含头像。")
-          });
-        } else {
-          const fileExt = avatarFile.name.split('.').pop();
-          const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-          const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, avatarFile);
-          if (uploadError) {
-            toast.error(uploadError.message);
+        
+        // Check if storage is ready
+        if (!storageReady) {
+          const isReady = await ensureAvatarsBucketExists();
+          if (!isReady) {
+            toast.error(t("Cannot upload avatar", "无法上传头像"), { 
+              description: t("Storage not configured properly.", "存储配置不正确。") 
+            });
             setUploadingAvatar(false);
             setSaving(false);
             return;
           }
-          const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
-          newAvatarUrl = publicUrl;
         }
+        
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${user.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const { error: uploadError, data } = await supabase.storage.from('avatars').upload(fileName, avatarFile);
+        
+        if (uploadError) {
+          console.error("Avatar upload error:", uploadError);
+          toast.error(t("Avatar upload failed", "头像上传失败"), { 
+            description: uploadError.message 
+          });
+          setUploadingAvatar(false);
+          setSaving(false);
+          return;
+        }
+        
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+        newAvatarUrl = publicUrl;
         setUploadingAvatar(false);
       }
 

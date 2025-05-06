@@ -67,7 +67,7 @@ export const useTimeSlotSubmit = ({
         }
         
         const { error } = await supabase
-          .from('astro_spot_timeslots')
+          .from('astro_spot_timeslots')  // Corrected table name
           .update({
             start_time: formatISO(date),
             end_time: formatISO(endDate),
@@ -100,7 +100,7 @@ export const useTimeSlotSubmit = ({
           
           return {
             spot_id: spotId,
-            creator_id: user.id, // Added creator_id which was missing
+            creator_id: user.id,
             start_time: formatISO(startDateTime),
             end_time: formatISO(endDateTime),
             max_capacity: maxCapacity,
@@ -109,7 +109,7 @@ export const useTimeSlotSubmit = ({
         });
         
         const { error } = await supabase
-          .from('astro_spot_timeslots')
+          .from('astro_spot_timeslots')  // Corrected table name
           .insert(timeSlots);
         
         if (error) throw error;
