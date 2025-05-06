@@ -65,19 +65,20 @@ export const useAstronomyTips = () => {
       position: isMobile ? "top-center" : "bottom-right",
       className: "astronomy-tip-toast",
       style: {
-        background: "rgba(15, 23, 42, 0.8)",
-        backdropFilter: "blur(10px)",
-        border: "1px solid rgba(148, 163, 184, 0.1)",
+        background: "rgba(15, 23, 42, 0.9)",
+        backdropFilter: "blur(12px)",
+        border: "1px solid rgba(148, 163, 184, 0.2)",
         color: "#fff",
         fontWeight: "400",
         maxWidth: "400px",
         width: "95%",
-        padding: "12px 16px",
+        padding: "14px 18px",
         fontSize: "0.95rem",
         lineHeight: "1.5",
         borderRadius: "12px",
-        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)",
-      }
+        boxShadow: "0 8px 16px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1)",
+      },
+      closeButton: true,
     });
   }, [language, lastTipTime, getRandomTip, addToRecentlyUsed, isMobile]);
 

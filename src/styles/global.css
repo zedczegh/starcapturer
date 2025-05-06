@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -237,4 +238,35 @@
     @apply shadow-sm transition-all duration-300;
     @apply hover:shadow-glow-light;
   }
+  
+  /* Enhanced styling for toast components */
+  [data-sonner-toast] {
+    @apply rounded-xl border border-cosmic-700/30 shadow-lg;
+    @apply bg-cosmic-800/80 backdrop-blur-xl;
+  }
+  
+  [data-sonner-toast] [data-close-button] {
+    @apply bg-cosmic-800/70 hover:bg-cosmic-700/80;
+    @apply rounded-full p-1.5;
+    @apply flex items-center justify-center;
+    @apply text-cosmic-300 hover:text-cosmic-100;
+    @apply opacity-70 hover:opacity-100;
+    @apply transition-all duration-200;
+    @apply border border-cosmic-700/30;
+    @apply shadow-sm;
+  }
+  
+  [data-sonner-toast] [data-icon] {
+    @apply text-primary;
+  }
+  
+  .astronomy-tip-toast [data-close-button] {
+    @apply bg-cosmic-800/90 hover:bg-cosmic-700/90;
+    @apply p-1.5 rounded-full;
+    @apply text-cosmic-300 hover:text-cosmic-100;
+    @apply border border-cosmic-700/40;
+    @apply shadow-md;
+    @apply transition-all duration-200;
+  }
 }
+
