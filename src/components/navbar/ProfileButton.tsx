@@ -27,13 +27,39 @@ const ProfileButton = () => {
           .from('profiles')
           .select('avatar_url, username')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
+          
         if (data) {
-          if (data.avatar_url) setAvatarUrl(data.avatar_url);
+          // Add cache-busting parameter to force browser to reload the image
+          if (data.avatar_url) {
+            const cacheBustUrl = `${data.avatar_url}?t=${new Date().getTime()}`;
+            setAvatarUrl(cacheBustUrl);
+          }
           setProfile({ username: data.username || null });
         }
       };
+      
       fetchProfile();
+      
+      // Set up subscription to profile changes
+      const channel = supabase
+        .channel('profile_changes')
+        .on('postgres_changes', 
+          { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'profiles',
+            filter: `id=eq.${user.id}`
+          }, 
+          () => {
+            fetchProfile();
+          }
+        )
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user]);
 
@@ -70,6 +96,14 @@ const ProfileButton = () => {
     );
   }
 
+  // Display initials only if there's no avatar URL
+  const getUserInitial = () => {
+    if (profile?.username) {
+      return profile.username[0]?.toUpperCase() || "?";
+    }
+    return user.email?.[0]?.toUpperCase() || "?";
+  };
+
   return (
     <AnimatePresence>
       <DropdownMenu modal>
@@ -88,10 +122,18 @@ const ProfileButton = () => {
             >
               <Avatar className="h-9 w-9 transition-transform duration-300 group-hover:scale-105">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
+                  <img 
+                    src={avatarUrl} 
+                    alt="Profile" 
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      // If image fails to load, fallback to initials
+                      setAvatarUrl(null);
+                    }}
+                  />
                 ) : (
                   <AvatarFallback className="bg-primary/10 text-primary">
-                    {user.email?.[0]?.toUpperCase() || "?"}
+                    {getUserInitial()}
                   </AvatarFallback>
                 )}
               </Avatar>

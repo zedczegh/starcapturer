@@ -34,8 +34,14 @@ export function useProfileUpdate() {
       
       // Upload avatar if changed
       let newAvatarUrl = currentAvatarUrl;
+      let avatarUploaded = false;
+      
       if (avatarFile) {
-        newAvatarUrl = await uploadAvatar(userId);
+        const uploadedUrl = await uploadAvatar(userId);
+        if (uploadedUrl) {
+          newAvatarUrl = uploadedUrl;
+          avatarUploaded = true;
+        }
       }
 
       // Check if profile exists first
@@ -74,8 +80,9 @@ export function useProfileUpdate() {
       // Save tags
       await saveProfileTags(userId, tags);
 
+      // Only show one toast with appropriate description
       toast.success(t("Profile updated successfully", "个人资料更新成功"), {
-        description: avatarFile ? t("Your avatar has been updated", "您的头像已更新") : undefined
+        description: avatarUploaded ? t("Your avatar has been updated", "您的头像已更新") : undefined
       });
       
       return {

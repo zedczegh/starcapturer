@@ -74,9 +74,12 @@ export function useMessageOperations(userId: string | undefined) {
     if (!userId || !message.trim() || sending) return false;
     
     setSending(true);
+    
+    // Create temporary ID for optimistic UI update
+    const tempId = `temp-${Date.now()}`;
+    
     try {
       // Add the message to local state with temporary ID and 'sent' status
-      const tempId = `temp-${Date.now()}`;
       const newMessage: Message = {
         id: tempId,
         sender_id: userId,

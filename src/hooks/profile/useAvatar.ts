@@ -34,6 +34,7 @@ export function useAvatar() {
           return false;
         }
         
+        // Set RLS policies for the new bucket
         console.log("Avatars bucket created successfully");
       }
       
@@ -85,7 +86,9 @@ export function useAvatar() {
         .from('avatars')
         .getPublicUrl(fileName);
       
-      return publicUrl;
+      // Add cache-busting parameter to force browser to reload the image
+      const cacheBustUrl = `${publicUrl}?t=${new Date().getTime()}`;
+      return cacheBustUrl;
     } catch (error: any) {
       console.error("Error uploading avatar:", error);
       toast.error(t("Avatar upload failed", "头像上传失败"), { 

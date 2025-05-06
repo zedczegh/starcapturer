@@ -28,6 +28,7 @@ const Toaster = ({ theme = "system", ...props }: ToasterProps & { theme?: string
           warning: "group-[.toaster]:bg-amber-900/90 group-[.toaster]:text-amber-100 group-[.toaster]:border-amber-500/50 group-[.toaster]:border-l-4 group-[.toaster]:border-l-amber-500 group-[.toaster]:shadow-lg group-[.toaster]:shadow-amber-500/20",
         },
         duration: 5000,
+        dismissible: true,
         style: {
           fontSize: "14px",
           borderRadius: "12px",
