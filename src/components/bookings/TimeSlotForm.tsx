@@ -1,19 +1,15 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
-import { Calendar } from '@/components/ui/calendar';
-import { format, isSameDay, isAfter, isBefore, eachDayOfInterval } from 'date-fns';
-import { Loader2, Trash2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
 import { useDateSelection } from '@/hooks/useDateSelection';
 import { useTimeSlotSubmit } from '@/hooks/useTimeSlotSubmit';
+import DateSelectionArea from './DateSelectionArea';
+import TimeCapacityInputs from './TimeCapacityInputs';
 
 interface TimeSlotFormProps {
   spotId: string;
@@ -31,6 +27,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
   const { user } = useAuth();
   const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   
   const isEditing = !!existingTimeSlot;
   const initialDate = isEditing ? new Date(existingTimeSlot.start_time) : new Date();
@@ -39,7 +36,9 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     selectedDates,
     setSelectedDates,
     handleCalendarSelect,
-    removeDateBadge
+    removeDateBadge,
+    selectAll,
+    deleteAll
   } = useDateSelection(isEditing, initialDate);
 
   const [startTime, setStartTime] = useState(isEditing ? 
@@ -67,6 +66,10 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     t
   });
 
+  const handleMonthChange = (month: Date) => {
+    setCurrentMonth(month);
+  };
+
   return (
     <div className="bg-cosmic-800/50 border border-cosmic-700/30 rounded-lg p-4 mb-4">
       <h3 className="text-lg font-medium text-gray-200 mb-3">
@@ -88,6 +91,32 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                 {isEditing ? "" : t("(select a date to create a range from today)", "（选择一个日期创建从今天开始的范围）")}
               </span>
             </Label>
+
+            {!isEditing && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => selectAll(currentMonth)}
+                  className="flex items-center gap-1 text-xs bg-cosmic-800/70"
+                >
+                  <SelectAll className="h-3.5 w-3.5" />
+                  {t("Select All", "全选")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={deleteAll}
+                  className="flex items-center gap-1 text-xs bg-cosmic-800/70"
+                >
+                  <CalendarX className="h-3.5 w-3.5" />
+                  {t("Clear All", "清除全部")}
+                </Button>
+              </div>
+            )}
+
             <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
               {isEditing ? (
                 <Calendar
@@ -104,6 +133,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                   onSelect={handleCalendarSelect}
                   disabled={(date) => date < new Date()}
                   className="bg-cosmic-800/30 rounded-lg"
+                  onMonthChange={handleMonthChange}
                 />
               )}
             </div>
@@ -113,7 +143,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                 <Label className="block text-sm text-gray-300 mb-1">
                   {t("Selected Dates", "已选择日期")} ({selectedDates.length})
                 </Label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1">
                   {selectedDates.map((date, index) => (
                     <Badge 
                       key={index} 
