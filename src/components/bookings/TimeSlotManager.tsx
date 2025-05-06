@@ -1,40 +1,15 @@
 
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useModal } from '@/contexts/ModalContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar } from '@/components/ui/calendar';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Plus, Loader2 } from 'lucide-react';
 import TimeSlotForm from './TimeSlotForm';
 import TimeSlotItem from './TimeSlotItem';
-import { format, parseISO, isAfter } from 'date-fns';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
-import ConfirmDialog from '@/components/ui/confirm-dialog';
 
-interface TimeSlotManagerProps {
-  spotId: string;
-  creatorId: string;
-  spotName: string;
-}
-
-// Define the profiles type to match what we expect
-interface Profile {
-  username: string | null;
-  avatar_url: string | null;
-}
-
-// Define the reservation type
-interface Reservation {
-  id: string;
-  user_id: string;
-  status: string;
-  profiles?: Profile;
-}
-
-// Define the TimeSlot type
 interface TimeSlot {
   id: string;
   spot_id: string;
@@ -42,40 +17,41 @@ interface TimeSlot {
   start_time: string;
   end_time: string;
   max_capacity: number;
-  description: string | null;
-  price: number | null;
-  currency: string | null;
-  astro_spot_reservations: Reservation[];
+  description: string;
+  price: number;
+  currency: string;
+  astro_spot_reservations: {
+    id: string;
+    user_id: string;
+    status: string;
+    profiles?: {
+      username?: string;
+      avatar_url?: string;
+    };
+  }[];
 }
 
-const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ 
-  spotId, 
-  creatorId,
-  spotName
-}) => {
+interface TimeSlotManagerProps {
+  spotId: string;
+  isOwner: boolean;
+}
+
+const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isOwner }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const { modalType, modalData, openModal, closeModal } = useModal();
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [showAddForm, setShowAddForm] = useState(false);
-  const isCreator = user?.id === creatorId;
+  const [loading, setLoading] = useState(true);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingSlot, setEditingSlot] = useState<TimeSlot | null>(null);
 
-  // Fetch time slots for this spot
-  const { data: timeSlots, isLoading, refetch } = useQuery({
-    queryKey: ['timeSlots', spotId],
-    queryFn: async () => {
+  const fetchTimeSlots = async () => {
+    try {
+      setLoading(true);
+      
       const { data, error } = await supabase
         .from('astro_spot_timeslots')
         .select(`
-          id,
-          spot_id,
-          creator_id,
-          start_time,
-          end_time,
-          max_capacity,
-          description,
-          price,
-          currency,
+          *,
           astro_spot_reservations (
             id,
             user_id,
@@ -84,191 +60,203 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({
         `)
         .eq('spot_id', spotId)
         .order('start_time', { ascending: true });
-
+      
       if (error) throw error;
       
-      // Process the data to add profiles for each reservation
+      // For each reservation, fetch the profile data
       const enhancedData = await Promise.all((data || []).map(async (slot) => {
-        // For each reservation, fetch the user profile separately
-        const enhancedReservations = await Promise.all(
-          (slot.astro_spot_reservations || []).map(async (reservation) => {
-            // Fetch profile for this user_id
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('username, avatar_url')
-              .eq('id', reservation.user_id)
-              .single();
+        if (slot.astro_spot_reservations && slot.astro_spot_reservations.length > 0) {
+          const enhancedReservations = await Promise.all(slot.astro_spot_reservations.map(async (reservation) => {
+            try {
+              const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('username, avatar_url')
+                .eq('id', reservation.user_id)
+                .single();
+                
+              if (profileError) throw profileError;
               
-            return {
-              ...reservation,
-              profiles: profileData || { username: null, avatar_url: null }
-            };
-          })
-        );
+              return {
+                ...reservation,
+                profiles: profileData || { username: 'Unknown User', avatar_url: null }
+              };
+            } catch (err) {
+              // If we can't fetch the profile, just return the reservation with default values
+              return {
+                ...reservation,
+                profiles: { username: 'Unknown User', avatar_url: null }
+              };
+            }
+          }));
+          
+          return {
+            ...slot,
+            astro_spot_reservations: enhancedReservations
+          };
+        }
         
-        return {
-          ...slot,
-          astro_spot_reservations: enhancedReservations
-        };
+        return slot;
       }));
       
-      return enhancedData as TimeSlot[];
+      setTimeSlots(enhancedData as TimeSlot[]);
+    } catch (error) {
+      console.error('Error fetching time slots:', error);
+      toast.error(t('Failed to load time slots', '加载时段失败'));
+    } finally {
+      setLoading(false);
     }
-  });
-
-  // Filter time slots for the selected date if any
-  const filteredTimeSlots = timeSlots?.filter((slot) => {
-    if (!selectedDate) return true;
-    
-    const slotDate = new Date(slot.start_time);
-    return (
-      slotDate.getDate() === selectedDate.getDate() &&
-      slotDate.getMonth() === selectedDate.getMonth() &&
-      slotDate.getFullYear() === selectedDate.getFullYear()
-    );
-  });
-
-  // Filter upcoming time slots (not in the past)
-  const upcomingTimeSlots = filteredTimeSlots?.filter(slot => 
-    isAfter(new Date(slot.start_time), new Date())
-  );
-
-  const handleAddSuccess = () => {
-    setShowAddForm(false);
-    refetch();
-    toast.success(t("Time slots added successfully", "时间段添加成功"));
   };
 
-  const handleBookingRequest = async (timeslotId: string, spotCreatorId: string) => {
-    if (!user) {
-      toast.error(t("You need to be logged in to book a time slot", "您需要登录才能预订时间段"));
-      return;
+  useEffect(() => {
+    if (spotId) {
+      fetchTimeSlots();
     }
+  }, [spotId]);
 
+  const handleAddSlot = () => {
+    setEditingSlot(null);
+    setShowForm(true);
+  };
+
+  const handleEditSlot = (slot: TimeSlot) => {
+    setEditingSlot(slot);
+    setShowForm(true);
+  };
+
+  const handleSaveTimeSlot = async (formData: {
+    start_time: string;
+    end_time: string;
+    max_capacity: number;
+    description: string;
+    price: number;
+    currency: string;
+  }) => {
     try {
-      // Create a reservation
-      const { data, error } = await supabase.rpc('insert_astro_spot_reservation', {
-        p_timeslot_id: timeslotId,
-        p_user_id: user.id,
-        p_status: 'confirmed'
-      });
+      if (!user) return;
+      
+      if (editingSlot) {
+        // Update existing time slot
+        const { error } = await supabase.rpc('update_astro_spot_timeslot', {
+          p_id: editingSlot.id,
+          p_spot_id: spotId,
+          p_creator_id: user.id,
+          p_start_time: formData.start_time,
+          p_end_time: formData.end_time,
+          p_max_capacity: formData.max_capacity,
+          p_description: formData.description,
+          p_price: formData.price,
+          p_currency: formData.currency
+        });
+        
+        if (error) throw error;
+        
+        toast.success(t('Time slot updated successfully', '时段更新成功'));
+      } else {
+        // Create new time slot
+        const { error } = await supabase.rpc('insert_astro_spot_timeslot', {
+          p_spot_id: spotId,
+          p_creator_id: user.id,
+          p_start_time: formData.start_time,
+          p_end_time: formData.end_time,
+          p_max_capacity: formData.max_capacity,
+          p_description: formData.description,
+          p_price: formData.price,
+          p_currency: formData.currency
+        });
+        
+        if (error) throw error;
+        
+        toast.success(t('Time slot created successfully', '时段创建成功'));
+      }
+      
+      setShowForm(false);
+      fetchTimeSlots();
+    } catch (error: any) {
+      console.error('Error saving time slot:', error);
+      toast.error(t('Failed to save time slot', '保存时段失败'));
+    }
+  };
 
+  const handleDeleteTimeSlot = async (slotId: string) => {
+    try {
+      const { error } = await supabase
+        .from('astro_spot_timeslots')
+        .delete()
+        .eq('id', slotId)
+        .eq('spot_id', spotId);
+        
       if (error) throw error;
       
-      // Create a message to notify the spot creator
-      await supabase.from('user_messages').insert({
-        sender_id: user.id,
-        receiver_id: spotCreatorId,
-        message: t(`I've booked a time slot for ${spotName}. Looking forward to it!`, 
-                   `我已经预订了${spotName}的时间段。期待与您见面！`)
-      });
-      
-      toast.success(t("Booking successful! A message has been sent to the creator.", 
-                      "预订成功！已向创建者发送消息。"));
-      refetch();
-    } catch (error: any) {
-      toast.error(error.message || t("Failed to book time slot", "预订时间段失败"));
+      toast.success(t('Time slot deleted successfully', '时段删除成功'));
+      fetchTimeSlots();
+    } catch (error) {
+      console.error('Error deleting time slot:', error);
+      toast.error(t('Failed to delete time slot', '删除时段失败'));
     }
   };
 
-  if (isLoading) {
+  const handleCancelEdit = () => {
+    setShowForm(false);
+    setEditingSlot(null);
+  };
+
+  if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+        <span className="ml-2 text-cosmic-300">{t('Loading time slots...', '加载时段中...')}</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
-      <h2 className="text-xl font-semibold text-gray-200 mb-3 flex items-center">
-        <span className="w-2 h-6 bg-blue-500 rounded-sm mr-2.5"></span>
-        {t("Availability & Bookings", "可用性和预订")}
-      </h2>
-      
-      {isCreator && (
-        <div className="mb-6">
-          {showAddForm ? (
-            <TimeSlotForm 
-              spotId={spotId} 
-              onSuccess={handleAddSuccess} 
-              onCancel={() => setShowAddForm(false)}
-            />
-          ) : (
-            <Button 
-              onClick={() => setShowAddForm(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {t("Add Available Time Slot", "添加可用时间段")}
-            </Button>
-          )}
-        </div>
-      )}
-
-      <div className="mb-6">
-        <div className="block mb-2 text-gray-300">
-          {t("Filter by Date", "按日期筛选")}
-        </div>
-        <div className="bg-cosmic-900/50 rounded-lg border border-cosmic-700/40 p-2">
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-            className="bg-cosmic-800/40 rounded-lg"
-          />
-        </div>
-        {selectedDate && (
-          <div className="mt-2 flex justify-end">
-            <Button 
-              variant="ghost" 
-              onClick={() => setSelectedDate(undefined)}
-              size="sm"
-            >
-              {t("Clear Filter", "清除筛选")}
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-gray-300">
-          {selectedDate 
-            ? t(`Available on ${format(selectedDate, 'PPP')}`, `${format(selectedDate, 'PPP')} 可用时间`) 
-            : t("All Available Time Slots", "所有可用时间段")}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium text-cosmic-100">
+          {t('Available Time Slots', '可用时段')}
         </h3>
         
-        {upcomingTimeSlots && upcomingTimeSlots.length > 0 ? (
-          <div className="space-y-3">
-            {upcomingTimeSlots.map(slot => (
-              <TimeSlotItem 
-                key={slot.id}
-                timeSlot={slot}
-                isCreator={isCreator}
-                onUpdate={refetch}
-                onBook={() => handleBookingRequest(slot.id, creatorId)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="py-8 text-center bg-cosmic-800/20 rounded-lg border border-cosmic-700/20">
-            <p className="text-gray-400">
-              {t("No available time slots found", "未找到可用时间段")}
-            </p>
-          </div>
+        {isOwner && !showForm && (
+          <Button 
+            onClick={handleAddSlot}
+            size="sm" 
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            {t('Add Time Slot', '添加时段')}
+          </Button>
         )}
       </div>
-
-      {/* Confirmation Dialog */}
-      {modalType === 'confirmation' && modalData && (
-        <ConfirmDialog
-          isOpen={true}
-          onClose={closeModal}
-          onConfirm={() => modalData.onConfirm()}
-          title={modalData.title}
-          description={modalData.description}
-          confirmText={modalData.confirmText}
-          cancelText={modalData.cancelText}
+      
+      <Separator className="bg-cosmic-700/50" />
+      
+      {showForm ? (
+        <TimeSlotForm 
+          initialData={editingSlot}
+          onSave={handleSaveTimeSlot}
+          onCancel={handleCancelEdit}
         />
+      ) : timeSlots.length > 0 ? (
+        <div className="space-y-4">
+          {timeSlots.map(slot => (
+            <TimeSlotItem
+              key={slot.id}
+              timeSlot={slot}
+              isOwner={isOwner}
+              onEdit={() => handleEditSlot(slot)}
+              onDelete={() => handleDeleteTimeSlot(slot.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-8 text-cosmic-400">
+          <p>{t('No time slots available for this spot yet.', '此地点暂无可用时段。')}</p>
+          {isOwner && (
+            <p className="mt-2">
+              {t('Click "Add Time Slot" to create your first available time.', '点击"添加时段"创建您的第一个可用时间。')}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

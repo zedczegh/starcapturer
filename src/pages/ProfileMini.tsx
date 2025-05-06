@@ -9,16 +9,18 @@ import NavBar from '@/components/NavBar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, Camera, User, MessageCircle, Calendar, Star } from 'lucide-react';
+import { ArrowLeft, User, MessageCircle, Star } from 'lucide-react';
 import { useUserTags } from '@/hooks/useUserTags';
 import UserTags from '@/components/profile/UserTags';
 import { motion } from 'framer-motion';
+import LocationCard from '@/components/LocationCard';
 
 const ProfileMini = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const { t } = useLanguage();
   const { tags, loading: loadingTags, fetchUserTags } = useUserTags();
+  const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', id],
@@ -60,6 +62,13 @@ const ProfileMini = () => {
       fetchUserTags(id);
     }
   }, [id, fetchUserTags]);
+
+  const handleSiqsCalculated = (spotId: string, siqs: number | null) => {
+    setRealTimeSiqs(prev => ({
+      ...prev,
+      [spotId]: siqs
+    }));
+  };
 
   const isOwnProfile = user?.id === id;
 
@@ -138,7 +147,6 @@ const ProfileMini = () => {
 
               {/* Join date */}
               <div className="flex items-center gap-2 text-cosmic-400 text-sm mb-4">
-                <Calendar className="h-3.5 w-3.5" />
                 <span>{t('Joined', '加入于')} {new Date(profile.created_at).toLocaleDateString()}</span>
               </div>
 
@@ -147,23 +155,42 @@ const ProfileMini = () => {
                 tags={tags} 
                 loading={loadingTags} 
                 className="mt-4"
+                editable={false}
               />
 
               {/* AstroSpots count */}
               {astroSpots && astroSpots.length > 0 && (
-                <div className="mt-6 p-3 bg-cosmic-800/40 rounded-lg border border-cosmic-700/40">
-                  <div className="flex items-center gap-2 text-cosmic-200 mb-2">
+                <div className="mt-6">
+                  <div className="flex items-center gap-2 text-cosmic-200 mb-4">
                     <Star className="h-4 w-4 text-amber-500" />
                     <span className="font-medium">
                       {t('Astronomy Spots', '天文地点')} ({astroSpots.length})
                     </span>
                   </div>
-                  <p className="text-sm text-cosmic-400">
-                    {t(
-                      'This user has shared astronomy observation locations with the community.',
-                      '该用户已与社区分享天文观测地点。'
-                    )}
-                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    {astroSpots.slice(0, 4).map((spot) => (
+                      <div key={spot.id} className="relative">
+                        <Link to={`/astro-spot/${spot.id}`} className="block w-full">
+                          <LocationCard
+                            id={spot.id}
+                            name={spot.name}
+                            latitude={spot.latitude}
+                            longitude={spot.longitude}
+                            siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                            timestamp={spot.created_at}
+                            username={profile.username || t("Stargazer", "星空观察者")}
+                          />
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {astroSpots.length > 4 && (
+                    <div className="mt-4 text-center text-sm text-cosmic-400">
+                      {t('And {{count}} more spots', '还有 {{count}} 个地点').replace('{{count}}', (astroSpots.length - 4).toString())}
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -174,15 +201,6 @@ const ProfileMini = () => {
                   <MessageCircle className="h-4 w-4 mr-2" />
                   {t('Message', '发消息')}
                 </Button>
-              )}
-
-              {astroSpots && astroSpots.length > 0 && (
-                <Link to="/community" className="flex-1">
-                  <Button variant="outline" className="w-full border-cosmic-700/50">
-                    <Camera className="h-4 w-4 mr-2" />
-                    {t('View Spots', '查看地点')}
-                  </Button>
-                </Link>
               )}
 
               {isOwnProfile && (
