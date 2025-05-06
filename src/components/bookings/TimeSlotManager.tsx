@@ -3,102 +3,66 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useModal } from '@/contexts/ModalContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import TimeSlotForm from './TimeSlotForm';
 import TimeSlotItem from './TimeSlotItem';
 import { format, parseISO, isAfter } from 'date-fns';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/confirm-dialog';
 
 interface TimeSlotManagerProps {
   spotId: string;
-  isCreator: boolean;
+  creatorId: string;
+  spotName: string;
 }
 
-const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) => {
+const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ 
+  spotId, 
+  creatorId,
+  spotName
+}) => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { modalType, modalData, openModal, closeModal } = useModal();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [showAddForm, setShowAddForm] = useState(false);
+  const isCreator = user?.id === creatorId;
 
   // Fetch time slots for this spot
   const { data: timeSlots, isLoading, refetch } = useQuery({
     queryKey: ['timeSlots', spotId],
     queryFn: async () => {
-      // Use fetch to directly access the Supabase API
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      const response = await fetch(
-        `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/astro_spot_timeslots?spot_id=eq.${spotId}&order=start_time.asc`,
-        {
-          headers: {
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y',
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const { data, error } = await supabase
+        .from('astro_spot_timeslots')
+        .select(`
+          id,
+          spot_id,
+          creator_id,
+          start_time,
+          end_time,
+          max_capacity,
+          description,
+          price,
+          currency,
+          astro_spot_reservations (
+            id,
+            user_id,
+            status,
+            profiles:user_id (
+              username,
+              avatar_url
+            )
+          )
+        `)
+        .eq('spot_id', spotId)
+        .order('start_time', { ascending: true });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch time slots');
-      }
-
-      const data = await response.json();
-      
-      // Fetch reservations for each time slot
-      for (const slot of data || []) {
-        const reservationsResponse = await fetch(
-          `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/astro_spot_reservations?timeslot_id=eq.${slot.id}`,
-          {
-            headers: {
-              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y',
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-        
-        if (!reservationsResponse.ok) {
-          throw new Error('Failed to fetch reservations');
-        }
-        
-        const reservations = await reservationsResponse.json();
-        slot.astro_spot_reservations = reservations;
-        
-        // Get user profiles for each reservation
-        if (reservations.length > 0) {
-          const userIds = reservations.map((res: any) => res.user_id);
-          const userIdsQuery = userIds.map((id: string) => `id=eq.${id}`).join(',');
-            
-          const profilesResponse = await fetch(
-            `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/profiles?${userIdsQuery}`,
-            {
-              headers: {
-                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y',
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            }
-          );
-            
-          if (profilesResponse.ok) {
-            const profiles = await profilesResponse.json();
-            
-            // Attach profile to each reservation
-            if (profiles) {
-              slot.astro_spot_reservations = slot.astro_spot_reservations.map((res: any) => {
-                const profile = profiles.find((p: any) => p.id === res.user_id);
-                return { ...res, profiles: profile };
-              });
-            }
-          }
-        }
-      }
-      
-      return data;
+      if (error) throw error;
+      return data || [];
     }
   });
 
@@ -123,6 +87,38 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
     setShowAddForm(false);
     refetch();
     toast.success(t("Time slots added successfully", "时间段添加成功"));
+  };
+
+  const handleBookingRequest = async (timeslotId: string, spotCreatorId: string) => {
+    if (!user) {
+      toast.error(t("You need to be logged in to book a time slot", "您需要登录才能预订时间段"));
+      return;
+    }
+
+    try {
+      // Create a reservation
+      const { data, error } = await supabase.rpc('insert_astro_spot_reservation', {
+        p_timeslot_id: timeslotId,
+        p_user_id: user.id,
+        p_status: 'confirmed'
+      });
+
+      if (error) throw error;
+      
+      // Create a message to notify the spot creator
+      await supabase.from('user_messages').insert({
+        sender_id: user.id,
+        receiver_id: spotCreatorId,
+        message: t(`I've booked a time slot for ${spotName}. Looking forward to it!`, 
+                   `我已经预订了${spotName}的时间段。期待与您见面！`)
+      });
+      
+      toast.success(t("Booking successful! A message has been sent to the creator.", 
+                      "预订成功！已向创建者发送消息。"));
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || t("Failed to book time slot", "预订时间段失败"));
+    }
   };
 
   if (isLoading) {
@@ -160,9 +156,9 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
       )}
 
       <div className="mb-6">
-        <Label className="block mb-2 text-gray-300">
+        <div className="block mb-2 text-gray-300">
           {t("Filter by Date", "按日期筛选")}
-        </Label>
+        </div>
         <div className="bg-cosmic-900/50 rounded-lg border border-cosmic-700/40 p-2">
           <Calendar
             mode="single"
@@ -199,6 +195,7 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
                 timeSlot={slot}
                 isCreator={isCreator}
                 onUpdate={refetch}
+                onBook={() => handleBookingRequest(slot.id, creatorId)}
               />
             ))}
           </div>
@@ -210,6 +207,19 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
           </div>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      {modalType === 'confirmation' && modalData && (
+        <ConfirmDialog
+          isOpen={true}
+          onClose={closeModal}
+          onConfirm={() => modalData.onConfirm()}
+          title={modalData.title}
+          description={modalData.description}
+          confirmText={modalData.confirmText}
+          cancelText={modalData.cancelText}
+        />
+      )}
     </div>
   );
 };

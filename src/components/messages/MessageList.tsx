@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { motion } from "framer-motion";
 import { ChevronLeft, User, MessageCircle } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -9,6 +9,8 @@ import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import MessageStatus, { MessageStatusType } from './MessageStatus';
+import { useUserTags } from '@/hooks/useUserTags';
+import UserTags from '@/components/profile/UserTags';
 
 interface Message {
   id: string;
@@ -49,7 +51,15 @@ const MessageList: React.FC<MessageListProps> = ({
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
-  const [prevMessagesLength, setPrevMessagesLength] = React.useState(messages.length);
+  const [prevMessagesLength, setPrevMessagesLength] = useState(messages.length);
+  const { tags, loading: loadingTags, fetchUserTags } = useUserTags();
+
+  // Fetch partner's tags when conversation changes
+  useEffect(() => {
+    if (activeConversation?.id) {
+      fetchUserTags(activeConversation.id);
+    }
+  }, [activeConversation?.id, fetchUserTags]);
 
   const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -145,20 +155,29 @@ const MessageList: React.FC<MessageListProps> = ({
           <h3 className="font-semibold text-white text-base md:text-lg truncate">
             {activeConversation.username || t("User", "用户")}
           </h3>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="link"
-                className="p-0 h-auto text-xs md:text-sm text-primary hover:text-primary/80"
-                onClick={() => navigate(`/profile/${activeConversation.id}`)}
-              >
-                {t("View Profile", "查看资料")}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t("Visit profile page", "访问个人资料页面")}
-            </TooltipContent>
-          </Tooltip>
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="link"
+                  className="p-0 h-auto text-xs md:text-sm text-primary hover:text-primary/80"
+                  onClick={() => navigate(`/profile/${activeConversation.id}`)}
+                >
+                  {t("View Profile", "查看资料")}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t("Visit profile page", "访问个人资料页面")}
+              </TooltipContent>
+            </Tooltip>
+            
+            {/* User tags */}
+            <UserTags 
+              tags={tags} 
+              loading={loadingTags}
+              className="ml-2"
+            />
+          </div>
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { ModalProvider } from './contexts/ModalContext';
 import { TooltipProvider } from './components/ui/tooltip';
 import { Toaster } from './components/ui/sonner';
 import { supabase } from './integrations/supabase/client';
@@ -33,6 +34,7 @@ const App = () => {
       try {
         const { data: buckets } = await supabase.storage.listBuckets();
         const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
+        const userTagsBucketExists = buckets?.some(bucket => bucket.name === 'user_tags');
         
         if (!avatarsBucketExists) {
           // Create the avatars bucket if it doesn't exist
@@ -47,8 +49,22 @@ const App = () => {
             console.log('Created avatars bucket successfully');
           }
         }
+        
+        if (!userTagsBucketExists) {
+          // Create the user_tags bucket if it doesn't exist
+          const { data, error } = await supabase.storage.createBucket('user_tags', {
+            public: true, // Make it publicly accessible
+            fileSizeLimit: 1024 * 1024 * 1 // 1MB limit
+          });
+          
+          if (error) {
+            console.error('Error creating user_tags bucket:', error);
+          } else {
+            console.log('Created user_tags bucket successfully');
+          }
+        }
       } catch (error) {
-        console.error('Error checking/creating avatars bucket:', error);
+        console.error('Error checking/creating buckets:', error);
       }
     };
     
@@ -61,29 +77,31 @@ const App = () => {
         <LanguageProvider>
           <Router>
             <AuthProvider>
-              <TooltipProvider>
-                <Routes>
-                  <Route path="/" element={<Navigate to="/photo-points" replace />} />
-                  <Route path="/photo-points" element={<PhotoPointsNearby />} />
-                  <Route path="/community" element={<CommunityAstroSpots />} />
-                  <Route path="/about-siqs" element={<AboutSIQS />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/location/:id" element={<LocationDetails />} />
-                  <Route path="/location/siqs-calculator" element={<LocationDetails />} />
-                  <Route path="/links" element={<UsefulLinks />} />
-                  <Route path="/useful-links" element={<UsefulLinks />} />
-                  <Route path="/share" element={<ShareLocation />} />
-                  <Route path="/collections" element={<Collections />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/profile/:id" element={<ProfileMini />} />
-                  <Route path="/settings" element={<PreferencesPage />} />
-                  <Route path="/manage-astro-spots" element={<ManageAstroSpots />} />
-                  <Route path="/astro-spot/:id" element={<AstroSpotProfile />} />
-                  <Route path="/messages" element={<Messages />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Toaster />
-              </TooltipProvider>
+              <ModalProvider>
+                <TooltipProvider>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/photo-points" replace />} />
+                    <Route path="/photo-points" element={<PhotoPointsNearby />} />
+                    <Route path="/community" element={<CommunityAstroSpots />} />
+                    <Route path="/about-siqs" element={<AboutSIQS />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/location/:id" element={<LocationDetails />} />
+                    <Route path="/location/siqs-calculator" element={<LocationDetails />} />
+                    <Route path="/links" element={<UsefulLinks />} />
+                    <Route path="/useful-links" element={<UsefulLinks />} />
+                    <Route path="/share" element={<ShareLocation />} />
+                    <Route path="/collections" element={<Collections />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/profile/:id" element={<ProfileMini />} />
+                    <Route path="/settings" element={<PreferencesPage />} />
+                    <Route path="/manage-astro-spots" element={<ManageAstroSpots />} />
+                    <Route path="/astro-spot/:id" element={<AstroSpotProfile />} />
+                    <Route path="/messages" element={<Messages />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                  <Toaster />
+                </TooltipProvider>
+              </ModalProvider>
             </AuthProvider>
           </Router>
         </LanguageProvider>

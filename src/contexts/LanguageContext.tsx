@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 
+// Export the Language type so other modules can use it
 export type Language = 'en' | 'zh';
 
 interface LanguageContextType {

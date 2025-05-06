@@ -80,6 +80,13 @@ const AstroSpotProfile = () => {
         .eq('spot_id', id)
         .order('created_at', { ascending: false });
 
+      // Fetch creator profile
+      const { data: creatorProfileData } = await supabase
+        .from('profiles')
+        .select('username, avatar_url')
+        .eq('id', spotData.user_id)
+        .maybeSingle();
+
       let commentsWithProfiles: Comment[] = [];
       if (commentData) {
         commentsWithProfiles = commentData.map((comment: any) => ({
@@ -95,6 +102,7 @@ const AstroSpotProfile = () => {
         astro_spot_types: typeData || [],
         astro_spot_advantages: advantageData || [],
         astro_spot_comments: commentsWithProfiles || [],
+        creator_profile: creatorProfileData
       };
     },
     retry: 1,
@@ -243,7 +251,7 @@ const AstroSpotProfile = () => {
 
           <SpotHeader
             spot={spot}
-            creatorProfile={creatorProfile}
+            creatorProfile={spot.creator_profile || creatorProfile}
             loadingCreator={loadingCreator}
             spotId={spot.user_id}
             onViewDetails={handleViewDetails}
@@ -257,7 +265,11 @@ const AstroSpotProfile = () => {
               advantages={spot.astro_spot_advantages}
             />
             
-            <TimeSlotManager spotId={id!} isCreator={isCreator} />
+            <TimeSlotManager 
+              spotId={id!} 
+              creatorId={spot.user_id}
+              spotName={spot.name}
+            />
             
             <SpotImageGallery
               spotId={id!}
