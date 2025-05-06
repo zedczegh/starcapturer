@@ -1,6 +1,5 @@
 
 import { useCallback } from 'react';
-import { isNight } from '@/utils/astronomy/nightTimeCalculator';
 
 export function useNightForecastProcessor() {
   // Process forecast data to extract nighttime values
@@ -16,9 +15,12 @@ export function useNightForecastProcessor() {
       // Process each forecast hour
       for (let i = 0; i < hourly.time.length; i++) {
         const time = new Date(hourly.time[i]);
+        const hour = time.getHours();
         
-        // Only include nighttime forecasts (between sunset and sunrise)
-        if (isNight(time)) {
+        // Define nighttime as between 6 PM (18) and 7 AM (7)
+        const isNight = hour >= 18 || hour < 7;
+        
+        if (isNight) {
           nightForecasts.push({
             time: hourly.time[i],
             cloudCover: hourly.cloud_cover?.[i] ?? null,
