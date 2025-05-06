@@ -3,9 +3,9 @@ import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Tag, Plus, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserTag } from '@/hooks/useUserTags';
-import TagSelector from './TagSelector';
 
 // Colors for the tag badges
 const TAG_COLORS = [
@@ -30,7 +30,7 @@ interface UserTagsProps {
 }
 
 const UserTags: React.FC<UserTagsProps> = ({
-  tags = [], // Provide default empty array
+  tags,
   loading,
   editable = false,
   showAddNew = false,
@@ -39,26 +39,22 @@ const UserTags: React.FC<UserTagsProps> = ({
   className = ''
 }) => {
   const { t } = useLanguage();
+  const [newTagName, setNewTagName] = React.useState('');
   const [isAdding, setIsAdding] = React.useState(false);
   const [showAddForm, setShowAddForm] = React.useState(false);
 
-  const handleAddTag = async (tagName: string) => {
-    if (!tagName.trim() || !onAddTag) return;
+  const handleAddTag = async () => {
+    if (!newTagName.trim() || !onAddTag) return;
     
     try {
       setIsAdding(true);
-      await onAddTag(tagName.trim());
-      setShowAddForm(false); // Close the form after adding
-    } catch (error) {
-      console.error("Error adding tag:", error);
+      await onAddTag(newTagName.trim());
+      setNewTagName('');
+      setShowAddForm(false);
     } finally {
       setIsAdding(false);
     }
   };
-
-  // Create a list of tag names for filtering in the selector
-  const safeTags = Array.isArray(tags) ? tags : [];
-  const tagNames = safeTags.map(tag => tag.name);
 
   if (loading) {
     return (
@@ -71,14 +67,14 @@ const UserTags: React.FC<UserTagsProps> = ({
     );
   }
 
-  if (safeTags.length === 0 && !showAddNew) {
+  if (tags.length === 0 && !showAddNew) {
     return null;
   }
 
   return (
     <div className={className}>
       <div className="flex flex-wrap gap-2">
-        {safeTags.map((tag, index) => (
+        {tags.map((tag, index) => (
           <Badge 
             key={tag.id} 
             variant="outline" 
@@ -90,7 +86,6 @@ const UserTags: React.FC<UserTagsProps> = ({
               <button
                 className="ml-1.5 text-current opacity-80 hover:opacity-100"
                 onClick={() => onRemoveTag(tag.id)}
-                aria-label={`Remove ${tag.name} tag`}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -112,15 +107,27 @@ const UserTags: React.FC<UserTagsProps> = ({
       </div>
       
       {showAddForm && (
-        <div className="mt-3">
-          <div className="mb-2">
-            <TagSelector 
-              onSelect={handleAddTag}
-              selectedTags={tagNames}
-              disabled={isAdding}
-            />
-          </div>
-          
+        <div className="mt-3 flex items-center gap-2">
+          <Input
+            value={newTagName}
+            onChange={(e) => setNewTagName(e.target.value)}
+            placeholder={t('Enter tag name...', '输入标签名称...')}
+            className="h-8 bg-cosmic-800/30 border-cosmic-700/50"
+            disabled={isAdding}
+          />
+          <Button 
+            size="sm" 
+            onClick={handleAddTag} 
+            disabled={isAdding || !newTagName.trim()}
+            className="h-8 px-3"
+          >
+            {isAdding ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Plus className="h-3.5 w-3.5 mr-1" />
+            )}
+            {t('Add', '添加')}
+          </Button>
           <Button 
             variant="ghost" 
             size="sm"
