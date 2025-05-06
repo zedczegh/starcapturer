@@ -20,6 +20,34 @@ interface TimeSlotManagerProps {
   spotName: string;
 }
 
+// Define the profiles type to match what we expect
+interface Profile {
+  username: string | null;
+  avatar_url: string | null;
+}
+
+// Define the reservation type
+interface Reservation {
+  id: string;
+  user_id: string;
+  status: string;
+  profiles?: Profile;
+}
+
+// Define the TimeSlot type
+interface TimeSlot {
+  id: string;
+  spot_id: string;
+  creator_id: string;
+  start_time: string;
+  end_time: string;
+  max_capacity: number;
+  description: string | null;
+  price: number | null;
+  currency: string | null;
+  astro_spot_reservations: Reservation[];
+}
+
 const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ 
   spotId, 
   creatorId,
@@ -51,18 +79,40 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({
           astro_spot_reservations (
             id,
             user_id,
-            status,
-            profiles:user_id (
-              username,
-              avatar_url
-            )
+            status
           )
         `)
         .eq('spot_id', spotId)
         .order('start_time', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      
+      // Process the data to add profiles for each reservation
+      const enhancedData = await Promise.all((data || []).map(async (slot) => {
+        // For each reservation, fetch the user profile separately
+        const enhancedReservations = await Promise.all(
+          (slot.astro_spot_reservations || []).map(async (reservation) => {
+            // Fetch profile for this user_id
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('username, avatar_url')
+              .eq('id', reservation.user_id)
+              .single();
+              
+            return {
+              ...reservation,
+              profiles: profileData || { username: null, avatar_url: null }
+            };
+          })
+        );
+        
+        return {
+          ...slot,
+          astro_spot_reservations: enhancedReservations
+        };
+      }));
+      
+      return enhancedData as TimeSlot[];
     }
   });
 

@@ -30,7 +30,7 @@ import './App.css';
 const App = () => {
   // Check if the avatars bucket exists, create if it doesn't
   useEffect(() => {
-    const checkAndCreateAvatarsBucket = async () => {
+    const checkAndCreateBuckets = async () => {
       try {
         const { data: buckets } = await supabase.storage.listBuckets();
         const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
@@ -61,6 +61,16 @@ const App = () => {
             console.error('Error creating user_tags bucket:', error);
           } else {
             console.log('Created user_tags bucket successfully');
+            
+            // Create a directory structure for tag icons
+            // This is a workaround as Supabase doesn't have a direct method to create directories
+            const { error: uploadError } = await supabase.storage
+              .from('user_tags')
+              .upload('icons/.placeholder', new Blob([''], { type: 'text/plain' }));
+            
+            if (uploadError && !uploadError.message.includes('already exists')) {
+              console.error('Error creating user_tags directory structure:', uploadError);
+            }
           }
         }
       } catch (error) {
@@ -68,7 +78,7 @@ const App = () => {
       }
     };
     
-    checkAndCreateAvatarsBucket();
+    checkAndCreateBuckets();
   }, []);
 
   return (

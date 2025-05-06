@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -72,13 +73,32 @@ const ProfileForm = () => {
   };
 
   const uploadAvatar = async () => {
-    if (!avatarFile) return;
-    const { data, error } = await supabase.storage
-      .from('avatars')
-      .upload(`avatars/${user?.id}`, avatarFile);
-    if (error) throw error;
-    setAvatarUrl(data?.signedUrl);
-    setAvatarUploading(false);
+    if (!avatarFile || !user?.id) return null;
+    
+    try {
+      // Upload the file
+      const { data: fileData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(`${user.id}`, avatarFile, {
+          upsert: true
+        });
+      
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileData.path);
+      
+      setAvatarUrl(publicUrlData.publicUrl);
+      setAvatarUploading(false);
+      
+      return publicUrlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      setAvatarUploading(false);
+      return null;
+    }
   };
 
   const handleAddTag = async (tagName: string) => {
@@ -97,8 +117,9 @@ const ProfileForm = () => {
       setSaving(true);
 
       // Upload avatar if selected
+      let newAvatarUrl = avatarUrl;
       if (avatarFile) {
-        await uploadAvatar();
+        newAvatarUrl = await uploadAvatar();
       }
 
       // Update profile in Supabase
@@ -106,6 +127,7 @@ const ProfileForm = () => {
         .from('profiles')
         .update({
           username: data.username,
+          avatar_url: newAvatarUrl,
           updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
@@ -113,7 +135,11 @@ const ProfileForm = () => {
       if (error) throw error;
 
       // Update local state
-      setProfile(prev => prev ? { ...prev, username: data.username } : null);
+      setProfile(prev => prev ? { 
+        ...prev, 
+        username: data.username,
+        avatar_url: newAvatarUrl
+      } : null);
 
       toast.success(t('Profile updated successfully', '个人资料更新成功'));
     } catch (error: any) {
