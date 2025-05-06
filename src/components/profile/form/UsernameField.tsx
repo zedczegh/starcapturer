@@ -4,10 +4,12 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { UseFormRegister, FieldErrors } from 'react-hook-form';
+import { z } from 'zod';
 
-interface ProfileFormValues {
+// Update the type definition to make username optional
+export type ProfileFormValues = {
   username: string;
-}
+};
 
 interface UsernameFieldProps {
   register: UseFormRegister<ProfileFormValues>;

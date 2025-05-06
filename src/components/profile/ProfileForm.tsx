@@ -9,17 +9,16 @@ import { useUserTags } from '@/hooks/useUserTags';
 import { useProfileForm } from '@/hooks/profile/useProfileForm';
 
 // Component imports
-import UsernameField from './form/UsernameField';
+import UsernameField, { ProfileFormValues } from './form/UsernameField';
 import ProfileTagsSection from './form/ProfileTagsSection';
 import SubmitButton from './form/SubmitButton';
 
+// Use the same type from UsernameField to ensure consistency
 const formSchema = z.object({
   username: z.string().min(3, {
     message: 'Username must be at least 3 characters.',
   }),
 });
-
-type ProfileFormValues = z.infer<typeof formSchema>;
 
 const ProfileForm = () => {
   const { user } = useAuth();
