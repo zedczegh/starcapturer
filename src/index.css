@@ -108,44 +108,4 @@
   .bg-cosmic-glow {
     background: radial-gradient(circle, rgba(138, 43, 226, 0.3), rgba(25, 25, 112, 0.1));
   }
-  
-  /* Toast animations */
-  @keyframes slideIn {
-    from {
-      transform: translateY(20px);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-  
-  @keyframes slideOut {
-    from {
-      transform: translateY(0);
-      opacity: 1;
-    }
-    to {
-      transform: translateY(20px);
-      opacity: 0;
-    }
-  }
-  
-  /* Toast styles */
-  .toast-success {
-    border-left: 4px solid var(--green-500) !important;
-  }
-  
-  .toast-error {
-    border-left: 4px solid var(--red-500) !important;
-  }
-  
-  .toast-info {
-    border-left: 4px solid #0EA5E9 !important;
-  }
-  
-  .toast-warning {
-    border-left: 4px solid #F97316 !important;
-  }
 }

@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
-import { Camera, X, Loader2 } from 'lucide-react';
+import { Camera, X } from 'lucide-react';
 import { User } from 'lucide-react';
 
 interface ProfileAvatarProps {
@@ -47,24 +47,14 @@ const ProfileAvatar = ({
           </div>
         )}
         
-        <label 
-          htmlFor="avatar-upload" 
-          className={`absolute -bottom-1 -right-1 p-2 rounded-full cursor-pointer shadow-md hover:bg-primary/90 transition-all ${
-            uploadingAvatar ? 'bg-cosmic-700 text-cosmic-300' : 'bg-primary text-white'
-          }`}
-        >
-          {uploadingAvatar ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Camera className="w-5 h-5" />
-          )}
+        <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 bg-primary text-white p-2 rounded-full cursor-pointer shadow-md hover:bg-primary/90 transition-all">
+          <Camera className="w-5 h-5" />
           <Input
             id="avatar-upload"
             type="file"
             accept="image/*"
             onChange={onAvatarChange}
             className="hidden"
-            disabled={uploadingAvatar}
           />
         </label>
       </div>
