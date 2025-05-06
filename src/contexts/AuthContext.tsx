@@ -23,6 +23,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { t } = useLanguage ? useLanguage() : { t: (en: string, zh: string) => en };
 
   useEffect(() => {
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
@@ -30,12 +31,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    (async () => {
-      const sessionResult = await supabase.auth.getSession();
-      setSession(sessionResult.data.session);
-      setUser(sessionResult.data.session?.user ?? null);
-      setIsLoading(false);
-    })();
+    // THEN check for existing session
+    const getInitialSession = async () => {
+      try {
+        const sessionResult = await supabase.auth.getSession();
+        setSession(sessionResult.data.session);
+        setUser(sessionResult.data.session?.user ?? null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    getInitialSession();
 
     return () => subscription.unsubscribe();
   }, []);
