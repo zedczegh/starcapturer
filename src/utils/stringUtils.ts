@@ -24,8 +24,9 @@ export const safeToString = (value: any): string => {
 /**
  * Returns a truncated version of a string if it exceeds maxLength
  */
-export const truncateString = (str: string, maxLength: number): string => {
-  if (!str || str.length <= maxLength) return str || '';
+export const truncateString = (str: string | null | undefined, maxLength: number): string => {
+  if (!str) return '';
+  if (str.length <= maxLength) return str;
   return `${str.substring(0, maxLength)}...`;
 };
 

@@ -98,6 +98,9 @@ const TagSelector: React.FC<TagSelectorProps> = ({
            !selectedTags.includes(safeToString(tag.label))
   );
 
+  // Ensure we have a valid list structure even if availableTags is empty
+  const safeAvailableTags = Array.isArray(availableTags) ? availableTags : [];
+  
   return (
     <div className="flex flex-col space-y-2">
       <Popover open={open} onOpenChange={setOpen}>
@@ -145,23 +148,25 @@ const TagSelector: React.FC<TagSelectorProps> = ({
               </div>
             </CommandEmpty>
             <CommandGroup>
-              {Array.isArray(availableTags) && availableTags.length > 0 ? availableTags.map((tag) => (
-                <CommandItem
-                  key={tag.value}
-                  value={tag.value}
-                  onSelect={handleSelectTag}
-                  className="text-cosmic-200 hover:bg-cosmic-800"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === tag.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <TagIcon className="h-3.5 w-3.5 mr-2 text-cosmic-400" />
-                  {translateTag(tag.label)}
-                </CommandItem>
-              )) : (
+              {safeAvailableTags.length > 0 ? (
+                safeAvailableTags.map((tag) => (
+                  <CommandItem
+                    key={tag.value}
+                    value={tag.value}
+                    onSelect={handleSelectTag}
+                    className="text-cosmic-200 hover:bg-cosmic-800"
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === tag.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <TagIcon className="h-3.5 w-3.5 mr-2 text-cosmic-400" />
+                    {translateTag(tag.label)}
+                  </CommandItem>
+                ))
+              ) : (
                 <div className="py-2 px-3 text-cosmic-400">
                   {t('No tags available', '没有可用的标签')}
                 </div>

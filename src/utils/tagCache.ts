@@ -6,16 +6,19 @@ const tagCache = new Map<string, UserTag[]>();
 
 // Get cached tags for a user
 export const getCachedTags = (userId: string): UserTag[] | null => {
+  if (!userId) return null;
   return tagCache.get(userId) || null;
 };
 
 // Set cached tags for a user
 export const setCachedTags = (userId: string, tags: UserTag[]): void => {
+  if (!userId) return;
   tagCache.set(userId, ensureArray(tags));
 };
 
 // Clear cache for a user
 export const clearCachedTags = (userId: string): void => {
+  if (!userId) return;
   tagCache.delete(userId);
 };
 
@@ -33,7 +36,13 @@ export const safeFilter = <T>(
 ): T[] => {
   const safeArray = ensureArray(array);
   if (!safeArray || !Array.isArray(safeArray)) return [];
-  return safeArray.filter(filterFn);
+  
+  try {
+    return safeArray.filter(filterFn);
+  } catch (error) {
+    console.error("Error in safeFilter:", error);
+    return [];
+  }
 };
 
 // Safe map function to avoid similar errors
@@ -43,5 +52,11 @@ export const safeMap = <T, R>(
 ): R[] => {
   const safeArray = ensureArray(array);
   if (!safeArray || !Array.isArray(safeArray)) return [];
-  return safeArray.map(mapFn);
+  
+  try {
+    return safeArray.map(mapFn);
+  } catch (error) {
+    console.error("Error in safeMap:", error);
+    return [];
+  }
 };

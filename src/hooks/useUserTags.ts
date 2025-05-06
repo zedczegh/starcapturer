@@ -19,7 +19,11 @@ export function useUserTags() {
   // Fetch user tags
   const fetchUserTags = async (userId: string) => {
     try {
-      if (!userId) return;
+      if (!userId) {
+        setTags([]);
+        setLoading(false);
+        return;
+      }
 
       // Check cache first to avoid flickering
       const cachedTags = getCachedTags(userId);
@@ -28,7 +32,9 @@ export function useUserTags() {
         setLoading(false);
         
         // Still refresh in background but don't show loading state
-        refreshTagsInBackground(userId);
+        refreshTagsInBackground(userId).catch(error => {
+          console.error("Error refreshing tags in background:", error);
+        });
         return;
       }
       
@@ -42,34 +48,33 @@ export function useUserTags() {
       
       if (error) throw error;
       
-      if (tagData) {
-        const processedTags = ensureArray(tagData).map(item => ({
-          id: item.id,
-          name: item.tag,
-          icon_url: null // We'll add the icon URL in a moment
-        }));
-        
-        // Fetch tag icons from the user_tags bucket if any exist
-        for (const tag of processedTags) {
-          try {
-            const tagSlug = tag.name.toLowerCase().replace(/\s+/g, '-');
-            const { data } = supabase.storage
-              .from('user_tags')
-              .getPublicUrl(`icons/${tagSlug}.png`);
-              
-            tag.icon_url = data.publicUrl;
-          } catch (err) {
-            // No icon available for this tag, continue
-          }
+      const processedTags = ensureArray(tagData).map(item => ({
+        id: item.id,
+        name: item.tag,
+        icon_url: null // We'll add the icon URL in a moment
+      }));
+      
+      // Fetch tag icons from the user_tags bucket if any exist
+      for (const tag of processedTags) {
+        try {
+          const tagSlug = tag.name.toLowerCase().replace(/\s+/g, '-');
+          const { data } = supabase.storage
+            .from('user_tags')
+            .getPublicUrl(`icons/${tagSlug}.png`);
+            
+          tag.icon_url = data.publicUrl;
+        } catch (err) {
+          // No icon available for this tag, continue
         }
-        
-        setTags(processedTags);
-        
-        // Update cache
-        setCachedTags(userId, processedTags);
       }
+      
+      setTags(processedTags);
+      
+      // Update cache
+      setCachedTags(userId, processedTags);
     } catch (error: any) {
       console.error('Error fetching user tags:', error);
+      setTags([]);
     } finally {
       setLoading(false);
     }
@@ -77,6 +82,8 @@ export function useUserTags() {
 
   // Refresh tags in background without setting loading state
   const refreshTagsInBackground = async (userId: string) => {
+    if (!userId) return;
+    
     try {
       // Get tags from profile_tags table
       const { data: tagData, error } = await supabase
@@ -86,39 +93,40 @@ export function useUserTags() {
       
       if (error) throw error;
       
-      if (tagData) {
-        const processedTags = ensureArray(tagData).map(item => ({
-          id: item.id,
-          name: item.tag,
-          icon_url: null
-        }));
-        
-        // Fetch tag icons from the user_tags bucket if any exist
-        for (const tag of processedTags) {
-          try {
-            const tagSlug = tag.name.toLowerCase().replace(/\s+/g, '-');
-            const { data } = supabase.storage
-              .from('user_tags')
-              .getPublicUrl(`icons/${tagSlug}.png`);
-              
-            tag.icon_url = data.publicUrl;
-          } catch (err) {
-            // No icon available for this tag, continue
-          }
+      const processedTags = ensureArray(tagData).map(item => ({
+        id: item.id,
+        name: item.tag,
+        icon_url: null
+      }));
+      
+      // Fetch tag icons from the user_tags bucket if any exist
+      for (const tag of processedTags) {
+        try {
+          const tagSlug = tag.name.toLowerCase().replace(/\s+/g, '-');
+          const { data } = supabase.storage
+            .from('user_tags')
+            .getPublicUrl(`icons/${tagSlug}.png`);
+            
+          tag.icon_url = data.publicUrl;
+        } catch (err) {
+          // No icon available for this tag, continue
         }
-        
-        setTags(processedTags);
-        
-        // Update cache
-        setCachedTags(userId, processedTags);
       }
+      
+      setTags(processedTags);
+      
+      // Update cache
+      setCachedTags(userId, processedTags);
     } catch (error) {
       console.error('Error refreshing tags in background:', error);
+      // Don't update state or show error to user, just log it
     }
   };
 
   // Add a new tag to user's profile
   const addUserTag = async (userId: string, tagName: string) => {
+    if (!userId || !tagName) return null;
+    
     try {
       const { data, error } = await supabase
         .from('profile_tags')
@@ -129,6 +137,7 @@ export function useUserTags() {
       if (error) throw error;
       
       if (data) {
+        // Use the ensureArray helper to ensure we're working with an array
         setTags(prev => [...ensureArray(prev), { 
           id: data.id, 
           name: data.tag, 
@@ -148,6 +157,8 @@ export function useUserTags() {
 
   // Remove a tag from user's profile
   const removeUserTag = async (tagId: string) => {
+    if (!tagId) return false;
+    
     try {
       const { error } = await supabase
         .from('profile_tags')
@@ -156,6 +167,7 @@ export function useUserTags() {
         
       if (error) throw error;
       
+      // Use the ensureArray helper to ensure we're working with an array
       setTags(prev => ensureArray(prev).filter(tag => tag.id !== tagId));
       toast.success(t('Tag removed successfully', '标签移除成功'));
       
