@@ -99,13 +99,13 @@ const LocationDetailsMain: React.FC<LocationDetailsMainProps> = ({
         <title>{pageTitle}</title>
       </Helmet>
       <LocationHeader
-        locationData={locationData}
-        loading={loading}
         onRefresh={handleRefreshAll}
+        loading={loading}
         statusMessage={statusMessage}
         messageType={messageType}
         setStatusMessage={setStatusMessage}
         handleUpdateLocation={handleUpdateLocation}
+        locationData={locationData}
       />
       <LocationDetailsContent
         locationData={locationData}
@@ -126,6 +126,7 @@ const LocationDetailsMain: React.FC<LocationDetailsMainProps> = ({
         }
         onRefreshAll={handleRefreshAll}
         weatherAlerts={weatherAlerts}
+        onLocationUpdate={(loc) => handleUpdateLocation && handleUpdateLocation()}
       />
     </div>
   );
