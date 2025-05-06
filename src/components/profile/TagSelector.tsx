@@ -16,8 +16,6 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { safeFilter } from '@/utils/tagCache';
-import { safeToString } from '@/utils/stringUtils';
 
 // Common tags that users can select from
 const COMMON_TAGS = [
@@ -61,20 +59,16 @@ const TagSelector: React.FC<TagSelectorProps> = ({
   const [customTag, setCustomTag] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Translate common tags based on current language
-  const translateTag = (tag: string): string => {
-    // Here you can implement tag translation if needed
-    return tag;
-  };
-
+  // Handle selecting a tag from the dropdown
   const handleSelectTag = (currentValue: string) => {
     setValue(currentValue);
-    if (currentValue && !selectedTags.includes(currentValue)) {
+    if (currentValue) {
       onSelect(currentValue);
     }
     setOpen(false);
   };
 
+  // Handle submitting a custom tag
   const handleCustomTagSubmit = () => {
     if (customTag && !selectedTags.includes(customTag)) {
       onSelect(customTag);
@@ -82,27 +76,21 @@ const TagSelector: React.FC<TagSelectorProps> = ({
     }
   };
 
+  // Reset value when popover closes
   useEffect(() => {
     if (!open) {
       setValue('');
     }
   }, [open]);
 
-  // Make sure COMMON_TAGS is defined and use safeFilter to handle filtering
-  const commonTagsArray = Array.isArray(COMMON_TAGS) ? COMMON_TAGS : [];
-  
-  // Make sure selectedTags is always an array
+  // Filter out already selected tags
   const safeSelectedTags = Array.isArray(selectedTags) ? selectedTags : [];
   
-  // Use safeFilter to ensure we're not filtering undefined values
-  const availableTags = safeFilter(
-    commonTagsArray,
-    tag => !safeSelectedTags.includes(safeToString(tag.value)) && 
-           !safeSelectedTags.includes(safeToString(tag.label))
+  // Simple filtering logic to avoid undefined errors
+  const availableTags = COMMON_TAGS.filter(tag => 
+    !safeSelectedTags.includes(tag.value) && 
+    !safeSelectedTags.includes(tag.label)
   );
-
-  // Ensure we have a valid list structure even if availableTags is empty
-  const safeAvailableTags = Array.isArray(availableTags) ? availableTags : [];
   
   return (
     <div className="flex flex-col space-y-2">
@@ -151,8 +139,8 @@ const TagSelector: React.FC<TagSelectorProps> = ({
               </div>
             </CommandEmpty>
             <CommandGroup>
-              {safeAvailableTags.length > 0 ? (
-                safeAvailableTags.map((tag) => (
+              {availableTags.length > 0 ? (
+                availableTags.map((tag) => (
                   <CommandItem
                     key={tag.value}
                     value={tag.value}
@@ -166,7 +154,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
                       )}
                     />
                     <TagIcon className="h-3.5 w-3.5 mr-2 text-cosmic-400" />
-                    {translateTag(tag.label)}
+                    {tag.label}
                   </CommandItem>
                 ))
               ) : (

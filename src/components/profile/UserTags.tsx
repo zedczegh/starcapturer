@@ -6,7 +6,6 @@ import { Loader2, Tag, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserTag } from '@/hooks/useUserTags';
 import TagSelector from './TagSelector';
-import { ensureArray } from '@/utils/tagCache';
 
 // Colors for the tag badges
 const TAG_COLORS = [
@@ -57,9 +56,8 @@ const UserTags: React.FC<UserTagsProps> = ({
     }
   };
 
-  // Get an array of tag names from the tags array
-  // Use ensureArray to guarantee we're working with an array
-  const safeTags = ensureArray(tags);
+  // Create a list of tag names for filtering in the selector
+  const safeTags = Array.isArray(tags) ? tags : [];
   const tagNames = safeTags.map(tag => tag.name);
 
   if (loading) {
@@ -118,7 +116,7 @@ const UserTags: React.FC<UserTagsProps> = ({
           <div className="mb-2">
             <TagSelector 
               onSelect={handleAddTag}
-              selectedTags={tagNames || []}
+              selectedTags={tagNames}
               disabled={isAdding}
             />
           </div>
