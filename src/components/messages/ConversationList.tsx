@@ -153,7 +153,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   }`}
               >
                 <Link 
-                  to={`/profile-mini/${conversation.id}`}
+                  to={`/profile/${conversation.id}`}
                   onClick={(e) => e.stopPropagation()}
                   className="relative"
                 >

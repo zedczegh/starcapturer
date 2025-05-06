@@ -70,7 +70,7 @@ const MessageList: React.FC<MessageListProps> = ({
           </button>
         )}
         
-        <Link to={`/profile-mini/${activeConversation.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+        <Link to={`/profile/${activeConversation.id}`} className="flex items-center gap-3 flex-1 min-w-0">
           <Avatar className="h-10 w-10 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20">
             {activeConversation.avatar_url ? (
               <AvatarImage
@@ -108,7 +108,7 @@ const MessageList: React.FC<MessageListProps> = ({
               >
                 <div className="flex items-end gap-2 max-w-[80%]">
                   {!isSender && (
-                    <Link to={`/profile-mini/${message.sender_id}`}>
+                    <Link to={`/profile/${message.sender_id}`}>
                       <Avatar className="h-8 w-8 flex-shrink-0">
                         {message.sender_profile?.avatar_url ? (
                           <AvatarImage

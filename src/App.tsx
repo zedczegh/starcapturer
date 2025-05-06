@@ -103,6 +103,7 @@ const App = () => {
                     <Route path="/collections" element={<Collections />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/profile/:id" element={<ProfileMini />} />
+                    <Route path="/profile-mini/:id" element={<ProfileMini />} />
                     <Route path="/settings" element={<PreferencesPage />} />
                     <Route path="/manage-astro-spots" element={<ManageAstroSpots />} />
                     <Route path="/astro-spot/:id" element={<AstroSpotProfile />} />
