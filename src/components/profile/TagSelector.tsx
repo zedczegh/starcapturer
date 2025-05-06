@@ -88,9 +88,12 @@ const TagSelector: React.FC<TagSelectorProps> = ({
     }
   }, [open]);
 
+  // Make sure COMMON_TAGS is defined and use safeFilter to handle filtering
+  const commonTagsArray = Array.isArray(COMMON_TAGS) ? COMMON_TAGS : [];
+  
   // Use safeFilter to ensure we're not filtering undefined values
   const availableTags = safeFilter(
-    COMMON_TAGS,
+    commonTagsArray,
     tag => !selectedTags.includes(safeToString(tag.value)) && 
            !selectedTags.includes(safeToString(tag.label))
   );
@@ -142,7 +145,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
               </div>
             </CommandEmpty>
             <CommandGroup>
-              {availableTags && availableTags.length > 0 ? availableTags.map((tag) => (
+              {Array.isArray(availableTags) && availableTags.length > 0 ? availableTags.map((tag) => (
                 <CommandItem
                   key={tag.value}
                   value={tag.value}
@@ -158,7 +161,11 @@ const TagSelector: React.FC<TagSelectorProps> = ({
                   <TagIcon className="h-3.5 w-3.5 mr-2 text-cosmic-400" />
                   {translateTag(tag.label)}
                 </CommandItem>
-              )) : null}
+              )) : (
+                <div className="py-2 px-3 text-cosmic-400">
+                  {t('No tags available', '没有可用的标签')}
+                </div>
+              )}
             </CommandGroup>
           </Command>
         </PopoverContent>

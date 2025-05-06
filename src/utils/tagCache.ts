@@ -11,7 +11,7 @@ export const getCachedTags = (userId: string): UserTag[] | null => {
 
 // Set cached tags for a user
 export const setCachedTags = (userId: string, tags: UserTag[]): void => {
-  tagCache.set(userId, tags);
+  tagCache.set(userId, ensureArray(tags));
 };
 
 // Clear cache for a user
@@ -22,7 +22,8 @@ export const clearCachedTags = (userId: string): void => {
 // Make sure an array is returned for safety
 export const ensureArray = <T>(possibleArray: T[] | undefined | null): T[] => {
   if (!possibleArray) return [];
-  return Array.isArray(possibleArray) ? possibleArray : [];
+  if (!Array.isArray(possibleArray)) return [];
+  return possibleArray;
 };
 
 // Safe filter function to avoid "undefined is not iterable" errors
@@ -31,6 +32,7 @@ export const safeFilter = <T>(
   filterFn: (item: T) => boolean
 ): T[] => {
   const safeArray = ensureArray(array);
+  if (!safeArray || !Array.isArray(safeArray)) return [];
   return safeArray.filter(filterFn);
 };
 
@@ -40,5 +42,6 @@ export const safeMap = <T, R>(
   mapFn: (item: T) => R
 ): R[] => {
   const safeArray = ensureArray(array);
+  if (!safeArray || !Array.isArray(safeArray)) return [];
   return safeArray.map(mapFn);
 };
