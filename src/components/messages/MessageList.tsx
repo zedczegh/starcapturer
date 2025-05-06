@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { motion } from "framer-motion";
-import { ChevronLeft, User, MessageCircle } from "lucide-react";
+import { ChevronLeft, User, MessageCircle, Check, X } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -14,6 +14,8 @@ interface Message {
   sender_id: string;
   message: string;
   created_at: string;
+  read: boolean;
+  status?: 'sent' | 'failed' | 'read';
   sender_profile?: {
     username: string | null;
     avatar_url: string | null;
@@ -101,6 +103,46 @@ const MessageList: React.FC<MessageListProps> = ({
         duration: 0.1
       }
     })
+  };
+
+  // Message status indicator component
+  const MessageStatus = ({ message }: { message: Message }) => {
+    if (message.sender_id !== currentUserId) return null;
+    
+    // Default to sent if status not specified
+    const status = message.status || (message.read ? 'read' : 'sent');
+    
+    if (status === 'failed') {
+      return (
+        <Tooltip>
+          <TooltipTrigger>
+            <X className="h-3.5 w-3.5 text-red-500 ml-1" />
+          </TooltipTrigger>
+          <TooltipContent>{t("Failed to send", "发送失败")}</TooltipContent>
+        </Tooltip>
+      );
+    } else if (status === 'read') {
+      return (
+        <Tooltip>
+          <TooltipTrigger>
+            <div className="flex text-green-500 ml-1">
+              <Check className="h-3.5 w-3.5" />
+              <Check className="h-3.5 w-3.5 -ml-2" />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>{t("Read", "已读")}</TooltipContent>
+        </Tooltip>
+      );
+    } else {
+      return (
+        <Tooltip>
+          <TooltipTrigger>
+            <Check className="h-3.5 w-3.5 text-cosmic-300 ml-1" />
+          </TooltipTrigger>
+          <TooltipContent>{t("Sent", "已发送")}</TooltipContent>
+        </Tooltip>
+      );
+    }
   };
 
   return (
@@ -197,15 +239,16 @@ const MessageList: React.FC<MessageListProps> = ({
                   }`}>
                     <div className={`rounded-2xl px-4 py-2 ${
                       message.sender_id === currentUserId 
-                        ? 'bg-primary text-white ml-auto shadow-lg shadow-primary/10' 
-                        : 'bg-cosmic-800/50 text-cosmic-100'
-                    }`}>
+                        ? 'bg-gradient-to-br from-primary/90 to-primary/70 text-white ml-auto shadow-lg shadow-primary/10' 
+                        : 'bg-cosmic-800/50 text-cosmic-100 rounded-tl-none'
+                    } ${message.message.length < 10 ? 'rounded-full py-1.5' : ''}`}>
                       <p className="break-words">{message.message}</p>
                     </div>
-                    <div className={`flex items-center gap-2 text-xs text-cosmic-400 ${
+                    <div className={`flex items-center gap-1 text-xs text-cosmic-400 ${
                       message.sender_id === currentUserId ? 'justify-end' : 'justify-start'
                     }`}>
                       <span>{formatMessageTime(message.created_at)}</span>
+                      <MessageStatus message={message} />
                     </div>
                   </div>
                 </motion.div>

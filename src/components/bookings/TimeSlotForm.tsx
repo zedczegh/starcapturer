@@ -1,19 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
-import { Calendar } from '@/components/ui/calendar';
-import { format, isSameDay, isAfter, isBefore, eachDayOfInterval } from 'date-fns';
-import { Loader2, Trash2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
 import { useDateSelection } from '@/hooks/useDateSelection';
 import { useTimeSlotSubmit } from '@/hooks/useTimeSlotSubmit';
+import DateSelectionArea from './DateSelectionArea';
+import TimeCapacityInputs from './TimeCapacityInputs';
 
 interface TimeSlotFormProps {
   spotId: string;
@@ -31,15 +28,17 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
   const { user } = useAuth();
   const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   
   const isEditing = !!existingTimeSlot;
   const initialDate = isEditing ? new Date(existingTimeSlot.start_time) : new Date();
   
   const {
     selectedDates,
-    setSelectedDates,
     handleCalendarSelect,
-    removeDateBadge
+    removeDateBadge,
+    selectAll,
+    deleteAll
   } = useDateSelection(isEditing, initialDate);
 
   const [startTime, setStartTime] = useState(isEditing ? 
@@ -67,6 +66,10 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     t
   });
 
+  const handleMonthChange = (month: Date) => {
+    setCurrentMonth(month);
+  };
+
   return (
     <div className="bg-cosmic-800/50 border border-cosmic-700/30 rounded-lg p-4 mb-4">
       <h3 className="text-lg font-medium text-gray-200 mb-3">
@@ -78,113 +81,25 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="date" className="block text-sm text-gray-300 mb-1">
-              {isEditing
-                ? t("Date", "日期")
-                : t("Select Dates", "选择日期")
-              }
-              <span className="text-xs ml-1 text-gray-400">
-                {isEditing ? "" : t("(select a date to create a range from today)", "（选择一个日期创建从今天开始的范围）")}
-              </span>
-            </Label>
-            <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
-              {isEditing ? (
-                <Calendar
-                  mode="single"
-                  selected={selectedDates[0]}
-                  onSelect={(date) => date && setSelectedDates([date])}
-                  disabled={(date) => date < new Date()}
-                  className="bg-cosmic-800/30 rounded-lg"
-                />
-              ) : (
-                <Calendar
-                  mode="multiple"
-                  selected={selectedDates}
-                  onSelect={handleCalendarSelect}
-                  disabled={(date) => date < new Date()}
-                  className="bg-cosmic-800/30 rounded-lg"
-                />
-              )}
-            </div>
-            
-            {!isEditing && selectedDates.length > 0 && (
-              <div className="mt-2">
-                <Label className="block text-sm text-gray-300 mb-1">
-                  {t("Selected Dates", "已选择日期")} ({selectedDates.length})
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {selectedDates.map((date, index) => (
-                    <Badge 
-                      key={index} 
-                      variant="secondary"
-                      className="pl-2 pr-1 py-1 flex items-center gap-1 bg-cosmic-800/60"
-                    >
-                      {format(date, 'MMM dd, yyyy')}
-                      <Button 
-                        type="button"
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-5 w-5 ml-1 rounded-full hover:bg-cosmic-700/50"
-                        onClick={() => removeDateBadge(date)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <DateSelectionArea
+            isEditing={isEditing}
+            selectedDates={selectedDates}
+            handleCalendarSelect={handleCalendarSelect}
+            removeDateBadge={removeDateBadge}
+            selectAll={selectAll}
+            deleteAll={deleteAll}
+            currentMonth={currentMonth}
+            setCurrentMonth={handleMonthChange}
+          />
           
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="start-time" className="block text-sm text-gray-300 mb-1">
-                {t("Start Time", "开始时间")}
-              </Label>
-              <Input
-                id="start-time"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
-                required
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="end-time" className="block text-sm text-gray-300 mb-1">
-                {t("End Time", "结束时间")}
-              </Label>
-              <Input
-                id="end-time"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
-                required
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                {t("For overnight sessions, set end time earlier than start time", "对于通宵会话，请将结束时间设置为早于开始时间")}
-              </p>
-            </div>
-            
-            <div>
-              <Label htmlFor="capacity" className="block text-sm text-gray-300 mb-1">
-                {t("Maximum Capacity", "最大容量")}
-              </Label>
-              <Input
-                id="capacity"
-                type="number"
-                min="1"
-                max="100"
-                value={maxCapacity}
-                onChange={(e) => setMaxCapacity(parseInt(e.target.value))}
-                className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
-                required
-              />
-            </div>
-          </div>
+          <TimeCapacityInputs
+            startTime={startTime}
+            setStartTime={setStartTime}
+            endTime={endTime}
+            setEndTime={setEndTime}
+            maxCapacity={maxCapacity}
+            setMaxCapacity={setMaxCapacity}
+          />
         </div>
         
         <div>
