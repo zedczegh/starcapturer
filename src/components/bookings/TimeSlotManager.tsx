@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,14 +34,14 @@ interface TimeSlot {
 interface TimeSlotManagerProps {
   spotId: string;
   isOwner: boolean;
-  creatorId?: string;  // Adding this prop
-  spotName?: string;   // Adding this prop
+  creatorId?: string;
+  spotName?: string;
 }
 
 const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ 
   spotId, 
   isOwner,
-  creatorId,  // Add these new props
+  creatorId,
   spotName 
 }) => {
   const { user } = useAuth();
@@ -239,11 +240,7 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({
       {showForm ? (
         <TimeSlotForm 
           initialData={editingSlot}
-          spotId={spotId}
-          onSuccess={() => {
-            setShowForm(false);
-            fetchTimeSlots();
-          }}
+          onSuccess={handleSaveTimeSlot}
           onCancel={handleCancelEdit}
         />
       ) : timeSlots.length > 0 ? (
