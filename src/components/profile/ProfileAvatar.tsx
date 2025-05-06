@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
 import { Camera, X, Loader2 } from 'lucide-react';
@@ -19,16 +19,23 @@ const ProfileAvatar = ({
   uploadingAvatar 
 }: ProfileAvatarProps) => {
   const { t } = useLanguage();
+  const [imageError, setImageError] = useState(false);
+
+  const handleImageError = () => {
+    console.log("Image loading error detected");
+    setImageError(true);
+  };
 
   return (
     <div className="flex flex-col items-center">
       <div className="relative w-28 h-28">
-        {avatarUrl ? (
+        {avatarUrl && !imageError ? (
           <div className="relative group">
             <img
               src={avatarUrl}
               alt="Profile"
               className="w-full h-full rounded-full object-cover border-2 border-primary shadow-glow"
+              onError={handleImageError}
             />
             <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <button 

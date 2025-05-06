@@ -1,64 +1,73 @@
 
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async';
+import { useEffect } from 'react';
+import { BrowserRouter as Router } from 'react-router-dom';
+import AppRoutes from './routes/AppRoutes';
+import { Toaster } from './components/ui/sonner';
+import './App.css';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
-import { TooltipProvider } from './components/ui/tooltip';
-import IndexPage from './pages/Index';
-import PhotoPointsNearby from './pages/PhotoPointsNearby';
-import NotFound from './pages/NotFound';
-import AboutSIQS from './pages/AboutSIQS';
-import About from './pages/About';
-import LocationDetails from './pages/LocationDetails';
-import UsefulLinks from './pages/UsefulLinks';
-import ShareLocation from './pages/ShareLocation';
-import Collections from './pages/Collections';
-import Profile from './pages/Profile';
-import PreferencesPage from './pages/Preferences';
-import ManageAstroSpots from './pages/ManageAstroSpots';
-import AstroSpotProfile from './pages/AstroSpotProfile';
-import CommunityAstroSpots from './pages/CommunityAstroSpots';
-import ProfileMini from "./pages/ProfileMini";
-import Messages from './pages/Messages';
-import './App.css';
+import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
+import { supabase } from './integrations/supabase/client';
 
-const App = () => {
+const queryClient = new QueryClient();
+
+function App() {
+  useEffect(() => {
+    // Check and ensure avatars bucket exists on app initialization
+    const checkAvatarsBucket = async () => {
+      try {
+        // Check if bucket exists
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        
+        if (bucketsError) {
+          console.error('Error checking storage buckets:', bucketsError);
+          return;
+        }
+        
+        const avatarsBucketExists = buckets.some(bucket => bucket.name === 'avatars');
+        
+        if (!avatarsBucketExists) {
+          console.warn('Avatars bucket not found. Creating bucket...');
+          const { error: createError } = await supabase.storage.createBucket('avatars', {
+            public: true,
+            fileSizeLimit: 1024 * 1024 * 2 // 2MB limit
+          });
+          
+          if (createError) {
+            console.error('Failed to create avatars bucket:', createError);
+            return;
+          }
+          
+          console.log('Avatars bucket created successfully');
+        } else {
+          console.log('Avatars bucket already exists');
+        }
+      } catch (error) {
+        console.error('Error ensuring avatars bucket exists:', error);
+      }
+    };
+    
+    checkAvatarsBucket();
+  }, []);
+
   return (
     <HelmetProvider>
-      <ThemeProvider>
-        <LanguageProvider>
-          <Router>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <LanguageProvider>
             <AuthProvider>
-              <TooltipProvider>
-                <Routes>
-                  <Route path="/" element={<Navigate to="/photo-points" replace />} />
-                  <Route path="/photo-points" element={<PhotoPointsNearby />} />
-                  <Route path="/community" element={<CommunityAstroSpots />} />
-                  <Route path="/about-siqs" element={<AboutSIQS />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/location/:id" element={<LocationDetails />} />
-                  <Route path="/location/siqs-calculator" element={<LocationDetails />} />
-                  <Route path="/links" element={<UsefulLinks />} />
-                  <Route path="/useful-links" element={<UsefulLinks />} />
-                  <Route path="/share" element={<ShareLocation />} />
-                  <Route path="/collections" element={<Collections />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/profile/:id" element={<ProfileMini />} />
-                  <Route path="/settings" element={<PreferencesPage />} />
-                  <Route path="/manage-astro-spots" element={<ManageAstroSpots />} />
-                  <Route path="/astro-spot/:id" element={<AstroSpotProfile />} />
-                  <Route path="/messages" element={<Messages />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </TooltipProvider>
+              <Router>
+                <AppRoutes />
+                <Toaster richColors />
+              </Router>
             </AuthProvider>
-          </Router>
-        </LanguageProvider>
-      </ThemeProvider>
+          </LanguageProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </HelmetProvider>
   );
-};
+}
 
 export default App;

@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { motion } from "framer-motion";
 import { ChevronLeft, User, MessageCircle, Check, X } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -48,6 +48,7 @@ const MessageList: React.FC<MessageListProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const [prevMessagesLength, setPrevMessagesLength] = React.useState(messages.length);
+  const [avatarError, setAvatarError] = useState(false);
 
   const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -105,6 +106,11 @@ const MessageList: React.FC<MessageListProps> = ({
     })
   };
 
+  const handleAvatarError = () => {
+    console.log("Avatar loading error in MessageList");
+    setAvatarError(true);
+  };
+
   // Message status indicator component
   const MessageStatus = ({ message }: { message: Message }) => {
     if (message.sender_id !== currentUserId) return null;
@@ -157,11 +163,12 @@ const MessageList: React.FC<MessageListProps> = ({
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <Avatar className="h-10 w-10 md:h-12 md:w-12 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20">
-          {activeConversation.avatar_url ? (
+          {activeConversation.avatar_url && !avatarError ? (
             <AvatarImage
               src={activeConversation.avatar_url}
               alt={activeConversation.username || "User"}
               className="object-cover"
+              onError={handleAvatarError}
             />
           ) : (
             <AvatarFallback className="bg-primary/10">
@@ -178,7 +185,7 @@ const MessageList: React.FC<MessageListProps> = ({
               <Button
                 variant="link"
                 className="p-0 h-auto text-xs md:text-sm text-primary hover:text-primary/80"
-                onClick={() => navigate(`/profile/${activeConversation.id}`)}
+                onClick={() => navigate(`/profile/${activeConversation.id}`, { state: { fromMessages: true } })}
               >
                 {t("View Profile", "查看资料")}
               </Button>
@@ -222,11 +229,12 @@ const MessageList: React.FC<MessageListProps> = ({
                   }`}
                 >
                   <Avatar className="h-8 w-8 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20 flex-shrink-0">
-                    {message.sender_profile?.avatar_url ? (
+                    {message.sender_profile?.avatar_url && !avatarError ? (
                       <AvatarImage 
                         src={message.sender_profile.avatar_url} 
                         alt={message.sender_profile.username || "User"}
                         className="object-cover"
+                        onError={handleAvatarError}
                       />
                     ) : (
                       <AvatarFallback className="bg-primary/10">

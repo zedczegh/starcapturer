@@ -151,7 +151,7 @@ export function useMessaging() {
             username: senderProfile?.username || "User",
             avatar_url: senderProfile?.avatar_url
           }
-        } as Message;  // Explicit type casting to ensure it matches Message interface
+        } as Message;  
       });
       
       setMessages(messagesWithProfiles || []);
