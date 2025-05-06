@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getCachedTags, setCachedTags } from '@/utils/tagCache';
 
 export interface UserTag {
   id: string;
@@ -18,6 +19,19 @@ export function useUserTags() {
   // Fetch user tags
   const fetchUserTags = async (userId: string) => {
     try {
+      if (!userId) return;
+
+      // Check cache first to avoid flickering
+      const cachedTags = getCachedTags(userId);
+      if (cachedTags) {
+        setTags(cachedTags);
+        setLoading(false);
+        
+        // Still refresh in background but don't show loading state
+        refreshTagsInBackground(userId);
+        return;
+      }
+      
       setLoading(true);
       
       // Get tags from profile_tags table
@@ -50,12 +64,56 @@ export function useUserTags() {
         }
         
         setTags(processedTags);
+        
+        // Update cache
+        setCachedTags(userId, processedTags);
       }
     } catch (error: any) {
       console.error('Error fetching user tags:', error);
-      toast.error(t('Failed to load user tags', '加载用户标签失败'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Refresh tags in background without setting loading state
+  const refreshTagsInBackground = async (userId: string) => {
+    try {
+      // Get tags from profile_tags table
+      const { data: tagData, error } = await supabase
+        .from('profile_tags')
+        .select('id, tag')
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      
+      if (tagData) {
+        const processedTags = tagData.map(item => ({
+          id: item.id,
+          name: item.tag,
+          icon_url: null
+        }));
+        
+        // Fetch tag icons from the user_tags bucket if any exist
+        for (const tag of processedTags) {
+          try {
+            const tagSlug = tag.name.toLowerCase().replace(/\s+/g, '-');
+            const { data } = supabase.storage
+              .from('user_tags')
+              .getPublicUrl(`icons/${tagSlug}.png`);
+              
+            tag.icon_url = data.publicUrl;
+          } catch (err) {
+            // No icon available for this tag, continue
+          }
+        }
+        
+        setTags(processedTags);
+        
+        // Update cache
+        setCachedTags(userId, processedTags);
+      }
+    } catch (error) {
+      console.error('Error refreshing tags in background:', error);
     }
   };
 

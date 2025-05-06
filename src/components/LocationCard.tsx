@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatTime, calculateAstronomicalNight } from '@/utils/astronomy/nightTimeCalculator';
@@ -8,6 +8,7 @@ import SiqsScoreBadge from './photoPoints/cards/SiqsScoreBadge';
 import { Star, Clock, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
+import { useRealTimeSiqs } from '@/hooks/siqs/useRealTimeSiqs';
 
 interface LocationCardProps {
   id: string;
@@ -35,13 +36,54 @@ const LocationCard: React.FC<LocationCardProps> = ({
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const location = useLocation();
+  const [displaySiqs, setDisplaySiqs] = useState<number | null>(getSiqsScore(siqs));
+  const [siqsLoading, setSiqsLoading] = useState(false);
+  const { calculateSiqs } = useRealTimeSiqs({ skipCache: false });
+  
+  // Load real-time SIQS data when the component mounts
+  useEffect(() => {
+    let isMounted = true;
+    const initialSiqs = getSiqsScore(siqs);
+    
+    // Set initial SIQS value
+    if (initialSiqs) {
+      setDisplaySiqs(initialSiqs);
+    }
+    
+    // Fetch real-time SIQS if coordinates are available
+    const fetchRealTimeSiqs = async () => {
+      if (latitude && longitude) {
+        try {
+          setSiqsLoading(true);
+          const result = await calculateSiqs(latitude, longitude);
+          if (isMounted && result?.siqs) {
+            setDisplaySiqs(result.siqs);
+          }
+        } catch (error) {
+          console.error('Error calculating SIQS:', error);
+          // Fall back to initial value if available
+          if (isMounted && initialSiqs && !displaySiqs) {
+            setDisplaySiqs(initialSiqs);
+          }
+        } finally {
+          if (isMounted) {
+            setSiqsLoading(false);
+          }
+        }
+      }
+    };
+    
+    fetchRealTimeSiqs();
+    
+    return () => { isMounted = false; };
+  }, [latitude, longitude, siqs, calculateSiqs]);
   
   // Memoize these expensive calculations
-  const numericSiqs = React.useMemo(() => getSiqsScore(siqs), [siqs]);
   const { start: nightStart, end: nightEnd } = React.useMemo(
     () => calculateAstronomicalNight(latitude, longitude),
     [latitude, longitude]
   );
+  
   const nightTimeStr = React.useMemo(
     () => `${formatTime(nightStart)}-${formatTime(nightEnd)}`,
     [nightStart, nightEnd]
@@ -85,7 +127,7 @@ const LocationCard: React.FC<LocationCardProps> = ({
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-gray-50 truncate pr-2">{displayName}</h3>
           <div className="flex-shrink-0">
-            <SiqsScoreBadge score={numericSiqs} isCertified={isCertified} />
+            <SiqsScoreBadge score={displaySiqs} loading={siqsLoading} isCertified={isCertified} />
           </div>
         </div>
         <div className="space-y-2 text-sm text-gray-400">

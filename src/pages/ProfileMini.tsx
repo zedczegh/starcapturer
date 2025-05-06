@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +14,7 @@ import { useUserTags } from '@/hooks/useUserTags';
 import UserTags from '@/components/profile/UserTags';
 import { motion } from 'framer-motion';
 import LocationCard from '@/components/LocationCard';
+import { getInitials } from '@/utils/stringUtils';
 
 const ProfileMini = () => {
   const { id } = useParams();
@@ -39,7 +40,7 @@ const ProfileMini = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: astroSpots } = useQuery({
+  const { data: astroSpots, isLoading: loadingSpots } = useQuery({
     queryKey: ['user-spots', id],
     queryFn: async () => {
       if (!id) return [];
@@ -56,7 +57,7 @@ const ProfileMini = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Load user tags
+  // Load user tags - with optimizations to prevent flickering
   useEffect(() => {
     if (id) {
       fetchUserTags(id);
@@ -71,6 +72,22 @@ const ProfileMini = () => {
   };
 
   const isOwnProfile = user?.id === id;
+
+  const userAvatar = useMemo(() => {
+    if (!profile) return null;
+    
+    if (profile.avatar_url) {
+      return (
+        <AvatarImage src={profile.avatar_url} alt={profile.username || 'User'} />
+      );
+    }
+    
+    return (
+      <AvatarFallback className="bg-primary/20">
+        <User className="h-12 w-12 text-primary/80" />
+      </AvatarFallback>
+    );
+  }, [profile]);
 
   if (isLoading) {
     return (
@@ -129,13 +146,7 @@ const ProfileMini = () => {
             <div className="relative h-32 bg-gradient-to-r from-cosmic-800/80 to-cosmic-900/80">
               <div className="absolute -bottom-16 left-6">
                 <Avatar className="h-32 w-32 border-4 border-cosmic-900/60 shadow-xl">
-                  {profile.avatar_url ? (
-                    <AvatarImage src={profile.avatar_url} alt={profile.username || 'User'} />
-                  ) : (
-                    <AvatarFallback className="bg-primary/20">
-                      <User className="h-12 w-12 text-primary/80" />
-                    </AvatarFallback>
-                  )}
+                  {userAvatar}
                 </Avatar>
               </div>
             </div>
@@ -150,7 +161,7 @@ const ProfileMini = () => {
                 <span>{t('Joined', '加入于')} {new Date(profile.created_at).toLocaleDateString()}</span>
               </div>
 
-              {/* User tags */}
+              {/* User tags - properly handled to prevent flickering */}
               <UserTags 
                 tags={tags} 
                 loading={loadingTags} 
@@ -158,8 +169,24 @@ const ProfileMini = () => {
                 editable={false}
               />
 
-              {/* AstroSpots count */}
-              {astroSpots && astroSpots.length > 0 && (
+              {/* AstroSpots section with loading state */}
+              {loadingSpots ? (
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Star className="h-4 w-4 text-amber-500" />
+                    <span className="font-medium text-cosmic-200">
+                      {t('Astronomy Spots', '天文地点')}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[1, 2].map((placeholder) => (
+                      <div key={placeholder} className="animate-pulse">
+                        <div className="bg-cosmic-800/50 h-32 rounded-md"></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : astroSpots && astroSpots.length > 0 ? (
                 <div className="mt-6">
                   <div className="flex items-center gap-2 text-cosmic-200 mb-4">
                     <Star className="h-4 w-4 text-amber-500" />
@@ -192,7 +219,7 @@ const ProfileMini = () => {
                     </div>
                   )}
                 </div>
-              )}
+              ) : null}
             </CardContent>
 
             <CardFooter className="border-t border-cosmic-800/60 px-6 py-4 gap-3">
