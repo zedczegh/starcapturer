@@ -9,9 +9,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Calendar } from '@/components/ui/calendar';
-import { format, addDays, isSameDay, isAfter, isBefore, eachDayOfInterval } from 'date-fns';
+import { format, isSameDay, isAfter, isBefore, eachDayOfInterval } from 'date-fns';
 import { Loader2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useDateSelection } from '@/hooks/useDateSelection';
+import { useTimeSlotSubmit } from '@/hooks/useTimeSlotSubmit';
 
 interface TimeSlotFormProps {
   spotId: string;
@@ -33,8 +35,13 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
   const isEditing = !!existingTimeSlot;
   const initialDate = isEditing ? new Date(existingTimeSlot.start_time) : new Date();
   
-  const [selectedDates, setSelectedDates] = useState<Date[]>(isEditing ? [initialDate] : [new Date()]);
-  const [lastSelectedDate, setLastSelectedDate] = useState<Date | null>(null);
+  const {
+    selectedDates,
+    setSelectedDates,
+    handleCalendarSelect,
+    removeDateBadge
+  } = useDateSelection(isEditing, initialDate);
+
   const [startTime, setStartTime] = useState(isEditing ? 
     format(new Date(existingTimeSlot.start_time), 'HH:mm') : '20:00');
   const [endTime, setEndTime] = useState(isEditing ? 
@@ -43,161 +50,22 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     existingTimeSlot.description || '' : '');
   const [maxCapacity, setMaxCapacity] = useState(isEditing ? 
     existingTimeSlot.max_capacity : 1);
-
-  // Effect to ensure at least one date is selected
-  useEffect(() => {
-    if (selectedDates.length === 0) {
-      setSelectedDates([new Date()]);
-    }
-  }, [selectedDates]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!user?.id || !spotId) {
-      toast.error(t("Authentication required", "需要登录"));
-      return;
-    }
-    
-    // Even with the effect above, we'll add an extra check here for safety
-    if (selectedDates.length === 0) {
-      // Auto-select today's date if no date is selected
-      const today = new Date();
-      setSelectedDates([today]);
-      toast.info(t("Today's date was automatically selected", "已自动选择今天的日期"));
-      return; // Let the user review the auto-selected date before submitting
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      // Parse the time strings
-      const [startHour, startMinute] = startTime.split(':').map(Number);
-      const [endHour, endMinute] = endTime.split(':').map(Number);
-      
-      const createTimeSlotsPromises = selectedDates.map(async (selectedDate) => {
-        const startDateTime = new Date(selectedDate);
-        startDateTime.setHours(startHour, startMinute, 0, 0);
-        
-        const endDateTime = new Date(selectedDate);
-        endDateTime.setHours(endHour, endMinute, 0, 0);
-        
-        // If end time is earlier than start time, assume it's the next day
-        if (endDateTime <= startDateTime) {
-          endDateTime.setDate(endDateTime.getDate() + 1);
-        }
-        
-        if (isEditing && isSameDay(selectedDate, initialDate)) {
-          // Update the existing time slot if it's on the initial date
-          return supabase.functions.invoke('call-rpc', {
-            body: {
-              function: 'update_astro_spot_timeslot',
-              params: {
-                p_id: existingTimeSlot.id,
-                p_spot_id: spotId,
-                p_creator_id: user.id,
-                p_start_time: startDateTime.toISOString(),
-                p_end_time: endDateTime.toISOString(),
-                p_max_capacity: maxCapacity,
-                p_description: description.trim()
-              }
-            }
-          });
-        } else {
-          // Create a new time slot for this date
-          return supabase.functions.invoke('call-rpc', {
-            body: {
-              function: 'insert_astro_spot_timeslot',
-              params: {
-                p_spot_id: spotId,
-                p_creator_id: user.id,
-                p_start_time: startDateTime.toISOString(),
-                p_end_time: endDateTime.toISOString(),
-                p_max_capacity: maxCapacity,
-                p_description: description.trim()
-              }
-            }
-          });
-        }
-      });
-      
-      const results = await Promise.all(createTimeSlotsPromises);
-      
-      // Check if any operations failed
-      const errors = results.filter(result => result.error).map(result => result.error);
-      if (errors.length > 0) {
-        console.error("Errors creating time slots:", errors);
-        throw new Error(t("Some time slots could not be created", "部分时间段无法创建"));
-      }
-      
-      if (selectedDates.length > 1) {
-        toast.success(
-          t(
-            `${selectedDates.length} time slots have been created successfully`, 
-            `已成功创建 ${selectedDates.length} 个时间段`
-          )
-        );
-      } else {
-        toast.success(
-          isEditing 
-            ? t("Time slot updated successfully", "时间段已成功更新") 
-            : t("Time slot created successfully", "时间段已成功创建")
-        );
-      }
-      
-      onSuccess();
-    } catch (error) {
-      console.error("Error saving time slots:", error);
-      toast.error(t("Failed to save time slots", "保存时间段失败"));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCalendarSelect = (dates: Date[] | undefined) => {
-    if (!dates || dates.length === 0) {
-      // Auto-select today's date if the user cleared all dates
-      setSelectedDates([new Date()]);
-      setLastSelectedDate(null);
-      toast.info(t("Today's date was automatically selected", "已自动选择今天的日期"));
-      return;
-    }
-
-    // If this is a range selection scenario
-    if (lastSelectedDate && dates.length === 1 && !isSameDay(lastSelectedDate, dates[0])) {
-      // Determine start and end of the range
-      const startDate = isBefore(lastSelectedDate, dates[0]) ? lastSelectedDate : dates[0];
-      const endDate = isAfter(lastSelectedDate, dates[0]) ? lastSelectedDate : dates[0];
-      
-      // Create an array of all dates in the range
-      const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
-      
-      // Set all dates in the range as selected
-      setSelectedDates(dateRange);
-      toast.info(t("Date range selected", "已选择日期范围"));
-      setLastSelectedDate(null);
-    } else {
-      // Normal selection behavior
-      setSelectedDates(dates);
-      setLastSelectedDate(dates.length === 1 ? dates[0] : null);
-    }
-  };
-
-  const removeDateBadge = (dateToRemove: Date) => {
-    const newDates = selectedDates.filter(date => 
-      !isSameDay(date, dateToRemove)
-    );
-    
-    if (newDates.length === 0) {
-      // Auto-select today's date if the user removes the last date
-      setSelectedDates([new Date()]);
-      setLastSelectedDate(null);
-      toast.info(t("Today's date was automatically selected", "已自动选择今天的日期"));
-    } else {
-      setSelectedDates(newDates);
-      setLastSelectedDate(null);
-    }
-  };
+  
+  const handleSubmit = useTimeSlotSubmit({
+    user,
+    spotId,
+    selectedDates,
+    startTime,
+    endTime,
+    maxCapacity,
+    description,
+    isEditing,
+    existingTimeSlot,
+    initialDate,
+    setIsSubmitting,
+    onSuccess,
+    t
+  });
 
   return (
     <div className="bg-cosmic-800/50 border border-cosmic-700/30 rounded-lg p-4 mb-4">
@@ -217,7 +85,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                 : t("Select Dates", "选择日期")
               }
               <span className="text-xs ml-1 text-gray-400">
-                {isEditing ? "" : t("(select two dates to create a range)", "（选择两个日期创建范围）")}
+                {isEditing ? "" : t("(select a date to create a range from today)", "（选择一个日期创建从今天开始的范围）")}
               </span>
             </Label>
             <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
@@ -265,11 +133,6 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                     </Badge>
                   ))}
                 </div>
-                {lastSelectedDate && (
-                  <p className="text-xs text-primary mt-2">
-                    {t("Select another date to create a range", "选择另一个日期创建范围")}
-                  </p>
-                )}
               </div>
             )}
           </div>
