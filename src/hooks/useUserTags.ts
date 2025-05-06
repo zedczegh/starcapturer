@@ -120,6 +120,12 @@ export function useUserTags() {
   // Add a new tag to user's profile
   const addUserTag = async (userId: string, tagName: string) => {
     try {
+      // Check if the tag already exists to prevent duplicates
+      const existingTag = tags.find(tag => tag.name.toLowerCase() === tagName.toLowerCase());
+      if (existingTag) {
+        return existingTag; // Tag already exists, return it
+      }
+      
       const { data, error } = await supabase
         .from('profile_tags')
         .insert({ user_id: userId, tag: tagName })
@@ -129,16 +135,19 @@ export function useUserTags() {
       if (error) throw error;
       
       if (data) {
-        setTags(prev => [...prev, { 
+        const newTag = { 
           id: data.id, 
           name: data.tag, 
           icon_url: null 
-        }]);
+        };
         
+        setTags(prev => [...prev, newTag]);
         toast.success(t('Tag added successfully', '标签添加成功'));
+        
+        return newTag;
       }
       
-      return data;
+      return null;
     } catch (error: any) {
       console.error('Error adding user tag:', error);
       toast.error(t('Failed to add tag', '添加标签失败'));

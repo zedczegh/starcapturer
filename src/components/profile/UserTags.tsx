@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Tag, Plus, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Loader2, Tag, Plus } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { UserTag } from '@/hooks/useUserTags';
 
@@ -17,6 +17,31 @@ const TAG_COLORS = [
   'bg-indigo-800/60 text-indigo-200 border-indigo-700/50',
   'bg-teal-800/60 text-teal-200 border-teal-700/50',
   'bg-pink-800/60 text-pink-200 border-pink-700/50',
+];
+
+// Common tags that users can select from
+const COMMON_TAGS = [
+  'Astronomy',
+  'Astrophotography',
+  'Stargazing',
+  'Milky Way',
+  'Telescopes',
+  'Planets',
+  'Galaxies',
+  'Nebulae',
+  'Dark Sky',
+  'Meteor Shower',
+  'Aurora',
+  'Space Science',
+  'Cosmology',
+  'Night Photography',
+  'Citizen Science',
+  'Professional Astronomer',
+  'Amateur Astronomer',
+  'Meteorology',
+  'Cosmos Lover',
+  'Traveler',
+  'Dark Sky Volunteer',
 ];
 
 interface UserTagsProps {
@@ -39,21 +64,40 @@ const UserTags: React.FC<UserTagsProps> = ({
   className = ''
 }) => {
   const { t } = useLanguage();
-  const [newTagName, setNewTagName] = React.useState('');
-  const [isAdding, setIsAdding] = React.useState(false);
-  const [showAddForm, setShowAddForm] = React.useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<{[key: string]: boolean}>({});
 
-  const handleAddTag = async () => {
-    if (!newTagName.trim() || !onAddTag) return;
-    
-    try {
-      setIsAdding(true);
-      await onAddTag(newTagName.trim());
-      setNewTagName('');
-      setShowAddForm(false);
-    } finally {
-      setIsAdding(false);
+  // Initialize selected tags based on current user tags
+  useEffect(() => {
+    if (tags) {
+      const tagMap: {[key: string]: boolean} = {};
+      tags.forEach(tag => {
+        tagMap[tag.name] = true;
+      });
+      setSelectedTags(tagMap);
     }
+  }, [tags]);
+
+  const handleTagToggle = async (tagName: string, checked: boolean) => {
+    // Find if the tag already exists in the user's tags
+    const existingTag = tags.find(t => t.name === tagName);
+    
+    if (checked && !existingTag && onAddTag) {
+      // Add new tag
+      await onAddTag(tagName);
+    } else if (!checked && existingTag && onRemoveTag) {
+      // Remove existing tag
+      await onRemoveTag(existingTag.id);
+    }
+    
+    setSelectedTags(prev => ({
+      ...prev,
+      [tagName]: checked
+    }));
+  };
+
+  const saveChanges = () => {
+    setIsEditing(false);
   };
 
   if (loading) {
@@ -73,69 +117,58 @@ const UserTags: React.FC<UserTagsProps> = ({
 
   return (
     <div className={className}>
-      <div className="flex flex-wrap gap-2">
-        {tags.map((tag, index) => (
-          <Badge 
-            key={tag.id} 
-            variant="outline" 
-            className={`${TAG_COLORS[index % TAG_COLORS.length]} px-2 py-1 hover:opacity-90`}
-          >
-            <Tag className="h-3 w-3 mr-1.5 text-current opacity-80" />
-            {tag.name}
-            {editable && onRemoveTag && (
-              <button
-                className="ml-1.5 text-current opacity-80 hover:opacity-100"
-                onClick={() => onRemoveTag(tag.id)}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </Badge>
-        ))}
-        
-        {showAddNew && !showAddForm && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-transparent border-dashed border-cosmic-700/50 text-cosmic-400 hover:text-cosmic-200 hover:border-cosmic-500 hover:bg-cosmic-800/30"
-            onClick={() => setShowAddForm(true)}
-          >
-            <Plus className="h-3 w-3 mr-1" />
-            {t('Add tag', '添加标签')}
-          </Button>
-        )}
-      </div>
-      
-      {showAddForm && (
-        <div className="mt-3 flex items-center gap-2">
-          <Input
-            value={newTagName}
-            onChange={(e) => setNewTagName(e.target.value)}
-            placeholder={t('Enter tag name...', '输入标签名称...')}
-            className="h-8 bg-cosmic-800/30 border-cosmic-700/50"
-            disabled={isAdding}
-          />
-          <Button 
-            size="sm" 
-            onClick={handleAddTag} 
-            disabled={isAdding || !newTagName.trim()}
-            className="h-8 px-3"
-          >
-            {isAdding ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Plus className="h-3.5 w-3.5 mr-1" />
-            )}
-            {t('Add', '添加')}
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setShowAddForm(false)}
-            className="h-8 px-2 text-cosmic-400"
-          >
-            {t('Cancel', '取消')}
-          </Button>
+      {!isEditing ? (
+        <div className="flex flex-wrap gap-2">
+          {tags.map((tag, index) => (
+            <Badge 
+              key={tag.id} 
+              variant="outline" 
+              className={`${TAG_COLORS[index % TAG_COLORS.length]} px-2 py-1 hover:opacity-90`}
+            >
+              <Tag className="h-3 w-3 mr-1.5 text-current opacity-80" />
+              {tag.name}
+            </Badge>
+          ))}
+          
+          {editable && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="bg-transparent border-dashed border-cosmic-700/50 text-cosmic-400 hover:text-cosmic-200 hover:border-cosmic-500 hover:bg-cosmic-800/30"
+              onClick={() => setIsEditing(true)}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              {t('Manage tags', '管理标签')}
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+            {COMMON_TAGS.map((tagName) => (
+              <label key={tagName} className="flex items-center space-x-2 cursor-pointer">
+                <Checkbox
+                  checked={selectedTags[tagName] || false}
+                  onCheckedChange={(checked) => handleTagToggle(tagName, !!checked)}
+                />
+                <span className="text-sm text-cosmic-200">{tagName}</span>
+              </label>
+            ))}
+          </div>
+          
+          <div className="flex gap-2 mt-3">
+            <Button size="sm" onClick={saveChanges}>
+              {t('Save', '保存')}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsEditing(false)}
+              className="text-cosmic-400"
+            >
+              {t('Cancel', '取消')}
+            </Button>
+          </div>
         </div>
       )}
     </div>
