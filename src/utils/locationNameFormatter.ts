@@ -20,14 +20,13 @@ export function extractNearestTownName(
     return language === 'en' ? 'Remote area' : '偏远地区';
   }
 
-  // Extract the first part of a comma-separated location (typically town/city)
-  if (locationName.includes(',')) {
-    const parts = locationName.split(',');
-    // Take the first part, which is typically the town/city
-    return parts[0].trim();
+  // Don't truncate detailed location information
+  // This ensures we keep full address details in both languages
+  if (locationName.includes(',') && locationName.split(',').length >= 3) {
+    return locationName;
   }
 
-  // Sometimes we can extract information from the description
+  // Extract useful information from the description if available
   if (description && description.length > 0) {
     const nearPattern = language === 'en' ? 
       /near\s+([^,\.]+)/i : 
@@ -38,6 +37,11 @@ export function extractNearestTownName(
       return language === 'en' ? 
         `Near ${match[1].trim()}` : 
         `${match[1]}${match[2].trim()}`;
+    }
+    
+    // If description has detailed information, use it
+    if (description.includes(',') && description.split(',').length >= 3) {
+      return description;
     }
   }
   
@@ -126,13 +130,10 @@ export function formatLocationName(
     return language === 'en' ? 'Remote area' : '偏远地区';
   }
 
-  // Extract the first part of a comma-separated location (typically town/city)
-  if (locationName.includes(',')) {
-    const parts = locationName.split(',');
-    // Take the first part, which is typically the town/city
-    return parts[0].trim();
-  }
-
+  // DON'T truncate detailed location names
+  // This is the key change - we're no longer extracting just the first part
+  // Keep the full detailed name, regardless of commas
+  
   // Handle special case for calculated locations
   const locationMatch = locationName.match(/calc-loc-(\d+)/);
   if (locationMatch) {
@@ -142,6 +143,6 @@ export function formatLocationName(
       : `潜在理想暗夜地点 ${locationNumber}`;
   }
 
-  // Default to the original name
+  // Return the full location name with all details
   return locationName;
 }

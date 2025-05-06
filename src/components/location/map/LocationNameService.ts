@@ -19,7 +19,7 @@ export function normalizeLongitude(lng: number): number {
 
 /**
  * Get a friendly location name for coordinates
- * Enhanced with mobile optimizations and better error handling
+ * Enhanced with detailed location information for both English and Chinese
  */
 export async function getLocationNameForCoordinates(
   lat: number, 
@@ -54,7 +54,8 @@ export async function getLocationNameForCoordinates(
     // API call with retry logic for mobile reliability
     const fetchWithRetry = async (retries = 2): Promise<string> => {
       try {
-        const url = `https://nominatim.openstreetmap.org/reverse?lat=${validLat}&lon=${validLng}&format=json&zoom=14&accept-language=${language}`;
+        // Use zoom=14 for detailed results in both languages
+        const url = `https://nominatim.openstreetmap.org/reverse?lat=${validLat}&lon=${validLng}&format=json&zoom=14&accept-language=${language}&addressdetails=1`;
         
         const response = await fetch(url, {
           headers: {
@@ -69,50 +70,57 @@ export async function getLocationNameForCoordinates(
         
         const data = await response.json();
         
-        // Extract location name based on available data
+        // Build a detailed location name using address components
         let name = "";
         
-        if (data.name) {
-          // Direct name if available
-          name = data.name;
-        } else if (data.address) {
+        // More structured approach to building detailed names
+        if (data.address) {
           // Build name from address components
           const addr = data.address;
+          const parts = [];
           
-          if (addr.road || addr.neighbourhood || addr.suburb) {
-            // More specific location info
-            name = addr.road || addr.neighbourhood || addr.suburb;
-            
-            if (addr.city || addr.town || addr.village) {
-              name += `, ${addr.city || addr.town || addr.village}`;
-            }
-          } else if (addr.city || addr.town || addr.village) {
-            // City/town level
-            name = addr.city || addr.town || addr.village;
-          } else if (addr.county) {
-            // County level
-            name = addr.county;
-          } else if (addr.state) {
-            // State level
-            name = addr.state;
-          } else if (addr.country) {
-            // Country level
-            name = addr.country;
+          // Start with the most specific location components
+          // For both English and Chinese, build a rich detailed address
+          if (addr.road || addr.pedestrian || addr.footway) {
+            parts.push(addr.road || addr.pedestrian || addr.footway);
           }
+          
+          if (addr.neighbourhood || addr.suburb) {
+            parts.push(addr.neighbourhood || addr.suburb);
+          }
+          
+          if (addr.village || addr.town || addr.city) {
+            parts.push(addr.village || addr.town || addr.city);
+          }
+          
+          if (addr.county && !parts.includes(addr.county)) {
+            parts.push(addr.county);
+          }
+          
+          if (addr.state && !parts.includes(addr.state)) {
+            parts.push(addr.state);
+          }
+          
+          // Only add country for locations outside the current region
+          if (addr.country && parts.length < 2) {
+            parts.push(addr.country);
+          }
+          
+          // Join with appropriate separator for the language
+          name = parts.join(language === 'en' ? ', ' : '，');
         }
         
-        // Fallback for empty results
+        // If we couldn't build a detailed name, use display_name
+        if (!name && data.display_name) {
+          name = data.display_name;
+        }
+        
+        // Last resort - use coordinates
         if (!name) {
-          // Provide geographic coordinates in a readable format
           const latDir = lat >= 0 ? "N" : "S";
           const lngDir = lng >= 0 ? "E" : "W";
           
           name = `${Math.abs(validLat).toFixed(2)}° ${latDir}, ${Math.abs(validLng).toFixed(2)}° ${lngDir}`;
-          
-          if (data.country_code) {
-            // Add country code if available
-            name += ` (${data.country_code.toUpperCase()})`;
-          }
         }
         
         // Cache the result

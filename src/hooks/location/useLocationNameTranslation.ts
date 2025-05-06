@@ -14,7 +14,7 @@ interface UseLocationNameTranslationProps {
 
 /**
  * Hook to handle location name translation based on language changes
- * Enhanced for better geocoding in remote regions
+ * Enhanced for better geocoding in remote regions and consistent detail level
  */
 export function useLocationNameTranslation({
   locationData,
@@ -44,9 +44,6 @@ export function useLocationNameTranslation({
     // Skip if we already processed this exact combination
     if (locationKey === lastProcessedKey && !initialRenderRef.current) return;
     
-    // Check if we're in a remote region that needs special handling
-    const isRemoteRegion = identifyRemoteRegion(locationData.latitude, locationData.longitude);
-    
     // Skip translation for special locations like Beijing
     if (locationData.name === "北京" || locationData.name === "Beijing") {
       setLastProcessedKey(locationKey);
@@ -60,26 +57,24 @@ export function useLocationNameTranslation({
       updateTimerRef.current = null;
     }
     
-    // For initial load or remote regions, add a small delay to ensure component is mounted
+    // For initial load or language change, add a small delay to ensure component is mounted
     const delay = initialRenderRef.current ? 100 : 0;
     
     updateTimerRef.current = window.setTimeout(() => {
-      // For remote regions or initial page load, always update the name to ensure accuracy
+      // Always update the name to ensure detailed information in both languages
       const updateNameForLanguage = async () => {
         try {
           setIsUpdating(true);
           
-          // Priority update for remote regions to ensure proper naming
-          if (isRemoteRegion) {
-            console.log("Remote region detected, updating name with high priority");
-          }
+          // Check if we're in a remote region that needs special handling
+          const isRemoteRegion = identifyRemoteRegion(locationData.latitude, locationData.longitude);
           
           // For initial render, log this information
           if (initialRenderRef.current) {
             console.log("Initial render detected, updating location name for:", locationData.name);
           }
           
-          // Get enhanced location details for better language support
+          // Always get enhanced location details for better language support
           const enhancedDetails = await getEnhancedLocationDetails(
             locationData.latitude,
             locationData.longitude,
@@ -100,7 +95,7 @@ export function useLocationNameTranslation({
                 });
               }
             } else {
-              // For English language, update the name
+              // For English language, update the name with detailed information
               if (enhancedDetails.formattedName && enhancedDetails.formattedName !== 'Remote area') {
                 console.log(`Location name updated for English: "${locationData.name}" -> "${enhancedDetails.formattedName}"`);
                 
@@ -149,7 +144,7 @@ export function useLocationNameTranslation({
         }
       };
       
-      // Run the update with priority for remote regions and initial load
+      // Run the update for all locations to ensure detailed information
       updateNameForLanguage();
     }, delay);
 
