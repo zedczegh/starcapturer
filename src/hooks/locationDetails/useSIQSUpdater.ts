@@ -1,89 +1,81 @@
 
 import { useCallback, useRef } from 'react';
-import { calculateNighttimeSIQS, calculateTonightCloudCover } from "@/lib/siqs/utils";
-import { calculateAstronomicalNight, formatTime } from "@/lib/siqs/utils";
+import { calculateSIQS } from '@/lib/calculateSIQS';
 
-export const useSIQSUpdater = () => {
-  const siqsUpdatedRef = useRef<boolean>(false);
+export function useSIQSUpdater() {
+  const updateCompleteRef = useRef(false);
 
+  // Reset update state to force a fresh update
+  const resetUpdateState = useCallback(() => {
+    updateCompleteRef.current = false;
+  }, []);
+
+  /**
+   * Updates SIQS score using forecast data to ensure consistency
+   */
   const updateSIQSWithForecast = useCallback((
     locationData: any,
     forecastData: any,
     forecastLoading: boolean,
     setLocationData: (data: any) => void
   ) => {
-    if (!forecastData || forecastLoading || !locationData) return false;
-    
-    if (!siqsUpdatedRef.current) {
-      console.log("Updating SIQS score with fresh forecast data");
+    // Skip if already updated or no forecast data available
+    if (updateCompleteRef.current || forecastLoading || !forecastData || !locationData) {
+      return false;
+    }
+
+    // Check if we need to update SIQS (missing or zero score)
+    const needsUpdate = 
+      !locationData.siqsResult ||
+      typeof locationData.siqsResult.score !== "number" ||
+      locationData.siqsResult.score === 0;
+
+    if (needsUpdate) {
+      console.log("Updating SIQS score with forecast data");
       
+      // Ensure we have all required data
+      if (!locationData.weatherData || 
+          !locationData.bortleScale || 
+          typeof locationData.weatherData.cloudCover !== 'number') {
+        console.log("Missing required data for SIQS calculation");
+        return false;
+      }
+
       try {
-        // Extract coordinates for astronomical night calculations
-        const latitude = locationData.latitude || 0;
-        const longitude = locationData.longitude || 0;
-        
-        // Get astronomical night times for display
-        const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude);
-        const nightTimeStr = `${formatTime(nightStart)}-${formatTime(nightEnd)}`;
-        
-        const updatedSIQS = calculateNighttimeSIQS(locationData, forecastData, null);
-        
-        if (updatedSIQS) {
-          console.log("Nighttime SIQS calculated:", updatedSIQS.score);
-          
-          // Only update if we have meaningful data (either good or bad score)
-          setLocationData({
-            ...locationData,
-            siqsResult: updatedSIQS
-          });
-          
-          siqsUpdatedRef.current = true;
-          return true;
-        } else if (forecastData?.hourly?.cloud_cover && locationData.weatherData) {
-          // If we couldn't calculate nighttime SIQS but have forecast data,
-          // use our improved astronomical night cloud cover calculation
-          
-          // Calculate cloud cover for the astronomical night
-          const tonightCloudCover = calculateTonightCloudCover(forecastData.hourly, latitude, longitude);
-          
-          // Convert to SIQS score
-          const estimatedScore = Math.max(0, Math.min(10, 10 - (tonightCloudCover * 0.25)));
-          
-          console.log(`Using calculated tonight's cloud cover for SIQS (${nightTimeStr}): ${tonightCloudCover.toFixed(1)}% -> ${estimatedScore}`);
-          
-          setLocationData({
-            ...locationData,
-            siqsResult: {
-              score: estimatedScore,
-              isViable: tonightCloudCover < 40,
-              factors: [
-                {
-                  name: "Cloud Cover",
-                  score: (100 - tonightCloudCover * 2.5) / 10,
-                  description: `Tonight's cloud cover of ${tonightCloudCover.toFixed(1)}% affects imaging quality`,
-                  nighttimeData: {
-                    average: tonightCloudCover,
-                    timeRange: nightTimeStr
-                  }
-                }
-              ]
-            }
-          });
-          
-          siqsUpdatedRef.current = true;
-          return true;
-        }
+        // Calculate SIQS score
+        const siqsResult = calculateSIQS({
+          cloudCover: locationData.weatherData.cloudCover,
+          bortleScale: locationData.bortleScale || 4,
+          seeingConditions: locationData.seeingConditions || 3,
+          windSpeed: locationData.weatherData.windSpeed || 0,
+          humidity: locationData.weatherData.humidity || 50,
+          moonPhase: locationData.moonPhase || 0,
+          aqi: locationData.weatherData.aqi || 50,
+          weatherCondition: locationData.weatherData.weatherCondition || 'Clear',
+          precipitation: locationData.weatherData.precipitation || 0
+        });
+
+        // Update location data with SIQS result
+        setLocationData({
+          ...locationData,
+          siqsResult,
+          lastSiqsUpdate: new Date().toISOString()
+        });
+
+        // Mark as updated
+        updateCompleteRef.current = true;
+        return true;
       } catch (error) {
-        console.error("Error updating SIQS with forecast data:", error);
+        console.error("Error calculating SIQS:", error);
+        return false;
       }
     }
-    
-    return siqsUpdatedRef.current;
-  }, []);
-  
-  const resetUpdateState = useCallback(() => {
-    siqsUpdatedRef.current = false;
+
+    return false;
   }, []);
 
-  return { updateSIQSWithForecast, resetUpdateState, siqsUpdatedRef };
-};
+  return { 
+    updateSIQSWithForecast,
+    resetUpdateState
+  };
+}

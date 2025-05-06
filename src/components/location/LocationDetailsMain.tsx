@@ -3,6 +3,7 @@ import React from "react";
 import { useLocationDetails } from "@/hooks/useLocationDetails";
 import LocationDetailsViewport from "./LocationDetailsViewport";
 import { useRefreshManager } from "@/hooks/location/useRefreshManager";
+import { useWeatherAutoRefresh } from "@/hooks/location/useWeatherAutoRefresh"; 
 
 interface LocationDetailsMainProps {
   locationData: any;
@@ -59,6 +60,14 @@ const LocationDetailsMain: React.FC<LocationDetailsMainProps> = ({
       }
     }
   };
+
+  // Auto-refresh weather data if invalid
+  useWeatherAutoRefresh({
+    weatherData: locationData?.weatherData,
+    refreshFn: handleCompleteRefresh,
+    maxRetries: 3,
+    retryDelay: 3000
+  });
 
   // Set additional props for location data
   const enhancedLocationData = {

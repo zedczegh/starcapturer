@@ -1,16 +1,20 @@
 
 import { useCallback } from 'react';
 
-export const useCleanupUtils = () => {
-  // Clean up function to abort ongoing requests
+export function useCleanupUtils() {
+  // Cleanup utility for AbortController references
   const cleanupRequest = useCallback((controllerRef: React.MutableRefObject<AbortController | null>) => {
     if (controllerRef.current) {
-      controllerRef.current.abort();
+      try {
+        controllerRef.current.abort();
+      } catch (e) {
+        console.error("Error aborting request:", e);
+      }
       controllerRef.current = null;
     }
   }, []);
-  
-  // Cleanup timeout function
+
+  // Cleanup utility for timeout references
   const cleanupTimeout = useCallback((timeoutRef: React.MutableRefObject<NodeJS.Timeout | null>) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -19,4 +23,4 @@ export const useCleanupUtils = () => {
   }, []);
   
   return { cleanupRequest, cleanupTimeout };
-};
+}
