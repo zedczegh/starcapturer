@@ -1,3 +1,4 @@
+
 // Helper functions for category and type translations
 export function translateCategory(category: string): string {
   const categoryMap: Record<string, string> = {
@@ -16,7 +17,7 @@ export function translateCategory(category: string): string {
     "Community": "社区",
     // Location advantages translations
     "Low Light Pollution Region": "低光污染地区",
-    "Low Air Pollution Region": "低空气污染��区",
+    "Low Air Pollution Region": "低空气污染地区",
     "Lodging available": "可住宿",
     "Stable and Low Wind Gusts": "风力稳定且小",
     "High Annual Clear Nights Rate(>100 Days a year)": "高年晴朗夜晚率(>100天/年)",

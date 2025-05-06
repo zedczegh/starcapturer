@@ -99,4 +99,3 @@ export const commonPhrases = {
   "Friendly host": "友好的主人",
   "Wi-Fi available": "Wi-Fi可用"
 };
-

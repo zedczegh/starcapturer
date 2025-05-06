@@ -2,6 +2,7 @@
 import React from 'react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { translateCategory } from "@/utils/linkTranslations";
 
 export const LOCATION_ADVANTAGES = [
   "Low Light Pollution Region",
@@ -16,7 +17,7 @@ export const LOCATION_ADVANTAGES = [
   "No local interruptions",
   "Hard Soil or Concrete floor",
   "Power supplies available",
-  "Mobile battery available",
+  "Mobile battery available", 
   "Wi-Fi available",
   "Friendly host"
 ];
@@ -30,7 +31,7 @@ const LocationAdvantagesSelector: React.FC<LocationAdvantagesSelectorProps> = ({
   selectedAdvantages,
   onAdvantagesChange,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
     <div>
@@ -53,7 +54,9 @@ const LocationAdvantagesSelector: React.FC<LocationAdvantagesSelectorProps> = ({
                 );
               }}
             />
-            <span>{t(advantage, advantage)}</span>
+            <span>
+              {language === 'zh' ? translateCategory(advantage) : advantage}
+            </span>
           </label>
         ))}
       </div>

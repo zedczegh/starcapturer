@@ -1,5 +1,4 @@
 
-// Import necessary libraries and components
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,9 +47,7 @@ const ShareLocationForm: React.FC<{
     e.preventDefault();
     
     if (!name || !latitude || !longitude) {
-      toast.error(
-        language === 'en' ? 'Please fill all required fields' : '请填写所有必填字段'
-      );
+      toast.error(t('Please fill all required fields', '请填写所有必填字段'));
       return;
     }
     
@@ -58,7 +55,6 @@ const ShareLocationForm: React.FC<{
     
     try {
       // Create spot data object
-      // Removed the photoUrl field which was causing the TypeScript error
       const spotData: Omit<SharedAstroSpot, 'id'> = {
         name,
         chineseName: chineseName || undefined,
@@ -76,9 +72,7 @@ const ShareLocationForm: React.FC<{
       const response = await shareAstroSpot(spotData);
       
       if (response.success) {
-        toast.success(
-          language === 'en' ? 'Location shared successfully!' : '位置分享成功！'
-        );
+        toast.success(t('Location shared successfully!', '位置分享成功！'));
         
         // Navigate to location page if ID is returned
         if (response.id) {
@@ -91,7 +85,7 @@ const ShareLocationForm: React.FC<{
       }
     } catch (error) {
       toast.error(
-        language === 'en' ? 'Failed to share location' : '分享位置失败',
+        t('Failed to share location', '分享位置失败'),
         { description: (error as Error).message }
       );
     } finally {
@@ -230,9 +224,7 @@ const ShareLocationForm: React.FC<{
         
         <Button type="submit" disabled={isSubmitting} className="w-full">
           {isSubmitting ? (
-            <>
-              {language === 'en' ? 'Submitting...' : '提交中...'}
-            </>
+            t('Submitting...', '提交中...')
           ) : (
             <>
               <MapPin className="mr-2 h-4 w-4" />
