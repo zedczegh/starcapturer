@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,6 +43,13 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
   const [maxCapacity, setMaxCapacity] = useState(isEditing ? 
     existingTimeSlot.max_capacity : 1);
 
+  // Effect to ensure at least one date is selected
+  useEffect(() => {
+    if (selectedDates.length === 0) {
+      setSelectedDates([new Date()]);
+    }
+  }, [selectedDates]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -51,9 +58,13 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
       return;
     }
     
+    // Even with the effect above, we'll add an extra check here for safety
     if (selectedDates.length === 0) {
-      toast.error(t("Please select at least one date", "请至少选择一个日期"));
-      return;
+      // Auto-select today's date if no date is selected
+      const today = new Date();
+      setSelectedDates([today]);
+      toast.info(t("Today's date was automatically selected", "已自动选择今天的日期"));
+      return; // Let the user review the auto-selected date before submitting
     }
     
     setIsSubmitting(true);
@@ -143,14 +154,27 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
   };
 
   const handleCalendarSelect = (dates: Date[] | undefined) => {
-    if (!dates) return;
-    setSelectedDates(dates);
+    if (!dates || dates.length === 0) {
+      // Auto-select today's date if the user cleared all dates
+      setSelectedDates([new Date()]);
+      toast.info(t("Today's date was automatically selected", "已自动选择今天的日期"));
+    } else {
+      setSelectedDates(dates);
+    }
   };
 
   const removeDateBadge = (dateToRemove: Date) => {
-    setSelectedDates(selectedDates.filter(date => 
+    const newDates = selectedDates.filter(date => 
       !isSameDay(date, dateToRemove)
-    ));
+    );
+    
+    if (newDates.length === 0) {
+      // Auto-select today's date if the user removes the last date
+      setSelectedDates([new Date()]);
+      toast.info(t("Today's date was automatically selected", "已自动选择今天的日期"));
+    } else {
+      setSelectedDates(newDates);
+    }
   };
 
   return (
