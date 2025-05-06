@@ -14,7 +14,6 @@ import MessageInput from "@/components/messages/MessageInput";
 import { useMessageNavigation } from "@/hooks/useMessageNavigation";
 import { toast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 
 const Messages = () => {
   const { user } = useAuth();
@@ -36,7 +35,6 @@ const Messages = () => {
     messages,
     loading,
     sending,
-    unreadCount,
     fetchMessages,
     sendMessage,
   } = useMessaging();

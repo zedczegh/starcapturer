@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 
 type Theme = 'dark' | 'light' | 'system';
 
@@ -9,16 +9,14 @@ interface ThemeProviderProps {
 
 interface ThemeContextType {
   theme: Theme;
-  isDarkMode: boolean;
   setTheme: (theme: Theme) => void;
-  toggleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   // Default to system theme
-  const [theme, setTheme] = useState<Theme>(() => {
+  const [theme, setTheme] = React.useState<Theme>(() => {
     // Try to get the theme from localStorage
     if (typeof window !== 'undefined') {
       const storedTheme = localStorage.getItem('theme') as Theme;
@@ -26,16 +24,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
     return 'system';
   });
-
-  const [isDarkMode, setIsDarkMode] = useState(true);
-
-  const toggleTheme = () => {
-    if (theme === 'dark') {
-      setTheme('light');
-    } else {
-      setTheme('dark');
-    }
-  };
 
   useEffect(() => {
     // Update localStorage when theme changes
@@ -55,16 +43,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
           ? 'dark'
           : 'light';
         root.classList.add(systemTheme);
-        setIsDarkMode(systemTheme === 'dark');
       } else {
         root.classList.add(theme);
-        setIsDarkMode(theme === 'dark');
       }
     }
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, isDarkMode, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

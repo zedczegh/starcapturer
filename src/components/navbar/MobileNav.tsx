@@ -1,109 +1,87 @@
-import React from "react";
-import { useLocation } from "react-router-dom";
-import { Home, Map, Compass, MessageCircle, User } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
 
-// Modify the component to accept unreadCount
-const MobileNav = ({ 
-  location, 
-  locationId,
-  unreadCount = 0
-}: { 
-  location: ReturnType<typeof useLocation>,
-  locationId: string | null,
-  unreadCount?: number
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { Telescope, Map, Smartphone, Users } from "lucide-react";
+import { MobileNavButton } from "./NavButtons";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { motion } from "framer-motion";
+
+interface MobileNavProps {
+  location: ReturnType<typeof useLocation>;
+  locationId: string | null;
+}
+
+const MobileNav: React.FC<MobileNavProps> = ({
+  location,
+  locationId
 }) => {
   const { t } = useLanguage();
-  const { pathname } = location;
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  // Use a default location ID for when there isn't one
+  const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
+
+  // Handle scroll behavior - hide navbar when scrolling down, show when scrolling up
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY && currentScrollY > 60) {
+        setIsVisible(false);
+      } else {
+        setIsVisible(true);
+      }
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
 
   return (
     <motion.div 
-      initial={{ y: '100%' }}
-      animate={{ y: 0 }}
-      exit={{ y: '100%' }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-nav-bar"
+      initial={{ y: 0 }}
+      animate={{ y: isVisible ? 0 : 100 }}
+      transition={{ duration: 0.3 }}
     >
-      <nav className="fixed bottom-0 left-0 right-0 z-50 mobile-nav-bar backdrop-blur-lg">
-        <div className="flex items-center justify-around py-2">
-          <NavButton 
-            to="/photo-points" 
-            icon={<Home className="h-6 w-6" />} 
-            label={t("Home", "首页")}
-            active={pathname === '/photo-points'}
-          />
-          <NavButton 
-            to="/community" 
-            icon={<Compass className="h-6 w-6" />} 
-            label={t("Community", "社区")}
-            active={pathname === '/community'}
-          />
-          <NavButton 
-            to="/share" 
-            icon={<Map className="h-6 w-6" />} 
-            label={t("Share", "分享")}
-            active={pathname === '/share'}
-          />
-          <NavButton 
-            to="/messages" 
-            icon={<MessageCircle className="h-6 w-6" />} 
-            label={t("Messages", "消息")}
-            active={pathname === '/messages'}
-            badge={unreadCount > 0 ? unreadCount : undefined}
-          />
-          <NavButton 
-            to="/profile" 
-            icon={<User className="h-6 w-6" />} 
-            label={t("Profile", "个人资料")}
-            active={pathname === '/profile'}
-          />
-        </div>
-      </nav>
-    </motion.div>
-  );
-};
+      <div className="flex justify-around items-center py-3 px-2 bg-[#123341]/[0.92] backdrop-blur-xl border-t border-cosmic-100/15 shadow-lg">
+        <motion.div 
+          className="absolute -top-1 left-0 right-0 h-1 bg-gradient-to-r from-primary/10 via-primary/60 to-primary/10"
+          initial={{ scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: 1, opacity: 1 }}
+          transition={{ duration: 1, delay: 0.2 }}
+        />
+        
+        <MobileNavButton 
+          to="/photo-points" 
+          icon={<Telescope className="h-5 w-5" />} 
+          label={t("Photo", "拍摄")} 
+          active={location.pathname === "/photo-points"} 
+        />
+        
+        <MobileNavButton 
+          to={detailsPath}
+          icon={<Map className="h-5 w-5" />} 
+          label={t("Location", "位置")} 
+          active={location.pathname.startsWith('/location/')} 
+        />
 
-// Modifying the NavButton component to support badges
-const NavButton = ({ to, icon, label, active, badge }: { 
-  to: string; 
-  icon: React.ReactNode; 
-  label: string;
-  active: boolean;
-  badge?: number;
-}) => {
-  return (
-    <Link 
-      to={to} 
-      className={cn(
-        "mobile-nav-item flex flex-col items-center justify-center p-1 w-1/5",
-        active ? "active" : ""
-      )}
-    >
-      <div className="relative">
-        <div className={cn(
-          "icon-container flex items-center justify-center p-2 rounded-full mb-1",
-          active ? "bg-primary/30" : "bg-cosmic-800/30"
-        )}>
-          {icon}
-        </div>
-        {badge !== undefined && badge > 0 && (
-          <Badge
-            className="absolute -top-1 -right-1 h-5 min-w-[1.25rem] flex items-center justify-center rounded-full bg-primary text-white text-xs px-1"
-          >
-            {badge > 99 ? '99+' : badge}
-          </Badge>
-        )}
+        <MobileNavButton
+          to="/community"
+          icon={<Users className="h-5 w-5" />}
+          label={t("Community", "社区")}
+          active={location.pathname === "/community"}
+        />
+        
+        <MobileNavButton 
+          to="/share" 
+          icon={<Smartphone className="h-5 w-5" />} 
+          label={t("Bortle", "光污染")} 
+          active={location.pathname === "/share"} 
+        />
       </div>
-      <span className={cn(
-        "text-xs", 
-        active ? "text-white" : "text-cosmic-300"
-      )}>
-        {label}
-      </span>
-    </Link>
+    </motion.div>
   );
 };
 

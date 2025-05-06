@@ -37,7 +37,6 @@ export function useMessaging() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchConversations = async () => {
     if (!user) return;
@@ -54,7 +53,6 @@ export function useMessaging() {
 
       if (!messagesData || messagesData.length === 0) {
         setConversations([]);
-        setUnreadCount(0);
         setLoading(false);
         return;
       }
@@ -78,23 +76,19 @@ export function useMessaging() {
       });
 
       const conversationsMap = new Map<string, ConversationPartner>();
-      let totalUnread = 0;
 
       messagesData.forEach(msg => {
         const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
         
         if (!conversationsMap.has(partnerId)) {
           const profile = profilesMap.get(partnerId);
-          const unreadCount = msg.sender_id !== user.id && !msg.read ? 1 : 0;
-          totalUnread += unreadCount;
-          
           conversationsMap.set(partnerId, {
             id: partnerId,
             username: profile?.username || "User",
             avatar_url: profile?.avatar_url || null,
             last_message: msg.message,
             last_message_time: msg.created_at,
-            unread_count: unreadCount
+            unread_count: msg.sender_id !== user.id && !msg.read ? 1 : 0
           });
         } else {
           const existingConv = conversationsMap.get(partnerId);
@@ -108,12 +102,10 @@ export function useMessaging() {
           
           if (msg.sender_id !== user.id && !msg.read) {
             existingConv.unread_count += 1;
-            totalUnread += 1;
           }
         }
       });
 
-      setUnreadCount(totalUnread);
       setConversations(Array.from(conversationsMap.values()));
     } catch (error) {
       console.error("Error fetching conversations:", error);
@@ -178,9 +170,6 @@ export function useMessaging() {
             conv.id === partnerId ? { ...conv, unread_count: 0 } : conv
           )
         );
-        
-        // Update total unread count
-        setUnreadCount(prev => Math.max(0, prev - unreadMessages.length));
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -246,23 +235,6 @@ export function useMessaging() {
     }
   };
 
-  // New function to send booking notification message
-  const sendBookingNotification = async (creatorId: string, spotName: string, timeSlot: string) => {
-    if (!user) return false;
-    
-    try {
-      const message = t(
-        `I've made a booking request for "${spotName}" at ${timeSlot}. Please review it when you have a chance.`,
-        `我已经为"${spotName}"在 ${timeSlot} 提出了预订请求。请您有空时查看。`
-      );
-      
-      return await sendMessage(creatorId, message);
-    } catch (error) {
-      console.error("Error sending booking notification:", error);
-      return false;
-    }
-  };
-
   useEffect(() => {
     if (!user) return;
     
@@ -293,9 +265,7 @@ export function useMessaging() {
     messages,
     loading,
     sending,
-    unreadCount,
     fetchMessages,
     sendMessage,
-    sendBookingNotification,
   };
 }

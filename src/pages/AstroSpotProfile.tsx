@@ -243,10 +243,10 @@ const AstroSpotProfile = () => {
 
           <SpotHeader
             spot={spot}
-            creatorProfile={spot.creator_profile}
-            loadingCreator={false}
+            creatorProfile={creatorProfile}
+            loadingCreator={loadingCreator}
             spotId={spot.user_id}
-            onViewDetails={() => handleViewDetails()}
+            onViewDetails={handleViewDetails}
             comingFromCommunity={comingFromCommunity}
           />
           
@@ -257,26 +257,22 @@ const AstroSpotProfile = () => {
               advantages={spot.astro_spot_advantages}
             />
             
-            <TimeSlotManager 
-              spotId={id!} 
-              creatorId={spot.user_id} 
-              spotName={spot.name}
-            />
+            <TimeSlotManager spotId={id!} isCreator={isCreator} />
             
             <SpotImageGallery
               spotId={id!}
               spotName={spot.name}
-              spotImages={[]}
-              loadingImages={false}
+              spotImages={spotImages}
+              loadingImages={loadingImages}
               user={!!user}
-              onImagesUpdate={() => {}}
+              onImagesUpdate={handleImagesUpdate}
             />
             
             <SpotComments
               spotId={id!}
               comments={spot.astro_spot_comments || []}
               user={!!user}
-              onCommentsUpdate={() => {}}
+              onCommentsUpdate={handleCommentsUpdate}
             />
           </div>
         </motion.div>
