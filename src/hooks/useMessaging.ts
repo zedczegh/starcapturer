@@ -138,18 +138,20 @@ export function useMessaging() {
       // Transform messages to include status indicators
       const messagesWithProfiles = data?.map(msg => {
         const senderProfile = profilesData?.find(profile => profile.id === msg.sender_id);
-        const status = msg.sender_id === user.id
-                       ? (msg.read ? 'read' : 'sent')
-                       : undefined;
+        let messageStatus: 'sent' | 'read' | undefined = undefined;
+        
+        if (msg.sender_id === user.id) {
+          messageStatus = msg.read ? 'read' : 'sent';
+        }
                        
         return {
           ...msg,
-          status,
+          status: messageStatus,
           sender_profile: {
             username: senderProfile?.username || "User",
             avatar_url: senderProfile?.avatar_url
           }
-        };
+        } as Message;  // Explicit type casting to ensure it matches Message interface
       });
       
       setMessages(messagesWithProfiles || []);
@@ -183,14 +185,14 @@ export function useMessaging() {
     try {
       // First, add the message to the local state with a temporary ID and 'sent' status
       const tempId = `temp-${Date.now()}`;
-      const newMessage = {
+      const newMessage: Message = {
         id: tempId,
         sender_id: user.id,
         receiver_id: receiverId,
         message: message.trim(),
         created_at: new Date().toISOString(),
         read: false,
-        status: 'sent' as const,
+        status: 'sent',
         sender_profile: {
           username: user.email?.split('@')[0] || "You",
           avatar_url: null // This will be updated when fetched
