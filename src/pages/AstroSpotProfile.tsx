@@ -267,8 +267,9 @@ const AstroSpotProfile = () => {
             
             <TimeSlotManager 
               spotId={id!} 
-              creatorId={spot.user_id}
-              spotName={spot.name}
+              isOwner={isCreator}
+              creatorId={spot?.user_id}
+              spotName={spot?.name}
             />
             
             <SpotImageGallery

@@ -17,30 +17,34 @@ interface TimeSlotFormProps {
   onSuccess: () => void;
   onCancel: () => void;
   existingTimeSlot?: any;
+  initialData?: any; // Adding this prop to fix the type error
 }
 
 const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ 
   spotId, 
   onSuccess, 
   onCancel,
-  existingTimeSlot 
+  existingTimeSlot,
+  initialData 
 }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const isEditing = !!existingTimeSlot;
-  const initialDate = isEditing ? new Date(existingTimeSlot.start_time) : new Date();
+  // If initialData is provided, use it. Otherwise, fall back to existingTimeSlot
+  const timeSlotData = initialData || existingTimeSlot;
+  const isEditing = !!timeSlotData;
+  const initialDate = isEditing ? new Date(timeSlotData.start_time) : new Date();
   
   const [selectedDates, setSelectedDates] = useState<Date[]>(isEditing ? [initialDate] : [new Date()]);
   const [startTime, setStartTime] = useState(isEditing ? 
-    format(new Date(existingTimeSlot.start_time), 'HH:mm') : '20:00');
+    format(new Date(timeSlotData.start_time), 'HH:mm') : '20:00');
   const [endTime, setEndTime] = useState(isEditing ? 
-    format(new Date(existingTimeSlot.end_time), 'HH:mm') : '23:00');
+    format(new Date(timeSlotData.end_time), 'HH:mm') : '23:00');
   const [description, setDescription] = useState(isEditing ? 
-    existingTimeSlot.description || '' : '');
+    timeSlotData.description || '' : '');
   const [maxCapacity, setMaxCapacity] = useState(isEditing ? 
-    existingTimeSlot.max_capacity : 1);
+    timeSlotData.max_capacity : 1);
   const [lastSelectedDate, setLastSelectedDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
@@ -82,7 +86,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
             body: {
               function: 'update_astro_spot_timeslot',
               params: {
-                p_id: existingTimeSlot.id,
+                p_id: timeSlotData.id,
                 p_spot_id: spotId,
                 p_creator_id: user.id,
                 p_start_time: startDateTime.toISOString(),
