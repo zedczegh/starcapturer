@@ -8,16 +8,20 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import MessageStatus, { MessageStatusType } from './MessageStatus';
 
 interface Message {
   id: string;
   sender_id: string;
   message: string;
   created_at: string;
+  read: boolean;
   sender_profile?: {
     username: string | null;
     avatar_url: string | null;
   };
+  // New field for message status
+  status?: MessageStatusType;
 }
 
 interface ConversationPartner {
@@ -90,6 +94,16 @@ const MessageList: React.FC<MessageListProps> = ({
     } else {
       return format(messageDate, "MMM d, yyyy");
     }
+  };
+
+  // Determine message status based on read status
+  const getMessageStatus = (message: Message): MessageStatusType => {
+    if (message.sender_id === currentUserId) {
+      // For user's own messages
+      if (message.status === 'error') return 'error';
+      return message.read ? 'read' : 'sent';
+    }
+    return 'sent'; // For received messages
   };
 
   const staggerVariants = {
@@ -168,48 +182,60 @@ const MessageList: React.FC<MessageListProps> = ({
                 </div>
               </div>
               
-              {groupedMessages[date].map((message, index) => (
-                <motion.div
-                  key={message.id}
-                  custom={index}
-                  initial="hidden"
-                  animate="visible"
-                  variants={staggerVariants}
-                  className={`flex gap-3 ${
-                    message.sender_id === currentUserId ? 'flex-row-reverse' : 'flex-row'
-                  }`}
-                >
-                  <Avatar className="h-8 w-8 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20 flex-shrink-0">
-                    {message.sender_profile?.avatar_url ? (
-                      <AvatarImage 
-                        src={message.sender_profile.avatar_url} 
-                        alt={message.sender_profile.username || "User"}
-                        className="object-cover"
-                      />
-                    ) : (
-                      <AvatarFallback className="bg-primary/10">
-                        <User className="h-4 w-4 text-primary" />
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div className={`max-w-[75%] space-y-1 ${
-                    message.sender_id === currentUserId ? 'items-end' : 'items-start'
-                  }`}>
-                    <div className={`rounded-2xl px-4 py-2 ${
-                      message.sender_id === currentUserId 
-                        ? 'bg-primary text-white ml-auto shadow-lg shadow-primary/10' 
-                        : 'bg-cosmic-800/50 text-cosmic-100'
+              {groupedMessages[date].map((message, index) => {
+                const isUserMessage = message.sender_id === currentUserId;
+                const messageStatus = getMessageStatus(message);
+                const messageLength = message.message.length;
+                
+                // Determine bubble width class based on message length
+                let bubbleWidthClass = "max-w-[75%]";
+                if (messageLength < 20) bubbleWidthClass = "max-w-fit";
+                else if (messageLength > 100) bubbleWidthClass = "max-w-[85%]";
+                
+                return (
+                  <motion.div
+                    key={message.id}
+                    custom={index}
+                    initial="hidden"
+                    animate="visible"
+                    variants={staggerVariants}
+                    className={`flex gap-3 ${isUserMessage ? 'flex-row-reverse' : 'flex-row'}`}
+                  >
+                    <Avatar className="h-8 w-8 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20 flex-shrink-0">
+                      {message.sender_profile?.avatar_url ? (
+                        <AvatarImage 
+                          src={message.sender_profile.avatar_url} 
+                          alt={message.sender_profile.username || "User"}
+                          className="object-cover"
+                        />
+                      ) : (
+                        <AvatarFallback className="bg-primary/10">
+                          <User className="h-4 w-4 text-primary" />
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div className={`${bubbleWidthClass} space-y-1 ${
+                      isUserMessage ? 'items-end' : 'items-start'
                     }`}>
-                      <p className="break-words">{message.message}</p>
+                      <div className={`rounded-2xl px-4 py-2 ${
+                        isUserMessage 
+                          ? 'bg-primary text-white ml-auto shadow-lg shadow-primary/10' 
+                          : 'bg-cosmic-800/50 text-cosmic-100'
+                      }`}>
+                        <p className="break-words">{message.message}</p>
+                      </div>
+                      <div className={`flex items-center gap-2 text-xs text-cosmic-400 ${
+                        isUserMessage ? 'justify-end' : 'justify-start'
+                      }`}>
+                        <span>{formatMessageTime(message.created_at)}</span>
+                        {isUserMessage && (
+                          <MessageStatus status={messageStatus} />
+                        )}
+                      </div>
                     </div>
-                    <div className={`flex items-center gap-2 text-xs text-cosmic-400 ${
-                      message.sender_id === currentUserId ? 'justify-end' : 'justify-start'
-                    }`}>
-                      <span>{formatMessageTime(message.created_at)}</span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </div>
           ))
         )}

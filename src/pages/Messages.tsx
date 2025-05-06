@@ -12,7 +12,7 @@ import ConversationList from "@/components/messages/ConversationList";
 import MessageList from "@/components/messages/MessageList";
 import MessageInput from "@/components/messages/MessageInput";
 import { useMessageNavigation } from "@/hooks/useMessageNavigation";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const Messages = () => {
@@ -20,8 +20,8 @@ const Messages = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [sendError, setSendError] = useState(false);
   
   const {
     activeConversation,
@@ -52,21 +52,26 @@ const Messages = () => {
   const handleSelectConversation = (conversation) => {
     setActiveConversation(conversation);
     fetchMessages(conversation.id);
+    setSendError(false); // Reset error state when changing conversation
   };
 
   const handleSendMessage = async (message) => {
-    if (!activeConversation) return;
+    if (!activeConversation) return false;
     
+    setSendError(false);
     const success = await sendMessage(activeConversation.id, message);
-    if (success) {
-      fetchMessages(activeConversation.id);
+    
+    if (!success) {
+      setSendError(true);
+      toast.error(
+        t("Message not sent", "消息发送失败"), 
+        { description: t("Please try again", "请重试") }
+      );
     } else {
-      toast({
-        title: t("Message not sent", "消息发送失败"),
-        description: t("Please try again", "请重试"),
-        variant: "destructive"
-      });
+      fetchMessages(activeConversation.id);
     }
+    
+    return success;
   };
 
   if (!user) {
@@ -137,6 +142,7 @@ const Messages = () => {
                         <MessageInput 
                           onSend={handleSendMessage}
                           sending={sending}
+                          errorState={sendError}
                         />
                       </>
                     ) : (

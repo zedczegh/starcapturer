@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+export type MessageStatusType = 'sent' | 'read' | 'error';
+
 interface Message {
   id: string;
   sender_id: string;
@@ -16,6 +18,7 @@ interface Message {
     username: string | null;
     avatar_url: string | null;
   };
+  status?: MessageStatusType;
 }
 
 interface ConversationPartner {
@@ -136,8 +139,13 @@ export function useMessaging() {
       
       const messagesWithProfiles = data?.map(msg => {
         const senderProfile = profilesData?.find(profile => profile.id === msg.sender_id);
+        // Set appropriate status for messages
+        const status: MessageStatusType = 
+          msg.sender_id === user.id ? (msg.read ? 'read' : 'sent') : 'sent';
+          
         return {
           ...msg,
+          status,
           sender_profile: {
             username: senderProfile?.username || "User",
             avatar_url: senderProfile?.avatar_url
@@ -174,19 +182,53 @@ export function useMessaging() {
     
     setSending(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('user_messages')
         .insert({
           sender_id: user.id,
           receiver_id: receiverId,
           message: message.trim()
-        });
+        })
+        .select();
         
       if (error) throw error;
+      
+      // Add the new message to the messages state with optimistic update
+      if (data && data.length > 0) {
+        const newMessage = {
+          ...data[0],
+          status: 'sent' as MessageStatusType,
+          sender_profile: {
+            username: user.email || "User",
+            avatar_url: null
+          }
+        };
+        
+        setMessages(prev => [...prev, newMessage]);
+      }
+      
       return true;
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error(t("Failed to send message", "发送消息失败"));
+      
+      // Add failed message to the list with error status
+      const failedMessage = {
+        id: `temp-${Date.now()}`,
+        sender_id: user.id,
+        receiver_id: receiverId,
+        message: message.trim(),
+        created_at: new Date().toISOString(),
+        read: false,
+        status: 'error' as MessageStatusType,
+        sender_profile: {
+          username: user.email || "User",
+          avatar_url: null
+        }
+      };
+      
+      setMessages(prev => [...prev, failedMessage]);
+      
       return false;
     } finally {
       setSending(false);
