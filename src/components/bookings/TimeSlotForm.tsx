@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Calendar } from '@/components/ui/calendar';
-import { format, addDays, isSameDay } from 'date-fns';
+import { format, addDays, isSameDay, isAfter, isBefore, eachDayOfInterval } from 'date-fns';
 import { Loader2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -34,6 +34,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
   const initialDate = isEditing ? new Date(existingTimeSlot.start_time) : new Date();
   
   const [selectedDates, setSelectedDates] = useState<Date[]>(isEditing ? [initialDate] : [new Date()]);
+  const [lastSelectedDate, setLastSelectedDate] = useState<Date | null>(null);
   const [startTime, setStartTime] = useState(isEditing ? 
     format(new Date(existingTimeSlot.start_time), 'HH:mm') : '20:00');
   const [endTime, setEndTime] = useState(isEditing ? 
@@ -157,9 +158,28 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     if (!dates || dates.length === 0) {
       // Auto-select today's date if the user cleared all dates
       setSelectedDates([new Date()]);
+      setLastSelectedDate(null);
       toast.info(t("Today's date was automatically selected", "已自动选择今天的日期"));
+      return;
+    }
+
+    // If this is a range selection scenario
+    if (lastSelectedDate && dates.length === 1 && !isSameDay(lastSelectedDate, dates[0])) {
+      // Determine start and end of the range
+      const startDate = isBefore(lastSelectedDate, dates[0]) ? lastSelectedDate : dates[0];
+      const endDate = isAfter(lastSelectedDate, dates[0]) ? lastSelectedDate : dates[0];
+      
+      // Create an array of all dates in the range
+      const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
+      
+      // Set all dates in the range as selected
+      setSelectedDates(dateRange);
+      toast.info(t("Date range selected", "已选择日期范围"));
+      setLastSelectedDate(null);
     } else {
+      // Normal selection behavior
       setSelectedDates(dates);
+      setLastSelectedDate(dates.length === 1 ? dates[0] : null);
     }
   };
 
@@ -171,9 +191,11 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     if (newDates.length === 0) {
       // Auto-select today's date if the user removes the last date
       setSelectedDates([new Date()]);
+      setLastSelectedDate(null);
       toast.info(t("Today's date was automatically selected", "已自动选择今天的日期"));
     } else {
       setSelectedDates(newDates);
+      setLastSelectedDate(null);
     }
   };
 
@@ -195,7 +217,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                 : t("Select Dates", "选择日期")
               }
               <span className="text-xs ml-1 text-gray-400">
-                {isEditing ? "" : t("(multiple allowed)", "（可多选）")}
+                {isEditing ? "" : t("(select two dates to create a range)", "（选择两个日期创建范围）")}
               </span>
             </Label>
             <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
@@ -243,6 +265,11 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                     </Badge>
                   ))}
                 </div>
+                {lastSelectedDate && (
+                  <p className="text-xs text-primary mt-2">
+                    {t("Select another date to create a range", "选择另一个日期创建范围")}
+                  </p>
+                )}
               </div>
             )}
           </div>
