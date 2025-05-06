@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -34,7 +35,6 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
   
   const {
     selectedDates,
-    setSelectedDates,
     handleCalendarSelect,
     removeDateBadge,
     selectAll,
@@ -81,140 +81,25 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="date" className="block text-sm text-gray-300 mb-1">
-              {isEditing
-                ? t("Date", "日期")
-                : t("Select Dates", "选择日期")
-              }
-              <span className="text-xs ml-1 text-gray-400">
-                {isEditing ? "" : t("(select a date to create a range from today)", "（选择一个日期创建从今天开始的范围）")}
-              </span>
-            </Label>
-
-            {!isEditing && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => selectAll(currentMonth)}
-                  className="flex items-center gap-1 text-xs bg-cosmic-800/70"
-                >
-                  <SelectAll className="h-3.5 w-3.5" />
-                  {t("Select All", "全选")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={deleteAll}
-                  className="flex items-center gap-1 text-xs bg-cosmic-800/70"
-                >
-                  <CalendarX className="h-3.5 w-3.5" />
-                  {t("Clear All", "清除全部")}
-                </Button>
-              </div>
-            )}
-
-            <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
-              {isEditing ? (
-                <Calendar
-                  mode="single"
-                  selected={selectedDates[0]}
-                  onSelect={(date) => date && setSelectedDates([date])}
-                  disabled={(date) => date < new Date()}
-                  className="bg-cosmic-800/30 rounded-lg"
-                />
-              ) : (
-                <Calendar
-                  mode="multiple"
-                  selected={selectedDates}
-                  onSelect={handleCalendarSelect}
-                  disabled={(date) => date < new Date()}
-                  className="bg-cosmic-800/30 rounded-lg"
-                  onMonthChange={handleMonthChange}
-                />
-              )}
-            </div>
-            
-            {!isEditing && selectedDates.length > 0 && (
-              <div className="mt-2">
-                <Label className="block text-sm text-gray-300 mb-1">
-                  {t("Selected Dates", "已选择日期")} ({selectedDates.length})
-                </Label>
-                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1">
-                  {selectedDates.map((date, index) => (
-                    <Badge 
-                      key={index} 
-                      variant="secondary"
-                      className="pl-2 pr-1 py-1 flex items-center gap-1 bg-cosmic-800/60"
-                    >
-                      {format(date, 'MMM dd, yyyy')}
-                      <Button 
-                        type="button"
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-5 w-5 ml-1 rounded-full hover:bg-cosmic-700/50"
-                        onClick={() => removeDateBadge(date)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <DateSelectionArea
+            isEditing={isEditing}
+            selectedDates={selectedDates}
+            handleCalendarSelect={handleCalendarSelect}
+            removeDateBadge={removeDateBadge}
+            selectAll={selectAll}
+            deleteAll={deleteAll}
+            currentMonth={currentMonth}
+            setCurrentMonth={handleMonthChange}
+          />
           
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="start-time" className="block text-sm text-gray-300 mb-1">
-                {t("Start Time", "开始时间")}
-              </Label>
-              <Input
-                id="start-time"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
-                required
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="end-time" className="block text-sm text-gray-300 mb-1">
-                {t("End Time", "结束时间")}
-              </Label>
-              <Input
-                id="end-time"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
-                required
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                {t("For overnight sessions, set end time earlier than start time", "对于通宵会话，请将结束时间设置为早于开始时间")}
-              </p>
-            </div>
-            
-            <div>
-              <Label htmlFor="capacity" className="block text-sm text-gray-300 mb-1">
-                {t("Maximum Capacity", "最大容量")}
-              </Label>
-              <Input
-                id="capacity"
-                type="number"
-                min="1"
-                max="100"
-                value={maxCapacity}
-                onChange={(e) => setMaxCapacity(parseInt(e.target.value))}
-                className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
-                required
-              />
-            </div>
-          </div>
+          <TimeCapacityInputs
+            startTime={startTime}
+            setStartTime={setStartTime}
+            endTime={endTime}
+            setEndTime={setEndTime}
+            maxCapacity={maxCapacity}
+            setMaxCapacity={setMaxCapacity}
+          />
         </div>
         
         <div>
