@@ -47,6 +47,40 @@ export function useProfile() {
     return { data, error };
   }, []);
 
+  // Upload avatar to Supabase Storage
+  const uploadAvatar = useCallback(async (userId: string, file: File): Promise<string | null> => {
+    if (!file) return null;
+    
+    try {
+      setUploadingAvatar(true);
+      
+      // Upload the file
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .upload(`${userId}`, file, {
+          upsert: true,
+          cacheControl: '3600'
+        });
+      
+      if (error) throw error;
+      
+      // Get the public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(data.path);
+      
+      const publicUrl = publicUrlData.publicUrl;
+      setAvatarUrl(publicUrl);
+      
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      return null;
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }, []);
+
   // Save profile tags
   const saveProfileTags = useCallback(async (userId: string, newTags: string[]) => {
     // Remove all current tags for this user, then insert selected ones
@@ -75,6 +109,7 @@ export function useProfile() {
     randomTip,
     setRandomTip,
     fetchProfile,
+    uploadAvatar,
     tags,
     setTags,
     saveProfileTags,

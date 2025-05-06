@@ -63,8 +63,10 @@ const Profile = () => {
     const file = e.target.files?.[0];
     if (file) {
       setAvatarFile(file);
+      // Create a local preview of the image
       const previewUrl = URL.createObjectURL(file);
       setAvatarUrl(previewUrl);
+      setUploadingAvatar(false); // We'll upload when the form is submitted
     }
   };
 

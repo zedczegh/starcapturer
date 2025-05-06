@@ -92,6 +92,7 @@ const ProfileForm = () => {
       
       setAvatarUrl(publicUrlData.publicUrl);
       setAvatarUploading(false);
+      setAvatarFile(null); // Clear the file after successful upload
       
       return publicUrlData.publicUrl;
     } catch (error) {
@@ -120,6 +121,12 @@ const ProfileForm = () => {
       let newAvatarUrl = avatarUrl;
       if (avatarFile) {
         newAvatarUrl = await uploadAvatar();
+        
+        if (!newAvatarUrl) {
+          toast.error(t('Failed to upload avatar', '上传头像失败'));
+          setSaving(false);
+          return;
+        }
       }
 
       // Update profile in Supabase
@@ -147,31 +154,12 @@ const ProfileForm = () => {
       console.error('Error updating profile:', error);
     } finally {
       setSaving(false);
+      setAvatarUploading(false);
     }
   };
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-      {/* Avatar upload section */}
-      <div className="space-y-4">
-        <div className="flex flex-col items-center">
-          <Label className="text-cosmic-300">
-            {t('Upload Avatar', '上传头像')}
-          </Label>
-          <Input
-            type="file"
-            accept="image/*"
-            onChange={handleAvatarChange}
-            className="bg-cosmic-900/50 border-cosmic-700/50"
-          />
-          {avatarUploading && (
-            <p className="text-sm text-cosmic-400">
-              {t('Uploading avatar...', '上传头像中...')}
-            </p>
-          )}
-        </div>
-      </div>
-
       {/* Username field */}
       <div className="space-y-2">
         <Label htmlFor="username" className="text-cosmic-300">
