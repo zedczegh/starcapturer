@@ -91,11 +91,14 @@ const TagSelector: React.FC<TagSelectorProps> = ({
   // Make sure COMMON_TAGS is defined and use safeFilter to handle filtering
   const commonTagsArray = Array.isArray(COMMON_TAGS) ? COMMON_TAGS : [];
   
+  // Make sure selectedTags is always an array
+  const safeSelectedTags = Array.isArray(selectedTags) ? selectedTags : [];
+  
   // Use safeFilter to ensure we're not filtering undefined values
   const availableTags = safeFilter(
     commonTagsArray,
-    tag => !selectedTags.includes(safeToString(tag.value)) && 
-           !selectedTags.includes(safeToString(tag.label))
+    tag => !safeSelectedTags.includes(safeToString(tag.value)) && 
+           !safeSelectedTags.includes(safeToString(tag.label))
   );
 
   // Ensure we have a valid list structure even if availableTags is empty

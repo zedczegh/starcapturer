@@ -137,12 +137,16 @@ export function useUserTags() {
       if (error) throw error;
       
       if (data) {
-        // Use the ensureArray helper to ensure we're working with an array
-        setTags(prev => [...ensureArray(prev), { 
+        const newTag = { 
           id: data.id, 
           name: data.tag, 
           icon_url: null 
-        }]);
+        };
+        
+        setTags(prevTags => {
+          const safePrevTags = Array.isArray(prevTags) ? prevTags : [];
+          return [...safePrevTags, newTag];
+        });
         
         toast.success(t('Tag added successfully', '标签添加成功'));
       }
@@ -167,8 +171,11 @@ export function useUserTags() {
         
       if (error) throw error;
       
-      // Use the ensureArray helper to ensure we're working with an array
-      setTags(prev => ensureArray(prev).filter(tag => tag.id !== tagId));
+      setTags(prevTags => {
+        const safePrevTags = Array.isArray(prevTags) ? prevTags : [];
+        return safePrevTags.filter(tag => tag.id !== tagId);
+      });
+      
       toast.success(t('Tag removed successfully', '标签移除成功'));
       
       return true;
