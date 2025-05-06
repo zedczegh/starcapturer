@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { safeFilter } from '@/utils/tagCache';
+import { safeToString } from '@/utils/stringUtils';
 
 // Common tags that users can select from
 const COMMON_TAGS = [
@@ -50,7 +52,7 @@ interface TagSelectorProps {
 
 const TagSelector: React.FC<TagSelectorProps> = ({
   onSelect,
-  selectedTags,
+  selectedTags = [], // Provide default empty array
   disabled = false
 }) => {
   const { t } = useLanguage();
@@ -86,11 +88,12 @@ const TagSelector: React.FC<TagSelectorProps> = ({
     }
   }, [open]);
 
-  // Filter out already selected tags
-  const availableTags = COMMON_TAGS.filter(tag => 
-    !selectedTags.includes(tag.value) && 
-    !selectedTags.includes(tag.label)
-  ) || [];
+  // Use safeFilter to ensure we're not filtering undefined values
+  const availableTags = safeFilter(
+    COMMON_TAGS,
+    tag => !selectedTags.includes(safeToString(tag.value)) && 
+           !selectedTags.includes(safeToString(tag.label))
+  );
 
   return (
     <div className="flex flex-col space-y-2">
@@ -139,7 +142,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
               </div>
             </CommandEmpty>
             <CommandGroup>
-              {availableTags.length > 0 && availableTags.map((tag) => (
+              {availableTags && availableTags.length > 0 ? availableTags.map((tag) => (
                 <CommandItem
                   key={tag.value}
                   value={tag.value}
@@ -155,7 +158,7 @@ const TagSelector: React.FC<TagSelectorProps> = ({
                   <TagIcon className="h-3.5 w-3.5 mr-2 text-cosmic-400" />
                   {translateTag(tag.label)}
                 </CommandItem>
-              ))}
+              )) : null}
             </CommandGroup>
           </Command>
         </PopoverContent>

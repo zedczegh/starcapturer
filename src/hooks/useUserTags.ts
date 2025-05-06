@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getCachedTags, setCachedTags } from '@/utils/tagCache';
+import { getCachedTags, setCachedTags, ensureArray } from '@/utils/tagCache';
 
 export interface UserTag {
   id: string;
@@ -43,7 +43,7 @@ export function useUserTags() {
       if (error) throw error;
       
       if (tagData) {
-        const processedTags = tagData.map(item => ({
+        const processedTags = ensureArray(tagData).map(item => ({
           id: item.id,
           name: item.tag,
           icon_url: null // We'll add the icon URL in a moment
@@ -87,7 +87,7 @@ export function useUserTags() {
       if (error) throw error;
       
       if (tagData) {
-        const processedTags = tagData.map(item => ({
+        const processedTags = ensureArray(tagData).map(item => ({
           id: item.id,
           name: item.tag,
           icon_url: null
@@ -129,7 +129,7 @@ export function useUserTags() {
       if (error) throw error;
       
       if (data) {
-        setTags(prev => [...prev, { 
+        setTags(prev => [...ensureArray(prev), { 
           id: data.id, 
           name: data.tag, 
           icon_url: null 
@@ -156,7 +156,7 @@ export function useUserTags() {
         
       if (error) throw error;
       
-      setTags(prev => prev.filter(tag => tag.id !== tagId));
+      setTags(prev => ensureArray(prev).filter(tag => tag.id !== tagId));
       toast.success(t('Tag removed successfully', '标签移除成功'));
       
       return true;

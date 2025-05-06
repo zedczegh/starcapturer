@@ -6,6 +6,7 @@ import { Loader2, Tag, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserTag } from '@/hooks/useUserTags';
 import TagSelector from './TagSelector';
+import { ensureArray } from '@/utils/tagCache';
 
 // Colors for the tag badges
 const TAG_COLORS = [
@@ -30,7 +31,7 @@ interface UserTagsProps {
 }
 
 const UserTags: React.FC<UserTagsProps> = ({
-  tags,
+  tags = [], // Provide default empty array
   loading,
   editable = false,
   showAddNew = false,
@@ -57,7 +58,9 @@ const UserTags: React.FC<UserTagsProps> = ({
   };
 
   // Get an array of tag names from the tags array
-  const tagNames = tags.map(tag => tag.name);
+  // Use ensureArray to guarantee we're working with an array
+  const safeTags = ensureArray(tags);
+  const tagNames = safeTags.map(tag => tag.name);
 
   if (loading) {
     return (
@@ -70,14 +73,14 @@ const UserTags: React.FC<UserTagsProps> = ({
     );
   }
 
-  if (tags.length === 0 && !showAddNew) {
+  if (safeTags.length === 0 && !showAddNew) {
     return null;
   }
 
   return (
     <div className={className}>
       <div className="flex flex-wrap gap-2">
-        {tags.map((tag, index) => (
+        {safeTags.map((tag, index) => (
           <Badge 
             key={tag.id} 
             variant="outline" 
