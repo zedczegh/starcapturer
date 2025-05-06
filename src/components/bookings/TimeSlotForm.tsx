@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Calendar } from '@/components/ui/calendar';
-import { format, addDays, isSameDay } from 'date-fns';
+import { format, addDays, isSameDay, eachDayOfInterval } from 'date-fns';
 import { Loader2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -42,6 +42,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     existingTimeSlot.description || '' : '');
   const [maxCapacity, setMaxCapacity] = useState(isEditing ? 
     existingTimeSlot.max_capacity : 1);
+  const [lastSelectedDate, setLastSelectedDate] = useState<Date | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,15 +143,50 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     }
   };
 
+  // Handle calendar date selection with auto range selection
   const handleCalendarSelect = (dates: Date[] | undefined) => {
-    if (!dates) return;
+    if (!dates || dates.length === 0) {
+      setSelectedDates([]);
+      setLastSelectedDate(null);
+      return;
+    }
+    
+    // If we already have a lastSelectedDate and this is a single new date selection
+    if (lastSelectedDate && dates.length === 1) {
+      const newDate = dates[0];
+      
+      // Check if the new date is more than 1 day away from the last selected date
+      const dateDifference = Math.abs(newDate.getTime() - lastSelectedDate.getTime());
+      const daysDifference = Math.floor(dateDifference / (1000 * 60 * 60 * 24));
+      
+      if (daysDifference > 1) {
+        // Create range selection by adding all dates between the last selected and new date
+        const startDate = new Date(Math.min(lastSelectedDate.getTime(), newDate.getTime()));
+        const endDate = new Date(Math.max(lastSelectedDate.getTime(), newDate.getTime()));
+        
+        // Generate array of all dates in the interval (inclusive)
+        const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
+        setSelectedDates(dateRange);
+        setLastSelectedDate(newDate);
+        return;
+      }
+    }
+    
+    // Regular date selection handling
     setSelectedDates(dates);
+    setLastSelectedDate(dates[dates.length - 1]);
   };
 
   const removeDateBadge = (dateToRemove: Date) => {
     setSelectedDates(selectedDates.filter(date => 
       !isSameDay(date, dateToRemove)
     ));
+    
+    // If the removed date was the last selected date, update lastSelectedDate
+    if (lastSelectedDate && isSameDay(lastSelectedDate, dateToRemove)) {
+      const remainingDates = selectedDates.filter(date => !isSameDay(date, dateToRemove));
+      setLastSelectedDate(remainingDates.length > 0 ? remainingDates[remainingDates.length - 1] : null);
+    }
   };
 
   return (
@@ -171,7 +207,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                 : t("Select Dates", "选择日期")
               }
               <span className="text-xs ml-1 text-gray-400">
-                {isEditing ? "" : t("(multiple allowed)", "（可多选）")}
+                {isEditing ? "" : t("(multiple or range allowed)", "（可多选或选择范围）")}
               </span>
             </Label>
             <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
