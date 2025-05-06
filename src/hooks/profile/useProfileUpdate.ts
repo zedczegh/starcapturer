@@ -81,9 +81,13 @@ export function useProfileUpdate() {
       await saveProfileTags(userId, tags);
 
       // Only show one toast with appropriate description
-      toast.success(t("Profile updated successfully", "个人资料更新成功"), {
-        description: avatarUploaded ? t("Your avatar has been updated", "您的头像已更新") : undefined
-      });
+      if (avatarUploaded) {
+        toast.success(t("Profile updated successfully", "个人资料更新成功"), {
+          description: t("Your avatar has been updated", "您的头像已更新")
+        });
+      } else {
+        toast.success(t("Profile updated successfully", "个人资料更新成功"));
+      }
       
       return {
         success: true,

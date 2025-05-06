@@ -24,18 +24,8 @@ export function useAvatar() {
       const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
       
       if (!avatarsBucketExists) {
-        const { error: createBucketError } = await supabase.storage.createBucket('avatars', {
-          public: true,
-          fileSizeLimit: 2097152 // 2MB
-        });
-        
-        if (createBucketError) {
-          console.error("Error creating avatars bucket:", createBucketError);
-          return false;
-        }
-        
-        // Set RLS policies for the new bucket
-        console.log("Avatars bucket created successfully");
+        console.error("Avatars bucket does not exist");
+        return false;
       }
       
       return true;
@@ -101,8 +91,10 @@ export function useAvatar() {
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    try {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      
       if (file.size > 2 * 1024 * 1024) { // 2MB limit
         toast.error(t("File too large", "文件太大"), {
           description: t("Avatar must be less than 2MB", "头像必须小于2MB")
@@ -113,6 +105,11 @@ export function useAvatar() {
       setAvatarFile(file);
       const previewUrl = URL.createObjectURL(file);
       setAvatarUrl(previewUrl);
+    } catch (error: any) {
+      console.error("Error handling avatar change:", error);
+      toast.error(t("Could not preview avatar", "无法预览头像"), {
+        description: error.message
+      });
     }
   };
 

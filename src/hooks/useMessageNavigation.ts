@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useIsMobile } from './use-mobile';
 
@@ -14,15 +15,12 @@ export function useMessageNavigation() {
   const [activeConversation, setActiveConversation] = useState<ConversationPartner | null>(null);
   const isMobile = useIsMobile();
   
-  // Reset conversation when switching to mobile view from desktop with active conversation
-  useEffect(() => {
-    // If moving from desktop to mobile with a conversation already open,
-    // keep the conversation open
-    // This is handled automatically by the component state
-  }, [isMobile]);
-
+  // This prevents flickering by ensuring state stability between renders
   const handleSelectConversation = (conversation: ConversationPartner) => {
-    setActiveConversation(conversation);
+    // Only update if actually changing (prevents unnecessary re-renders)
+    if (!activeConversation || activeConversation.id !== conversation.id) {
+      setActiveConversation(conversation);
+    }
   };
 
   const handleBack = () => {

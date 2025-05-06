@@ -19,16 +19,23 @@ const ProfileAvatar = ({
   uploadingAvatar 
 }: ProfileAvatarProps) => {
   const { t } = useLanguage();
+  const [imgError, setImgError] = React.useState(false);
+
+  // Reset error state when URL changes
+  React.useEffect(() => {
+    setImgError(false);
+  }, [avatarUrl]);
 
   return (
     <div className="flex flex-col items-center">
       <div className="relative w-28 h-28">
-        {avatarUrl ? (
+        {avatarUrl && !imgError ? (
           <div className="relative group">
             <img
               src={avatarUrl}
               alt="Profile"
               className="w-full h-full rounded-full object-cover border-2 border-primary shadow-glow"
+              onError={() => setImgError(true)}
             />
             <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <button 

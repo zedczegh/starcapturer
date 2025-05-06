@@ -12,7 +12,7 @@ import ConversationList from "@/components/messages/ConversationList";
 import MessageList from "@/components/messages/MessageList";
 import MessageInput from "@/components/messages/MessageInput";
 import { useMessageNavigation } from "@/hooks/useMessageNavigation";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const Messages = () => {
@@ -20,7 +20,6 @@ const Messages = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   
   const {
@@ -45,9 +44,10 @@ const Messages = () => {
       const conversation = conversations.find(c => c.id === location.state.conversationId);
       if (conversation) {
         setActiveConversation(conversation);
+        fetchMessages(conversation.id);
       }
     }
-  }, [location.state, conversations, user, setActiveConversation]);
+  }, [location.state, conversations, user, setActiveConversation, fetchMessages]);
 
   const handleSelectConversation = (conversation) => {
     setActiveConversation(conversation);
@@ -61,10 +61,8 @@ const Messages = () => {
     if (success) {
       fetchMessages(activeConversation.id);
     } else {
-      toast({
-        title: t("Message not sent", "消息发送失败"),
-        description: t("Please try again", "请重试"),
-        variant: "destructive"
+      toast.error(t("Message not sent", "消息发送失败"), {
+        description: t("Please try again", "请重试")
       });
     }
   };
@@ -114,7 +112,7 @@ const Messages = () => {
                 </motion.div>
               )}
               
-              {(activeConversation || !isMobile) && (
+              {activeConversation && (
                 <motion.div 
                   key="message-list"
                   initial={isMobile ? { opacity: 0, x: 20 } : { opacity: 0 }}
@@ -125,42 +123,50 @@ const Messages = () => {
                 >
                   <Card className="glassmorphism overflow-hidden flex flex-col h-full
                       border border-cosmic-800/30 shadow-xl backdrop-blur-lg">
-                    {activeConversation ? (
-                      <>
-                        <MessageList 
-                          messages={messages}
-                          currentUserId={user.id}
-                          activeConversation={activeConversation}
-                          onBack={handleBack}
-                          isMobile={isMobile}
-                        />
-                        <MessageInput 
-                          onSend={handleSendMessage}
-                          sending={sending}
-                        />
-                      </>
-                    ) : (
-                      <div className="flex-1 flex items-center justify-center p-8">
-                        <div className="text-center text-cosmic-400 space-y-4">
-                          <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ duration: 0.3 }}
-                          >
-                            <MessageCircle className="mx-auto h-20 w-20 mb-6 opacity-20" />
-                          </motion.div>
-                          <h3 className="text-xl font-medium text-white mb-2">
-                            {t("Select a conversation", "选择一个对话")}
-                          </h3>
-                          <p className="max-w-md mx-auto text-cosmic-300">
-                            {t(
-                              "Choose a conversation from the list or start a new one by going to a user's profile", 
-                              "从列表中选择一个对话，或通过访问用户资料开始新的对话"
-                            )}
-                          </p>
-                        </div>
+                    <MessageList 
+                      messages={messages}
+                      currentUserId={user.id}
+                      activeConversation={activeConversation}
+                      onBack={handleBack}
+                      isMobile={isMobile}
+                    />
+                    <MessageInput 
+                      onSend={handleSendMessage}
+                      sending={sending}
+                    />
+                  </Card>
+                </motion.div>
+              )}
+              
+              {!activeConversation && !isMobile && (
+                <motion.div 
+                  key="empty-state"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="w-full md:w-2/3 flex-grow"
+                >
+                  <Card className="glassmorphism overflow-hidden flex flex-col h-full
+                      border border-cosmic-800/30 shadow-xl backdrop-blur-lg">
+                    <div className="flex-1 flex items-center justify-center p-8">
+                      <div className="text-center text-cosmic-400 space-y-4">
+                        <motion.div
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <MessageCircle className="mx-auto h-20 w-20 mb-6 opacity-20" />
+                        </motion.div>
+                        <h3 className="text-xl font-medium text-white mb-2">
+                          {t("Select a conversation", "选择一个对话")}
+                        </h3>
+                        <p className="max-w-md mx-auto text-cosmic-300">
+                          {t(
+                            "Choose a conversation from the list or start a new one by going to a user's profile", 
+                            "从列表中选择一个对话，或通过访问用户资料开始新的对话"
+                          )}
+                        </p>
                       </div>
-                    )}
+                    </div>
                   </Card>
                 </motion.div>
               )}
