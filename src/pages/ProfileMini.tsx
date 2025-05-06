@@ -23,7 +23,6 @@ const ProfileMini: React.FC = () => {
   const location = useLocation();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
   const { t, language } = useLanguage();
   
   // Check if we came from messages to hide the "Send message" button
@@ -91,22 +90,12 @@ const ProfileMini: React.FC = () => {
     }
   };
 
-  const handleImageError = () => {
-    console.log("Image loading error detected in ProfileMini");
-    setImageError(true);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950 flex flex-col items-center px-4 pt-20">
       <Card className="max-w-xl w-full mx-auto mt-4 glassmorphism p-8 rounded-xl shadow-glow">
         <div className="flex gap-4 items-center mb-8">
-          {profile.avatar_url && !imageError ? (
-            <img 
-              src={profile.avatar_url} 
-              alt="avatar" 
-              className="w-20 h-20 rounded-full border-2 border-primary shadow" 
-              onError={handleImageError}
-            />
+          {profile.avatar_url ? (
+            <img src={profile.avatar_url} alt="avatar" className="w-20 h-20 rounded-full border-2 border-primary shadow" />
           ) : (
             <div className="w-20 h-20 flex items-center justify-center rounded-full bg-cosmic-800 border-2 border-cosmic-700 shadow-glow">
               <User className="w-10 h-10 text-cosmic-400" />
@@ -127,7 +116,6 @@ const ProfileMini: React.FC = () => {
             )}
           </div>
         </div>
-        
         <div className="flex justify-between mt-6">
           {!isFromMessages && user && user.id !== profileId && (
             <Button

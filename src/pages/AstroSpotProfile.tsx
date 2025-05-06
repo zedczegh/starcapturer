@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -17,7 +16,6 @@ import SpotImageGallery from '@/components/astro-spots/profile/SpotImageGallery'
 import SpotComments from '@/components/astro-spots/profile/SpotComments';
 import TimeSlotManager from '@/components/bookings/TimeSlotManager';
 import LocationDetailsLoading from "@/components/location/LocationDetailsLoading";
-import { toast } from "sonner";
 
 interface Comment {
   id: string;
@@ -193,28 +191,22 @@ const AstroSpotProfile = () => {
   const handleEditClose = () => {
     setShowEditDialog(false);
     refetch();
-    toast.success(t("Spot updated successfully!", "景点更新成功！"), {
-      description: t("Your changes have been saved.", "您的更改已保存。")
-    });
   };
 
   const handleCommentsUpdate = async () => {
     console.log("Comments update triggered");
     await refetch();
-    toast.success(t("Comment added!", "评论已添加！"));
   };
 
   const handleImagesUpdate = async () => {
     console.log("Images update triggered");
     await refetchImages();
     triggerRefresh();
-    toast.success(t("Images updated!", "图片已更新！"));
   };
 
   const handleMessageCreator = () => {
     if (!user || !spot?.user_id) return;
     navigate('/messages', { state: { selectedUser: spot.user_id } });
-    toast.info(t("Starting conversation", "开始对话"));
   };
 
   if (isLoading || !spot) {

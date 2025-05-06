@@ -1,17 +1,18 @@
 
 import React, { useState } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { CalendarPlus, Loader2 } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
-import { format, parseISO, isAfter } from 'date-fns';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import TimeSlotForm from './TimeSlotForm';
 import TimeSlotItem from './TimeSlotItem';
+import { format, parseISO, isAfter } from 'date-fns';
 import { toast } from 'sonner';
-import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
+import { Loader2 } from 'lucide-react';
 
 interface TimeSlotManagerProps {
   spotId: string;
@@ -23,8 +24,6 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
   const { t } = useLanguage();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [showAddForm, setShowAddForm] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const queryClient = useQueryClient();
 
   // Fetch time slots for this spot
   const { data: timeSlots, isLoading, refetch } = useQuery({
@@ -102,31 +101,6 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
       return data;
     }
   });
-
-  // Delete a time slot
-  const handleDelete = async (id: string) => {
-    try {
-      setDeletingId(id);
-      const { error } = await supabase
-        .from('astro_spot_timeslots')  // Corrected table name
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ['timeSlots', spotId] });
-      toast.success(t('Time slot deleted', '时间段已删除'), {
-        description: t('The time slot has been removed from your spot', '时间段已从您的地点中删除')
-      });
-    } catch (error) {
-      console.error('Error deleting time slot:', error);
-      toast.error(t('Failed to delete time slot', '删除时间段失败'), {
-        description: (error as Error).message
-      });
-    } finally {
-      setDeletingId(null);
-    }
-  };
 
   // Filter time slots for the selected date if any
   const filteredTimeSlots = timeSlots?.filter((slot) => {
@@ -225,7 +199,6 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
                 timeSlot={slot}
                 isCreator={isCreator}
                 onUpdate={refetch}
-                onDelete={handleDelete}
               />
             ))}
           </div>

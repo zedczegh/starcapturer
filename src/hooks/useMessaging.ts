@@ -12,7 +12,6 @@ interface Message {
   message: string;
   created_at: string;
   read: boolean;
-  status?: 'sent' | 'failed' | 'read';
   sender_profile?: {
     username: string | null;
     avatar_url: string | null;
@@ -135,23 +134,15 @@ export function useMessaging() {
         
       if (profilesError) throw profilesError;
       
-      // Transform messages to include status indicators
       const messagesWithProfiles = data?.map(msg => {
         const senderProfile = profilesData?.find(profile => profile.id === msg.sender_id);
-        let messageStatus: 'sent' | 'read' | undefined = undefined;
-        
-        if (msg.sender_id === user.id) {
-          messageStatus = msg.read ? 'read' : 'sent';
-        }
-                       
         return {
           ...msg,
-          status: messageStatus,
           sender_profile: {
             username: senderProfile?.username || "User",
             avatar_url: senderProfile?.avatar_url
           }
-        } as Message;  
+        };
       });
       
       setMessages(messagesWithProfiles || []);
@@ -183,68 +174,18 @@ export function useMessaging() {
     
     setSending(true);
     try {
-      // First, add the message to the local state with a temporary ID and 'sent' status
-      const tempId = `temp-${Date.now()}`;
-      const newMessage: Message = {
-        id: tempId,
-        sender_id: user.id,
-        receiver_id: receiverId,
-        message: message.trim(),
-        created_at: new Date().toISOString(),
-        read: false,
-        status: 'sent',
-        sender_profile: {
-          username: user.email?.split('@')[0] || "You",
-          avatar_url: null // This will be updated when fetched
-        }
-      };
-      
-      // Add message to UI immediately
-      setMessages(prev => [...prev, newMessage]);
-      
-      // Now try to send to the server
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('user_messages')
         .insert({
           sender_id: user.id,
           receiver_id: receiverId,
           message: message.trim()
-        })
-        .select()
-        .single();
+        });
         
-      if (error) {
-        console.error("Error sending message:", error);
-        // Update the message status to 'failed'
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === tempId ? { ...msg, status: 'failed' as const } : msg
-          )
-        );
-        toast.error(t("Failed to send message", "发送消息失败"));
-        return false;
-      }
-      
-      // Replace the temporary message with the real one from the server
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === tempId ? {
-            ...data,
-            status: 'sent' as const,
-            sender_profile: msg.sender_profile
-          } : msg
-        )
-      );
-      
+      if (error) throw error;
       return true;
     } catch (error) {
       console.error("Error sending message:", error);
-      // Update the message status to 'failed'
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === `temp-${Date.now()}` ? { ...msg, status: 'failed' as const } : msg
-        )
-      );
       toast.error(t("Failed to send message", "发送消息失败"));
       return false;
     } finally {
@@ -266,7 +207,7 @@ export function useMessaging() {
           table: 'user_messages',
           filter: `receiver_id=eq.${user.id}`
         }, 
-        (payload) => {
+        () => {
           fetchConversations();
         }
       )

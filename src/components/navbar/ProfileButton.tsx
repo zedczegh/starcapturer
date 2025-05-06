@@ -19,7 +19,6 @@ const ProfileButton = () => {
   const navigate = useNavigate();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [profile, setProfile] = useState<{ username: string | null } | null>(null);
-  const [avatarError, setAvatarError] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -30,11 +29,7 @@ const ProfileButton = () => {
           .eq('id', user.id)
           .single();
         if (data) {
-          if (data.avatar_url) {
-            setAvatarUrl(data.avatar_url);
-            // Reset error state when we get a new URL
-            setAvatarError(false);
-          }
+          if (data.avatar_url) setAvatarUrl(data.avatar_url);
           setProfile({ username: data.username || null });
         }
       };
@@ -45,11 +40,6 @@ const ProfileButton = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate('/photo-points');
-  };
-
-  const handleImageError = () => {
-    console.log("Avatar loading error in ProfileButton");
-    setAvatarError(true);
   };
 
   if (!user) {
@@ -97,13 +87,8 @@ const ProfileButton = () => {
               aria-label="Profile"
             >
               <Avatar className="h-9 w-9 transition-transform duration-300 group-hover:scale-105">
-                {avatarUrl && !avatarError ? (
-                  <img 
-                    src={avatarUrl} 
-                    alt="Profile" 
-                    className="h-full w-full object-cover rounded-full"
-                    onError={handleImageError}
-                  />
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
                 ) : (
                   <AvatarFallback className="bg-primary/10 text-primary">
                     {user.email?.[0]?.toUpperCase() || "?"}

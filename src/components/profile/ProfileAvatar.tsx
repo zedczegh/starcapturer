@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
-import { Camera, X, Loader2 } from 'lucide-react';
+import { Camera, X } from 'lucide-react';
 import { User } from 'lucide-react';
 
 interface ProfileAvatarProps {
@@ -19,23 +19,16 @@ const ProfileAvatar = ({
   uploadingAvatar 
 }: ProfileAvatarProps) => {
   const { t } = useLanguage();
-  const [imageError, setImageError] = useState(false);
-
-  const handleImageError = () => {
-    console.log("Image loading error detected");
-    setImageError(true);
-  };
 
   return (
     <div className="flex flex-col items-center">
       <div className="relative w-28 h-28">
-        {avatarUrl && !imageError ? (
+        {avatarUrl ? (
           <div className="relative group">
             <img
               src={avatarUrl}
               alt="Profile"
               className="w-full h-full rounded-full object-cover border-2 border-primary shadow-glow"
-              onError={handleImageError}
             />
             <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <button 
@@ -54,24 +47,14 @@ const ProfileAvatar = ({
           </div>
         )}
         
-        <label 
-          htmlFor="avatar-upload" 
-          className={`absolute -bottom-1 -right-1 p-2 rounded-full cursor-pointer shadow-md hover:bg-primary/90 transition-all ${
-            uploadingAvatar ? 'bg-cosmic-700 text-cosmic-300' : 'bg-primary text-white'
-          }`}
-        >
-          {uploadingAvatar ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Camera className="w-5 h-5" />
-          )}
+        <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 bg-primary text-white p-2 rounded-full cursor-pointer shadow-md hover:bg-primary/90 transition-all">
+          <Camera className="w-5 h-5" />
           <Input
             id="avatar-upload"
             type="file"
             accept="image/*"
             onChange={onAvatarChange}
             className="hidden"
-            disabled={uploadingAvatar}
           />
         </label>
       </div>

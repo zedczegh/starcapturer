@@ -1,7 +1,7 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { motion } from "framer-motion";
-import { ChevronLeft, User, MessageCircle, Check, X } from "lucide-react";
+import { ChevronLeft, User, MessageCircle } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -14,8 +14,6 @@ interface Message {
   sender_id: string;
   message: string;
   created_at: string;
-  read: boolean;
-  status?: 'sent' | 'failed' | 'read';
   sender_profile?: {
     username: string | null;
     avatar_url: string | null;
@@ -48,7 +46,6 @@ const MessageList: React.FC<MessageListProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const [prevMessagesLength, setPrevMessagesLength] = React.useState(messages.length);
-  const [avatarError, setAvatarError] = useState(false);
 
   const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -106,51 +103,6 @@ const MessageList: React.FC<MessageListProps> = ({
     })
   };
 
-  const handleAvatarError = () => {
-    console.log("Avatar loading error in MessageList");
-    setAvatarError(true);
-  };
-
-  // Message status indicator component
-  const MessageStatus = ({ message }: { message: Message }) => {
-    if (message.sender_id !== currentUserId) return null;
-    
-    // Default to sent if status not specified
-    const status = message.status || (message.read ? 'read' : 'sent');
-    
-    if (status === 'failed') {
-      return (
-        <Tooltip>
-          <TooltipTrigger>
-            <X className="h-3.5 w-3.5 text-red-500 ml-1" />
-          </TooltipTrigger>
-          <TooltipContent>{t("Failed to send", "发送失败")}</TooltipContent>
-        </Tooltip>
-      );
-    } else if (status === 'read') {
-      return (
-        <Tooltip>
-          <TooltipTrigger>
-            <div className="flex text-green-500 ml-1">
-              <Check className="h-3.5 w-3.5" />
-              <Check className="h-3.5 w-3.5 -ml-2" />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>{t("Read", "已读")}</TooltipContent>
-        </Tooltip>
-      );
-    } else {
-      return (
-        <Tooltip>
-          <TooltipTrigger>
-            <Check className="h-3.5 w-3.5 text-cosmic-300 ml-1" />
-          </TooltipTrigger>
-          <TooltipContent>{t("Sent", "已发送")}</TooltipContent>
-        </Tooltip>
-      );
-    }
-  };
-
   return (
     <div className="flex flex-col h-full">
       <div className="p-3 md:p-4 border-b border-cosmic-800/50 bg-cosmic-900/50 flex items-center gap-3">
@@ -163,12 +115,11 @@ const MessageList: React.FC<MessageListProps> = ({
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <Avatar className="h-10 w-10 md:h-12 md:w-12 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20">
-          {activeConversation.avatar_url && !avatarError ? (
+          {activeConversation.avatar_url ? (
             <AvatarImage
               src={activeConversation.avatar_url}
               alt={activeConversation.username || "User"}
               className="object-cover"
-              onError={handleAvatarError}
             />
           ) : (
             <AvatarFallback className="bg-primary/10">
@@ -185,7 +136,7 @@ const MessageList: React.FC<MessageListProps> = ({
               <Button
                 variant="link"
                 className="p-0 h-auto text-xs md:text-sm text-primary hover:text-primary/80"
-                onClick={() => navigate(`/profile/${activeConversation.id}`, { state: { fromMessages: true } })}
+                onClick={() => navigate(`/profile/${activeConversation.id}`)}
               >
                 {t("View Profile", "查看资料")}
               </Button>
@@ -229,12 +180,11 @@ const MessageList: React.FC<MessageListProps> = ({
                   }`}
                 >
                   <Avatar className="h-8 w-8 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20 flex-shrink-0">
-                    {message.sender_profile?.avatar_url && !avatarError ? (
+                    {message.sender_profile?.avatar_url ? (
                       <AvatarImage 
                         src={message.sender_profile.avatar_url} 
                         alt={message.sender_profile.username || "User"}
                         className="object-cover"
-                        onError={handleAvatarError}
                       />
                     ) : (
                       <AvatarFallback className="bg-primary/10">
@@ -247,16 +197,15 @@ const MessageList: React.FC<MessageListProps> = ({
                   }`}>
                     <div className={`rounded-2xl px-4 py-2 ${
                       message.sender_id === currentUserId 
-                        ? 'bg-gradient-to-br from-primary/90 to-primary/70 text-white ml-auto shadow-lg shadow-primary/10' 
-                        : 'bg-cosmic-800/50 text-cosmic-100 rounded-tl-none'
-                    } ${message.message.length < 10 ? 'rounded-full py-1.5' : ''}`}>
+                        ? 'bg-primary text-white ml-auto shadow-lg shadow-primary/10' 
+                        : 'bg-cosmic-800/50 text-cosmic-100'
+                    }`}>
                       <p className="break-words">{message.message}</p>
                     </div>
-                    <div className={`flex items-center gap-1 text-xs text-cosmic-400 ${
+                    <div className={`flex items-center gap-2 text-xs text-cosmic-400 ${
                       message.sender_id === currentUserId ? 'justify-end' : 'justify-start'
                     }`}>
                       <span>{formatMessageTime(message.created_at)}</span>
-                      <MessageStatus message={message} />
                     </div>
                   </div>
                 </motion.div>
