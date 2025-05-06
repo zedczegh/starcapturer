@@ -1,35 +1,33 @@
 
-import React, { useRef, useEffect, useState } from 'react';
-import { motion } from "framer-motion";
-import { ChevronLeft, User, MessageCircle } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { format } from "date-fns";
-import { useNavigate } from "react-router-dom";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import MessageStatus, { MessageStatusType } from './MessageStatus';
-import { useUserTags } from '@/hooks/useUserTags';
-import UserTags from '@/components/profile/UserTags';
+import React, { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { User, ArrowLeft } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import MessageStatus from './MessageStatus';
+import { MessageStatusType } from '@/hooks/useMessaging';
 
 interface Message {
   id: string;
   sender_id: string;
+  receiver_id: string;
   message: string;
   created_at: string;
-  read: boolean;
+  status?: MessageStatusType;
   sender_profile?: {
     username: string | null;
     avatar_url: string | null;
   };
-  // New field for message status
-  status?: MessageStatusType;
 }
 
 interface ConversationPartner {
   id: string;
   username: string | null;
   avatar_url: string | null;
+  last_message: string;
+  last_message_time: string;
+  unread_count: number;
 }
 
 interface MessageListProps {
@@ -48,215 +46,104 @@ const MessageList: React.FC<MessageListProps> = ({
   isMobile = false
 }) => {
   const { t } = useLanguage();
-  const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messageContainerRef = useRef<HTMLDivElement>(null);
-  const [prevMessagesLength, setPrevMessagesLength] = useState(messages.length);
-  const { tags, loading: loadingTags, fetchUserTags } = useUserTags();
-
-  // Fetch partner's tags when conversation changes
-  useEffect(() => {
-    if (activeConversation?.id) {
-      fetchUserTags(activeConversation.id);
-    }
-  }, [activeConversation?.id, fetchUserTags]);
-
+  
   const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
-    const now = new Date();
-    
-    if (date.toDateString() === now.toDateString()) {
-      return format(date, "h:mm a");
-    } else {
-      return format(date, "MMM d, h:mm a");
-    }
+    return format(date, 'h:mm a');
   };
-
+  
   useEffect(() => {
-    // Only scroll to bottom for new messages or initial load
-    if (messages.length > prevMessagesLength || prevMessagesLength === 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-    setPrevMessagesLength(messages.length);
-  }, [messages.length, prevMessagesLength]);
-
-  // Group messages by day
-  const groupedMessages = messages.reduce((groups, message) => {
-    const date = new Date(message.created_at).toDateString();
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(message);
-    return groups;
-  }, {} as Record<string, Message[]>);
-
-  // Format date labels
-  const formatDateLabel = (dateStr: string) => {
-    const messageDate = new Date(dateStr);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (messageDate.toDateString() === today.toDateString()) {
-      return t("Today", "今天");
-    } else if (messageDate.toDateString() === yesterday.toDateString()) {
-      return t("Yesterday", "昨天");
-    } else {
-      return format(messageDate, "MMM d, yyyy");
-    }
-  };
-
-  // Determine message status based on read status
-  const getMessageStatus = (message: Message): MessageStatusType => {
-    if (message.sender_id === currentUserId) {
-      // For user's own messages
-      if (message.status === 'error') return 'error';
-      return message.read ? 'read' : 'sent';
-    }
-    return 'sent'; // For received messages
-  };
-
-  const staggerVariants = {
-    hidden: { opacity: 0 },
-    visible: (i: number) => ({
-      opacity: 1,
-      transition: {
-        delay: i * 0.05,
-        duration: 0.1
-      }
-    })
-  };
+    // Scroll to the latest message
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages.length]);
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-3 md:p-4 border-b border-cosmic-800/50 bg-cosmic-900/50 flex items-center gap-3">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          className="md:hidden text-cosmic-400 hover:text-white hover:bg-cosmic-800/50" 
-          onClick={onBack}
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <Avatar className="h-10 w-10 md:h-12 md:w-12 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20">
-          {activeConversation.avatar_url ? (
-            <AvatarImage
-              src={activeConversation.avatar_url}
-              alt={activeConversation.username || "User"}
-              className="object-cover"
-            />
-          ) : (
-            <AvatarFallback className="bg-primary/10">
-              <User className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-            </AvatarFallback>
-          )}
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-white text-base md:text-lg truncate">
-            {activeConversation.username || t("User", "用户")}
-          </h3>
-          <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="link"
-                  className="p-0 h-auto text-xs md:text-sm text-primary hover:text-primary/80"
-                  onClick={() => navigate(`/profile/${activeConversation.id}`)}
-                >
-                  {t("View Profile", "查看资料")}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t("Visit profile page", "访问个人资料页面")}
-              </TooltipContent>
-            </Tooltip>
-            
-            {/* User tags */}
-            <UserTags 
-              tags={tags} 
-              loading={loadingTags}
-              className="ml-2"
-            />
+      <div className="flex items-center px-4 py-3 border-b border-cosmic-800/50 bg-cosmic-900/50 gap-3">
+        {isMobile && (
+          <button 
+            onClick={onBack}
+            className="p-1 rounded-full hover:bg-cosmic-800/50"
+          >
+            <ArrowLeft className="h-5 w-5 text-cosmic-400" />
+          </button>
+        )}
+        
+        <Link to={`/profile-mini/${activeConversation.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+          <Avatar className="h-10 w-10 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20">
+            {activeConversation.avatar_url ? (
+              <AvatarImage
+                src={activeConversation.avatar_url}
+                alt={activeConversation.username || "User"}
+              />
+            ) : (
+              <AvatarFallback className="bg-primary/10">
+                <User className="h-5 w-5 text-primary" />
+              </AvatarFallback>
+            )}
+          </Avatar>
+          
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-white truncate">
+              {activeConversation.username || t("User", "用户")}
+            </h3>
           </div>
-        </div>
+        </Link>
       </div>
-
-      <div ref={messageContainerRef} className="flex-1 overflow-y-auto p-3 md:p-4 space-y-4">
+      
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center h-full">
-            <div className="text-center text-cosmic-400 space-y-2">
-              <MessageCircle className="mx-auto h-16 w-16 mb-4 opacity-30" />
-              <p className="text-lg font-medium">{t("No messages yet", "暂无消息")}</p>
-              <p className="text-sm">
-                {t("Send a message to start the conversation", "发送消息开始对话")}
-              </p>
-            </div>
+          <div className="flex h-full items-center justify-center text-cosmic-400">
+            <span>{t("No messages yet", "暂无消息")}</span>
           </div>
         ) : (
-          Object.keys(groupedMessages).map(date => (
-            <div key={date} className="space-y-4">
-              <div className="flex justify-center">
-                <div className="text-xs text-cosmic-400 bg-cosmic-800/30 px-3 py-1 rounded-full">
-                  {formatDateLabel(date)}
+          messages.map((message) => {
+            const isSender = message.sender_id === currentUserId;
+            
+            return (
+              <div 
+                key={message.id} 
+                className={`flex ${isSender ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className="flex items-end gap-2 max-w-[80%]">
+                  {!isSender && (
+                    <Link to={`/profile-mini/${message.sender_id}`}>
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        {message.sender_profile?.avatar_url ? (
+                          <AvatarImage
+                            src={message.sender_profile.avatar_url}
+                            alt={message.sender_profile.username || "User"}
+                          />
+                        ) : (
+                          <AvatarFallback className="bg-cosmic-800 text-cosmic-400">
+                            <User className="h-4 w-4" />
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                    </Link>
+                  )}
+                  
+                  <div className={`flex flex-col ${isSender ? 'items-end' : 'items-start'}`}>
+                    <div
+                      className={`px-4 py-2 rounded-xl ${
+                        isSender
+                          ? 'bg-primary/80 text-white rounded-tr-none'
+                          : 'bg-cosmic-800 text-cosmic-100 rounded-tl-none'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap break-words">{message.message}</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-1 mt-1 text-xs text-cosmic-400">
+                      <span>{formatMessageTime(message.created_at)}</span>
+                      {isSender && message.status && <MessageStatus status={message.status} />}
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              {groupedMessages[date].map((message, index) => {
-                const isUserMessage = message.sender_id === currentUserId;
-                const messageStatus = getMessageStatus(message);
-                const messageLength = message.message.length;
-                
-                // Determine bubble width class based on message length
-                let bubbleWidthClass = "max-w-[75%]";
-                if (messageLength < 20) bubbleWidthClass = "max-w-fit";
-                else if (messageLength > 100) bubbleWidthClass = "max-w-[85%]";
-                
-                return (
-                  <motion.div
-                    key={message.id}
-                    custom={index}
-                    initial="hidden"
-                    animate="visible"
-                    variants={staggerVariants}
-                    className={`flex gap-3 ${isUserMessage ? 'flex-row-reverse' : 'flex-row'}`}
-                  >
-                    <Avatar className="h-8 w-8 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20 flex-shrink-0">
-                      {message.sender_profile?.avatar_url ? (
-                        <AvatarImage 
-                          src={message.sender_profile.avatar_url} 
-                          alt={message.sender_profile.username || "User"}
-                          className="object-cover"
-                        />
-                      ) : (
-                        <AvatarFallback className="bg-primary/10">
-                          <User className="h-4 w-4 text-primary" />
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <div className={`${bubbleWidthClass} space-y-1 ${
-                      isUserMessage ? 'items-end' : 'items-start'
-                    }`}>
-                      <div className={`rounded-2xl px-4 py-2 ${
-                        isUserMessage 
-                          ? 'bg-primary text-white ml-auto shadow-lg shadow-primary/10' 
-                          : 'bg-cosmic-800/50 text-cosmic-100'
-                      }`}>
-                        <p className="break-words">{message.message}</p>
-                      </div>
-                      <div className={`flex items-center gap-2 text-xs text-cosmic-400 ${
-                        isUserMessage ? 'justify-end' : 'justify-start'
-                      }`}>
-                        <span>{formatMessageTime(message.created_at)}</span>
-                        {isUserMessage && (
-                          <MessageStatus status={messageStatus} />
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

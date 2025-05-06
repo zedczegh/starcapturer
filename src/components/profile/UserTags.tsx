@@ -7,6 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { UserTag } from '@/hooks/useUserTags';
 
+// Colors for the tag badges
+const TAG_COLORS = [
+  'bg-purple-800/60 text-purple-200 border-purple-700/50',
+  'bg-blue-800/60 text-blue-200 border-blue-700/50',
+  'bg-green-800/60 text-green-200 border-green-700/50',
+  'bg-amber-800/60 text-amber-200 border-amber-700/50',
+  'bg-rose-800/60 text-rose-200 border-rose-700/50',
+  'bg-indigo-800/60 text-indigo-200 border-indigo-700/50',
+  'bg-teal-800/60 text-teal-200 border-teal-700/50',
+  'bg-pink-800/60 text-pink-200 border-pink-700/50',
+];
+
 interface UserTagsProps {
   tags: UserTag[];
   loading: boolean;
@@ -62,25 +74,17 @@ const UserTags: React.FC<UserTagsProps> = ({
   return (
     <div className={className}>
       <div className="flex flex-wrap gap-2">
-        {tags.map((tag) => (
+        {tags.map((tag, index) => (
           <Badge 
             key={tag.id} 
             variant="outline" 
-            className="bg-cosmic-800/60 text-cosmic-200 border-cosmic-700/50 hover:bg-cosmic-700/50 px-2 py-1"
+            className={`${TAG_COLORS[index % TAG_COLORS.length]} px-2 py-1 hover:opacity-90`}
           >
-            {tag.icon_url ? (
-              <img 
-                src={tag.icon_url} 
-                alt={tag.name} 
-                className="h-3 w-3 mr-1.5 object-contain" 
-              />
-            ) : (
-              <Tag className="h-3 w-3 mr-1.5 text-cosmic-400" />
-            )}
+            <Tag className="h-3 w-3 mr-1.5 text-current opacity-80" />
             {tag.name}
             {editable && onRemoveTag && (
               <button
-                className="ml-1.5 text-cosmic-400 hover:text-cosmic-200"
+                className="ml-1.5 text-current opacity-80 hover:opacity-100"
                 onClick={() => onRemoveTag(tag.id)}
               >
                 <X className="h-3 w-3" />

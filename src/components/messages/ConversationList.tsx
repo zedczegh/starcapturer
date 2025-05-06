@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from "framer-motion";
 import { Search, User, MessageCircle, Plus } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -152,7 +152,11 @@ const ConversationList: React.FC<ConversationListProps> = ({
                     : 'hover:border-cosmic-700/30'
                   }`}
               >
-                <div className="relative">
+                <Link 
+                  to={`/profile-mini/${conversation.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="relative"
+                >
                   <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20">
                     {conversation.avatar_url ? (
                       <AvatarImage
@@ -173,7 +177,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                       {conversation.unread_count}
                     </span>
                   )}
-                </div>
+                </Link>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
                     <p className="font-medium text-white truncate">

@@ -1,33 +1,21 @@
 
 /**
- * Utility functions for string manipulation
- */
-
-/**
- * Get initials from a name (first letter of first and last name)
- * @param name Full name
- * @returns Initials (1-2 characters)
+ * Get initials from a name string
+ * @param name The name to get initials from
+ * @returns The first letter of first and last name, or first two letters if only one word
  */
 export const getInitials = (name: string): string => {
-  if (!name) return '?';
+  if (!name) return '';
   
-  const names = name.trim().split(' ');
+  const parts = name.trim().split(/\s+/);
   
-  if (names.length === 1) {
-    return names[0].charAt(0).toUpperCase();
+  if (parts.length === 0) return '';
+  
+  if (parts.length === 1) {
+    // If single word, return first two letters or just first if it's a single letter
+    return parts[0].substring(0, Math.min(2, parts[0].length)).toUpperCase();
   }
   
-  return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
-};
-
-/**
- * Truncate a string to a specified length and add ellipsis if needed
- * @param str String to truncate
- * @param maxLength Maximum length
- * @returns Truncated string
- */
-export const truncateString = (str: string, maxLength: number): string => {
-  if (!str) return '';
-  if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength) + '...';
+  // Return first letter of first word + first letter of last word
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
