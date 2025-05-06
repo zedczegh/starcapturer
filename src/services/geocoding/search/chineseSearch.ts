@@ -2,40 +2,27 @@
 import { Location, Language } from '../types';
 import { checkAlternativeSpellings } from '../chineseCityData';
 import { findMatchingLocations } from '../locationDatabase';
-import { convertToSimplifiedChinese, containsChineseCharacters } from '@/utils/chineseCharacterConverter';
 
 /**
  * Handle Chinese language search
  */
 export async function handleChineseSearch(query: string, language: Language): Promise<Location[]> {
-  // Convert query to simplified Chinese if it contains Chinese characters
-  const simplifiedQuery = containsChineseCharacters(query) ? convertToSimplifiedChinese(query) : query;
-  
   // Check for special Chinese locations
-  const specialLocation = await checkSpecialChineseLocations(simplifiedQuery);
+  const specialLocation = await checkSpecialChineseLocations(query);
   if (specialLocation.length > 0) {
-    return specialLocation.map(loc => ({
-      ...loc,
-      name: language === 'zh' ? convertToSimplifiedChinese(loc.name) : loc.name
-    }));
+    return specialLocation;
   }
   
   // Check for alternative spellings
-  const alternativeResults = checkAlternativeSpellings(simplifiedQuery);
+  const alternativeResults = checkAlternativeSpellings(query);
   if (alternativeResults.length > 0) {
-    return alternativeResults.map(loc => ({
-      ...loc,
-      name: language === 'zh' ? convertToSimplifiedChinese(loc.name) : loc.name
-    }));
+    return alternativeResults;
   }
   
   // Check internal database
-  const internalResults = findMatchingLocations(simplifiedQuery, 5, language);
+  const internalResults = findMatchingLocations(query, 5, language);
   if (internalResults.length > 0) {
-    return internalResults.map(loc => ({
-      ...loc,
-      name: language === 'zh' ? convertToSimplifiedChinese(loc.name) : loc.name
-    }));
+    return internalResults;
   }
   
   return [];

@@ -1,6 +1,5 @@
 import { commonPhrases } from './commonPhrases';
 import { descriptionMappings } from './descriptionMappings';
-import { convertToSimplifiedChinese } from '@/utils/chineseCharacterConverter';
 
 /**
  * Translates a description to the specified language
@@ -20,7 +19,7 @@ export function getTranslatedDescription(
   // Check if there's a direct mapping for this description
   const directMapping = descriptionMappings[description];
   if (directMapping) {
-    return convertToSimplifiedChinese(directMapping);
+    return directMapping;
   }
   
   // Otherwise, do phrase-by-phrase replacement
@@ -33,10 +32,10 @@ export function getTranslatedDescription(
     if (translatedText.includes(phrase)) {
       translatedText = translatedText.replace(
         new RegExp(phrase, 'gi'), 
-        convertToSimplifiedChinese(commonPhrases[phrase])
+        commonPhrases[phrase]
       );
     }
   }
   
-  return convertToSimplifiedChinese(translatedText);
+  return translatedText;
 }

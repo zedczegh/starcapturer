@@ -1,7 +1,6 @@
 
 import { normalizeLongitude } from './coordinates';
 import { Language } from '@/services/geocoding/types';
-import { convertToSimplifiedChinese } from '@/utils/chineseCharacterConverter';
 
 /**
  * Format location address based on language-specific patterns
@@ -62,9 +61,7 @@ function formatAddress(address: any, language: Language): string {
   // Remove duplicates while preserving order
   const uniqueParts = [...new Set(parts)];
   
-  // For Chinese, convert to simplified characters
-  const result = uniqueParts.join(language === 'en' ? ', ' : '，');
-  return language === 'zh' ? convertToSimplifiedChinese(result) : result;
+  return uniqueParts.join(language === 'en' ? ', ' : '，');
 }
 
 /**
@@ -104,12 +101,11 @@ export async function getLocationNameFromCoordinates(
         // Fallbacks if structured formatting didn't work
         if (data.display_name) {
           const parts = data.display_name.split(',');
-          const result = parts.slice(0, Math.min(4, parts.length)).join(language === 'en' ? ', ' : '，');
-          return language === 'zh' ? convertToSimplifiedChinese(result) : result;
+          return parts.slice(0, Math.min(4, parts.length)).join(language === 'en' ? ', ' : '，');
         }
         
         if (data.name) {
-          return language === 'zh' ? convertToSimplifiedChinese(data.name) : data.name;
+          return data.name;
         }
       }
     } catch (error) {
@@ -122,11 +118,11 @@ export async function getLocationNameFromCoordinates(
     
     // If we're close to a known location, use its name or "Near X"
     if (closestLocation.distance <= 20) {
-      return language === 'zh' ? convertToSimplifiedChinese(closestLocation.name) : closestLocation.name;
+      return closestLocation.name;
     } else if (closestLocation.distance <= 100) {
       return language === 'en' 
         ? `Near ${closestLocation.name}` 
-        : convertToSimplifiedChinese(`${closestLocation.name}附近`);
+        : `${closestLocation.name}附近`;
     }
     
     // Last resort - use major city or region names based on approximate location

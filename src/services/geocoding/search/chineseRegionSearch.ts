@@ -1,8 +1,7 @@
 
 import { Location } from '../types';
-import { containsChineseCharacters } from '@/utils/chineseCharacterConverter';
+import { containsChineseCharacters } from '../matching';
 import { chineseCityAlternatives } from '../chineseCityData';
-import { convertToSimplifiedChinese } from '@/utils/chineseCharacterConverter';
 
 /**
  * Search specifically for Chinese regions using specialized data
@@ -11,11 +10,7 @@ import { convertToSimplifiedChinese } from '@/utils/chineseCharacterConverter';
  */
 export async function searchChineseRegions(query: string): Promise<Location[]> {
   const results: Location[] = [];
-  const originalQuery = query.toLowerCase().trim();
-  
-  // Convert query to simplified Chinese if it contains Chinese characters
-  const queryLower = containsChineseCharacters(originalQuery) ? 
-    convertToSimplifiedChinese(originalQuery).toLowerCase() : originalQuery;
+  const queryLower = query.toLowerCase().trim();
   
   // Skip non-Chinese character queries for efficiency
   if (!containsChineseCharacters(queryLower) && !queryRequiresChinaSearch(queryLower)) {
@@ -24,23 +19,22 @@ export async function searchChineseRegions(query: string): Promise<Location[]> {
   
   // Look up direct matches in our Chinese city database
   for (const [key, city] of Object.entries(chineseCityAlternatives)) {
-    // Convert city.chinese to simplified Chinese
-    const simplifiedCityName = convertToSimplifiedChinese(city.chinese);
-    
-    if (simplifiedCityName.includes(queryLower) || 
-        queryLower.includes(simplifiedCityName) || 
+    if (city.chinese.includes(queryLower) || 
+        queryLower.includes(city.chinese) || 
         key.includes(queryLower) || 
         queryLower.includes(key) ||
         city.alternatives.some(alt => alt.includes(queryLower) || queryLower.includes(alt))) {
       
       results.push({
-        name: simplifiedCityName, // Use simplified Chinese name for Chinese region searches
+        name: city.chinese, // Use Chinese name for Chinese region searches
         latitude: city.coordinates[0],
         longitude: city.coordinates[1],
-        placeDetails: convertToSimplifiedChinese(city.placeDetails) || '中国城市'
+        placeDetails: city.placeDetails || '中国城市'
       });
     }
   }
+  
+  // TODO: Add future enhancements like province-level administrative lookup
   
   return results;
 }

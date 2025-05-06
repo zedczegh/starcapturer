@@ -1,7 +1,6 @@
 
 import { Language } from "@/contexts/LanguageContext";
 import { calculateDistance } from "@/utils/mapUtils";
-import { convertToSimplifiedChinese } from "@/utils/chineseCharacterConverter";
 
 /**
  * Interface for the location cache service
@@ -109,16 +108,11 @@ export async function getLocationNameForCoordinates(
           
           // Join with appropriate separator for the language
           name = parts.join(language === 'en' ? ', ' : '，');
-          
-          // Convert traditional Chinese to simplified Chinese if language is Chinese
-          if (language === 'zh') {
-            name = convertToSimplifiedChinese(name);
-          }
         }
         
         // If we couldn't build a detailed name, use display_name
         if (!name && data.display_name) {
-          name = language === 'zh' ? convertToSimplifiedChinese(data.display_name) : data.display_name;
+          name = data.display_name;
         }
         
         // Last resort - use coordinates

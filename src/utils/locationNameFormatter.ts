@@ -1,6 +1,4 @@
-
 import { Language } from "@/contexts/LanguageContext";
-import { convertToSimplifiedChinese } from "./chineseCharacterConverter";
 
 /**
  * Extract the nearest town name from location information
@@ -25,8 +23,7 @@ export function extractNearestTownName(
   // Don't truncate detailed location information
   // This ensures we keep full address details in both languages
   if (locationName.includes(',') && locationName.split(',').length >= 3) {
-    // Convert to simplified Chinese if needed
-    return language === 'zh' ? convertToSimplifiedChinese(locationName) : locationName;
+    return locationName;
   }
 
   // Extract useful information from the description if available
@@ -37,24 +34,19 @@ export function extractNearestTownName(
     
     const match = description.match(nearPattern);
     if (match) {
-      const result = language === 'en' ? 
+      return language === 'en' ? 
         `Near ${match[1].trim()}` : 
         `${match[1]}${match[2].trim()}`;
-      
-      // Convert to simplified Chinese if needed
-      return language === 'zh' ? convertToSimplifiedChinese(result) : result;
     }
     
     // If description has detailed information, use it
     if (description.includes(',') && description.split(',').length >= 3) {
-      // Convert to simplified Chinese if needed
-      return language === 'zh' ? convertToSimplifiedChinese(description) : description;
+      return description;
     }
   }
   
   // If we can't extract anything more specific, return the full name
-  // Convert to simplified Chinese if needed
-  return language === 'zh' ? convertToSimplifiedChinese(locationName) : locationName;
+  return locationName;
 }
 
 /**
@@ -151,6 +143,6 @@ export function formatLocationName(
       : `潜在理想暗夜地点 ${locationNumber}`;
   }
 
-  // Return the full location name with all details, converting to simplified Chinese if needed
-  return language === 'zh' ? convertToSimplifiedChinese(locationName) : locationName;
+  // Return the full location name with all details
+  return locationName;
 }
