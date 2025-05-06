@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -5,10 +6,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CalendarPlus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isAfter } from 'date-fns';
 import TimeSlotForm from './TimeSlotForm';
 import TimeSlotItem from './TimeSlotItem';
 import { toast } from 'sonner';
+import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
 
 interface TimeSlotManagerProps {
   spotId: string;
@@ -105,7 +108,7 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
     try {
       setDeletingId(id);
       const { error } = await supabase
-        .from('astro_spot_time_slots')
+        .from('astro_spot_timeslots')
         .delete()
         .eq('id', id);
       

@@ -15,9 +15,10 @@ interface TimeSlotItemProps {
   timeSlot: any;
   isCreator: boolean;
   onUpdate: () => void;
+  onDelete: (id: string) => Promise<void>; // Added missing onDelete prop
 }
 
-const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpdate }) => {
+const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpdate, onDelete }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [showEditForm, setShowEditForm] = useState(false);
@@ -44,7 +45,7 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
   const formattedStartTime = format(parseISO(timeSlot.start_time), 'h:mm a');
   const formattedEndTime = format(parseISO(timeSlot.end_time), 'h:mm a');
 
-  const handleBookSlot = async () => {
+  function handleBookSlot() {
     if (!user?.id) {
       toast.error(t("Please sign in to book", "请登录后预订"));
       return;
@@ -52,40 +53,36 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
     
     setIsBooking(true);
     
-    try {
-      // Use the Edge Function to call RPC
-      const { data, error } = await supabase.functions.invoke('call-rpc', {
-        body: {
-          function: 'insert_astro_spot_reservation',
-          params: {
-            p_timeslot_id: timeSlot.id,
-            p_user_id: user.id,
-            p_status: 'confirmed'
-          }
+    supabase.functions.invoke('call-rpc', {
+      body: {
+        function: 'insert_astro_spot_reservation',
+        params: {
+          p_timeslot_id: timeSlot.id,
+          p_user_id: user.id,
+          p_status: 'confirmed'
         }
-      });
-
+      }
+    }).then(({ data, error }) => {
       if (error) throw error;
       
       toast.success(t("Booking confirmed!", "预订已确认！"));
       onUpdate();
-    } catch (error) {
+    }).catch((error) => {
       console.error("Error booking time slot:", error);
       toast.error(t("Failed to book time slot", "预订时间段失败"));
-    } finally {
+    }).finally(() => {
       setIsBooking(false);
-    }
-  };
+    });
+  }
   
-  const handleCancelBooking = async () => {
+  function handleCancelBooking() {
     if (!userReservation) return;
     
     setIsCancelling(true);
     
-    try {
-      // Use fetch to make a direct delete request to the supabase API
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      const response = await fetch(
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data.session?.access_token;
+      return fetch(
         `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/astro_spot_reservations?id=eq.${userReservation.id}`,
         {
           method: 'DELETE',
@@ -96,20 +93,20 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
           }
         }
       );
-        
+    }).then(response => {
       if (!response.ok) throw new Error('Failed to cancel reservation');
       
       toast.success(t("Booking cancelled", "预订已取消"));
       onUpdate();
-    } catch (error) {
+    }).catch(error => {
       console.error("Error cancelling booking:", error);
       toast.error(t("Failed to cancel booking", "取消预订失败"));
-    } finally {
+    }).finally(() => {
       setIsCancelling(false);
-    }
-  };
+    });
+  }
   
-  const handleDeleteTimeSlot = async () => {
+  function handleDeleteTimeSlot() {
     try {
       // Use fetch to make a direct delete request to the supabase API
       const token = (await supabase.auth.getSession()).data.session?.access_token;
@@ -134,13 +131,13 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
       console.error("Error deleting time slot:", error);
       toast.error(t("Failed to delete time slot", "删除时间段失败"));
     }
-  };
+  }
   
-  const handleEditSuccess = () => {
+  function handleEditSuccess() {
     setShowEditForm(false);
     onUpdate();
     toast.success(t("Time slot updated", "时间段已更新"));
-  };
+  }
 
   return (
     <>
@@ -270,7 +267,7 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
               {t("Cancel", "取消")}
             </AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleDeleteTimeSlot}
+              onClick={() => onDelete(timeSlot.id)}
               className="bg-red-600 hover:bg-red-700"
             >
               {t("Delete", "删除")}

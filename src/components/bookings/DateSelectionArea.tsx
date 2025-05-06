@@ -6,7 +6,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, X as CalendarX, Calendar as SelectAll } from 'lucide-react';
+import { Trash2, X as CalendarX, Calendar as CalendarIcon } from 'lucide-react';
 
 interface DateSelectionAreaProps {
   isEditing: boolean;
@@ -52,7 +52,7 @@ const DateSelectionArea: React.FC<DateSelectionAreaProps> = ({
             onClick={() => selectAll(currentMonth)}
             className="flex items-center gap-1 text-xs bg-cosmic-800/70"
           >
-            <SelectAll className="h-3.5 w-3.5" />
+            <CalendarIcon className="h-3.5 w-3.5" />
             {t("Select All", "全选")}
           </Button>
           <Button

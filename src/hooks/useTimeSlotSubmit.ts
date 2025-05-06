@@ -67,7 +67,7 @@ export const useTimeSlotSubmit = ({
         }
         
         const { error } = await supabase
-          .from('astro_spot_time_slots')
+          .from('astro_spot_timeslots')
           .update({
             start_time: formatISO(date),
             end_time: formatISO(endDate),
@@ -100,16 +100,16 @@ export const useTimeSlotSubmit = ({
           
           return {
             spot_id: spotId,
+            creator_id: user.id, // Added creator_id which was missing
             start_time: formatISO(startDateTime),
             end_time: formatISO(endDateTime),
             max_capacity: maxCapacity,
             description: description || null,
-            created_at: new Date().toISOString(),
           };
         });
         
         const { error } = await supabase
-          .from('astro_spot_time_slots')
+          .from('astro_spot_timeslots')
           .insert(timeSlots);
         
         if (error) throw error;
