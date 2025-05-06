@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Moon, Sun, MessageCircle } from "lucide-react";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import ProfileButton from "./ProfileButton";
 
 // Modify the component to accept unreadCount
 const DesktopNav = ({ 

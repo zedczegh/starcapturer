@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
 import { format, addDays, isSameDay, isWithinInterval, setHours, setMinutes, setSeconds } from 'date-fns';
@@ -50,7 +51,7 @@ const TimeSlotManager = ({ spotId, creatorId, spotName }: {
       setLoading(true);
       try {
         const { data, error } = await supabase
-          .from('available_time_slots')
+          .from('astro_spot_timeslots')
           .select('*')
           .eq('spot_id', spotId)
           .gte('start_time', format(date.from, 'yyyy-MM-dd'))
@@ -132,7 +133,7 @@ const TimeSlotManager = ({ spotId, creatorId, spotName }: {
     setIsSubmitting(true);
     try {
       const { data, error } = await supabase
-        .from('reservations')
+        .from('astro_spot_reservations')
         .insert([
           {
             spot_id: spotId,
