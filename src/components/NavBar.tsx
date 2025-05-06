@@ -7,10 +7,14 @@ import DesktopNav from "./navbar/DesktopNav";
 import MobileNav from "./navbar/MobileNav";
 import ProfileButton from "./navbar/ProfileButton";
 import { motion } from "framer-motion";
+import { useMessaging } from "@/hooks/useMessaging";
+import { useAuth } from "@/contexts/AuthContext";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
+  const { unreadCount } = useMessaging();
   
   const locationId = location.pathname.startsWith('/location/') 
     ? location.pathname.split('/location/')[1] 
@@ -39,6 +43,7 @@ const NavBar = () => {
         <DesktopNav 
           location={location} 
           locationId={locationId}
+          unreadCount={user ? unreadCount : 0}
         />
         <div className="flex md:hidden items-center">
           <ProfileButton />
@@ -48,6 +53,7 @@ const NavBar = () => {
       <MobileNav 
         location={location} 
         locationId={locationId}
+        unreadCount={user ? unreadCount : 0}
       />
     </motion.div>
   );

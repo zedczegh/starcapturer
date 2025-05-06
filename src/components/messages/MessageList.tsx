@@ -217,10 +217,10 @@ const MessageList: React.FC<MessageListProps> = ({
                     <div className={`${bubbleWidthClass} space-y-1 ${
                       isUserMessage ? 'items-end' : 'items-start'
                     }`}>
-                      <div className={`rounded-2xl px-4 py-2 ${
+                      <div className={`message-bubble ${
                         isUserMessage 
-                          ? 'bg-primary text-white ml-auto shadow-lg shadow-primary/10' 
-                          : 'bg-cosmic-800/50 text-cosmic-100'
+                          ? 'message-bubble-sent' 
+                          : 'message-bubble-received'
                       }`}>
                         <p className="break-words">{message.message}</p>
                       </div>
