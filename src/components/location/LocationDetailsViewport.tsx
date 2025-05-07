@@ -151,10 +151,10 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       
       {/* Add the enhanced location details header */}
       <LocationDetailsHeader 
-        name={locationData?.name}
+        name={locationData?.name || ''}
         latitude={locationData?.latitude}
         longitude={locationData?.longitude}
-        timestamp={locationData?.timestamp}
+        timestamp={locationData?.timestamp || new Date().toISOString()}
       />
       
       {weatherAlerts && weatherAlerts.length > 0 && (
