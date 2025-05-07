@@ -31,6 +31,12 @@ export function useProfileAvatar() {
         return null;
       }
       
+      // Verify this is the current user's profile
+      if (session.user.id !== userId) {
+        toast.error(t("You can only update your own profile", "您只能更新自己的个人资料"));
+        return null;
+      }
+      
       // Upload the file
       const { data, error } = await supabase.storage
         .from('avatars')

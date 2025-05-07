@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ensureProfileExists } from './utils/profilePersistence';
+import { ensureProfileExists } from '@/components/profile/tags/ProfileUtils';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -30,10 +30,23 @@ export function useProfileTags() {
       }
       
       // First ensure profile exists
-      await ensureProfileExists(userId);
+      const profileExists = await ensureProfileExists(userId);
+      if (!profileExists) {
+        toast.error(t("Failed to ensure profile exists", "确保个人资料存在失败"));
+        return false;
+      }
       
       // Remove all current tags for this user, then insert selected ones
-      await supabase.from('profile_tags').delete().eq('user_id', userId);
+      const { error: deleteError } = await supabase
+        .from('profile_tags')
+        .delete()
+        .eq('user_id', userId);
+        
+      if (deleteError) {
+        console.error("Error deleting existing tags:", deleteError);
+        toast.error(t("Failed to update profile tags", "更新个人资料标签失败"));
+        return false;
+      }
       
       if (newTags.length === 0) {
         setTags([]);
@@ -50,7 +63,7 @@ export function useProfileTags() {
       if (error) {
         console.error("Error saving profile tags:", error);
         toast.error(t("Failed to save profile tags", "保存个人资料标签失败"));
-        throw error;
+        return false;
       }
       
       setTags(newTags);

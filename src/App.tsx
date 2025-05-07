@@ -32,12 +32,20 @@ const App = () => {
   useEffect(() => {
     const checkAndCreateBuckets = async () => {
       try {
-        const { data: buckets } = await supabase.storage.listBuckets();
+        console.log("Checking if required buckets exist...");
+        const { data: buckets, error } = await supabase.storage.listBuckets();
+        
+        if (error) {
+          console.error('Error listing buckets:', error);
+          return;
+        }
+        
         const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
         const userTagsBucketExists = buckets?.some(bucket => bucket.name === 'user_tags');
         
         if (!avatarsBucketExists) {
           // Create the avatars bucket if it doesn't exist
+          console.log("Creating avatars bucket...");
           const { data, error } = await supabase.storage.createBucket('avatars', {
             public: true, // Make it publicly accessible
             fileSizeLimit: 1024 * 1024 * 2 // 2MB limit
@@ -47,11 +55,26 @@ const App = () => {
             console.error('Error creating avatars bucket:', error);
           } else {
             console.log('Created avatars bucket successfully');
+            
+            // Set up public access policy
+            try {
+              await supabase.rpc('create_storage_policy', {
+                bucket_id: 'avatars',
+                policy_name: 'Avatar images are publicly accessible',
+                definition: "bucket_id = 'avatars'"
+              });
+              console.log("Created public access policy for avatars");
+            } catch (policyError) {
+              console.log("Policy may already exist:", policyError);
+            }
           }
+        } else {
+          console.log("Avatars bucket already exists");
         }
         
         if (!userTagsBucketExists) {
           // Create the user_tags bucket if it doesn't exist
+          console.log("Creating user_tags bucket...");
           const { data, error } = await supabase.storage.createBucket('user_tags', {
             public: true, // Make it publicly accessible
             fileSizeLimit: 1024 * 1024 * 1 // 1MB limit
@@ -72,6 +95,8 @@ const App = () => {
               console.error('Error creating user_tags directory structure:', uploadError);
             }
           }
+        } else {
+          console.log("User tags bucket already exists");
         }
       } catch (error) {
         console.error('Error checking/creating buckets:', error);
