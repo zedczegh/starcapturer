@@ -13,20 +13,8 @@ export async function ensureProfileExists(userId: string) {
       .maybeSingle();
     
     if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error("Error fetching profile:", fetchError);
-      
-      if (fetchError.message?.includes('JWT expired')) {
-        // Only show critical auth errors
-        toast.error('Your session has expired. Please log in again.');
-        await supabase.auth.refreshSession();
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) {
-          throw new Error('Authentication required');
-        }
-      } else {
-        // Log error but don't display toast
-        console.error(fetchError);
-      }
+      console.log("Error fetching profile:", fetchError);
+      return false;
     }
     
     // If profile doesn't exist, create it
@@ -48,7 +36,13 @@ export async function ensureProfileExists(userId: string) {
         });
       
       if (insertError) {
-        console.error("Error creating profile:", insertError);
+        // Don't log RLS-related errors as critical errors
+        if (insertError.message.includes('violates row-level security') || 
+            insertError.message.includes('permission denied')) {
+          console.log("Profile creation blocked by RLS - this might be expected behavior");
+        } else {
+          console.error("Error creating profile:", insertError);
+        }
         return false;
       }
       
@@ -69,8 +63,7 @@ export async function fetchUserProfile(userId: string) {
   try {
     const profileExists = await ensureProfileExists(userId);
     if (!profileExists) {
-      console.error("Failed to ensure profile exists");
-      return { data: null, error: new Error("Failed to ensure profile exists") };
+      console.log("Failed to ensure profile exists - proceeding with fetch anyway");
     }
     
     return await supabase

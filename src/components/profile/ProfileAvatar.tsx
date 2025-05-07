@@ -36,13 +36,11 @@ const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   const handleImageLoad = () => {
     setImageLoading(false);
     setImageError(false);
-    console.log("Avatar image loaded successfully from URL:", avatarUrl);
   };
 
   const handleImageError = () => {
     setImageLoading(false);
     setImageError(true);
-    console.error("Failed to load avatar image from URL:", avatarUrl);
   };
 
   const triggerFileInput = () => {
@@ -50,19 +48,6 @@ const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
       inputRef.current.click();
     }
   };
-
-  // Debug if the avatar URL is a blob or from Supabase
-  React.useEffect(() => {
-    if (avatarUrl) {
-      const urlType = avatarUrl.startsWith('blob:') 
-        ? 'Blob URL (temporary preview)' 
-        : avatarUrl.includes('supabase') 
-          ? 'Supabase URL' 
-          : 'Other URL';
-      
-      console.log("Avatar URL type:", urlType, "Value:", avatarUrl);
-    }
-  }, [avatarUrl]);
 
   return (
     <div className="flex flex-col items-center">

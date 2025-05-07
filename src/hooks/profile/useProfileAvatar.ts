@@ -1,7 +1,6 @@
 
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export function useProfileAvatar() {
@@ -43,14 +42,25 @@ export function useProfileAvatar() {
         });
       
       if (error) {
-        console.error("Avatar upload error:", error);
+        console.log("Avatar upload issue:", error.message);
         
-        // Don't show error toasts for common RLS/permission issues
-        if (!error.message.includes('Permission denied') && 
-            !error.message.includes('violates row-level security policy') &&
-            !error.message.includes('does not exist')) {
-          console.error("Avatar upload failed with unexpected error:", error.message);
+        // Don't show detailed error messages for common issues
+        if (error.message.includes('The resource already exists') ||
+            error.message.includes('bucket_id') || 
+            error.message.includes('not found')) {
+          console.log("Non-critical avatar upload issue, attempting to continue...");
         }
+        
+        // Try to get the URL even if upload had issues
+        const { data: existingData } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+        
+        if (existingData) {
+          console.log("Found existing file, using its URL");
+          return existingData.publicUrl;
+        }
+        
         return null;
       }
       

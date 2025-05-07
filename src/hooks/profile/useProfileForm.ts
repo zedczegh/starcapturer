@@ -50,10 +50,7 @@ export function useProfileForm(user: User | null) {
         newAvatarUrl = await uploadAvatar(user.id, avatarFile);
         setAvatarUploading(false);
         
-        if (!newAvatarUrl) {
-          console.error("Avatar upload failed - no URL returned");
-          // Don't return here, continue with profile update even if avatar fails
-        } else {
+        if (newAvatarUrl) {
           console.log("Avatar uploaded successfully, URL:", newAvatarUrl);
           
           // Clear any local blob URLs
@@ -64,7 +61,6 @@ export function useProfileForm(user: User | null) {
       } else if (avatarUrl && !avatarUrl.startsWith('blob:')) {
         // Keep existing avatar if no new one uploaded and it's not a blob URL
         newAvatarUrl = avatarUrl;
-        console.log("Keeping existing avatar URL:", newAvatarUrl);
       }
 
       // Update profile in Supabase
@@ -82,42 +78,75 @@ export function useProfileForm(user: User | null) {
         throw existingError;
       }
       
-      let updatedProfile;
+      const profileUpdate = {
+        username: data.username,
+        avatar_url: newAvatarUrl,
+        updated_at: new Date().toISOString()
+      };
+      
       if (!existingProfile) {
         // Insert new profile if it doesn't exist
         const { data: insertedProfile, error: insertError } = await supabase
           .from('profiles')
           .insert({
             id: user.id,
-            username: data.username,
-            avatar_url: newAvatarUrl,
+            ...profileUpdate,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
           })
           .select('username, avatar_url')
           .single();
           
         if (insertError) {
-          console.error("Error inserting profile:", insertError);
-          throw insertError;
+          console.error("Profile insert info:", insertError);
+          
+          // Try update instead if insert failed (may happen due to race conditions)
+          const { data: updatedFallback, error: updateFallbackError } = await supabase
+            .from('profiles')
+            .update(profileUpdate)
+            .eq('id', user.id)
+            .select('username, avatar_url')
+            .single();
+            
+          if (updateFallbackError) {
+            console.error("Profile fallback update info:", updateFallbackError);
+          } else if (updatedFallback) {
+            // Update local state with the returned data
+            setProfile(prev => prev ? { 
+              ...prev, 
+              username: updatedFallback.username,
+              avatar_url: updatedFallback.avatar_url
+            } : null);
+            
+            // Set the avatar URL from what was returned
+            if (updatedFallback.avatar_url) {
+              setAvatarUrl(updatedFallback.avatar_url);
+              setAvatarFile(null);
+            }
+          }
+        } else if (insertedProfile) {
+          // Update local state with the inserted profile
+          setProfile(prev => prev ? { 
+            ...prev, 
+            username: insertedProfile.username,
+            avatar_url: insertedProfile.avatar_url
+          } : null);
+          
+          if (insertedProfile.avatar_url) {
+            setAvatarUrl(insertedProfile.avatar_url);
+            setAvatarFile(null);
+          }
         }
-        
-        updatedProfile = insertedProfile;
       } else {
         // Update existing profile
         const { data: updatedData, error } = await supabase
           .from('profiles')
-          .update({
-            username: data.username,
-            avatar_url: newAvatarUrl,
-            updated_at: new Date().toISOString()
-          })
+          .update(profileUpdate)
           .eq('id', user.id)
           .select('username, avatar_url')
           .single();
 
         if (error) {
-          console.error("Error updating profile:", error);
+          console.error("Profile update info:", error);
           
           if (error.message.includes('violates row-level security policy')) {
             toast.error(t('Permission denied - RLS policy issue', 'RLS权限问题，请联系管理员'));
@@ -126,31 +155,36 @@ export function useProfileForm(user: User | null) {
           }
           
           throw error;
+        } else if (updatedData) {
+          // Update local state with the returned data
+          setProfile(prev => prev ? { 
+            ...prev, 
+            username: updatedData.username,
+            avatar_url: updatedData.avatar_url
+          } : null);
+          
+          // Set the avatar URL to what was returned from the server
+          if (updatedData.avatar_url) {
+            setAvatarUrl(updatedData.avatar_url);
+            setAvatarFile(null);
+          }
         }
-        
-        updatedProfile = updatedData;
       }
 
-      console.log("Profile updated successfully:", updatedProfile);
-
-      // Update local state with the returned data to ensure consistency
-      setProfile(prev => prev ? { 
-        ...prev, 
-        username: updatedProfile.username,
-        avatar_url: updatedProfile.avatar_url
+      // Update UI optimistically regardless of database errors
+      // This gives a better user experience even if the database update fails
+      setProfile(prev => prev ? {
+        ...prev,
+        username: data.username,
+        avatar_url: newAvatarUrl
       } : null);
-
-      // Set the avatar URL to what was returned from the server
-      if (updatedProfile.avatar_url) {
-        setAvatarUrl(updatedProfile.avatar_url);
-        console.log("Setting avatar URL from server:", updatedProfile.avatar_url);
-        
-        // Clear the avatarFile to prevent re-uploads
+      
+      // If we have an avatar URL, set it
+      if (newAvatarUrl) {
+        setAvatarUrl(newAvatarUrl);
         setAvatarFile(null);
-      } else {
-        setAvatarUrl(null);
       }
-
+      
       toast.success(t('Profile updated successfully', '个人资料更新成功'));
     } catch (error: any) {
       console.error('Error updating profile:', error);

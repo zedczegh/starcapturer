@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Helper function to ensure user profile exists
 export async function ensureProfileExists(uid: string): Promise<boolean> {
@@ -34,7 +35,11 @@ export async function ensureProfileExists(uid: string): Promise<boolean> {
         }]);
         
       if (createError) {
-        console.error("Error creating profile:", createError);
+        // Don't show toast for expected errors like RLS restrictions
+        if (!createError.message.includes("policy") && 
+            !createError.message.includes("permission")) {
+          console.error("Error creating profile:", createError);
+        }
         return false;
       }
       

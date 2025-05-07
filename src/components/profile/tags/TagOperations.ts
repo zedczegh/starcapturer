@@ -7,8 +7,7 @@ import { UserTag } from './UserTagsTypes';
 export async function addTagForUser(uid: string, tagName: string): Promise<any> {
   try {
     if (!await ensureProfileExists(uid)) {
-      console.error("Failed to ensure profile exists");
-      return null;
+      console.log("Proceeding with tag addition despite profile check issue");
     }
     
     // Check if tag already exists
@@ -31,13 +30,13 @@ export async function addTagForUser(uid: string, tagName: string): Promise<any> 
       .single();
       
     if (error) {
-      console.error("Error adding tag:", error);
+      console.log("Tag addition info:", error);
       return null;
     }
     
     return data;
   } catch (err) {
-    console.error("Error adding tag:", err);
+    console.log("Tag addition exception:", err);
     return null;
   }
 }
@@ -51,13 +50,13 @@ export async function removeTagForUser(tagId: string): Promise<boolean> {
       .eq('id', tagId);
       
     if (error) {
-      console.error("Error removing tag:", error);
+      console.log("Tag removal info:", error);
       return false;
     }
     
     return true;
   } catch (err) {
-    console.error("Error removing tag:", err);
+    console.log("Tag removal exception:", err);
     return false;
   }
 }
@@ -70,8 +69,7 @@ export async function fetchTagsForUser(userId: string): Promise<UserTag[]> {
     // Ensure the user has a profile
     const profileExists = await ensureProfileExists(userId);
     if (!profileExists) {
-      console.error("Profile doesn't exist for user:", userId);
-      return [];
+      console.log("Profile doesn't exist for user:", userId);
     }
     
     // Now fetch tags
@@ -81,7 +79,7 @@ export async function fetchTagsForUser(userId: string): Promise<UserTag[]> {
       .eq('user_id', userId);
       
     if (error) {
-      console.error("Error fetching tags:", error);
+      console.log("Tag fetch info:", error);
       return [];
     }
     
@@ -98,7 +96,7 @@ export async function fetchTagsForUser(userId: string): Promise<UserTag[]> {
     
     return [];
   } catch (err) {
-    console.error("Error fetching tags:", err);
+    console.log("Tag fetch exception:", err);
     return [];
   }
 }

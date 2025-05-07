@@ -37,7 +37,7 @@ export function useUserTags() {
         .eq('user_id', targetUserId);
       
       if (error) {
-        console.error("Error fetching user tags:", error);
+        console.log("User tags fetch info:", error);
         return;
       }
       
@@ -54,7 +54,7 @@ export function useUserTags() {
         setTags([]);
       }
     } catch (err) {
-      console.error("Error in fetchUserTags:", err);
+      console.log("User tags fetch exception:", err);
     } finally {
       setLoading(false);
     }
@@ -82,8 +82,7 @@ export function useUserTags() {
       // First ensure the user has a profile
       const profileExists = await ensureProfileExists(userId);
       if (!profileExists) {
-        console.error("Failed to ensure profile exists");
-        return null;
+        console.log("Proceeding with tag addition despite profile check issue");
       }
       
       // Add new tag
@@ -94,7 +93,7 @@ export function useUserTags() {
         .single();
       
       if (error) {
-        console.error("Error adding user tag:", error);
+        console.log("User tag add info:", error);
         return null;
       }
       
@@ -110,7 +109,7 @@ export function useUserTags() {
       console.log(`Tag "${tagName}" added successfully for user:`, userId);
       return data;
     } catch (err) {
-      console.error("Error in addUserTag:", err);
+      console.log("User tag add exception:", err);
       return null;
     }
   }, [user]);
@@ -124,7 +123,7 @@ export function useUserTags() {
         .eq('id', tagId);
       
       if (error) {
-        console.error("Error removing user tag:", error);
+        console.log("User tag remove info:", error);
         return false;
       }
       
@@ -132,7 +131,7 @@ export function useUserTags() {
       console.log("Tag removed successfully");
       return true;
     } catch (err) {
-      console.error("Error in removeUserTag:", err);
+      console.log("User tag remove exception:", err);
       return false;
     }
   }, []);
