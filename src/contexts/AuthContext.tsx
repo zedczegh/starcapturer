@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,10 +42,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     (async () => {
-      const sessionResult = await supabase.auth.getSession();
-      setSession(sessionResult.data.session);
-      setUser(sessionResult.data.session?.user ?? null);
-      setIsLoading(false);
+      try {
+        console.log('Checking for existing session...');
+        const sessionResult = await supabase.auth.getSession();
+        setSession(sessionResult.data.session);
+        setUser(sessionResult.data.session?.user ?? null);
+        console.log('Session check complete:', sessionResult.data.session ? 'Active session found' : 'No active session');
+      } catch (error) {
+        console.error('Error checking session:', error);
+      } finally {
+        setIsLoading(false);
+      }
     })();
 
     return () => subscription.unsubscribe();
@@ -53,11 +61,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string) => {
     try {
       setIsLoading(true);
+      console.log('Starting signup process for:', email);
 
       let redirectTo = window.location.origin;
       if (!redirectTo.startsWith('http')) {
         redirectTo = 'https://siqs.astroai.top';
       }
+
+      console.log('Using redirect URL:', redirectTo + '/photo-points');
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -67,7 +78,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Signup error:', error);
+        throw error;
+      }
+
+      console.log('Signup successful, user data:', data);
 
       if (data.user && !data.user.confirmed_at) {
         toast.success(
@@ -97,17 +113,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         );
       }
     } catch (error: any) {
-      toast.error(
-        t(
-          "Account creation paused",
-          "帐户创建已暂停"
-        ),
-        {
-          description: error.message ||
-            t("Please try again with a different email", "请更换邮箱后重试"),
-          position: "top-center"
-        }
-      );
+      console.error('Exception in signUp:', error);
+      
+      if (error.message === 'Failed to fetch' || !navigator.onLine) {
+        toast.error(
+          t(
+            "Network Connection Issue",
+            "网络连接问题"
+          ),
+          {
+            description: t(
+              "Unable to reach our servers. Please check your internet connection and try again.",
+              "无法连接到我们的服务器。请检查您的互联网连接，然后重试。"
+            ),
+            position: "top-center"
+          }
+        );
+      } else {
+        toast.error(
+          t(
+            "Account creation paused",
+            "帐户创建已暂停"
+          ),
+          {
+            description: error.message ||
+              t("Please try again with a different email", "请更换邮箱后重试"),
+            position: "top-center"
+          }
+        );
+      }
+      
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -123,12 +159,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         duration: 1500
       });
 
+      console.log('Attempting sign in for:', email);
       const { error } = await supabase.auth.signInWithPassword({ 
         email, 
         password
       });
 
       if (error) {
+        console.error('Sign in error:', error);
+        
         let errorMessage = "Please double-check your email and password";
         if (error.message.includes("Email not confirmed")) {
           await supabase.auth.resend({
@@ -140,7 +179,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           errorMessage = "Please double-check your email and password";
         } else if (error.message.includes("Too many requests")) {
           errorMessage = "Too many login attempts. Please try again in a few minutes";
+        } else if (error.message === 'Failed to fetch' || !navigator.onLine) {
+          errorMessage = "Network connection issue. Please check your internet connection and try again.";
         }
+        
         toast.error("Sign in paused", {
           description: errorMessage,
           position: "top-center"
@@ -148,12 +190,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
+      console.log('Sign in successful');
       signedIn = true;
     } catch (error: any) {
-      toast.error("Sign in error", {
-        description: "An unknown error occurred. Please try again.",
-        position: "top-center"
-      });
+      console.error('Exception in signIn:', error);
+      
+      if (error.message === 'Failed to fetch' || !navigator.onLine) {
+        toast.error("Network Connection Issue", {
+          description: "Unable to reach our servers. Please check your internet connection and try again.",
+          position: "top-center"
+        });
+      } else {
+        toast.error("Sign in error", {
+          description: "An unknown error occurred. Please try again.",
+          position: "top-center"
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -167,21 +219,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         position: "top-center",
         duration: 1000
       });
+      
+      console.log('Signing out user');
       const { error } = await supabase.auth.signOut();
       setUser(null);
       setSession(null);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Sign out error:', error);
+        throw error;
+      }
 
+      console.log('Sign out successful');
       toast.success("See you soon! ✨", {
         description: "The stars will be waiting for your return",
         position: "top-center"
       });
     } catch (error: any) {
-      toast.error("Sign out issue", {
-        description: "Please try again in a moment",
-        position: "top-center"
-      });
+      console.error('Exception in signOut:', error);
+      
+      if (error.message === 'Failed to fetch' || !navigator.onLine) {
+        toast.error("Network Connection Issue", {
+          description: "Unable to complete sign out due to network issues. You may be offline.",
+          position: "top-center"
+        });
+      } else {
+        toast.error("Sign out issue", {
+          description: "Please try again in a moment",
+          position: "top-center"
+        });
+      }
     } finally {
       setIsLoading(false);
     }
