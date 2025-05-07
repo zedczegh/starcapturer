@@ -30,9 +30,19 @@ export function useProfileTags() {
       }
       
       // First ensure profile exists
-      const profileExists = await ensureProfileExists(userId);
-      if (!profileExists) {
-        toast.error(t("Failed to ensure profile exists", "确保个人资料存在失败"));
+      try {
+        const profileExists = await ensureProfileExists(userId);
+        if (!profileExists) {
+          toast.error(t("Failed to ensure profile exists", "确保个人资料存在失败"));
+          return false;
+        }
+      } catch (error: any) {
+        console.error("Profile existence check error:", error);
+        if (error.message?.includes('RLS')) {
+          toast.error(t("Permission denied. Please contact an administrator.", "权限被拒绝，请联系管理员。"));
+        } else {
+          toast.error(t("Failed to ensure profile exists", "确保个人资料存在失败"));
+        }
         return false;
       }
       
@@ -44,7 +54,11 @@ export function useProfileTags() {
         
       if (deleteError) {
         console.error("Error deleting existing tags:", deleteError);
-        toast.error(t("Failed to update profile tags", "更新个人资料标签失败"));
+        if (deleteError.message?.includes('RLS')) {
+          toast.error(t("Permission denied. Please contact an administrator.", "权限被拒绝，请联系管理员。"));
+        } else {
+          toast.error(t("Failed to update profile tags", "更新个人资料标签失败"));
+        }
         return false;
       }
       
@@ -62,7 +76,11 @@ export function useProfileTags() {
       
       if (error) {
         console.error("Error saving profile tags:", error);
-        toast.error(t("Failed to save profile tags", "保存个人资料标签失败"));
+        if (error.message?.includes('RLS')) {
+          toast.error(t("Permission denied. Please contact an administrator.", "权限被拒绝，请联系管理员。"));
+        } else {
+          toast.error(t("Failed to save profile tags", "保存个人资料标签失败"));
+        }
         return false;
       }
       

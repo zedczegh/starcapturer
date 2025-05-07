@@ -11,6 +11,7 @@ export function useProfileForm(user: User | null) {
   const [saving, setSaving] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const {
+    profile,
     setProfile,
     avatarFile,
     setAvatarFile,
@@ -52,9 +53,7 @@ export function useProfileForm(user: User | null) {
         
         if (!newAvatarUrl) {
           console.error("Avatar upload failed - no URL returned");
-          toast.error(t('Failed to upload avatar', '上传头像失败'));
-          setSaving(false);
-          return; // Stop the process if avatar upload fails
+          // Don't return here, continue with profile update even if avatar fails
         } else {
           console.log("Avatar uploaded successfully, URL:", newAvatarUrl);
           
@@ -71,21 +70,66 @@ export function useProfileForm(user: User | null) {
 
       // Update profile in Supabase
       console.log(`Updating profile with username: ${data.username}, avatar: ${newAvatarUrl || 'none'}`);
-      const { error, data: updatedProfile } = await supabase
+      
+      // First check if profile exists
+      const { data: existingProfile, error: existingError } = await supabase
         .from('profiles')
-        .update({
-          username: data.username,
-          avatar_url: newAvatarUrl,
-          updated_at: new Date().toISOString(),
-        })
+        .select('id')
         .eq('id', user.id)
-        .select('username, avatar_url')
         .single();
+        
+      if (existingError && existingError.code !== 'PGRST116') {
+        console.error("Error checking profile existence:", existingError);
+        throw existingError;
+      }
+      
+      let updatedProfile;
+      if (!existingProfile) {
+        // Insert new profile if it doesn't exist
+        const { data: insertedProfile, error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            username: data.username,
+            avatar_url: newAvatarUrl,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select('username, avatar_url')
+          .single();
+          
+        if (insertError) {
+          console.error("Error inserting profile:", insertError);
+          throw insertError;
+        }
+        
+        updatedProfile = insertedProfile;
+      } else {
+        // Update existing profile
+        const { data: updatedData, error } = await supabase
+          .from('profiles')
+          .update({
+            username: data.username,
+            avatar_url: newAvatarUrl,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id)
+          .select('username, avatar_url')
+          .single();
 
-      if (error) {
-        console.error("Error updating profile:", error);
-        toast.error(t('Failed to update profile', '更新个人资料失败'));
-        throw error;
+        if (error) {
+          console.error("Error updating profile:", error);
+          
+          if (error.message.includes('violates row-level security policy')) {
+            toast.error(t('Permission denied - RLS policy issue', 'RLS权限问题，请联系管理员'));
+          } else {
+            toast.error(t('Failed to update profile', '更新个人资料失败'));
+          }
+          
+          throw error;
+        }
+        
+        updatedProfile = updatedData;
       }
 
       console.log("Profile updated successfully:", updatedProfile);
@@ -111,7 +155,7 @@ export function useProfileForm(user: User | null) {
       toast.success(t('Profile updated successfully', '个人资料更新成功'));
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      toast.error(t('Failed to update profile', '更新个人资料失败'));
+      toast.error(t('Error updating profile', '更新个人资料时出错') + `: ${error.message}`);
     } finally {
       setSaving(false);
     }

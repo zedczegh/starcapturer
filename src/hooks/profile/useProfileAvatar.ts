@@ -21,6 +21,14 @@ export function useProfileAvatar() {
       console.log("Starting avatar upload for user:", userId);
       setUploadingAvatar(true);
       
+      // Ensure the user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error("User is not authenticated");
+        toast.error(t("Authentication required to upload avatar", "需要认证才能上传头像"));
+        return null;
+      }
+      
       // First ensure the bucket exists
       try {
         const { data: buckets } = await supabase.storage.listBuckets();
@@ -55,7 +63,11 @@ export function useProfileAvatar() {
       
       if (error) {
         console.error("Avatar upload error:", error);
-        toast.error(t("Failed to upload avatar. Please try again.", "上传头像失败，请重试。"));
+        if (error.message.includes('Permission denied')) {
+          toast.error(t("Permission denied. Please contact an administrator.", "权限被拒绝，请联系管理员。"));
+        } else {
+          toast.error(t("Failed to upload avatar. Please try again.", "上传头像失败，请重试。"));
+        }
         return null;
       }
       
@@ -79,9 +91,9 @@ export function useProfileAvatar() {
       toast.success(t("Avatar uploaded successfully", "头像上传成功"));
       
       return publicUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading avatar:', error);
-      toast.error(t("Avatar upload failed", "头像上传失败"));
+      toast.error(t("Avatar upload failed", "头像上传失败") + `: ${error.message}`);
       return null;
     } finally {
       setUploadingAvatar(false);

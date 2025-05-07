@@ -6,6 +6,10 @@ export async function ensureProfileExists(uid: string): Promise<boolean> {
   try {
     // Check if user is logged in
     const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error("User not authenticated");
+      return false;
+    }
     
     // Check if profile exists
     const { data, error } = await supabase
@@ -21,7 +25,7 @@ export async function ensureProfileExists(uid: string): Promise<boolean> {
     
     if (!data) {
       // Only allow creating a profile for the current user
-      if (!session || session.user.id !== uid) {
+      if (session.user.id !== uid) {
         console.error("Cannot create profile for another user");
         return false;
       }
@@ -29,7 +33,11 @@ export async function ensureProfileExists(uid: string): Promise<boolean> {
       // Create profile if doesn't exist
       const { error: createError } = await supabase
         .from('profiles')
-        .insert([{ id: uid }]);
+        .insert([{ 
+          id: uid,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }]);
         
       if (createError) {
         console.error("Error creating profile:", createError);

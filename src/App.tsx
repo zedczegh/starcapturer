@@ -57,6 +57,12 @@ const App = () => {
               toast.error("Error creating storage bucket. Some features may not work properly.");
             } else {
               console.log('Created avatars bucket successfully');
+              
+              // Set public bucket policy
+              const { error: policyError } = await supabase.storage.from('avatars').createSignedUrl('test-permission.txt', 3600);
+              if (policyError && !policyError.message.includes('not found')) {
+                console.error("Error testing bucket permissions:", policyError);
+              }
             }
           } catch (err) {
             console.error("Error creating bucket:", err);

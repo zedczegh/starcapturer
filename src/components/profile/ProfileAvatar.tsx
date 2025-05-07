@@ -25,7 +25,7 @@ const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   const [imageError, setImageError] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  // Reset error state when avatarUrl changes
+  // Reset error state and set loading when avatarUrl changes
   React.useEffect(() => {
     if (avatarUrl) {
       setImageError(false);
@@ -80,6 +80,7 @@ const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
               className={`w-full h-full rounded-full object-cover border-2 border-primary shadow-glow ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
               onLoad={handleImageLoad}
               onError={handleImageError}
+              key={avatarUrl} // Add key to force re-render when URL changes
             />
             <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <TooltipProvider>
