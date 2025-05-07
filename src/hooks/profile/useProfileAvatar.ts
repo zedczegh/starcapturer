@@ -24,6 +24,13 @@ export function useProfileAvatar() {
       
       console.log(`Uploading avatar to avatars/${fileName}`);
       
+      // Make sure the user is logged in
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error(t("You must be logged in to upload an avatar", "您必须登录才能上传头像"));
+        return null;
+      }
+      
       // Upload the file
       const { data, error } = await supabase.storage
         .from('avatars')

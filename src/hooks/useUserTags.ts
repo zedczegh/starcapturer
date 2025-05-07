@@ -69,6 +69,19 @@ export function useUserTags() {
         return null;
       }
       
+      // Verify user is logged in
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error(t("You must be logged in to add tags", "您必须登录才能添加标签"));
+        return null;
+      }
+      
+      // Verify this is the current user's profile
+      if (session.user.id !== userId) {
+        toast.error(t("You can only update your own profile", "您只能更新自己的个人资料"));
+        return null;
+      }
+      
       console.log(`Adding tag "${tagName}" for user:`, userId);
       
       // First ensure the user has a profile
@@ -119,6 +132,25 @@ export function useUserTags() {
   // Remove a tag
   const removeUserTag = useCallback(async (tagId: string) => {
     try {
+      // Get the tag information to verify ownership
+      const { data: tagData, error: tagError } = await supabase
+        .from('profile_tags')
+        .select('user_id')
+        .eq('id', tagId)
+        .single();
+        
+      if (tagError) {
+        console.error("Error getting tag info:", tagError);
+        return false;
+      }
+      
+      // Check if current user owns this tag
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || session.user.id !== tagData.user_id) {
+        toast.error(t("You can only remove your own tags", "您只能删除自己的标签"));
+        return false;
+      }
+      
       console.log("Removing tag with ID:", tagId);
       
       const { error } = await supabase

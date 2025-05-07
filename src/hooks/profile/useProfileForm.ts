@@ -22,11 +22,22 @@ export function useProfileForm(user: User | null) {
 
   // Handle form submission
   const handleSubmit = async (data: { username: string }) => {
-    if (!user) return;
+    if (!user) {
+      toast.error(t('You must be logged in to update your profile', '您必须登录才能更新个人资料'));
+      return;
+    }
 
     try {
       setSaving(true);
       console.log("Submitting profile form with username:", data.username);
+
+      // Verify user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error(t('Authentication required', '需要认证'));
+        setSaving(false);
+        return;
+      }
 
       // Ensure profile exists first
       await ensureProfileExists(user.id);
@@ -59,6 +70,7 @@ export function useProfileForm(user: User | null) {
 
       if (error) {
         console.error("Error updating profile:", error);
+        toast.error(t('Failed to update profile', '更新个人资料失败'));
         throw error;
       }
 
@@ -79,8 +91,8 @@ export function useProfileForm(user: User | null) {
 
       toast.success(t('Profile updated successfully', '个人资料更新成功'));
     } catch (error: any) {
-      toast.error(t('Failed to update profile', '更新个人资料失败'));
       console.error('Error updating profile:', error);
+      toast.error(t('Failed to update profile', '更新个人资料失败'));
     } finally {
       setSaving(false);
     }

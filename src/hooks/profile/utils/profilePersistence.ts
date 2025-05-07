@@ -1,9 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Helper function to ensure user profile exists
 export async function ensureProfileExists(userId: string): Promise<boolean> {
   try {
+    // Check if user is logged in
+    const { data: { session } } = await supabase.auth.getSession();
+    
     // Check if profile exists
     const { data, error } = await supabase
       .from('profiles')
@@ -17,6 +21,12 @@ export async function ensureProfileExists(userId: string): Promise<boolean> {
     }
     
     if (!data) {
+      // Only allow creating a profile for the current user
+      if (!session || session.user.id !== userId) {
+        console.error("Cannot create profile for another user");
+        return false;
+      }
+      
       // Create profile if doesn't exist
       const { error: createError } = await supabase
         .from('profiles')
@@ -67,6 +77,19 @@ export async function updateUserProfile(userId: string, updates: {
   avatar_url?: string | null;
 }) {
   try {
+    // Check if user is logged in
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error('You must be logged in to update your profile');
+      return { data: null, error: new Error('Not authenticated') };
+    }
+    
+    // Verify this is the current user's profile
+    if (session.user.id !== userId) {
+      toast.error('You can only update your own profile');
+      return { data: null, error: new Error('Permission denied') };
+    }
+    
     const { data, error } = await supabase
       .from('profiles')
       .update({
