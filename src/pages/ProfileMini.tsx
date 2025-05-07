@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -13,8 +12,8 @@ import { toast } from "sonner";
 import ProfileTag from "@/components/profile/ProfileTag";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
-import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
+import LocationCard from "@/components/LocationCard";
+import { Loader2 as Loader } from "@/components/ui/loader"; // Fixed the import to use Loader2 as Loader
 
 const ProfileMini: React.FC = () => {
   const { id: profileId } = useParams();
@@ -82,16 +81,7 @@ const ProfileMini: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('user_astro_spots')
-          .select(`
-            id,
-            name,
-            latitude,
-            longitude,
-            bortlescale,
-            siqs,
-            description,
-            created_at
-          `)
+          .select('*')
           .eq('user_id', profileId)
           .order('created_at', { ascending: false })
           .limit(3);  // Limit to 3 most recent spots for the mini profile
@@ -134,10 +124,6 @@ const ProfileMini: React.FC = () => {
         selectedUsername: profile.username
       } 
     });
-  };
-
-  const handleViewDetails = (location: any) => {
-    navigate(`/astro-spot/${location.id}`);
   };
 
   // Animation variants for staggered tag animations
@@ -214,29 +200,24 @@ const ProfileMini: React.FC = () => {
           
           {loadingSpots ? (
             <div className="flex justify-center py-6">
-              <Loader className="w-6 h-6 text-primary animate-spin" />
+              <Loader className="w-6 h-6 text-primary" />
             </div>
           ) : userAstroSpots.length > 0 ? (
             <div className="space-y-4">
-              {userAstroSpots.map((spot, index) => (
+              {userAstroSpots.map(spot => (
                 <div 
-                  key={spot.id}
+                  key={spot.id} 
                   className="cursor-pointer transition duration-200 hover:scale-[1.02]"
+                  onClick={() => navigate(`/astro-spot/${spot.id}`)}
                 >
-                  <PhotoLocationCard
-                    location={{
-                      id: spot.id,
-                      name: spot.name,
-                      latitude: spot.latitude,
-                      longitude: spot.longitude,
-                      bortleScale: spot.bortlescale || 4,
-                      siqs: spot.siqs || 0,
-                      timestamp: spot.created_at
-                      // Note: user_id is not passed as it's not part of SharedAstroSpot type
-                    }}
-                    index={index}
-                    onViewDetails={() => handleViewDetails(spot)}
-                    showRealTimeSiqs={true}
+                  <LocationCard
+                    id={spot.id}
+                    name={spot.name}
+                    latitude={spot.latitude}
+                    longitude={spot.longitude}
+                    siqs={spot.siqs}
+                    timestamp={spot.created_at}
+                    isCertified={false}
                   />
                 </div>
               ))}
