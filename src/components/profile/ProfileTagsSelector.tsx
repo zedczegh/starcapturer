@@ -36,11 +36,11 @@ const ProfileTagsSelector: React.FC<ProfileTagsSelectorProps> = ({
   const { t, language } = useLanguage();
   
   return (
-    <div className="space-y-3">
-      <Label className="block text-white mb-2">{t("Profile Tags", "个人标签")}</Label>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div className="space-y-4">
+      <Label className="block text-white mb-3">{t("Profile Tags", "个人标签")}</Label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {TAGS.map((tag) => (
-          <label key={tag.value} className="flex items-center gap-2 cursor-pointer group">
+          <label key={tag.value} className="flex items-center gap-3 cursor-pointer group py-1">
             <Checkbox
               checked={selectedTags.includes(tag.value)}
               onCheckedChange={(checked) => onChange(tag.value, !!checked)}
@@ -55,8 +55,8 @@ const ProfileTagsSelector: React.FC<ProfileTagsSelectorProps> = ({
       </div>
       
       {selectedTags.length > 0 && (
-        <div className="mt-4">
-          <p className="text-sm text-cosmic-300 mb-2">
+        <div className="mt-6">
+          <p className="text-sm text-cosmic-300 mb-3">
             {t("Selected tags:", "已选标签:")}
           </p>
           <div className="flex flex-wrap gap-2">
