@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { User } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { translateProfileTag } from "@/utils/linkTranslations";
 import { useMessageNavigation } from "@/hooks/useMessageNavigation";
 import { fetchUserProfile } from "@/utils/profileUtils";
 import type { ProfileData } from "@/utils/profile/profileCore";
-import { toast } from "sonner";
+import ProfileTag from "@/components/profile/ProfileTag";
+import { motion } from "framer-motion";
 
 const ProfileMini: React.FC = () => {
   const { id: profileId } = useParams();
@@ -20,7 +20,7 @@ const ProfileMini: React.FC = () => {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   
   // Check if we came from messages to hide the "Send message" button
   const isFromMessages = location.state?.fromMessages;
@@ -91,14 +91,32 @@ const ProfileMini: React.FC = () => {
     });
   };
 
+  // Animation variants for tags container
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1, 
+      transition: { 
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      } 
+    }
+  };
+  
+  // Animation variants for individual tags
+  const tagVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950 flex flex-col items-center px-4 pt-20">
       <Card className="max-w-xl w-full mx-auto mt-4 glassmorphism p-8 rounded-xl shadow-glow">
-        <div className="flex gap-4 items-center mb-8">
+        <div className="flex gap-4 items-center mb-6">
           {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt="avatar" className="w-20 h-20 rounded-full object-cover shadow-lg" />
+            <img src={profile.avatar_url} alt="avatar" className="w-20 h-20 rounded-full object-cover shadow-lg border-2 border-primary/30" />
           ) : (
-            <div className="w-20 h-20 flex items-center justify-center rounded-full bg-cosmic-800/60 shadow-lg">
+            <div className="w-20 h-20 flex items-center justify-center rounded-full bg-cosmic-800/60 shadow-lg border-2 border-primary/20">
               <User className="w-10 h-10 text-cosmic-400" />
             </div>
           )}
@@ -106,22 +124,30 @@ const ProfileMini: React.FC = () => {
             <h2 className="text-2xl font-bold text-white">
               {profile.username ? `@${profile.username}` : t("Stargazer", "星空观察者")}
             </h2>
+            
+            {/* Tag display with animations - only show if there are tags */}
             {profile.tags && profile.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
+              <motion.div 
+                className="mt-3 flex flex-wrap gap-2"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
                 {profile.tags.map(tag => (
-                  <span key={tag} className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs bg-primary/20 text-primary-foreground">
-                    {language === 'zh' ? translateProfileTag(tag) : tag}
-                  </span>
+                  <motion.div key={tag} variants={tagVariants}>
+                    <ProfileTag tag={tag} />
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             )}
           </div>
         </div>
+        
         <div className="flex justify-between mt-6">
           {!isFromMessages && user && user.id !== profileId && (
             <Button
               onClick={handleSendMessage}
-              className="w-full mr-2"
+              className="w-full mr-2 bg-gradient-to-r from-primary to-purple-600 hover:opacity-90 shadow-md"
             >
               {t("Send Message", "发送消息")}
             </Button>

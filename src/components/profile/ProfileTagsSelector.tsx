@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translateProfileTag } from "@/utils/linkTranslations";
+import ProfileTag from "./ProfileTag";
 
 const TAGS: { value: string; label: string }[] = [
   { value: "Professional Astronomer", label: "Professional Astronomer" },
@@ -29,20 +30,50 @@ const ProfileTagsSelector: React.FC<ProfileTagsSelectorProps> = ({
   const { t, language } = useLanguage();
   
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <Label className="block text-white mb-2">{t("Profile Tags", "个人标签")}</Label>
-      <div className="flex flex-wrap gap-4">
+      
+      {/* Preview of selected tags */}
+      {selectedTags.length > 0 && (
+        <div className="mb-4 p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30">
+          <p className="text-xs text-cosmic-400 mb-2">{t("Selected Tags", "已选标签")}:</p>
+          <div className="flex flex-wrap gap-2">
+            {selectedTags.map((tag) => (
+              <ProfileTag key={tag} tag={tag} />
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Tag selection */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {TAGS.map((tag) => (
-          <label key={tag.value} className="flex items-center gap-2 cursor-pointer">
+          <div 
+            key={tag.value}
+            className={`
+              flex items-center gap-2 p-2 rounded-md cursor-pointer
+              ${selectedTags.includes(tag.value) ? 'bg-cosmic-800/60 border border-primary/30' : 'hover:bg-cosmic-800/30'}
+              transition-all duration-200
+            `}
+            onClick={() => !disabled && onChange(tag.value, !selectedTags.includes(tag.value))}
+          >
             <Checkbox
               checked={selectedTags.includes(tag.value)}
               onCheckedChange={(checked) => onChange(tag.value, !!checked)}
               disabled={disabled}
+              className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
             />
-            <span className="text-sm text-cosmic-200">
-              {language === 'zh' ? translateProfileTag(tag.value) : tag.label}
-            </span>
-          </label>
+            <div className="flex flex-col">
+              <span className="text-sm text-cosmic-200">
+                {language === 'zh' ? translateProfileTag(tag.value) : tag.label}
+              </span>
+              
+              {/* Show the tag badge example */}
+              <div className="mt-1">
+                <ProfileTag tag={tag.value} size="sm" />
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     </div>

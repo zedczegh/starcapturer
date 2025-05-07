@@ -26,9 +26,9 @@ const Toaster = ({ theme = "system", ...props }: ToasterProps & { theme?: string
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-          success: "group-[.toaster]:bg-green-100/90 group-[.toaster]:text-green-900 dark:group-[.toaster]:bg-green-900/90 dark:group-[.toaster]:text-green-100",
-          error: "group-[.toaster]:bg-cosmic-800 group-[.toaster]:text-amber-200 dark:group-[.toaster]:bg-cosmic-800/90 dark:group-[.toaster]:text-amber-100", 
-          info: "group-[.toaster]:bg-blue-100/90 group-[.toaster]:text-blue-900 dark:group-[.toaster]:bg-blue-900/90 dark:group-[.toaster]:text-blue-100",
+          success: "group-[.toaster]:bg-green-900/80 group-[.toaster]:text-green-100 dark:group-[.toaster]:bg-green-900/90 dark:group-[.toaster]:text-green-100",
+          error: "group-[.toaster]:bg-cosmic-800/90 group-[.toaster]:text-amber-200 dark:group-[.toaster]:bg-cosmic-800/90 dark:group-[.toaster]:text-amber-100", 
+          info: "group-[.toaster]:bg-blue-900/80 group-[.toaster]:text-blue-100 dark:group-[.toaster]:bg-blue-900/90 dark:group-[.toaster]:text-blue-100",
         },
         duration: 5000, // Longer default duration for better readability
         // Custom styling
@@ -38,8 +38,8 @@ const Toaster = ({ theme = "system", ...props }: ToasterProps & { theme?: string
           fontWeight: 500,
           paddingBottom: "14px",
           paddingTop: "14px",
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
-          border: "1px solid rgba(var(--primary), 0.1)",
+          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.25)",
+          border: "1px solid rgba(var(--primary), 0.2)",
           animation: "slideIn 0.3s ease-out forwards"
         },
       }}
