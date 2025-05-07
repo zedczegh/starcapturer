@@ -38,25 +38,6 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
       return null;
     }
 
-    // Check if storage bucket exists
-    const { data: buckets, error: bucketsError } = await supabase
-      .storage
-      .listBuckets();
-      
-    if (bucketsError) {
-      console.error('Error checking buckets:', bucketsError);
-      toast.error('Storage error', { description: bucketsError.message });
-      return null;
-    }
-      
-    const bucketExists = buckets?.some(bucket => bucket.name === 'avatars');
-    
-    if (!bucketExists) {
-      console.error('Avatars bucket does not exist');
-      toast.error('Storage error', { description: 'Avatar storage not configured - please contact support' });
-      return null;
-    }
-    
     // Generate unique filename to prevent conflicts
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -87,6 +68,7 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
       .getPublicUrl(fileName);
       
     console.log('Avatar uploaded successfully, public URL:', publicUrl);
+    toast.success('Avatar updated successfully');
     return publicUrl;
   } catch (error: any) {
     console.error('Exception in uploadAvatar:', error);
