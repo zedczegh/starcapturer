@@ -153,78 +153,59 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       console.log("Found profile:", profileData);
       
-      // Now sign in directly with the profile ID and password
+      // Now try signing in with a predictable format email
+      const testEmail = `${username}-auth@astrosiqs.app`;
+      console.log("Trying to sign in with email:", testEmail);
+      
       const { data, error } = await supabase.auth.signInWithPassword({ 
-        email: `${username}-auth@astrosiqs.app`,  // Try a predictable format first
+        email: testEmail, 
         password
       });
       
-      // If that fails, try to get the associated email
+      // If that fails, try a few other formats
       if (error) {
-        console.log("First sign in attempt failed, trying to find exact email");
+        console.log("First sign in attempt failed, trying alternative formats");
         
-        // Get the user's auth details by user ID
-        const { data: authUser, error: userError } = await supabase
-          .from('auth.users')  // This is a workaround since we can't directly access auth.users
-          .select('email')
-          .eq('id', profileData.id)
-          .single();
+        // Try with timestamp format
+        // We need to try a few patterns since we don't know which one was used during signup
+        const signInAttempts = [
+          `${username}-%@astrosiqs.app`,
+          `${username}-auth@astrosiqs.app`,
+          `${username}@astrosiqs.app`
+        ];
         
-        if (userError || !authUser) {
-          console.error("Could not find user email:", userError);
-          // Try with our fake email pattern instead
-          const { data: allProfiles, error: searchError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('username', username);
-            
-          if (searchError || !allProfiles || allProfiles.length === 0) {
-            toast.error(t("Sign in failed", "登录失败"), {
-              description: t("Could not authenticate user", "无法验证用户"),
-              position: "top-center"
-            });
-            return;
-          }
+        let signedIn = false;
+        
+        for (const emailPattern of signInAttempts) {
+          if (signedIn) break;
           
-          // Try signing in with a wildcard email format
-          const { error: finalError } = await supabase.auth.signInWithPassword({ 
-            email: `${username}-%@astrosiqs.app`, 
+          console.log(`Trying login with pattern: ${emailPattern}`);
+          
+          const { error: attemptError } = await supabase.auth.signInWithPassword({ 
+            email: emailPattern, 
             password
           });
           
-          if (finalError) {
-            let errorMessage = "Please check your username and password";
-            if (finalError.message.includes("Invalid login")) {
-              errorMessage = "Invalid password for this username";
-            } else if (finalError.message.includes("Too many requests")) {
-              errorMessage = "Too many login attempts. Please try again in a few minutes";
-            }
-            
-            toast.error(t("Sign in failed", "登录失败"), {
-              description: t(errorMessage, "请检查您的用户名和密码"),
-              position: "top-center"
-            });
+          if (!attemptError) {
+            console.log("Login successful with pattern:", emailPattern);
+            signedIn = true;
+            break;
           }
-        } else {
-          // Now try again with the actual email
-          const { error: retryError } = await supabase.auth.signInWithPassword({
-            email: authUser.email,
-            password
-          });
+        }
+        
+        if (!signedIn) {
+          console.error("All login attempts failed");
+          let errorMessage = "Please check your username and password";
+          if (error.message.includes("Invalid login")) {
+            errorMessage = "Invalid password for this username";
+          } else if (error.message.includes("Too many requests")) {
+            errorMessage = "Too many login attempts. Please try again in a few minutes";
+          }
           
-          if (retryError) {
-            let errorMessage = "Please check your username and password";
-            if (retryError.message.includes("Invalid login")) {
-              errorMessage = "Invalid password for this username";
-            } else if (retryError.message.includes("Too many requests")) {
-              errorMessage = "Too many login attempts. Please try again in a few minutes";
-            }
-            
-            toast.error(t("Sign in failed", "登录失败"), {
-              description: t(errorMessage, "请检查您的用户名和密码"),
-              position: "top-center"
-            });
-          }
+          toast.error(t("Sign in failed", "登录失败"), {
+            description: t(errorMessage, "请检查您的用户名和密码"),
+            position: "top-center"
+          });
         }
       }
     } catch (error: any) {
