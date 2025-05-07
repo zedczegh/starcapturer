@@ -11,6 +11,7 @@ import ProfileLoader from '@/components/profile/ProfileLoader';
 import ProfileMain from '@/components/profile/ProfileMain';
 import { useProfile } from '@/hooks/profile/useProfile';
 import AboutFooter from '@/components/about/AboutFooter';
+import { uploadAvatar, upsertUserProfile, saveUserTags, fetchUserProfile } from '@/utils/profileUtils';
 
 interface ProfileFormValues {
   username: string;
@@ -34,10 +35,8 @@ const Profile = () => {
     uploadingAvatar,
     setUploadingAvatar,
     randomTip,
-    fetchProfile,
     tags,
-    setTags,
-    saveProfileTags
+    setTags
   } = useProfile();
 
   const { register, handleSubmit, setValue } = useForm<ProfileFormValues>({
@@ -57,8 +56,24 @@ const Profile = () => {
           navigate('/photo-points');
           return;
         }
-        await fetchProfile(session.user.id, setValue);
+
+        // Fetch profile data
+        const profileData = await fetchUserProfile(session.user.id);
+        
+        // Update form with fetched data
+        setValue('username', profileData.username || '');
+        setAvatarUrl(profileData.avatar_url);
+        setTags(profileData.tags);
+        
+        // Update profile state
+        setProfile({
+          username: profileData.username,
+          avatar_url: profileData.avatar_url,
+          date_of_birth: null,
+          tags: profileData.tags,
+        });
       } catch (error) {
+        console.error("Error loading profile:", error);
         setProfile({
           username: null,
           avatar_url: null,
@@ -72,7 +87,7 @@ const Profile = () => {
     };
 
     checkSession();
-  }, [navigate, t, setProfile, fetchProfile, setValue]);
+  }, [navigate, t, setProfile, setValue, setAvatarUrl, setTags]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -95,72 +110,43 @@ const Profile = () => {
       let newAvatarUrl = avatarUrl;
       if (avatarFile) {
         setUploadingAvatar(true);
-        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-        if (bucketsError) {
-          toast.error(t("Storage error", "存储错误"), { description: bucketsError.message });
-          setUploadingAvatar(false);
-          setSaving(false);
-          return;
-        }
-
-        const avatarsBucketExists = buckets.some(bucket => bucket.name === 'avatars');
-        if (!avatarsBucketExists) {
-          toast.error(t("Avatar upload not available", "头像上传功能不可用"), {
-            description: t("Storage not configured. Profile saved without avatar.", "存储未配置。个人资料已保存，但未包含头像。")
-          });
-        } else {
-          const fileExt = avatarFile.name.split('.').pop();
-          const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-          const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, avatarFile);
-          if (uploadError) {
-            toast.error(uploadError.message);
-            setUploadingAvatar(false);
-            setSaving(false);
-            return;
-          }
-          const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
-          newAvatarUrl = publicUrl;
-        }
+        newAvatarUrl = await uploadAvatar(user.id, avatarFile);
         setUploadingAvatar(false);
+        
+        if (!newAvatarUrl) {
+          setSaving(false);
+          return; // Error already handled in uploadAvatar
+        }
       }
 
-      // Check if profile exists first
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single();
+      // Upsert profile
+      const profileSuccess = await upsertUserProfile(user.id, {
+        username: formData.username,
+        avatar_url: newAvatarUrl,
+      });
 
-      if (existingProfile) {
-        // Update existing profile
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            username: formData.username,
-            avatar_url: newAvatarUrl,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-        
-        if (updateError) throw updateError;
-      } else {
-        // Create new profile
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            username: formData.username,
-            avatar_url: newAvatarUrl,
-            updated_at: new Date().toISOString()
-          });
-        
-        if (insertError) throw insertError;
+      if (!profileSuccess) {
+        toast.error(t("Update failed", "更新失败"), { description: t("Could not update profile", "无法更新个人资料") });
+        setSaving(false);
+        return;
       }
 
       // Save tags
-      await saveProfileTags(user.id, tags);
-
-      toast.success(t("Profile updated successfully", "个人资料更新成功"));
+      const tagsSuccess = await saveUserTags(user.id, tags);
+      
+      if (!tagsSuccess) {
+        toast.error(t("Tags update failed", "标签更新失败"));
+      } else {
+        toast.success(t("Profile updated successfully", "个人资料更新成功"));
+      }
+      
+      // Update local state with new data
+      setProfile(prev => ({
+        ...prev,
+        username: formData.username,
+        avatar_url: newAvatarUrl,
+        tags,
+      }));
     } catch (error: any) {
       toast.error(t("Update failed", "更新失败"), { description: error.message });
     } finally {

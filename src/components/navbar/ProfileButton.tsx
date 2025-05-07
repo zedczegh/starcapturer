@@ -8,9 +8,9 @@ import AuthDialog from '../auth/AuthDialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import ProfileDropdownMenu from './ProfileDropdownMenu';
 import { motion, AnimatePresence } from 'framer-motion';
+import { fetchUserProfile } from '@/utils/profileUtils';
 
 const ProfileButton = () => {
   const { user, signOut } = useAuth();
@@ -22,18 +22,14 @@ const ProfileButton = () => {
 
   useEffect(() => {
     if (user) {
-      const fetchProfile = async () => {
-        const { data } = await supabase
-          .from('profiles')
-          .select('avatar_url, username')
-          .eq('id', user.id)
-          .single();
-        if (data) {
-          if (data.avatar_url) setAvatarUrl(data.avatar_url);
-          setProfile({ username: data.username || null });
+      const loadProfile = async () => {
+        const profileData = await fetchUserProfile(user.id);
+        if (profileData) {
+          if (profileData.avatar_url) setAvatarUrl(profileData.avatar_url);
+          setProfile({ username: profileData.username });
         }
       };
-      fetchProfile();
+      loadProfile();
     }
   }, [user]);
 

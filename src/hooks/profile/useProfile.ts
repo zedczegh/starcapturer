@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { getRandomAstronomyTip } from '@/utils/astronomyTips';
+import { fetchUserProfile } from '@/utils/profileUtils';
 
 interface Profile {
   username: string | null;
@@ -20,47 +20,25 @@ export function useProfile() {
 
   // Fetch profile, including tags
   const fetchProfile = useCallback(async (userId: string, setValue: any) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('username, avatar_url')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (!error && data) {
-      // Fetch tags
-      const { data: tagsData } = await supabase
-        .from('profile_tags')
-        .select('tag')
-        .eq('user_id', userId);
-
-      const tagArr = tagsData ? tagsData.map(t => t.tag) : [];
+    try {
+      const profileData = await fetchUserProfile(userId);
+      
       setProfile({
-        username: data.username || '',
-        avatar_url: data.avatar_url,
+        username: profileData.username || '',
+        avatar_url: profileData.avatar_url,
         date_of_birth: null,
-        tags: tagArr,
+        tags: profileData.tags,
       });
-      setValue('username', data.username || '');
-      setTags(tagArr);
-      setAvatarUrl(data.avatar_url);
+      
+      setValue('username', profileData.username || '');
+      setTags(profileData.tags);
+      setAvatarUrl(profileData.avatar_url);
+      
+      return { data: { username: profileData.username, avatar_url: profileData.avatar_url }, error: null };
+    } catch (error) {
+      console.error("Error in fetchProfile:", error);
+      return { data: null, error };
     }
-    return { data, error };
-  }, []);
-
-  // Save profile tags
-  const saveProfileTags = useCallback(async (userId: string, newTags: string[]) => {
-    // Remove all current tags for this user, then insert selected ones
-    await supabase.from('profile_tags').delete().eq('user_id', userId);
-    if (newTags.length === 0) return;
-    const tagRows = newTags.map((tag) => ({
-      user_id: userId,
-      tag,
-    }));
-    await supabase.from('profile_tags').insert(tagRows);
-    setTags(newTags);
-    setProfile((prev) =>
-      prev ? { ...prev, tags: newTags } : prev
-    );
   }, []);
 
   return {
@@ -77,6 +55,5 @@ export function useProfile() {
     fetchProfile,
     tags,
     setTags,
-    saveProfileTags,
   }
 }

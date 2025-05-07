@@ -1,7 +1,6 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +8,7 @@ import { User } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translateProfileTag } from "@/utils/linkTranslations";
 import { useMessageNavigation } from "@/hooks/useMessageNavigation";
+import { fetchUserProfile } from "@/utils/profileUtils";
 
 interface ProfileData {
   username: string | null;
@@ -31,36 +31,19 @@ const ProfileMini: React.FC = () => {
 
   useEffect(() => {
     if (!profileId) return;
-    const fetchData = async () => {
+    
+    const loadProfile = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("username, avatar_url")
-          .eq("id", profileId)
-          .maybeSingle();
-          
-        if (!data || error) {
-          console.error("Error fetching profile:", error);
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
+        const profileData = await fetchUserProfile(profileId);
         
-        const { data: tagRows, error: tagError } = await supabase
-          .from("profile_tags")
-          .select("tag")
-          .eq("user_id", profileId);
-          
-        if (tagError) {
-          console.error("Error fetching profile tags:", tagError);
+        if (profileData) {
+          setProfile({
+            username: profileData.username || "Stargazer",
+            avatar_url: profileData.avatar_url,
+            tags: profileData.tags || [],
+          });
         }
-        
-        setProfile({
-          username: data.username || "Stargazer",
-          avatar_url: data.avatar_url,
-          tags: tagRows ? tagRows.map((t) => t.tag) : [],
-        });
       } catch (err) {
         console.error("Exception fetching profile data:", err);
         setProfile(null);
@@ -68,7 +51,8 @@ const ProfileMini: React.FC = () => {
         setLoading(false);
       }
     };
-    fetchData();
+    
+    loadProfile();
   }, [profileId]);
 
   if (loading) {
