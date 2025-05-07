@@ -3,7 +3,6 @@ import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import ProfileAvatar from './ProfileAvatar';
 import AstronomyTip from './AstronomyTip';
-import { Textarea } from '@/components/ui/textarea';
 
 interface ProfileHeaderProps {
   username: string;
@@ -48,18 +47,6 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       </div>
       
       <AstronomyTip tip={astronomyTip} />
-
-      {/* Bio section */}
-      <div className="mt-4 bg-gradient-to-r from-cosmic-800/50 to-cosmic-900/40 rounded-lg p-4 border border-cosmic-700/30 backdrop-blur-sm">
-        <h3 className="text-cosmic-100 font-medium mb-2">{t("About Me", "关于我")}</h3>
-        <Textarea
-          className="bg-cosmic-800/30 border-cosmic-700/40 text-cosmic-100 placeholder:text-cosmic-400/60 min-h-[100px] resize-y"
-          placeholder={t("Share a bit about yourself, your interests in astronomy, or your favorite celestial objects to observe...", "分享一些关于您自己的信息，您对天文学的兴趣，或者您最喜欢观察的天体物体...")}
-          defaultValue={bio || ""}
-          id="bio"
-          name="bio"
-        />
-      </div>
     </div>
   );
 };
