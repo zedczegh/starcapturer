@@ -1,7 +1,8 @@
+
 import { useMemo } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getSiqsScore } from '@/utils/siqsHelpers';
+import { getSiqsScore, formatSiqsScore } from '@/utils/siqsHelpers';
 import { getLocationMarker } from '../MarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 

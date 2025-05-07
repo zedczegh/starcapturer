@@ -12,9 +12,9 @@ import { useLocationDetailsService } from './header/LocationDetailsService';
 
 interface LocationDetailsHeaderProps {
   name: string;
-  latitude: number;
-  longitude: number;
-  timestamp: string;
+  latitude?: number;
+  longitude?: number;
+  timestamp?: string;
 }
 
 const LocationDetailsHeader = ({ 
@@ -30,10 +30,13 @@ const LocationDetailsHeader = ({
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Early return if no coordinates are provided
+  const hasValidCoordinates = latitude !== undefined && longitude !== undefined;
+  
   // Use the location details service to get enhanced location name
   const { enhancedName } = useLocationDetailsService({
-    latitude,
-    longitude,
+    latitude: latitude || 0,
+    longitude: longitude || 0,
     language
   });
 
@@ -43,7 +46,7 @@ const LocationDetailsHeader = ({
   // Check if location is already saved by user
   useEffect(() => {
     const checkIfSaved = async () => {
-      if (!user) {
+      if (!user || !hasValidCoordinates) {
         setIsSaved(false);
         return;
       }
@@ -68,11 +71,16 @@ const LocationDetailsHeader = ({
     };
 
     checkIfSaved();
-  }, [user, latitude, longitude]);
+  }, [user, latitude, longitude, hasValidCoordinates]);
 
   const handleToggleSave = async () => {
     if (!user) {
       setShowAuthDialog(true);
+      return;
+    }
+
+    if (!hasValidCoordinates) {
+      toast.error(t("Invalid location coordinates", "位置坐标无效"));
       return;
     }
 
@@ -97,7 +105,7 @@ const LocationDetailsHeader = ({
           name: displayName, // Use the enhanced name for saving
           latitude,
           longitude,
-          timestamp
+          timestamp: timestamp || new Date().toISOString()
         });
         setIsSaved(true);
       }
@@ -117,15 +125,17 @@ const LocationDetailsHeader = ({
           variant="ghost"
           size="sm"
           onClick={handleToggleSave}
-          disabled={isLoading}
+          disabled={isLoading || !hasValidCoordinates}
           className={isSaved ? "text-yellow-400 hover:text-yellow-500" : "text-muted-foreground hover:text-yellow-400"}
         >
           <Star className="h-5 w-5" fill={isSaved ? "currentColor" : "none"} />
         </Button>
       </div>
-      <div className="text-sm text-muted-foreground">
-        {latitude.toFixed(6)}, {longitude.toFixed(6)}
-      </div>
+      {hasValidCoordinates && (
+        <div className="text-sm text-muted-foreground">
+          {latitude.toFixed(6)}, {longitude.toFixed(6)}
+        </div>
+      )}
       <AuthDialog 
         open={showAuthDialog} 
         onOpenChange={setShowAuthDialog} 

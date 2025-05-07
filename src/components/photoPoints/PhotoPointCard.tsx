@@ -1,4 +1,3 @@
-
 import React from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -30,7 +29,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const certInfo = React.useMemo(() => getCertificationInfo(point), [point]);
-
+  
   const { displayName } = useDisplayName({
     location: point,
     language,
@@ -108,4 +107,3 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
 };
 
 export default PhotoPointCard;
-

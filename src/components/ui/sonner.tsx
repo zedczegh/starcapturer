@@ -26,9 +26,11 @@ const Toaster = ({ theme = "system", ...props }: ToasterProps & { theme?: string
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-          success: "group-[.toaster]:bg-emerald-100/90 group-[.toaster]:text-emerald-900 dark:group-[.toaster]:bg-emerald-900/90 dark:group-[.toaster]:text-emerald-100",
-          error: "group-[.toaster]:bg-cosmic-800/90 group-[.toaster]:text-amber-200 dark:group-[.toaster]:bg-cosmic-800/90 dark:group-[.toaster]:text-amber-100", 
-          info: "group-[.toaster]:bg-blue-100/90 group-[.toaster]:text-blue-900 dark:group-[.toaster]:bg-blue-900/90 dark:group-[.toaster]:text-blue-100",
+          // Enhanced color scheme to match SIQS badges
+          success: "group-[.toaster]:bg-green-500/20 group-[.toaster]:text-green-400 group-[.toaster]:border group-[.toaster]:border-green-500/40",
+          error: "group-[.toaster]:bg-red-500/20 group-[.toaster]:text-red-300 group-[.toaster]:border group-[.toaster]:border-red-500/40",
+          info: "group-[.toaster]:bg-yellow-500/20 group-[.toaster]:text-yellow-300 group-[.toaster]:border group-[.toaster]:border-yellow-500/40",
+          warning: "group-[.toaster]:bg-orange-500/20 group-[.toaster]:text-orange-300 group-[.toaster]:border group-[.toaster]:border-orange-500/40",
         },
         duration: 5000, // Longer default duration for better readability
         // Custom styling
@@ -38,8 +40,7 @@ const Toaster = ({ theme = "system", ...props }: ToasterProps & { theme?: string
           fontWeight: 500,
           paddingBottom: "14px",
           paddingTop: "14px",
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
-          border: "1px solid rgba(var(--primary), 0.1)",
+          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.25)",
         },
       }}
       {...props}
