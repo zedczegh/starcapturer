@@ -39,7 +39,14 @@ const SpotHeader: React.FC<SpotHeaderProps> = ({
 
   const handleMessageCreator = () => {
     if (!user || !spot.user_id) return;
-    navigate('/messages', { state: { selectedUser: spot.user_id } });
+    
+    // Navigate to messages page with state information about the selected user
+    navigate('/messages', { 
+      state: { 
+        selectedUserId: spot.user_id,
+        selectedUsername: creatorProfile?.username || 'User'
+      } 
+    });
   };
 
   const renderCreatorAvatar = () => {

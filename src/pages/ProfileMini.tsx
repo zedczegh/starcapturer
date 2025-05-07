@@ -80,9 +80,15 @@ const ProfileMini: React.FC = () => {
   }
 
   const handleSendMessage = () => {
-    if (profileId) {
-      navigate(`/messages/${profileId}`);
-    }
+    if (!profileId) return;
+    
+    // Navigate directly to messages page with the profileId
+    navigate(`/messages`, { 
+      state: { 
+        selectedUserId: profileId,
+        selectedUsername: profile.username
+      } 
+    });
   };
 
   return (

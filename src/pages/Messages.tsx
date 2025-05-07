@@ -1,7 +1,7 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion"; // Add this import
+import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +11,7 @@ import { useMessaging } from "@/hooks/useMessaging";
 import ConversationList from "@/components/messages/ConversationList";
 import MessageList from "@/components/messages/MessageList";
 import MessageInput from "@/components/messages/MessageInput";
+import { fetchUserProfile } from "@/utils/profileUtils";
 
 interface ConversationPartner {
   id: string;
@@ -37,6 +38,61 @@ const Messages = () => {
     fetchMessages,
     sendMessage,
   } = useMessaging();
+
+  // Handle incoming user from navigation
+  useEffect(() => {
+    const initializeFromNavigation = async () => {
+      if (!user || !location.state?.selectedUserId) return;
+      
+      const selectedUserId = location.state.selectedUserId;
+      const selectedUsername = location.state.selectedUsername;
+      
+      // Look for the conversation in existing conversations
+      const existingConversation = conversations.find(c => c.id === selectedUserId);
+      
+      if (existingConversation) {
+        // If the conversation already exists, select it
+        setActiveConversation(existingConversation);
+        fetchMessages(existingConversation.id);
+      } else if (selectedUserId) {
+        // If it's a new conversation, create a placeholder and fetch profile data
+        try {
+          // First try to use the passed username if available
+          let username = selectedUsername || null;
+          let avatar_url = null;
+          
+          // If no username was provided in navigation state, fetch the profile
+          if (!username) {
+            const profileData = await fetchUserProfile(selectedUserId);
+            if (profileData) {
+              username = profileData.username || "User";
+              avatar_url = profileData.avatar_url;
+            }
+          }
+          
+          // Create a new conversation object
+          const newConversation: ConversationPartner = {
+            id: selectedUserId,
+            username: username || "User",
+            avatar_url: avatar_url,
+            last_message: "",
+            last_message_time: new Date().toISOString(),
+            unread_count: 0
+          };
+          
+          setActiveConversation(newConversation);
+          fetchMessages(selectedUserId);
+        } catch (error) {
+          console.error("Error fetching profile for new conversation:", error);
+        }
+      }
+      
+      // Clear the location state to prevent re-initialization
+      window.history.replaceState({}, document.title);
+    };
+    
+    initializeFromNavigation();
+  }, [user, location.state, conversations]);
 
   const handleSelectConversation = (conversation: ConversationPartner) => {
     setActiveConversation(conversation);
