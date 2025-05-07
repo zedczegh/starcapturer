@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ensureProfileExists } from '@/components/profile/tags/ProfileUtils';
 import { UserTag } from '@/components/profile/tags/UserTagsTypes';
@@ -39,7 +38,6 @@ export function useUserTags() {
       
       if (error) {
         console.error("Error fetching user tags:", error);
-        toast.error(t("Failed to load tags", "加载标签失败"));
         return;
       }
       
@@ -60,7 +58,7 @@ export function useUserTags() {
     } finally {
       setLoading(false);
     }
-  }, [user, t]);
+  }, [user]);
 
   // Add a new tag for current user or specified user
   const addUserTag = useCallback(async (userId: string, tagName: string) => {
@@ -69,25 +67,7 @@ export function useUserTags() {
         return null;
       }
       
-      // Verify user is logged in
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error(t("You must be logged in to add tags", "您必须登录才能添加标签"));
-        return null;
-      }
-      
-      // Verify this is the current user's profile
-      if (session.user.id !== userId) {
-        toast.error(t("You can only update your own profile", "您只能更新自己的个人资料"));
-        return null;
-      }
-      
-      console.log(`Adding tag "${tagName}" for user:`, userId);
-      
-      // First ensure the user has a profile
-      await ensureProfileExists(userId);
-      
-      // Check if tag already exists to avoid duplicates
+      // Check if tag already exists
       const { data: existingTags } = await supabase
         .from('profile_tags')
         .select('id, tag')
@@ -99,6 +79,13 @@ export function useUserTags() {
         return existingTags[0];
       }
       
+      // First ensure the user has a profile
+      const profileExists = await ensureProfileExists(userId);
+      if (!profileExists) {
+        console.error("Failed to ensure profile exists");
+        return null;
+      }
+      
       // Add new tag
       const { data, error } = await supabase
         .from('profile_tags')
@@ -108,8 +95,7 @@ export function useUserTags() {
       
       if (error) {
         console.error("Error adding user tag:", error);
-        toast.error(t("Failed to add tag", "添加标签失败"));
-        throw error;
+        return null;
       }
       
       if (userId === user?.id) {
@@ -127,32 +113,11 @@ export function useUserTags() {
       console.error("Error in addUserTag:", err);
       return null;
     }
-  }, [user, t]);
+  }, [user]);
 
   // Remove a tag
   const removeUserTag = useCallback(async (tagId: string) => {
     try {
-      // Get the tag information to verify ownership
-      const { data: tagData, error: tagError } = await supabase
-        .from('profile_tags')
-        .select('user_id')
-        .eq('id', tagId)
-        .single();
-        
-      if (tagError) {
-        console.error("Error getting tag info:", tagError);
-        return false;
-      }
-      
-      // Check if current user owns this tag
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session || session.user.id !== tagData.user_id) {
-        toast.error(t("You can only remove your own tags", "您只能删除自己的标签"));
-        return false;
-      }
-      
-      console.log("Removing tag with ID:", tagId);
-      
       const { error } = await supabase
         .from('profile_tags')
         .delete()
@@ -160,7 +125,6 @@ export function useUserTags() {
       
       if (error) {
         console.error("Error removing user tag:", error);
-        toast.error(t("Failed to remove tag", "删除标签失败"));
         return false;
       }
       
@@ -171,7 +135,7 @@ export function useUserTags() {
       console.error("Error in removeUserTag:", err);
       return false;
     }
-  }, [t]);
+  }, []);
 
   // Load tags for current user on mount
   useEffect(() => {

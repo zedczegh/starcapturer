@@ -26,81 +26,8 @@ import CommunityAstroSpots from './pages/CommunityAstroSpots';
 import ProfileMini from "./pages/ProfileMini";
 import Messages from './pages/Messages';
 import './App.css';
-import { toast } from 'sonner';
 
 const App = () => {
-  // Check if required buckets exist, create if they don't
-  useEffect(() => {
-    const checkAndCreateBuckets = async () => {
-      try {
-        console.log("Checking if required buckets exist...");
-        const { data: buckets, error } = await supabase.storage.listBuckets();
-        
-        if (error) {
-          console.error('Error listing buckets:', error);
-          return;
-        }
-        
-        const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
-        
-        if (!avatarsBucketExists) {
-          // Create the avatars bucket if it doesn't exist
-          console.log("Avatars bucket doesn't exist, creating...");
-          try {
-            const { error: bucketError } = await supabase.storage.createBucket('avatars', {
-              public: true, // Make it publicly accessible
-              fileSizeLimit: 2 * 1024 * 1024 // 2MB limit
-            });
-            
-            if (bucketError) {
-              console.error("Error creating avatars bucket:", bucketError);
-              toast.error("Error creating storage bucket. Some features may not work properly.");
-            } else {
-              console.log('Created avatars bucket successfully');
-              
-              // Set public bucket policy
-              const { error: policyError } = await supabase.storage.from('avatars').createSignedUrl('test-permission.txt', 3600);
-              if (policyError && !policyError.message.includes('not found')) {
-                console.error("Error testing bucket permissions:", policyError);
-              }
-            }
-          } catch (err) {
-            console.error("Error creating bucket:", err);
-            // Just log the error and continue, as the bucket might already exist
-            // but not be visible due to permissions
-          }
-        } else {
-          console.log("Avatars bucket already exists");
-        }
-        
-        // Handle the user_tags bucket similarly
-        const userTagsBucketExists = buckets?.some(bucket => bucket.name === 'user_tags');
-        
-        if (!userTagsBucketExists) {
-          console.log("Creating user_tags bucket...");
-          try {
-            const { error: bucketError } = await supabase.storage.createBucket('user_tags', {
-              public: true,
-              fileSizeLimit: 1024 * 1024 * 1 // 1MB limit
-            });
-            
-            if (bucketError) {
-              console.error("Error creating user_tags bucket:", bucketError);
-            } else {
-              console.log('Created user_tags bucket successfully');
-            }
-          } catch (err) {
-            console.error("Error creating user_tags bucket:", err);
-          }
-        }
-      } catch (error) {
-        console.error('Error checking/creating buckets:', error);
-      }
-    };
-    
-    checkAndCreateBuckets();
-  }, []);
-
   return (
     <HelmetProvider>
       <ThemeProvider>

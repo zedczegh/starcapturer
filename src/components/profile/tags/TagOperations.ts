@@ -7,6 +7,7 @@ import { UserTag } from './UserTagsTypes';
 export async function addTagForUser(uid: string, tagName: string): Promise<any> {
   try {
     if (!await ensureProfileExists(uid)) {
+      console.error("Failed to ensure profile exists");
       return null;
     }
     
@@ -18,6 +19,7 @@ export async function addTagForUser(uid: string, tagName: string): Promise<any> 
       .eq('tag', tagName);
       
     if (existingTags && existingTags.length > 0) {
+      console.log(`Tag "${tagName}" already exists for user ${uid}`);
       return existingTags[0];
     }
     
@@ -29,12 +31,13 @@ export async function addTagForUser(uid: string, tagName: string): Promise<any> 
       .single();
       
     if (error) {
-      throw error;
+      console.error("Error adding tag:", error);
+      return null;
     }
     
     return data;
   } catch (err) {
-    console.error("Error adding tag directly:", err);
+    console.error("Error adding tag:", err);
     return null;
   }
 }
@@ -48,12 +51,13 @@ export async function removeTagForUser(tagId: string): Promise<boolean> {
       .eq('id', tagId);
       
     if (error) {
-      throw error;
+      console.error("Error removing tag:", error);
+      return false;
     }
     
     return true;
   } catch (err) {
-    console.error("Error removing tag directly:", err);
+    console.error("Error removing tag:", err);
     return false;
   }
 }
@@ -61,10 +65,14 @@ export async function removeTagForUser(tagId: string): Promise<boolean> {
 // Fetch tags for a specific user
 export async function fetchTagsForUser(userId: string): Promise<UserTag[]> {
   try {
-    console.log("Directly fetching tags for user:", userId);
+    console.log("Fetching tags for user:", userId);
     
     // Ensure the user has a profile
-    await ensureProfileExists(userId);
+    const profileExists = await ensureProfileExists(userId);
+    if (!profileExists) {
+      console.error("Profile doesn't exist for user:", userId);
+      return [];
+    }
     
     // Now fetch tags
     const { data: tagData, error } = await supabase
@@ -72,7 +80,10 @@ export async function fetchTagsForUser(userId: string): Promise<UserTag[]> {
       .select('id, tag')
       .eq('user_id', userId);
       
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching tags:", error);
+      return [];
+    }
     
     if (tagData) {
       const fetchedTags = tagData.map(item => ({
@@ -81,13 +92,13 @@ export async function fetchTagsForUser(userId: string): Promise<UserTag[]> {
         icon_url: null
       }));
       
-      console.log(`Directly fetched ${fetchedTags.length} tags for user:`, userId);
+      console.log(`Fetched ${fetchedTags.length} tags for user:`, userId);
       return fetchedTags;
     }
     
     return [];
   } catch (err) {
-    console.error("Error directly fetching tags:", err);
+    console.error("Error fetching tags:", err);
     return [];
   }
 }

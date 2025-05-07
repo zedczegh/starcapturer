@@ -24,13 +24,7 @@ export async function ensureProfileExists(uid: string): Promise<boolean> {
     }
     
     if (!data) {
-      // Only allow creating a profile for the current user
-      if (session.user.id !== uid) {
-        console.error("Cannot create profile for another user");
-        return false;
-      }
-      
-      // Create profile if doesn't exist
+      // Create profile if it doesn't exist
       const { error: createError } = await supabase
         .from('profiles')
         .insert([{ 
@@ -45,6 +39,8 @@ export async function ensureProfileExists(uid: string): Promise<boolean> {
       }
       
       console.log("Created new profile for user:", uid);
+    } else {
+      console.log("Profile exists for user:", uid);
     }
     
     return true;

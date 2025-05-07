@@ -10,21 +10,22 @@ export async function ensureProfileExists(userId: string) {
       .from('profiles')
       .select('id')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
     
     if (fetchError && fetchError.code !== 'PGRST116') {
       console.error("Error fetching profile:", fetchError);
       
       if (fetchError.message?.includes('JWT expired')) {
+        // Only show critical auth errors
         toast.error('Your session has expired. Please log in again.');
-        // Force refresh auth state
         await supabase.auth.refreshSession();
         const { data } = await supabase.auth.getSession();
         if (!data.session) {
           throw new Error('Authentication required');
         }
       } else {
-        throw fetchError;
+        // Log error but don't display toast
+        console.error(fetchError);
       }
     }
     
@@ -35,13 +36,7 @@ export async function ensureProfileExists(userId: string) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.error("User not authenticated");
-        throw new Error('Authentication required');
-      }
-      
-      // Verify this is the current user's profile
-      if (session.user.id !== userId) {
-        console.error("Cannot create profile for another user");
-        throw new Error('Unauthorized operation');
+        return false;
       }
       
       const { error: insertError } = await supabase
@@ -54,10 +49,7 @@ export async function ensureProfileExists(userId: string) {
       
       if (insertError) {
         console.error("Error creating profile:", insertError);
-        if (insertError.message.includes('violates row-level security policy')) {
-          throw new Error('Permission denied - Row Level Security restriction');
-        }
-        throw insertError;
+        return false;
       }
       
       console.log("Profile created successfully for user:", userId);
@@ -68,22 +60,26 @@ export async function ensureProfileExists(userId: string) {
     return true;
   } catch (error) {
     console.error("Error in ensureProfileExists:", error);
-    throw error;
+    return false;
   }
 }
 
 // Fetch user profile
 export async function fetchUserProfile(userId: string) {
   try {
-    await ensureProfileExists(userId);
+    const profileExists = await ensureProfileExists(userId);
+    if (!profileExists) {
+      console.error("Failed to ensure profile exists");
+      return { data: null, error: new Error("Failed to ensure profile exists") };
+    }
     
     return await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
   } catch (error) {
     console.error("Error in fetchUserProfile:", error);
-    throw error;
+    return { data: null, error };
   }
 }

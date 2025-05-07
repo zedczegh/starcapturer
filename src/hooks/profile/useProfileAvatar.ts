@@ -25,26 +25,7 @@ export function useProfileAvatar() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.error("User is not authenticated");
-        toast.error(t("Authentication required to upload avatar", "需要认证才能上传头像"));
         return null;
-      }
-      
-      // First ensure the bucket exists
-      try {
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const bucketExists = buckets?.some(bucket => bucket.name === 'avatars');
-        
-        if (!bucketExists) {
-          console.log("Creating avatars bucket...");
-          await supabase.storage.createBucket('avatars', {
-            public: true,
-            fileSizeLimit: 2 * 1024 * 1024 // 2MB limit
-          });
-          console.log("Avatars bucket created successfully");
-        }
-      } catch (err) {
-        console.error("Bucket check error:", err);
-        // Continue anyway as the bucket might exist but not be visible due to permissions
       }
       
       // Create a unique filename to avoid cache issues
@@ -63,10 +44,12 @@ export function useProfileAvatar() {
       
       if (error) {
         console.error("Avatar upload error:", error);
-        if (error.message.includes('Permission denied')) {
-          toast.error(t("Permission denied. Please contact an administrator.", "权限被拒绝，请联系管理员。"));
-        } else {
-          toast.error(t("Failed to upload avatar. Please try again.", "上传头像失败，请重试。"));
+        
+        // Don't show error toasts for common RLS/permission issues
+        if (!error.message.includes('Permission denied') && 
+            !error.message.includes('violates row-level security policy') &&
+            !error.message.includes('does not exist')) {
+          console.error("Avatar upload failed with unexpected error:", error.message);
         }
         return null;
       }
@@ -80,20 +63,15 @@ export function useProfileAvatar() {
       
       if (!publicUrlData) {
         console.error("Failed to get public URL for uploaded avatar");
-        toast.error(t("Failed to process avatar", "处理头像失败"));
         return null;
       }
       
       const publicUrl = publicUrlData.publicUrl;
       console.log("Avatar public URL:", publicUrl);
       
-      // Show success toast for avatar upload
-      toast.success(t("Avatar uploaded successfully", "头像上传成功"));
-      
       return publicUrl;
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
-      toast.error(t("Avatar upload failed", "头像上传失败") + `: ${error.message}`);
       return null;
     } finally {
       setUploadingAvatar(false);
