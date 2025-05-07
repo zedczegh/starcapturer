@@ -56,17 +56,9 @@ const App = () => {
           } else {
             console.log('Created avatars bucket successfully');
             
-            // Set up public access policy
-            try {
-              await supabase.rpc('create_storage_policy', {
-                bucket_id: 'avatars',
-                policy_name: 'Avatar images are publicly accessible',
-                definition: "bucket_id = 'avatars'"
-              });
-              console.log("Created public access policy for avatars");
-            } catch (policyError) {
-              console.log("Policy may already exist:", policyError);
-            }
+            // Note: We cannot directly create storage policies from the client
+            // Policies must be created via SQL migrations or in the Supabase dashboard
+            console.log("Avatar bucket created - policies should be configured via migrations");
           }
         } else {
           console.log("Avatars bucket already exists");
