@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { User } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { translateProfileTag } from "@/utils/linkTranslations";
 import { useMessageNavigation } from "@/hooks/useMessageNavigation";
 import { fetchUserProfile } from "@/utils/profileUtils";
 import type { ProfileData } from "@/utils/profile/profileCore";
 import { toast } from "sonner";
+import ProfileTag from "@/components/profile/ProfileTag";
+import { motion } from "framer-motion";
 
 const ProfileMini: React.FC = () => {
   const { id: profileId } = useParams();
@@ -91,6 +92,22 @@ const ProfileMini: React.FC = () => {
     });
   };
 
+  // Animation variants for staggered tag animations
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950 flex flex-col items-center px-4 pt-20">
       <Card className="max-w-xl w-full mx-auto mt-4 glassmorphism p-8 rounded-xl shadow-glow">
@@ -107,13 +124,18 @@ const ProfileMini: React.FC = () => {
               {profile.username ? `@${profile.username}` : t("Stargazer", "星空观察者")}
             </h2>
             {profile.tags && profile.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {profile.tags.map(tag => (
-                  <span key={tag} className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs bg-primary/20 text-primary-foreground">
-                    {language === 'zh' ? translateProfileTag(tag) : tag}
-                  </span>
+              <motion.div 
+                className="mt-2 flex flex-wrap gap-2"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                {profile.tags.map((tag, index) => (
+                  <motion.div key={tag} variants={itemVariants}>
+                    <ProfileTag tag={tag} size="sm" />
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             )}
           </div>
         </div>
