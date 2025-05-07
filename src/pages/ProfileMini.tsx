@@ -86,9 +86,9 @@ const ProfileMini: React.FC = () => {
       <Card className="max-w-xl w-full mx-auto mt-4 glassmorphism p-8 rounded-xl shadow-glow">
         <div className="flex gap-4 items-center mb-8">
           {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt="avatar" className="w-20 h-20 rounded-full border-2 border-primary shadow" />
+            <img src={profile.avatar_url} alt="avatar" className="w-20 h-20 rounded-full object-cover shadow-lg" />
           ) : (
-            <div className="w-20 h-20 flex items-center justify-center rounded-full bg-cosmic-800 border-2 border-cosmic-700 shadow-glow">
+            <div className="w-20 h-20 flex items-center justify-center rounded-full bg-cosmic-800/60 shadow-lg">
               <User className="w-10 h-10 text-cosmic-400" />
             </div>
           )}

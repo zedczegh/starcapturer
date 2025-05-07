@@ -28,7 +28,7 @@ const ProfileAvatar = ({
             <img
               src={avatarUrl}
               alt="Profile"
-              className="w-full h-full rounded-full object-cover border-2 border-primary shadow-glow"
+              className="w-full h-full rounded-full object-cover border-2 border-primary/30 shadow-lg"
             />
             <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <button 
@@ -42,7 +42,7 @@ const ProfileAvatar = ({
             </div>
           </div>
         ) : (
-          <div className="w-full h-full rounded-full bg-cosmic-800 border-2 border-cosmic-700 shadow-glow flex items-center justify-center">
+          <div className="w-full h-full rounded-full bg-cosmic-800/60 flex items-center justify-center shadow-lg">
             <User className="w-12 h-12 text-cosmic-400" />
           </div>
         )}

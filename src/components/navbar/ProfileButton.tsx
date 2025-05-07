@@ -100,14 +100,14 @@ const ProfileButton = () => {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="relative rounded-full p-0 border border-accent/40 hover:border-primary shadow-glow focus:ring-2 focus:ring-primary group transition-all duration-300" 
+              className="relative rounded-full p-0 hover:bg-transparent focus:ring-2 focus:ring-primary" 
               aria-label="Profile"
             >
               <Avatar className="h-8 w-8 transition-transform duration-300 group-hover:scale-105">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
                 ) : (
-                  <AvatarFallback className="bg-primary/10 text-primary">
+                  <AvatarFallback className="bg-cosmic-800/60 text-cosmic-400">
                     {user.email?.[0]?.toUpperCase() || "?"}
                   </AvatarFallback>
                 )}
