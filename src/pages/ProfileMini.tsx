@@ -113,7 +113,7 @@ const ProfileMini: React.FC = () => {
     const spotsWithRealtimeSiqs = userAstroSpots.map(spot => ({
       ...spot,
       realTimeSiqs: realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs,
-      timestamp: spot.created_at // Ensure timestamp is properly defined
+      timestamp: spot.created_at // Use created_at as the timestamp property
     }));
     
     // Sort using the utility function
@@ -249,7 +249,7 @@ const ProfileMini: React.FC = () => {
                     latitude={spot.latitude}
                     longitude={spot.longitude}
                     siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
-                    timestamp={spot.created_at}
+                    timestamp={spot.created_at} // Using created_at as timestamp
                     isCertified={false}
                   />
                 </div>
