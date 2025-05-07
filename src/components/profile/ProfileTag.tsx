@@ -5,24 +5,24 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { translateProfileTag } from "@/utils/linkTranslations";
 import { motion } from "framer-motion";
 
-// Define colors for different tags
+// Define colors for different tags using more muted, softer colors
 const TAG_COLORS: Record<string, { bg: string, text: string }> = {
-  "Professional Astronomer": { bg: "bg-indigo-100 dark:bg-indigo-900/30", text: "text-indigo-700 dark:text-indigo-300" },
-  "Amateur Astronomer": { bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-700 dark:text-blue-300" },
-  "Astrophotographer": { bg: "bg-purple-100 dark:bg-purple-900/30", text: "text-purple-700 dark:text-purple-300" },
-  "Meteorology Enthusiast": { bg: "bg-cyan-100 dark:bg-cyan-900/30", text: "text-cyan-700 dark:text-cyan-300" },
-  "Cosmos Lover": { bg: "bg-pink-100 dark:bg-pink-900/30", text: "text-pink-700 dark:text-pink-300" },
-  "Traveler": { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-300" },
-  "Dark Sky Volunteer": { bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-700 dark:text-green-300" },
-  "Nebulae Observer": { bg: "bg-violet-100 dark:bg-violet-900/30", text: "text-violet-700 dark:text-violet-300" },
-  "Astronomy Student": { bg: "bg-teal-100 dark:bg-teal-900/30", text: "text-teal-700 dark:text-teal-300" },
-  "Planet Watcher": { bg: "bg-orange-100 dark:bg-orange-900/30", text: "text-orange-700 dark:text-orange-300" },
-  "Telescope Maker": { bg: "bg-yellow-100 dark:bg-yellow-900/30", text: "text-yellow-700 dark:text-yellow-300" },
-  "Star Gazer": { bg: "bg-rose-100 dark:bg-rose-900/30", text: "text-rose-700 dark:text-rose-300" },
+  "Professional Astronomer": { bg: "bg-indigo-100/60 dark:bg-indigo-950/60", text: "text-indigo-800 dark:text-indigo-200" },
+  "Amateur Astronomer": { bg: "bg-blue-100/60 dark:bg-blue-950/60", text: "text-blue-800 dark:text-blue-200" },
+  "Astrophotographer": { bg: "bg-purple-100/60 dark:bg-purple-950/60", text: "text-purple-800 dark:text-purple-200" },
+  "Meteorology Enthusiast": { bg: "bg-cyan-100/60 dark:bg-cyan-950/60", text: "text-cyan-800 dark:text-cyan-200" },
+  "Cosmos Lover": { bg: "bg-pink-100/60 dark:bg-pink-950/60", text: "text-pink-800 dark:text-pink-200" },
+  "Traveler": { bg: "bg-amber-100/60 dark:bg-amber-950/60", text: "text-amber-800 dark:text-amber-200" },
+  "Dark Sky Volunteer": { bg: "bg-emerald-100/60 dark:bg-emerald-950/60", text: "text-emerald-800 dark:text-emerald-200" },
+  "Nebulae Observer": { bg: "bg-violet-100/60 dark:bg-violet-950/60", text: "text-violet-800 dark:text-violet-200" },
+  "Astronomy Student": { bg: "bg-teal-100/60 dark:bg-teal-950/60", text: "text-teal-800 dark:text-teal-200" },
+  "Planet Watcher": { bg: "bg-orange-100/60 dark:bg-orange-950/60", text: "text-orange-800 dark:text-orange-200" },
+  "Telescope Maker": { bg: "bg-yellow-100/60 dark:bg-yellow-950/60", text: "text-yellow-800 dark:text-yellow-200" },
+  "Star Gazer": { bg: "bg-rose-100/60 dark:bg-rose-950/60", text: "text-rose-800 dark:text-rose-200" },
 };
 
-// Get default colors for tags not in our map
-const DEFAULT_TAG_COLORS = { bg: "bg-cosmic-100/10", text: "text-cosmic-300" };
+// Get default colors for tags not in our map - also more muted
+const DEFAULT_TAG_COLORS = { bg: "bg-cosmic-100/20 dark:bg-cosmic-800/50", text: "text-cosmic-800 dark:text-cosmic-200" };
 
 interface ProfileTagProps {
   tag: string;
@@ -44,7 +44,7 @@ const ProfileTag: React.FC<ProfileTagProps> = ({ tag, animated = false, size = "
   
   const TagComponent = (
     <Badge
-      className={`${bg} ${text} border-none font-medium ${sizeClasses[size]} cursor-default hover:${bg}`}
+      className={`${bg} ${text} border border-current/10 font-medium ${sizeClasses[size]} cursor-default hover:${bg}`}
       variant="outline"
     >
       {displayText}
