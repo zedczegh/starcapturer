@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -57,8 +56,8 @@ export function useProfileForm(user: User | null) {
         } else {
           console.log("Avatar uploaded successfully, URL:", newAvatarUrl);
         }
-      } else if (avatarUrl) {
-        // Keep existing avatar if no new one uploaded
+      } else if (avatarUrl && !avatarUrl.startsWith('blob:')) {
+        // Keep existing avatar if no new one uploaded and it's not a blob URL
         newAvatarUrl = avatarUrl;
         console.log("Keeping existing avatar URL:", newAvatarUrl);
       }
@@ -91,11 +90,10 @@ export function useProfileForm(user: User | null) {
         avatar_url: updatedProfile.avatar_url
       } : null);
 
-      // Force refresh avatar url to break cache
+      // Set the avatar URL to what was returned from the server
       if (updatedProfile.avatar_url) {
-        const refreshedUrl = `${updatedProfile.avatar_url}?v=${new Date().getTime()}`;
-        setAvatarUrl(refreshedUrl);
-        console.log("Setting refreshed avatar URL:", refreshedUrl);
+        setAvatarUrl(updatedProfile.avatar_url);
+        console.log("Setting avatar URL from server:", updatedProfile.avatar_url);
         
         // Clear the avatarFile to prevent re-uploads
         setAvatarFile(null);

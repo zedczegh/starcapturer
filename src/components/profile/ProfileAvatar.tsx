@@ -1,9 +1,10 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
 import { Camera, X } from 'lucide-react';
 import { User } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ProfileAvatarProps {
   avatarUrl: string | null;
@@ -19,16 +20,42 @@ const ProfileAvatar = ({
   uploadingAvatar 
 }: ProfileAvatarProps) => {
   const { t } = useLanguage();
+  const [imageLoading, setImageLoading] = React.useState(false);
+  const [imageError, setImageError] = React.useState(false);
+
+  // Reset error state when avatarUrl changes
+  React.useEffect(() => {
+    setImageError(false);
+    setImageLoading(true);
+  }, [avatarUrl]);
+
+  const handleImageLoad = () => {
+    setImageLoading(false);
+    setImageError(false);
+  };
+
+  const handleImageError = () => {
+    setImageLoading(false);
+    setImageError(true);
+    console.error("Failed to load avatar image from URL:", avatarUrl);
+  };
 
   return (
     <div className="flex flex-col items-center">
       <div className="relative w-28 h-28">
-        {avatarUrl ? (
+        {avatarUrl && !imageError ? (
           <div className="relative group">
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Skeleton className="w-full h-full rounded-full" />
+              </div>
+            )}
             <img
               src={avatarUrl}
               alt="Profile"
-              className="w-full h-full rounded-full object-cover border-2 border-primary shadow-glow"
+              className={`w-full h-full rounded-full object-cover border-2 border-primary shadow-glow ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
+              onLoad={handleImageLoad}
+              onError={handleImageError}
             />
             <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <button 

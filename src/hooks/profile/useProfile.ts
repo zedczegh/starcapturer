@@ -7,6 +7,7 @@ import { useProfileAvatar } from './useProfileAvatar';
 import { useProfileTags } from './useProfileTags';
 import { useAstronomyTip } from './useAstronomyTip';
 import { ensureProfileExists, fetchUserProfile } from './utils/profilePersistence';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Profile {
   username: string | null;
@@ -53,15 +54,24 @@ export function useProfile() {
 
         const tagArr = tagsData ? tagsData.map(t => t.tag) : [];
         
+        // Update profile data and form values
         setProfile({
           username: data.username || '',
           avatar_url: data.avatar_url,
-          date_of_birth: null,
+          date_of_birth: data.date_of_birth || null,
           tags: tagArr,
         });
+        
         setValue('username', data.username || '');
         tagsHook.setTags(tagArr);
-        avatarHook.setAvatarUrl(data.avatar_url);
+        
+        // Set avatar URL if it exists and is valid (from Supabase storage)
+        if (data.avatar_url && !data.avatar_url.startsWith('blob:')) {
+          avatarHook.setAvatarUrl(data.avatar_url);
+          console.log("Setting avatar URL from profile:", data.avatar_url);
+        } else {
+          avatarHook.setAvatarUrl(null);
+        }
       }
       
       return { data };
@@ -69,7 +79,7 @@ export function useProfile() {
       console.error("Error in fetchProfile:", error);
       throw error;
     }
-  }, [avatarHook.setAvatarUrl]);
+  }, [avatarHook.setAvatarUrl, tagsHook.setTags]);
 
   return {
     profile,
@@ -84,6 +94,3 @@ export function useProfile() {
     ...tipHook,
   };
 }
-
-// Import supabase inside the hook to avoid breaking the code
-import { supabase } from '@/integrations/supabase/client';

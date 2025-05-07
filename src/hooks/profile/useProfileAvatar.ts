@@ -27,44 +27,6 @@ export function useProfileAvatar() {
       
       console.log(`Uploading avatar to avatars/${fileName}`);
       
-      // Check if the avatars bucket exists, create if it doesn't
-      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-      
-      if (bucketsError) {
-        console.error("Error listing buckets:", bucketsError);
-        toast.error(t("Failed to check storage buckets", "无法检查存储桶"));
-        return null;
-      }
-      
-      const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
-      
-      if (!avatarsBucketExists) {
-        console.log("Avatars bucket doesn't exist, creating...");
-        const { error: bucketError } = await supabase.storage.createBucket('avatars', {
-          public: true,
-          fileSizeLimit: 2 * 1024 * 1024 // 2MB limit
-        });
-        
-        if (bucketError) {
-          console.error("Error creating avatars bucket:", bucketError);
-          toast.error(t("Failed to create storage for avatars", "无法创建头像存储"));
-          return null;
-        }
-      }
-      
-      // Make sure the user is logged in
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error(t("You must be logged in to upload an avatar", "您必须登录才能上传头像"));
-        return null;
-      }
-      
-      // Verify this is the current user's profile
-      if (session.user.id !== userId) {
-        toast.error(t("You can only update your own profile", "您只能更新自己的个人资料"));
-        return null;
-      }
-      
       // Upload the file with proper content type
       const { data, error } = await supabase.storage
         .from('avatars')
@@ -82,7 +44,7 @@ export function useProfileAvatar() {
       
       console.log("Avatar uploaded successfully:", data);
       
-      // Get the public URL
+      // Get the public URL - construct it properly from Supabase
       const { data: publicUrlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);

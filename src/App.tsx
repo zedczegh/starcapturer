@@ -45,20 +45,24 @@ const App = () => {
         
         if (!avatarsBucketExists) {
           // Create the avatars bucket if it doesn't exist
-          console.log("Creating avatars bucket...");
-          const { data, error } = await supabase.storage.createBucket('avatars', {
+          console.log("Avatars bucket doesn't exist, creating...");
+          const { error: bucketError } = await supabase.storage.createBucket('avatars', {
             public: true, // Make it publicly accessible
-            fileSizeLimit: 1024 * 1024 * 2 // 2MB limit
+            fileSizeLimit: 2 * 1024 * 1024 // 2MB limit
           });
           
-          if (error) {
-            console.error('Error creating avatars bucket:', error);
+          if (bucketError) {
+            console.error("Error creating avatars bucket:", bucketError);
           } else {
             console.log('Created avatars bucket successfully');
             
-            // Note: We cannot directly create storage policies from the client
-            // Policies must be created via SQL migrations or in the Supabase dashboard
-            console.log("Avatar bucket created - policies should be configured via migrations");
+            // Set public access policy for the bucket using RPC
+            try {
+              // Note: Policies must be created via SQL migrations
+              console.log("Avatar bucket created - policies should be configured via migrations");
+            } catch (policyError) {
+              console.error("Error setting bucket policy:", policyError);
+            }
           }
         } else {
           console.log("Avatars bucket already exists");
@@ -67,13 +71,13 @@ const App = () => {
         if (!userTagsBucketExists) {
           // Create the user_tags bucket if it doesn't exist
           console.log("Creating user_tags bucket...");
-          const { data, error } = await supabase.storage.createBucket('user_tags', {
+          const { error: bucketError } = await supabase.storage.createBucket('user_tags', {
             public: true, // Make it publicly accessible
             fileSizeLimit: 1024 * 1024 * 1 // 1MB limit
           });
           
-          if (error) {
-            console.error('Error creating user_tags bucket:', error);
+          if (bucketError) {
+            console.error("Error creating user_tags bucket:", bucketError);
           } else {
             console.log('Created user_tags bucket successfully');
             

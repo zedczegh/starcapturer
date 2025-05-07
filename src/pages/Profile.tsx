@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -87,10 +88,10 @@ const Profile = () => {
               console.log("Updating profile from database:", data);
               setProfile(prev => prev ? { ...prev, ...data } : null);
               
-              // Add cache busting for avatars
+              // Update avatar URL if it exists in the database
               if (data.avatar_url) {
-                const cacheBustUrl = `${data.avatar_url}?v=${new Date().getTime()}`;
-                setAvatarUrl(cacheBustUrl);
+                setAvatarUrl(data.avatar_url);
+                console.log("Setting avatar URL from database:", data.avatar_url);
               } else {
                 setAvatarUrl(null);
               }
