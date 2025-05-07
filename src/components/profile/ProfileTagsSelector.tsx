@@ -6,6 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { translateProfileTag } from "@/utils/linkTranslations";
 import ProfileTag from "./ProfileTag";
 
+// Complete list of all available tags
 const TAGS: { value: string; label: string }[] = [
   { value: "Professional Astronomer", label: "Professional Astronomer" },
   { value: "Amateur Astronomer", label: "Amateur Astronomer" },
@@ -14,6 +15,11 @@ const TAGS: { value: string; label: string }[] = [
   { value: "Cosmos Lover", label: "Cosmos Lover" },
   { value: "Traveler", label: "Traveler" },
   { value: "Dark Sky Volunteer", label: "Dark Sky Volunteer" },
+  { value: "Nebulae Observer", label: "Nebulae Observer" },
+  { value: "Astronomy Student", label: "Astronomy Student" },
+  { value: "Planet Watcher", label: "Planet Watcher" },
+  { value: "Telescope Maker", label: "Telescope Maker" },
+  { value: "Star Gazer", label: "Star Gazer" },
 ];
 
 interface ProfileTagsSelectorProps {
