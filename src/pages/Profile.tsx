@@ -65,9 +65,9 @@ const Profile = () => {
     checkSession();
   }, [navigate, t, setProfile, fetchProfile, ensureProfileExists]);
 
-  // Add this effect to refetch profile when avatarUrl changes
+  // Add this effect to refetch profile when user logs in or out
   useEffect(() => {
-    if (user && !loading && profile) {
+    if (user && !loading && authChecked) {
       console.log("Checking for profile updates");
       const checkProfileUpdates = async () => {
         try {
@@ -84,14 +84,14 @@ const Profile = () => {
           
           if (data) {
             // Update local state if there's a mismatch and not using a blob URL
-            if (data.username !== profile.username || 
-               (data.avatar_url !== profile.avatar_url && 
-               (!data.avatar_url || !data.avatar_url.startsWith('blob:')))) {
+            if (data.username !== profile?.username || 
+               (data.avatar_url !== profile?.avatar_url && 
+               (!avatarUrl || !avatarUrl.startsWith('blob:')))) {
               console.log("Updating profile from database:", data);
               setProfile(prev => prev ? { ...prev, ...data } : null);
               
               // Update avatar URL if it exists in the database and is not a blob URL
-              if (data.avatar_url && !data.avatar_url.startsWith('blob:')) {
+              if (data.avatar_url) {
                 setAvatarUrl(data.avatar_url);
                 console.log("Setting avatar URL from database:", data.avatar_url);
               }
@@ -104,7 +104,7 @@ const Profile = () => {
       
       checkProfileUpdates();
     }
-  }, [user, loading, profile, setProfile, setAvatarUrl, ensureProfileExists]);
+  }, [user, loading, profile, setProfile, setAvatarUrl, ensureProfileExists, authChecked]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -158,7 +158,7 @@ const Profile = () => {
   if (!user) return <ProfileLoader />;
 
   const displayUsername = profile?.username || t("Stargazer", "星空观察者");
-  console.log("Rendering profile with username:", displayUsername);
+  console.log("Rendering profile with username:", displayUsername, "avatar:", avatarUrl);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex flex-col">

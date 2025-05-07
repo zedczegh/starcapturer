@@ -22,6 +22,7 @@ const ProfileAvatar = ({
   const { t } = useLanguage();
   const [imageLoading, setImageLoading] = React.useState(false);
   const [imageError, setImageError] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   // Reset error state when avatarUrl changes
   React.useEffect(() => {
@@ -34,6 +35,7 @@ const ProfileAvatar = ({
   const handleImageLoad = () => {
     setImageLoading(false);
     setImageError(false);
+    console.log("Avatar image loaded successfully");
   };
 
   const handleImageError = () => {
@@ -41,6 +43,21 @@ const ProfileAvatar = ({
     setImageError(true);
     console.error("Failed to load avatar image from URL:", avatarUrl);
   };
+
+  const triggerFileInput = () => {
+    if (inputRef.current) {
+      inputRef.current.click();
+    }
+  };
+
+  // Debug if the avatar URL is a blob or from Supabase
+  React.useEffect(() => {
+    if (avatarUrl) {
+      console.log("Avatar URL type:", 
+        avatarUrl.startsWith('blob:') ? 'Blob URL (temporary preview)' : 
+        avatarUrl.includes('supabase') ? 'Supabase URL' : 'Other URL');
+    }
+  }, [avatarUrl]);
 
   return (
     <div className="flex flex-col items-center">
@@ -76,16 +93,23 @@ const ProfileAvatar = ({
           </div>
         )}
         
-        <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 bg-primary text-white p-2 rounded-full cursor-pointer shadow-md hover:bg-primary/90 transition-all">
+        <button
+          type="button"
+          onClick={triggerFileInput}
+          className="absolute -bottom-1 -right-1 bg-primary text-white p-2 rounded-full cursor-pointer shadow-md hover:bg-primary/90 transition-all"
+          disabled={uploadingAvatar}
+        >
           <Camera className="w-5 h-5" />
           <Input
+            ref={inputRef}
             id="avatar-upload"
             type="file"
             accept="image/*"
             onChange={onAvatarChange}
             className="hidden"
+            disabled={uploadingAvatar}
           />
-        </label>
+        </button>
       </div>
       <p className="text-cosmic-400 text-sm mt-2">
         {uploadingAvatar ? t("Uploading...", "上传中...") : t("Click to change", "点击更改")}

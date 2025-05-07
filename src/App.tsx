@@ -40,52 +40,51 @@ const App = () => {
         }
         
         const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
-        const userTagsBucketExists = buckets?.some(bucket => bucket.name === 'user_tags');
         
         if (!avatarsBucketExists) {
           // Create the avatars bucket if it doesn't exist
           console.log("Avatars bucket doesn't exist, creating...");
-          const { error: bucketError } = await supabase.storage.createBucket('avatars', {
-            public: true, // Make it publicly accessible
-            fileSizeLimit: 2 * 1024 * 1024 // 2MB limit
-          });
-          
-          if (bucketError) {
-            console.error("Error creating avatars bucket:", bucketError);
-            // Continue anyway, as this might be a permissions issue with the client
-            // The policy is already set in the migration
-          } else {
-            console.log('Created avatars bucket successfully');
+          try {
+            const { error: bucketError } = await supabase.storage.createBucket('avatars', {
+              public: true, // Make it publicly accessible
+              fileSizeLimit: 2 * 1024 * 1024 // 2MB limit
+            });
+            
+            if (bucketError) {
+              console.error("Error creating avatars bucket:", bucketError);
+              // Continue anyway, as this might be a permissions issue with the client
+              // The policy is already set in the migration
+            } else {
+              console.log('Created avatars bucket successfully');
+            }
+          } catch (err) {
+            console.error("Error creating bucket:", err);
+            // Just log the error and continue, as the bucket might already exist
+            // but not be visible due to permissions
           }
         } else {
           console.log("Avatars bucket already exists");
         }
         
+        // Handle the user_tags bucket similarly
+        const userTagsBucketExists = buckets?.some(bucket => bucket.name === 'user_tags');
+        
         if (!userTagsBucketExists) {
-          // Create the user_tags bucket if it doesn't exist
           console.log("Creating user_tags bucket...");
-          const { error: bucketError } = await supabase.storage.createBucket('user_tags', {
-            public: true, // Make it publicly accessible
-            fileSizeLimit: 1024 * 1024 * 1 // 1MB limit
-          });
-          
-          if (bucketError) {
-            console.error("Error creating user_tags bucket:", bucketError);
-          } else {
-            console.log('Created user_tags bucket successfully');
+          try {
+            const { error: bucketError } = await supabase.storage.createBucket('user_tags', {
+              public: true,
+              fileSizeLimit: 1024 * 1024 * 1 // 1MB limit
+            });
             
-            // Create a directory structure for tag icons
-            // This is a workaround as Supabase doesn't have a direct method to create directories
-            const { error: uploadError } = await supabase.storage
-              .from('user_tags')
-              .upload('icons/.placeholder', new Blob([''], { type: 'text/plain' }));
-            
-            if (uploadError && !uploadError.message.includes('already exists')) {
-              console.error('Error creating user_tags directory structure:', uploadError);
+            if (bucketError) {
+              console.error("Error creating user_tags bucket:", bucketError);
+            } else {
+              console.log('Created user_tags bucket successfully');
             }
+          } catch (err) {
+            console.error("Error creating user_tags bucket:", err);
           }
-        } else {
-          console.log("User tags bucket already exists");
         }
       } catch (error) {
         console.error('Error checking/creating buckets:', error);

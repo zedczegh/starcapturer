@@ -57,7 +57,7 @@ export function useProfileForm(user: User | null) {
         } else {
           console.log("Avatar uploaded successfully, URL:", newAvatarUrl);
           
-          // Clear the blob URL if it exists
+          // Clear any local blob URLs
           if (avatarUrl && avatarUrl.startsWith('blob:')) {
             URL.revokeObjectURL(avatarUrl);
           }

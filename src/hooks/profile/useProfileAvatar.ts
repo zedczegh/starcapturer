@@ -21,35 +21,35 @@ export function useProfileAvatar() {
       console.log("Starting avatar upload for user:", userId);
       setUploadingAvatar(true);
       
-      // Check if avatars bucket exists, create if not
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const bucketExists = buckets?.some(bucket => bucket.name === 'avatars');
-      
-      if (!bucketExists) {
-        console.log("Creating avatars bucket...");
-        const { error: bucketError } = await supabase.storage.createBucket('avatars', {
-          public: true,
-          fileSizeLimit: 2 * 1024 * 1024 // 2MB limit
-        });
+      // First ensure the bucket exists
+      try {
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const bucketExists = buckets?.some(bucket => bucket.name === 'avatars');
         
-        if (bucketError) {
-          console.error("Error creating avatars bucket:", bucketError);
-          // Continue anyway as the bucket might exist but not be visible due to permissions
+        if (!bucketExists) {
+          console.log("Creating avatars bucket...");
+          await supabase.storage.createBucket('avatars', {
+            public: true,
+            fileSizeLimit: 2 * 1024 * 1024 // 2MB limit
+          });
         }
+      } catch (err) {
+        console.log("Bucket check error (likely exists already):", err);
+        // Continue anyway as the bucket might exist but not be visible due to permissions
       }
       
       // Create a unique filename with timestamp and userId to avoid cache issues
       const fileExt = file.name.split('.').pop();
       const fileName = `avatar-${userId}-${Date.now()}.${fileExt}`;
       
-      console.log(`Uploading avatar to avatars/${fileName}`);
+      console.log(`Uploading avatar with content type ${file.type} to avatars/${fileName}`);
       
-      // Upload the file with proper content type
+      // Upload the file
       const { data, error } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
           upsert: true,
-          contentType: file.type // Set the proper content type based on the file
+          contentType: file.type // Set the proper content type
         });
       
       if (error) {
@@ -64,6 +64,12 @@ export function useProfileAvatar() {
       const { data: publicUrlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
+      
+      if (!publicUrlData) {
+        console.error("Failed to get public URL for uploaded avatar");
+        toast.error(t("Failed to process avatar", "处理头像失败"));
+        return null;
+      }
       
       const publicUrl = publicUrlData.publicUrl;
       console.log("Avatar public URL:", publicUrl);
