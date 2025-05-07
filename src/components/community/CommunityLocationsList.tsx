@@ -5,6 +5,7 @@ import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { Loader2 } from "@/components/ui/loader";
 import CommunityLocationCard from "./CommunityLocationCard";
 import CommunitySiqsProvider from "./CommunitySiqsProvider";
+import { getSiqsScore } from "@/utils/siqsHelpers";
 
 interface CommunityLocationsListProps {
   isLoading: boolean;
@@ -47,7 +48,7 @@ const CommunityLocationsList: React.FC<CommunityLocationsListProps> = ({
         <React.Fragment key={spot.id}>
           <CommunityLocationCard
             location={spot}
-            realTimeSiqs={realTimeSiqs[spot.id]}
+            realTimeSiqs={realTimeSiqs[spot.id] !== undefined ? getSiqsScore(realTimeSiqs[spot.id]) : null}
             isLoading={Boolean(spot.id && realTimeSiqs[spot.id] === undefined)}
           />
           
