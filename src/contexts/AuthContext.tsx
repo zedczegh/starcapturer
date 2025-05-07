@@ -73,14 +73,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         ));
       }
 
-      // Generate a unique fake email address based on the username
-      const uniqueEmail = `${username}-${Date.now()}@astrosiqs.app`;
+      // Use phone auth instead of email - this bypasses email provider restrictions
+      // Format: +{username} as phone number
+      const phoneNumber = `+${username}`;
       
-      console.log("Using generated email for auth:", uniqueEmail);
+      console.log("Using phone auth with number:", phoneNumber);
       
-      // Sign up with the generated email
+      // Sign up with phone
       const { data, error } = await supabase.auth.signUp({
-        email: uniqueEmail,
+        phone: phoneNumber,
         password,
         options: {
           data: {
@@ -92,6 +93,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) {
         console.error("Signup error:", error);
         throw error;
+      }
+
+      // Create the profile entry for the new user
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            username: username
+          });
+          
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+          // Continue anyway as the auth was successful
+        }
       }
 
       toast.success(
@@ -135,7 +151,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log("Attempting to sign in with username:", username);
       
-      // Find the user's email by username
+      // Find the user by username
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, username')
@@ -153,60 +169,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       console.log("Found profile:", profileData);
       
-      // Now try signing in with a predictable format email
-      const testEmail = `${username}-auth@astrosiqs.app`;
-      console.log("Trying to sign in with email:", testEmail);
+      // Sign in with phone number format
+      const phoneNumber = `+${username}`;
+      console.log("Trying to sign in with phone:", phoneNumber);
       
       const { data, error } = await supabase.auth.signInWithPassword({ 
-        email: testEmail, 
+        phone: phoneNumber, 
         password
       });
       
-      // If that fails, try a few other formats
       if (error) {
-        console.log("First sign in attempt failed, trying alternative formats");
-        
-        // Try with timestamp format
-        // We need to try a few patterns since we don't know which one was used during signup
-        const signInAttempts = [
-          `${username}-%@astrosiqs.app`,
-          `${username}-auth@astrosiqs.app`,
-          `${username}@astrosiqs.app`
-        ];
-        
-        let signedIn = false;
-        
-        for (const emailPattern of signInAttempts) {
-          if (signedIn) break;
-          
-          console.log(`Trying login with pattern: ${emailPattern}`);
-          
-          const { error: attemptError } = await supabase.auth.signInWithPassword({ 
-            email: emailPattern, 
-            password
-          });
-          
-          if (!attemptError) {
-            console.log("Login successful with pattern:", emailPattern);
-            signedIn = true;
-            break;
-          }
+        console.error("Login error:", error);
+        let errorMessage = "Please check your username and password";
+        if (error.message.includes("Invalid login")) {
+          errorMessage = "Invalid password for this username";
+        } else if (error.message.includes("Too many requests")) {
+          errorMessage = "Too many login attempts. Please try again in a few minutes";
         }
         
-        if (!signedIn) {
-          console.error("All login attempts failed");
-          let errorMessage = "Please check your username and password";
-          if (error.message.includes("Invalid login")) {
-            errorMessage = "Invalid password for this username";
-          } else if (error.message.includes("Too many requests")) {
-            errorMessage = "Too many login attempts. Please try again in a few minutes";
-          }
-          
-          toast.error(t("Sign in failed", "登录失败"), {
-            description: t(errorMessage, "请检查您的用户名和密码"),
-            position: "top-center"
-          });
-        }
+        toast.error(t("Sign in failed", "登录失败"), {
+          description: t(errorMessage, "请检查您的用户名和密码"),
+          position: "top-center"
+        });
+      } else {
+        console.log("Login successful!");
+        toast.success(t("Signed in successfully!", "登录成功！"), {
+          position: "top-center"
+        });
       }
     } catch (error: any) {
       console.error("Unexpected error during sign in:", error);
