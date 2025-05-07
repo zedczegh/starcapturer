@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { fetchUserTags } from './profileTagUtils';
@@ -32,6 +33,16 @@ export const ensureUserProfile = async (
     // If profile doesn't exist, create it
     if (!profile) {
       console.log('Profile not found, creating new profile for user:', userId);
+      
+      // Check if user exists in auth.users first
+      const { data: authUser, error: authError } = await supabase.auth.getUser();
+      if (authError || !authUser) {
+        console.error('User may not exist in auth.users table:', authError || 'No auth user found');
+        toast.error('Authentication error', { description: 'There was an issue with your user account. Please try signing out and back in.' });
+        return false;
+      }
+      
+      // Try to insert profile with more detailed error handling
       const { error: insertError } = await supabase
         .from('profiles')
         .insert({
@@ -47,7 +58,14 @@ export const ensureUserProfile = async (
         // Special handling for "Foreign key violation" errors, which often indicate the user doesn't exist in auth.users
         if (insertError.message.includes('foreign key') || insertError.code === '23503') {
           console.error('Foreign key violation - user may not exist in auth.users table');
-          toast.error('User authentication error', { description: 'There was an issue with your user account' });
+          toast.error('User authentication error', { description: 'There was an issue with your user account. Please try signing out and in again.' });
+          return false;
+        }
+        
+        // Special handling for RLS policy violations
+        if (insertError.message.includes('violates row-level security policy')) {
+          console.error('RLS policy violation - ensure you are authenticated and have proper permissions');
+          toast.error('Permission error', { description: 'You do not have permission to create a profile. Please try signing out and in again.' });
           return false;
         }
         
@@ -82,7 +100,19 @@ export const upsertUserProfile = async (
     console.log('Upserting profile for user:', userId, profileData);
     
     // First ensure the profile exists
-    await ensureUserProfile(userId);
+    const profileExists = await ensureUserProfile(userId);
+    if (!profileExists) {
+      console.error('Failed to ensure profile exists before update');
+      return false;
+    }
+    
+    // Check auth status
+    const { data: session } = await supabase.auth.getSession();
+    if (!session || !session.session) {
+      console.error('User not authenticated for profile update');
+      toast.error('Authentication required', { description: 'Please sign in to update your profile' });
+      return false;
+    }
     
     // Then update the profile
     const { data: updateData, error: updateError } = await supabase
@@ -95,6 +125,14 @@ export const upsertUserProfile = async (
       
     if (updateError) {
       console.error('Error updating profile:', updateError);
+      
+      // Special handling for RLS policy violations
+      if (updateError.message.includes('violates row-level security policy')) {
+        console.error('RLS policy violation - ensure you are authenticated and have proper permissions');
+        toast.error('Permission error', { description: 'You do not have permission to update this profile. Please try signing out and in again.' });
+        return false;
+      }
+      
       toast.error('Profile update failed', { description: updateError.message });
       return false;
     }
@@ -114,6 +152,12 @@ export const upsertUserProfile = async (
 export const fetchUserProfile = async (userId: string) => {
   try {
     console.log('Fetching profile for user:', userId);
+    
+    // Check auth status for potential RLS issues
+    const { data: session } = await supabase.auth.getSession();
+    if (!session || !session.session) {
+      console.log('User not authenticated, some profiles may not be accessible');
+    }
     
     // First ensure the profile exists
     await ensureUserProfile(userId);

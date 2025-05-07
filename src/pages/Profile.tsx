@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import NavBar from '@/components/NavBar';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -29,6 +30,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const [profile, setProfile] = useState<any>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -51,8 +53,17 @@ const Profile = () => {
 
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setAuthError('Unable to verify authentication status');
+          navigate('/photo-points');
+          return;
+        }
+        
         if (!session) {
+          console.log('No active session, redirecting to login');
           toast.error(t("Authentication required", "需要认证"), {
             description: t("Please sign in to view your profile", "请登录以查看您的个人资料")
           });
@@ -62,12 +73,18 @@ const Profile = () => {
 
         console.log("Session user ID:", session.user.id);
         
+        // Re-authenticate to refresh token if needed
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.warn('Session refresh error:', refreshError);
+        }
+        
         // Attempt to create profile if it doesn't exist
         const profileCreated = await ensureUserProfile(session.user.id);
         if (!profileCreated) {
           console.error("Failed to ensure user profile exists");
           toast.error(t("Profile setup failed", "个人资料设置失败"), {
-            description: t("There was an issue setting up your profile", "设置您的个人资料时出现问题")
+            description: t("There was an issue setting up your profile. Please try signing out and back in.", "设置您的个人资料时出现问题，请尝试退出并重新登录。")
           });
           setProfile({
             username: null,
@@ -97,14 +114,18 @@ const Profile = () => {
         });
         
         console.log("Profile loaded:", profileData);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error loading profile:", error);
+        toast.error(t("Profile loading error", "个人资料加载错误"), {
+          description: error.message
+        });
         setProfile({
           username: null,
           avatar_url: null,
           date_of_birth: null,
           tags: [],
         });
+        setAuthError(error.message);
       } finally {
         setAuthChecked(true);
         setLoading(false);
@@ -112,6 +133,23 @@ const Profile = () => {
     };
 
     checkSession();
+    
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        if (event === 'SIGNED_OUT') {
+          navigate('/photo-points');
+        } else if (event === 'SIGNED_IN' && session) {
+          // Allow the signed in event to complete before reloading the page
+          window.location.reload();
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate, t, setValue]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,7 +172,14 @@ const Profile = () => {
       console.log("Starting profile update with data:", formData, tags);
 
       // Ensure profile exists first
-      await ensureUserProfile(user.id);
+      const profileExists = await ensureUserProfile(user.id);
+      if (!profileExists) {
+        toast.error(t("Profile setup issue", "个人资料设置问题"), {
+          description: t("Please try signing out and back in", "请尝试退出并重新登录")
+        });
+        setSaving(false);
+        return;
+      }
 
       let newAvatarUrl = avatarUrl;
       if (avatarFile) {
@@ -195,7 +240,28 @@ const Profile = () => {
   };
 
   if (!authChecked || loading) return <ProfileLoader />;
-  if (!user) return <ProfileLoader />;
+  
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex flex-col items-center justify-center p-4">
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 max-w-md w-full text-center">
+          <h2 className="text-xl font-semibold text-red-400 mb-3">{t("Authentication Error", "认证错误")}</h2>
+          <p className="text-cosmic-200 mb-5">{authError}</p>
+          <Button 
+            onClick={() => navigate('/photo-points')} 
+            variant="destructive"
+          >
+            {t("Back to Home", "返回主页")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    navigate('/photo-points');
+    return <ProfileLoader />;
+  }
 
   const displayUsername = profile?.username || t("Stargazer", "星空观察者");
 

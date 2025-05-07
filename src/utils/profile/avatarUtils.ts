@@ -13,6 +13,14 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
   }
 
   try {
+    // Check auth status first for RLS
+    const { data: session } = await supabase.auth.getSession();
+    if (!session || !session.session) {
+      console.error('User not authenticated for avatar upload');
+      toast.error('Authentication required', { description: 'Please sign in to upload an avatar' });
+      return null;
+    }
+
     console.log('Uploading avatar for user:', userId);
     
     // Validate the file
@@ -36,7 +44,7 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
     
     if (!bucketExists) {
       console.error('Avatars bucket does not exist');
-      toast.error('Storage error', { description: 'Avatar storage not configured' });
+      toast.error('Storage error', { description: 'Avatar storage not configured - please contact support' });
       return null;
     }
     
@@ -53,6 +61,13 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
       
     if (uploadError) {
       console.error('Error uploading avatar:', uploadError);
+      
+      // Special handling for RLS policy violations
+      if (uploadError.message.includes('violates row-level security policy')) {
+        toast.error('Permission error', { description: 'You do not have permission to upload this avatar. Please try signing out and in again.' });
+        return null;
+      }
+      
       toast.error('Avatar upload failed', { description: uploadError.message });
       return null;
     }
@@ -86,6 +101,14 @@ export const removeAvatar = async (userId: string, avatarUrl: string | null): Pr
   }
 
   try {
+    // Check auth status first for RLS
+    const { data: session } = await supabase.auth.getSession();
+    if (!session || !session.session) {
+      console.error('User not authenticated for avatar removal');
+      toast.error('Authentication required', { description: 'Please sign in to remove an avatar' });
+      return false;
+    }
+    
     // Extract the path from the URL
     const urlObj = new URL(avatarUrl);
     const pathParts = urlObj.pathname.split('/');
@@ -99,13 +122,22 @@ export const removeAvatar = async (userId: string, avatarUrl: string | null): Pr
 
       if (error) {
         console.error('Error removing avatar file:', error);
+        
+        // Special handling for RLS policy violations
+        if (error.message.includes('violates row-level security policy')) {
+          toast.error('Permission error', { description: 'You do not have permission to delete this avatar' });
+          return false;
+        }
+        
         // Continue anyway, so we can still update the profile
+        toast.warning('Failed to delete avatar file', { description: 'The profile will still be updated, but the file may remain on the server' });
       }
     }
 
     return true;
   } catch (error: any) {
     console.error('Exception in removeAvatar:', error);
+    toast.error('Avatar removal failed', { description: error.message });
     return false;
   }
 };
