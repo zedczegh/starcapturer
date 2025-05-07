@@ -448,10 +448,6 @@ export type Database = {
         }
         Returns: string
       }
-      is_username_available: {
-        Args: { username_to_check: string }
-        Returns: boolean
-      }
       update_astro_spot_timeslot: {
         Args: {
           p_id: string

@@ -23,27 +23,17 @@ const ProfileMini = () => {
   const { tags, loading: loadingTags, fetchUserTags } = useUserTags();
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
 
-  // Log the profile ID we're trying to load
-  console.log("ProfileMini: Loading profile for ID:", id);
-  
-  const { data: profile, isLoading, error } = useQuery({
+  const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', id],
     queryFn: async () => {
       if (!id) throw new Error('No profile ID provided');
-      console.log("Fetching profile data for:", id);
-      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) {
-        console.error("Error fetching profile data:", error);
-        throw error;
-      }
-      
-      console.log("Profile data fetched:", data);
+      if (error) throw error;
       return data;
     },
     retry: 1,
@@ -54,19 +44,12 @@ const ProfileMini = () => {
     queryKey: ['user-spots', id],
     queryFn: async () => {
       if (!id) return [];
-      console.log("Fetching astro spots for user:", id);
-      
       const { data, error } = await supabase
         .from('user_astro_spots')
         .select('*')
         .eq('user_id', id);
 
-      if (error) {
-        console.error("Error fetching astro spots:", error);
-        throw error;
-      }
-      
-      console.log("Astro spots fetched:", data?.length || 0);
+      if (error) throw error;
       return data || [];
     },
     retry: 1,
@@ -74,20 +57,12 @@ const ProfileMini = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Load user tags - use useEffect to prevent flickering
+  // Load user tags - with optimizations to prevent flickering
   useEffect(() => {
     if (id) {
-      console.log("Calling fetchUserTags for user:", id);
       fetchUserTags(id);
     }
   }, [id, fetchUserTags]);
-
-  // Log the tags that were loaded
-  useEffect(() => {
-    if (!loadingTags) {
-      console.log("Tags loaded for profile:", id, tags);
-    }
-  }, [tags, loadingTags, id]);
 
   const handleSiqsCalculated = (spotId: string, siqs: number | null) => {
     setRealTimeSiqs(prev => ({
@@ -113,28 +88,6 @@ const ProfileMini = () => {
       </AvatarFallback>
     );
   }, [profile]);
-
-  // Error handling for profile loading
-  if (error) {
-    console.error("Profile loading error:", error);
-    return (
-      <div className="min-h-screen bg-cosmic-950">
-        <NavBar />
-        <div className="container max-w-3xl py-8 px-4">
-          <div className="flex justify-center items-center h-64 text-cosmic-400">
-            <div className="text-center">
-              <User className="h-16 w-16 mx-auto mb-4 opacity-30" />
-              <h2 className="text-lg font-medium mb-2">{t('Error loading profile', '加载个人资料时出错')}</h2>
-              <p className="text-sm mb-4">{t('There was an error loading this profile', '加载此个人资料时出错')}</p>
-              <Link to="/">
-                <Button variant="outline">{t('Go to homepage', '返回首页')}</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
@@ -214,7 +167,6 @@ const ProfileMini = () => {
                 loading={loadingTags} 
                 className="mt-4"
                 editable={false}
-                showAddNew={false}
               />
 
               {/* AstroSpots section with loading state */}

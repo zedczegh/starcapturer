@@ -19,14 +19,7 @@ export function useUserTags() {
   // Fetch user tags
   const fetchUserTags = async (userId: string) => {
     try {
-      if (!userId) {
-        console.log("No user ID provided to fetchUserTags");
-        setTags([]);
-        setLoading(false);
-        return;
-      }
-
-      console.log(`Fetching tags for user: ${userId}`);
+      if (!userId) return;
 
       // Check cache first to avoid flickering
       const cachedTags = getCachedTags(userId);
@@ -47,10 +40,7 @@ export function useUserTags() {
         .select('id, tag')
         .eq('user_id', userId);
       
-      if (error) {
-        console.error('Error fetching user tags:', error);
-        throw error;
-      }
+      if (error) throw error;
       
       if (tagData) {
         const processedTags = tagData.map(item => ({
@@ -73,17 +63,13 @@ export function useUserTags() {
           }
         }
         
-        console.log(`Found ${processedTags.length} tags for user ${userId}`, processedTags);
         setTags(processedTags);
         
         // Update cache
         setCachedTags(userId, processedTags);
-      } else {
-        setTags([]);
       }
     } catch (error: any) {
       console.error('Error fetching user tags:', error);
-      setTags([]);
     } finally {
       setLoading(false);
     }
@@ -92,8 +78,6 @@ export function useUserTags() {
   // Refresh tags in background without setting loading state
   const refreshTagsInBackground = async (userId: string) => {
     try {
-      if (!userId) return;
-
       // Get tags from profile_tags table
       const { data: tagData, error } = await supabase
         .from('profile_tags')
@@ -136,68 +120,19 @@ export function useUserTags() {
   // Add a new tag to user's profile
   const addUserTag = async (userId: string, tagName: string) => {
     try {
-      if (!userId) {
-        console.error("No user ID provided for adding tag");
-        toast.error(t('User not authenticated. Please sign in.', '用户未认证。请登录。'));
-        return null;
-      }
-
-      console.log(`Attempting to add tag "${tagName}" for user ${userId}`);
-
-      // First ensure the profile exists
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .single();
-      
-      if (profileError) {
-        console.error("Error checking profile:", profileError);
-        
-        // Attempt to create the profile if it doesn't exist
-        try {
-          console.log("Profile not found, attempting to create one for user:", userId);
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: userId,
-              updated_at: new Date().toISOString()
-            });
-            
-          if (insertError) {
-            console.error("Error creating missing profile:", insertError);
-            toast.error(t('Profile not found. Please try signing out and back in.', '找不到个人资料。请尝试重新登录。'));
-            return null;
-          } else {
-            console.log("Successfully created missing profile for user:", userId);
-          }
-        } catch (createProfileError) {
-          console.error("Error creating profile:", createProfileError);
-          toast.error(t('Profile not found. Please try signing out and back in.', '找不到个人资料。请尝试重新登录。'));
-          return null;
-        }
-      } else {
-        console.log("Profile exists for user:", userId);
-      }
-      
       // Check if the tag already exists to prevent duplicates
       const existingTag = tags.find(tag => tag.name.toLowerCase() === tagName.toLowerCase());
       if (existingTag) {
-        console.log("Tag already exists:", existingTag);
         return existingTag; // Tag already exists, return it
       }
       
-      console.log("Adding new tag to profile_tags table:", tagName);
       const { data, error } = await supabase
         .from('profile_tags')
         .insert({ user_id: userId, tag: tagName })
         .select()
         .single();
         
-      if (error) {
-        console.error("Error adding user tag:", error);
-        throw error;
-      }
+      if (error) throw error;
       
       if (data) {
         const newTag = { 
@@ -208,7 +143,7 @@ export function useUserTags() {
         
         setTags(prev => [...prev, newTag]);
         toast.success(t('Tag added successfully', '标签添加成功'));
-        console.log("Tag added successfully:", newTag);
+        
         return newTag;
       }
       
