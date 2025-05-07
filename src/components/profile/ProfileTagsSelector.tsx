@@ -40,12 +40,12 @@ const ProfileTagsSelector: React.FC<ProfileTagsSelectorProps> = ({
       <Label className="block text-white mb-3">{t("Profile Tags", "个人标签")}</Label>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {TAGS.map((tag) => (
-          <label key={tag.value} className="flex items-center gap-3 cursor-pointer group py-1">
+          <label key={tag.value} className="flex items-start gap-5 cursor-pointer group py-2">
             <Checkbox
               checked={selectedTags.includes(tag.value)}
               onCheckedChange={(checked) => onChange(tag.value, !!checked)}
               disabled={disabled}
-              className="border-cosmic-400"
+              className="border-cosmic-400 mt-0.5"
             />
             <div className="flex-1 flex">
               <ProfileTag tag={tag.value} />
