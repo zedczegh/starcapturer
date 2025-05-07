@@ -3,15 +3,16 @@ import React, { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Loader, Star, Circle } from "lucide-react";
+import LocationCard from "@/components/LocationCard";
+import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
-import CommunityAstroSpotsHeader from "@/components/community/CommunityAstroSpotsHeader";
 import CommunityMap from "@/components/community/CommunityMap";
-import CommunityAstroSpotsList from "@/components/community/CommunityAstroSpotsList";
+import { Loader2 } from "@/components/ui/loader";
 import CommunityLocationsSkeleton from "@/components/community/CommunityLocationsSkeleton";
-import CommunityMapContainer from "@/components/community/CommunityMapContainer";
+import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
@@ -59,6 +60,19 @@ const CommunityAstroSpots: React.FC = () => {
     return sortLocationsBySiqs(spotsWithRealtimeSiqs);
   }, [astrospots, realTimeSiqs]);
 
+  const titleVariants = {
+    hidden: { opacity: 0, scale: 0.96, y: -10 },
+    visible: { opacity: 1, scale: 1, y: 0, transition: { delay: 0.1, duration: 0.6, ease: "easeOut" } }
+  };
+  const lineVariants = {
+    hidden: { width: 0, opacity: 0 },
+    visible: { width: 90, opacity: 1, transition: { delay: 0.35, duration: 0.7, ease: "easeOut" } }
+  };
+  const descVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
+  };
+
   const handleCardClick = (id: string) => {
     navigate(`/astro-spot/${id}`, { 
       state: { from: 'community' } 
@@ -68,10 +82,40 @@ const CommunityAstroSpots: React.FC = () => {
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>
       <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
-        <CommunityAstroSpotsHeader />
+        <motion.div
+          className="flex flex-col items-center justify-center gap-3 mb-9"
+          initial="hidden"
+          animate="visible"
+          variants={{}}
+        >
+          <motion.h1
+            className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-3xl md:text-4xl text-center drop-shadow tracking-tight"
+            variants={titleVariants}
+          >
+            {t("Astrospots Community", "观星社区")}
+          </motion.h1>
+          <motion.div
+            className="rounded-full h-1 bg-gradient-to-r from-blue-400 to-purple-400 mb-1"
+            style={{ width: 90, maxWidth: "40vw" }}
+            variants={lineVariants}
+          />
+          <motion.p
+            className="text-center mb-2 mt-1 max-w-2xl text-base md:text-lg text-muted-foreground leading-relaxed"
+            variants={descVariants}
+          >
+            {t(
+              "Discover and explore astrospots contributed by our SIQS community members. View their favorite stargazing locations on the interactive map and find inspiration for your next adventure.",
+              "由SIQS社区成员贡献的观星点，在这里一览无余。浏览大家推荐的拍摄位置，探索灵感，发现下次观星之旅的新去处。"
+            )}
+          </motion.p>
+        </motion.div>
 
-        <CommunityMapContainer>
-          {isLoading ? null : (
+        <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 380, minHeight: 275 }}>
+          {isLoading ? (
+            <div className="absolute inset-0 flex justify-center items-center bg-cosmic-900/20 backdrop-blur-sm">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/80" />
+            </div>
+          ) : (
             <CommunityMap
               center={userLocation || DEFAULT_CENTER}
               locations={sortedAstroSpots ?? []}
@@ -81,9 +125,10 @@ const CommunityAstroSpots: React.FC = () => {
               onLocationUpdate={handleLocationUpdate}
             />
           )}
-        </CommunityMapContainer>
+        </div>
 
         <h2 className="font-bold text-xl mt-12 mb-5 flex items-center gap-2 text-gradient-blue">
+          <Circle className="h-4 w-4 text-primary" />
           <span>{t("All Community Astrospots", "全部社区地点")}</span>
           <span className="text-sm font-normal text-muted-foreground ml-2">
             ({t("Sorted by best SIQS score", "按照SIQS评分排序")})
@@ -92,13 +137,53 @@ const CommunityAstroSpots: React.FC = () => {
 
         {isLoading ? (
           <CommunityLocationsSkeleton />
+        ) : sortedAstroSpots && sortedAstroSpots.length > 0 ? (
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+            {sortedAstroSpots.map((spot: any) => (
+              <button
+                key={spot.id}
+                className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
+                tabIndex={0}
+                onClick={() => handleCardClick(spot.id)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleCardClick(spot.id);
+                  }
+                }}
+                aria-label={spot.name}
+                style={{ background: "none", padding: 0 }}
+              >
+                <div className="w-full h-full">
+                  <RealTimeSiqsProvider
+                    isVisible={true}
+                    latitude={spot.latitude}
+                    longitude={spot.longitude}
+                    bortleScale={spot.bortleScale}
+                    existingSiqs={spot.siqs}
+                    onSiqsCalculated={(siqs, loading) =>
+                      handleSiqsCalculated(spot.id, siqs, loading)
+                    }
+                  />
+                  <div className="transition-shadow group-hover:shadow-xl group-hover:ring-2 group-hover:ring-primary rounded-xl">
+                    <LocationCard
+                      id={spot.id}
+                      name={spot.name}
+                      latitude={spot.latitude}
+                      longitude={spot.longitude}
+                      siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                      timestamp={spot.timestamp}
+                      isCertified={false}
+                    />
+                  </div>
+                  <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />
+                </div>
+              </button>
+            ))}
+          </div>
         ) : (
-          <CommunityAstroSpotsList 
-            spots={sortedAstroSpots} 
-            realTimeSiqs={realTimeSiqs} 
-            handleSiqsCalculated={handleSiqsCalculated} 
-            handleCardClick={handleCardClick}
-          />
+          <div className="w-full text-muted-foreground/70 text-center py-16">
+            {t("No community astrospots yet. Be the first to share!", "还没有社区观星点，快来分享吧！")}
+          </div>
         )}
       </div>
     </PhotoPointsLayout>
