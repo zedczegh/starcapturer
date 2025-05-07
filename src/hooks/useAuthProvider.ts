@@ -22,6 +22,7 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log(`Auth state changed: ${event}`, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -29,7 +30,11 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
         if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
           // Use setTimeout to avoid blocking auth state change
           setTimeout(async () => {
-            await ensureUserProfile(session.user.id, session.user.email || '');
+            try {
+              await ensureUserProfile(session.user.id, session.user.email || '');
+            } catch (err) {
+              console.error("Failed to ensure profile exists:", err);
+            }
           }, 0);
         }
       }
@@ -38,6 +43,7 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
     // THEN check for existing session
     const getInitialSession = async () => {
       try {
+        console.log("Checking for existing session...");
         const sessionResult = await supabase.auth.getSession();
         setSession(sessionResult.data.session);
         setUser(sessionResult.data.session?.user ?? null);
@@ -45,8 +51,13 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
         // Ensure profile exists for already logged in user
         if (sessionResult.data.session?.user) {
           const user = sessionResult.data.session.user;
+          console.log("Found existing session, ensuring profile exists for:", user.id);
           await ensureUserProfile(user.id, user.email || '');
+        } else {
+          console.log("No existing session found");
         }
+      } catch (error) {
+        console.error("Error getting initial session:", error);
       } finally {
         setIsLoading(false);
       }
@@ -84,6 +95,7 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
 
       // Create the profile entry for the new user
       if (data.user) {
+        console.log("Creating profile for new user:", data.user.id);
         await createUserProfile(data.user.id, username, email);
       }
 
@@ -131,12 +143,18 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
           t("Sign in failed", "登录失败"),
           t(errorMessage, "请检查您的邮箱和密码")
         );
+        throw error;
       } else {
-        console.log("Login successful!");
+        console.log("Login successful for user:", data.user?.id);
         
-        // Ensure profile exists for user
+        // Ensure profile exists for user - force profile creation if needed
         if (data.user) {
-          await ensureUserProfile(data.user.id, data.user.email || '');
+          try {
+            const created = await ensureUserProfile(data.user.id, data.user.email || '');
+            console.log("Profile check complete, was new profile created?", created);
+          } catch (err) {
+            console.error("Error ensuring user profile exists:", err);
+          }
         }
         
         showAuthToast(
@@ -151,6 +169,7 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
         t("Sign in error", "登录错误"),
         t("An unexpected error occurred. Please try again.", "发生未知错误，请重试。")
       );
+      throw error;
     } finally {
       setIsLoading(false);
     }
