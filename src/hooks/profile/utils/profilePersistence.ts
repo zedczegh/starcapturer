@@ -1,113 +1,62 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
-// Helper function to ensure user profile exists
-export async function ensureProfileExists(userId: string): Promise<boolean> {
+// Ensure a profile exists for the user
+export async function ensureProfileExists(userId: string) {
   try {
-    // Check if user is logged in
-    const { data: { session } } = await supabase.auth.getSession();
-    
     // Check if profile exists
-    const { data, error } = await supabase
+    const { data: existingProfile, error: fetchError } = await supabase
       .from('profiles')
       .select('id')
       .eq('id', userId)
-      .maybeSingle();
+      .single();
     
-    if (error) {
-      console.error("Error checking profile existence:", error);
-      return false;
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error("Error fetching profile:", fetchError);
+      throw fetchError;
     }
     
-    if (!data) {
-      // Only allow creating a profile for the current user
-      if (!session || session.user.id !== userId) {
-        console.error("Cannot create profile for another user");
-        return false;
-      }
+    // If profile doesn't exist, create it
+    if (!existingProfile) {
+      console.log("Profile doesn't exist, creating one for user:", userId);
       
-      // Create profile if doesn't exist
-      const { error: createError } = await supabase
+      const { error: insertError } = await supabase
         .from('profiles')
-        .insert([{ id: userId }]);
-        
-      if (createError) {
-        console.error("Error creating profile:", createError);
-        return false;
+        .insert({
+          id: userId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      
+      if (insertError) {
+        console.error("Error creating profile:", insertError);
+        throw insertError;
       }
       
-      console.log("Created new profile for user:", userId);
+      console.log("Profile created successfully for user:", userId);
+    } else {
+      console.log("Profile already exists for user:", userId);
     }
     
     return true;
-  } catch (err) {
-    console.error("Failed to ensure profile exists:", err);
-    return false;
-  }
-}
-
-// Fetch a user's profile data
-export async function fetchUserProfile(userId: string) {
-  try {
-    // First ensure profile exists
-    await ensureProfileExists(userId);
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('username, avatar_url')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Error fetching profile:", error);
-      throw error;
-    }
-    
-    return { data, error };
   } catch (error) {
-    console.error("Error in fetchUserProfile:", error);
+    console.error("Error in ensureProfileExists:", error);
     throw error;
   }
 }
 
-// Update a user's profile data
-export async function updateUserProfile(userId: string, updates: {
-  username?: string;
-  avatar_url?: string | null;
-}) {
+// Fetch user profile
+export async function fetchUserProfile(userId: string) {
   try {
-    // Check if user is logged in
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      toast.error('You must be logged in to update your profile');
-      return { data: null, error: new Error('Not authenticated') };
-    }
+    await ensureProfileExists(userId);
     
-    // Verify this is the current user's profile
-    if (session.user.id !== userId) {
-      toast.error('You can only update your own profile');
-      return { data: null, error: new Error('Permission denied') };
-    }
-    
-    const { data, error } = await supabase
+    return await supabase
       .from('profiles')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .select('*')
       .eq('id', userId)
-      .select('username, avatar_url')
       .single();
-      
-    if (error) {
-      console.error("Error updating profile:", error);
-      throw error;
-    }
-    
-    return { data, error };
   } catch (error) {
-    console.error("Error in updateUserProfile:", error);
+    console.error("Error in fetchUserProfile:", error);
     throw error;
   }
 }

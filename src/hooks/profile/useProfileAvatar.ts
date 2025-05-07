@@ -28,13 +28,21 @@ export function useProfileAvatar() {
       console.log(`Uploading avatar to avatars/${fileName}`);
       
       // Check if the avatars bucket exists, create if it doesn't
-      const { data: buckets } = await supabase.storage.listBuckets();
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      
+      if (bucketsError) {
+        console.error("Error listing buckets:", bucketsError);
+        toast.error(t("Failed to check storage buckets", "无法检查存储桶"));
+        return null;
+      }
+      
       const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
       
       if (!avatarsBucketExists) {
         console.log("Avatars bucket doesn't exist, creating...");
         const { error: bucketError } = await supabase.storage.createBucket('avatars', {
-          public: true
+          public: true,
+          fileSizeLimit: 2 * 1024 * 1024 // 2MB limit
         });
         
         if (bucketError) {
@@ -63,7 +71,7 @@ export function useProfileAvatar() {
         .upload(fileName, file, {
           upsert: true,
           contentType: file.type, // Set the proper content type based on the file
-          cacheControl: 'no-cache' // Prevent caching issues
+          cacheControl: '3600' // Cache for 1 hour
         });
       
       if (error) {

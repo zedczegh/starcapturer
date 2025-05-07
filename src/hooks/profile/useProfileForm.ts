@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,8 +52,8 @@ export function useProfileForm(user: User | null) {
         
         if (!newAvatarUrl) {
           toast.error(t('Failed to upload avatar', '上传头像失败'));
-          // Continue with profile update even if avatar upload fails
-          console.log("Continuing with profile update despite avatar upload failure");
+          setSaving(false);
+          return; // Stop the process if avatar upload fails
         } else {
           console.log("Avatar uploaded successfully, URL:", newAvatarUrl);
         }
@@ -95,6 +96,9 @@ export function useProfileForm(user: User | null) {
         const refreshedUrl = `${updatedProfile.avatar_url}?v=${new Date().getTime()}`;
         setAvatarUrl(refreshedUrl);
         console.log("Setting refreshed avatar URL:", refreshedUrl);
+        
+        // Clear the avatarFile to prevent re-uploads
+        setAvatarFile(null);
       } else {
         setAvatarUrl(null);
       }
