@@ -18,23 +18,6 @@ export function useProfileAvatar() {
       console.log("Starting avatar upload for user:", userId);
       setUploadingAvatar(true);
       
-      // First ensure avatars bucket exists
-      try {
-        // Check if bucket exists
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
-        
-        if (!avatarsBucketExists) {
-          console.log("Avatars bucket doesn't exist. Creating it...");
-          // Since we can't create the bucket from the client, we'll let the user know
-          toast.error("Storage bucket not configured. Please contact support.");
-          return null;
-        }
-      } catch (error) {
-        console.error("Error checking buckets:", error);
-        // Continue anyway as the bucket might exist
-      }
-      
       // Create a unique filename with timestamp and userId to avoid cache issues
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
@@ -51,7 +34,7 @@ export function useProfileAvatar() {
       
       if (error) {
         console.error("Avatar upload error:", error);
-        toast.error("Failed to upload avatar. Please try again.");
+        toast.error(t("Failed to upload avatar. Please try again."));
         throw error;
       }
       

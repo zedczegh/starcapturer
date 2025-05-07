@@ -16,7 +16,7 @@ CREATE POLICY "Users can upload their own avatars"
 ON storage.objects FOR INSERT
 WITH CHECK (
   bucket_id = 'avatars' AND
-  (storage.foldername(name))[1] = auth.uid()::text
+  auth.uid()::text
 );
 
 -- Allow users to update their own avatars
@@ -24,7 +24,7 @@ CREATE POLICY "Users can update their own avatars"
 ON storage.objects FOR UPDATE
 USING (
   bucket_id = 'avatars' AND
-  (storage.foldername(name))[1] = auth.uid()::text
+  auth.uid()::text
 );
 
 -- Allow users to delete their own avatars
@@ -32,5 +32,5 @@ CREATE POLICY "Users can delete their own avatars"
 ON storage.objects FOR DELETE
 USING (
   bucket_id = 'avatars' AND
-  (storage.foldername(name))[1] = auth.uid()::text
+  auth.uid()::text
 );
