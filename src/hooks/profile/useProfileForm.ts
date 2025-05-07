@@ -17,6 +17,7 @@ export function useProfileForm(user: User | null) {
     avatarUrl,
     setAvatarUrl,
     uploadAvatar,
+    ensureProfileExists,
   } = useProfile();
 
   // Handle form submission
@@ -26,6 +27,9 @@ export function useProfileForm(user: User | null) {
     try {
       setSaving(true);
       console.log("Submitting profile form with username:", data.username);
+
+      // Ensure profile exists first
+      await ensureProfileExists(user.id);
 
       // Upload avatar if selected
       let newAvatarUrl = avatarUrl;

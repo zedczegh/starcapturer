@@ -26,6 +26,7 @@ export function useProfile() {
     try {
       console.log("Fetching profile for user ID:", userId);
       
+      // First check if the profile exists
       const { data, error } = await supabase
         .from('profiles')
         .select('username, avatar_url')
@@ -37,8 +38,10 @@ export function useProfile() {
         throw error;
       }
 
+      // If profile doesn't exist, create one
       if (!data) {
         console.log("No profile found, creating one for user:", userId);
+        
         // Create a profile if it doesn't exist
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
@@ -96,14 +99,21 @@ export function useProfile() {
       console.log("Starting avatar upload for user:", userId);
       setUploadingAvatar(true);
       
-      // First check if avatars bucket exists, if not create it
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
-      
-      if (!avatarsBucketExists) {
-        console.warn("Avatars bucket doesn't exist. Please create it in Supabase.");
-        toast.error("Storage bucket not configured. Please contact support.");
-        return null;
+      // First ensure avatars bucket exists
+      try {
+        // Check if bucket exists
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
+        
+        if (!avatarsBucketExists) {
+          console.log("Avatars bucket doesn't exist. Creating it...");
+          // Since we can't create the bucket from the client, we'll let the user know
+          toast.error("Storage bucket not configured. Please contact support.");
+          return null;
+        }
+      } catch (error) {
+        console.error("Error checking buckets:", error);
+        // Continue anyway as the bucket might exist
       }
       
       // Create a unique filename with timestamp and userId to avoid cache issues
@@ -136,17 +146,6 @@ export function useProfile() {
       const publicUrl = publicUrlData.publicUrl;
       console.log("Avatar public URL:", publicUrl);
       
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', userId);
-        
-      if (updateError) {
-        console.error("Error updating profile with avatar URL:", updateError);
-      }
-      
-      setAvatarUrl(publicUrl);
       return publicUrl;
     } catch (error) {
       console.error('Error uploading avatar:', error);
@@ -160,6 +159,9 @@ export function useProfile() {
   const saveProfileTags = useCallback(async (userId: string, newTags: string[]) => {
     try {
       console.log("Saving profile tags for user:", userId, newTags);
+      
+      // First ensure profile exists
+      await ensureProfileExists(userId);
       
       // Remove all current tags for this user, then insert selected ones
       await supabase.from('profile_tags').delete().eq('user_id', userId);
@@ -188,6 +190,42 @@ export function useProfile() {
     }
   }, []);
 
+  // Helper function to ensure user profile exists
+  const ensureProfileExists = useCallback(async (userId: string) => {
+    try {
+      // Check if profile exists
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Error checking profile existence:", error);
+        return false;
+      }
+      
+      if (!data) {
+        // Create profile if doesn't exist
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert([{ id: userId }]);
+          
+        if (createError) {
+          console.error("Error creating profile:", createError);
+          return false;
+        }
+        
+        console.log("Created new profile for user:", userId);
+      }
+      
+      return true;
+    } catch (err) {
+      console.error("Failed to ensure profile exists:", err);
+      return false;
+    }
+  }, []);
+
   return {
     profile,
     setProfile,
@@ -204,5 +242,6 @@ export function useProfile() {
     tags,
     setTags,
     saveProfileTags,
+    ensureProfileExists
   }
 }

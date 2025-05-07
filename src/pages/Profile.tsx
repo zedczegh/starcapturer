@@ -29,6 +29,7 @@ const Profile = () => {
     setUploadingAvatar,
     randomTip,
     fetchProfile,
+    ensureProfileExists,
   } = useProfile();
 
   useEffect(() => {
@@ -42,9 +43,13 @@ const Profile = () => {
           navigate('/photo-points');
           return;
         }
+        
+        // Ensure profile exists before fetching
+        await ensureProfileExists(session.user.id);
         await fetchProfile(session.user.id, () => {});
       } catch (error) {
         console.error("Error checking session:", error);
+        toast.error(t("Failed to load profile", "加载个人资料失败"));
         setProfile({
           username: null,
           avatar_url: null,
@@ -58,7 +63,7 @@ const Profile = () => {
     };
 
     checkSession();
-  }, [navigate, t, setProfile, fetchProfile]);
+  }, [navigate, t, setProfile, fetchProfile, ensureProfileExists]);
 
   // Add this effect to refetch profile when avatarUrl changes
   useEffect(() => {
@@ -66,6 +71,9 @@ const Profile = () => {
       console.log("Checking for profile updates");
       const checkProfileUpdates = async () => {
         try {
+          // Ensure profile exists
+          await ensureProfileExists(user.id);
+          
           const { data, error } = await supabase
             .from('profiles')
             .select('username, avatar_url')
@@ -79,7 +87,14 @@ const Profile = () => {
             if (data.username !== profile.username || data.avatar_url !== profile.avatar_url) {
               console.log("Updating profile from database:", data);
               setProfile(prev => prev ? { ...prev, ...data } : null);
-              setAvatarUrl(data.avatar_url);
+              
+              // Add cache busting for avatars
+              if (data.avatar_url) {
+                const cacheBustUrl = `${data.avatar_url}?v=${new Date().getTime()}`;
+                setAvatarUrl(cacheBustUrl);
+              } else {
+                setAvatarUrl(null);
+              }
             }
           }
         } catch (error) {
@@ -89,7 +104,7 @@ const Profile = () => {
       
       checkProfileUpdates();
     }
-  }, [user, loading, profile, setProfile, setAvatarUrl]);
+  }, [user, loading, profile, setProfile, setAvatarUrl, ensureProfileExists]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

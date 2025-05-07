@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -15,6 +16,8 @@ import { motion } from 'framer-motion';
 import LocationCard from '@/components/LocationCard';
 import { getInitials } from '@/utils/stringUtils';
 import { useNavigate } from 'react-router-dom';
+import { useProfile } from '@/hooks/profile/useProfile';
+import { toast } from 'sonner';
 
 const ProfileMini = () => {
   const { id } = useParams();
@@ -23,6 +26,7 @@ const ProfileMini = () => {
   const { tags, loading: loadingTags, fetchUserTags } = useUserTags();
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const navigate = useNavigate();
+  const { ensureProfileExists } = useProfile();
 
   // Query for profile data
   const { data: profile, isLoading } = useQuery({
@@ -32,37 +36,27 @@ const ProfileMini = () => {
       
       console.log("Fetching profile data for:", id);
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        console.error("Error fetching profile:", error);
+      try {
+        // First ensure profile exists
+        await ensureProfileExists(id);
         
-        // If profile not found, attempt to create it
-        if (error.code === 'PGRST116') {
-          console.log("Profile not found, attempting to create a default profile");
-          
-          const { data: newProfile, error: insertError } = await supabase
-            .from('profiles')
-            .insert([{ id: id }])
-            .select()
-            .single();
-            
-          if (insertError) {
-            console.error("Failed to create default profile:", insertError);
-            throw insertError;
-          }
-          
-          return newProfile;
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) {
+          console.error("Error fetching profile:", error);
+          throw error;
         }
         
-        throw error;
+        return data;
+      } catch (err) {
+        console.error("Error in profile fetch:", err);
+        toast.error(t('Failed to load profile data', '加载个人资料失败'));
+        throw err;
       }
-      
-      return data;
     },
     retry: 1,
     staleTime: 1000 * 60 * 5,
@@ -99,15 +93,17 @@ const ProfileMini = () => {
       if (id) {
         try {
           console.log("Loading tags for profile:", id);
+          await ensureProfileExists(id);
           await fetchUserTags(id);
         } catch (err) {
           console.error("Error loading tags:", err);
+          toast.error(t('Failed to load profile tags', '加载个人资料标签失败'));
         }
       }
     };
     
     loadProfileData();
-  }, [id, fetchUserTags]);
+  }, [id, fetchUserTags, ensureProfileExists, t]);
   
   // For updating SIQS values in real-time
   const handleSiqsCalculated = (spotId: string, siqs: number | null) => {
@@ -137,8 +133,10 @@ const ProfileMini = () => {
     if (!profile) return null;
     
     if (profile.avatar_url) {
+      // Add cache busting to ensure latest avatar is shown
+      const cacheBustUrl = `${profile.avatar_url}?v=${new Date().getTime()}`;
       return (
-        <AvatarImage src={profile.avatar_url} alt={profile.username || 'User'} />
+        <AvatarImage src={cacheBustUrl} alt={profile.username || 'User'} />
       );
     }
     

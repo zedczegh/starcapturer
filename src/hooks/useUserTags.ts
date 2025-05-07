@@ -1,9 +1,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getCachedTags, setCachedTags } from '@/utils/tagCache';
 
 export interface UserTag {
   id: string;
@@ -13,260 +13,179 @@ export interface UserTag {
 
 export function useUserTags() {
   const [tags, setTags] = useState<UserTag[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
   const { t } = useLanguage();
-  
-  // Fetch user tags
-  const fetchUserTags = useCallback(async (userId: string) => {
-    try {
-      console.log("Fetching tags for user:", userId);
-      if (!userId) {
-        console.log("No user ID provided for tag fetch");
-        setTags([]);
-        setLoading(false);
-        return [];
-      }
 
-      // Check cache first to avoid flickering
-      const cachedTags = getCachedTags(userId);
-      if (cachedTags) {
-        console.log("Using cached tags for user:", userId);
-        setTags(cachedTags);
-        setLoading(false);
+  // Create profiles for users if they don't exist
+  const ensureProfileExists = useCallback(async (uid: string) => {
+    try {
+      // Check if profile exists
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', uid)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Error checking profile existence:", error);
+        return false;
+      }
+      
+      if (!data) {
+        // Create profile if doesn't exist
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert([{ id: uid }]);
+          
+        if (createError) {
+          console.error("Error creating profile:", createError);
+          return false;
+        }
         
-        // Still refresh in background but don't show loading state
-        refreshTagsInBackground(userId);
-        return cachedTags;
+        console.log("Created new profile for user:", uid);
+      }
+      
+      return true;
+    } catch (err) {
+      console.error("Failed to ensure profile exists:", err);
+      return false;
+    }
+  }, []);
+
+  // Fetch tags for current user or specified user
+  const fetchUserTags = useCallback(async (userId?: string) => {
+    try {
+      const targetUserId = userId || user?.id;
+      
+      if (!targetUserId) {
+        console.log("No user ID available to fetch tags");
+        return;
       }
       
       setLoading(true);
       
-      // Ensure profile exists first
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .maybeSingle();
-        
-      if (profileError) {
-        console.error("Error checking profile existence:", profileError);
-      }
-        
-      if (!profile) {
-        console.log("No profile found for user, creating one:", userId);
-        // Create profile if it doesn't exist
-        try {
-          const { data: newProfile, error: insertError } = await supabase
-            .from('profiles')
-            .insert([{ id: userId }])
-            .select();
-            
-          if (insertError) {
-            console.error("Error creating profile:", insertError);
-          }
-        } catch (err) {
-          console.error("Failed to create profile:", err);
-        }
-      }
-
-      // Get tags from profile_tags table
-      const { data: tagData, error } = await supabase
+      // First ensure the user has a profile
+      await ensureProfileExists(targetUserId);
+      
+      console.log("Fetching tags for user:", targetUserId);
+      
+      const { data, error } = await supabase
         .from('profile_tags')
         .select('id, tag')
-        .eq('user_id', userId);
+        .eq('user_id', targetUserId);
       
       if (error) {
         console.error("Error fetching user tags:", error);
-        throw error;
+        toast.error(t("Failed to load tags", "加载标签失败"));
+        return;
       }
       
-      let processedTags: UserTag[] = [];
-      
-      if (tagData && tagData.length > 0) {
-        console.log(`Found ${tagData.length} tags for user:`, userId);
-        
-        processedTags = tagData.map(item => ({
-          id: item.id,
-          name: item.tag,
-          icon_url: null // We'll add the icon URL in a moment
-        }));
-        
-        // Fetch tag icons from the user_tags bucket if any exist
-        for (const tag of processedTags) {
-          try {
-            const tagSlug = tag.name.toLowerCase().replace(/\s+/g, '-');
-            const { data } = supabase.storage
-              .from('user_tags')
-              .getPublicUrl(`icons/${tagSlug}.png`);
-              
-            tag.icon_url = data.publicUrl;
-          } catch (err) {
-            // No icon available for this tag, continue
-          }
-        }
-        
-        setTags(processedTags);
-        
-        // Update cache
-        setCachedTags(userId, processedTags);
-      } else {
-        console.log("No tags found for user:", userId);
-        setTags([]);
-      }
-      
-      setLoading(false);
-      return processedTags;
-    } catch (error: any) {
-      console.error('Error fetching user tags:', error);
-      setTags([]);
-      setLoading(false);
-      return [];
-    }
-  }, []);
-
-  // Refresh tags in background without setting loading state
-  const refreshTagsInBackground = async (userId: string) => {
-    try {
-      console.log("Refreshing tags in background for user:", userId);
-      
-      // Get tags from profile_tags table
-      const { data: tagData, error } = await supabase
-        .from('profile_tags')
-        .select('id, tag')
-        .eq('user_id', userId);
-      
-      if (error) throw error;
-      
-      if (tagData) {
-        const processedTags = tagData.map(item => ({
+      if (data) {
+        console.log(`Fetched ${data.length} tags for user:`, targetUserId);
+        const formattedTags: UserTag[] = data.map(item => ({
           id: item.id,
           name: item.tag,
           icon_url: null
         }));
         
-        // Fetch tag icons from the user_tags bucket if any exist
-        for (const tag of processedTags) {
-          try {
-            const tagSlug = tag.name.toLowerCase().replace(/\s+/g, '-');
-            const { data } = supabase.storage
-              .from('user_tags')
-              .getPublicUrl(`icons/${tagSlug}.png`);
-              
-            tag.icon_url = data.publicUrl;
-          } catch (err) {
-            // No icon available for this tag, continue
-          }
-        }
-        
-        setTags(processedTags);
-        
-        // Update cache
-        setCachedTags(userId, processedTags);
+        setTags(formattedTags);
+      } else {
+        setTags([]);
       }
-    } catch (error) {
-      console.error('Error refreshing tags in background:', error);
+    } catch (err) {
+      console.error("Error in fetchUserTags:", err);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [user, ensureProfileExists, t]);
 
-  // Add a new tag to user's profile
-  const addUserTag = async (userId: string, tagName: string) => {
+  // Add a new tag for current user or specified user
+  const addUserTag = useCallback(async (userId: string, tagName: string) => {
     try {
-      console.log("Adding tag for user:", userId, tagName);
-      
-      // Ensure the user has a profile first
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (!profileData) {
-        console.log("Creating profile for user:", userId);
-        // Create profile if it doesn't exist
-        const { error: createError } = await supabase
-          .from('profiles')
-          .insert([{ id: userId }]);
-          
-        if (createError) {
-          console.error("Error creating profile:", createError);
-          throw createError;
-        }
+      if (!tagName.trim()) {
+        return null;
       }
       
-      // Check if the tag already exists to prevent duplicates
-      const existingTag = tags.find(tag => tag.name.toLowerCase() === tagName.toLowerCase());
-      if (existingTag) {
-        return existingTag; // Tag already exists, return it
+      console.log(`Adding tag "${tagName}" for user:`, userId);
+      
+      // First ensure the user has a profile
+      await ensureProfileExists(userId);
+      
+      // Check if tag already exists to avoid duplicates
+      const { data: existingTags } = await supabase
+        .from('profile_tags')
+        .select('id, tag')
+        .eq('user_id', userId)
+        .eq('tag', tagName);
+        
+      if (existingTags && existingTags.length > 0) {
+        console.log(`Tag "${tagName}" already exists for user:`, userId);
+        return existingTags[0];
       }
       
+      // Add new tag
       const { data, error } = await supabase
         .from('profile_tags')
         .insert({ user_id: userId, tag: tagName })
         .select()
         .single();
-        
+      
       if (error) {
         console.error("Error adding user tag:", error);
+        toast.error(t("Failed to add tag", "添加标签失败"));
         throw error;
       }
       
-      if (data) {
-        const newTag = { 
+      if (userId === user?.id) {
+        // Update local state only for current user
+        setTags(prev => [...prev, { 
           id: data.id, 
-          name: data.tag, 
-          icon_url: null 
-        };
-        
-        setTags(prev => [...prev, newTag]);
-        toast.success(t('Tag added successfully', '标签添加成功'));
-        
-        // Update cache
-        const updatedTags = [...tags, newTag];
-        setCachedTags(userId, updatedTags);
-        
-        return newTag;
+          name: data.tag,
+          icon_url: null
+        }]);
       }
       
-      return null;
-    } catch (error: any) {
-      console.error('Error adding user tag:', error);
-      toast.error(t('Failed to add tag', '添加标签失败'));
+      console.log(`Tag "${tagName}" added successfully for user:`, userId);
+      return data;
+    } catch (err) {
+      console.error("Error in addUserTag:", err);
       return null;
     }
-  };
+  }, [user, ensureProfileExists, t]);
 
-  // Remove a tag from user's profile
-  const removeUserTag = async (tagId: string) => {
+  // Remove a tag
+  const removeUserTag = useCallback(async (tagId: string) => {
     try {
-      console.log("Removing tag:", tagId);
-      
-      // Find the tag to get user_id for cache update
-      const tagToRemove = tags.find(tag => tag.id === tagId);
+      console.log("Removing tag with ID:", tagId);
       
       const { error } = await supabase
         .from('profile_tags')
         .delete()
         .eq('id', tagId);
-        
+      
       if (error) {
-        console.error("Error removing tag:", error);
-        throw error;
+        console.error("Error removing user tag:", error);
+        toast.error(t("Failed to remove tag", "删除标签失败"));
+        return false;
       }
       
-      // Update local state
-      const updatedTags = tags.filter(tag => tag.id !== tagId);
-      setTags(updatedTags);
-      
-      toast.success(t('Tag removed successfully', '标签移除成功'));
-      
+      setTags(prev => prev.filter(tag => tag.id !== tagId));
+      console.log("Tag removed successfully");
       return true;
-    } catch (error: any) {
-      console.error('Error removing user tag:', error);
-      toast.error(t('Failed to remove tag', '移除标签失败'));
+    } catch (err) {
+      console.error("Error in removeUserTag:", err);
       return false;
     }
-  };
-  
+  }, [t]);
+
+  // Load tags for current user on mount
+  useEffect(() => {
+    if (user) {
+      fetchUserTags();
+    }
+  }, [user, fetchUserTags]);
+
   return {
     tags,
     loading,
