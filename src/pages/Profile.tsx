@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +20,7 @@ import {
 
 interface ProfileFormValues {
   username: string;
+  bio: string;
 }
 
 const Profile = () => {
@@ -41,7 +41,8 @@ const Profile = () => {
 
   const { register, handleSubmit, setValue } = useForm<ProfileFormValues>({
     defaultValues: {
-      username: ''
+      username: '',
+      bio: ''
     }
   });
 
@@ -102,6 +103,7 @@ const Profile = () => {
         
         // Update form with fetched data
         setValue('username', profileData.username || '');
+        setValue('bio', profileData.bio || '');
         setAvatarUrl(profileData.avatar_url);
         setTags(profileData.tags || []);
         
@@ -109,6 +111,7 @@ const Profile = () => {
         setProfile({
           username: profileData.username,
           avatar_url: profileData.avatar_url,
+          bio: profileData.bio,
           date_of_birth: null,
           tags: profileData.tags || [],
         });
@@ -194,10 +197,11 @@ const Profile = () => {
       }
 
       // First update the profile
-      console.log("Upserting profile with:", { username: formData.username, avatar_url: newAvatarUrl });
+      console.log("Upserting profile with:", { username: formData.username, avatar_url: newAvatarUrl, bio: formData.bio });
       const profileSuccess = await upsertUserProfile(user.id, {
         username: formData.username,
         avatar_url: newAvatarUrl,
+        bio: formData.bio,
       });
 
       if (!profileSuccess) {
@@ -222,6 +226,7 @@ const Profile = () => {
         ...prev,
         username: formData.username,
         avatar_url: newAvatarUrl,
+        bio: formData.bio,
         tags,
       }));
       
@@ -282,6 +287,7 @@ const Profile = () => {
           onSubmit={onSubmit}
           tags={tags}
           setTags={setTags}
+          bio={profile?.bio}
         />
       </main>
       <AboutFooter />

@@ -46,12 +46,14 @@ const ProfileMini: React.FC = () => {
           setProfile({
             username: profileData.username || "Stargazer",
             avatar_url: profileData.avatar_url,
+            bio: profileData.bio,
             tags: profileData.tags || [],
           });
         } else {
           setProfile({
             username: "Stargazer",
             avatar_url: null,
+            bio: null,
             tags: [],
           });
         }
@@ -111,7 +113,7 @@ const ProfileMini: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950 flex flex-col items-center px-4 pt-20">
       <Card className="max-w-xl w-full mx-auto mt-4 glassmorphism p-8 rounded-xl shadow-glow">
-        <div className="flex gap-4 items-center mb-8">
+        <div className="flex gap-4 items-center mb-6">
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="w-20 h-20 rounded-full object-cover shadow-lg" />
           ) : (
@@ -139,6 +141,20 @@ const ProfileMini: React.FC = () => {
             )}
           </div>
         </div>
+        
+        {/* Bio section */}
+        {profile.bio && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-6 bg-cosmic-800/40 p-4 rounded-lg border border-cosmic-700/30"
+          >
+            <h3 className="text-cosmic-200 text-sm font-medium mb-2">{t("About", "关于")}</h3>
+            <p className="text-cosmic-100 text-sm">{profile.bio}</p>
+          </motion.div>
+        )}
+        
         <div className="flex justify-between mt-6">
           {!isFromMessages && user && user.id !== profileId && (
             <Button

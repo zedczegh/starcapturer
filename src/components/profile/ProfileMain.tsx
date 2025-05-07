@@ -17,7 +17,8 @@ const ProfileMain = ({
   handleSubmit,
   onSubmit,
   tags,
-  setTags
+  setTags,
+  bio
 }: any) => (
   <div className="container mx-auto px-4 py-8 pt-24 max-w-3xl">
     <Card className="glassmorphism p-8 rounded-xl shadow-glow overflow-hidden relative">
@@ -32,6 +33,7 @@ const ProfileMain = ({
           onRemoveAvatar={onRemoveAvatar}
           uploadingAvatar={uploadingAvatar}
           astronomyTip={astronomyTip}
+          bio={bio}
         />
         <ProfileForm 
           register={register}

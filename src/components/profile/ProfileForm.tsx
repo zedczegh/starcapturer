@@ -8,9 +8,11 @@ import { User } from 'lucide-react';
 import { UseFormRegister } from 'react-hook-form';
 import ProfileBenefits from './ProfileBenefits';
 import ProfileTagsSelector from './ProfileTagsSelector';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ProfileFormValues {
   username: string;
+  bio: string;
 }
 
 interface ProfileFormProps {
@@ -60,6 +62,19 @@ const ProfileForm = ({ register, loading, onSubmit, tags, setTags }: ProfileForm
               </div>
             </div>
           </div>
+
+          <div className="bg-cosmic-800/30 p-5 rounded-lg border border-cosmic-700/30">
+            <Label htmlFor="bio" className="text-white mb-2 block text-lg">
+              {t("Bio", "个人简介")}
+            </Label>
+            <Textarea
+              id="bio"
+              {...register('bio')}
+              className="bg-cosmic-800/50 border-cosmic-700/40 text-white focus:border-primary focus:ring-1 focus:ring-primary/30"
+              placeholder={t("Tell us about yourself...", "介绍一下你自己...")}
+            />
+          </div>
+          
           {/* Tag selector */}
           <div className="bg-cosmic-800/30 p-5 rounded-lg border border-cosmic-700/30">
             <ProfileTagsSelector selectedTags={tags} onChange={handleTagChange} disabled={loading} />
