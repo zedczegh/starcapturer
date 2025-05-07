@@ -8,8 +8,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  signUp: (email: string, password: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (username: string, password: string) => Promise<void>;
+  signIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   isLoading: boolean;
 }
@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (username: string, password: string) => {
     try {
       setIsLoading(true);
 
@@ -56,14 +56,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         redirectTo = 'https://siqs.astroai.top';
       }
 
-      // Add a log to check if signups are enabled
-      console.log("Attempting to sign up with email:", email);
+      console.log("Attempting to sign up with username:", username);
+      
+      // Check if username is available
+      const { data: usernameCheck, error: usernameError } = await supabase.rpc('is_username_available', {
+        username_to_check: username
+      });
+      
+      if (usernameError) {
+        console.error("Username check error:", usernameError);
+        throw new Error(t(
+          "Could not verify username availability. Please try again.",
+          "无法验证用户名可用性。请重试。"
+        ));
+      }
+      
+      if (usernameCheck === false) {
+        throw new Error(t(
+          "This username is already taken. Please choose another one.",
+          "此用户名已被使用。请选择另一个。"
+        ));
+      }
+
+      // Since email signups are disabled, we'll create a unique email address based on the username
+      const email = `${username}-${Date.now()}@example.com`;
       
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: redirectTo + '/photo-points'
+          emailRedirectTo: redirectTo + '/photo-points',
+          data: {
+            username: username,
+          }
         }
       });
 
@@ -72,51 +97,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw error;
       }
 
-      if (data.user && !data.user.confirmed_at) {
-        toast.success(
-          t(
-            "Almost there! ✨",
-            "就差一步！✨"
+      toast.success(
+        t(
+          "Account created successfully!",
+          "账户创建成功！"
+        ),
+        {
+          duration: 4000,
+          description: t(
+            "Welcome to AstroSIQS! You are now logged in.",
+            "欢迎来到AstroSIQS！您现在已登录。"
           ),
-          {
-            duration: 8000,
-            description: (
-              <>
-                {t(
-                  "Check your email (inbox and spam)! Click the confirmation link to activate your account. You will be redirected back to our website to complete your signup.",
-                  "请查收您的邮箱（包括垃圾箱）！点击确认链接激活账号，系统将自动将您带回本站继续完成注册。"
-                )}
-                <br />
-                <span className="font-bold">
-                  {t(
-                    "If you are not redirected, return to the site and sign in.",
-                    "若未自动跳转，请回到本站重新登录。"
-                  )}
-                </span>
-              </>
-            ),
-            position: "top-center"
-          }
-        );
-      }
+          position: "top-center"
+        }
+      );
+      
     } catch (error: any) {
       console.error("Error during signup:", error);
       let errorMessage = error.message;
-      if (error.message.includes("Email signups are disabled")) {
-        errorMessage = t(
-          "Email signups are currently disabled. Please contact the administrator.",
-          "电子邮件注册功能目前已禁用。请联系管理员。"
-        );
-      }
       
       toast.error(
         t(
-          "Account creation paused",
-          "帐户创建已暂停"
+          "Account creation issue",
+          "帐户创建问题"
         ),
         {
           description: errorMessage ||
-            t("Please try again with a different email", "请更换邮箱后重试"),
+            t("Please try again with a different username", "请更换用户名后重试"),
           position: "top-center"
         }
       );
@@ -126,29 +133,52 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (username: string, password: string) => {
     setIsLoading(true);
     try {
+      // Find the user's email by username
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .single();
+
+      if (profileError || !profileData) {
+        toast.error(t("Sign in failed", "登录失败"), {
+          description: t("Username not found", "找不到用户名"),
+          position: "top-center"
+        });
+        return;
+      }
+      
+      // Get the user's email from auth.users using the profile ID
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
+        profileData.id
+      );
+      
+      if (userError || !userData || !userData.user?.email) {
+        toast.error(t("Sign in failed", "登录失败"), {
+          description: t("Could not authenticate user", "无法验证用户"),
+          position: "top-center"
+        });
+        return;
+      }
+      
+      // Now sign in with the email and password
       const { error } = await supabase.auth.signInWithPassword({ 
-        email, 
+        email: userData.user.email, 
         password
       });
 
       if (error) {
-        let errorMessage = "Please double-check your email and password";
-        if (error.message.includes("Email not confirmed")) {
-          await supabase.auth.resend({
-            type: 'signup',
-            email: email,
-          });
-          errorMessage = "Check your inbox for the verification email we just sent!";
-        } else if (error.message.includes("Invalid login")) {
-          errorMessage = "Please double-check your email and password";
+        let errorMessage = "Please check your username and password";
+        if (error.message.includes("Invalid login")) {
+          errorMessage = "Invalid password for this username";
         } else if (error.message.includes("Too many requests")) {
           errorMessage = "Too many login attempts. Please try again in a few minutes";
         }
         toast.error(t("Sign in paused", "登录暂停"), {
-          description: t(errorMessage, "请检查您的邮箱和密码"),
+          description: t(errorMessage, "请检查您的用户名和密码"),
           position: "top-center"
         });
       }

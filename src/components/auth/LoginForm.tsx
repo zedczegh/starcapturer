@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, Loader2 } from 'lucide-react';
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -23,7 +24,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const onSubmit = async (data: any) => {
     try {
       setFormSubmitted(true);
-      await signIn(data.email, data.password);
+      await signIn(data.username, data.password);
       onSuccess();
       navigate('/photo-points');
       // Toast notification is handled in AuthContext for a more consistent experience
@@ -42,13 +43,9 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="email"
+          name="username"
           rules={{
-            required: t("Email is required", "必须填写邮箱"),
-            pattern: {
-              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-              message: t("Please enter a valid email", "请输入有效的邮箱"),
-            },
+            required: t("Username is required", "必须填写用户名"),
           }}
           render={({ field }) => (
             <FormItem>
@@ -56,15 +53,15 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
                 <FormControl>
                   <Input 
                     {...field} 
-                    id="login_email"
-                    type="email" 
-                    autoComplete="email"
-                    placeholder={t("Your email address", "您的邮箱")}
+                    id="login_username"
+                    type="text" 
+                    autoComplete="username"
+                    placeholder={t("Your username", "您的用户名")}
                     className="pl-10 h-11 text-base"
                     disabled={processing}
                   />
                 </FormControl>
-                <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                <User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
               </div>
               <FormMessage className="text-xs" />
             </FormItem>

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { Loader2 } from '@/components/ui/loader';
 
@@ -26,7 +26,7 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
   const onSubmit = async (data: any) => {
     try {
       setIsLoading(true);
-      await signUp(data.email, data.password);
+      await signUp(data.username, data.password);
       onSuccess();
       navigate('/photo-points');
     } catch (error: any) {
@@ -47,13 +47,17 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="email"
+          name="username"
           rules={{
-            required: t("Email is required", "必须填写邮箱"),
-            pattern: {
-              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-              message: t("Please enter a valid email", "请输入有效的邮箱"),
+            required: t("Username is required", "必须填写用户名"),
+            minLength: {
+              value: 3,
+              message: t("Username must be at least 3 characters", "用户名至少3位"),
             },
+            pattern: {
+              value: /^[a-zA-Z0-9_]+$/,
+              message: t("Username can only contain letters, numbers, and underscores", "用户名只能包含字母、数字和下划线"),
+            }
           }}
           render={({ field }) => (
             <FormItem>
@@ -61,15 +65,15 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
                 <FormControl>
                   <Input 
                     {...field} 
-                    id="signup_email"
-                    type="email" 
-                    autoComplete="email"
-                    placeholder={t("name@email.com", "邮箱")}
+                    id="signup_username"
+                    type="text" 
+                    autoComplete="username"
+                    placeholder={t("Choose a username", "选择用户名")}
                     className="pl-10 h-11 text-base"
                     disabled={isLoading}
                   />
                 </FormControl>
-                <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                <User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
               </div>
               <FormMessage className="text-xs" />
             </FormItem>
