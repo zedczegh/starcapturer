@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import CommunityMap from "@/components/community/CommunityMap";
 import { Loader2 } from "@/components/ui/loader";
 import CommunityLocationsSkeleton from "@/components/community/CommunityLocationsSkeleton";
+import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
@@ -44,6 +45,20 @@ const CommunityAstroSpots: React.FC = () => {
     console.log("Location updated:", lat, lng);
     setUserLocation([lat, lng]);
   }, []);
+
+  // Sort locations by SIQS scores (highest first)
+  const sortedAstroSpots = React.useMemo(() => {
+    if (!astrospots) return [];
+    
+    // Add real-time SIQS values to spots for sorting
+    const spotsWithRealtimeSiqs = astrospots.map(spot => ({
+      ...spot,
+      realTimeSiqs: realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs
+    }));
+    
+    // Sort using the utility function
+    return sortLocationsBySiqs(spotsWithRealtimeSiqs);
+  }, [astrospots, realTimeSiqs]);
 
   const titleVariants = {
     hidden: { opacity: 0, scale: 0.96, y: -10 },
@@ -103,7 +118,7 @@ const CommunityAstroSpots: React.FC = () => {
           ) : (
             <CommunityMap
               center={userLocation || DEFAULT_CENTER}
-              locations={astrospots ?? []}
+              locations={sortedAstroSpots ?? []}
               hoveredLocationId={null}
               isMobile={false}
               zoom={userLocation ? 8 : 3}
@@ -115,13 +130,16 @@ const CommunityAstroSpots: React.FC = () => {
         <h2 className="font-bold text-xl mt-12 mb-5 flex items-center gap-2 text-gradient-blue">
           <Circle className="h-4 w-4 text-primary" />
           <span>{t("All Community Astrospots", "全部社区地点")}</span>
+          <span className="text-sm font-normal text-muted-foreground ml-2">
+            ({t("Sorted by best SIQS score", "按照SIQS评分排序")})
+          </span>
         </h2>
 
         {isLoading ? (
           <CommunityLocationsSkeleton />
-        ) : astrospots && astrospots.length > 0 ? (
+        ) : sortedAstroSpots && sortedAstroSpots.length > 0 ? (
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-            {astrospots.map((spot: any) => (
+            {sortedAstroSpots.map((spot: any) => (
               <button
                 key={spot.id}
                 className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -13,7 +14,8 @@ import ProfileTag from "@/components/profile/ProfileTag";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import LocationCard from "@/components/LocationCard";
-import { Loader2 as Loader } from "@/components/ui/loader"; // Fixed the import to use Loader2 as Loader
+import { Loader2 } from "@/components/ui/loader";
+import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
 
 const ProfileMini: React.FC = () => {
   const { id: profileId } = useParams();
@@ -26,6 +28,8 @@ const ProfileMini: React.FC = () => {
   const { t, language } = useLanguage();
   const [userAstroSpots, setUserAstroSpots] = useState<any[]>([]);
   const [loadingSpots, setLoadingSpots] = useState(false);
+  const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
+  const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
   
   // Check if we came from messages to hide the "Send message" button
   const isFromMessages = location.state?.fromMessages;
@@ -100,6 +104,32 @@ const ProfileMini: React.FC = () => {
     
     fetchUserAstroSpots();
   }, [profileId, t]);
+
+  // Sort astro spots by SIQS score
+  const sortedAstroSpots = React.useMemo(() => {
+    if (!userAstroSpots) return [];
+    
+    // Add real-time SIQS values to spots for sorting
+    const spotsWithRealtimeSiqs = userAstroSpots.map(spot => ({
+      ...spot,
+      realTimeSiqs: realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs,
+      timestamp: spot.created_at // Ensure timestamp is properly defined
+    }));
+    
+    // Sort using the utility function
+    return sortLocationsBySiqs(spotsWithRealtimeSiqs);
+  }, [userAstroSpots, realTimeSiqs]);
+
+  const handleSiqsCalculated = (spotId: string, siqs: number | null, loading: boolean) => {
+    setRealTimeSiqs(prev => ({
+      ...prev,
+      [spotId]: siqs
+    }));
+    setLoadingSiqs(prev => ({
+      ...prev,
+      [spotId]: loading
+    }));
+  };
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-cosmic-900">{t("Loading...", "加载中...")}</div>;
@@ -194,17 +224,20 @@ const ProfileMini: React.FC = () => {
           transition={{ delay: 0.3 }}
           className="mt-4 mb-6"
         >
-          <h3 className="text-cosmic-200 text-sm font-medium mb-3">
+          <h3 className="text-cosmic-200 text-sm font-medium mb-3 flex items-center">
             {t("AstroSpots Created", "创建的观星点")}
+            <span className="text-xs text-muted-foreground ml-2">
+              ({t("Best SIQS first", "最佳SIQS排前")})
+            </span>
           </h3>
           
           {loadingSpots ? (
             <div className="flex justify-center py-6">
-              <Loader className="w-6 h-6 text-primary" />
+              <Loader2 className="w-6 h-6 text-primary" />
             </div>
-          ) : userAstroSpots.length > 0 ? (
+          ) : sortedAstroSpots.length > 0 ? (
             <div className="space-y-4">
-              {userAstroSpots.map(spot => (
+              {sortedAstroSpots.map(spot => (
                 <div 
                   key={spot.id} 
                   className="cursor-pointer transition duration-200 hover:scale-[1.02]"
@@ -215,14 +248,14 @@ const ProfileMini: React.FC = () => {
                     name={spot.name}
                     latitude={spot.latitude}
                     longitude={spot.longitude}
-                    siqs={spot.siqs}
+                    siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
                     timestamp={spot.created_at}
                     isCertified={false}
                   />
                 </div>
               ))}
               
-              {userAstroSpots.length > 0 && (
+              {sortedAstroSpots.length > 0 && (
                 <Button 
                   variant="outline" 
                   size="sm" 
