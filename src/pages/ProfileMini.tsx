@@ -8,7 +8,7 @@ import { User } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translateProfileTag } from "@/utils/linkTranslations";
 import { useMessageNavigation } from "@/hooks/useMessageNavigation";
-import { fetchUserProfile, ensureUserProfile } from "@/utils/profileUtils";
+import { fetchUserProfile } from "@/utils/profileUtils";
 import type { ProfileData } from "@/utils/profile/profileCore";
 import { toast } from "sonner";
 
@@ -36,16 +36,8 @@ const ProfileMini: React.FC = () => {
       try {
         console.log("Loading profile in ProfileMini for user:", profileId);
         
-        // Ensure the user has a profile entry in the database
-        const profileCreated = await ensureUserProfile(profileId);
-        
-        if (!profileCreated) {
-          console.error("Failed to ensure user profile exists in ProfileMini");
-          setError("Failed to load profile");
-          setLoading(false);
-          return;
-        }
-        
+        // Simply fetch the profile without trying to ensure it exists
+        // This fixes the permission error when viewing other profiles
         const profileData = await fetchUserProfile(profileId);
         
         if (profileData) {

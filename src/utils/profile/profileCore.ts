@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { fetchUserTags } from './profileTagUtils';
@@ -170,6 +169,7 @@ export const upsertUserProfile = async (
 
 /**
  * Fetch a user's profile data with better error handling
+ * Updated to handle viewing other users' profiles
  */
 export const fetchUserProfile = async (userId: string) => {
   try {
@@ -181,20 +181,15 @@ export const fetchUserProfile = async (userId: string) => {
       console.error('Session check error:', sessionError);
     }
     
-    if (!sessionData || !sessionData.session) {
-      console.log('User not authenticated, some profiles may not be accessible');
-    } else {
-      // If fetching own profile, verify authentication matches
-      if (sessionData.session.user.id === userId) {
-        console.log('User is fetching their own profile');
-      } else {
-        console.log('User is fetching another user\'s profile');
-      }
+    // Check if the requested profile is the current user's own profile
+    const isOwnProfile = sessionData?.session?.user?.id === userId;
+    
+    // Only ensure profile exists for own profile
+    if (isOwnProfile) {
+      await ensureUserProfile(userId);
     }
     
-    // First ensure the profile exists
-    await ensureUserProfile(userId);
-    
+    // Fetch the profile regardless of whether it's our own or another user's
     const { data, error } = await supabase
       .from('profiles')
       .select('username, avatar_url')
