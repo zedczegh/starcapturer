@@ -23,13 +23,20 @@ const ProfileButton = () => {
   useEffect(() => {
     if (user) {
       const loadProfile = async () => {
-        const profileData = await fetchUserProfile(user.id);
-        if (profileData) {
-          if (profileData.avatar_url) setAvatarUrl(profileData.avatar_url);
-          setProfile({ username: profileData.username });
+        try {
+          const profileData = await fetchUserProfile(user.id);
+          if (profileData) {
+            if (profileData.avatar_url) setAvatarUrl(profileData.avatar_url);
+            setProfile({ username: profileData.username });
+          }
+        } catch (error) {
+          console.error("Error loading profile in ProfileButton:", error);
         }
       };
       loadProfile();
+    } else {
+      setAvatarUrl(null);
+      setProfile(null);
     }
   }, [user]);
 

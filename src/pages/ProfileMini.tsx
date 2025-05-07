@@ -43,6 +43,12 @@ const ProfileMini: React.FC = () => {
             avatar_url: profileData.avatar_url,
             tags: profileData.tags || [],
           });
+        } else {
+          setProfile({
+            username: "Stargazer",
+            avatar_url: null,
+            tags: [],
+          });
         }
       } catch (err) {
         console.error("Exception fetching profile data:", err);

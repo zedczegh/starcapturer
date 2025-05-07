@@ -114,12 +114,13 @@ const Profile = () => {
         setUploadingAvatar(false);
         
         if (!newAvatarUrl) {
+          toast.error(t("Avatar upload failed", "头像上传失败"));
           setSaving(false);
-          return; // Error already handled in uploadAvatar
+          return;
         }
       }
 
-      // Upsert profile
+      // Upsert profile with our improved function
       const profileSuccess = await upsertUserProfile(user.id, {
         username: formData.username,
         avatar_url: newAvatarUrl,
@@ -131,7 +132,7 @@ const Profile = () => {
         return;
       }
 
-      // Save tags
+      // Save tags with improved function
       const tagsSuccess = await saveUserTags(user.id, tags);
       
       if (!tagsSuccess) {
@@ -148,6 +149,7 @@ const Profile = () => {
         tags,
       }));
     } catch (error: any) {
+      console.error("Profile update error:", error);
       toast.error(t("Update failed", "更新失败"), { description: error.message });
     } finally {
       setSaving(false);

@@ -20,6 +20,7 @@ export const upsertUserProfile = async (
       .eq('id', userId)
       .maybeSingle();
     
+    // If RLS is preventing queries, we need to handle it differently
     if (existingProfile) {
       // Update existing profile
       const { error } = await supabase
@@ -30,7 +31,10 @@ export const upsertUserProfile = async (
         })
         .eq('id', userId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating profile:', error);
+        return false;
+      }
     } else {
       // Create new profile
       const { error } = await supabase
@@ -41,7 +45,27 @@ export const upsertUserProfile = async (
           updated_at: new Date().toISOString()
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting profile:', error);
+        // Special case: if the error is about RLS, the profile likely exists but RLS prevents us from seeing it
+        // In this case, try an update instead
+        if (error.code === '42501') {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              ...profileData,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          if (updateError) {
+            console.error('Error in fallback update:', updateError);
+            return false;
+          }
+          return true;
+        }
+        return false;
+      }
     }
     
     return true;
@@ -88,7 +112,10 @@ export const saveUserTags = async (userId: string, tags: string[]): Promise<bool
       .delete()
       .eq('user_id', userId);
       
-    if (deleteError) throw deleteError;
+    if (deleteError) {
+      console.error('Error deleting tags:', deleteError);
+      // If RLS prevented deletion, we'll try the insertions anyway
+    }
     
     // If no tags to insert, we're done
     if (tags.length === 0) return true;
@@ -103,7 +130,10 @@ export const saveUserTags = async (userId: string, tags: string[]): Promise<bool
       .from('profile_tags')
       .insert(tagRows);
       
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error('Error saving profile tags:', insertError);
+      return false;
+    }
     
     return true;
   } catch (error: any) {
@@ -122,7 +152,10 @@ export const fetchUserTags = async (userId: string): Promise<string[]> => {
       .select('tag')
       .eq('user_id', userId);
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching user tags:', error);
+      return [];
+    }
     
     return data ? data.map(item => item.tag) : [];
   } catch (error) {
@@ -142,7 +175,14 @@ export const fetchUserProfile = async (userId: string) => {
       .eq('id', userId)
       .maybeSingle();
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching profile:', error);
+      return {
+        username: null, 
+        avatar_url: null,
+        tags: []
+      };
+    }
     
     // Also fetch tags
     const tags = await fetchUserTags(userId);
