@@ -17,13 +17,14 @@ const CommunityAstroSpots: React.FC = () => {
   const { data: astrospots, isLoading } = useQuery({
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
+  // Handler for SIQS calculation results
   const handleSiqsCalculated = (spotId: string, siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(prev => ({
       ...prev,
@@ -35,6 +36,7 @@ const CommunityAstroSpots: React.FC = () => {
     }));
   };
 
+  // Handler for user location updates
   const handleLocationUpdate = useCallback((lat: number, lng: number) => {
     console.log("Location updated:", lat, lng);
     setUserLocation([lat, lng]);
@@ -50,15 +52,17 @@ const CommunityAstroSpots: React.FC = () => {
       realTimeSiqs: realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs
     }));
     
-    // Sort using the utility function
+    // Use our helper function to sort by SIQS
     return sortLocationsBySiqs(spotsWithRealtimeSiqs);
   }, [astrospots, realTimeSiqs]);
 
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>
       <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
+        {/* Header Section */}
         <CommunityHeader />
 
+        {/* Map Section */}
         <CommunityMapSection 
           isLoading={isLoading}
           sortedAstroSpots={sortedAstroSpots}
@@ -67,6 +71,7 @@ const CommunityAstroSpots: React.FC = () => {
           onLocationUpdate={handleLocationUpdate}
         />
 
+        {/* Locations List Section */}
         <CommunityLocationsList 
           isLoading={isLoading}
           sortedAstroSpots={sortedAstroSpots}

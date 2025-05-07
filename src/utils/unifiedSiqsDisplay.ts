@@ -1,3 +1,4 @@
+
 /**
  * Unified SIQS Display Utility
  * 
@@ -83,9 +84,17 @@ export function getLocationSiqs(location: any, realTimeSiqs: number | null = nul
   });
 }
 
-// Use the function from siqsHelpers instead of duplicating it
-import { formatSiqsForDisplay as formatSiqs } from './siqsHelpers';
-export { formatSiqs as formatSiqsForDisplay };
+/**
+ * Format SIQS for display
+ * @param score The SIQS score to format
+ * @returns Formatted string representation
+ */
+export function formatSiqsForDisplay(score: number | null): string {
+  if (score === null || score <= 0) return 'N/A';
+  // Normalize score to 1-10 scale if needed
+  const normalizedScore = normalizeToSiqsScale(score);
+  return normalizedScore.toFixed(1);
+}
 
 /**
  * Get cached SIQS with optimized performance

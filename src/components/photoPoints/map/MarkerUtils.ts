@@ -1,10 +1,12 @@
+
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation } from "@/utils/validation";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
 import { getSiqsScore } from "@/utils/siqsHelpers";
 import L from 'leaflet'; // Add this import for the Leaflet library
-import { formatSiqsScore, getSiqsColorClass } from "@/utils/mapSiqsDisplay";
-import { hasCertification } from "../utils/certificationUtils";
+import { getSiqsColorClass } from "@/utils/mapSiqsDisplay";
+// Fix missing formatSiqsScore by using our own implementation
+import { formatSiqsScore } from "@/utils/siqsHelpers";
 
 /**
  * Get SIQS quality class for styling
@@ -228,6 +230,7 @@ export function generateMarkerHtml(
   
   // Get appropriate color class based on SIQS value
   const siqsClass = getSiqsColorClass(siqsValue);
+  // Use our own formatSiqsScore function
   const siqsText = formatSiqsScore(siqsValue);
 
   const pulseAnimation = shouldPulse

@@ -1,90 +1,128 @@
-/**
- * Utility functions for managing Leaflet map markers, including icon updates and color changes
- */
 
 import L from 'leaflet';
-import { getSiqsColorClass } from '@/utils/mapSiqsDisplay';
-import { formatSiqsScore, getSiqsScore } from "@/utils/siqsHelpers";
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { getLocationMarker } from '../../MarkerUtils';
 
 /**
- * Updates the marker color based on the SIQS score
- * @param marker The marker to update
- * @param score The SIQS score (numeric value)
+ * Manager for handling map markers efficiently
  */
-export const updateMarkerColor = (marker: any, score: number) => {
-  try {
-    if (!marker || !marker.getElement()) return;
-    
-    const element = marker.getElement();
-    if (!element) return;
-    
-    const innerElement = element.querySelector('.marker-inner');
-    if (!innerElement) return;
-    
-    // Remove existing color classes
-    innerElement.classList.remove(
-      'text-green-500',
-      'text-lime-500',
-      'text-yellow-500',
-      'text-orange-500',
-      'text-red-500',
-      'text-muted-foreground'
-    );
-    
-    // Add the new color class based on score
-    innerElement.classList.add(getSiqsColorClass(score));
-  } catch (error) {
-    console.error("Error updating marker color:", error);
+export class MarkerManager {
+  private map: L.Map | null = null;
+  private markers: Map<string, L.Marker> = new Map();
+  private visibleMarkers: Set<string> = new Set();
+
+  /**
+   * Initialize with the Leaflet map instance
+   */
+  public initialize(map: L.Map): void {
+    this.map = map;
   }
-};
 
-/**
- * Updates the marker SIQS display with the latest score
- * @param marker The marker to update
- * @param score The new SIQS score (numeric value)
- */
-export const updateMarkerSiqs = (marker: any, score: number | any) => {
-  try {
-    if (!marker || !marker.getElement()) return;
-    
-    const element = marker.getElement();
-    if (!element) return;
-    
-    const scoreElement = element.querySelector('.marker-inner');
-    if (!scoreElement) return;
-    
-    // Get the numeric SIQS score
-    const numericScore = getSiqsScore(score);
-    
-    // Update the text content
-    scoreElement.textContent = formatSiqsScore(numericScore);
-    
-    // Update the color class based on score
-    updateMarkerColor(marker, numericScore);
-    
-  } catch (error) {
-    console.error("Error updating marker SIQS:", error);
-  }
-};
+  /**
+   * Render markers for locations
+   * @param locations Array of locations to render
+   * @param selectedId Optional ID of selected location
+   * @param bounds Optional map bounds for optimization
+   */
+  public renderMarkers(
+    locations: SharedAstroSpot[],
+    selectedId?: string,
+    bounds?: L.LatLngBounds
+  ): void {
+    if (!this.map) return;
 
-/**
- * Updates the marker icon with the new HTML
- * @param marker The marker to update
- * @param html The new HTML for the icon
- */
-export const updateMarkerIcon = (marker: L.Marker, html: string) => {
-  try {
-    if (!marker) return;
+    // Track which markers should remain visible
+    const newVisibleMarkers = new Set<string>();
     
-    const newIcon = L.divIcon({
-      className: 'custom-marker',
-      html: html,
-      iconSize: [40, 40],
-      iconAnchor: [20, 20]
+    // Create or update markers for each location
+    locations.forEach(location => {
+      if (!location.latitude || !location.longitude) return;
+      
+      // Skip locations outside the visible bounds
+      if (bounds && !bounds.contains([location.latitude, location.longitude])) {
+        return;
+      }
+      
+      const locationId = location.id || `${location.latitude}-${location.longitude}`;
+      newVisibleMarkers.add(locationId);
+      
+      // Check if marker already exists
+      if (this.markers.has(locationId)) {
+        // Update existing marker if needed
+        const marker = this.markers.get(locationId)!;
+        
+        // Update position if needed
+        const currentPos = marker.getLatLng();
+        if (currentPos.lat !== location.latitude || currentPos.lng !== location.longitude) {
+          marker.setLatLng([location.latitude, location.longitude]);
+        }
+        
+        // Ensure marker is on the map
+        if (!marker.getMap()) {
+          marker.addTo(this.map);
+        }
+      } else {
+        // Create new marker
+        this.createMarker(location, locationId, selectedId === locationId);
+      }
     });
     
-    marker.setIcon(newIcon);
-  } catch (error) {
-    console.error("Error updating marker icon:", error);
+    // Remove markers that are no longer visible
+    this.visibleMarkers.forEach(id => {
+      if (!newVisibleMarkers.has(id)) {
+        const marker = this.markers.get(id);
+        if (marker) {
+          marker.remove();
+        }
+      }
+    });
+    
+    // Update visible markers
+    this.visibleMarkers = newVisibleMarkers;
   }
-};
+  
+  /**
+   * Create a new marker for a location
+   */
+  private createMarker(
+    location: SharedAstroSpot,
+    locationId: string,
+    isSelected: boolean
+  ): void {
+    if (!this.map) return;
+    
+    // Determine if location is certified
+    const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+    
+    // Create marker with appropriate icon
+    const marker = L.marker(
+      [location.latitude, location.longitude],
+      {
+        icon: getLocationMarker(location, isCertified, isSelected, false)
+      }
+    );
+    
+    // Add to map and store in collection
+    marker.addTo(this.map);
+    this.markers.set(locationId, marker);
+  }
+  
+  /**
+   * Clear all markers
+   */
+  public clearMarkers(): void {
+    this.markers.forEach(marker => {
+      marker.remove();
+    });
+    this.markers.clear();
+    this.visibleMarkers.clear();
+  }
+  
+  /**
+   * Clean up resources
+   */
+  public destroy(): void {
+    this.clearMarkers();
+    this.map = null;
+  }
+}
