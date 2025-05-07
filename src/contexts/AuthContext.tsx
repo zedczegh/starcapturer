@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -172,11 +173,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     let signedIn = false;
     try {
-      toast("Signing in...", {
-        description: "Checking your credentials...",
-        position: "top-center",
-        duration: 1500
-      });
+      // Removed the "Signing in..." toast here
 
       console.log('Attempting sign in for:', email);
       const { data, error } = await supabase.auth.signInWithPassword({ 
@@ -252,10 +249,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     let toastId: string | number | undefined = undefined;
     try {
-      toastId = toast("Signing out...", {
-        position: "top-center",
-        duration: 1000
-      });
+      // Removed the "Signing out..." toast here
       
       console.log('Signing out user');
       // First set user to null to prevent any authenticated API calls after sign out
