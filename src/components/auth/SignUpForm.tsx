@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -29,6 +30,13 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
       onSuccess();
       navigate('/photo-points');
     } catch (error: any) {
+      toast.error(
+        t("Account creation issue", "账户创建问题"),
+        {
+          description: error.message || t("Please try again", "请重试"),
+          position: "top-center"
+        }
+      );
     } finally {
       setIsLoading(false);
     }

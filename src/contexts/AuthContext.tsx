@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const { t } = useLanguage ? useLanguage() : { t: (en: string, zh: string) => en };
 
   useEffect(() => {
@@ -56,6 +56,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         redirectTo = 'https://siqs.astroai.top';
       }
 
+      // Add a log to check if signups are enabled
+      console.log("Attempting to sign up with email:", email);
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -64,7 +67,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Signup error:", error);
+        throw error;
+      }
 
       if (data.user && !data.user.confirmed_at) {
         toast.success(
@@ -94,17 +100,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         );
       }
     } catch (error: any) {
+      console.error("Error during signup:", error);
+      let errorMessage = error.message;
+      if (error.message.includes("Email signups are disabled")) {
+        errorMessage = t(
+          "Email signups are currently disabled. Please contact the administrator.",
+          "电子邮件注册功能目前已禁用。请联系管理员。"
+        );
+      }
+      
       toast.error(
         t(
           "Account creation paused",
           "帐户创建已暂停"
         ),
         {
-          description: error.message ||
+          description: errorMessage ||
             t("Please try again with a different email", "请更换邮箱后重试"),
           position: "top-center"
         }
       );
+      throw error;
     } finally {
       setIsLoading(false);
     }
