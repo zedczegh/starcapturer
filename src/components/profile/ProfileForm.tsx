@@ -42,18 +42,18 @@ const ProfileForm = ({ register, loading, onSubmit, tags, setTags }: ProfileForm
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="username" className="text-white mb-2 block">
+    <form onSubmit={onSubmit} className="space-y-8">
+      <div className="grid md:grid-cols-2 gap-8">
+        <div className="space-y-6">
+          <div className="bg-cosmic-800/30 p-5 rounded-lg border border-cosmic-700/30">
+            <Label htmlFor="username" className="text-white mb-2 block text-lg">
               {t("Username", "用户名")}
             </Label>
             <div className="relative">
               <Input
                 id="username"
                 {...register('username', { required: true, minLength: 3 })}
-                className="pl-10 bg-cosmic-800 border-cosmic-700 text-white focus:border-primary"
+                className="pl-10 bg-cosmic-800/50 border-cosmic-700/40 text-white focus:border-primary focus:ring-1 focus:ring-primary/30"
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-cosmic-400">
                 <User className="w-5 h-5" />
@@ -61,20 +61,23 @@ const ProfileForm = ({ register, loading, onSubmit, tags, setTags }: ProfileForm
             </div>
           </div>
           {/* Tag selector */}
-          <ProfileTagsSelector selectedTags={tags} onChange={handleTagChange} disabled={loading} />
+          <div className="bg-cosmic-800/30 p-5 rounded-lg border border-cosmic-700/30">
+            <ProfileTagsSelector selectedTags={tags} onChange={handleTagChange} disabled={loading} />
+          </div>
         </div>
 
-        <ProfileBenefits />
-      </div>
-
-      <div className="flex justify-end">
-        <Button 
-          type="submit" 
-          className="bg-gradient-to-r from-primary to-[#8A6FD6] hover:opacity-90 text-white px-6"
-          disabled={loading}
-        >
-          {loading ? t("Updating...", "更新中...") : t("Save Changes", "保存更改")}
-        </Button>
+        <div className="flex flex-col gap-6">
+          <ProfileBenefits />
+          <div className="flex justify-end mt-auto">
+            <Button 
+              type="submit" 
+              className="bg-gradient-to-r from-primary to-[#8A6FD6] hover:opacity-90 text-white px-8 py-6 shadow-lg shadow-primary/20"
+              disabled={loading}
+            >
+              {loading ? t("Updating...", "更新中...") : t("Save Changes", "保存更改")}
+            </Button>
+          </div>
+        </div>
       </div>
     </form>
   );

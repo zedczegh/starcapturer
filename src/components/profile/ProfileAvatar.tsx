@@ -25,11 +25,13 @@ const ProfileAvatar = ({
       <div className="relative w-24 h-24">
         {avatarUrl ? (
           <div className="relative group">
-            <img
-              src={avatarUrl}
-              alt="Profile"
-              className="w-full h-full rounded-full object-cover border-2 border-primary/30 shadow-lg"
-            />
+            <div className="w-full h-full rounded-full overflow-hidden border-2 border-primary/30 shadow-lg shadow-primary/10 ring-2 ring-cosmic-800/80">
+              <img
+                src={avatarUrl}
+                alt="Profile"
+                className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-700"
+              />
+            </div>
             <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <button 
                 onClick={onRemoveAvatar} 
@@ -42,12 +44,12 @@ const ProfileAvatar = ({
             </div>
           </div>
         ) : (
-          <div className="w-full h-full rounded-full bg-cosmic-800/60 flex items-center justify-center shadow-lg">
+          <div className="w-full h-full rounded-full bg-gradient-to-br from-cosmic-700/60 to-cosmic-900/90 flex items-center justify-center shadow-lg ring-2 ring-cosmic-800/80">
             <User className="w-12 h-12 text-cosmic-400" />
           </div>
         )}
         
-        <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 bg-primary text-white p-2 rounded-full cursor-pointer shadow-md hover:bg-primary/90 transition-all">
+        <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 bg-primary hover:bg-primary/90 text-white p-2 rounded-full cursor-pointer shadow-md shadow-primary/30 hover:shadow-primary/40 transition-all">
           <Camera className="w-5 h-5" />
           <Input
             id="avatar-upload"

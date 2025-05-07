@@ -37,15 +37,15 @@ const ProfileTagsSelector: React.FC<ProfileTagsSelectorProps> = ({
   
   return (
     <div className="space-y-4">
-      <Label className="block text-white mb-3">{t("Profile Tags", "个人标签")}</Label>
+      <Label className="block text-white mb-3 text-lg">{t("Profile Tags", "个人标签")}</Label>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {TAGS.map((tag) => (
-          <label key={tag.value} className="flex items-start gap-5 cursor-pointer group py-2">
+          <label key={tag.value} className="flex items-start gap-6 cursor-pointer group py-2 px-3 rounded-md hover:bg-cosmic-800/20 transition-colors">
             <Checkbox
               checked={selectedTags.includes(tag.value)}
               onCheckedChange={(checked) => onChange(tag.value, !!checked)}
               disabled={disabled}
-              className="border-cosmic-400 mt-0.5"
+              className="border-cosmic-400 mt-1"
             />
             <div className="flex-1 flex">
               <ProfileTag tag={tag.value} />
@@ -55,7 +55,7 @@ const ProfileTagsSelector: React.FC<ProfileTagsSelectorProps> = ({
       </div>
       
       {selectedTags.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-6 p-4 bg-cosmic-800/30 border border-cosmic-700/20 rounded-lg">
           <p className="text-sm text-cosmic-300 mb-3">
             {t("Selected tags:", "已选标签:")}
           </p>
