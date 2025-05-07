@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -13,8 +12,8 @@ import { toast } from "sonner";
 import ProfileTag from "@/components/profile/ProfileTag";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
-import { Loader2 } from "lucide-react";
+import LocationCard from "@/components/LocationCard";
+import { Loader2 as Loader } from "@/components/ui/loader"; // Fixed the import to use Loader2 as Loader
 
 const ProfileMini: React.FC = () => {
   const { id: profileId } = useParams();
@@ -201,32 +200,24 @@ const ProfileMini: React.FC = () => {
           
           {loadingSpots ? (
             <div className="flex justify-center py-6">
-              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+              <Loader className="w-6 h-6 text-primary" />
             </div>
           ) : userAstroSpots.length > 0 ? (
             <div className="space-y-4">
-              {userAstroSpots.map((spot, index) => (
+              {userAstroSpots.map(spot => (
                 <div 
                   key={spot.id} 
                   className="cursor-pointer transition duration-200 hover:scale-[1.02]"
                   onClick={() => navigate(`/astro-spot/${spot.id}`)}
                 >
-                  <PhotoLocationCard
-                    location={{
-                      id: spot.id,
-                      name: spot.name,
-                      latitude: spot.latitude,
-                      longitude: spot.longitude,
-                      siqs: spot.siqs,
-                      bortleScale: spot.bortle_scale || 4,
-                      certification: spot.is_certified ? "Certified Location" : undefined,
-                      isDarkSkyReserve: spot.is_dark_sky_reserve || false,
-                      type: spot.type || 'astro-spot'
-                    }}
-                    index={index}
-                    onViewDetails={() => navigate(`/astro-spot/${spot.id}`)}
-                    showRealTimeSiqs={true}
-                    showBortleScale={true}
+                  <LocationCard
+                    id={spot.id}
+                    name={spot.name}
+                    latitude={spot.latitude}
+                    longitude={spot.longitude}
+                    siqs={spot.siqs}
+                    timestamp={spot.created_at}
+                    isCertified={false}
                   />
                 </div>
               ))}
