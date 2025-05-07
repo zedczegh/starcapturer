@@ -4,54 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { ensureProfileExists } from '@/components/profile/tags/ProfileUtils';
+import { UserTag } from '@/components/profile/tags/UserTagsTypes';
 
-export interface UserTag {
-  id: string;
-  name: string;
-  icon_url: string | null;
-}
+export type { UserTag };
 
 export function useUserTags() {
   const [tags, setTags] = useState<UserTag[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { t } = useLanguage();
-
-  // Create profiles for users if they don't exist
-  const ensureProfileExists = useCallback(async (uid: string) => {
-    try {
-      // Check if profile exists
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', uid)
-        .maybeSingle();
-      
-      if (error) {
-        console.error("Error checking profile existence:", error);
-        return false;
-      }
-      
-      if (!data) {
-        // Create profile if doesn't exist
-        const { error: createError } = await supabase
-          .from('profiles')
-          .insert([{ id: uid }]);
-          
-        if (createError) {
-          console.error("Error creating profile:", createError);
-          return false;
-        }
-        
-        console.log("Created new profile for user:", uid);
-      }
-      
-      return true;
-    } catch (err) {
-      console.error("Failed to ensure profile exists:", err);
-      return false;
-    }
-  }, []);
 
   // Fetch tags for current user or specified user
   const fetchUserTags = useCallback(async (userId?: string) => {
@@ -98,7 +60,7 @@ export function useUserTags() {
     } finally {
       setLoading(false);
     }
-  }, [user, ensureProfileExists, t]);
+  }, [user, t]);
 
   // Add a new tag for current user or specified user
   const addUserTag = useCallback(async (userId: string, tagName: string) => {
@@ -152,7 +114,7 @@ export function useUserTags() {
       console.error("Error in addUserTag:", err);
       return null;
     }
-  }, [user, ensureProfileExists, t]);
+  }, [user, t]);
 
   // Remove a tag
   const removeUserTag = useCallback(async (tagId: string) => {
