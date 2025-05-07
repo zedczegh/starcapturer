@@ -9,12 +9,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { translateProfileTag } from "@/utils/linkTranslations";
 import { useMessageNavigation } from "@/hooks/useMessageNavigation";
 import { fetchUserProfile, ensureUserProfile } from "@/utils/profileUtils";
-
-interface ProfileData {
-  username: string | null;
-  avatar_url: string | null;
-  tags: string[];
-}
+import type { ProfileData } from "@/utils/profile/profileCore";
 
 const ProfileMini: React.FC = () => {
   const { id: profileId } = useParams();

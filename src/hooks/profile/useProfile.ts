@@ -2,16 +2,10 @@
 import { useState, useCallback } from 'react';
 import { getRandomAstronomyTip } from '@/utils/astronomyTips';
 import { fetchUserProfile, ensureUserProfile } from '@/utils/profileUtils';
-
-interface Profile {
-  username: string | null;
-  avatar_url: string | null;
-  date_of_birth: string | null;
-  tags: string[];
-}
+import type { ProfileData } from '@/utils/profile/profileCore';
 
 export function useProfile() {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -38,7 +32,6 @@ export function useProfile() {
       setProfile({
         username: profileData.username || null,
         avatar_url: profileData.avatar_url,
-        date_of_birth: null,
         tags: profileData.tags || [],
       });
       
@@ -46,7 +39,7 @@ export function useProfile() {
       setTags(profileData.tags || []);
       setAvatarUrl(profileData.avatar_url);
       
-      return { data: { username: profileData.username, avatar_url: profileData.avatar_url }, error: null };
+      return { data: { username: profileData.username, avatar_url: profileData.avatar_url, tags: profileData.tags }, error: null };
     } catch (error) {
       console.error("Error in fetchProfile:", error);
       return { data: null, error };
