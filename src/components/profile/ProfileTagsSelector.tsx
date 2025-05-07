@@ -10,7 +10,7 @@ import ProfileTag from "./ProfileTag";
 const TAGS: { value: string; label: string }[] = [
   { value: "Professional Astronomer", label: "Professional Astronomer" },
   { value: "Amateur Astronomer", label: "Amateur Astronomer" },
-  { value: "Astrophotographer", label: "Astrophotographer" },
+  { value: "Star Gazer", label: "Star Gazer" },
   { value: "Meteorology Enthusiast", label: "Meteorology Enthusiast" },
   { value: "Cosmos Lover", label: "Cosmos Lover" },
   { value: "Traveler", label: "Traveler" },
@@ -19,7 +19,7 @@ const TAGS: { value: string; label: string }[] = [
   { value: "Astronomy Student", label: "Astronomy Student" },
   { value: "Planet Watcher", label: "Planet Watcher" },
   { value: "Telescope Maker", label: "Telescope Maker" },
-  { value: "Star Gazer", label: "Star Gazer" },
+  { value: "Astrophotographer", label: "Astrophotographer" },
 ];
 
 interface ProfileTagsSelectorProps {
