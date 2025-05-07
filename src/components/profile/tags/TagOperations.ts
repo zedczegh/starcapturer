@@ -6,9 +6,7 @@ import { UserTag } from './UserTagsTypes';
 // Add a tag for a specific user
 export async function addTagForUser(uid: string, tagName: string): Promise<any> {
   try {
-    if (!await ensureProfileExists(uid)) {
-      console.log("Proceeding with tag addition despite profile check issue");
-    }
+    await ensureProfileExists(uid);
     
     // Check if tag already exists
     const { data: existingTags } = await supabase
@@ -67,10 +65,7 @@ export async function fetchTagsForUser(userId: string): Promise<UserTag[]> {
     console.log("Fetching tags for user:", userId);
     
     // Ensure the user has a profile
-    const profileExists = await ensureProfileExists(userId);
-    if (!profileExists) {
-      console.log("Profile doesn't exist for user:", userId);
-    }
+    await ensureProfileExists(userId);
     
     // Now fetch tags
     const { data: tagData, error } = await supabase

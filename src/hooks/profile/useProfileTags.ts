@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ensureProfileExists } from './utils/profilePersistence';
+import { ensureProfileExists } from '@/hooks/profile/utils/profilePersistence';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export function useProfileTags() {
@@ -15,22 +15,8 @@ export function useProfileTags() {
       console.log("Saving profile tags for user:", userId);
       setLoadingTags(true);
       
-      // Check if user is logged in
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error("Not authenticated");
-        return false;
-      }
-      
       // First ensure profile exists
-      try {
-        const profileExists = await ensureProfileExists(userId);
-        if (!profileExists) {
-          console.log("Profile doesn't exist - proceeding with tag save anyway");
-        }
-      } catch (error: any) {
-        console.log("Profile check info:", error);
-      }
+      await ensureProfileExists(userId);
       
       // Remove all current tags for this user, then insert selected ones
       try {
@@ -66,11 +52,11 @@ export function useProfileTags() {
         console.log("Tag insertion exception:", error);
       }
       
-      // Update local state optimistically regardless of backend errors
+      // Update local state
       setTags(newTags);
       return true;
     } catch (error) {
-      console.error("Error in saveProfileTags:", error);
+      console.log("Error in saveProfileTags:", error);
       return false;
     } finally {
       setLoadingTags(false);

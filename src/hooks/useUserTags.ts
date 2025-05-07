@@ -67,6 +67,9 @@ export function useUserTags() {
         return null;
       }
       
+      // Ensure the user has a profile first
+      await ensureProfileExists(userId);
+      
       // Check if tag already exists
       const { data: existingTags } = await supabase
         .from('profile_tags')
@@ -77,12 +80,6 @@ export function useUserTags() {
       if (existingTags && existingTags.length > 0) {
         console.log(`Tag "${tagName}" already exists for user:`, userId);
         return existingTags[0];
-      }
-      
-      // First ensure the user has a profile
-      const profileExists = await ensureProfileExists(userId);
-      if (!profileExists) {
-        console.log("Proceeding with tag addition despite profile check issue");
       }
       
       // Add new tag
@@ -139,7 +136,7 @@ export function useUserTags() {
   // Load tags for current user on mount
   useEffect(() => {
     if (user) {
-      fetchUserTags();
+      fetchUserTags(user.id);
     }
   }, [user, fetchUserTags]);
 

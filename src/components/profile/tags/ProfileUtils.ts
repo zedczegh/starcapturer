@@ -1,14 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
-// Helper function to ensure user profile exists
+// Delegate to the centralized profile function
 export async function ensureProfileExists(uid: string): Promise<boolean> {
   try {
     // Check if user is logged in
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      console.error("User not authenticated");
+      console.log("User not authenticated");
       return false;
     }
     
@@ -20,7 +19,7 @@ export async function ensureProfileExists(uid: string): Promise<boolean> {
       .maybeSingle();
     
     if (error) {
-      console.error("Error checking profile existence:", error);
+      console.log("Error checking profile existence:", error);
       return false;
     }
     
@@ -35,11 +34,7 @@ export async function ensureProfileExists(uid: string): Promise<boolean> {
         }]);
         
       if (createError) {
-        // Don't show toast for expected errors like RLS restrictions
-        if (!createError.message.includes("policy") && 
-            !createError.message.includes("permission")) {
-          console.error("Error creating profile:", createError);
-        }
+        console.log("Profile creation info:", createError);
         return false;
       }
       
@@ -50,7 +45,7 @@ export async function ensureProfileExists(uid: string): Promise<boolean> {
     
     return true;
   } catch (err) {
-    console.error("Failed to ensure profile exists:", err);
+    console.log("Profile check exception:", err);
     return false;
   }
 }

@@ -12,7 +12,7 @@ export function useProfileAvatar() {
   // Upload avatar to Supabase Storage
   const uploadAvatar = useCallback(async (userId: string, file: File): Promise<string | null> => {
     if (!file) {
-      console.error("No file provided for upload");
+      console.log("No file provided for upload");
       return null;
     }
     
@@ -20,20 +20,13 @@ export function useProfileAvatar() {
       console.log("Starting avatar upload for user:", userId);
       setUploadingAvatar(true);
       
-      // Ensure the user is authenticated
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error("User is not authenticated");
-        return null;
-      }
-      
       // Create a unique filename to avoid cache issues
       const fileExt = file.name.split('.').pop();
       const fileName = `avatar-${userId}-${Date.now()}.${fileExt}`;
       
-      console.log(`Uploading avatar with content type ${file.type} to avatars/${fileName}`);
+      console.log(`Uploading avatar with name ${fileName}`);
       
-      // Upload the file with explicit content type
+      // Upload the file
       const { data, error } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
@@ -43,13 +36,6 @@ export function useProfileAvatar() {
       
       if (error) {
         console.log("Avatar upload issue:", error.message);
-        
-        // Don't show detailed error messages for common issues
-        if (error.message.includes('The resource already exists') ||
-            error.message.includes('bucket_id') || 
-            error.message.includes('not found')) {
-          console.log("Non-critical avatar upload issue, attempting to continue...");
-        }
         
         // Try to get the URL even if upload had issues
         const { data: existingData } = supabase.storage
@@ -64,15 +50,15 @@ export function useProfileAvatar() {
         return null;
       }
       
-      console.log("Avatar uploaded successfully to path:", data?.path);
+      console.log("Avatar uploaded successfully");
       
-      // Get the public URL from Supabase
+      // Get the public URL
       const { data: publicUrlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
       
       if (!publicUrlData) {
-        console.error("Failed to get public URL for uploaded avatar");
+        console.log("Failed to get public URL for uploaded avatar");
         return null;
       }
       
@@ -81,12 +67,12 @@ export function useProfileAvatar() {
       
       return publicUrl;
     } catch (error: any) {
-      console.error('Error uploading avatar:', error);
+      console.log('Error uploading avatar:', error);
       return null;
     } finally {
       setUploadingAvatar(false);
     }
-  }, [t]);
+  }, []);
 
   return {
     avatarFile,
