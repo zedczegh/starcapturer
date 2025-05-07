@@ -109,17 +109,42 @@ const Profile = () => {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file size and type
+      const fileSize = file.size / 1024 / 1024; // size in MB
+      
+      if (fileSize > 2) {
+        toast.error(t("File is too large", "文件太大"), {
+          description: t("Avatar must be less than 2MB", "头像必须小于2MB")
+        });
+        return;
+      }
+      
+      // Check if file is an image
+      if (!file.type.startsWith('image/')) {
+        toast.error(t("Invalid file type", "无效的文件类型"), {
+          description: t("Please select an image file", "请选择图像文件")
+        });
+        return;
+      }
+      
+      console.log("Avatar file selected:", file.name, file.type, `${fileSize.toFixed(2)}MB`);
       setAvatarFile(file);
+      
       // Create a local preview of the image
       const previewUrl = URL.createObjectURL(file);
       setAvatarUrl(previewUrl);
-      setUploadingAvatar(false); // We'll upload when the form is submitted
+      toast.info(t("Avatar selected", "已选择头像"), {
+        description: t("Click 'Save Profile' to upload", "点击'保存资料'上传")
+      });
     }
   };
 
   const removeAvatar = () => {
     setAvatarUrl(null);
     setAvatarFile(null);
+    toast.info(t("Avatar removed", "已移除头像"), {
+      description: t("Click 'Save Profile' to confirm", "点击'保存资料'确认")
+    });
   };
 
   if (!authChecked || loading) return <ProfileLoader />;

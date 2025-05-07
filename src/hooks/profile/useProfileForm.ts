@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,20 +42,28 @@ export function useProfileForm(user: User | null) {
       await ensureProfileExists(user.id);
 
       // Upload avatar if selected
-      let newAvatarUrl = avatarUrl;
+      let newAvatarUrl = null;
       if (avatarFile) {
         setAvatarUploading(true);
+        console.log("Starting avatar upload process...");
         newAvatarUrl = await uploadAvatar(user.id, avatarFile);
         setAvatarUploading(false);
         
         if (!newAvatarUrl) {
           toast.error(t('Failed to upload avatar', '上传头像失败'));
-          setSaving(false);
-          return;
+          // Continue with profile update even if avatar upload fails
+          console.log("Continuing with profile update despite avatar upload failure");
+        } else {
+          console.log("Avatar uploaded successfully, URL:", newAvatarUrl);
         }
+      } else if (avatarUrl) {
+        // Keep existing avatar if no new one uploaded
+        newAvatarUrl = avatarUrl;
+        console.log("Keeping existing avatar URL:", newAvatarUrl);
       }
 
       // Update profile in Supabase
+      console.log(`Updating profile with username: ${data.username}, avatar: ${newAvatarUrl || 'none'}`);
       const { error, data: updatedProfile } = await supabase
         .from('profiles')
         .update({
@@ -87,6 +94,9 @@ export function useProfileForm(user: User | null) {
       if (updatedProfile.avatar_url) {
         const refreshedUrl = `${updatedProfile.avatar_url}?v=${new Date().getTime()}`;
         setAvatarUrl(refreshedUrl);
+        console.log("Setting refreshed avatar URL:", refreshedUrl);
+      } else {
+        setAvatarUrl(null);
       }
 
       toast.success(t('Profile updated successfully', '个人资料更新成功'));

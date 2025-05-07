@@ -12,7 +12,10 @@ export function useProfileAvatar() {
 
   // Upload avatar to Supabase Storage
   const uploadAvatar = useCallback(async (userId: string, file: File): Promise<string | null> => {
-    if (!file) return null;
+    if (!file) {
+      console.error("No file provided for upload");
+      return null;
+    }
     
     try {
       console.log("Starting avatar upload for user:", userId);
@@ -23,6 +26,23 @@ export function useProfileAvatar() {
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
       
       console.log(`Uploading avatar to avatars/${fileName}`);
+      
+      // Check if the avatars bucket exists, create if it doesn't
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
+      
+      if (!avatarsBucketExists) {
+        console.log("Avatars bucket doesn't exist, creating...");
+        const { error: bucketError } = await supabase.storage.createBucket('avatars', {
+          public: true
+        });
+        
+        if (bucketError) {
+          console.error("Error creating avatars bucket:", bucketError);
+          toast.error(t("Failed to create storage for avatars", "无法创建头像存储"));
+          return null;
+        }
+      }
       
       // Make sure the user is logged in
       const { data: { session } } = await supabase.auth.getSession();
@@ -37,18 +57,19 @@ export function useProfileAvatar() {
         return null;
       }
       
-      // Upload the file
+      // Upload the file with proper content type
       const { data, error } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
           upsert: true,
-          cacheControl: '0'
+          contentType: file.type, // Set the proper content type based on the file
+          cacheControl: 'no-cache' // Prevent caching issues
         });
       
       if (error) {
         console.error("Avatar upload error:", error);
         toast.error(t("Failed to upload avatar. Please try again.", "上传头像失败，请重试。"));
-        throw error;
+        return null;
       }
       
       console.log("Avatar uploaded successfully:", data);
@@ -64,6 +85,7 @@ export function useProfileAvatar() {
       return publicUrl;
     } catch (error) {
       console.error('Error uploading avatar:', error);
+      toast.error(t("Avatar upload failed", "头像上传失败"));
       return null;
     } finally {
       setUploadingAvatar(false);
