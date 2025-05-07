@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import ProfileTag from "@/components/profile/ProfileTag";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 as Loader } from "@/components/ui/loader"; // Fixed the import to use Loader2 as Loader
+import { Loader2 } from "lucide-react";
 import PhotoLocationCard from "@/components/photoPoints/PhotoLocationCard";
 
 const ProfileMini: React.FC = () => {
@@ -214,7 +214,7 @@ const ProfileMini: React.FC = () => {
           
           {loadingSpots ? (
             <div className="flex justify-center py-6">
-              <Loader className="w-6 h-6 text-primary" />
+              <Loader className="w-6 h-6 text-primary animate-spin" />
             </div>
           ) : userAstroSpots.length > 0 ? (
             <div className="space-y-4">
@@ -229,10 +229,10 @@ const ProfileMini: React.FC = () => {
                       name: spot.name,
                       latitude: spot.latitude,
                       longitude: spot.longitude,
-                      bortleScale: spot.bortlescale,
-                      siqs: spot.siqs,
-                      timestamp: spot.created_at,
-                      user_id: profileId
+                      bortleScale: spot.bortlescale || 4,
+                      siqs: spot.siqs || 0,
+                      timestamp: spot.created_at
+                      // Note: user_id is not passed as it's not part of SharedAstroSpot type
                     }}
                     index={index}
                     onViewDetails={() => handleViewDetails(spot)}
