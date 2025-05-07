@@ -2,13 +2,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { formatPhoneNumber, checkUsernameAvailability, showAuthToast, createUserProfile } from '@/utils/authUtils';
+import { checkUsernameAvailability, showAuthToast, createUserProfile } from '@/utils/authUtils';
 
 interface AuthHookReturn {
   user: User | null;
   session: Session | null;
-  signUp: (username: string, password: string) => Promise<void>;
-  signIn: (username: string, password: string) => Promise<void>;
+  signUp: (username: string, email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   isLoading: boolean;
 }
@@ -43,23 +43,18 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = useCallback(async (username: string, password: string) => {
+  const signUp = useCallback(async (username: string, email: string, password: string) => {
     try {
       setIsLoading(true);
       
-      console.log("Attempting to sign up with username:", username);
+      console.log("Attempting to sign up with username:", username, "and email:", email);
       
       // Check if username is available
       await checkUsernameAvailability(username, t);
 
-      // Use phone auth instead of email - this bypasses email provider restrictions
-      const phoneNumber = formatPhoneNumber(username);
-      
-      console.log("Using phone auth with number:", phoneNumber);
-      
-      // Sign up with phone
+      // Sign up with email
       const { data, error } = await supabase.auth.signUp({
-        phone: phoneNumber,
+        email,
         password,
         options: {
           data: {
@@ -75,7 +70,7 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
 
       // Create the profile entry for the new user
       if (data.user) {
-        await createUserProfile(data.user.id, username);
+        await createUserProfile(data.user.id, username, email);
       }
 
       showAuthToast(
@@ -90,7 +85,7 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
       showAuthToast(
         'error',
         t("Account creation issue", "帐户创建问题"),
-        error.message || t("Please try again with a different username", "请更换用户名后重试")
+        error.message || t("Please try again with a different email", "请更换邮箱后重试")
       );
       throw error;
     } finally {
@@ -98,44 +93,21 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
     }
   }, [t]);
 
-  const signIn = useCallback(async (username: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      console.log("Attempting to sign in with username:", username);
-      
-      // Find the user by username
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, username')
-        .eq('username', username)
-        .single();
-
-      if (profileError || !profileData) {
-        console.error("Profile lookup error:", profileError);
-        showAuthToast(
-          'error', 
-          t("Sign in failed", "登录失败"),
-          t("Username not found", "找不到用户名")
-        );
-        return;
-      }
-      
-      console.log("Found profile:", profileData);
-      
-      // Sign in with phone number format
-      const phoneNumber = formatPhoneNumber(username);
-      console.log("Trying to sign in with phone:", phoneNumber);
+      console.log("Attempting to sign in with email:", email);
       
       const { data, error } = await supabase.auth.signInWithPassword({ 
-        phone: phoneNumber, 
+        email, 
         password
       });
       
       if (error) {
         console.error("Login error:", error);
-        let errorMessage = "Please check your username and password";
+        let errorMessage = "Please check your email and password";
         if (error.message.includes("Invalid login")) {
-          errorMessage = "Invalid password for this username";
+          errorMessage = "Invalid password for this email";
         } else if (error.message.includes("Too many requests")) {
           errorMessage = "Too many login attempts. Please try again in a few minutes";
         }
@@ -143,7 +115,7 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
         showAuthToast(
           'error',
           t("Sign in failed", "登录失败"),
-          t(errorMessage, "请检查您的用户名和密码")
+          t(errorMessage, "请检查您的邮箱和密码")
         );
       } else {
         console.log("Login successful!");

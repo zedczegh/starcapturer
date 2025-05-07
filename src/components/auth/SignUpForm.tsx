@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Eye, EyeOff } from 'lucide-react';
-import { toast } from 'sonner';
+import { User, Lock, Eye, EyeOff, AtSign } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 
 interface SignUpFormProps {
@@ -26,7 +25,7 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
   const onSubmit = async (data: any) => {
     try {
       setIsLoading(true);
-      await signUp(data.username, data.password);
+      await signUp(data.username, data.email, data.password);
       onSuccess();
       navigate('/photo-points');
     } catch (error: any) {
@@ -69,6 +68,37 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
                   />
                 </FormControl>
                 <User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+              </div>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="email"
+          rules={{
+            required: t("Email is required", "必须填写电子邮箱"),
+            pattern: {
+              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+              message: t("Invalid email address", "电子邮箱格式无效"),
+            }
+          }}
+          render={({ field }) => (
+            <FormItem>
+              <div className="relative">
+                <FormControl>
+                  <Input 
+                    {...field} 
+                    id="signup_email"
+                    type="email" 
+                    autoComplete="email"
+                    placeholder={t("Your email address", "您的电子邮箱")}
+                    className="pl-10 h-11 text-base"
+                    disabled={isLoading}
+                  />
+                </FormControl>
+                <AtSign className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
               </div>
               <FormMessage className="text-xs" />
             </FormItem>

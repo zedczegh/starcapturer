@@ -3,14 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 
 /**
- * Formats a username as a phone number for Supabase authentication
- * This is used to bypass email provider restrictions
- */
-export const formatPhoneNumber = (username: string): string => {
-  return `+${username}`;
-};
-
-/**
  * Checks if a username is available by calling the Supabase RPC function
  */
 export const checkUsernameAvailability = async (username: string, t: (en: string, zh: string) => string) => {
@@ -55,12 +47,13 @@ export const showAuthToast = (
 /**
  * Creates a profile entry for a new user
  */
-export const createUserProfile = async (userId: string, username: string) => {
+export const createUserProfile = async (userId: string, username: string, email: string) => {
   const { error: profileError } = await supabase
     .from('profiles')
     .insert({
       id: userId,
-      username: username
+      username: username,
+      email: email
     });
     
   if (profileError) {
