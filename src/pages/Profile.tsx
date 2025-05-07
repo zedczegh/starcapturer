@@ -83,17 +83,17 @@ const Profile = () => {
           if (error) throw error;
           
           if (data) {
-            // Update local state if there's a mismatch
-            if (data.username !== profile.username || data.avatar_url !== profile.avatar_url) {
+            // Update local state if there's a mismatch and not using a blob URL
+            if (data.username !== profile.username || 
+               (data.avatar_url !== profile.avatar_url && 
+               (!data.avatar_url || !data.avatar_url.startsWith('blob:')))) {
               console.log("Updating profile from database:", data);
               setProfile(prev => prev ? { ...prev, ...data } : null);
               
-              // Update avatar URL if it exists in the database
-              if (data.avatar_url) {
+              // Update avatar URL if it exists in the database and is not a blob URL
+              if (data.avatar_url && !data.avatar_url.startsWith('blob:')) {
                 setAvatarUrl(data.avatar_url);
                 console.log("Setting avatar URL from database:", data.avatar_url);
-              } else {
-                setAvatarUrl(null);
               }
             }
           }
@@ -130,7 +130,10 @@ const Profile = () => {
       console.log("Avatar file selected:", file.name, file.type, `${fileSize.toFixed(2)}MB`);
       setAvatarFile(file);
       
-      // Create a local preview of the image
+      // Create a local preview of the image and revoke any existing blob URLs
+      if (avatarUrl && avatarUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(avatarUrl);
+      }
       const previewUrl = URL.createObjectURL(file);
       setAvatarUrl(previewUrl);
       toast.info(t("Avatar selected", "已选择头像"), {
@@ -140,6 +143,10 @@ const Profile = () => {
   };
 
   const removeAvatar = () => {
+    // Clean up blob URL if it exists
+    if (avatarUrl && avatarUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(avatarUrl);
+    }
     setAvatarUrl(null);
     setAvatarFile(null);
     toast.info(t("Avatar removed", "已移除头像"), {

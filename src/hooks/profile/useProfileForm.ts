@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,6 +56,11 @@ export function useProfileForm(user: User | null) {
           return; // Stop the process if avatar upload fails
         } else {
           console.log("Avatar uploaded successfully, URL:", newAvatarUrl);
+          
+          // Clear the blob URL if it exists
+          if (avatarUrl && avatarUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(avatarUrl);
+          }
         }
       } else if (avatarUrl && !avatarUrl.startsWith('blob:')) {
         // Keep existing avatar if no new one uploaded and it's not a blob URL

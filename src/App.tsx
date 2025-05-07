@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
@@ -53,16 +52,10 @@ const App = () => {
           
           if (bucketError) {
             console.error("Error creating avatars bucket:", bucketError);
+            // Continue anyway, as this might be a permissions issue with the client
+            // The policy is already set in the migration
           } else {
             console.log('Created avatars bucket successfully');
-            
-            // Set public access policy for the bucket using RPC
-            try {
-              // Note: Policies must be created via SQL migrations
-              console.log("Avatar bucket created - policies should be configured via migrations");
-            } catch (policyError) {
-              console.error("Error setting bucket policy:", policyError);
-            }
           }
         } else {
           console.log("Avatars bucket already exists");

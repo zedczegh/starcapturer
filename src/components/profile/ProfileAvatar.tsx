@@ -25,8 +25,10 @@ const ProfileAvatar = ({
 
   // Reset error state when avatarUrl changes
   React.useEffect(() => {
-    setImageError(false);
-    setImageLoading(true);
+    if (avatarUrl) {
+      setImageError(false);
+      setImageLoading(true);
+    }
   }, [avatarUrl]);
 
   const handleImageLoad = () => {
