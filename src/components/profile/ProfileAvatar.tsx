@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
 import { Camera, X } from 'lucide-react';
@@ -22,7 +22,7 @@ const ProfileAvatar = ({
 
   return (
     <div className="flex flex-col items-center">
-      <div className="relative w-28 h-28">
+      <div className="relative w-24 h-24">
         {avatarUrl ? (
           <div className="relative group">
             <img
