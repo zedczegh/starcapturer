@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,30 +18,34 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const { t } = useLanguage ? useLanguage() : { t: (en: string, zh: string) => en };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+
+        if (event === 'SIGNED_IN' && session?.user) {
+          setTimeout(() => {
+            const username = session.user.email?.split('@')[0] || 'stargazer';
+            toast.success(`Welcome, ${username}! 🌟`, {
+              description: "Ready for some stargazing? Your sky awaits!",
+              duration: 4000,
+              position: "top-center"
+            });
+          }, 0);
+        }
       }
     );
 
-    // THEN check for existing session
-    const getInitialSession = async () => {
-      try {
-        const sessionResult = await supabase.auth.getSession();
-        setSession(sessionResult.data.session);
-        setUser(sessionResult.data.session?.user ?? null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    getInitialSession();
+    (async () => {
+      const sessionResult = await supabase.auth.getSession();
+      setSession(sessionResult.data.session);
+      setUser(sessionResult.data.session?.user ?? null);
+      setIsLoading(false);
+    })();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -56,9 +59,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         redirectTo = 'https://siqs.astroai.top';
       }
 
-      // Add a log to check if signups are enabled
-      console.log("Attempting to sign up with email:", email);
-      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -67,10 +67,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       });
 
-      if (error) {
-        console.error("Signup error:", error);
-        throw error;
-      }
+      if (error) throw error;
 
       if (data.user && !data.user.confirmed_at) {
         toast.success(
@@ -100,27 +97,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         );
       }
     } catch (error: any) {
-      console.error("Error during signup:", error);
-      let errorMessage = error.message;
-      if (error.message.includes("Email signups are disabled")) {
-        errorMessage = t(
-          "Email signups are currently disabled. Please contact the administrator.",
-          "电子邮件注册功能目前已禁用。请联系管理员。"
-        );
-      }
-      
       toast.error(
         t(
           "Account creation paused",
           "帐户创建已暂停"
         ),
         {
-          description: errorMessage ||
+          description: error.message ||
             t("Please try again with a different email", "请更换邮箱后重试"),
           position: "top-center"
         }
       );
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -128,7 +115,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
+    let signedIn = false;
     try {
+      toast("Signing in...", {
+        description: "Checking your credentials...",
+        position: "top-center",
+        duration: 1500
+      });
+
       const { error } = await supabase.auth.signInWithPassword({ 
         email, 
         password
@@ -147,14 +141,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } else if (error.message.includes("Too many requests")) {
           errorMessage = "Too many login attempts. Please try again in a few minutes";
         }
-        toast.error(t("Sign in paused", "登录暂停"), {
-          description: t(errorMessage, "请检查您的邮箱和密码"),
+        toast.error("Sign in paused", {
+          description: errorMessage,
           position: "top-center"
         });
+        return;
       }
+
+      signedIn = true;
     } catch (error: any) {
-      toast.error(t("Sign in error", "登录错误"), {
-        description: t("An unknown error occurred. Please try again.", "发生未知错误，请重试。"),
+      toast.error("Sign in error", {
+        description: "An unknown error occurred. Please try again.",
         position: "top-center"
       });
     } finally {
@@ -164,15 +161,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     setIsLoading(true);
+    let toastId: string | number | undefined = undefined;
     try {
+      toastId = toast("Signing out...", {
+        position: "top-center",
+        duration: 1000
+      });
       const { error } = await supabase.auth.signOut();
       setUser(null);
       setSession(null);
 
       if (error) throw error;
+
+      toast.success("See you soon! ✨", {
+        description: "The stars will be waiting for your return",
+        position: "top-center"
+      });
     } catch (error: any) {
-      toast.error(t("Sign out issue", "登出问题"), {
-        description: t("Please try again in a moment", "请稍后重试"),
+      toast.error("Sign out issue", {
+        description: "Please try again in a moment",
         position: "top-center"
       });
     } finally {

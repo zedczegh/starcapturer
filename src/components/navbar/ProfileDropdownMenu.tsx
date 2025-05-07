@@ -5,9 +5,8 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, ExternalLink } from 'lucide-react';
+import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -43,6 +42,7 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
     <DropdownMenuContent 
       align="end" 
       className="z-[200] min-w-[240px] rounded-xl cosmic-dropdown shadow-2xl py-2 px-0 overflow-hidden"
+      // Add slide and fade animation
       asChild
     >
       <motion.div
@@ -59,65 +59,33 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
-        <DropdownMenuGroup>
-          {[
-            { icon: MessageCircle, label: t('Messages', '消息'), path: '/messages' },
-            { icon: User, label: t('Profile', '个人资料'), path: '/profile' },
-            { icon: BookmarkPlus, label: t('My Collections', '我的收藏'), path: '/collections' },
-            { icon: MapPin, label: t('My AstroSpots', '我的观星点'), path: '/manage-astro-spots' },
-          ].map(({ icon: Icon, label, path }, i) => (
-            <motion.div
-              key={path}
-              custom={i}
-              initial="hidden"
-              animate="visible"
-              variants={menuItemVariants}
+        {[
+          { icon: MessageCircle, label: t('Messages', '消息'), path: '/messages' },
+          { icon: User, label: t('Profile', '个人资料'), path: '/profile' },
+          { icon: BookmarkPlus, label: t('My Collections', '我的收藏'), path: '/collections' },
+          { icon: MapPin, label: t('My AstroSpots', '我的观星点'), path: '/manage-astro-spots' },
+          { icon: Settings, label: t('Settings', '设置'), path: '/settings' },
+        ].map(({ icon: Icon, label, path }, i) => (
+          <motion.div
+            key={path}
+            custom={i}
+            initial="hidden"
+            animate="visible"
+            variants={menuItemVariants}
+          >
+            <DropdownMenuItem
+              onClick={() => navigate(path)}
+              className="interactive-button px-4 py-2 flex gap-2 items-center hover:!bg-primary/10 hover:text-primary rounded-md transition-all duration-300"
             >
-              <DropdownMenuItem
-                onClick={() => navigate(path)}
-                className="interactive-button px-4 py-2 flex gap-2 items-center hover:!bg-primary/10 hover:text-primary rounded-md transition-all duration-300"
-              >
-                <Icon className="h-4 w-4 text-primary" />
-                <span>{label}</span>
-              </DropdownMenuItem>
-            </motion.div>
-          ))}
-        </DropdownMenuGroup>
-        
-        <DropdownMenuSeparator className="my-1" />
-        
-        <DropdownMenuLabel className="px-4 py-1 text-xs text-cosmic-400">
-          {t('Resources & Settings', '资源与设置')}
-        </DropdownMenuLabel>
-        
-        <DropdownMenuGroup>
-          {[
-            { icon: Link2, label: t('Useful Links', '实用链接'), path: '/useful-links' },
-            { icon: Info, label: t('About', '关于'), path: '/about' },
-            { icon: Settings, label: t('Settings', '设置'), path: '/settings' },
-          ].map(({ icon: Icon, label, path }, i) => (
-            <motion.div
-              key={path}
-              custom={i + 5}
-              initial="hidden"
-              animate="visible"
-              variants={menuItemVariants}
-            >
-              <DropdownMenuItem
-                onClick={() => navigate(path)}
-                className="interactive-button px-4 py-2 flex gap-2 items-center hover:!bg-primary/10 hover:text-primary rounded-md transition-all duration-300"
-              >
-                <Icon className="h-4 w-4 text-primary" />
-                <span>{label}</span>
-              </DropdownMenuItem>
-            </motion.div>
-          ))}
-        </DropdownMenuGroup>
+              <Icon className="h-4 w-4 text-primary" />
+              <span>{label}</span>
+            </DropdownMenuItem>
+          </motion.div>
+        ))}
         
         <DropdownMenuSeparator />
-        
         <motion.div
-          custom={9}
+          custom={6}
           initial="hidden"
           animate="visible"
           variants={menuItemVariants}

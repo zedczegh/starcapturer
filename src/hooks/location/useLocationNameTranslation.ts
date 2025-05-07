@@ -3,7 +3,6 @@ import { useEffect, useState, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { updateLocationName } from "@/lib/locationNameUpdater";
 import { identifyRemoteRegion } from "@/services/geocoding/remoteRegionResolver";
-import { getEnhancedLocationDetails } from "@/services/geocoding/enhancedReverseGeocoding";
 
 interface UseLocationNameTranslationProps {
   locationData: any;
@@ -14,7 +13,7 @@ interface UseLocationNameTranslationProps {
 
 /**
  * Hook to handle location name translation based on language changes
- * Enhanced for better geocoding in remote regions and consistent detail level
+ * Enhanced for better geocoding in remote regions
  */
 export function useLocationNameTranslation({
   locationData,
@@ -44,6 +43,9 @@ export function useLocationNameTranslation({
     // Skip if we already processed this exact combination
     if (locationKey === lastProcessedKey && !initialRenderRef.current) return;
     
+    // Check if we're in a remote region that needs special handling
+    const isRemoteRegion = identifyRemoteRegion(locationData.latitude, locationData.longitude);
+    
     // Skip translation for special locations like Beijing
     if (locationData.name === "北京" || locationData.name === "Beijing") {
       setLastProcessedKey(locationKey);
@@ -57,80 +59,39 @@ export function useLocationNameTranslation({
       updateTimerRef.current = null;
     }
     
-    // For initial load or language change, add a small delay to ensure component is mounted
+    // For initial load or remote regions, add a small delay to ensure component is mounted
     const delay = initialRenderRef.current ? 100 : 0;
     
     updateTimerRef.current = window.setTimeout(() => {
-      // Always update the name to ensure detailed information in both languages
+      // For remote regions or initial page load, always update the name to ensure accuracy
       const updateNameForLanguage = async () => {
         try {
           setIsUpdating(true);
           
-          // Check if we're in a remote region that needs special handling
-          const isRemoteRegion = identifyRemoteRegion(locationData.latitude, locationData.longitude);
+          // Priority update for remote regions to ensure proper naming
+          if (isRemoteRegion) {
+            console.log("Remote region detected, updating name with high priority");
+          }
           
           // For initial render, log this information
           if (initialRenderRef.current) {
             console.log("Initial render detected, updating location name for:", locationData.name);
           }
           
-          // Always get enhanced location details for better language support
-          const enhancedDetails = await getEnhancedLocationDetails(
+          const newName = await updateLocationName(
             locationData.latitude,
             locationData.longitude,
-            language === 'zh' ? 'zh' : 'en'
+            locationData.name,
+            language === 'zh' ? 'zh' : 'en',
+            { setCachedData, getCachedData }
           );
           
-          // Update the location data with enhanced details
-          if (enhancedDetails) {
-            // For Chinese language, update the Chinese name
-            if (language === 'zh') {
-              if (enhancedDetails.formattedName && enhancedDetails.formattedName !== '偏远地区') {
-                console.log(`Location name updated for Chinese: "${locationData.name}" -> "${enhancedDetails.formattedName}"`);
-                
-                setLocationData({
-                  ...locationData,
-                  name: enhancedDetails.formattedName,
-                  chineseName: enhancedDetails.formattedName
-                });
-              }
-            } else {
-              // For English language, update the name with detailed information
-              if (enhancedDetails.formattedName && enhancedDetails.formattedName !== 'Remote area') {
-                console.log(`Location name updated for English: "${locationData.name}" -> "${enhancedDetails.formattedName}"`);
-                
-                setLocationData({
-                  ...locationData,
-                  name: enhancedDetails.formattedName
-                });
-              }
-            }
-          } else {
-            // Fallback to the old update method if enhanced details fail
-            const newName = await updateLocationName(
-              locationData.latitude,
-              locationData.longitude,
-              locationData.name,
-              language === 'zh' ? 'zh' : 'en',
-              { setCachedData, getCachedData }
-            );
-            
-            if (newName && newName !== locationData.name) {
-              console.log(`Location name updated: "${locationData.name}" -> "${newName}"`);
-              
-              if (language === 'zh') {
-                setLocationData({
-                  ...locationData,
-                  name: newName,
-                  chineseName: newName
-                });
-              } else {
-                setLocationData({
-                  ...locationData,
-                  name: newName
-                });
-              }
-            }
+          if (newName && newName !== locationData.name) {
+            console.log(`Location name updated: "${locationData.name}" -> "${newName}"`);
+            setLocationData({
+              ...locationData,
+              name: newName
+            });
           }
           
           // Mark this combination as processed
@@ -144,7 +105,7 @@ export function useLocationNameTranslation({
         }
       };
       
-      // Run the update for all locations to ensure detailed information
+      // Run the update with priority for remote regions and initial load
       updateNameForLanguage();
     }, delay);
 

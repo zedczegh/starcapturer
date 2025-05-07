@@ -80,41 +80,41 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
   return (
     <Card className="shadow-md h-full overflow-hidden border border-cosmic-600/30 hover:border-cosmic-500/40 transition-all duration-300">
       <CardHeader className="pb-2 bg-cosmic-800/30">
-        <CardTitle className="text-sm flex items-center justify-between">
+        <CardTitle className="text-lg flex items-center justify-between">
           <div className="flex items-center">
-            <CloudSun className="mr-2 h-4 w-4 text-blue-400" />
+            <CloudSun className="mr-2 h-5 w-5 text-blue-400" />
             <span>{t("Clear Sky Nights", "晴空夜晚")}</span>
           </div>
           <Badge 
             variant="outline" 
-            className={`${rating.colorClass} ml-2 text-xs font-semibold px-2`}
+            className={`${rating.colorClass} ml-2 text-sm font-semibold px-2.5`}
           >
             {clearNightsPerYear} {t("per year", "每年")}
           </Badge>
         </CardTitle>
       </CardHeader>
       
-      <CardContent className="pt-3 pb-2 space-y-3">
+      <CardContent className="pt-4 pb-2 space-y-3">
         {/* Visual progress bar */}
-        <div className="w-full bg-cosmic-700/30 rounded-full h-2 mb-3 dark:bg-cosmic-700/50">
+        <div className="w-full bg-cosmic-700/30 rounded-full h-2.5 mb-4 dark:bg-cosmic-700/50">
           <div 
-            className={`h-2 rounded-full ${getProgressClass(clearNightsPerYear)}`} 
+            className={`h-2.5 rounded-full ${getProgressClass(clearNightsPerYear)}`} 
             style={{ width: `${Math.max(5, progressPercentage)}%` }}
           ></div>
         </div>
         
         {/* Rating with stars */}
         <ConditionItem
-          icon={<Star className={`h-4 w-4 ${rating.colorClass}`} />}
+          icon={<Star className={`h-5 w-5 ${rating.colorClass}`} />}
           label={t("Rating", "评级")}
           value={
             <div className="flex items-center">
-              <span className={`text-xs font-medium ${rating.colorClass}`}>{rating.ratingText}</span>
+              <span className={`font-medium ${rating.colorClass}`}>{rating.ratingText}</span>
               <div className="flex ml-2">
                 {[...Array(5)].map((_, i) => (
                   <Star 
                     key={i} 
-                    size={12} 
+                    size={14} 
                     className={i < rating.stars ? rating.colorClass : "text-gray-400"} 
                     fill={i < rating.stars ? "currentColor" : "none"}
                   />
@@ -122,22 +122,21 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
               </div>
             </div>
           }
-          className="mb-1"
         />
         
         {/* Clear nights per year */}
         <ConditionItem
-          icon={<Calendar className="h-4 w-4 text-blue-400" />}
+          icon={<Calendar className="h-5 w-5 text-blue-400" />}
           label={t("Clear Nights", "晴朗夜晚")}
           value={
             <div className="flex items-center">
-              <span className={`font-medium text-sm ${rating.colorClass}`}>{clearNightsPerYear}</span>
-              <span className="ml-1 text-xs text-muted-foreground">{t("per year", "每年")}</span>
+              <span className={`font-medium text-lg ${rating.colorClass}`}>{clearNightsPerYear}</span>
+              <span className="ml-1 text-muted-foreground">{t("per year", "每年")}</span>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button className="ml-1.5 inline-flex">
-                      <Info className="h-3 w-3 text-muted-foreground" />
+                      <Info className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
@@ -147,23 +146,21 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
               </TooltipProvider>
             </div>
           }
-          className="mb-1"
         />
         
         {/* Best months */}
         <ConditionItem
-          icon={<ThermometerSun className="h-4 w-4 text-amber-400" />}
+          icon={<ThermometerSun className="h-5 w-5 text-amber-400" />}
           label={t("Best Season", "最佳季节")}
-          value={<span className="text-xs text-muted-foreground">{bestMonthsText.split(': ')[1] || bestMonthsText}</span>}
-          className="mb-1"
+          value={<span className="text-muted-foreground">{bestMonthsText.split(': ')[1] || bestMonthsText}</span>}
         />
       </CardContent>
       
-      <CardFooter className="pt-0 pb-2 px-4">
-        <div className="w-full text-xs text-muted-foreground/70 italic">
+      <CardFooter className="pt-0 pb-3 px-6">
+        <div className="w-full text-xs text-muted-foreground/80 italic">
           {language === 'en' 
-            ? "* Based on historical data, excludes full moon nights"
-            : "* 基于历史数据分析，不包括满月夜晚"}
+            ? "* Analysis based on historical climate data, excluding full moon nights"
+            : "* 基于历史气候数据分析，不包括满月夜晚"}
         </div>
       </CardFooter>
     </Card>

@@ -4,7 +4,6 @@ import { Link, useLocation } from "react-router-dom";
 import { NavLink } from "./NavButtons";
 import LanguageSwitcher from "../LanguageSwitcher";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useTheme } from "@/contexts/ThemeContext";
 import { Map } from "lucide-react";
 import LocationPinButton from "./LocationPinButton";
 import ProfileButton from "./ProfileButton";
@@ -19,7 +18,6 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
   locationId 
 }) => {
   const { t } = useLanguage();
-  const { theme, setTheme } = useTheme();
   
   const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
   

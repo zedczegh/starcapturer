@@ -1,9 +1,11 @@
+
 import React from "react"
 import { Toaster as Sonner } from "sonner"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
+// Using the props pattern for theming to avoid invalid hook calls
 const Toaster = ({ theme = "system", ...props }: ToasterProps & { theme?: string }) => {
   const isMobile = useIsMobile();
 
@@ -17,15 +19,19 @@ const Toaster = ({ theme = "system", ...props }: ToasterProps & { theme?: string
       expand={isMobile}
       toastOptions={{
         classNames: {
-          toast: "group toast group-[.toaster]:bg-background/95 group-[.toaster]:backdrop-blur-md group-[.toaster]:text-foreground group-[.toaster]:border-border/50 group-[.toaster]:shadow-lg",
+          toast:
+            "group toast group-[.toaster]:bg-background/90 group-[.toaster]:backdrop-blur-lg group-[.toaster]:text-foreground group-[.toaster]:border-border/50 group-[.toaster]:shadow-lg",
           description: "group-[.toast]:text-muted-foreground",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-          success: "group-[.toaster]:bg-green-100/95 group-[.toaster]:text-green-900 dark:group-[.toaster]:bg-green-900/90 dark:group-[.toaster]:text-green-100",
-          error: "group-[.toaster]:bg-red-100/95 group-[.toaster]:text-red-900 dark:group-[.toaster]:bg-red-900/90 dark:group-[.toaster]:text-red-100",
-          info: "group-[.toaster]:bg-blue-100/95 group-[.toaster]:text-blue-900 dark:group-[.toaster]:bg-blue-900/90 dark:group-[.toaster]:text-blue-100",
+          actionButton:
+            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+          cancelButton:
+            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+          success: "group-[.toaster]:bg-green-100/90 group-[.toaster]:text-green-900 dark:group-[.toaster]:bg-green-900/90 dark:group-[.toaster]:text-green-100",
+          error: "group-[.toaster]:bg-red-100/90 group-[.toaster]:text-red-900 dark:group-[.toaster]:bg-red-900/90 dark:group-[.toaster]:text-red-100",
+          info: "group-[.toaster]:bg-blue-100/90 group-[.toaster]:text-blue-900 dark:group-[.toaster]:bg-blue-900/90 dark:group-[.toaster]:text-blue-100",
         },
-        duration: 6000,
+        duration: 5000, // Longer default duration for better readability
+        // Custom styling
         style: {
           fontSize: "14px",
           borderRadius: "12px",

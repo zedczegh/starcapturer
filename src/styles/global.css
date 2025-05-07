@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -91,213 +92,24 @@
     box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
   }
   
-  .glassmorphism-strong {
-    background: linear-gradient(to bottom right, rgba(43, 35, 70, 0.85), rgba(23, 19, 36, 0.9));
-    backdrop-filter: blur(12px);
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
-  }
-  
   .shadow-glow {
     box-shadow: 0 0 20px rgba(124, 58, 237, 0.15), 
                 0 0 60px rgba(139, 92, 246, 0.08);
   }
   
-  /* Enhanced Mobile navigation styling */
-  .mobile-nav-bar {
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
-    background: linear-gradient(180deg, rgba(18, 51, 65, 0.95), rgba(14, 31, 48, 0.97));
-    border-top: 1px solid rgba(146, 109, 222, 0.2);
-  }
+  /* Other existing styles */
   
-  .mobile-nav-item.active .icon-container {
-    box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
-    background: rgba(124, 58, 237, 0.25);
-    transform: translateY(-2px);
-  }
-  
-  .mobile-nav-item .icon-container {
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-  
-  .mobile-nav-item:hover .icon-container {
-    transform: translateY(-2px);
-    background: rgba(124, 58, 237, 0.15);
-  }
-  
-  .mobile-nav-item.active span {
-    font-weight: 500;
-  }
-  
-  .pulse-glow {
-    animation: pulse-animation 2s infinite;
-  }
-  
-  @keyframes pulse-animation {
-    0% {
-      box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4);
-    }
-    70% {
-      box-shadow: 0 0 0 10px rgba(124, 58, 237, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
-    }
-  }
-
-  /* Enhanced mobile cards and data displays */
-  .location-card-mobile {
-    @apply bg-gradient-to-br from-cosmic-800/60 to-cosmic-900/80;
-    @apply border border-cosmic-700/30;
-    @apply rounded-xl backdrop-blur-md;
-    @apply transition-all duration-300;
-  }
-  
-  .data-chip {
-    @apply inline-flex items-center px-2 py-1;
-    @apply bg-cosmic-800/50 text-cosmic-100;
-    @apply border border-cosmic-700/40 rounded-full;
-    @apply text-xs font-medium;
-  }
-  
-  .time-chip {
-    @apply bg-gradient-to-r from-purple-800/40 to-indigo-800/30;
-    @apply border-l-2 border-primary/50;
-    @apply rounded-l-none rounded-r-lg;
-    @apply pl-2 pr-3 py-1;
-    @apply text-xs font-mono;
-  }
-  
-  /* Cosmic glassmorphism dropdown - enhanced */
+  /* Cosmic glassmorphism dropdown */
   .cosmic-dropdown {
     @apply glassmorphism;
     background: linear-gradient(135deg, rgba(33,21,50,0.97) 60%, rgba(29,30,51,0.97) 100%);
     box-shadow: 0 8px 32px 0 rgba(104, 117, 255, 0.15), 0 2px 8px rgba(0,0,0,0.30) !important;
-    border: 1px solid rgba(104, 117, 255, 0.12);
+    border: 1px solid rgba(104, 117, 255, 0.06);
     backdrop-filter: blur(12px);
   }
-  
   .glass-dropdown-label {
-    background: linear-gradient(90deg, rgba(55,41,85,0.95) 50%, rgba(17,15,29,0.99) 100%);
+    background: linear-gradient(90deg, rgba(55,41,85,0.90) 50%, rgba(17,15,29,0.99) 100%);
     border-radius: 0.5rem 0.5rem 0 0;
     margin-bottom: 0.5rem;
-  }
-  
-  .interactive-button {
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .interactive-button::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 0;
-    height: 100%;
-    background: rgba(124, 58, 237, 0.08);
-    transform: translateY(-50%);
-    transition: width 0.3s ease;
-    z-index: -1;
-    border-radius: 0.25rem;
-  }
-  
-  .interactive-button:hover::before {
-    width: 100%;
-  }
-
-  /* Mobile enhancement classes for location details */
-  .location-panel {
-    @apply rounded-xl overflow-hidden;
-    @apply backdrop-blur-md bg-cosmic-900/30;
-    @apply border border-cosmic-700/30;
-    @apply shadow-lg;
-  }
-
-  .panel-header {
-    @apply bg-gradient-to-r from-cosmic-800/90 to-cosmic-800/70;
-    @apply border-b border-cosmic-700/40;
-    @apply px-4 py-3;
-  }
-
-  .panel-content {
-    @apply p-4;
-  }
-
-  .data-badge {
-    @apply inline-flex items-center gap-1;
-    @apply bg-cosmic-800/70 text-cosmic-200;
-    @apply border border-cosmic-700/40 rounded-lg;
-    @apply px-2.5 py-1 text-sm;
-  }
-  
-  /* New panel container style for consistent UI */
-  .panel-container {
-    @apply bg-cosmic-800/30 backdrop-blur-sm rounded-lg;
-    @apply border border-cosmic-700/30;
-    @apply shadow-sm transition-all duration-300;
-    @apply hover:shadow-glow-light;
-  }
-  
-  /* Enhanced styling for toast components */
-  [data-sonner-toast] {
-    @apply rounded-xl border border-cosmic-700/30 shadow-lg;
-    @apply bg-cosmic-800/80 backdrop-blur-xl;
-  }
-  
-  [data-sonner-toast] [data-close-button] {
-    @apply bg-cosmic-800/70 hover:bg-cosmic-700/80;
-    @apply rounded-full p-1.5;
-    @apply flex items-center justify-center;
-    @apply text-cosmic-300 hover:text-cosmic-100;
-    @apply opacity-70 hover:opacity-100;
-    @apply transition-all duration-200;
-    @apply border border-cosmic-700/30;
-    @apply shadow-sm;
-  }
-  
-  [data-sonner-toast] [data-icon] {
-    @apply text-primary;
-  }
-  
-  .astronomy-tip-toast [data-close-button] {
-    @apply bg-cosmic-800/90 hover:bg-cosmic-700/90;
-    @apply p-1.5 rounded-full;
-    @apply text-cosmic-300 hover:text-cosmic-100;
-    @apply border border-cosmic-700/40;
-    @apply shadow-md;
-    @apply transition-all duration-200;
-  }
-  
-  /* Enhanced styling for message bubbles and indicators */
-  .message-bubble {
-    @apply relative px-4 py-2 rounded-2xl;
-    word-wrap: break-word;
-  }
-  
-  .message-bubble-sent {
-    @apply bg-gradient-to-br from-primary to-primary/90 text-white;
-    @apply rounded-tr-sm;
-    @apply shadow-lg shadow-primary/10;
-  }
-  
-  .message-bubble-received {
-    @apply bg-gradient-to-br from-cosmic-800/70 to-cosmic-800/40 text-cosmic-100;
-    @apply rounded-tl-sm;
-  }
-  
-  .message-status {
-    @apply inline-flex items-center justify-center;
-  }
-  
-  .message-status-sent {
-    @apply text-cosmic-400;
-  }
-  
-  .message-status-read {
-    @apply text-green-500;
-  }
-  
-  .message-status-error {
-    @apply text-red-500;
   }
 }

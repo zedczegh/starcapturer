@@ -50,10 +50,10 @@ const ProfileButton = () => {
           whileTap={{ scale: 0.95 }}
         >
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => setShowAuthDialog(true)}
-            className="text-primary hover:text-primary hover:bg-primary/10 rounded-full flex items-center justify-center gap-2 px-4 py-2 bg-primary/5 border-primary/20"
+            className="text-primary hover:text-primary hover:bg-primary/10 rounded-full flex items-center justify-center gap-2 px-4"
             aria-label="Login"
           >
             <UserRound className="h-5 w-5" />
@@ -83,10 +83,10 @@ const ProfileButton = () => {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="relative rounded-full p-0 border border-primary/30 hover:border-primary shadow-glow focus:ring-2 focus:ring-primary group transition-all duration-300" 
+              className="relative rounded-full p-0 border border-accent/40 hover:border-primary shadow-glow focus:ring-2 focus:ring-primary group transition-all duration-300" 
               aria-label="Profile"
             >
-              <Avatar className="h-9 w-9 transition-transform duration-300 group-hover:scale-105">
+              <Avatar className="h-8 w-8 transition-transform duration-300 group-hover:scale-105">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
                 ) : (
@@ -95,7 +95,6 @@ const ProfileButton = () => {
                   </AvatarFallback>
                 )}
               </Avatar>
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full border-2 border-background"></span>
             </Button>
           </motion.div>
         </DropdownMenuTrigger>

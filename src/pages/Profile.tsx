@@ -6,10 +6,15 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import NavBar from '@/components/NavBar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
 import ProfileLoader from '@/components/profile/ProfileLoader';
 import ProfileMain from '@/components/profile/ProfileMain';
 import { useProfile } from '@/hooks/profile/useProfile';
 import AboutFooter from '@/components/about/AboutFooter';
+
+interface ProfileFormValues {
+  username: string;
+}
 
 const Profile = () => {
   const { user } = useAuth();
@@ -17,6 +22,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const {
     profile,
@@ -29,8 +35,16 @@ const Profile = () => {
     setUploadingAvatar,
     randomTip,
     fetchProfile,
-    ensureProfileExists,
+    tags,
+    setTags,
+    saveProfileTags
   } = useProfile();
+
+  const { register, handleSubmit, setValue } = useForm<ProfileFormValues>({
+    defaultValues: {
+      username: ''
+    }
+  });
 
   useEffect(() => {
     const checkSession = async () => {
@@ -43,13 +57,8 @@ const Profile = () => {
           navigate('/photo-points');
           return;
         }
-        
-        // Ensure profile exists before fetching
-        await ensureProfileExists(session.user.id);
-        await fetchProfile(session.user.id, () => {});
+        await fetchProfile(session.user.id, setValue);
       } catch (error) {
-        console.error("Error checking session:", error);
-        toast.error(t("Failed to load profile", "加载个人资料失败"));
         setProfile({
           username: null,
           avatar_url: null,
@@ -63,104 +72,111 @@ const Profile = () => {
     };
 
     checkSession();
-  }, [navigate, t, setProfile, fetchProfile, ensureProfileExists]);
-
-  // Add this effect to refetch profile when user logs in or out
-  useEffect(() => {
-    if (user && !loading && authChecked) {
-      console.log("Checking for profile updates");
-      const checkProfileUpdates = async () => {
-        try {
-          // Ensure profile exists
-          await ensureProfileExists(user.id);
-          
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('username, avatar_url')
-            .eq('id', user.id)
-            .single();
-            
-          if (error) throw error;
-          
-          if (data) {
-            // Update local state if there's a mismatch and not using a blob URL
-            if (data.username !== profile?.username || 
-               (data.avatar_url !== profile?.avatar_url && 
-               (!avatarUrl || !avatarUrl.startsWith('blob:')))) {
-              console.log("Updating profile from database:", data);
-              setProfile(prev => prev ? { ...prev, ...data } : null);
-              
-              // Update avatar URL if it exists in the database and is not a blob URL
-              if (data.avatar_url) {
-                console.log("Setting avatar URL from database:", data.avatar_url);
-                setAvatarUrl(data.avatar_url);
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error checking profile updates:", error);
-        }
-      };
-      
-      checkProfileUpdates();
-    }
-  }, [user, loading, profile, setProfile, setAvatarUrl, ensureProfileExists, authChecked, avatarUrl]);
+  }, [navigate, t, setProfile, fetchProfile, setValue]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file size and type
-      const fileSize = file.size / 1024 / 1024; // size in MB
-      
-      if (fileSize > 2) {
-        toast.error(t("File is too large", "文件太大"), {
-          description: t("Avatar must be less than 2MB", "头像必须小于2MB")
-        });
-        return;
-      }
-      
-      // Check if file is an image
-      if (!file.type.startsWith('image/')) {
-        toast.error(t("Invalid file type", "无效的文件类型"), {
-          description: t("Please select an image file", "请选择图像文件")
-        });
-        return;
-      }
-      
-      console.log("Avatar file selected:", file.name, file.type, `${fileSize.toFixed(2)}MB`);
-      
-      // Clean up previous blob URL if it exists
-      if (avatarUrl && avatarUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(avatarUrl);
-      }
-      
-      // Create a local preview of the image
-      const previewUrl = URL.createObjectURL(file);
       setAvatarFile(file);
+      const previewUrl = URL.createObjectURL(file);
       setAvatarUrl(previewUrl);
-      toast.info(t("Avatar selected", "已选择头像"), {
-        description: t("Click 'Save Profile' to upload", "点击'保存资料'上传")
-      });
+    }
+  };
+
+  const onSubmit = async (formData: ProfileFormValues) => {
+    if (!user) {
+      toast.error(t("Authentication required", "需要认证"));
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      let newAvatarUrl = avatarUrl;
+      if (avatarFile) {
+        setUploadingAvatar(true);
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        if (bucketsError) {
+          toast.error(t("Storage error", "存储错误"), { description: bucketsError.message });
+          setUploadingAvatar(false);
+          setSaving(false);
+          return;
+        }
+
+        const avatarsBucketExists = buckets.some(bucket => bucket.name === 'avatars');
+        if (!avatarsBucketExists) {
+          toast.error(t("Avatar upload not available", "头像上传功能不可用"), {
+            description: t("Storage not configured. Profile saved without avatar.", "存储未配置。个人资料已保存，但未包含头像。")
+          });
+        } else {
+          const fileExt = avatarFile.name.split('.').pop();
+          const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, avatarFile);
+          if (uploadError) {
+            toast.error(uploadError.message);
+            setUploadingAvatar(false);
+            setSaving(false);
+            return;
+          }
+          const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+          newAvatarUrl = publicUrl;
+        }
+        setUploadingAvatar(false);
+      }
+
+      // Check if profile exists first
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (existingProfile) {
+        // Update existing profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            username: formData.username,
+            avatar_url: newAvatarUrl,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+        
+        if (updateError) throw updateError;
+      } else {
+        // Create new profile
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            username: formData.username,
+            avatar_url: newAvatarUrl,
+            updated_at: new Date().toISOString()
+          });
+        
+        if (insertError) throw insertError;
+      }
+
+      // Save tags
+      await saveProfileTags(user.id, tags);
+
+      toast.success(t("Profile updated successfully", "个人资料更新成功"));
+    } catch (error: any) {
+      toast.error(t("Update failed", "更新失败"), { description: error.message });
+    } finally {
+      setSaving(false);
     }
   };
 
   const removeAvatar = () => {
-    // Clean up blob URL if it exists
-    if (avatarUrl && avatarUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(avatarUrl);
-    }
     setAvatarUrl(null);
     setAvatarFile(null);
-    toast.info(t("Avatar removed", "已移除头像"), {
-      description: t("Click 'Save Profile' to confirm", "点击'保存资料'确认")
-    });
   };
 
   if (!authChecked || loading) return <ProfileLoader />;
   if (!user) return <ProfileLoader />;
 
   const displayUsername = profile?.username || t("Stargazer", "星空观察者");
-  console.log("Rendering profile with username:", displayUsername, "avatar:", avatarUrl);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex flex-col">
@@ -173,6 +189,12 @@ const Profile = () => {
           onRemoveAvatar={removeAvatar}
           uploadingAvatar={uploadingAvatar}
           astronomyTip={randomTip}
+          register={register}
+          saving={saving}
+          handleSubmit={handleSubmit}
+          onSubmit={onSubmit}
+          tags={tags}
+          setTags={setTags}
         />
       </main>
       <AboutFooter />

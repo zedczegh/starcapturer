@@ -58,7 +58,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     onLocationUpdate
   });
   
-  // Add persistent storage for locations with error handling
+  // Add persistent storage for locations
   useEffect(() => {
     if (locations && locations.length > 0) {
       try {
@@ -94,7 +94,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
             // Add existing locations first
             if (Array.isArray(existingLocations)) {
               existingLocations.forEach(loc => {
-                if (loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number') {
+                if (loc && loc.latitude && loc.longitude) {
                   const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
                   locationMap.set(key, loc);
                 }
@@ -103,10 +103,10 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
             
             // Add new locations, overwriting existing ones if they have the same coordinates
             simplifiedLocations.forEach(loc => {
-                if (loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number') {
-                  const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-                  locationMap.set(key, loc);
-                }
+              if (loc && loc.latitude && loc.longitude) {
+                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+                locationMap.set(key, loc);
+              }
             });
             
             // Convert back to array
@@ -125,7 +125,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     }
   }, [locations, activeView]);
   
-  // Load persisted locations on component mount with improved error handling
+  // Load persisted locations on component mount
   useEffect(() => {
     try {
       const storageKey = activeView === 'certified' ? 
@@ -147,7 +147,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   return (
     <MapContainer
       userLocation={userLocation}
-      locations={optimizedLocations || []} 
+      locations={optimizedLocations}
       searchRadius={searchRadius}
       activeView={activeView}
       mapReady={mapReady}
@@ -169,4 +169,4 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   );
 };
 
-export default React.memo(PhotoPointsMap);
+export default PhotoPointsMap;

@@ -22,18 +22,18 @@ const ConditionItem: React.FC<ConditionItemProps> = ({
   badgeText
 }) => {
   return (
-    <div className={cn("flex items-start mb-2", className)}>
-      <div className="mr-2 mt-0.5 text-muted-foreground/80">
+    <div className={cn("flex items-start", className)}>
+      <div className="mr-3 mt-1 text-muted-foreground/80">
         {icon}
       </div>
       <div className="flex-1">
         <div className="flex items-center">
-          <h3 className="text-xs font-medium text-muted-foreground">
+          <h3 className="text-sm font-medium text-muted-foreground">
             {label}
           </h3>
           
           {badgeText && (
-            <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-sm bg-blue-500/30 text-blue-300 border border-blue-500/20">
+            <span className="ml-2 px-1.5 py-0.5 text-xs rounded-sm bg-blue-500/30 text-blue-300 border border-blue-500/20">
               {badgeText}
             </span>
           )}
@@ -42,7 +42,7 @@ const ConditionItem: React.FC<ConditionItemProps> = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-3 w-3 ml-1.5 text-muted-foreground/60 cursor-help" />
+                  <Info className="h-3.5 w-3.5 ml-1.5 text-muted-foreground/60 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs max-w-64">{tooltip}</p>
@@ -51,7 +51,7 @@ const ConditionItem: React.FC<ConditionItemProps> = ({
             </TooltipProvider>
           )}
         </div>
-        <div className="mt-0.5 text-xs text-primary-foreground">{value}</div>
+        <div className="mt-1 text-primary-foreground">{value}</div>
       </div>
     </div>
   );

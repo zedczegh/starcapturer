@@ -1,17 +1,16 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SharedAstroSpot } from '@/types/weather';
-import LocationCard from '@/components/LocationCard';
-import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import RealTimeSiqsProvider from '@/components/photoPoints/cards/RealTimeSiqsProvider';
+import { motion } from "framer-motion";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import LocationCard from "@/components/LocationCard";
+import MiniRemoveButton from "@/components/collections/MiniRemoveButton";
+import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 
 interface AstroSpotGridProps {
   spots: SharedAstroSpot[];
   editMode: boolean;
-  onDelete: (id: string) => Promise<void>;
+  onDelete: (spotId: string) => Promise<void>;
   onSiqsCalculated: (spotId: string, siqs: number | null, loading: boolean) => void;
   realTimeSiqs: Record<string, number | null>;
 }
@@ -23,42 +22,44 @@ const AstroSpotGrid: React.FC<AstroSpotGridProps> = ({
   onSiqsCalculated,
   realTimeSiqs
 }) => {
-  const { t } = useLanguage();
   const navigate = useNavigate();
-
-  const handleSpotClick = (id: string) => {
-    navigate(`/astro-spot/${id}`);
+  
+  const handleSpotClick = (spotId: string) => {
+    if (!editMode) {
+      console.log("Navigating to astro spot profile:", spotId);
+      navigate(`/astro-spot/${spotId}`);
+    }
   };
-
+  
   return (
-    <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-      {spots.map((spot) => (
-        <div key={spot.id} className="relative">
+    <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      {spots.map((spot, index) => (
+        <motion.div
+          key={spot.id}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: index * 0.10 }}
+          className="relative group"
+          onClick={() => handleSpotClick(spot.id)}
+        >
           {editMode && (
-            <Button
-              variant="destructive"
-              size="icon"
-              className="absolute -top-3 -right-3 z-10 rounded-full w-8 h-8"
-              onClick={(e) => {
+            <div className="absolute top-3 right-3 z-20">
+              <MiniRemoveButton onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onDelete(spot.id);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+              }} />
+            </div>
           )}
-          <button
-            className="w-full text-left block focus:outline-none"
-            onClick={() => handleSpotClick(spot.id)}
-          >
-            <RealTimeSiqsProvider
-              isVisible={true}
-              latitude={spot.latitude}
-              longitude={spot.longitude}
-              bortleScale={spot.bortleScale || 4}
-              existingSiqs={spot.siqs}
-              onSiqsCalculated={(siqs, loading) => onSiqsCalculated(spot.id, siqs, loading)}
-            />
+          <RealTimeSiqsProvider
+            isVisible={true}
+            latitude={spot.latitude}
+            longitude={spot.longitude}
+            bortleScale={spot.bortleScale}
+            existingSiqs={spot.siqs}
+            onSiqsCalculated={(siqs, loading) => onSiqsCalculated(spot.id, siqs, loading)}
+          />
+          <div className={`cursor-${editMode ? 'default' : 'pointer'} transition duration-200 hover:scale-[1.025]`}>
             <LocationCard
               id={spot.id}
               name={spot.name}
@@ -66,11 +67,10 @@ const AstroSpotGrid: React.FC<AstroSpotGridProps> = ({
               longitude={spot.longitude}
               siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
               timestamp={spot.timestamp}
-              username={t("You", "您")}
-              chineseName={spot.chineseName}
+              isCertified={false}
             />
-          </button>
-        </div>
+          </div>
+        </motion.div>
       ))}
     </div>
   );

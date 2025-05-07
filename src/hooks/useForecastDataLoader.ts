@@ -1,9 +1,8 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { fetchForecastData, fetchLongRangeForecastData } from '@/lib/api';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { areValidCoordinates } from '@/lib/api/coordinates';
 
 export const useForecastDataLoader = (
   latitude: number | undefined, 
@@ -14,60 +13,26 @@ export const useForecastDataLoader = (
   const [longRangeForecastData, setLongRangeForecastData] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const loadingRef = useRef(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Load forecast data with improved error handling
-  const loadForecastData = useCallback(async () => {
-    if (!areValidCoordinates(latitude, longitude)) {
-      console.warn("Invalid coordinates provided to useForecastDataLoader:", { latitude, longitude });
-      return;
-    }
+  useEffect(() => {
+    const loadForecastData = async () => {
+      if (latitude === undefined || longitude === undefined) {
+        return;
+      }
 
-    // Prevent multiple simultaneous loading
-    if (loadingRef.current) {
-      console.log("Forecast data already loading, request ignored");
-      return;
-    }
+      setLoading(true);
+      setError(null);
 
-    // Cancel any pending requests
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+      try {
+        // Load both forecast data types in parallel
+        const [forecast, longRangeForecast] = await Promise.all([
+          fetchForecastData({ latitude, longitude }),
+          fetchLongRangeForecastData({ latitude, longitude })
+        ]);
 
-    // Create new abort controller
-    abortControllerRef.current = new AbortController();
-    const signal = abortControllerRef.current.signal;
-
-    setLoading(true);
-    setError(null);
-    loadingRef.current = true;
-
-    try {
-      // Load both forecast data types in parallel with timeout
-      const [forecast, longRangeForecast] = await Promise.all([
-        fetchForecastData({ 
-          latitude: latitude!, 
-          longitude: longitude! 
-        }, { 
-          signal 
-        }),
-        fetchLongRangeForecastData({ 
-          latitude: latitude!, 
-          longitude: longitude!
-        }, {
-          signal
-        })
-      ]);
-
-      // Only update state if not aborted
-      if (!signal.aborted) {
         setForecastData(forecast);
         setLongRangeForecastData(longRangeForecast);
-      }
-    } catch (err) {
-      // Only update error state if not aborted
-      if (!signal.aborted) {
+      } catch (err) {
         console.error('Error loading forecast data:', err);
         setError(err as Error);
         
@@ -79,36 +44,13 @@ export const useForecastDataLoader = (
               : '请检查您的连接并重试'
           }
         );
-      }
-    } finally {
-      // Only update loading state if not aborted
-      if (!signal.aborted) {
+      } finally {
         setLoading(false);
-        loadingRef.current = false;
       }
-    }
+    };
+
+    loadForecastData();
   }, [latitude, longitude, language]);
 
-  // Load forecast data when coordinates change
-  useEffect(() => {
-    loadForecastData();
-    
-    // Cleanup function - abort any in-flight requests when unmounting
-    // or when coordinates change
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-      loadingRef.current = false;
-    };
-  }, [latitude, longitude, loadForecastData]);
-
-  return { 
-    forecastData, 
-    longRangeForecastData, 
-    loading, 
-    error,
-    reloadForecast: loadForecastData 
-  };
+  return { forecastData, longRangeForecastData, loading, error };
 };

@@ -1,11 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
 import { Camera, X } from 'lucide-react';
 import { User } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ProfileAvatarProps {
   avatarUrl: string | null;
@@ -14,77 +12,33 @@ interface ProfileAvatarProps {
   uploadingAvatar: boolean;
 }
 
-const ProfileAvatar: React.FC<ProfileAvatarProps> = ({ 
+const ProfileAvatar = ({ 
   avatarUrl, 
   onAvatarChange, 
   onRemoveAvatar,
   uploadingAvatar 
 }: ProfileAvatarProps) => {
   const { t } = useLanguage();
-  const [imageLoading, setImageLoading] = React.useState(false);
-  const [imageError, setImageError] = React.useState(false);
-  const inputRef = React.useRef<HTMLInputElement>(null);
-
-  // Reset error state and set loading when avatarUrl changes
-  React.useEffect(() => {
-    if (avatarUrl) {
-      setImageError(false);
-      setImageLoading(true);
-    }
-  }, [avatarUrl]);
-
-  const handleImageLoad = () => {
-    setImageLoading(false);
-    setImageError(false);
-  };
-
-  const handleImageError = () => {
-    setImageLoading(false);
-    setImageError(true);
-  };
-
-  const triggerFileInput = () => {
-    if (inputRef.current) {
-      inputRef.current.click();
-    }
-  };
 
   return (
     <div className="flex flex-col items-center">
       <div className="relative w-28 h-28">
-        {avatarUrl && !imageError ? (
+        {avatarUrl ? (
           <div className="relative group">
-            {imageLoading && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Skeleton className="w-full h-full rounded-full" />
-              </div>
-            )}
             <img
               src={avatarUrl}
               alt="Profile"
-              className={`w-full h-full rounded-full object-cover border-2 border-primary shadow-glow ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-              key={avatarUrl} // Add key to force re-render when URL changes
+              className="w-full h-full rounded-full object-cover border-2 border-primary shadow-glow"
             />
             <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button 
-                      onClick={onRemoveAvatar} 
-                      className="text-white p-1 rounded-full hover:text-red-400 transition-colors"
-                      type="button"
-                      aria-label={t("Remove avatar", "删除头像")}
-                    >
-                      <X className="w-6 h-6" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t("Remove avatar", "删除头像")}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <button 
+                onClick={onRemoveAvatar} 
+                className="text-white p-1 rounded-full hover:text-red-400 transition-colors"
+                type="button"
+                aria-label={t("Remove avatar", "删除头像")}
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
           </div>
         ) : (
@@ -93,39 +47,19 @@ const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
           </div>
         )}
         
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={triggerFileInput}
-                className="absolute -bottom-1 -right-1 bg-primary text-white p-2 rounded-full cursor-pointer shadow-md hover:bg-primary/90 transition-all"
-                disabled={uploadingAvatar}
-              >
-                <Camera className="w-5 h-5" />
-                <Input
-                  ref={inputRef}
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={onAvatarChange}
-                  className="hidden"
-                  disabled={uploadingAvatar}
-                />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t("Change avatar", "更改头像")}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 bg-primary text-white p-2 rounded-full cursor-pointer shadow-md hover:bg-primary/90 transition-all">
+          <Camera className="w-5 h-5" />
+          <Input
+            id="avatar-upload"
+            type="file"
+            accept="image/*"
+            onChange={onAvatarChange}
+            className="hidden"
+          />
+        </label>
       </div>
       <p className="text-cosmic-400 text-sm mt-2">
-        {uploadingAvatar 
-          ? t("Uploading...", "上传中...") 
-          : avatarUrl && avatarUrl.startsWith('blob:')
-            ? t("Save profile to upload", "保存资料以上传头像")
-            : t("Click to change", "点击更改")}
+        {uploadingAvatar ? t("Uploading...", "上传中...") : t("Click to change", "点击更改")}
       </p>
     </div>
   );

@@ -57,8 +57,6 @@ enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = true
-# Enable leaked password protection with HaveIBeenPwned.org
-enable_pwned_passwords = true
 
 [analytics]
 enabled = false

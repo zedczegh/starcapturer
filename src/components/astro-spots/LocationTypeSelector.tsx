@@ -2,7 +2,6 @@
 import React from 'react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { translateType } from "@/utils/linkTranslations";
 
 export const LOCATION_TYPES = [
   { name: "National/Academic Observatory", color: "#9b87f5" },
@@ -23,7 +22,7 @@ const LocationTypeSelector: React.FC<LocationTypeSelectorProps> = ({
   selectedTypes,
   onTypesChange,
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
 
   return (
     <div>
@@ -47,9 +46,7 @@ const LocationTypeSelector: React.FC<LocationTypeSelectorProps> = ({
                 );
               }}
             />
-            <span>
-              {language === 'zh' ? translateType(type.name) : type.name}
-            </span>
+            <span>{t(type.name, type.name)}</span>
           </label>
         ))}
       </div>

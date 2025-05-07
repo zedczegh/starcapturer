@@ -1,111 +1,81 @@
 
-import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/profile/useProfile';
-import { useUserTags } from '@/hooks/useUserTags';
-import { useProfileForm } from '@/hooks/profile/useProfileForm';
+import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { User } from 'lucide-react';
+import { UseFormRegister } from 'react-hook-form';
+import ProfileBenefits from './ProfileBenefits';
+import ProfileTagsSelector from './ProfileTagsSelector';
 
-// Component imports
-import UsernameField, { ProfileFormValues } from './form/UsernameField';
-import ProfileTagsSection from './form/ProfileTagsSection';
-import SubmitButton from './form/SubmitButton';
-import { toast } from 'sonner';
+interface ProfileFormValues {
+  username: string;
+}
 
-// Use the same type from UsernameField to ensure consistency
-const formSchema = z.object({
-  username: z.string().min(3, {
-    message: 'Username must be at least 3 characters.',
-  }),
-});
+interface ProfileFormProps {
+  register: UseFormRegister<ProfileFormValues>;
+  loading: boolean;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  tags: string[];
+  setTags: (tags: string[]) => void;
+}
 
-const ProfileForm = () => {
+const ALL_TAGS = [
+  "Professional Astronomer",
+  "Amateur Astronomer",
+  "Astrophotographer",
+  "Meteorology Enthusiast",
+  "Cosmos Lover",
+  "Traveler",
+  "Dark Sky Volunteer"
+];
+
+const ProfileForm = ({ register, loading, onSubmit, tags, setTags }: ProfileFormProps) => {
   const { t } = useLanguage();
-  const { user } = useAuth();
-  const {
-    profile,
-    fetchProfile,
-  } = useProfile();
-
-  const { 
-    tags, 
-    loading: loadingTags, 
-    fetchUserTags,
-    addUserTag,
-    removeUserTag
-  } = useUserTags();
-
-  // Set up form with react-hook-form
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      username: profile?.username || '',
-    },
-  });
-
-  const { handleSubmit, saving, avatarUploading } = useProfileForm(user);
-
-  // Load profile data when component mounts
-  useEffect(() => {
-    const initializeProfile = async () => {
-      if (user) {
-        try {
-          console.log("Initializing profile for user:", user.id);
-          await fetchProfile(user.id, form.setValue);
-          await fetchUserTags(user.id);
-        } catch (error) {
-          console.error("Error initializing profile:", error);
-          toast.error(t('Failed to load profile', '加载个人资料失败'), {
-            description: t('Please refresh the page and try again', '请刷新页面并重试')
-          });
-        }
-      }
-    };
-    
-    initializeProfile();
-  }, [user, fetchProfile, form.setValue, fetchUserTags, t]);
-
-  // Re-set form values when profile changes
-  useEffect(() => {
-    if (profile?.username) {
-      console.log("Setting username in form to:", profile.username);
-      form.setValue('username', profile.username);
+  const handleTagChange = (tag: string, checked: boolean) => {
+    if (checked && !tags.includes(tag)) {
+      setTags([...tags, tag]);
+    } else if (!checked) {
+      setTags(tags.filter((t) => t !== tag));
     }
-  }, [profile, form.setValue]);
-
-  const handleAddTag = async (tagName: string) => {
-    if (!user) {
-      console.error("Cannot add tag: No user logged in");
-      return null;
-    }
-    return addUserTag(user.id, tagName);
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-      {/* Username field */}
-      <UsernameField 
-        register={form.register} 
-        errors={form.formState.errors}
-        defaultValue={profile?.username || ''}
-      />
+    <form onSubmit={onSubmit} className="space-y-6">
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="username" className="text-white mb-2 block">
+              {t("Username", "用户名")}
+            </Label>
+            <div className="relative">
+              <Input
+                id="username"
+                {...register('username', { required: true, minLength: 3 })}
+                className="pl-10 bg-cosmic-800 border-cosmic-700 text-white focus:border-primary"
+              />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-cosmic-400">
+                <User className="w-5 h-5" />
+              </div>
+            </div>
+          </div>
+          {/* Tag selector */}
+          <ProfileTagsSelector selectedTags={tags} onChange={handleTagChange} disabled={loading} />
+        </div>
 
-      {/* User tags section */}
-      <ProfileTagsSection
-        tags={tags}
-        loadingTags={loadingTags}
-        onAddTag={handleAddTag}
-        onRemoveTag={removeUserTag}
-      />
+        <ProfileBenefits />
+      </div>
 
-      {/* Submit button */}
-      <SubmitButton 
-        saving={saving} 
-        avatarUploading={avatarUploading} 
-      />
+      <div className="flex justify-end">
+        <Button 
+          type="submit" 
+          className="bg-gradient-to-r from-primary to-[#8A6FD6] hover:opacity-90 text-white px-6"
+          disabled={loading}
+        >
+          {loading ? t("Updating...", "更新中...") : t("Save Changes", "保存更改")}
+        </Button>
+      </div>
     </form>
   );
 };

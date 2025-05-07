@@ -94,47 +94,39 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
   }, [locationData?.historicalData]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 transition-all">
-      <div className="lg:col-span-7 space-y-5">
-        <div className="panel-container">
-          <WeatherConditions
-            weatherData={weatherData}
-            moonPhase={moonPhaseString}
-            bortleScale={bortleScale}
-            seeingConditions={seeingConditionsString}
-            forecastData={forecastData}
-          />
-        </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 transition-all">
+      <div className="space-y-6 lg:space-y-8">
+        <WeatherConditions
+          weatherData={weatherData}
+          moonPhase={moonPhaseString}
+          bortleScale={bortleScale}
+          seeingConditions={seeingConditionsString}
+          forecastData={forecastData}
+        />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="panel-container">
-            <ClearSkyRateDisplay 
-              latitude={locationData.latitude} 
-              longitude={locationData.longitude}
-              clearSkyRate={clearSkyRate}
-              monthlyRates={monthlyRates}
-              clearestMonths={clearestMonths}
-            />
-          </div>
-          <div className="panel-container">
-            <MoonlessNightDisplay
-              latitude={locationData.latitude}
-              longitude={locationData.longitude}
-            />
-          </div>
-        </div>
-        
-        <div className="panel-container">
-          <SIQSSummary
-            siqsResult={locationData.siqsResult || null}
-            weatherData={weatherData}
-            locationData={locationData}
+          <ClearSkyRateDisplay 
+            latitude={locationData.latitude} 
+            longitude={locationData.longitude}
+            clearSkyRate={clearSkyRate}
+            monthlyRates={monthlyRates}
+            clearestMonths={clearestMonths}
+          />
+          <MoonlessNightDisplay
+            latitude={locationData.latitude}
+            longitude={locationData.longitude}
           />
         </div>
+        
+        <SIQSSummary
+          siqsResult={locationData.siqsResult || null}
+          weatherData={weatherData}
+          locationData={locationData}
+        />
       </div>
       
-      <div className="lg:col-span-5 space-y-5">
-        <div className="panel-container relative z-60">
+      <div className="space-y-6 lg:space-y-8">
+        <div className="relative z-60">
           <LocationUpdater 
             locationData={locationData}
             onLocationUpdate={onLocationUpdate}
@@ -144,16 +136,14 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
           />
         </div>
         
-        <div className="panel-container">
-          <ForecastTabs
-            forecastData={forecastData}
-            longRangeForecast={longRangeForecast}
-            forecastLoading={forecastLoading}
-            longRangeLoading={longRangeLoading}
-            onRefreshForecast={onRefreshForecast}
-            onRefreshLongRange={onRefreshLongRange}
-          />
-        </div>
+        <ForecastTabs
+          forecastData={forecastData}
+          longRangeForecast={longRangeForecast}
+          forecastLoading={forecastLoading}
+          longRangeLoading={longRangeLoading}
+          onRefreshForecast={onRefreshForecast}
+          onRefreshLongRange={onRefreshLongRange}
+        />
       </div>
     </div>
   );

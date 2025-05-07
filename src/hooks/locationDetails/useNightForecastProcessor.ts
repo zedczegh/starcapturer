@@ -1,43 +1,21 @@
 
 import { useCallback } from 'react';
+import { extractFutureForecasts } from '@/components/forecast/ForecastUtils';
 
-export function useNightForecastProcessor() {
-  // Process forecast data to extract nighttime values
-  const processNightForecast = useCallback((forecastData: any) => {
-    if (!forecastData || !forecastData.hourly || !forecastData.hourly.time) {
-      return [];
-    }
+export const useNightForecastProcessor = () => {
+  // Process forecast data to extract nighttime forecast (6 PM to 6 AM)
+  const processNightForecast = useCallback((data: any) => {
+    if (!data || !data.hourly) return [];
     
-    try {
-      const nightForecasts = [];
-      const { hourly } = forecastData;
-      
-      // Process each forecast hour
-      for (let i = 0; i < hourly.time.length; i++) {
-        const time = new Date(hourly.time[i]);
-        const hour = time.getHours();
-        
-        // Define nighttime as between 6 PM (18) and 7 AM (7)
-        const isNight = hour >= 18 || hour < 7;
-        
-        if (isNight) {
-          nightForecasts.push({
-            time: hourly.time[i],
-            cloudCover: hourly.cloud_cover?.[i] ?? null,
-            temperature: hourly.temperature_2m?.[i] ?? null,
-            humidity: hourly.relative_humidity_2m?.[i] ?? null,
-            weatherCode: hourly.weather_code?.[i] ?? null,
-            isNight: true
-          });
-        }
-      }
-      
-      return nightForecasts;
-    } catch (error) {
-      console.error("Error processing night forecast:", error);
-      return [];
-    }
+    const futureForecasts = extractFutureForecasts(data);
+    
+    // Filter for nighttime hours (6 PM to 6 AM)
+    return futureForecasts.filter(item => {
+      const date = new Date(item.time);
+      const hour = date.getHours();
+      return hour >= 18 || hour < 6;
+    });
   }, []);
   
   return { processNightForecast };
-}
+};

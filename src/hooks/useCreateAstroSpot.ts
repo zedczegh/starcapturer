@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
@@ -239,8 +238,6 @@ export const useCreateAstroSpot = (
         toast.success(t("Astro spot created successfully!", "观星点创建成功！"));
         navigate(`/location/${formData.latitude.toFixed(6)},${formData.longitude.toFixed(6)}`);
       }
-      
-      setIsSuccess(true);
     } catch (error) {
       console.error('Error handling astro spot:', error);
       toast.error(isEditing 

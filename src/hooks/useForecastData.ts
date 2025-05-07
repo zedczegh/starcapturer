@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { fetchForecastData, fetchLongRangeForecastData } from "@/lib/api";
@@ -51,9 +50,7 @@ export const useForecastData = () => {
         latitude,
         longitude,
         days: 3
-      }, { 
-        signal: forecastControllerRef.current.signal 
-      });
+      }, forecastControllerRef.current.signal);
       
       if (data) {
         forecastCache.set(cacheKey, { data, timestamp: Date.now() });
@@ -88,9 +85,7 @@ export const useForecastData = () => {
         latitude,
         longitude,
         days: 16
-      }, { 
-        signal: longRangeControllerRef.current.signal 
-      });
+      }, longRangeControllerRef.current.signal);
       
       setLongRangeForecast(data);
     } catch (error) {

@@ -91,11 +91,5 @@ export const commonPhrases = {
   "Good for imaging": "适合观测",
   "Fair for imaging": "观测条件尚可",
   "Poor for imaging": "观测条件较差",
-  "Not recommended": "不推荐观测",
-  
-  // Location advantages - Adding the missing translations
-  "Power supplies available": "电源可用",
-  "Mobile battery available": "移动电源可用",
-  "Friendly host": "友好的主人",
-  "Wi-Fi available": "Wi-Fi可用"
+  "Not recommended": "不推荐观测"
 };

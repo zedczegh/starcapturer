@@ -1,81 +1,136 @@
 
-import React from 'react';
-import { MapPin, Clock, Copy } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { formatDistanceToNow } from 'date-fns';
+import { useLocationCollection } from '@/hooks/useLocationCollection';
+import { Button } from '@/components/ui/button';
+import { Star } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import AuthDialog from '../auth/AuthDialog';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { useLocationDetailsService } from './header/LocationDetailsService';
 
 interface LocationDetailsHeaderProps {
   name: string;
   latitude: number;
   longitude: number;
-  timestamp?: string;
+  timestamp: string;
 }
 
-const LocationDetailsHeader: React.FC<LocationDetailsHeaderProps> = ({
-  name,
-  latitude,
+const LocationDetailsHeader = ({ 
+  name, 
+  latitude, 
   longitude,
-  timestamp
-}) => {
+  timestamp 
+}: LocationDetailsHeaderProps) => {
   const { t, language } = useLanguage();
+  const { saveLocation } = useLocationCollection();
+  const { user } = useAuth();
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Format the coordinates for display
-  const formattedCoordinates = `${latitude?.toFixed(4)}, ${longitude?.toFixed(4)}`;
-  
-  // Format the timestamp as "updated X minutes/hours ago"
-  const formattedTimestamp = timestamp 
-    ? formatDistanceToNow(new Date(timestamp), { addSuffix: true })
-    : '';
-  
-  // Handle copying coordinates to clipboard
-  const handleCopyCoordinates = () => {
-    navigator.clipboard.writeText(`${latitude}, ${longitude}`);
-    toast.success(t("Coordinates copied to clipboard", "坐标已复制到剪贴板"));
+  // Use the location details service to get enhanced location name
+  const { enhancedName } = useLocationDetailsService({
+    latitude,
+    longitude,
+    language
+  });
+
+  // Display the enhanced name if available, otherwise fall back to the provided name
+  const displayName = enhancedName || name;
+
+  // Check if location is already saved by user
+  useEffect(() => {
+    const checkIfSaved = async () => {
+      if (!user) {
+        setIsSaved(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('saved_locations')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('latitude', latitude)
+          .eq('longitude', longitude)
+          .maybeSingle();
+
+        if (error) throw error;
+        setIsSaved(!!data);
+      } catch (error) {
+        console.error('Error checking saved status:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkIfSaved();
+  }, [user, latitude, longitude]);
+
+  const handleToggleSave = async () => {
+    if (!user) {
+      setShowAuthDialog(true);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (isSaved) {
+        // Remove from collection
+        const { error } = await supabase
+          .from('saved_locations')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('latitude', latitude)
+          .eq('longitude', longitude);
+          
+        if (error) throw error;
+        
+        setIsSaved(false);
+        toast.success(t("Removed from collection", "已从收藏中移除"));
+      } else {
+        // Add to collection
+        await saveLocation({
+          name: displayName, // Use the enhanced name for saving
+          latitude,
+          longitude,
+          timestamp
+        });
+        setIsSaved(true);
+      }
+    } catch (error) {
+      console.error('Error toggling save status:', error);
+      toast.error(t("Action failed", "操作失败"));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <motion.div 
-      className="bg-gradient-to-r from-cosmic-800/70 to-cosmic-800/40 backdrop-blur-sm rounded-lg border border-cosmic-700/30 p-5 mb-5 overflow-hidden relative shadow-glow-light"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      {/* Decorative elements for visual interest */}
-      <div className="absolute -top-12 -right-12 w-24 h-24 bg-primary/10 rounded-full blur-xl"></div>
-      <div className="absolute -bottom-8 -left-8 w-16 h-16 bg-indigo-500/10 rounded-full blur-lg"></div>
-      
-      <div className="relative z-10">
-        <h1 className="text-2xl sm:text-3xl font-bold text-cosmic-50 mb-3 leading-tight">
-          {name || t("Unnamed Location", "未命名位置")}
-        </h1>
-        
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
-          <div className="flex items-center gap-2 text-cosmic-200 bg-cosmic-800/40 px-3 py-1.5 rounded-md border border-cosmic-700/30">
-            <MapPin className="h-4 w-4 text-primary/80 flex-shrink-0" />
-            <span className="text-sm">{formattedCoordinates}</span>
-            <Button 
-              size="icon"
-              variant="ghost" 
-              className="h-6 w-6 p-0.5 text-cosmic-300 hover:text-primary hover:bg-cosmic-700/30 ml-1"
-              onClick={handleCopyCoordinates}
-              title={t("Copy coordinates", "复制坐标")}
-            >
-              <Copy className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-          
-          {timestamp && (
-            <div className="flex items-center gap-2 text-cosmic-300 bg-cosmic-800/40 px-3 py-1.5 rounded-md border border-cosmic-700/30">
-              <Clock className="h-4 w-4 text-cosmic-400 flex-shrink-0" />
-              <span className="text-xs">{formattedTimestamp}</span>
-            </div>
-          )}
-        </div>
+    <div className="mb-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold mb-2">{displayName}</h1>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleToggleSave}
+          disabled={isLoading}
+          className={isSaved ? "text-yellow-400 hover:text-yellow-500" : "text-muted-foreground hover:text-yellow-400"}
+        >
+          <Star className="h-5 w-5" fill={isSaved ? "currentColor" : "none"} />
+        </Button>
       </div>
-    </motion.div>
+      <div className="text-sm text-muted-foreground">
+        {latitude.toFixed(6)}, {longitude.toFixed(6)}
+      </div>
+      <AuthDialog 
+        open={showAuthDialog} 
+        onOpenChange={setShowAuthDialog} 
+      />
+    </div>
   );
 };
 

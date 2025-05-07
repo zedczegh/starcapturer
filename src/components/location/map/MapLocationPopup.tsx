@@ -8,64 +8,31 @@ interface MapLocationPopupProps {
   position: [number, number];
   isDarkSkyReserve?: boolean;
   certification?: string;
-  chineseName?: string;
 }
 
 const MapLocationPopup: React.FC<MapLocationPopupProps> = ({
   name,
   position,
   isDarkSkyReserve,
-  certification,
-  chineseName
+  certification
 }) => {
-  const { t, language } = useLanguage();
-  
-  // Use Chinese name if available and language is set to Chinese
-  const displayName = language === 'zh' && chineseName 
-    ? chineseName 
-    : (name || t("Selected Location", "所选位置"));
-  
-  // Format certification text based on language
-  const getCertificationText = () => {
-    if (!certification && !isDarkSkyReserve) return null;
-    
-    if (isDarkSkyReserve) {
-      return t("Dark Sky Reserve", "暗夜保护区");
-    }
-    
-    if (!certification) return null;
-    
-    const cert = certification.toLowerCase();
-    if (cert.includes('park')) {
-      return t("Dark Sky Park", "暗夜公园");
-    } else if (cert.includes('community')) {
-      return t("Dark Sky Community", "暗夜社区");
-    } else if (cert.includes('urban')) {
-      return t("Urban Night Sky", "城市夜空");
-    } else if (cert.includes('lodging')) {
-      return t("Dark Sky Lodging", "暗夜住宿");
-    } else {
-      return t("Certified Location", "认证地点");
-    }
-  };
-  
-  const certificationText = getCertificationText();
+  const { t } = useLanguage();
   
   return (
     <Popup>
       <div className="p-1">
-        <strong className="text-sm">{displayName}</strong>
+        <strong>{name || t("Selected Location", "所选位置")}</strong>
         <div className="text-xs mt-1">
           {position[0].toFixed(5)}, {position[1].toFixed(5)}
         </div>
-        {isDarkSkyReserve && !certificationText && (
+        {isDarkSkyReserve && (
           <div className="mt-1 text-xs font-semibold text-blue-600">
             {t("Dark Sky Reserve", "暗夜保护区")}
           </div>
         )}
-        {certificationText && (
+        {certification && (
           <div className="mt-1 text-xs font-semibold text-green-600">
-            {certificationText}
+            {certification}
           </div>
         )}
       </div>

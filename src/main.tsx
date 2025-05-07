@@ -9,7 +9,6 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { Toaster } from './components/ui/sonner';
 import { initializePreloadServices } from './services/preloadServices';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { TooltipProvider } from './components/ui/tooltip';
 
 // Initialize preloading services as early as possible
 initializePreloadServices();
@@ -44,9 +43,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <HelmetProvider>
         <ThemeProvider>
           <LanguageProvider>
-            <TooltipProvider>
-              <AppWithProviders />
-            </TooltipProvider>
+            <AppWithProviders />
           </LanguageProvider>
         </ThemeProvider>
       </HelmetProvider>

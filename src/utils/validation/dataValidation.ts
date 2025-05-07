@@ -1,231 +1,136 @@
 
 /**
- * Validate weather data against forecast data for consistency
+ * Validates SIQS data structure to ensure it's consistent
+ * @param siqsData The SIQS data object to validate
+ * @returns Boolean indicating if the data is valid
  */
-export function validateWeatherAgainstForecast(weatherData: any, forecastData: any) {
-  if (!weatherData || !forecastData?.current) {
-    return { isValid: false, correctedData: null };
+export const validateSIQSData = (siqsData: any): boolean => {
+  // Allow null SIQS data - component will handle this case
+  if (siqsData === null || siqsData === undefined) {
+    return false;
   }
+  
+  // Handle case where it's just a number
+  if (typeof siqsData === 'number') {
+    return true;
+  }
+  
+  // Handle case where it's a simple object with just a score property
+  if (typeof siqsData === 'object' && typeof siqsData.score === 'number') {
+    return true;
+  }
+  
+  // Handle nested siqsResult case
+  if (typeof siqsData === 'object' && siqsData.siqsResult) {
+    return validateSIQSData(siqsData.siqsResult);
+  }
+  
+  return false;
+};
 
-  const discrepancies = [];
+/**
+ * Validates location data structure
+ * @param locationData Location data to validate
+ * @returns Boolean indicating if the data is valid
+ */
+export const validateLocationData = (locationData: any): boolean => {
+  if (!locationData) return false;
+  
+  // Basic required fields
+  return (
+    typeof locationData === 'object' &&
+    typeof locationData.latitude === 'number' &&
+    typeof locationData.longitude === 'number' &&
+    isFinite(locationData.latitude) &&
+    isFinite(locationData.longitude)
+  );
+};
+
+/**
+ * Validates weather data structure to ensure it has required fields
+ * @param weatherData Weather data to validate
+ * @returns Boolean indicating if the data is valid
+ */
+export const validateWeatherData = (weatherData: any): boolean => {
+  if (!weatherData) return false;
+  
+  return (
+    typeof weatherData === 'object' &&
+    typeof weatherData.temperature === 'number' &&
+    typeof weatherData.humidity === 'number' &&
+    typeof weatherData.cloudCover === 'number' &&
+    typeof weatherData.windSpeed === 'number' &&
+    isFinite(weatherData.temperature) &&
+    isFinite(weatherData.humidity) &&
+    isFinite(weatherData.cloudCover) &&
+    isFinite(weatherData.windSpeed)
+  );
+};
+
+/**
+ * Validates weather data against forecast data for consistency
+ * @param weatherData Current weather data
+ * @param forecastData Forecast data to validate against
+ * @returns Object with validation results and corrected data if needed
+ */
+export const validateWeatherAgainstForecast = (weatherData: any, forecastData: any): {
+  isValid: boolean;
+  correctedData?: any;
+  discrepancies?: string[];
+} => {
+  if (!weatherData || !forecastData || !forecastData.current) {
+    return { isValid: true }; // Nothing to validate against
+  }
+  
+  const discrepancies: string[] = [];
+  let needsCorrection = false;
+  
+  // Create a copy for potential corrections
   const correctedData = { ...weatherData };
-  let hasChanges = false;
-
-  // Check temperature discrepancy greater than 5°C
-  if (
-    typeof weatherData.temperature === 'number' && 
-    typeof forecastData.current.temperature === 'number' &&
-    Math.abs(weatherData.temperature - forecastData.current.temperature) > 5
-  ) {
-    discrepancies.push({
-      field: 'temperature',
-      original: weatherData.temperature,
-      corrected: forecastData.current.temperature
-    });
+  
+  // Check temperature
+  if (forecastData.current.temperature && 
+      Math.abs(weatherData.temperature - forecastData.current.temperature) > 5) {
     correctedData.temperature = forecastData.current.temperature;
-    hasChanges = true;
+    discrepancies.push('temperature');
+    needsCorrection = true;
   }
-
-  // Check humidity discrepancy greater than 20%
-  if (
-    typeof weatherData.humidity === 'number' && 
-    typeof forecastData.current.humidity === 'number' &&
-    Math.abs(weatherData.humidity - forecastData.current.humidity) > 20
-  ) {
-    discrepancies.push({
-      field: 'humidity',
-      original: weatherData.humidity,
-      corrected: forecastData.current.humidity
-    });
+  
+  // Check humidity
+  if (forecastData.current.humidity && 
+      Math.abs(weatherData.humidity - forecastData.current.humidity) > 15) {
     correctedData.humidity = forecastData.current.humidity;
-    hasChanges = true;
+    discrepancies.push('humidity');
+    needsCorrection = true;
   }
-
-  // Check cloud cover discrepancy greater than 30%
-  if (
-    typeof weatherData.cloudCover === 'number' && 
-    typeof forecastData.current.cloudCover === 'number' &&
-    Math.abs(weatherData.cloudCover - forecastData.current.cloudCover) > 30
-  ) {
-    discrepancies.push({
-      field: 'cloudCover',
-      original: weatherData.cloudCover,
-      corrected: forecastData.current.cloudCover
-    });
+  
+  // Check cloud cover
+  if (forecastData.current.cloudCover && 
+      Math.abs(weatherData.cloudCover - forecastData.current.cloudCover) > 20) {
     correctedData.cloudCover = forecastData.current.cloudCover;
-    hasChanges = true;
+    discrepancies.push('cloudCover');
+    needsCorrection = true;
   }
-
-  // Check wind speed discrepancy greater than 10 km/h
-  if (
-    typeof weatherData.windSpeed === 'number' && 
-    typeof forecastData.current.windSpeed === 'number' &&
-    Math.abs(weatherData.windSpeed - forecastData.current.windSpeed) > 10
-  ) {
-    discrepancies.push({
-      field: 'windSpeed',
-      original: weatherData.windSpeed,
-      corrected: forecastData.current.windSpeed
-    });
+  
+  // Check wind speed
+  if (forecastData.current.windSpeed && 
+      Math.abs(weatherData.windSpeed - forecastData.current.windSpeed) > 5) {
     correctedData.windSpeed = forecastData.current.windSpeed;
-    hasChanges = true;
+    discrepancies.push('windSpeed');
+    needsCorrection = true;
   }
-
-  // Missing fields check
-  const criticalFields = ['temperature', 'humidity', 'cloudCover', 'windSpeed'];
-  for (const field of criticalFields) {
-    if (
-      (weatherData[field] === undefined || weatherData[field] === null || isNaN(weatherData[field])) &&
-      forecastData.current[field] !== undefined
-    ) {
-      discrepancies.push({
-        field,
-        original: weatherData[field],
-        corrected: forecastData.current[field]
-      });
-      correctedData[field] = forecastData.current[field];
-      hasChanges = true;
-    }
+  
+  // Check weather condition
+  if (forecastData.current.condition && 
+      weatherData.condition !== forecastData.current.condition) {
+    correctedData.condition = forecastData.current.condition;
+    discrepancies.push('condition');
+    needsCorrection = true;
   }
-
-  // Update time if significantly different
-  if (weatherData.time && forecastData.current.time) {
-    const weatherTime = new Date(weatherData.time).getTime();
-    const forecastTime = new Date(forecastData.current.time).getTime();
-    const hourDifference = Math.abs(weatherTime - forecastTime) / (1000 * 60 * 60);
-    
-    if (hourDifference > 1) {
-      discrepancies.push({
-        field: 'time',
-        original: weatherData.time,
-        corrected: forecastData.current.time
-      });
-      correctedData.time = forecastData.current.time;
-      hasChanges = true;
-    }
-  }
-
+  
   return {
-    isValid: !hasChanges,
-    correctedData: hasChanges ? correctedData : null,
-    discrepancies
+    isValid: !needsCorrection,
+    correctedData: needsCorrection ? correctedData : undefined,
+    discrepancies: needsCorrection ? discrepancies : undefined
   };
-}
-
-/**
- * Validate if a data object is valid by checking required fields
- */
-export function validateDataObject(data: any, requiredFields: string[]): boolean {
-  if (!data || typeof data !== 'object') {
-    return false;
-  }
-
-  for (const field of requiredFields) {
-    if (data[field] === undefined || data[field] === null) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-/**
- * Clean and validate coordinates
- */
-export function validateCoordinateObject(obj: any): { 
-  isValid: boolean; 
-  latitude?: number; 
-  longitude?: number; 
-} {
-  if (!obj) return { isValid: false };
-  
-  let latitude: number | undefined;
-  let longitude: number | undefined;
-  
-  // Handle case where coordinates might be nested in a location property
-  const source = obj.location && typeof obj.location === 'object' ? obj.location : obj;
-  
-  // Parse latitude
-  if (source.latitude !== undefined) {
-    latitude = typeof source.latitude === 'number' 
-      ? source.latitude 
-      : parseFloat(source.latitude);
-  } else if (source.lat !== undefined) {
-    latitude = typeof source.lat === 'number' 
-      ? source.lat 
-      : parseFloat(source.lat);
-  }
-  
-  // Parse longitude
-  if (source.longitude !== undefined) {
-    longitude = typeof source.longitude === 'number' 
-      ? source.longitude 
-      : parseFloat(source.longitude);
-  } else if (source.lon !== undefined || source.lng !== undefined) {
-    longitude = typeof source.lon !== 'undefined' 
-      ? (typeof source.lon === 'number' ? source.lon : parseFloat(source.lon))
-      : (typeof source.lng === 'number' ? source.lng : parseFloat(source.lng));
-  }
-  
-  // Validate values
-  const isValid = 
-    typeof latitude === 'number' && 
-    typeof longitude === 'number' && 
-    !isNaN(latitude) && 
-    !isNaN(longitude) && 
-    latitude >= -90 && 
-    latitude <= 90 && 
-    longitude >= -180 && 
-    longitude <= 180;
-  
-  return { isValid, latitude, longitude };
-}
-
-/**
- * Validates SIQS data structure and values
- */
-export function validateSIQSData(siqsData: any): boolean {
-  if (!siqsData || typeof siqsData !== 'object') {
-    return false;
-  }
-  
-  // Check if score exists and is a number
-  if (typeof siqsData.score !== 'number' || isNaN(siqsData.score)) {
-    return false;
-  }
-  
-  // Check if isViable property exists
-  if (typeof siqsData.isViable !== 'boolean') {
-    return false;
-  }
-  
-  // Check if factors is an array (optional check)
-  if (siqsData.factors !== undefined && !Array.isArray(siqsData.factors)) {
-    return false;
-  }
-  
-  return true;
-}
-
-/**
- * Validates weather data structure and values
- */
-export function validateWeatherData(weatherData: any): boolean {
-  if (!weatherData || typeof weatherData !== 'object') {
-    return false;
-  }
-  
-  // Define required weather fields
-  const requiredFields = ['temperature', 'humidity', 'cloudCover', 'windSpeed'];
-  let requiredFieldsPresent = true;
-  
-  for (const field of requiredFields) {
-    // Check if field exists and is a number
-    if (typeof weatherData[field] !== 'number' || isNaN(weatherData[field])) {
-      requiredFieldsPresent = false;
-      break;
-    }
-  }
-  
-  return requiredFieldsPresent;
-}
+};

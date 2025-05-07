@@ -1,233 +1,317 @@
-
-import React from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { format, parseISO } from 'date-fns';
-import { zhCN, enUS } from 'date-fns/locale';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Clock, Users, DollarSign, Edit, Trash2, User as UserIcon } from 'lucide-react';
-import { useModal } from '@/contexts/ModalContext';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
-import { getInitials } from '@/utils/stringUtils';
-
-interface TimeSlot {
-  id: string;
-  start_time: string;
-  end_time: string;
-  max_capacity: number;
-  description: string;
-  price: number;
-  currency: string;
-  astro_spot_reservations: {
-    id: string;
-    user_id: string;
-    status: string;
-    profiles?: {
-      username?: string;
-      avatar_url?: string;
-    };
-  }[];
-}
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import TimeSlotForm from './TimeSlotForm';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Calendar, Clock, User, X } from 'lucide-react';
 
 interface TimeSlotItemProps {
-  timeSlot: TimeSlot;
-  isOwner: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
+  timeSlot: any;
+  isCreator: boolean;
+  onUpdate: () => void;
 }
 
-const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ 
-  timeSlot, 
-  isOwner,
-  onEdit,
-  onDelete
-}) => {
-  const { language, t } = useLanguage();
+const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpdate }) => {
   const { user } = useAuth();
-  const { confirmDialog } = useModal();
+  const { t } = useLanguage();
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showParticipants, setShowParticipants] = useState(false);
+  const [isBooking, setIsBooking] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  // Check if current user has a reservation for this time slot
+  const userReservation = timeSlot.astro_spot_reservations?.find(
+    (res: any) => res.user_id === user?.id
+  );
   
-  const startTime = parseISO(timeSlot.start_time);
-  const endTime = parseISO(timeSlot.end_time);
+  const hasBooked = !!userReservation;
   
-  const locale = language === 'zh' ? zhCN : enUS;
+  // Count confirmed reservations
+  const confirmedReservations = timeSlot.astro_spot_reservations?.filter(
+    (res: any) => res.status === 'confirmed'
+  ) || [];
   
-  const formatTimeRange = () => {
-    const dateStr = format(startTime, 'PPP', { locale });
-    const startStr = format(startTime, 'p', { locale });
-    const endStr = format(endTime, 'p', { locale });
-    return `${dateStr}, ${startStr} - ${endStr}`;
-  };
+  const isSlotFull = confirmedReservations.length >= timeSlot.max_capacity;
   
-  const confirmedReservations = timeSlot.astro_spot_reservations.filter(r => r.status === 'confirmed');
-  const isFullyBooked = confirmedReservations.length >= timeSlot.max_capacity;
-  const hasUserBooked = user && timeSlot.astro_spot_reservations.some(r => r.user_id === user.id);
-  
-  const handleReservation = async () => {
+  const formattedStartDate = format(parseISO(timeSlot.start_time), 'EEEE, MMMM d');
+  const formattedStartTime = format(parseISO(timeSlot.start_time), 'h:mm a');
+  const formattedEndTime = format(parseISO(timeSlot.end_time), 'h:mm a');
+
+  const handleBookSlot = async () => {
+    if (!user?.id) {
+      toast.error(t("Please sign in to book", "请登录后预订"));
+      return;
+    }
+    
+    setIsBooking(true);
+    
     try {
-      if (!user) {
-        toast.error(t('Please sign in to make a reservation', '请登录以进行预订'));
-        return;
-      }
-      
-      if (isFullyBooked) {
-        toast.error(t('This time slot is fully booked', '此时段已预订满'));
-        return;
-      }
-      
-      if (hasUserBooked) {
-        toast.error(t('You have already booked this time slot', '您已预订此时段'));
-        return;
-      }
-      
-      const { data, error } = await supabase.rpc('insert_astro_spot_reservation', {
-        p_timeslot_id: timeSlot.id,
-        p_user_id: user.id
+      // Use the Edge Function to call RPC
+      const { data, error } = await supabase.functions.invoke('call-rpc', {
+        body: {
+          function: 'insert_astro_spot_reservation',
+          params: {
+            p_timeslot_id: timeSlot.id,
+            p_user_id: user.id,
+            p_status: 'confirmed'
+          }
+        }
       });
-      
+
       if (error) throw error;
       
-      toast.success(t('Reservation successful', '预订成功'));
-      // Refresh the page to show updated reservation status
-      window.location.reload();
-    } catch (error: any) {
-      console.error('Error making reservation:', error);
-      toast.error(error.message || t('Failed to make reservation', '预订失败'));
+      toast.success(t("Booking confirmed!", "预订已确认！"));
+      onUpdate();
+    } catch (error) {
+      console.error("Error booking time slot:", error);
+      toast.error(t("Failed to book time slot", "预订时间段失败"));
+    } finally {
+      setIsBooking(false);
     }
   };
-
-  const handleDeleteConfirm = () => {
-    confirmDialog({
-      title: t('Delete Time Slot', '删除时段'),
-      description: t('Are you sure you want to delete this time slot? This action cannot be undone.', 
-                     '您确定要删除此时段吗？此操作无法撤消。'),
-      onConfirm: onDelete
-    });
+  
+  const handleCancelBooking = async () => {
+    if (!userReservation) return;
+    
+    setIsCancelling(true);
+    
+    try {
+      // Use fetch to make a direct delete request to the supabase API
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const response = await fetch(
+        `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/astro_spot_reservations?id=eq.${userReservation.id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y',
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+        
+      if (!response.ok) throw new Error('Failed to cancel reservation');
+      
+      toast.success(t("Booking cancelled", "预订已取消"));
+      onUpdate();
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      toast.error(t("Failed to cancel booking", "取消预订失败"));
+    } finally {
+      setIsCancelling(false);
+    }
   };
   
+  const handleDeleteTimeSlot = async () => {
+    try {
+      // Use fetch to make a direct delete request to the supabase API
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const response = await fetch(
+        `https://fmnivvwpyriufxaebbzi.supabase.co/rest/v1/astro_spot_timeslots?id=eq.${timeSlot.id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y',
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+        
+      if (!response.ok) throw new Error('Failed to delete time slot');
+      
+      toast.success(t("Time slot deleted", "时间段已删除"));
+      onUpdate();
+      setShowDeleteConfirm(false);
+    } catch (error) {
+      console.error("Error deleting time slot:", error);
+      toast.error(t("Failed to delete time slot", "删除时间段失败"));
+    }
+  };
+  
+  const handleEditSuccess = () => {
+    setShowEditForm(false);
+    onUpdate();
+    toast.success(t("Time slot updated", "时间段已更新"));
+  };
+
   return (
-    <Card className="bg-cosmic-900/70 border-cosmic-700/50 hover:border-cosmic-600/50 transition-all">
-      <CardContent className="p-4">
-        <div className="flex flex-col space-y-4">
-          <div className="flex justify-between items-start">
-            <div className="space-y-1">
-              <h4 className="font-medium text-cosmic-100">
-                {formatTimeRange()}
-              </h4>
+    <>
+      <div className="bg-cosmic-800/20 border border-cosmic-700/30 rounded-lg p-4 transition-all hover:bg-cosmic-800/40">
+        <div className="flex flex-col md:flex-row md:items-center justify-between">
+          <div className="space-y-2">
+            <h4 className="text-md font-medium text-gray-200 flex items-center">
+              <Calendar className="h-4 w-4 mr-2 text-blue-400" />
+              {formattedStartDate}
+            </h4>
+            <div className="flex items-center text-gray-300">
+              <Clock className="h-4 w-4 mr-2 text-blue-300" />
+              {formattedStartTime} - {formattedEndTime}
+            </div>
+            <div className="flex items-center text-gray-300">
+              <User className="h-4 w-4 mr-2 text-blue-300" />
+              {t("Capacity", "容量")}: {confirmedReservations.length}/{timeSlot.max_capacity}
               
-              {timeSlot.description && (
-                <p className="text-sm text-cosmic-300">{timeSlot.description}</p>
+              {confirmedReservations.length > 0 && isCreator && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowParticipants(true)}
+                  className="ml-2 text-xs text-primary h-6"
+                >
+                  {t("View participants", "查看参与者")}
+                </Button>
               )}
             </div>
-            
-            <div>
-              {timeSlot.price > 0 ? (
-                <Badge variant="outline" className="bg-green-900/20 text-green-400 border-green-700/50">
-                  <DollarSign className="h-3 w-3 mr-1" />
-                  {timeSlot.price} {timeSlot.currency}
+            {timeSlot.description && (
+              <p className="text-sm text-gray-400 mt-1">{timeSlot.description}</p>
+            )}
+          </div>
+          
+          <div className="flex flex-col md:items-end gap-2 mt-4 md:mt-0">
+            <div className="flex flex-wrap gap-2">
+              {isSlotFull ? (
+                <Badge variant="outline" className="bg-red-500/20 text-red-300 border-red-600/30">
+                  {t("Fully Booked", "已满")}
                 </Badge>
               ) : (
-                <Badge variant="outline" className="bg-blue-900/20 text-blue-400 border-blue-700/50">
-                  {t('Free', '免费')}
+                <Badge variant="outline" className="bg-green-500/20 text-green-300 border-green-600/30">
+                  {t("Available", "可用")}
                 </Badge>
               )}
             </div>
-          </div>
-          
-          <div className="flex items-center space-x-2 text-sm text-cosmic-400">
-            <Clock className="h-4 w-4" />
-            <span>
-              {format(endTime, 'HH:mm') === '23:59' 
-                ? t('Full day', '全天') 
-                : t('Duration: {{hours}}h {{minutes}}m', '时长：{{hours}}小时 {{minutes}}分钟')
-                    .replace('{{hours}}', String(Math.floor((endTime.getTime() - startTime.getTime()) / 3600000)))
-                    .replace('{{minutes}}', String(Math.floor(((endTime.getTime() - startTime.getTime()) % 3600000) / 60000)))
-              }
-            </span>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Users className="h-4 w-4 text-cosmic-400" />
-              <span className="text-sm text-cosmic-400">
-                {confirmedReservations.length}/{timeSlot.max_capacity} {t('booked', '已预订')}
-              </span>
-              
-              {confirmedReservations.length > 0 && (
-                <div className="flex -space-x-2 ml-2">
-                  {confirmedReservations.slice(0, 3).map((reservation) => (
-                    <Avatar key={reservation.id} className="h-6 w-6 border border-cosmic-800">
-                      {reservation.profiles?.avatar_url ? (
-                        <AvatarImage src={reservation.profiles.avatar_url} alt={reservation.profiles.username || ''} />
-                      ) : (
-                        <AvatarFallback className="bg-cosmic-700 text-xs">
-                          {getInitials(reservation.profiles?.username || "User")}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                  ))}
-                  {confirmedReservations.length > 3 && (
-                    <Avatar className="h-6 w-6 border border-cosmic-800 bg-cosmic-700">
-                      <AvatarFallback className="text-xs">
-                        +{confirmedReservations.length - 3}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-              )}
-            </div>
             
-            <div className="flex space-x-2">
-              {isOwner && (
-                <>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={onEdit}
-                    className="h-8 px-2 text-cosmic-400 border-cosmic-700/50 hover:bg-cosmic-800/50"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDeleteConfirm}
-                    className="h-8 px-2 text-red-400 border-cosmic-700/50 hover:bg-cosmic-800/50 hover:text-red-300"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
-              
-              {!isOwner && !hasUserBooked && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {/* User booking controls */}
+              {!isCreator && !hasBooked && (
                 <Button
                   size="sm"
-                  onClick={handleReservation}
-                  disabled={isFullyBooked}
-                  className={isFullyBooked 
-                    ? "bg-cosmic-700 text-cosmic-400" 
-                    : "bg-primary hover:bg-primary/80"}
+                  disabled={isBooking || isSlotFull}
+                  onClick={handleBookSlot}
+                  className={isSlotFull ? "opacity-50" : ""}
                 >
-                  {isFullyBooked 
-                    ? t('Fully Booked', '已预订满') 
-                    : t('Book Now', '立即预订')}
+                  {isBooking ? t("Booking...", "预订中...") : t("Book Spot", "预订")}
                 </Button>
               )}
               
-              {!isOwner && hasUserBooked && (
-                <Badge className="bg-green-800/40 text-green-300 border-green-700/50">
-                  {t('Booked', '已预订')}
-                </Badge>
+              {!isCreator && hasBooked && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={isCancelling}
+                  onClick={handleCancelBooking}
+                >
+                  {isCancelling ? t("Cancelling...", "取消中...") : t("Cancel Booking", "取消预订")}
+                </Button>
+              )}
+              
+              {/* Creator management controls */}
+              {isCreator && (
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowEditForm(true)}
+                  >
+                    {t("Edit", "编辑")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    {t("Delete", "删除")}
+                  </Button>
+                </div>
               )}
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      
+      {/* Edit form dialog */}
+      {showEditForm && (
+        <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
+          <DialogContent className="bg-cosmic-900 border-cosmic-700 text-gray-100">
+            <DialogHeader>
+              <DialogTitle>{t("Edit Time Slot", "编辑时间段")}</DialogTitle>
+            </DialogHeader>
+            <TimeSlotForm
+              spotId={timeSlot.spot_id}
+              existingTimeSlot={timeSlot}
+              onSuccess={handleEditSuccess}
+              onCancel={() => setShowEditForm(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+      
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="bg-cosmic-900 border-cosmic-700 text-gray-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("Delete Time Slot", "删除时间段")}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              {t("Are you sure you want to delete this time slot? All reservations will be cancelled. This action cannot be undone.", 
+                "您确定要删除此时间段吗？所有预订将被取消。此操作无法撤消。")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-cosmic-800 text-gray-200 hover:bg-cosmic-700">
+              {t("Cancel", "取消")}
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteTimeSlot}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {t("Delete", "删除")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Participants dialog */}
+      <Dialog open={showParticipants} onOpenChange={setShowParticipants}>
+        <DialogContent className="bg-cosmic-900 border-cosmic-700 text-gray-100">
+          <DialogHeader>
+            <DialogTitle>{t("Participants", "参与者")}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="mt-4 space-y-2 max-h-[50vh] overflow-y-auto">
+            {confirmedReservations.length > 0 ? (
+              confirmedReservations.map((reservation: any) => (
+                <div 
+                  key={reservation.id}
+                  className="flex items-center justify-between bg-cosmic-800/50 p-3 rounded-md border border-cosmic-700/30"
+                >
+                  <span className="text-gray-200">
+                    {reservation.profiles?.username || t("Anonymous User", "匿名用户")}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {format(new Date(reservation.created_at), 'MMM d, HH:mm')}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-400">
+                  {t("No participants yet", "暂无参与者")}
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

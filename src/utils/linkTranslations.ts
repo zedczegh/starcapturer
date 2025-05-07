@@ -26,11 +26,7 @@ export function translateCategory(category: string): string {
     "Parking available": "有停车场",
     "Well-paved roads to location": "通往该地点的道路铺设良好",
     "No local interruptions": "无局部干扰",
-    "Hard Soil or Concrete floor": "坚硬的土壤或混凝土地面",
-    "Power supplies available": "电源可用",
-    "Mobile battery available": "移动电源可用",
-    "Friendly host": "友好的主人", 
-    "Wi-Fi available": "Wi-Fi可用"
+    "Hard Soil or Concrete floor": "坚硬的土壤或混凝土地面"
   };
   return categoryMap[category] || category;
 }

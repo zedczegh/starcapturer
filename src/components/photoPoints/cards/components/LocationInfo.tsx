@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MapPin, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +11,6 @@ interface LocationInfoProps {
   displayName: string;
   language: string;
   showBortleScale?: boolean;
-  isMobile?: boolean;
 }
 
 const LocationInfo: React.FC<LocationInfoProps> = ({ 
@@ -20,32 +18,29 @@ const LocationInfo: React.FC<LocationInfoProps> = ({
   certInfo, 
   displayName, 
   language,
-  showBortleScale = true,
-  isMobile = false
+  showBortleScale = true
 }) => {
   const { t } = useLanguage();
 
   return (
     <div className="space-y-1.5 mb-3">
-      {/* Certification badge - optimized with conditional rendering */}
+      {/* Certification badge */}
       {certInfo && (
         <div className="flex items-center">
           <Badge 
             variant="outline" 
-            className={`${certInfo.color} text-xs px-2 py-0.5 flex items-center gap-1.5`}
+            className={`${certInfo.color} text-xs px-2 py-1 flex items-center gap-1.5`}
           >
-            {React.createElement(certInfo.icon, { 
-              className: `${isMobile ? 'h-3 w-3' : 'h-3.5 w-3.5'}` 
-            })}
+            {React.createElement(certInfo.icon, { className: "h-3.5 w-3.5" })}
             <span>{certInfo.language === 'en' ? certInfo.label : certInfo.labelChinese}</span>
           </Badge>
         </div>
       )}
 
-      {/* Bortle scale information - optimized with conditional rendering */}
+      {/* Bortle scale information - only if showBortleScale is true */}
       {showBortleScale && location.bortleScale && (
         <div className="flex items-center text-muted-foreground">
-          <Star className={`${isMobile ? 'h-3 w-3' : 'h-3.5 w-3.5'} mr-1.5`} />
+          <Star className="h-3.5 w-3.5 mr-1.5" />
           <span className="text-xs">
             {t("Bortle", "波尔特")}: {location.bortleScale} - {getBortleDescription(location.bortleScale, t)}
           </span>
@@ -55,4 +50,4 @@ const LocationInfo: React.FC<LocationInfoProps> = ({
   );
 };
 
-export default React.memo(LocationInfo);
+export default LocationInfo;

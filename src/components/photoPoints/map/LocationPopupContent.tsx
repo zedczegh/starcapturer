@@ -28,15 +28,9 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
   isCertified,
   onViewDetails,
 }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const isMobile = useIsMobile();
   const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
-  
-  // For certified locations, prioritize appropriate name based on language
-  const finalDisplayName = isCertified ? 
-    (language === 'zh' && location.chineseName ? location.chineseName : 
-     (location.name || displayName)) : 
-    (language === 'zh' && location.chineseName ? location.chineseName : displayName);
   
   useEffect(() => {
     if (siqsScore !== null && siqsScore > 0) {
@@ -47,30 +41,6 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
   const siqsClass = getSiqsClass(stabilizedScore || siqsScore);
   const hasValidScore = stabilizedScore !== null || (siqsScore !== null && siqsScore > 0);
 
-  // Get certification text based on language
-  const getCertificationText = () => {
-    if (!location.certification && !location.isDarkSkyReserve) return null;
-    
-    if (location.isDarkSkyReserve) {
-      return t("Dark Sky Reserve", "暗夜保护区");
-    }
-    
-    if (!location.certification) return null;
-    
-    const cert = location.certification.toLowerCase();
-    if (cert.includes('park')) {
-      return t("Dark Sky Park", "暗夜公园");
-    } else if (cert.includes('community')) {
-      return t("Dark Sky Community", "暗夜社区");
-    } else if (cert.includes('urban')) {
-      return t("Urban Night Sky", "城市夜空");
-    } else if (cert.includes('lodging')) {
-      return t("Dark Sky Lodging", "暗夜住宿");
-    } else {
-      return t("Certified Location", "认证地点");
-    }
-  };
-
   return (
     <Popup 
       closeOnClick={false}
@@ -80,18 +50,21 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
     >
       <div 
         className={`py-2 px-0.5 max-w-[220px] leaflet-popup-custom-compact marker-popup-gradient ${siqsClass}`}
+        onClick={() => {
+          // Force refresh on popup click if desired
+        }}
       >
         <div className="font-medium text-sm mb-1.5 flex items-center">
           {isCertified && (
             <Star className="h-3.5 w-3.5 mr-1 text-primary fill-primary" />
           )}
-          <span className="text-gray-100">{finalDisplayName}</span>
+          <span className="text-gray-100">{displayName}</span>
         </div>
         
-        {isCertified && (location.certification || location.isDarkSkyReserve) && (
+        {isCertified && location.certification && (
           <div className="mt-1 text-xs font-medium text-primary flex items-center">
             <Star className="h-3 w-3 mr-1" />
-            {getCertificationText()}
+            {location.certification}
           </div>
         )}
         
@@ -102,6 +75,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
               compact={true} 
               loading={siqsLoading}
               isCertified={isCertified}
+              forceCertified={false}
             />
           </div>
           
@@ -118,7 +92,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
               e.stopPropagation();
               onViewDetails(location);
             }}
-            className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-2.5' : 'py-1.5'} px-2 rounded transition-colors`}
+            className={`text-xs flex items-center justify-center w-full bg-primary/20 hover:bg-primary/30 text-primary-foreground ${isMobile ? 'py-3' : 'py-1.5'} px-2 rounded transition-colors`}
           >
             <ExternalLink className="h-3 w-3 mr-1" />
             {t("View Details", "查看详情")}

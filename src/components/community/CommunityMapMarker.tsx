@@ -9,8 +9,6 @@ import SiqsScoreBadge from "@/components/photoPoints/cards/SiqsScoreBadge";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
-import { getSiqsScore } from "@/utils/siqsHelpers";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
 function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.DivIcon {
   const size = isMobile ? (isHovered ? 28 : 20) : (isHovered ? 32 : 26);
@@ -71,58 +69,53 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     }
   };
 
-  // Extract the numeric SIQS score using the helper function
-  const siqsScore = realTimeSiqs ?? getSiqsScore(spot.siqs);
-
+  // Use onClick directly with Marker (not eventHandlers which was causing the error)
   return (
-    <TooltipProvider>
-      <Marker
-        position={[spot.latitude, spot.longitude]}
-        icon={icon}
-        onClick={handleClick} // Use onClick instead of eventHandlers
-      >
-        <Popup>
-          <div className="community-popup px-1 py-2">
-            <div className="text-base font-medium mb-1">{spot.name}</div>
-            <div className="text-xs text-muted-foreground mb-2">
-              {spot.latitude.toFixed(4)}, {spot.longitude.toFixed(4)}
-            </div>
-            
-            {/* SIQS Score Display */}
-            <div className="flex items-center mb-2">
-              <SiqsScoreBadge 
-                score={siqsScore} 
-                loading={loadingSiqs} 
-              />
-            </div>
-            
-            {/* View Profile Button */}
-            <Button 
-              size="sm" 
-              className="w-full text-xs flex items-center justify-center gap-1 mt-1"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } });
-              }}
-            >
-              <ExternalLink size={14} />
-              View Profile
-            </Button>
-            
-            {/* Hidden SIQS Provider Component */}
-            <RealTimeSiqsProvider
-              isVisible={true}
-              latitude={spot.latitude}
-              longitude={spot.longitude}
-              bortleScale={spot.bortleScale}
-              existingSiqs={spot.siqs}
-              onSiqsCalculated={handleSiqsCalculated}
-              priority={3} // Medium priority for community markers
+    <Marker
+      position={[spot.latitude, spot.longitude]}
+      icon={icon}
+      onClick={handleClick}
+    >
+      <Popup>
+        <div className="community-popup px-1 py-2">
+          <div className="text-base font-medium mb-1">{spot.name}</div>
+          <div className="text-xs text-muted-foreground mb-2">
+            {spot.latitude.toFixed(4)}, {spot.longitude.toFixed(4)}
+          </div>
+          
+          {/* SIQS Score Display */}
+          <div className="flex items-center mb-2">
+            <SiqsScoreBadge 
+              score={realTimeSiqs ?? spot.siqs} 
+              loading={loadingSiqs} 
             />
           </div>
-        </Popup>
-      </Marker>
-    </TooltipProvider>
+          
+          {/* View Profile Button */}
+          <Button 
+            size="sm" 
+            className="w-full text-xs flex items-center justify-center gap-1 mt-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } });
+            }}
+          >
+            <ExternalLink size={14} />
+            View Profile
+          </Button>
+          
+          {/* Hidden SIQS Provider Component */}
+          <RealTimeSiqsProvider
+            isVisible={true}
+            latitude={spot.latitude}
+            longitude={spot.longitude}
+            bortleScale={spot.bortleScale}
+            existingSiqs={spot.siqs}
+            onSiqsCalculated={handleSiqsCalculated}
+          />
+        </div>
+      </Popup>
+    </Marker>
   );
 };
 

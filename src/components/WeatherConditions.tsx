@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -209,21 +210,21 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
     >
       <Card className="backdrop-blur-sm border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden hover:shadow-cosmic-600/10">
         <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Cloud className="w-4 h-4 text-blue-400" />
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Cloud className="w-5 h-5 text-blue-400" />
             {t("Current Conditions", "当前状况")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-4 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
+        <CardContent className="p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
           {isLoading ? (
             <div className="min-h-[200px] flex items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-cosmic-400" />
-              <span className="ml-2 text-cosmic-300 text-xs">{t("Loading weather data...", "加载天气数据中...")}</span>
+              <Loader2 className="h-6 w-6 animate-spin text-cosmic-400" />
+              <span className="ml-2 text-cosmic-300">{t("Loading weather data...", "加载天气数据中...")}</span>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <motion.div variants={itemVariants}>
-                <h3 className="text-xs font-semibold mb-2 text-cosmic-100 border-b border-cosmic-700/30 pb-1.5">
+                <h3 className="text-lg font-semibold mb-4 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
                   {t("Observing Conditions", "观测条件")}
                 </h3>
                 <PrimaryConditions
@@ -235,7 +236,7 @@ const WeatherConditions: React.FC<WeatherConditionsProps> = ({
               </motion.div>
               
               <motion.div variants={itemVariants}>
-                <h3 className="text-xs font-semibold mb-2 text-cosmic-100 border-b border-cosmic-700/30 pb-1.5">
+                <h3 className="text-lg font-semibold mb-4 text-cosmic-100 border-b border-cosmic-700/30 pb-2">
                   {t("Sky Conditions", "天空状况")}
                 </h3>
                 <SecondaryConditions
