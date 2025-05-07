@@ -1,3 +1,4 @@
+
 /**
  * Unified SIQS Display Utility
  * 
@@ -5,7 +6,7 @@
  * consistently across all map markers and popups.
  */
 
-import { getSiqsScore, normalizeToSiqsScale } from './siqsHelpers';
+import { getSiqsScore, normalizeToSiqsScale, formatSiqsForDisplay } from './siqsHelpers';
 import { formatMapSiqs, getSiqsColorClass } from './mapSiqsDisplay';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeSiqs/siqsCache';
