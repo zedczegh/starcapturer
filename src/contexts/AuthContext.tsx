@@ -50,12 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (username: string, password: string) => {
     try {
       setIsLoading(true);
-
-      let redirectTo = window.location.origin;
-      if (!redirectTo.startsWith('http')) {
-        redirectTo = 'https://siqs.astroai.top';
-      }
-
+      
       console.log("Attempting to sign up with username:", username);
       
       // Check if username is available
@@ -78,14 +73,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         ));
       }
 
-      // Since email signups are disabled, we'll create a unique email address based on the username
-      const email = `${username}-${Date.now()}@example.com`;
+      // Generate a unique fake email address based on the username
+      const uniqueEmail = `${username}-${Date.now()}@astrosiqs.app`;
       
+      console.log("Using generated email for auth:", uniqueEmail);
+      
+      // Sign up with the generated email
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: uniqueEmail,
         password,
         options: {
-          emailRedirectTo: redirectTo + '/photo-points',
           data: {
             username: username,
           }
@@ -136,14 +133,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (username: string, password: string) => {
     setIsLoading(true);
     try {
+      console.log("Attempting to sign in with username:", username);
+      
       // Find the user's email by username
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, username')
         .eq('username', username)
         .single();
 
       if (profileError || !profileData) {
+        console.error("Profile lookup error:", profileError);
         toast.error(t("Sign in failed", "登录失败"), {
           description: t("Username not found", "找不到用户名"),
           position: "top-center"
@@ -151,40 +151,86 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      // Get the user's email from auth.users using the profile ID
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
-        profileData.id
-      );
+      console.log("Found profile:", profileData);
       
-      if (userError || !userData || !userData.user?.email) {
-        toast.error(t("Sign in failed", "登录失败"), {
-          description: t("Could not authenticate user", "无法验证用户"),
-          position: "top-center"
-        });
-        return;
-      }
-      
-      // Now sign in with the email and password
-      const { error } = await supabase.auth.signInWithPassword({ 
-        email: userData.user.email, 
+      // Now sign in directly with the profile ID and password
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email: `${username}-auth@astrosiqs.app`,  // Try a predictable format first
         password
       });
-
+      
+      // If that fails, try to get the associated email
       if (error) {
-        let errorMessage = "Please check your username and password";
-        if (error.message.includes("Invalid login")) {
-          errorMessage = "Invalid password for this username";
-        } else if (error.message.includes("Too many requests")) {
-          errorMessage = "Too many login attempts. Please try again in a few minutes";
+        console.log("First sign in attempt failed, trying to find exact email");
+        
+        // Get the user's auth details by user ID
+        const { data: authUser, error: userError } = await supabase
+          .from('auth.users')  // This is a workaround since we can't directly access auth.users
+          .select('email')
+          .eq('id', profileData.id)
+          .single();
+        
+        if (userError || !authUser) {
+          console.error("Could not find user email:", userError);
+          // Try with our fake email pattern instead
+          const { data: allProfiles, error: searchError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('username', username);
+            
+          if (searchError || !allProfiles || allProfiles.length === 0) {
+            toast.error(t("Sign in failed", "登录失败"), {
+              description: t("Could not authenticate user", "无法验证用户"),
+              position: "top-center"
+            });
+            return;
+          }
+          
+          // Try signing in with a wildcard email format
+          const { error: finalError } = await supabase.auth.signInWithPassword({ 
+            email: `${username}-%@astrosiqs.app`, 
+            password
+          });
+          
+          if (finalError) {
+            let errorMessage = "Please check your username and password";
+            if (finalError.message.includes("Invalid login")) {
+              errorMessage = "Invalid password for this username";
+            } else if (finalError.message.includes("Too many requests")) {
+              errorMessage = "Too many login attempts. Please try again in a few minutes";
+            }
+            
+            toast.error(t("Sign in failed", "登录失败"), {
+              description: t(errorMessage, "请检查您的用户名和密码"),
+              position: "top-center"
+            });
+          }
+        } else {
+          // Now try again with the actual email
+          const { error: retryError } = await supabase.auth.signInWithPassword({
+            email: authUser.email,
+            password
+          });
+          
+          if (retryError) {
+            let errorMessage = "Please check your username and password";
+            if (retryError.message.includes("Invalid login")) {
+              errorMessage = "Invalid password for this username";
+            } else if (retryError.message.includes("Too many requests")) {
+              errorMessage = "Too many login attempts. Please try again in a few minutes";
+            }
+            
+            toast.error(t("Sign in failed", "登录失败"), {
+              description: t(errorMessage, "请检查您的用户名和密码"),
+              position: "top-center"
+            });
+          }
         }
-        toast.error(t("Sign in paused", "登录暂停"), {
-          description: t(errorMessage, "请检查您的用户名和密码"),
-          position: "top-center"
-        });
       }
     } catch (error: any) {
+      console.error("Unexpected error during sign in:", error);
       toast.error(t("Sign in error", "登录错误"), {
-        description: t("An unknown error occurred. Please try again.", "发生未知错误，请重试。"),
+        description: t("An unexpected error occurred. Please try again.", "发生未知错误，请重试。"),
         position: "top-center"
       });
     } finally {

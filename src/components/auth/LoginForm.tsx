@@ -27,9 +27,10 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       await signIn(data.username, data.password);
       onSuccess();
       navigate('/photo-points');
-      // Toast notification is handled in AuthContext for a more consistent experience
+      // Toast notification is handled in AuthContext
     } catch (error: any) {
       // Error handling is done in AuthContext
+      console.error("Login error:", error);
     } finally {
       setFormSubmitted(false);
     }

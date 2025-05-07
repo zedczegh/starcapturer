@@ -9,7 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
-import { Loader2 } from '@/components/ui/loader';
+import { Loader2 } from 'lucide-react';
 
 interface SignUpFormProps {
   onSuccess: () => void;
@@ -30,13 +30,8 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
       onSuccess();
       navigate('/photo-points');
     } catch (error: any) {
-      toast.error(
-        t("Account creation issue", "账户创建问题"),
-        {
-          description: error.message || t("Please try again", "请重试"),
-          position: "top-center"
-        }
-      );
+      console.error("SignUpForm error:", error);
+      // Error handling is done in AuthContext
     } finally {
       setIsLoading(false);
     }
