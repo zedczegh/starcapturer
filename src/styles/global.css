@@ -97,7 +97,23 @@
                 0 0 60px rgba(139, 92, 246, 0.08);
   }
   
-  /* Other existing styles */
+  /* Enhanced Facts Tooltip Styling */
+  .facts-tooltip {
+    @apply bg-gradient-to-br from-cosmic-800/95 to-cosmic-900/95 border border-cosmic-700/50 backdrop-blur-lg shadow-lg;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
+    animation: tooltip-appear 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  @keyframes tooltip-appear {
+    from {
+      opacity: 0;
+      transform: translateY(5px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
   
   /* Cosmic glassmorphism dropdown */
   .cosmic-dropdown {

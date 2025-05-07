@@ -42,10 +42,10 @@ const ConditionItem: React.FC<ConditionItemProps> = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-3.5 w-3.5 ml-1.5 text-muted-foreground/60 cursor-help" />
+                  <Info className="h-3.5 w-3.5 ml-1.5 text-muted-foreground/60 hover:text-primary/70 transition-colors cursor-help" />
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs max-w-64">{tooltip}</p>
+                <TooltipContent className="facts-tooltip max-w-xs">
+                  <p className="text-xs">{tooltip}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
