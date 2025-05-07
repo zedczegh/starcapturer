@@ -19,18 +19,19 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const { t } = useLanguage ? useLanguage() : { t: (en: string, zh: string) => en };
 
   useEffect(() => {
+    // First set up the auth change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      (event, newSession) => {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
 
-        if (event === 'SIGNED_IN' && session?.user) {
+        if (event === 'SIGNED_IN' && newSession?.user) {
           setTimeout(() => {
-            const username = session.user.email?.split('@')[0] || 'stargazer';
+            const username = newSession.user.email?.split('@')[0] || 'stargazer';
             toast.success(`Welcome, ${username}! 🌟`, {
               description: "Ready for some stargazing? Your sky awaits!",
               duration: 4000,
@@ -41,13 +42,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
+    // Then check for existing session
     (async () => {
       try {
         console.log('Checking for existing session...');
-        const sessionResult = await supabase.auth.getSession();
-        setSession(sessionResult.data.session);
-        setUser(sessionResult.data.session?.user ?? null);
-        console.log('Session check complete:', sessionResult.data.session ? 'Active session found' : 'No active session');
+        const { data: sessionData, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session check error:', error);
+          return;
+        }
+        
+        setSession(sessionData.session);
+        setUser(sessionData.session?.user ?? null);
+        
+        console.log('Session check complete:', 
+          sessionData.session ? 'Active session found' : 'No active session');
+        
+        if (sessionData.session) {
+          // Refresh the session to ensure tokens are valid
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.warn('Session refresh error:', refreshError);
+          }
+        }
       } catch (error) {
         console.error('Error checking session:', error);
       } finally {
@@ -55,7 +73,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     })();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string) => {
@@ -160,7 +180,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       console.log('Attempting sign in for:', email);
-      const { error } = await supabase.auth.signInWithPassword({ 
+      const { data, error } = await supabase.auth.signInWithPassword({ 
         email, 
         password
       });
@@ -170,6 +190,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         let errorMessage = "Please double-check your email and password";
         if (error.message.includes("Email not confirmed")) {
+          // Attempt to resend confirmation email
           await supabase.auth.resend({
             type: 'signup',
             email: email,
@@ -190,7 +211,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      console.log('Sign in successful');
+      console.log('Sign in successful, user data:', data);
+      
+      // Ensure profile exists after successful login
+      if (data.user) {
+        setTimeout(async () => {
+          try {
+            // We use setTimeout to avoid deadlock with the auth state change handler
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              const ensureProfile = (await import('@/utils/profile/profileCore')).ensureUserProfile;
+              await ensureProfile(user.id);
+            }
+          } catch (error) {
+            console.error('Error ensuring profile exists after login:', error);
+          }
+        }, 500);
+      }
+      
       signedIn = true;
     } catch (error: any) {
       console.error('Exception in signIn:', error);
@@ -221,7 +259,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       
       console.log('Signing out user');
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut({
+        scope: 'local'  // Only sign out from this device
+      });
+      
       setUser(null);
       setSession(null);
 

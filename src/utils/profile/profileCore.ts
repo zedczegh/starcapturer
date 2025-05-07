@@ -18,6 +18,25 @@ export const ensureUserProfile = async (
   try {
     console.log('Checking if profile exists for user:', userId);
     
+    // Check auth status first for RLS
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) {
+      console.error('User not authenticated for profile creation', sessionError);
+      toast.error('Authentication required', { 
+        description: 'Please sign out and sign back in to create your profile.' 
+      });
+      return false;
+    }
+    
+    // Verify the session user is the same as the requested userId
+    if (sessionData.session.user.id !== userId) {
+      console.error('Session user ID does not match requested user ID');
+      toast.error('Permission error', { 
+        description: 'You do not have permission to create this profile. Please sign out and sign in with the correct account.' 
+      });
+      return false;
+    }
+    
     // Check if profile exists
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -33,14 +52,6 @@ export const ensureUserProfile = async (
     // If profile doesn't exist, create it
     if (!profile) {
       console.log('Profile not found, creating new profile for user:', userId);
-      
-      // Check if user exists in auth.users first
-      const { data: authUser, error: authError } = await supabase.auth.getUser();
-      if (authError || !authUser) {
-        console.error('User may not exist in auth.users table:', authError || 'No auth user found');
-        toast.error('Authentication error', { description: 'There was an issue with your user account. Please try signing out and back in.' });
-        return false;
-      }
       
       // Try to insert profile with more detailed error handling
       const { error: insertError } = await supabase
@@ -99,18 +110,29 @@ export const upsertUserProfile = async (
   try {
     console.log('Upserting profile for user:', userId, profileData);
     
+    // Check auth status first
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) {
+      console.error('User not authenticated for profile update', sessionError);
+      toast.error('Authentication required', { 
+        description: 'Please sign in to update your profile' 
+      });
+      return false;
+    }
+    
+    // Verify the session user is the same as the requested userId
+    if (sessionData.session.user.id !== userId) {
+      console.error('Session user ID does not match requested user ID');
+      toast.error('Permission error', { 
+        description: 'You do not have permission to update this profile.' 
+      });
+      return false;
+    }
+    
     // First ensure the profile exists
     const profileExists = await ensureUserProfile(userId);
     if (!profileExists) {
       console.error('Failed to ensure profile exists before update');
-      return false;
-    }
-    
-    // Check auth status
-    const { data: session } = await supabase.auth.getSession();
-    if (!session || !session.session) {
-      console.error('User not authenticated for profile update');
-      toast.error('Authentication required', { description: 'Please sign in to update your profile' });
       return false;
     }
     
@@ -154,9 +176,20 @@ export const fetchUserProfile = async (userId: string) => {
     console.log('Fetching profile for user:', userId);
     
     // Check auth status for potential RLS issues
-    const { data: session } = await supabase.auth.getSession();
-    if (!session || !session.session) {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      console.error('Session check error:', sessionError);
+    }
+    
+    if (!sessionData || !sessionData.session) {
       console.log('User not authenticated, some profiles may not be accessible');
+    } else {
+      // If fetching own profile, verify authentication matches
+      if (sessionData.session.user.id === userId) {
+        console.log('User is fetching their own profile');
+      } else {
+        console.log('User is fetching another user\'s profile');
+      }
     }
     
     // First ensure the profile exists

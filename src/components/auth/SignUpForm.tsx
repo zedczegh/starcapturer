@@ -29,6 +29,41 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
       setIsLoading(true);
       setNetworkError(null);
       
+      // Check network connectivity before attempting signup
+      if (!navigator.onLine) {
+        setNetworkError(t(
+          "You appear to be offline. Please check your internet connection and try again.",
+          "您似乎处于离线状态。请检查您的互联网连接，然后重试。"
+        ));
+        return;
+      }
+      
+      // Attempt to ping the Supabase URL to see if it's reachable
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch('https://fmnivvwpyriufxaebbzi.supabase.co/auth/v1/health', { 
+          method: 'GET',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          console.warn('Supabase health check failed:', response.status);
+          // Continue anyway, the signup might still work
+        }
+      } catch (error) {
+        console.warn('Error checking Supabase reachability:', error);
+        setNetworkError(t(
+          "Unable to connect to our servers. This might be due to network issues or our servers may be experiencing problems.",
+          "无法连接至我们的服务器。这可能是由于网络问题，或者我们的服务器可能遇到了问题。"
+        ));
+        return;
+      }
+      
+      // Proceed with signup
       await signUp(data.email, data.password);
       onSuccess();
       navigate('/photo-points');
