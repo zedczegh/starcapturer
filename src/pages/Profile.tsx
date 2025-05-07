@@ -60,8 +60,25 @@ const Profile = () => {
           return;
         }
 
-        // Ensure the user has a profile entry in the database
-        await ensureUserProfile(session.user.id);
+        console.log("Session user ID:", session.user.id);
+        
+        // Attempt to create profile if it doesn't exist
+        const profileCreated = await ensureUserProfile(session.user.id);
+        if (!profileCreated) {
+          console.error("Failed to ensure user profile exists");
+          toast.error(t("Profile setup failed", "个人资料设置失败"), {
+            description: t("There was an issue setting up your profile", "设置您的个人资料时出现问题")
+          });
+          setProfile({
+            username: null,
+            avatar_url: null,
+            date_of_birth: null,
+            tags: [],
+          });
+          setAuthChecked(true);
+          setLoading(false);
+          return;
+        }
 
         // Fetch profile data with improved function
         const profileData = await fetchUserProfile(session.user.id);

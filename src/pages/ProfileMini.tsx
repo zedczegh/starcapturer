@@ -10,6 +10,7 @@ import { translateProfileTag } from "@/utils/linkTranslations";
 import { useMessageNavigation } from "@/hooks/useMessageNavigation";
 import { fetchUserProfile, ensureUserProfile } from "@/utils/profileUtils";
 import type { ProfileData } from "@/utils/profile/profileCore";
+import { toast } from "sonner";
 
 const ProfileMini: React.FC = () => {
   const { id: profileId } = useParams();
@@ -18,6 +19,7 @@ const ProfileMini: React.FC = () => {
   const location = useLocation();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { t, language } = useLanguage();
   
   // Check if we came from messages to hide the "Send message" button
@@ -29,11 +31,20 @@ const ProfileMini: React.FC = () => {
     
     const loadProfile = async () => {
       setLoading(true);
+      setError(null);
+      
       try {
         console.log("Loading profile in ProfileMini for user:", profileId);
         
         // Ensure the user has a profile entry in the database
-        await ensureUserProfile(profileId);
+        const profileCreated = await ensureUserProfile(profileId);
+        
+        if (!profileCreated) {
+          console.error("Failed to ensure user profile exists in ProfileMini");
+          setError("Failed to load profile");
+          setLoading(false);
+          return;
+        }
         
         const profileData = await fetchUserProfile(profileId);
         
@@ -53,6 +64,7 @@ const ProfileMini: React.FC = () => {
         }
       } catch (err) {
         console.error("Exception fetching profile data in ProfileMini:", err);
+        setError("Failed to load profile");
         setProfile(null);
       } finally {
         setLoading(false);

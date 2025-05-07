@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import ProfileDropdownMenu from './ProfileDropdownMenu';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchUserProfile, ensureUserProfile } from '@/utils/profileUtils';
+import { toast } from 'sonner';
 
 const ProfileButton = () => {
   const { user, signOut } = useAuth();
@@ -19,17 +20,31 @@ const ProfileButton = () => {
   const navigate = useNavigate();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [profile, setProfile] = useState<{ username: string | null } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     
     if (user) {
       const loadProfile = async () => {
+        setLoading(true);
+        setError(null);
+        
         try {
           console.log("Loading profile in ProfileButton for user:", user.id);
           
           // Ensure the user has a profile entry in the database
-          await ensureUserProfile(user.id);
+          const profileCreated = await ensureUserProfile(user.id);
+          
+          if (!profileCreated) {
+            console.error("Failed to ensure user profile exists in ProfileButton");
+            if (isMounted) {
+              setError("Failed to load profile");
+              setLoading(false);
+            }
+            return;
+          }
           
           const profileData = await fetchUserProfile(user.id);
           
@@ -37,9 +52,14 @@ const ProfileButton = () => {
             console.log("Profile loaded in ProfileButton:", profileData);
             if (profileData.avatar_url) setAvatarUrl(profileData.avatar_url);
             setProfile({ username: profileData.username });
+            setLoading(false);
           }
         } catch (error) {
           console.error("Error loading profile in ProfileButton:", error);
+          if (isMounted) {
+            setError("Error loading profile");
+            setLoading(false);
+          }
         }
       };
       
@@ -47,6 +67,8 @@ const ProfileButton = () => {
     } else {
       setAvatarUrl(null);
       setProfile(null);
+      setLoading(false);
+      setError(null);
     }
     
     return () => {
