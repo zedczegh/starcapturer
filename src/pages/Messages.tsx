@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -12,6 +11,7 @@ import ConversationList from "@/components/messages/ConversationList";
 import MessageList from "@/components/messages/MessageList";
 import MessageInput from "@/components/messages/MessageInput";
 import { fetchUserProfile } from "@/utils/profileUtils";
+import { Button } from "@/components/ui/button";
 
 interface ConversationPartner {
   id: string;
@@ -91,7 +91,9 @@ const Messages = () => {
       window.history.replaceState({}, document.title);
     };
     
-    initializeFromNavigation();
+    if (user) {
+      initializeFromNavigation();
+    }
   }, [user, location.state, conversations]);
 
   const handleSelectConversation = (conversation: ConversationPartner) => {
@@ -115,10 +117,25 @@ const Messages = () => {
     return (
       <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
         <NavBar />
-        <div className="container mx-auto px-4 py-8">
-          <p className="text-muted-foreground">
-            {t("Please sign in to view your messages", "请登录以查看您的消息")}
-          </p>
+        <div className="container mx-auto px-4 py-20 flex flex-col items-center justify-center">
+          <Card className="p-8 max-w-md w-full glassmorphism text-center">
+            <MessageCircle className="mx-auto h-16 w-16 mb-4 text-primary/40" />
+            <h2 className="text-xl font-semibold text-white mb-4">
+              {t("Sign in to view messages", "请登录以查看消息")}
+            </h2>
+            <p className="text-cosmic-300 mb-6">
+              {t(
+                "You need to be signed in to access your messages and conversations.", 
+                "您需要登录才能访问您的消息和对话。"
+              )}
+            </p>
+            <Button 
+              onClick={() => navigate('/photo-points')} 
+              className="w-full"
+            >
+              {t("Back to Photo Points", "返回照片点位")}
+            </Button>
+          </Card>
         </div>
       </div>
     );

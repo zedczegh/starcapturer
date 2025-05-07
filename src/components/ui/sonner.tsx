@@ -27,7 +27,7 @@ const Toaster = ({ theme = "system", ...props }: ToasterProps & { theme?: string
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
           success: "group-[.toaster]:bg-green-100/90 group-[.toaster]:text-green-900 dark:group-[.toaster]:bg-green-900/90 dark:group-[.toaster]:text-green-100",
-          error: "group-[.toaster]:bg-red-100/90 group-[.toaster]:text-red-900 dark:group-[.toaster]:bg-red-900/90 dark:group-[.toaster]:text-red-100",
+          error: "group-[.toaster]:bg-cosmic-800 group-[.toaster]:text-amber-200 dark:group-[.toaster]:bg-cosmic-800/90 dark:group-[.toaster]:text-amber-100", 
           info: "group-[.toaster]:bg-blue-100/90 group-[.toaster]:text-blue-900 dark:group-[.toaster]:bg-blue-900/90 dark:group-[.toaster]:text-blue-100",
         },
         duration: 5000, // Longer default duration for better readability

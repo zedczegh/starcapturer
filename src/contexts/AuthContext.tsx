@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -259,16 +258,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       
       console.log('Signing out user');
+      // First set user to null to prevent any authenticated API calls after sign out
+      setUser(null);
+      setSession(null);
+      
       const { error } = await supabase.auth.signOut({
         scope: 'local'  // Only sign out from this device
       });
-      
-      setUser(null);
-      setSession(null);
 
       if (error) {
         console.error('Sign out error:', error);
-        throw error;
+        // Don't throw error here - we already set user to null
+        // Just log it and continue with success flow
       }
 
       console.log('Sign out successful');
@@ -279,17 +280,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error: any) {
       console.error('Exception in signOut:', error);
       
-      if (error.message === 'Failed to fetch' || !navigator.onLine) {
-        toast.error("Network Connection Issue", {
-          description: "Unable to complete sign out due to network issues. You may be offline.",
-          position: "top-center"
-        });
-      } else {
-        toast.error("Sign out issue", {
-          description: "Please try again in a moment",
-          position: "top-center"
-        });
-      }
+      // Don't show error toast on signout
+      console.log('Sign out issue, but continuing with UI sign out');
     } finally {
       setIsLoading(false);
     }

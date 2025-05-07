@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -77,13 +76,19 @@ const ProfileButton = () => {
   }, [user]);
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/photo-points');
+    try {
+      await signOut();
+      navigate('/photo-points');
+    } catch (error) {
+      console.error("Error during sign out:", error);
+      // Don't show error toast, just navigate away
+      navigate('/photo-points');
+    }
   };
 
-  if (!user) {
-    return (
-      <>
+  return (
+    <AnimatePresence>
+      {!user ? (
         <motion.div
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -101,49 +106,45 @@ const ProfileButton = () => {
             </span>
           </Button>
         </motion.div>
-        <AuthDialog
-          open={showAuthDialog}
-          onOpenChange={setShowAuthDialog}
-        />
-      </>
-    );
-  }
-
-  return (
-    <AnimatePresence>
-      <DropdownMenu modal>
-        <DropdownMenuTrigger asChild>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="relative rounded-full p-0 hover:bg-transparent focus:ring-2 focus:ring-primary" 
-              aria-label="Profile"
+      ) : (
+        <DropdownMenu modal>
+          <DropdownMenuTrigger asChild>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <Avatar className="h-8 w-8 transition-transform duration-300 group-hover:scale-105">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
-                ) : (
-                  <AvatarFallback className="bg-cosmic-800/60 text-cosmic-400">
-                    {user.email?.[0]?.toUpperCase() || "?"}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-            </Button>
-          </motion.div>
-        </DropdownMenuTrigger>
-        <ProfileDropdownMenu
-          user={user}
-          profile={profile}
-          onSignOut={handleSignOut}
-          email={user.email}
-        />
-      </DropdownMenu>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="relative rounded-full p-0 hover:bg-transparent focus:ring-2 focus:ring-primary" 
+                aria-label="Profile"
+              >
+                <Avatar className="h-8 w-8 transition-transform duration-300 group-hover:scale-105">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <AvatarFallback className="bg-cosmic-800/60 text-cosmic-400">
+                      {user.email?.[0]?.toUpperCase() || "?"}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              </Button>
+            </motion.div>
+          </DropdownMenuTrigger>
+          <ProfileDropdownMenu
+            user={user}
+            profile={profile}
+            onSignOut={handleSignOut}
+            email={user.email}
+          />
+        </DropdownMenu>
+      )}
+      <AuthDialog
+        open={showAuthDialog}
+        onOpenChange={setShowAuthDialog}
+      />
     </AnimatePresence>
   );
 };
