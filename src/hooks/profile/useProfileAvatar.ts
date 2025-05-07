@@ -34,7 +34,7 @@ export function useProfileAvatar() {
       
       if (error) {
         console.error("Avatar upload error:", error);
-        toast.error(t("Failed to upload avatar. Please try again."));
+        toast.error(t("Failed to upload avatar. Please try again.", "上传头像失败，请重试。"));
         throw error;
       }
       
