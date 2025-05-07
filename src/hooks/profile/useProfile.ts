@@ -3,6 +3,8 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getRandomAstronomyTip } from '@/utils/astronomyTips';
 import { toast } from 'sonner';
+import { UseFormSetValue } from 'react-hook-form';
+import { ProfileFormValues } from '@/components/profile/form/UsernameField';
 
 interface Profile {
   username: string | null;
@@ -20,7 +22,7 @@ export function useProfile() {
   const [tags, setTags] = useState<string[]>([]);
 
   // Fetch profile, including tags
-  const fetchProfile = useCallback(async (userId: string, setValue: any) => {
+  const fetchProfile = useCallback(async (userId: string, setValue: UseFormSetValue<ProfileFormValues>) => {
     try {
       console.log("Fetching profile for user ID:", userId);
       
@@ -94,9 +96,21 @@ export function useProfile() {
       console.log("Starting avatar upload for user:", userId);
       setUploadingAvatar(true);
       
+      // First check if avatars bucket exists, if not create it
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
+      
+      if (!avatarsBucketExists) {
+        console.warn("Avatars bucket doesn't exist. Please create it in Supabase.");
+        toast.error("Storage bucket not configured. Please contact support.");
+        return null;
+      }
+      
       // Create a unique filename with timestamp and userId to avoid cache issues
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      
+      console.log(`Uploading avatar to avatars/${fileName}`);
       
       // Upload the file
       const { data, error } = await supabase.storage

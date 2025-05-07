@@ -44,6 +44,7 @@ const Profile = () => {
         }
         await fetchProfile(session.user.id, () => {});
       } catch (error) {
+        console.error("Error checking session:", error);
         setProfile({
           username: null,
           avatar_url: null,
@@ -58,6 +59,37 @@ const Profile = () => {
 
     checkSession();
   }, [navigate, t, setProfile, fetchProfile]);
+
+  // Add this effect to refetch profile when avatarUrl changes
+  useEffect(() => {
+    if (user && !loading && profile) {
+      console.log("Checking for profile updates");
+      const checkProfileUpdates = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('id', user.id)
+            .single();
+            
+          if (error) throw error;
+          
+          if (data) {
+            // Update local state if there's a mismatch
+            if (data.username !== profile.username || data.avatar_url !== profile.avatar_url) {
+              console.log("Updating profile from database:", data);
+              setProfile(prev => prev ? { ...prev, ...data } : null);
+              setAvatarUrl(data.avatar_url);
+            }
+          }
+        } catch (error) {
+          console.error("Error checking profile updates:", error);
+        }
+      };
+      
+      checkProfileUpdates();
+    }
+  }, [user, loading, profile, setProfile, setAvatarUrl]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -79,6 +111,7 @@ const Profile = () => {
   if (!user) return <ProfileLoader />;
 
   const displayUsername = profile?.username || t("Stargazer", "星空观察者");
+  console.log("Rendering profile with username:", displayUsername);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex flex-col">

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useIsMobile } from './use-mobile';
 import { useLocation } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ConversationPartner {
   id: string;
@@ -22,21 +23,49 @@ export function useMessageNavigation() {
     if (location.state?.selectedUser) {
       console.log("Received selectedUser from navigation:", location.state.selectedUser);
       
-      // Set temporary conversation while waiting for full data to load
-      if (!activeConversation) {
-        const tempConversation: ConversationPartner = {
+      // Fetch the user profile information to populate the conversation
+      const fetchUserProfile = async () => {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', location.state.selectedUser)
+          .single();
+          
+        if (error) {
+          console.error("Error fetching user profile for conversation:", error);
+          
+          // Set temporary conversation while waiting for full data to load
+          if (!activeConversation) {
+            const tempConversation: ConversationPartner = {
+              id: location.state.selectedUser,
+              username: "Loading...",
+              avatar_url: null,
+              last_message: "",
+              last_message_time: new Date().toISOString(),
+              unread_count: 0
+            };
+            
+            setActiveConversation(tempConversation);
+          }
+          return;
+        }
+        
+        // Set conversation with profile data
+        const conversation: ConversationPartner = {
           id: location.state.selectedUser,
-          username: "Loading...",
-          avatar_url: null,
+          username: data.username || "User",
+          avatar_url: data.avatar_url,
           last_message: "",
           last_message_time: new Date().toISOString(),
           unread_count: 0
         };
         
-        setActiveConversation(tempConversation);
-      }
+        setActiveConversation(conversation);
+      };
+      
+      fetchUserProfile();
     }
-  }, [location.state, activeConversation]);
+  }, [location.state]);
 
   // Reset conversation when switching to mobile view from desktop with active conversation
   useEffect(() => {

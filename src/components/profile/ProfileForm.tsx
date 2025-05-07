@@ -42,7 +42,7 @@ const ProfileForm = () => {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: '',
+      username: profile?.username || '',
     },
   });
 
@@ -68,6 +68,14 @@ const ProfileForm = () => {
     initializeProfile();
   }, [user, fetchProfile, form.setValue, fetchUserTags, t]);
 
+  // Re-set form values when profile changes
+  useEffect(() => {
+    if (profile?.username) {
+      console.log("Setting username in form to:", profile.username);
+      form.setValue('username', profile.username);
+    }
+  }, [profile, form.setValue]);
+
   const handleAddTag = async (tagName: string) => {
     if (!user) {
       console.error("Cannot add tag: No user logged in");
@@ -81,7 +89,8 @@ const ProfileForm = () => {
       {/* Username field */}
       <UsernameField 
         register={form.register} 
-        errors={form.formState.errors} 
+        errors={form.formState.errors}
+        defaultValue={profile?.username || ''}
       />
 
       {/* User tags section */}

@@ -13,6 +13,7 @@ export function useProfileForm(user: User | null) {
   const {
     setProfile,
     avatarFile,
+    setAvatarFile,
     avatarUrl,
     setAvatarUrl,
     uploadAvatar,
@@ -24,11 +25,14 @@ export function useProfileForm(user: User | null) {
 
     try {
       setSaving(true);
+      console.log("Submitting profile form with username:", data.username);
 
       // Upload avatar if selected
       let newAvatarUrl = avatarUrl;
       if (avatarFile) {
+        setAvatarUploading(true);
         newAvatarUrl = await uploadAvatar(user.id, avatarFile);
+        setAvatarUploading(false);
         
         if (!newAvatarUrl) {
           toast.error(t('Failed to upload avatar', '上传头像失败'));
@@ -38,23 +42,36 @@ export function useProfileForm(user: User | null) {
       }
 
       // Update profile in Supabase
-      const { error } = await supabase
+      const { error, data: updatedProfile } = await supabase
         .from('profiles')
         .update({
           username: data.username,
           avatar_url: newAvatarUrl,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select('username, avatar_url')
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating profile:", error);
+        throw error;
+      }
 
-      // Update local state
+      console.log("Profile updated successfully:", updatedProfile);
+
+      // Update local state with the returned data to ensure consistency
       setProfile(prev => prev ? { 
         ...prev, 
-        username: data.username,
-        avatar_url: newAvatarUrl
+        username: updatedProfile.username,
+        avatar_url: updatedProfile.avatar_url
       } : null);
+
+      // Force refresh avatar url to break cache
+      if (updatedProfile.avatar_url) {
+        const refreshedUrl = `${updatedProfile.avatar_url}?v=${new Date().getTime()}`;
+        setAvatarUrl(refreshedUrl);
+      }
 
       toast.success(t('Profile updated successfully', '个人资料更新成功'));
     } catch (error: any) {
@@ -62,7 +79,6 @@ export function useProfileForm(user: User | null) {
       console.error('Error updating profile:', error);
     } finally {
       setSaving(false);
-      setAvatarUploading(false);
     }
   };
 

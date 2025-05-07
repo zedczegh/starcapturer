@@ -14,9 +14,10 @@ export type ProfileFormValues = {
 interface UsernameFieldProps {
   register: UseFormRegister<ProfileFormValues>;
   errors: FieldErrors<ProfileFormValues>;
+  defaultValue?: string;
 }
 
-const UsernameField: React.FC<UsernameFieldProps> = ({ register, errors }) => {
+const UsernameField: React.FC<UsernameFieldProps> = ({ register, errors, defaultValue = '' }) => {
   const { t } = useLanguage();
 
   return (
@@ -29,6 +30,7 @@ const UsernameField: React.FC<UsernameFieldProps> = ({ register, errors }) => {
         {...register('username')}
         className="bg-cosmic-900/50 border-cosmic-700/50"
         placeholder={t('Enter your username', '输入您的用户名')}
+        defaultValue={defaultValue}
       />
       {errors.username && (
         <p className="text-sm text-red-500">
