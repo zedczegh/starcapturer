@@ -1,11 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Tag, Plus } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { UserTag } from '@/hooks/useUserTags';
+import { toast } from 'sonner';
 
 // Colors for the tag badges
 const TAG_COLORS = [
@@ -66,10 +67,11 @@ const UserTags: React.FC<UserTagsProps> = ({
   const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTags, setSelectedTags] = useState<{[key: string]: boolean}>({});
+  const [processingTags, setProcessingTags] = useState<{[key: string]: boolean}>({});
 
   // Initialize selected tags based on current user tags
   useEffect(() => {
-    if (tags) {
+    if (tags && tags.length > 0) {
       const tagMap: {[key: string]: boolean} = {};
       tags.forEach(tag => {
         tagMap[tag.name] = true;
@@ -79,21 +81,31 @@ const UserTags: React.FC<UserTagsProps> = ({
   }, [tags]);
 
   const handleTagToggle = async (tagName: string, checked: boolean) => {
-    // Find if the tag already exists in the user's tags
-    const existingTag = tags.find(t => t.name === tagName);
-    
-    if (checked && !existingTag && onAddTag) {
-      // Add new tag
-      await onAddTag(tagName);
-    } else if (!checked && existingTag && onRemoveTag) {
-      // Remove existing tag
-      await onRemoveTag(existingTag.id);
+    try {
+      // Set this tag as processing
+      setProcessingTags(prev => ({ ...prev, [tagName]: true }));
+      
+      // Find if the tag already exists in the user's tags
+      const existingTag = tags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+      
+      if (checked && !existingTag && onAddTag) {
+        // Add new tag
+        await onAddTag(tagName);
+      } else if (!checked && existingTag && onRemoveTag) {
+        // Remove existing tag
+        await onRemoveTag(existingTag.id);
+      }
+      
+      setSelectedTags(prev => ({
+        ...prev,
+        [tagName]: checked
+      }));
+    } catch (error) {
+      console.error("Error toggling tag:", error);
+      toast.error(t('Failed to update tag', '更新标签失败'));
+    } finally {
+      setProcessingTags(prev => ({ ...prev, [tagName]: false }));
     }
-    
-    setSelectedTags(prev => ({
-      ...prev,
-      [tagName]: checked
-    }));
   };
 
   const saveChanges = () => {
@@ -150,8 +162,14 @@ const UserTags: React.FC<UserTagsProps> = ({
                 <Checkbox
                   checked={selectedTags[tagName] || false}
                   onCheckedChange={(checked) => handleTagToggle(tagName, !!checked)}
+                  disabled={processingTags[tagName]}
                 />
-                <span className="text-sm text-cosmic-200">{tagName}</span>
+                <span className="text-sm text-cosmic-200 flex items-center">
+                  {tagName}
+                  {processingTags[tagName] && (
+                    <Loader2 className="ml-2 h-3 w-3 animate-spin" />
+                  )}
+                </span>
               </label>
             ))}
           </div>

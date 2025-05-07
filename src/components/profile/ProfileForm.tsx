@@ -7,11 +7,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/profile/useProfile';
 import { useUserTags } from '@/hooks/useUserTags';
 import { useProfileForm } from '@/hooks/profile/useProfileForm';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Component imports
 import UsernameField, { ProfileFormValues } from './form/UsernameField';
 import ProfileTagsSection from './form/ProfileTagsSection';
 import SubmitButton from './form/SubmitButton';
+import { toast } from 'sonner';
 
 // Use the same type from UsernameField to ensure consistency
 const formSchema = z.object({
@@ -21,6 +23,7 @@ const formSchema = z.object({
 });
 
 const ProfileForm = () => {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const {
     profile,
@@ -47,11 +50,31 @@ const ProfileForm = () => {
 
   // Load profile data when component mounts
   useEffect(() => {
-    if (user) {
-      fetchProfile(user.id, form.setValue);
-      fetchUserTags(user.id);
+    const initializeProfile = async () => {
+      if (user) {
+        try {
+          console.log("Initializing profile for user:", user.id);
+          await fetchProfile(user.id, form.setValue);
+          await fetchUserTags(user.id);
+        } catch (error) {
+          console.error("Error initializing profile:", error);
+          toast.error(t('Failed to load profile', '加载个人资料失败'), {
+            description: t('Please refresh the page and try again', '请刷新页面并重试')
+          });
+        }
+      }
+    };
+    
+    initializeProfile();
+  }, [user, fetchProfile, form.setValue, fetchUserTags, t]);
+
+  const handleAddTag = async (tagName: string) => {
+    if (!user) {
+      console.error("Cannot add tag: No user logged in");
+      return null;
     }
-  }, [user, fetchProfile, form.setValue, fetchUserTags]);
+    return addUserTag(user.id, tagName);
+  };
 
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -65,7 +88,7 @@ const ProfileForm = () => {
       <ProfileTagsSection
         tags={tags}
         loadingTags={loadingTags}
-        onAddTag={(tagName) => user ? addUserTag(user.id, tagName) : Promise.resolve(null)}
+        onAddTag={handleAddTag}
         onRemoveTag={removeUserTag}
       />
 

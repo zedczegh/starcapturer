@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -17,13 +17,20 @@ export function useUserTags() {
   const { t } = useLanguage();
   
   // Fetch user tags
-  const fetchUserTags = async (userId: string) => {
+  const fetchUserTags = useCallback(async (userId: string) => {
     try {
-      if (!userId) return;
+      console.log("Fetching tags for user:", userId);
+      if (!userId) {
+        console.log("No user ID provided for tag fetch");
+        setTags([]);
+        setLoading(false);
+        return;
+      }
 
       // Check cache first to avoid flickering
       const cachedTags = getCachedTags(userId);
       if (cachedTags) {
+        console.log("Using cached tags for user:", userId);
         setTags(cachedTags);
         setLoading(false);
         
@@ -34,15 +41,40 @@ export function useUserTags() {
       
       setLoading(true);
       
+      // Ensure profile exists first
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      if (profileError) {
+        console.error("Error checking profile existence:", profileError);
+      }
+        
+      if (!profile) {
+        console.log("No profile found for user, creating one:", userId);
+        // Create profile if it doesn't exist
+        await supabase
+          .from('profiles')
+          .insert([{ id: userId }])
+          .select();
+      }
+
       // Get tags from profile_tags table
       const { data: tagData, error } = await supabase
         .from('profile_tags')
         .select('id, tag')
         .eq('user_id', userId);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching user tags:", error);
+        throw error;
+      }
       
       if (tagData) {
+        console.log(`Found ${tagData.length} tags for user:`, userId);
+        
         const processedTags = tagData.map(item => ({
           id: item.id,
           name: item.tag,
@@ -67,17 +99,22 @@ export function useUserTags() {
         
         // Update cache
         setCachedTags(userId, processedTags);
+      } else {
+        setTags([]);
       }
     } catch (error: any) {
       console.error('Error fetching user tags:', error);
+      setTags([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Refresh tags in background without setting loading state
   const refreshTagsInBackground = async (userId: string) => {
     try {
+      console.log("Refreshing tags in background for user:", userId);
+      
       // Get tags from profile_tags table
       const { data: tagData, error } = await supabase
         .from('profile_tags')
@@ -120,6 +157,23 @@ export function useUserTags() {
   // Add a new tag to user's profile
   const addUserTag = async (userId: string, tagName: string) => {
     try {
+      console.log("Adding tag for user:", userId, tagName);
+      
+      // Ensure the user has a profile first
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (!profileData) {
+        console.log("Creating profile for user:", userId);
+        // Create profile if it doesn't exist
+        await supabase
+          .from('profiles')
+          .insert([{ id: userId }]);
+      }
+      
       // Check if the tag already exists to prevent duplicates
       const existingTag = tags.find(tag => tag.name.toLowerCase() === tagName.toLowerCase());
       if (existingTag) {
@@ -132,7 +186,10 @@ export function useUserTags() {
         .select()
         .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error adding user tag:", error);
+        throw error;
+      }
       
       if (data) {
         const newTag = { 
@@ -158,12 +215,17 @@ export function useUserTags() {
   // Remove a tag from user's profile
   const removeUserTag = async (tagId: string) => {
     try {
+      console.log("Removing tag:", tagId);
+      
       const { error } = await supabase
         .from('profile_tags')
         .delete()
         .eq('id', tagId);
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error removing tag:", error);
+        throw error;
+      }
       
       setTags(prev => prev.filter(tag => tag.id !== tagId));
       toast.success(t('Tag removed successfully', '标签移除成功'));

@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getRandomAstronomyTip } from '@/utils/astronomyTips';
+import { toast } from 'sonner';
 
 interface Profile {
   username: string | null;
@@ -20,31 +21,69 @@ export function useProfile() {
 
   // Fetch profile, including tags
   const fetchProfile = useCallback(async (userId: string, setValue: any) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('username, avatar_url')
-      .eq('id', userId)
-      .maybeSingle();
+    try {
+      console.log("Fetching profile for user ID:", userId);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('username, avatar_url')
+        .eq('id', userId)
+        .maybeSingle();
 
-    if (!error && data) {
-      // Fetch tags
-      const { data: tagsData } = await supabase
-        .from('profile_tags')
-        .select('tag')
-        .eq('user_id', userId);
+      if (error) {
+        console.error("Error fetching profile:", error);
+        throw error;
+      }
 
-      const tagArr = tagsData ? tagsData.map(t => t.tag) : [];
-      setProfile({
-        username: data.username || '',
-        avatar_url: data.avatar_url,
-        date_of_birth: null,
-        tags: tagArr,
-      });
-      setValue('username', data.username || '');
-      setTags(tagArr);
-      setAvatarUrl(data.avatar_url);
+      if (!data) {
+        console.log("No profile found, creating one for user:", userId);
+        // Create a profile if it doesn't exist
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([{ id: userId, username: '' }])
+          .select('username, avatar_url')
+          .single();
+          
+        if (createError) {
+          console.error("Error creating profile:", createError);
+          throw createError;
+        }
+        
+        // Use the newly created profile
+        if (newProfile) {
+          setProfile({
+            username: newProfile.username || '',
+            avatar_url: newProfile.avatar_url,
+            date_of_birth: null,
+            tags: [],
+          });
+          setValue('username', newProfile.username || '');
+          setAvatarUrl(newProfile.avatar_url);
+        }
+      } else {
+        // Fetch tags
+        const { data: tagsData } = await supabase
+          .from('profile_tags')
+          .select('tag')
+          .eq('user_id', userId);
+
+        const tagArr = tagsData ? tagsData.map(t => t.tag) : [];
+        setProfile({
+          username: data.username || '',
+          avatar_url: data.avatar_url,
+          date_of_birth: null,
+          tags: tagArr,
+        });
+        setValue('username', data.username || '');
+        setTags(tagArr);
+        setAvatarUrl(data.avatar_url);
+      }
+      
+      return { data, error };
+    } catch (error) {
+      console.error("Error in fetchProfile:", error);
+      throw error;
     }
-    return { data, error };
   }, []);
 
   // Upload avatar to Supabase Storage
@@ -52,26 +91,38 @@ export function useProfile() {
     if (!file) return null;
     
     try {
+      console.log("Starting avatar upload for user:", userId);
       setUploadingAvatar(true);
+      
+      // Create a unique filename with timestamp to avoid cache issues
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}-${Date.now()}.${fileExt}`;
       
       // Upload the file
       const { data, error } = await supabase.storage
         .from('avatars')
-        .upload(`${userId}`, file, {
+        .upload(fileName, file, {
           upsert: true,
-          cacheControl: '3600'
+          cacheControl: '0'
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Avatar upload error:", error);
+        toast.error("Failed to upload avatar. Please try again.");
+        throw error;
+      }
+      
+      console.log("Avatar uploaded successfully:", data);
       
       // Get the public URL
       const { data: publicUrlData } = supabase.storage
         .from('avatars')
-        .getPublicUrl(data.path);
+        .getPublicUrl(fileName);
       
       const publicUrl = publicUrlData.publicUrl;
-      setAvatarUrl(publicUrl);
+      console.log("Avatar public URL:", publicUrl);
       
+      setAvatarUrl(publicUrl);
       return publicUrl;
     } catch (error) {
       console.error('Error uploading avatar:', error);
@@ -83,18 +134,34 @@ export function useProfile() {
 
   // Save profile tags
   const saveProfileTags = useCallback(async (userId: string, newTags: string[]) => {
-    // Remove all current tags for this user, then insert selected ones
-    await supabase.from('profile_tags').delete().eq('user_id', userId);
-    if (newTags.length === 0) return;
-    const tagRows = newTags.map((tag) => ({
-      user_id: userId,
-      tag,
-    }));
-    await supabase.from('profile_tags').insert(tagRows);
-    setTags(newTags);
-    setProfile((prev) =>
-      prev ? { ...prev, tags: newTags } : prev
-    );
+    try {
+      console.log("Saving profile tags for user:", userId, newTags);
+      
+      // Remove all current tags for this user, then insert selected ones
+      await supabase.from('profile_tags').delete().eq('user_id', userId);
+      
+      if (newTags.length === 0) return;
+      
+      const tagRows = newTags.map((tag) => ({
+        user_id: userId,
+        tag,
+      }));
+      
+      const { error } = await supabase.from('profile_tags').insert(tagRows);
+      
+      if (error) {
+        console.error("Error saving profile tags:", error);
+        throw error;
+      }
+      
+      setTags(newTags);
+      setProfile((prev) =>
+        prev ? { ...prev, tags: newTags } : prev
+      );
+    } catch (error) {
+      console.error("Error in saveProfileTags:", error);
+      throw error;
+    }
   }, []);
 
   return {
