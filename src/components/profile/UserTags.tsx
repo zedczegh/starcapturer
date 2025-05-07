@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { UserTag } from '@/hooks/useUserTags';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Colors for the tag badges
 const TAG_COLORS = [
@@ -53,6 +54,7 @@ interface UserTagsProps {
   onAddTag?: (tagName: string) => Promise<any>;
   onRemoveTag?: (tagId: string) => Promise<boolean>;
   className?: string;
+  userId?: string; // Optional userId for direct tag operations
 }
 
 const UserTags: React.FC<UserTagsProps> = ({
@@ -62,23 +64,87 @@ const UserTags: React.FC<UserTagsProps> = ({
   showAddNew = false,
   onAddTag,
   onRemoveTag,
-  className = ''
+  className = '',
+  userId
 }) => {
   const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [selectedTags, setSelectedTags] = useState<{[key: string]: boolean}>({});
   const [processingTags, setProcessingTags] = useState<{[key: string]: boolean}>({});
+  const [localTags, setLocalTags] = useState<UserTag[]>([]);
+  const [localLoading, setLocalLoading] = useState(false);
+
+  // Use either provided tags or fetch directly if userId is provided
+  useEffect(() => {
+    if (userId && (tags.length === 0 || loading)) {
+      const fetchDirectTags = async () => {
+        try {
+          setLocalLoading(true);
+          
+          console.log("Directly fetching tags for user:", userId);
+          
+          // First check if profile exists
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', userId)
+            .maybeSingle();
+            
+          if (profileError) {
+            console.error("Error checking profile existence:", profileError);
+          }
+          
+          if (!profileData) {
+            // Create profile if it doesn't exist
+            console.log("Creating profile for user:", userId);
+            await supabase
+              .from('profiles')
+              .insert([{ id: userId }]);
+          }
+          
+          // Now fetch tags
+          const { data: tagData, error } = await supabase
+            .from('profile_tags')
+            .select('id, tag')
+            .eq('user_id', userId);
+            
+          if (error) throw error;
+          
+          if (tagData) {
+            const fetchedTags = tagData.map(item => ({
+              id: item.id,
+              name: item.tag,
+              icon_url: null
+            }));
+            
+            setLocalTags(fetchedTags);
+            console.log(`Directly fetched ${fetchedTags.length} tags for user:`, userId);
+          }
+        } catch (err) {
+          console.error("Error directly fetching tags:", err);
+        } finally {
+          setLocalLoading(false);
+        }
+      };
+      
+      fetchDirectTags();
+    } else {
+      setLocalTags(tags);
+    }
+  }, [userId, tags, loading]);
 
   // Initialize selected tags based on current user tags
   useEffect(() => {
-    if (tags && tags.length > 0) {
+    const tagsToUse = localTags.length > 0 ? localTags : tags;
+    
+    if (tagsToUse && tagsToUse.length > 0) {
       const tagMap: {[key: string]: boolean} = {};
-      tags.forEach(tag => {
+      tagsToUse.forEach(tag => {
         tagMap[tag.name] = true;
       });
       setSelectedTags(tagMap);
     }
-  }, [tags]);
+  }, [localTags, tags]);
 
   const handleTagToggle = async (tagName: string, checked: boolean) => {
     try {
@@ -86,7 +152,8 @@ const UserTags: React.FC<UserTagsProps> = ({
       setProcessingTags(prev => ({ ...prev, [tagName]: true }));
       
       // Find if the tag already exists in the user's tags
-      const existingTag = tags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+      const tagsToCheck = localTags.length > 0 ? localTags : tags;
+      const existingTag = tagsToCheck.find(t => t.name.toLowerCase() === tagName.toLowerCase());
       
       if (checked && !existingTag && onAddTag) {
         // Add new tag
@@ -111,8 +178,11 @@ const UserTags: React.FC<UserTagsProps> = ({
   const saveChanges = () => {
     setIsEditing(false);
   };
+  
+  // Use local loading state or passed loading state
+  const isLoading = localLoading || loading;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
         <Loader2 className="h-4 w-4 animate-spin text-cosmic-400" />
@@ -122,8 +192,11 @@ const UserTags: React.FC<UserTagsProps> = ({
       </div>
     );
   }
+  
+  // Use local tags or passed tags
+  const displayTags = localTags.length > 0 ? localTags : tags;
 
-  if (tags.length === 0 && !showAddNew) {
+  if (displayTags.length === 0 && !showAddNew) {
     return null;
   }
 
@@ -131,7 +204,7 @@ const UserTags: React.FC<UserTagsProps> = ({
     <div className={className}>
       {!isEditing ? (
         <div className="flex flex-wrap gap-2">
-          {tags.map((tag, index) => (
+          {displayTags.map((tag, index) => (
             <Badge 
               key={tag.id} 
               variant="outline" 

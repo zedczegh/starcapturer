@@ -94,7 +94,7 @@ export function useProfile() {
       console.log("Starting avatar upload for user:", userId);
       setUploadingAvatar(true);
       
-      // Create a unique filename with timestamp to avoid cache issues
+      // Create a unique filename with timestamp and userId to avoid cache issues
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
       
@@ -121,6 +121,16 @@ export function useProfile() {
       
       const publicUrl = publicUrlData.publicUrl;
       console.log("Avatar public URL:", publicUrl);
+      
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', userId);
+        
+      if (updateError) {
+        console.error("Error updating profile with avatar URL:", updateError);
+      }
       
       setAvatarUrl(publicUrl);
       return publicUrl;

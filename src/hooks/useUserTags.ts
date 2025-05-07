@@ -24,7 +24,7 @@ export function useUserTags() {
         console.log("No user ID provided for tag fetch");
         setTags([]);
         setLoading(false);
-        return;
+        return [];
       }
 
       // Check cache first to avoid flickering
@@ -36,7 +36,7 @@ export function useUserTags() {
         
         // Still refresh in background but don't show loading state
         refreshTagsInBackground(userId);
-        return;
+        return cachedTags;
       }
       
       setLoading(true);
@@ -55,10 +55,18 @@ export function useUserTags() {
       if (!profile) {
         console.log("No profile found for user, creating one:", userId);
         // Create profile if it doesn't exist
-        await supabase
-          .from('profiles')
-          .insert([{ id: userId }])
-          .select();
+        try {
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert([{ id: userId }])
+            .select();
+            
+          if (insertError) {
+            console.error("Error creating profile:", insertError);
+          }
+        } catch (err) {
+          console.error("Failed to create profile:", err);
+        }
       }
 
       // Get tags from profile_tags table
@@ -72,10 +80,12 @@ export function useUserTags() {
         throw error;
       }
       
-      if (tagData) {
+      let processedTags: UserTag[] = [];
+      
+      if (tagData && tagData.length > 0) {
         console.log(`Found ${tagData.length} tags for user:`, userId);
         
-        const processedTags = tagData.map(item => ({
+        processedTags = tagData.map(item => ({
           id: item.id,
           name: item.tag,
           icon_url: null // We'll add the icon URL in a moment
@@ -100,13 +110,17 @@ export function useUserTags() {
         // Update cache
         setCachedTags(userId, processedTags);
       } else {
+        console.log("No tags found for user:", userId);
         setTags([]);
       }
+      
+      setLoading(false);
+      return processedTags;
     } catch (error: any) {
       console.error('Error fetching user tags:', error);
       setTags([]);
-    } finally {
       setLoading(false);
+      return [];
     }
   }, []);
 
@@ -169,9 +183,14 @@ export function useUserTags() {
       if (!profileData) {
         console.log("Creating profile for user:", userId);
         // Create profile if it doesn't exist
-        await supabase
+        const { error: createError } = await supabase
           .from('profiles')
           .insert([{ id: userId }]);
+          
+        if (createError) {
+          console.error("Error creating profile:", createError);
+          throw createError;
+        }
       }
       
       // Check if the tag already exists to prevent duplicates
@@ -201,6 +220,10 @@ export function useUserTags() {
         setTags(prev => [...prev, newTag]);
         toast.success(t('Tag added successfully', '标签添加成功'));
         
+        // Update cache
+        const updatedTags = [...tags, newTag];
+        setCachedTags(userId, updatedTags);
+        
         return newTag;
       }
       
@@ -217,6 +240,9 @@ export function useUserTags() {
     try {
       console.log("Removing tag:", tagId);
       
+      // Find the tag to get user_id for cache update
+      const tagToRemove = tags.find(tag => tag.id === tagId);
+      
       const { error } = await supabase
         .from('profile_tags')
         .delete()
@@ -227,7 +253,10 @@ export function useUserTags() {
         throw error;
       }
       
-      setTags(prev => prev.filter(tag => tag.id !== tagId));
+      // Update local state
+      const updatedTags = tags.filter(tag => tag.id !== tagId);
+      setTags(updatedTags);
+      
       toast.success(t('Tag removed successfully', '标签移除成功'));
       
       return true;

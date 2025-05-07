@@ -23,33 +23,68 @@ const ProfileMini = () => {
   const { tags, loading: loadingTags, fetchUserTags } = useUserTags();
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
 
+  // Query for profile data
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', id],
     queryFn: async () => {
       if (!id) throw new Error('No profile ID provided');
+      
+      console.log("Fetching profile data for:", id);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching profile:", error);
+        
+        // If profile not found, attempt to create it
+        if (error.code === 'PGRST116') {
+          console.log("Profile not found, attempting to create a default profile");
+          
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert([{ id: id }])
+            .select()
+            .single();
+            
+          if (insertError) {
+            console.error("Failed to create default profile:", insertError);
+            throw insertError;
+          }
+          
+          return newProfile;
+        }
+        
+        throw error;
+      }
+      
       return data;
     },
     retry: 1,
     staleTime: 1000 * 60 * 5,
   });
 
+  // Query for user's astronomy spots
   const { data: astroSpots, isLoading: loadingSpots } = useQuery({
     queryKey: ['user-spots', id],
     queryFn: async () => {
       if (!id) return [];
+      
+      console.log("Fetching astro spots for:", id);
+      
       const { data, error } = await supabase
         .from('user_astro_spots')
         .select('*')
         .eq('user_id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching astro spots:", error);
+        throw error;
+      }
+      
       return data || [];
     },
     retry: 1,
@@ -57,13 +92,23 @@ const ProfileMini = () => {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Load user tags - with optimizations to prevent flickering
+  // Load user tags when profile data is available
   useEffect(() => {
-    if (id) {
-      fetchUserTags(id);
-    }
+    const loadProfileData = async () => {
+      if (id) {
+        try {
+          console.log("Loading tags for profile:", id);
+          await fetchUserTags(id);
+        } catch (err) {
+          console.error("Error loading tags:", err);
+        }
+      }
+    };
+    
+    loadProfileData();
   }, [id, fetchUserTags]);
-
+  
+  // For updating SIQS values in real-time
   const handleSiqsCalculated = (spotId: string, siqs: number | null) => {
     setRealTimeSiqs(prev => ({
       ...prev,
@@ -161,13 +206,16 @@ const ProfileMini = () => {
                 <span>{t('Joined', '加入于')} {new Date(profile.created_at).toLocaleDateString()}</span>
               </div>
 
-              {/* User tags - properly handled to prevent flickering */}
-              <UserTags 
-                tags={tags} 
-                loading={loadingTags} 
-                className="mt-4"
-                editable={false}
-              />
+              {/* User tags - debug info and proper handling */}
+              <div className="mt-4 mb-2">
+                <UserTags 
+                  tags={tags} 
+                  loading={loadingTags}
+                  className="mt-4"
+                  editable={false}
+                  userId={id}
+                />
+              </div>
 
               {/* AstroSpots section with loading state */}
               {loadingSpots ? (
