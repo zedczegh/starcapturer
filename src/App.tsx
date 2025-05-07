@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
@@ -25,9 +26,10 @@ import CommunityAstroSpots from './pages/CommunityAstroSpots';
 import ProfileMini from "./pages/ProfileMini";
 import Messages from './pages/Messages';
 import './App.css';
+import { toast } from 'sonner';
 
 const App = () => {
-  // Check if the avatars bucket exists, create if it doesn't
+  // Check if required buckets exist, create if they don't
   useEffect(() => {
     const checkAndCreateBuckets = async () => {
       try {
@@ -52,8 +54,7 @@ const App = () => {
             
             if (bucketError) {
               console.error("Error creating avatars bucket:", bucketError);
-              // Continue anyway, as this might be a permissions issue with the client
-              // The policy is already set in the migration
+              toast.error("Error creating storage bucket. Some features may not work properly.");
             } else {
               console.log('Created avatars bucket successfully');
             }

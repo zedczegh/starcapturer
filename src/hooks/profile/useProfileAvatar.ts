@@ -32,24 +32,25 @@ export function useProfileAvatar() {
             public: true,
             fileSizeLimit: 2 * 1024 * 1024 // 2MB limit
           });
+          console.log("Avatars bucket created successfully");
         }
       } catch (err) {
-        console.log("Bucket check error (likely exists already):", err);
+        console.error("Bucket check error:", err);
         // Continue anyway as the bucket might exist but not be visible due to permissions
       }
       
-      // Create a unique filename with timestamp and userId to avoid cache issues
+      // Create a unique filename to avoid cache issues
       const fileExt = file.name.split('.').pop();
       const fileName = `avatar-${userId}-${Date.now()}.${fileExt}`;
       
       console.log(`Uploading avatar with content type ${file.type} to avatars/${fileName}`);
       
-      // Upload the file
+      // Upload the file with explicit content type
       const { data, error } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
           upsert: true,
-          contentType: file.type // Set the proper content type
+          contentType: file.type
         });
       
       if (error) {
@@ -58,7 +59,7 @@ export function useProfileAvatar() {
         return null;
       }
       
-      console.log("Avatar uploaded successfully:", data);
+      console.log("Avatar uploaded successfully to path:", data?.path);
       
       // Get the public URL from Supabase
       const { data: publicUrlData } = supabase.storage
@@ -73,6 +74,9 @@ export function useProfileAvatar() {
       
       const publicUrl = publicUrlData.publicUrl;
       console.log("Avatar public URL:", publicUrl);
+      
+      // Show success toast for avatar upload
+      toast.success(t("Avatar uploaded successfully", "头像上传成功"));
       
       return publicUrl;
     } catch (error) {

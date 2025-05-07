@@ -46,11 +46,12 @@ export function useProfileForm(user: User | null) {
       let newAvatarUrl = null;
       if (avatarFile) {
         setAvatarUploading(true);
-        console.log("Starting avatar upload process...");
+        console.log("Starting avatar upload process with file:", avatarFile.name);
         newAvatarUrl = await uploadAvatar(user.id, avatarFile);
         setAvatarUploading(false);
         
         if (!newAvatarUrl) {
+          console.error("Avatar upload failed - no URL returned");
           toast.error(t('Failed to upload avatar', '上传头像失败'));
           setSaving(false);
           return; // Stop the process if avatar upload fails

@@ -92,8 +92,8 @@ const Profile = () => {
               
               // Update avatar URL if it exists in the database and is not a blob URL
               if (data.avatar_url) {
-                setAvatarUrl(data.avatar_url);
                 console.log("Setting avatar URL from database:", data.avatar_url);
+                setAvatarUrl(data.avatar_url);
               }
             }
           }
@@ -104,7 +104,7 @@ const Profile = () => {
       
       checkProfileUpdates();
     }
-  }, [user, loading, profile, setProfile, setAvatarUrl, ensureProfileExists, authChecked]);
+  }, [user, loading, profile, setProfile, setAvatarUrl, ensureProfileExists, authChecked, avatarUrl]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -128,13 +128,15 @@ const Profile = () => {
       }
       
       console.log("Avatar file selected:", file.name, file.type, `${fileSize.toFixed(2)}MB`);
-      setAvatarFile(file);
       
-      // Create a local preview of the image and revoke any existing blob URLs
+      // Clean up previous blob URL if it exists
       if (avatarUrl && avatarUrl.startsWith('blob:')) {
         URL.revokeObjectURL(avatarUrl);
       }
+      
+      // Create a local preview of the image
       const previewUrl = URL.createObjectURL(file);
+      setAvatarFile(file);
       setAvatarUrl(previewUrl);
       toast.info(t("Avatar selected", "已选择头像"), {
         description: t("Click 'Save Profile' to upload", "点击'保存资料'上传")
