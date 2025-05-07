@@ -10,7 +10,7 @@ import { UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProfileDropdownMenu from './ProfileDropdownMenu';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchUserProfile } from '@/utils/profileUtils';
+import { fetchUserProfile, ensureUserProfile } from '@/utils/profileUtils';
 
 const ProfileButton = () => {
   const { user, signOut } = useAuth();
@@ -27,6 +27,10 @@ const ProfileButton = () => {
       const loadProfile = async () => {
         try {
           console.log("Loading profile in ProfileButton for user:", user.id);
+          
+          // Ensure the user has a profile entry in the database
+          await ensureUserProfile(user.id);
+          
           const profileData = await fetchUserProfile(user.id);
           
           if (isMounted && profileData) {

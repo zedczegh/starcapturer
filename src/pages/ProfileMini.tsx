@@ -8,7 +8,7 @@ import { User } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { translateProfileTag } from "@/utils/linkTranslations";
 import { useMessageNavigation } from "@/hooks/useMessageNavigation";
-import { fetchUserProfile } from "@/utils/profileUtils";
+import { fetchUserProfile, ensureUserProfile } from "@/utils/profileUtils";
 
 interface ProfileData {
   username: string | null;
@@ -36,6 +36,10 @@ const ProfileMini: React.FC = () => {
       setLoading(true);
       try {
         console.log("Loading profile in ProfileMini for user:", profileId);
+        
+        // Ensure the user has a profile entry in the database
+        await ensureUserProfile(profileId);
+        
         const profileData = await fetchUserProfile(profileId);
         
         if (profileData) {

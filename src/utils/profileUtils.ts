@@ -3,6 +3,56 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 /**
+ * Check if a user profile exists and create one if it doesn't
+ */
+export const ensureUserProfile = async (
+  userId: string
+): Promise<boolean> => {
+  try {
+    console.log('Checking if profile exists for user:', userId);
+    
+    // Check if profile exists
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+      
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Error checking profile:', profileError);
+      return false;
+    }
+    
+    // If profile doesn't exist, create it
+    if (!profile) {
+      console.log('Profile not found, creating new profile for user:', userId);
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          username: null,
+          avatar_url: null,
+          updated_at: new Date().toISOString()
+        });
+        
+      if (insertError) {
+        console.error('Error creating profile:', insertError);
+        return false;
+      }
+      
+      console.log('Successfully created new profile for user:', userId);
+    } else {
+      console.log('Profile already exists for user:', userId);
+    }
+    
+    return true;
+  } catch (error: any) {
+    console.error('Exception in ensureUserProfile:', error);
+    return false;
+  }
+};
+
+/**
  * Upsert a user's profile with improved RLS handling
  */
 export const upsertUserProfile = async (
@@ -15,7 +65,10 @@ export const upsertUserProfile = async (
   try {
     console.log('Upserting profile for user:', userId, profileData);
     
-    // First try an update - if the profile exists and user has access
+    // First ensure the profile exists
+    await ensureUserProfile(userId);
+    
+    // Then update the profile
     const { data: updateData, error: updateError } = await supabase
       .from('profiles')
       .update({
@@ -24,32 +77,17 @@ export const upsertUserProfile = async (
       })
       .eq('id', userId);
       
-    // If update succeeds (no error) or fails with row not found, try insert
-    if (!updateError || (updateError && updateError.code === 'PGRST116')) {
-      // If update failed because row doesn't exist, try insert
-      if (updateError && updateError.code === 'PGRST116') {
-        console.log('Profile not found, attempting insert');
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            ...profileData,
-            updated_at: new Date().toISOString()
-          });
-          
-        if (insertError) {
-          console.error('Error inserting profile:', insertError);
-          return false;
-        }
-      }
-      
-      return true;
-    } else {
+    if (updateError) {
       console.error('Error updating profile:', updateError);
+      toast.error('Profile update failed', { description: updateError.message });
       return false;
     }
+    
+    console.log('Profile updated successfully for user:', userId);
+    return true;
   } catch (error: any) {
     console.error('Exception in upsertUserProfile:', error);
+    toast.error('Profile update failed', { description: error.message });
     return false;
   }
 };
@@ -111,6 +149,9 @@ export const saveUserTags = async (userId: string, tags: string[]): Promise<bool
   try {
     console.log('Saving tags for user:', userId, tags);
     
+    // First ensure the profile exists
+    await ensureUserProfile(userId);
+    
     // First delete existing tags
     const { error: deleteError } = await supabase
       .from('profile_tags')
@@ -125,24 +166,23 @@ export const saveUserTags = async (userId: string, tags: string[]): Promise<bool
     // If no tags to insert, we're done
     if (tags.length === 0) return true;
     
-    // Insert new tags one by one to avoid RLS issues
-    let allTagsInserted = true;
+    // Insert new tags in a batch to improve performance
+    const tagsToInsert = tags.map(tag => ({
+      user_id: userId,
+      tag
+    }));
     
-    for (const tag of tags) {
-      const { error: insertError } = await supabase
-        .from('profile_tags')
-        .insert({
-          user_id: userId,
-          tag
-        });
+    const { error: insertError } = await supabase
+      .from('profile_tags')
+      .insert(tagsToInsert);
         
-      if (insertError) {
-        console.error(`Error saving tag "${tag}":`, insertError);
-        allTagsInserted = false;
-      }
+    if (insertError) {
+      console.error('Error saving tags:', insertError);
+      return false;
     }
     
-    return allTagsInserted;
+    console.log('Tags saved successfully for user:', userId);
+    return true;
   } catch (error: any) {
     console.error('Exception in saveUserTags:', error);
     return false;
@@ -179,6 +219,9 @@ export const fetchUserTags = async (userId: string): Promise<string[]> => {
 export const fetchUserProfile = async (userId: string) => {
   try {
     console.log('Fetching profile for user:', userId);
+    
+    // First ensure the profile exists
+    await ensureUserProfile(userId);
     
     const { data, error } = await supabase
       .from('profiles')

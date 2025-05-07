@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { getRandomAstronomyTip } from '@/utils/astronomyTips';
-import { fetchUserProfile } from '@/utils/profileUtils';
+import { fetchUserProfile, ensureUserProfile } from '@/utils/profileUtils';
 
 interface Profile {
   username: string | null;
@@ -22,6 +22,10 @@ export function useProfile() {
   const fetchProfile = useCallback(async (userId: string, setValue: any) => {
     try {
       console.log("Fetching profile in useProfile hook for user:", userId);
+      
+      // Ensure the user profile exists in the database
+      await ensureUserProfile(userId);
+      
       const profileData = await fetchUserProfile(userId);
       
       if (!profileData) {

@@ -10,7 +10,13 @@ import { useForm } from 'react-hook-form';
 import ProfileLoader from '@/components/profile/ProfileLoader';
 import ProfileMain from '@/components/profile/ProfileMain';
 import AboutFooter from '@/components/about/AboutFooter';
-import { uploadAvatar, upsertUserProfile, saveUserTags, fetchUserProfile } from '@/utils/profileUtils';
+import { 
+  uploadAvatar, 
+  upsertUserProfile, 
+  saveUserTags, 
+  fetchUserProfile, 
+  ensureUserProfile 
+} from '@/utils/profileUtils';
 
 interface ProfileFormValues {
   username: string;
@@ -53,6 +59,9 @@ const Profile = () => {
           navigate('/photo-points');
           return;
         }
+
+        // Ensure the user has a profile entry in the database
+        await ensureUserProfile(session.user.id);
 
         // Fetch profile data with improved function
         const profileData = await fetchUserProfile(session.user.id);
@@ -106,6 +115,9 @@ const Profile = () => {
     try {
       setSaving(true);
       console.log("Starting profile update with data:", formData, tags);
+
+      // Ensure profile exists first
+      await ensureUserProfile(user.id);
 
       let newAvatarUrl = avatarUrl;
       if (avatarFile) {
