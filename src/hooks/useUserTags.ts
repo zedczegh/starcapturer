@@ -120,7 +120,7 @@ export function useUserTags() {
   // Add a new tag to user's profile
   const addUserTag = async (userId: string, tagName: string) => {
     try {
-      // First check if profile exists
+      // First ensure the profile exists
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id')
@@ -128,9 +128,27 @@ export function useUserTags() {
         .single();
       
       if (profileError) {
-        console.error("Error checking profile existence:", profileError);
-        toast.error(t('Profile not found. Please try refreshing the page.', '找不到个人资料。请尝试刷新页面。'));
-        return null;
+        // Attempt to create the profile if it doesn't exist
+        try {
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              updated_at: new Date().toISOString()
+            });
+            
+          if (insertError) {
+            console.error("Error creating missing profile:", insertError);
+            toast.error(t('Profile not found. Please try signing out and back in.', '找不到个人资料。请尝试重新登录。'));
+            return null;
+          } else {
+            console.log("Created missing profile for user:", userId);
+          }
+        } catch (createProfileError) {
+          console.error("Error creating profile:", createProfileError);
+          toast.error(t('Profile not found. Please try signing out and back in.', '找不到个人资料。请尝试重新登录。'));
+          return null;
+        }
       }
       
       // Check if the tag already exists to prevent duplicates
