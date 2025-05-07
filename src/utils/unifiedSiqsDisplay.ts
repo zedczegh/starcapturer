@@ -1,4 +1,3 @@
-
 /**
  * Unified SIQS Display Utility
  * 
@@ -85,15 +84,15 @@ export function getLocationSiqs(location: any, realTimeSiqs: number | null = nul
 }
 
 /**
- * Format SIQS for display
- * @param score The SIQS score to format
- * @returns Formatted string representation
+ * Format SIQS for display with consistent formatting
  */
-export function formatSiqsForDisplay(score: number | null): string {
-  if (score === null || score <= 0) return 'N/A';
-  // Normalize score to 1-10 scale if needed
-  const normalizedScore = normalizeToSiqsScale(score);
-  return normalizedScore.toFixed(1);
+export function formatSiqsForDisplay(siqs: number | null): string {
+  if (siqs === null || siqs <= 0) {
+    return "N/A";
+  }
+  
+  // Normalize before displaying
+  return normalizeToSiqsScale(siqs).toFixed(1);
 }
 
 /**

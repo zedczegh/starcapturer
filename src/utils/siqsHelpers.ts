@@ -1,42 +1,146 @@
-/**
- * Utility functions for handling SIQS scores
- */
 
 /**
- * Safely extracts a numeric SIQS score from either a number or an object with score property
- * @param siqs - The SIQS value, which can be a number, object, or null
- * @returns A numeric score or null
+ * Helper functions for safely working with SIQS values that might be numbers or objects
  */
-export const getSiqsScore = (siqs: number | { score: number; isViable: boolean; } | null): number | null => {
-  if (siqs === null || siqs === undefined) {
-    return null;
+
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+
+/**
+ * Get numeric SIQS score from any SIQS format (number or object)
+ * @param siqs SIQS value which could be a number or object
+ * @returns number value of SIQS or 0 if undefined
+ */
+export function getSiqsScore(siqs?: number | string | { score: number; isViable: boolean } | any): number {
+  if (siqs === undefined || siqs === null) {
+    return 0;
   }
   
-  // If siqs is already a number, return it
+  // Handle string values (parsing to number)
+  if (typeof siqs === 'string') {
+    const parsed = parseFloat(siqs);
+    return isNaN(parsed) ? 0 : normalizeToSiqsScale(parsed);
+  }
+  
+  // Handle numeric values directly
   if (typeof siqs === 'number') {
-    return siqs;
+    return isNaN(siqs) ? 0 : normalizeToSiqsScale(siqs);
   }
   
-  // Otherwise, extract the score from the object
-  return siqs.score;
-};
+  // Handle SharedAstroSpot object with siqs property
+  if (typeof siqs === 'object' && siqs !== null) {
+    // Case: location.siqs passed directly as an object with score property
+    if ('siqs' in siqs && typeof siqs.siqs !== 'undefined') {
+      return getSiqsScore(siqs.siqs);
+    }
+    
+    // Case: { score: number } object
+    if ('score' in siqs && typeof siqs.score === 'number') {
+      return isNaN(siqs.score) ? 0 : normalizeToSiqsScale(siqs.score);
+    }
+  }
+  
+  // Default fallback
+  return 0;
+}
 
 /**
- * Sort locations by their SIQS scores (highest first)
- * @param locations - Array of locations with siqs or realTimeSiqs properties
- * @returns Sorted array of locations
+ * Normalize scores to ensure they're on the 1-10 scale
+ * @param score The score to normalize
+ * @returns Normalized score in the 1-10 range
  */
-export const sortLocationsBySiqs = (locations: any[]): any[] => {
+export function normalizeToSiqsScale(score: number): number {
+  // If score is already in 0-10 range, return it
+  if (score >= 0 && score <= 10) {
+    return score;
+  }
+  
+  // If score is on a 0-100 scale, convert to 0-10
+  if (score > 10 && score <= 100) {
+    return score / 10;
+  }
+  
+  // For any other range, clamp to 0-10
+  return Math.min(10, Math.max(0, score));
+}
+
+/**
+ * Check if SIQS score is at least a certain value
+ */
+export function isSiqsAtLeast(siqs: any, minValue: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score >= minValue;
+}
+
+/**
+ * Check if SIQS score is greater than a value
+ */
+export function isSiqsGreaterThan(siqs: any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score > threshold;
+}
+
+/**
+ * Check if SIQS score is valid (greater than 0)
+ */
+export function isValidSiqs(siqs: any): boolean {
+  const score = getSiqsScore(siqs);
+  return score > 0;
+}
+
+/**
+ * Get SIQS score from a location object
+ */
+export function getLocationSiqs(location: SharedAstroSpot | any): number {
+  if (!location) return 0;
+  
+  // Use direct SIQS property if available
+  if ('siqs' in location) {
+    return getSiqsScore(location.siqs);
+  }
+  
+  // Try to get from siqsResult if available
+  if ('siqsResult' in location && location.siqsResult) {
+    return getSiqsScore(location.siqsResult);
+  }
+  
+  return 0;
+}
+
+/**
+ * Format SIQS score for display
+ */
+export function formatSiqsScore(siqs: number | any): string {
+  const score = typeof siqs === 'number' ? normalizeToSiqsScale(siqs) : getSiqsScore(siqs);
+  if (score <= 0) return 'N/A';
+  return score.toFixed(1);
+}
+
+/**
+ * Get appropriate SIQS display format
+ */
+export function formatSiqsForDisplay(score: number | null): string {
+  if (score === null || score <= 0) return 'N/A';
+  // Normalize score to 1-10 scale if needed
+  const normalizedScore = normalizeToSiqsScale(score);
+  return normalizedScore.toFixed(1);
+}
+
+/**
+ * Sort locations by their highest available SIQS score (descending)
+ * Uses either realTimeSiqs (if present) or static siqs
+ */
+export function sortLocationsBySiqs(locations: SharedAstroSpot[]): SharedAstroSpot[] {
   return [...locations].sort((a, b) => {
-    // Check for realTimeSiqs first, then fallback to siqs property
-    const scoreA = a.realTimeSiqs !== undefined ? getSiqsScore(a.realTimeSiqs) : a.siqs;
-    const scoreB = b.realTimeSiqs !== undefined ? getSiqsScore(b.realTimeSiqs) : b.siqs;
+    // Get SIQS score, using realTimeSiqs if available
+    const aSiqs = ('realTimeSiqs' in a && a.realTimeSiqs !== undefined && a.realTimeSiqs !== null) ? 
+      getSiqsScore(a.realTimeSiqs) : 
+      getSiqsScore(a.siqs);
     
-    // Handle null/undefined values in sorting
-    if (scoreA === null || scoreA === undefined) return 1;
-    if (scoreB === null || scoreB === undefined) return -1;
+    const bSiqs = ('realTimeSiqs' in b && b.realTimeSiqs !== undefined && b.realTimeSiqs !== null) ? 
+      getSiqsScore(b.realTimeSiqs) : 
+      getSiqsScore(b.siqs);
     
-    // Higher scores come first (descending order)
-    return scoreB - scoreA;
+    // Sort descending (highest first)
+    return (bSiqs || 0) - (aSiqs || 0);
   });
-};
+}

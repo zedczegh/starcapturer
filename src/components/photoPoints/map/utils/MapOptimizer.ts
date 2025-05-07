@@ -1,53 +1,9 @@
+
 import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { validateLocationWithReverseGeocoding } from '@/utils/location/reverseGeocodingValidator';
 import { MarkerManager } from './markers/MarkerManager';
-
-// Define LocationFilter class inline since it was missing
-class LocationFilter {
-  // Track filter settings
-  private maxDistance: number = 500; // km
-  
-  /**
-   * Reset distance filters
-   */
-  public resetDistanceFilters(): void {
-    this.maxDistance = 500;
-  }
-  
-  /**
-   * Filter locations by distance from user
-   */
-  public filterByDistance(
-    locations: SharedAstroSpot[],
-    activeView: 'certified' | 'calculated'
-  ): SharedAstroSpot[] {
-    // Don't filter certified locations by distance in any view
-    if (activeView === 'certified') {
-      return locations.filter(loc => 
-        loc.isDarkSkyReserve || loc.certification
-      );
-    }
-    
-    // For calculated view, apply distance filtering only to non-certified locations
-    const certifiedLocations = locations.filter(loc => 
-      loc.isDarkSkyReserve || loc.certification
-    );
-    
-    const filteredNonCertified = locations
-      .filter(loc => !loc.isDarkSkyReserve && !loc.certification)
-      .filter(loc => {
-        // If no distance info, keep the location
-        if (typeof loc.distance !== 'number') return true;
-        
-        // Filter by distance
-        return loc.distance <= this.maxDistance;
-      });
-    
-    // Return combined results
-    return [...certifiedLocations, ...filteredNonCertified];
-  }
-}
+import { LocationFilter } from './filters/LocationFilter';
 
 /**
  * Manager for optimizing map marker rendering

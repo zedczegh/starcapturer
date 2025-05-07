@@ -12,8 +12,8 @@ import { useLocationDetailsService } from './header/LocationDetailsService';
 
 interface LocationDetailsHeaderProps {
   name: string;
-  latitude: number | undefined;
-  longitude: number | undefined;
+  latitude: number;
+  longitude: number;
   timestamp: string;
 }
 
@@ -43,7 +43,7 @@ const LocationDetailsHeader = ({
   // Check if location is already saved by user
   useEffect(() => {
     const checkIfSaved = async () => {
-      if (!user || !latitude || !longitude) {
+      if (!user) {
         setIsSaved(false);
         return;
       }
@@ -73,12 +73,6 @@ const LocationDetailsHeader = ({
   const handleToggleSave = async () => {
     if (!user) {
       setShowAuthDialog(true);
-      return;
-    }
-
-    // Ensure we have valid coordinates before proceeding
-    if (!latitude || !longitude) {
-      toast.error(t("Invalid location coordinates", "无效的位置坐标"));
       return;
     }
 
@@ -123,18 +117,14 @@ const LocationDetailsHeader = ({
           variant="ghost"
           size="sm"
           onClick={handleToggleSave}
-          disabled={isLoading || !latitude || !longitude}
+          disabled={isLoading}
           className={isSaved ? "text-yellow-400 hover:text-yellow-500" : "text-muted-foreground hover:text-yellow-400"}
         >
           <Star className="h-5 w-5" fill={isSaved ? "currentColor" : "none"} />
         </Button>
       </div>
       <div className="text-sm text-muted-foreground">
-        {latitude && longitude ? (
-          `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-        ) : (
-          t("Coordinates unavailable", "坐标不可用")
-        )}
+        {latitude.toFixed(6)}, {longitude.toFixed(6)}
       </div>
       <AuthDialog 
         open={showAuthDialog} 
