@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { checkUsernameAvailability, showAuthToast, createUserProfile } from '@/utils/authUtils';
+import { checkUsernameAvailability, showAuthToast, createUserProfile, ensureUserProfile } from '@/utils/authUtils';
 
 interface AuthHookReturn {
   user: User | null;
@@ -21,9 +21,17 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // If user signed in or session refreshed, ensure they have a profile
+        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          // Use setTimeout to avoid blocking auth state change
+          setTimeout(async () => {
+            await ensureUserProfile(session.user.id, session.user.email || '');
+          }, 0);
+        }
       }
     );
 
@@ -33,6 +41,12 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
         const sessionResult = await supabase.auth.getSession();
         setSession(sessionResult.data.session);
         setUser(sessionResult.data.session?.user ?? null);
+        
+        // Ensure profile exists for already logged in user
+        if (sessionResult.data.session?.user) {
+          const user = sessionResult.data.session.user;
+          await ensureUserProfile(user.id, user.email || '');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -119,6 +133,12 @@ export const useAuthProvider = (t: (en: string, zh: string) => string): AuthHook
         );
       } else {
         console.log("Login successful!");
+        
+        // Ensure profile exists for user
+        if (data.user) {
+          await ensureUserProfile(data.user.id, data.user.email || '');
+        }
+        
         showAuthToast(
           'success',
           t("Signed in successfully!", "登录成功！")

@@ -48,19 +48,57 @@ export const showAuthToast = (
  * Creates a profile entry for a new user
  */
 export const createUserProfile = async (userId: string, username: string, email: string) => {
+  // First check if profile already exists to avoid duplicate inserts
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', userId)
+    .single();
+    
+  if (existingProfile) {
+    console.log("Profile already exists for user:", userId);
+    return null;
+  }
+  
+  console.log("Creating new profile for user:", userId, "with username:", username);
+  
   const { error: profileError } = await supabase
     .from('profiles')
     .insert({
       id: userId,
       username: username,
-      email: email
+      avatar_url: null,
+      updated_at: new Date().toISOString()
     });
     
   if (profileError) {
     console.error("Error creating profile:", profileError);
-    // We return the error but continue as auth was successful
     return profileError;
   }
   
   return null;
+};
+
+/**
+ * Ensures a user profile exists, creating one if needed
+ */
+export const ensureUserProfile = async (userId: string, email: string) => {
+  // Check if profile exists
+  const { data: profile, error: fetchError } = await supabase
+    .from('profiles')
+    .select('id, username')
+    .eq('id', userId)
+    .single();
+    
+  if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "no rows found" error
+    console.error("Error fetching profile:", fetchError);
+    return;
+  }
+  
+  // If profile doesn't exist, create one with email as username
+  if (!profile) {
+    const username = email.split('@')[0]; // Use part before @ as username
+    await createUserProfile(userId, username, email);
+    console.log("Created new profile for existing user:", userId);
+  }
 };

@@ -120,6 +120,19 @@ export function useUserTags() {
   // Add a new tag to user's profile
   const addUserTag = async (userId: string, tagName: string) => {
     try {
+      // First check if profile exists
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+      
+      if (profileError) {
+        console.error("Error checking profile existence:", profileError);
+        toast.error(t('Profile not found. Please try refreshing the page.', '找不到个人资料。请尝试刷新页面。'));
+        return null;
+      }
+      
       // Check if the tag already exists to prevent duplicates
       const existingTag = tags.find(tag => tag.name.toLowerCase() === tagName.toLowerCase());
       if (existingTag) {
@@ -132,7 +145,10 @@ export function useUserTags() {
         .select()
         .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error adding user tag:", error);
+        throw error;
+      }
       
       if (data) {
         const newTag = { 
