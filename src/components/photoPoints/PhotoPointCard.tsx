@@ -5,7 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Star, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatSiqsScore } from "@/utils/siqsHelpers";
+import { formatSiqsScore, getSiqsScore } from "@/utils/siqsHelpers";
 import { getCertificationInfo, getLocalizedCertText } from "./cards/CertificationBadge";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -58,6 +58,9 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     }
   };
 
+  // Get SIQS score as a number to display
+  const siqsScore = getSiqsScore(point.siqs);
+
   return (
     <div
       className="glassmorphism p-3 rounded-lg cursor-pointer hover:bg-background/50 transition-colors"
@@ -71,7 +74,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         />
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
-          <span className="text-xs font-medium">{formatSiqsScore(point.siqs)}</span>
+          <span className="text-xs font-medium">{formatSiqsScore(siqsScore)}</span>
         </div>
       </div>
       
@@ -108,4 +111,3 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
 };
 
 export default PhotoPointCard;
-

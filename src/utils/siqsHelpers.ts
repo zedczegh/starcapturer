@@ -127,20 +127,23 @@ export function formatSiqsForDisplay(score: number | null): string {
 
 /**
  * Sort locations by their highest available SIQS score (descending)
- * Uses either realTimeSiqs (if present) or static siqs
+ * Uses either realTimeSiqs (if present and accessible as a property), or static siqs
  */
 export function sortLocationsBySiqs(locations: SharedAstroSpot[]): SharedAstroSpot[] {
   return [...locations].sort((a, b) => {
-    // Get SIQS score, using realTimeSiqs if available
-    const aSiqs = ('realTimeSiqs' in a && a.realTimeSiqs !== undefined && a.realTimeSiqs !== null) ? 
-      getSiqsScore(a.realTimeSiqs) : 
-      getSiqsScore(a.siqs);
+    // Safely check for realTimeSiqs using type assertion or index access
+    // as the property might be added dynamically in runtime but not in the type definition
+    const aRealTime = (a as any).realTimeSiqs;
+    const bRealTime = (b as any).realTimeSiqs;
     
-    const bSiqs = ('realTimeSiqs' in b && b.realTimeSiqs !== undefined && b.realTimeSiqs !== null) ? 
-      getSiqsScore(b.realTimeSiqs) : 
-      getSiqsScore(b.siqs);
-    
-    // Sort descending (highest first)
+    const aSiqs = typeof aRealTime === "number" && aRealTime > 0
+      ? aRealTime
+      : getSiqsScore(a.siqs);
+      
+    const bSiqs = typeof bRealTime === "number" && bRealTime > 0
+      ? bRealTime
+      : getSiqsScore(b.siqs);
+      
     return (bSiqs || 0) - (aSiqs || 0);
   });
 }

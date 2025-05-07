@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Star, MapPin, Navigation, RefreshCw } from 'lucide-react';
 import { formatDistance } from '@/utils/geoUtils';
 import { useDisplayName } from '../cards/DisplayNameResolver';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
-import { getSiqsScore } from '@/utils/siqsHelpers';
+import { getSiqsScore, formatSiqsScore } from "@/utils/siqsHelpers";
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 
@@ -48,13 +47,18 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
       (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
   
   // Use our unified display SIQS function - no default scores for certified locations
-  const staticSiqs = getSiqsScore(location);
+  const staticSiqs = getSiqsScore(location.siqs);
   const displaySiqs = getDisplaySiqs({
     realTimeSiqs,
     staticSiqs,
     isCertified,
     isDarkSkyReserve: Boolean(location.isDarkSkyReserve)
   });
+  
+  const formatSiqs = (location: SharedAstroSpot) => {
+    const siqsScore = getSiqsScore(location.siqs);
+    return formatSiqsScore(siqsScore);
+  };
   
   const handleSiqsCalculated = (siqs: number | null, loading: boolean, confidence?: number) => {
     setRealTimeSiqs(siqs);

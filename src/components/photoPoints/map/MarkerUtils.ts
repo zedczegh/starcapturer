@@ -1,9 +1,10 @@
-
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation } from "@/utils/validation";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
 import { getSiqsScore } from "@/utils/siqsHelpers";
 import L from 'leaflet'; // Add this import for the Leaflet library
+import { formatSiqsScore, getSiqsColorClass } from "@/utils/mapSiqsDisplay";
+import { hasCertification } from "../utils/certificationUtils";
 
 /**
  * Get SIQS quality class for styling
@@ -191,3 +192,86 @@ export const isValidAstronomyLocation = (
   
   return true;
 };
+
+/**
+ * Generate marker icon HTML for a location with SIQS score
+ */
+export function generateMarkerHtml(
+  location: SharedAstroSpot,
+  isCertified: boolean,
+  isHovered: boolean,
+  isMobile: boolean = false,
+  shouldPulse: boolean = false
+): string {
+  // Calculate base size based on hover state and mobile
+  const baseSize = isHovered 
+    ? (isMobile ? 28 : 38) 
+    : (isMobile ? 20 : 28);
+    
+  // Calculate inner circle size
+  const innerSize = baseSize * 0.75;
+  
+  // Determine certification status and styling
+  const borderWidth = isCertified ? 2 : 1.5;
+  const borderColor = isCertified ? "#FFD700" : "rgba(255,255,255,0.6)";
+  let bgColor = "rgba(30,30,40,0.95)";
+  
+  // Handle different location types
+  if (location.type === 'dark-site' || location.isDarkSkyReserve) {
+    bgColor = "rgba(67, 56, 202, 0.95)";
+  } else if (location.type === 'lodging') {
+    bgColor = "rgba(14, 116, 144, 0.95)";
+  }
+  
+  // Convert the SIQS score to a number value
+  const siqsValue = getSiqsScore(location.siqs);
+  
+  // Get appropriate color class based on SIQS value
+  const siqsClass = getSiqsColorClass(siqsValue);
+  const siqsText = formatSiqsScore(siqsValue);
+
+  const pulseAnimation = shouldPulse
+    ? `animation: pulse 1.5s infinite; @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }`
+    : '';
+
+  // Build HTML for marker
+  return `
+    <div class="marker-container" style="
+      width: ${baseSize}px;
+      height: ${baseSize}px;
+      position: relative;
+      ${pulseAnimation}
+    ">
+      <div class="marker-outer" style="
+        width: ${baseSize}px;
+        height: ${baseSize}px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: ${borderWidth}px solid ${borderColor};
+        box-shadow: 0 0 8px rgba(0,0,0,0.3);
+        transform-origin: center;
+        transform: ${isHovered ? 'scale(1.1)' : 'scale(1)'};
+        transition: transform 0.2s ease-out;
+        background: ${bgColor};
+      ">
+        <div class="marker-inner" style="
+          width: ${innerSize}px;
+          height: ${innerSize}px;
+          border-radius: 50%;
+          background: ${bgColor};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: system-ui, sans-serif;
+          font-weight: 600;
+          font-size: ${isMobile ? '9px' : '12px'};
+          color: ${siqsClass};
+        ">
+          ${siqsText}
+        </div>
+      </div>
+    </div>
+  `;
+}

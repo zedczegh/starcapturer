@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -37,7 +38,7 @@ export function useMarkerState({
     }
     
     // Use location's SIQS regardless of certification status
-    const locationSiqs = getSiqsScore(location);
+    const locationSiqs = getSiqsScore(location.siqs);
     if (locationSiqs > 0) {
       return locationSiqs;
     }

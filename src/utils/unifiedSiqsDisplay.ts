@@ -83,17 +83,9 @@ export function getLocationSiqs(location: any, realTimeSiqs: number | null = nul
   });
 }
 
-/**
- * Format SIQS for display with consistent formatting
- */
-export function formatSiqsForDisplay(siqs: number | null): string {
-  if (siqs === null || siqs <= 0) {
-    return "N/A";
-  }
-  
-  // Normalize before displaying
-  return normalizeToSiqsScale(siqs).toFixed(1);
-}
+// Use the function from siqsHelpers instead of duplicating it
+import { formatSiqsForDisplay as formatSiqs } from './siqsHelpers';
+export { formatSiqs as formatSiqsForDisplay };
 
 /**
  * Get cached SIQS with optimized performance
