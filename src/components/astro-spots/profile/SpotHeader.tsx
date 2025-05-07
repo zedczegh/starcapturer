@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Star, MapPin, Calendar, ExternalLink, MessageCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,15 @@ const SpotHeader: React.FC<SpotHeaderProps> = ({
 
   const handleMessageCreator = () => {
     if (!user || !spot.user_id) return;
-    navigate('/messages', { state: { selectedUser: spot.user_id } });
+    
+    console.log("Navigating to messages with selected user:", spot.user_id);
+    
+    navigate('/messages', { 
+      state: { 
+        selectedUser: spot.user_id,
+        conversationId: spot.user_id 
+      } 
+    });
   };
 
   const renderCreatorAvatar = () => {

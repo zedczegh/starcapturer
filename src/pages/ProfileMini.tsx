@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -15,6 +14,7 @@ import UserTags from '@/components/profile/UserTags';
 import { motion } from 'framer-motion';
 import LocationCard from '@/components/LocationCard';
 import { getInitials } from '@/utils/stringUtils';
+import { useNavigate } from 'react-router-dom';
 
 const ProfileMini = () => {
   const { id } = useParams();
@@ -22,6 +22,7 @@ const ProfileMini = () => {
   const { t } = useLanguage();
   const { tags, loading: loadingTags, fetchUserTags } = useUserTags();
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
+  const navigate = useNavigate();
 
   // Query for profile data
   const { data: profile, isLoading } = useQuery({
@@ -117,6 +118,20 @@ const ProfileMini = () => {
   };
 
   const isOwnProfile = user?.id === id;
+
+  // Handle messaging the profile user
+  const handleMessageUser = () => {
+    if (!id) return;
+    
+    console.log("Navigating to messages with selected user:", id);
+    
+    navigate('/messages', { 
+      state: { 
+        selectedUser: id,
+        conversationId: id
+      } 
+    });
+  };
 
   const userAvatar = useMemo(() => {
     if (!profile) return null;
@@ -272,7 +287,7 @@ const ProfileMini = () => {
 
             <CardFooter className="border-t border-cosmic-800/60 px-6 py-4 gap-3">
               {!isOwnProfile && (
-                <Button className="flex-1">
+                <Button className="flex-1" onClick={handleMessageUser}>
                   <MessageCircle className="h-4 w-4 mr-2" />
                   {t('Message', '发消息')}
                 </Button>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -41,13 +40,38 @@ const Messages = () => {
 
   // Listen for new conversation parameter in URL when directed from profile
   useEffect(() => {
-    if (location.state?.conversationId && user) {
-      const conversation = conversations.find(c => c.id === location.state.conversationId);
-      if (conversation) {
-        setActiveConversation(conversation);
+    const selectedUserId = location.state?.selectedUser;
+    
+    if (selectedUserId && user && conversations.length > 0) {
+      console.log("Looking for conversation with user:", selectedUserId);
+      
+      // Find existing conversation or create a temporary one
+      const existingConversation = conversations.find(c => c.id === selectedUserId);
+      
+      if (existingConversation) {
+        console.log("Found existing conversation:", existingConversation);
+        setActiveConversation(existingConversation);
+        fetchMessages(existingConversation.id);
+      } else if (!activeConversation || activeConversation.id !== selectedUserId) {
+        // Create a temporary conversation while we wait for actual data to load
+        console.log("Creating temporary conversation for:", selectedUserId);
+        const tempConversation = {
+          id: selectedUserId,
+          username: "User",
+          avatar_url: null,
+          last_message: "",
+          last_message_time: new Date().toISOString(),
+          unread_count: 0
+        };
+        
+        setActiveConversation(tempConversation);
+        fetchMessages(selectedUserId);
       }
+      
+      // Clear the location state to prevent re-triggering
+      window.history.replaceState({}, document.title);
     }
-  }, [location.state, conversations, user, setActiveConversation]);
+  }, [location.state, conversations, user, setActiveConversation, fetchMessages, activeConversation]);
 
   const handleSelectConversation = (conversation) => {
     setActiveConversation(conversation);
