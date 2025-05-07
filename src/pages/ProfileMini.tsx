@@ -35,9 +35,11 @@ const ProfileMini: React.FC = () => {
     const loadProfile = async () => {
       setLoading(true);
       try {
+        console.log("Loading profile in ProfileMini for user:", profileId);
         const profileData = await fetchUserProfile(profileId);
         
         if (profileData) {
+          console.log("Profile loaded in ProfileMini:", profileData);
           setProfile({
             username: profileData.username || "Stargazer",
             avatar_url: profileData.avatar_url,
@@ -51,7 +53,7 @@ const ProfileMini: React.FC = () => {
           });
         }
       } catch (err) {
-        console.error("Exception fetching profile data:", err);
+        console.error("Exception fetching profile data in ProfileMini:", err);
         setProfile(null);
       } finally {
         setLoading(false);

@@ -21,11 +21,16 @@ const ProfileButton = () => {
   const [profile, setProfile] = useState<{ username: string | null } | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    
     if (user) {
       const loadProfile = async () => {
         try {
+          console.log("Loading profile in ProfileButton for user:", user.id);
           const profileData = await fetchUserProfile(user.id);
-          if (profileData) {
+          
+          if (isMounted && profileData) {
+            console.log("Profile loaded in ProfileButton:", profileData);
             if (profileData.avatar_url) setAvatarUrl(profileData.avatar_url);
             setProfile({ username: profileData.username });
           }
@@ -33,11 +38,16 @@ const ProfileButton = () => {
           console.error("Error loading profile in ProfileButton:", error);
         }
       };
+      
       loadProfile();
     } else {
       setAvatarUrl(null);
       setProfile(null);
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   const handleSignOut = async () => {

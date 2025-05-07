@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import ProfileLoader from '@/components/profile/ProfileLoader';
 import ProfileMain from '@/components/profile/ProfileMain';
-import { useProfile } from '@/hooks/profile/useProfile';
 import AboutFooter from '@/components/about/AboutFooter';
 import { uploadAvatar, upsertUserProfile, saveUserTags, fetchUserProfile } from '@/utils/profileUtils';
 
@@ -25,19 +24,12 @@ const Profile = () => {
   const [authChecked, setAuthChecked] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const {
-    profile,
-    setProfile,
-    avatarFile,
-    setAvatarFile,
-    avatarUrl,
-    setAvatarUrl,
-    uploadingAvatar,
-    setUploadingAvatar,
-    randomTip,
-    tags,
-    setTags
-  } = useProfile();
+  const [profile, setProfile] = useState<any>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [randomTip, setRandomTip] = useState<[string, string] | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
 
   const { register, handleSubmit, setValue } = useForm<ProfileFormValues>({
     defaultValues: {
@@ -46,6 +38,11 @@ const Profile = () => {
   });
 
   useEffect(() => {
+    // Load astronomy tip
+    import('@/utils/astronomyTips').then(module => {
+      setRandomTip(module.getRandomAstronomyTip());
+    });
+
     const checkSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -57,21 +54,23 @@ const Profile = () => {
           return;
         }
 
-        // Fetch profile data
+        // Fetch profile data with improved function
         const profileData = await fetchUserProfile(session.user.id);
         
         // Update form with fetched data
         setValue('username', profileData.username || '');
         setAvatarUrl(profileData.avatar_url);
-        setTags(profileData.tags);
+        setTags(profileData.tags || []);
         
         // Update profile state
         setProfile({
           username: profileData.username,
           avatar_url: profileData.avatar_url,
           date_of_birth: null,
-          tags: profileData.tags,
+          tags: profileData.tags || [],
         });
+        
+        console.log("Profile loaded:", profileData);
       } catch (error) {
         console.error("Error loading profile:", error);
         setProfile({
@@ -87,7 +86,7 @@ const Profile = () => {
     };
 
     checkSession();
-  }, [navigate, t, setProfile, setValue, setAvatarUrl, setTags]);
+  }, [navigate, t, setValue]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -106,6 +105,7 @@ const Profile = () => {
 
     try {
       setSaving(true);
+      console.log("Starting profile update with data:", formData, tags);
 
       let newAvatarUrl = avatarUrl;
       if (avatarFile) {
@@ -115,30 +115,32 @@ const Profile = () => {
         
         if (!newAvatarUrl) {
           toast.error(t("Avatar upload failed", "头像上传失败"));
-          setSaving(false);
-          return;
+          // Continue anyway, we can update the other fields
         }
       }
 
-      // Upsert profile with our improved function
+      // First update the profile
+      console.log("Upserting profile with:", { username: formData.username, avatar_url: newAvatarUrl });
       const profileSuccess = await upsertUserProfile(user.id, {
         username: formData.username,
         avatar_url: newAvatarUrl,
       });
 
       if (!profileSuccess) {
-        toast.error(t("Update failed", "更新失败"), { description: t("Could not update profile", "无法更新个人资料") });
+        console.error("Profile update failed");
+        toast.error(t("Profile update failed", "个人资料更新失败"));
         setSaving(false);
         return;
       }
 
-      // Save tags with improved function
+      // Then save tags
+      console.log("Saving tags:", tags);
       const tagsSuccess = await saveUserTags(user.id, tags);
       
       if (!tagsSuccess) {
+        console.error("Tags update failed");
         toast.error(t("Tags update failed", "标签更新失败"));
-      } else {
-        toast.success(t("Profile updated successfully", "个人资料更新成功"));
+        // Continue anyway since profile was updated successfully
       }
       
       // Update local state with new data
@@ -148,6 +150,8 @@ const Profile = () => {
         avatar_url: newAvatarUrl,
         tags,
       }));
+      
+      toast.success(t("Profile updated successfully", "个人资料更新成功"));
     } catch (error: any) {
       console.error("Profile update error:", error);
       toast.error(t("Update failed", "更新失败"), { description: error.message });

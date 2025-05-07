@@ -21,17 +21,25 @@ export function useProfile() {
   // Fetch profile, including tags
   const fetchProfile = useCallback(async (userId: string, setValue: any) => {
     try {
+      console.log("Fetching profile in useProfile hook for user:", userId);
       const profileData = await fetchUserProfile(userId);
       
+      if (!profileData) {
+        console.error("No profile data returned");
+        return { data: null, error: "No profile data returned" };
+      }
+      
+      console.log("Profile loaded in useProfile hook:", profileData);
+      
       setProfile({
-        username: profileData.username || '',
+        username: profileData.username || null,
         avatar_url: profileData.avatar_url,
         date_of_birth: null,
-        tags: profileData.tags,
+        tags: profileData.tags || [],
       });
       
       setValue('username', profileData.username || '');
-      setTags(profileData.tags);
+      setTags(profileData.tags || []);
       setAvatarUrl(profileData.avatar_url);
       
       return { data: { username: profileData.username, avatar_url: profileData.avatar_url }, error: null };
