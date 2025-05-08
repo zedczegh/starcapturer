@@ -27,7 +27,7 @@ const EmojiRenderer: React.FC<EmojiRendererProps> = ({ text, inline = false }) =
             return part;
           }
           
-          // If this is an emoji tag, render the corresponding emoji
+          // If this is an emoji tag, render the corresponding emoji without the text
           const emojiId = matches[i - 1].replace('[', '').replace(']', '');
           const emoji = siqsEmojis.find(e => e.id === emojiId);
           
