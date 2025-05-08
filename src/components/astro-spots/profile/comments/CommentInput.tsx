@@ -110,7 +110,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
 
       <div className="flex gap-2 justify-end">
         {imageUploadsAvailable !== false && (
-          <label className={`cursor-pointer ${imageUploadsAvailable === false ? 'opacity-50' : ''}`}>
+          <label className="cursor-pointer">
             <div className="flex items-center gap-2 px-3 py-2 text-sm text-primary/90 hover:text-primary hover:bg-cosmic-800/30 rounded-md">
               <ImagePlus className="h-4 w-4" />
               <span>{t("Add Image", "添加图片")}</span>
