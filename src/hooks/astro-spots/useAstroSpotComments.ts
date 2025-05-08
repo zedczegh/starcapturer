@@ -13,19 +13,19 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   const [storageChecked, setStorageChecked] = useState(false);
   const { user: authUser } = useAuth();
 
-  // Initialize bucket checking when hook is first used
+  // Check bucket access when hook is first used
   useEffect(() => {
     const checkStorage = async () => {
       try {
         const available = await ensureCommentImagesBucket();
         setStorageChecked(true);
         if (!available) {
-          console.log("Comment images storage is not accessible or couldn't be created. Some features may be limited.");
+          console.log("Comment images storage is not accessible. Image uploads may not work.");
         } else {
           console.log("Comment images storage is ready for use");
         }
       } catch (err) {
-        console.error("Error checking/creating comment image storage:", err);
+        console.error("Error checking comment image storage:", err);
         setStorageChecked(true);
       }
     };
@@ -77,20 +77,32 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       let imageUrl: string | null = null;
       if (imageFile) {
-        // Make sure bucket exists and is accessible
+        // Check if bucket exists and is accessible
         const bucketReady = await ensureCommentImagesBucket();
         if (!bucketReady) {
-          console.error("Failed to ensure comment_images bucket exists");
-          toast.error(t("Failed to access storage. Please try again later.", "无法访问存储。请稍后再试。"));
+          toast.error(t("Image upload is not available at this time. Please try again later or post without an image.", 
+                       "图片上传功能暂时不可用。请稍后再试或发布不含图片的评论。"));
           setCommentSending(false);
+          // Allow posting the comment without the image
+          if (content.trim()) {
+            const successNoImage = await createComment(userId, spotId, content, null, parentId);
+            if (successNoImage) {
+              const updatedComments = await fetchComments(spotId);
+              setComments(updatedComments);
+              toast.success(parentId 
+                ? t("Reply posted (without image)!", "回复已发表（无图片）！") 
+                : t("Comment posted (without image)!", "评论已发表（无图片）！")
+              );
+              return { success: true, comments: updatedComments };
+            }
+          }
           return { success: false };
         }
         
         imageUrl = await uploadCommentImage(imageFile, t);
         if (!imageUrl) {
-          toast.error(t("Failed to upload image", "图片上传失败"));
-          setCommentSending(false);
-          return { success: false };
+          toast.error(t("Failed to upload image. Posting comment without image.", "图片上传失败。发布不含图片的评论。"));
+          // Continue without the image
         }
       }
       

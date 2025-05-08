@@ -5,34 +5,11 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Checks if the comment_images bucket exists and is accessible
- * Uses a "try-it-and-see" approach rather than attempting bucket creation
+ * We don't try to create it as that requires admin privileges
  */
 export const ensureCommentImagesBucket = async (): Promise<boolean> => {
   try {
-    // First check if the bucket exists by listing buckets
-    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-    
-    if (bucketsError) {
-      console.error("Error checking buckets:", bucketsError);
-      return false;
-    }
-    
-    const bucketExists = buckets?.some(bucket => bucket.name === 'comment_images');
-    
-    if (!bucketExists) {
-      // Create the bucket only if it doesn't exist
-      const { error } = await supabase.storage.createBucket('comment_images', {
-        public: true
-      });
-      
-      if (error) {
-        console.error("Failed to create comment_images bucket:", error);
-        return false;
-      }
-      console.log("Created comment_images bucket successfully");
-    }
-    
-    // Double-check we can access the bucket now
+    // Just check if the bucket is accessible by trying to list its contents
     const { data, error } = await supabase.storage
       .from('comment_images')
       .list('');
@@ -45,7 +22,7 @@ export const ensureCommentImagesBucket = async (): Promise<boolean> => {
     console.log("comment_images bucket is available");
     return true;
   } catch (error) {
-    console.error("Exception checking/creating comment_images bucket:", error);
+    console.error("Exception checking comment_images bucket:", error);
     return false;
   }
 };
@@ -60,7 +37,7 @@ export const uploadCommentImage = async (
   try {
     if (!imageFile) return null;
     
-    // Check if bucket is accessible and create if needed
+    // Check if bucket is accessible
     const bucketReady = await ensureCommentImagesBucket();
     if (!bucketReady) {
       console.error("Comment images bucket is not accessible");
