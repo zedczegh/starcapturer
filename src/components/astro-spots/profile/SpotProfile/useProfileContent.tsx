@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Comment } from '../types/comments';
 import useAstroSpotComments from '@/hooks/astro-spots/useAstroSpotComments';
 
 export const useProfileContent = (
@@ -39,6 +39,7 @@ export const useProfileContent = (
     const loadInitialComments = async () => {
       try {
         if (isMounted) {
+          console.log("Loading initial comments for spot:", spotId);
           await fetchComments();
         }
       } catch (error) {
@@ -51,7 +52,10 @@ export const useProfileContent = (
       
       // Set up refresh interval for comments
       const intervalId = setInterval(() => {
-        if (isMounted) fetchComments();
+        if (isMounted) {
+          console.log("Refreshing comments automatically");
+          fetchComments();
+        }
       }, 30000); // Refresh every 30 seconds
       
       return () => {
@@ -182,20 +186,20 @@ export const useProfileContent = (
   };
 
   // Handler specifically for refreshing comments
-  const handleCommentsUpdate = async () => {
+  const handleCommentsUpdate = useCallback(async () => {
     console.log("Comments update triggered");
     await fetchComments();
-  };
+  }, [fetchComments]);
 
   // Handler for submitting a new comment
-  const handleCommentSubmit = async (
+  const handleCommentSubmit = useCallback(async (
     content: string,
     imageFile: File | null,
     parentId?: string | null
   ) => {
     console.log(`Comment submission starting with image: ${!!imageFile}, parent: ${parentId || 'none'}`);
     await submitComment(content, imageFile, parentId);
-  };
+  }, [submitComment]);
 
   // Handle images update (Gallery)
   const handleImagesUpdate = async () => {

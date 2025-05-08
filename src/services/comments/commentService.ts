@@ -29,6 +29,13 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
       throw error;
     }
     
+    if (!data || data.length === 0) {
+      console.log("No comments found for spot:", spotId);
+      return [];
+    }
+    
+    console.log(`Found ${data.length} comments for spot:`, spotId);
+    
     // Transform the data to match our Comment type
     const allComments = data.map((comment: any) => ({
       id: comment.id,
@@ -51,6 +58,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     });
     
+    console.log(`Processed ${topLevelComments.length} top-level comments with ${replies.length} replies`);
     return topLevelComments;
   } catch (error) {
     console.error("Error in fetchComments:", error);
@@ -69,7 +77,7 @@ export const createComment = async (
   parentId?: string | null
 ): Promise<boolean> => {
   try {
-    console.log("Creating comment for user:", userId, "spot:", spotId);
+    console.log(`Creating comment for user: ${userId}, spot: ${spotId}, parent: ${parentId || 'none'}`);
     
     const { error: insertError } = await supabase
       .from("astro_spot_comments")
@@ -86,6 +94,7 @@ export const createComment = async (
       return false;
     }
     
+    console.log("Comment created successfully");
     return true;
   } catch (err) {
     console.error("Exception in createComment:", err);

@@ -30,20 +30,24 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
   const [showCommentsSheet, setShowCommentsSheet] = useState(false);
   const [localComments, setLocalComments] = useState<Comment[]>(comments);
 
+  // Update local comments when props change
   useEffect(() => {
+    console.log(`SpotComments received ${comments.length} comments`);
     setLocalComments(comments);
   }, [comments]);
 
   const handleCommentSubmit = async (content: string, imageFile: File | null = null) => {
     if (onSubmit) {
+      console.log("Submitting new comment");
       await onSubmit(content, imageFile);
-      // Make sure we refresh comments after submission, regardless of whether the parent component does
+      // Make sure we refresh comments after submission
       onCommentsUpdate();
     }
   };
 
   const handleReplySubmit = async (content: string, imageFile: File | null, parentId: string) => {
     if (onSubmit) {
+      console.log(`Submitting reply to comment: ${parentId}`);
       // Pass the parent ID parameter
       await onSubmit(content, imageFile, parentId);
       onCommentsUpdate();

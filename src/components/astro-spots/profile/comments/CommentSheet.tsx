@@ -35,6 +35,8 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
     }
   }, [open, comments.length]);
 
+  console.log(`CommentSheet received ${comments.length} comments`);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md md:max-w-lg overflow-y-auto bg-cosmic-900/95 border-cosmic-700">
