@@ -45,12 +45,13 @@ export const uploadCommentImage = async (
       return null;
     }
     
-    // Generate a unique filename
+    // Generate a unique filename using UUID
     const uniqueId = uuidv4();
     const fileExt = imageFile.name.split('.').pop() || '';
     const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
-    // Store filename as a path (without dot notation which causes issues)
-    const fileName = `${uniqueId}-${sanitizedExt}`; 
+    
+    // Use UUID as filename and append extension (avoid using dash in the actual filename)
+    const fileName = `${uniqueId}.${sanitizedExt}`; 
     
     console.log("Uploading comment image with filename:", fileName);
     

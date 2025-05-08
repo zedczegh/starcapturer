@@ -82,30 +82,31 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         if (!bucketReady) {
           toast.error(t("Image upload is not available at this time. Please try again later or post without an image.", 
                        "图片上传功能暂时不可用。请稍后再试或发布不含图片的评论。"));
-          setCommentSending(false);
-          // Allow posting the comment without the image
-          if (content.trim()) {
-            const successNoImage = await createComment(userId, spotId, content, null, parentId);
-            if (successNoImage) {
-              const updatedComments = await fetchComments(spotId);
-              setComments(updatedComments);
-              toast.success(parentId 
-                ? t("Reply posted (without image)!", "回复已发表（无图片）！") 
-                : t("Comment posted (without image)!", "评论已发表（无图片）！")
-              );
-              return { success: true, comments: updatedComments };
+          
+          // Continue without the image if we have text content
+          if (!content.trim()) {
+            setCommentSending(false);
+            return { success: false };
+          }
+          // Proceed with just the text content
+        } else {
+          // Try to upload the image
+          imageUrl = await uploadCommentImage(imageFile, t);
+          if (!imageUrl) {
+            // Log the error but continue with the comment if we have text
+            console.warn("Failed to upload image, proceeding with text-only comment");
+            if (content.trim()) {
+              toast.warning(t("Failed to upload image. Posting comment without image.", "图片上传失败。发布不含图片的评论。"));
+            } else {
+              setCommentSending(false);
+              toast.error(t("Failed to upload image and no text provided.", "图片上传失败，且未提供文本。"));
+              return { success: false };
             }
           }
-          return { success: false };
-        }
-        
-        imageUrl = await uploadCommentImage(imageFile, t);
-        if (!imageUrl) {
-          toast.error(t("Failed to upload image. Posting comment without image.", "图片上传失败。发布不含图片的评论。"));
-          // Continue without the image
         }
       }
       
+      // Create the comment
       const success = await createComment(userId, spotId, content, imageUrl, parentId);
       
       if (!success) {
