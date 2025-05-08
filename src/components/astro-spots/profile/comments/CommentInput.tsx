@@ -120,7 +120,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
               className="hidden"
               accept="image/*"
               onChange={handleImageSelect}
-              disabled={sending || imageUploadsAvailable === false}
+              disabled={sending}
             />
           </label>
         )}

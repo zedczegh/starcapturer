@@ -4,23 +4,25 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Checks if a bucket exists and creates it if it doesn't
+ * Checks if a bucket exists and is accessible for the current user
  */
 export const ensureCommentImagesBucket = async (): Promise<boolean> => {
   try {
-    console.log("Checking if comment_images bucket exists...");
+    console.log("Checking if comment_images bucket is accessible...");
     
-    // First, check if the bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(bucket => bucket.name === 'comment_images');
+    // Try to list files in the bucket to verify access permissions
+    const { data, error } = await supabase.storage
+      .from('comment_images')
+      .list('', { limit: 1 });
     
-    if (!bucketExists) {
-      console.log("comment_images bucket doesn't exist. This requires admin privileges to create.");
+    if (error && error.message !== 'The resource was not found') {
+      console.error("Error checking comment_images bucket:", error);
       return false;
-    } else {
-      console.log("comment_images bucket already exists");
-      return true;
     }
+    
+    // If we get here, the bucket is accessible
+    console.log("comment_images bucket is accessible");
+    return true;
   } catch (error) {
     console.error("Exception in ensureCommentImagesBucket:", error);
     return false;
@@ -37,7 +39,7 @@ export const uploadCommentImage = async (
   try {
     if (!imageFile) return null;
     
-    // Check if bucket exists
+    // Check if bucket is accessible
     const bucketReady = await ensureCommentImagesBucket();
     if (!bucketReady) {
       console.error("Failed to access comment_images bucket");
@@ -45,11 +47,12 @@ export const uploadCommentImage = async (
       return null;
     }
     
-    // Generate a unique filename
+    // Generate a unique filename with the current timestamp
     const fileExt = imageFile.name.split('.').pop() || '';
     const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const timestamp = new Date().getTime();
     const uniqueId = uuidv4();
-    const fileName = `${uniqueId}.${sanitizedExt}`;
+    const fileName = `${timestamp}-${uniqueId}.${sanitizedExt}`;
     
     console.log(`Uploading image: ${fileName}, size: ${imageFile.size} bytes, type: ${imageFile.type}`);
     
@@ -84,6 +87,7 @@ export const uploadCommentImage = async (
     return publicUrlData.publicUrl;
   } catch (err) {
     console.error("Exception during comment image upload:", err);
+    toast.error(t("Failed to upload image", "图片上传失败"));
     return null;
   }
 };

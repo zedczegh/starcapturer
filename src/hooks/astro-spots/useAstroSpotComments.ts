@@ -18,17 +18,18 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     const checkStorage = async () => {
       try {
         const available = await ensureCommentImagesBucket();
+        console.log(`Comment images bucket available: ${available}`);
         setBucketAvailable(available);
-        if (!available) {
-          console.log("Comment images storage is not accessible - this will affect image uploads");
-        }
       } catch (err) {
         console.error("Error checking comment image storage:", err);
         setBucketAvailable(false);
       }
     };
-    checkStorage();
-  }, []);
+    
+    if (authUser) {
+      checkStorage();
+    }
+  }, [authUser]);
 
   // Load comments function with better error handling
   const loadComments = useCallback(async () => {
@@ -79,10 +80,13 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
           if (!imageUrl) {
             // Continue with text-only comment if image upload fails
             toast.warning(t("Image couldn't be uploaded, posting text only", "图片无法上传，仅发布文字"));
+          } else {
+            console.log("Image uploaded successfully:", imageUrl);
           }
         }
       }
       
+      console.log(`Creating comment with content: "${content.substring(0, 20)}..." and imageUrl: ${imageUrl ? "yes" : "no"}`);
       const success = await createComment(userId, spotId, content, imageUrl, parentId);
       
       if (!success) {
