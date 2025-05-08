@@ -1,4 +1,3 @@
-
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -15,6 +14,7 @@ import { findClimateRegion, getClimateAdjustmentFactor } from "./climateRegions"
 import { findClosestEnhancedLocation } from "./enhancedLocationData";
 import { getTerrainCorrectedBortleScale } from "@/utils/terrainCorrection";
 import { extractSingleHourCloudCover } from "@/utils/weather/hourlyCloudCoverExtractor";
+import { getHistoricalPattern } from "@/utils/historicalPatterns";
 
 // Performance optimization: Reduce duplicate calculations with memoization
 const memoizedResults = new Map<string, {result: SiqsResult, timestamp: number}>();
@@ -45,20 +45,47 @@ function improveCalculatedLocationSIQS(initialScore: number, location: any): num
   return initialScore;
 }
 
-function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { average: number; timeRange: string; sourceType?: string }) {
+/**
+ * Validate and adjust nighttime cloud data using historical patterns
+ */
+function validateNighttimeCloudData(
+  cloudCover: number, 
+  nighttimeData?: { average: number; timeRange: string; sourceType?: string },
+  latitude?: number,
+  longitude?: number
+): number {
   if (!nighttimeData) return cloudCover;
   
+  let adjustedCloudCover = cloudCover;
+  
+  // If forecast data and current data differ significantly, use a weighted average
   const difference = Math.abs(cloudCover - nighttimeData.average);
   if (difference > 20) {
     console.log(`Using nighttime cloud cover ${nighttimeData.average}% instead of current ${cloudCover}%`);
-    return nighttimeData.average;
+    adjustedCloudCover = nighttimeData.average;
+  } else {
+    // Weighted average giving more weight to nighttime data
+    adjustedCloudCover = (nighttimeData.average * 0.7) + (cloudCover * 0.3);
   }
   
-  return (nighttimeData.average * 0.7) + (cloudCover * 0.3);
+  // Apply historical pattern adjustment if location data is available
+  if (latitude && longitude) {
+    const historicalPattern = getHistoricalPattern(latitude, longitude);
+    
+    if (historicalPattern && historicalPattern.cloudCoverAdjustment) {
+      const month = new Date().getMonth();
+      const adjustment = historicalPattern.cloudCoverAdjustment[month] || 1.0;
+      
+      adjustedCloudCover *= adjustment;
+      console.log(`Applied historical cloud cover adjustment: ${adjustment.toFixed(2)}`);
+    }
+  }
+  
+  return Math.min(100, Math.max(0, adjustedCloudCover));
 }
 
 /**
- * Optimized real-time SIQS calculation with single-hour sampling option
+ * Optimized real-time SIQS calculation with enhanced historical data integration
  */
 export async function calculateRealTimeSiqs(
   latitude: number, 
@@ -68,6 +95,7 @@ export async function calculateRealTimeSiqs(
     useSingleHourSampling?: boolean;
     targetHour?: number;
     cacheDurationMins?: number;
+    useHistoricalData?: boolean;
   } = {}
 ): Promise<SiqsResult> {
   if (!isFinite(latitude) || !isFinite(longitude)) {
@@ -79,7 +107,8 @@ export async function calculateRealTimeSiqs(
   const {
     useSingleHourSampling = true,
     targetHour = 1, // Default to 1 AM for best astronomical viewing
-    cacheDurationMins = 15
+    cacheDurationMins = 15,
+    useHistoricalData = true // Enable historical data by default
   } = options;
   
   // Generate a cache key
@@ -129,6 +158,10 @@ export async function calculateRealTimeSiqs(
       return { siqs: 0, isViable: false };
     }
     
+    // Get historical pattern if enabled
+    const historicalPattern = useHistoricalData ? 
+      getHistoricalPattern(latitude, longitude) : null;
+    
     let finalBortleScale = bortleScale;
     let terrainCorrectedScale = null;
     
@@ -144,7 +177,10 @@ export async function calculateRealTimeSiqs(
     // Prepare weather data with clear sky info
     const weatherDataWithClearSky: WeatherDataWithClearSky = {
       ...weatherData,
-      clearSkyRate: clearSkyData?.annualRate || enhancedLocation?.clearSkyRate,
+      clearSkyRate: clearSkyData?.annualRate || 
+                    enhancedLocation?.clearSkyRate || 
+                    (historicalPattern?.annualClearNightCount ? 
+                      (historicalPattern.annualClearNightCount / 365) * 100 : undefined),
       latitude,
       longitude,
       _forecast: forecastData
@@ -178,17 +214,23 @@ export async function calculateRealTimeSiqs(
       };
     }
     
-    // Validate and finalize cloud cover
+    // Validate and finalize cloud cover with historical data
     let finalCloudCover = weatherDataWithClearSky.cloudCover;
     if (weatherDataWithClearSky.nighttimeCloudData) {
       finalCloudCover = validateNighttimeCloudData(
         finalCloudCover,
-        weatherDataWithClearSky.nighttimeCloudData
+        weatherDataWithClearSky.nighttimeCloudData,
+        useHistoricalData ? latitude : undefined,
+        useHistoricalData ? longitude : undefined
       );
     }
     
     const moonPhase = calculateMoonPhase();
-    const seeingConditions = enhancedLocation?.averageVisibility === 'excellent' ? 2 : 3;
+    
+    // Use seeing conditions from historical data if available
+    const seeingConditions = historicalPattern?.regionType === 'plateau' || 
+                             historicalPattern?.regionType === 'mountains' ? 2 :
+                             enhancedLocation?.averageVisibility === 'excellent' ? 2 : 3;
     
     // Calculate SIQS using the weather data with appropriate cloud cover
     const siqsResult = await calculateSIQSWithWeatherData(
@@ -210,10 +252,35 @@ export async function calculateRealTimeSiqs(
       finalBortleScale
     );
     
+    // Apply climate region adjustment
     if (climateRegion) {
       const month = new Date().getMonth();
       const climateAdjustment = getClimateAdjustmentFactor(latitude, longitude, month);
       adjustedScore *= climateAdjustment;
+    }
+    
+    // Apply historical pattern adjustments if available
+    if (useHistoricalData && historicalPattern) {
+      const month = new Date().getMonth();
+      
+      // Adjust for historical clear days ratio if available
+      if (historicalPattern.clearDaysRatio && historicalPattern.clearDaysRatio[month]) {
+        const clearDaysAdjustment = historicalPattern.clearDaysRatio[month];
+        adjustedScore *= clearDaysAdjustment;
+        console.log(`Applied historical clear days adjustment: ${clearDaysAdjustment.toFixed(2)}`);
+      }
+      
+      // If it's an exceptional location, boost score slightly
+      if (historicalPattern.isExceptionalLocation) {
+        adjustedScore *= 1.1;
+        console.log("Applied exceptional location boost");
+      }
+      
+      // If using actual observatory data, consider it high quality
+      if (historicalPattern.observatoryData) {
+        adjustedScore *= 1.05;
+        console.log("Applied observatory data quality boost");
+      }
     }
     
     // Ensure score is always normalized to 0-10 scale
@@ -242,6 +309,7 @@ export async function calculateRealTimeSiqs(
           lightPollution: !!pollutionData,
           terrainCorrected: !!terrainCorrectedScale,
           climate: !!climateRegion,
+          historicalData: useHistoricalData && !!historicalPattern,
           singleHourSampling: useSingleHourSampling && forecastData?.hourly ? true : false
         }
       }
