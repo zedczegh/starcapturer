@@ -2,7 +2,8 @@
 /**
  * Moon phase calculation utilities
  */
-import { MoonPhaseInfo } from './siqsTypes';
+import { MoonPhaseInfo, MoonlessNightInfo } from './siqsTypes';
+import SunCalc from 'suncalc';
 
 /**
  * Calculate the current moon phase
@@ -70,3 +71,86 @@ export function getMoonPhaseInfo(): MoonPhaseInfo {
     isWaning
   };
 }
+
+/**
+ * Get moon phase information for astronomy
+ * @returns Moon phase info with phase, illumination, name, and astronomy suitability
+ */
+export function getMoonInfo(): MoonPhaseInfo & { isGoodForAstronomy: boolean } {
+  const info = getMoonPhaseInfo();
+  const isGoodForAstronomy = info.isNew || 
+    info.name === 'Waxing Crescent' || 
+    info.name === 'Waning Crescent';
+  
+  return {
+    ...info,
+    isGoodForAstronomy
+  };
+}
+
+/**
+ * Get moon phase name from phase value
+ * @param phase Moon phase value (0-1)
+ * @returns Moon phase name
+ */
+export function getMoonPhaseNameByPhase(phase: number): string {
+  if (phase < 0.03 || phase > 0.97) return 'New Moon';
+  if (phase < 0.22) return 'Waxing Crescent';
+  if (phase < 0.28) return 'First Quarter';
+  if (phase < 0.47) return 'Waxing Gibbous';
+  if (phase < 0.53) return 'Full Moon';
+  if (phase < 0.72) return 'Waning Gibbous';
+  if (phase < 0.78) return 'Last Quarter';
+  return 'Waning Crescent';
+}
+
+/**
+ * Calculate moonrise and moonset times for a specific location
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @param date Optional date (defaults to current date)
+ * @returns Object with moonrise and moonset times
+ */
+export function calculateMoonriseMoonsetTimes(
+  latitude: number, 
+  longitude: number, 
+  date: Date = new Date()
+): { moonrise: string; moonset: string } {
+  try {
+    // Use SunCalc to get moonrise and moonset times
+    const moonTimes = SunCalc.getMoonTimes(date, latitude, longitude);
+    
+    // Format times
+    const formatTime = (time: Date | undefined) => {
+      if (!time) return 'Unknown';
+      return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+    
+    return {
+      moonrise: formatTime(moonTimes.rise),
+      moonset: formatTime(moonTimes.set)
+    };
+  } catch (error) {
+    console.error('Error calculating moon times:', error);
+    return {
+      moonrise: 'Unknown',
+      moonset: 'Unknown'
+    };
+  }
+}
+
+/**
+ * Get the date of the next new moon
+ * @param fromDate Optional starting date (defaults to current date)
+ * @returns Date of the next new moon
+ */
+export function getNextNewMoonDate(fromDate: Date = new Date()): Date {
+  const currentPhase = calculateMoonPhase();
+  const daysUntilNextNewMoon = (1 - currentPhase) * 29.53059;
+  
+  const nextNewMoon = new Date(fromDate);
+  nextNewMoon.setDate(fromDate.getDate() + Math.ceil(daysUntilNextNewMoon));
+  
+  return nextNewMoon;
+}
+

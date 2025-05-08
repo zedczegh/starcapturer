@@ -95,9 +95,15 @@ export interface MoonPhaseInfo {
 }
 
 export interface MoonlessNightInfo {
-  startDate: Date;
-  endDate: Date;
   duration: number;
-  quality: number;
-  moonPhase: number;
+  startTime: string;
+  endTime: string;
+  moonrise: string;
+  moonset: string;
+  nextNewMoon: string;
+  daysUntilNewMoon: number;
+  astronomicalNightStart?: string;
+  astronomicalNightEnd?: string;
+  astronomicalNightDuration?: number;
 }
+
