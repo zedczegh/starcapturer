@@ -23,6 +23,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
   const [commentText, setCommentText] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [showFilePicker, setShowFilePicker] = useState(false);
 
   // Clear image if uploads become unavailable
   useEffect(() => {
@@ -51,6 +52,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
     setCommentText('');
     setImageFile(null);
     setImagePreview(null);
+    setShowFilePicker(false);
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,6 +65,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
       
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
+      setShowFilePicker(false);
     }
   };
 
@@ -109,20 +112,29 @@ const CommentInput: React.FC<CommentInputProps> = ({
       )}
 
       <div className="flex gap-2 justify-end">
-        {imageUploadsAvailable !== false && (
-          <label className="cursor-pointer">
-            <div className="flex items-center gap-2 px-3 py-2 text-sm text-primary/90 hover:text-primary hover:bg-cosmic-800/30 rounded-md">
-              <ImagePlus className="h-4 w-4" />
-              <span>{t("Add Image", "添加图片")}</span>
-            </div>
-            <input 
-              type="file"
-              className="hidden"
-              accept="image/*"
-              onChange={handleImageSelect}
-              disabled={sending}
-            />
-          </label>
+        {imageUploadsAvailable !== false && !imageFile && (
+          <>
+            {showFilePicker ? (
+              <input 
+                type="file"
+                className="text-sm text-primary/90 file:mr-2 file:py-1 file:px-2 file:text-xs file:bg-cosmic-800/50 file:border-0 file:rounded file:text-primary"
+                accept="image/*"
+                onChange={handleImageSelect}
+                disabled={sending}
+              />
+            ) : (
+              <Button
+                type="button"
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowFilePicker(true)}
+                className="text-primary/90 hover:text-primary hover:bg-cosmic-800/30"
+              >
+                <ImagePlus className="h-4 w-4 mr-1" />
+                <span>{t("Add Image", "添加图片")}</span>
+              </Button>
+            )}
+          </>
         )}
         <Button 
           type="submit" 
