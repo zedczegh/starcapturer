@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -29,6 +30,12 @@ export default defineConfig(({ mode }) => ({
             return 'react';
           }
           
+          // Map dependencies in separate chunk to prevent blank screens
+          if (id.includes('node_modules/leaflet') ||
+              id.includes('node_modules/react-leaflet')) {
+            return 'map-vendor';
+          }
+          
           // UI components in separate chunk
           if (id.includes('/components/ui/')) {
             return 'ui';
@@ -58,9 +65,13 @@ export default defineConfig(({ mode }) => ({
     minify: 'esbuild',
     sourcemap: true,
     target: 'esnext',
+    // Disable dynamic imports that could cause blank screens
+    dynamicImportVarsOptions: {
+      warnOnError: true,
+    }
   },
   optimizeDeps: {
+    include: ['suncalc', 'leaflet', 'react-leaflet'],
     exclude: ['lovable-tagger'],
-    include: ['suncalc'],
   }
 }));

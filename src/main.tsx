@@ -25,6 +25,23 @@ const queryClient = new QueryClient({
   },
 });
 
+// Ensure Leaflet CSS is loaded
+const ensureLeafletCSS = () => {
+  if (typeof document !== 'undefined') {
+    // Check if Leaflet CSS is already loaded
+    const existingLink = document.querySelector('link[href*="leaflet.css"]');
+    if (!existingLink) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.7.1/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+  }
+};
+
+// Ensure Leaflet CSS is loaded
+ensureLeafletCSS();
+
 // Create a wrapper component that uses hooks
 const AppWithProviders = () => {
   const { theme } = useTheme();

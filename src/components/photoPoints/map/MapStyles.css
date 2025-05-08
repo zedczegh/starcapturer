@@ -4,6 +4,10 @@
   width: 100%;
   height: 100%;
   z-index: 1;
+  will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 /* Mobile optimized map */
@@ -16,6 +20,7 @@
 .mobile-optimized .leaflet-fade-anim .leaflet-tile,
 .mobile-optimized .leaflet-zoom-anim .leaflet-zoom-animated {
   transition: none !important;
+  animation: none !important;
 }
 
 /* Speed up loading tile effect on mobile */
@@ -28,6 +33,8 @@
   transform-origin: bottom center !important;
   will-change: transform;
   backface-visibility: hidden;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
 }
 
 /* Optimize controls for mobile touch */
@@ -42,5 +49,31 @@
 @supports (-webkit-touch-callout: none) {
   .map-container {
     transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+  
+  .leaflet-container {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}
+
+/* Improve performance for tiled map layers */
+.leaflet-tile-container {
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* Add iOS-specific optimizations */
+@media (pointer: coarse) {
+  .leaflet-marker-icon,
+  .leaflet-marker-shadow {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+  
+  .leaflet-container {
+    -webkit-overflow-scrolling: touch;
   }
 }
