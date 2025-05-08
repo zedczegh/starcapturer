@@ -1,4 +1,3 @@
-
 /**
  * Get regional pattern information for a specific location
  */
@@ -416,6 +415,5 @@ export function calculateClearNightQuality(
 // Export the regional pattern function as well
 export { 
   getRegionalPattern,
-  isHighAltitudeRegion,
-  calculateClearNightQuality
+  isHighAltitudeRegion
 };

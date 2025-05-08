@@ -147,35 +147,53 @@ export async function calculateRealTimeSiqs(
   
   try {
     // Use Promise.all for parallel API calls
-    const [enhancedLocation, climateRegion, forecastData] = await Promise.all([
-      findClosestEnhancedLocation(latitude, longitude).catch(err => {
+    const enhancedLocationPromise = findClosestEnhancedLocation(latitude, longitude)
+      .catch(err => {
         logError("Error finding enhanced location", err);
         return null;
-      }),
-      findClimateRegion(latitude, longitude).catch(err => {
+      });
+      
+    const climateRegionPromise = findClimateRegion(latitude, longitude)
+      .catch(err => {
         logError("Error finding climate region", err);
         return null;
-      }),
-      fetchForecastData({ latitude, longitude, days: 2 }).catch(err => {
+      });
+      
+    const forecastDataPromise = fetchForecastData({ latitude, longitude, days: 2 })
+      .catch(err => {
         logError("Error fetching forecast data", err);
         return null;
-      })
+      });
+      
+    const [enhancedLocation, climateRegion, forecastData] = await Promise.all([
+      enhancedLocationPromise,
+      climateRegionPromise,
+      forecastDataPromise
     ]);
     
     // Only fetch these if needed and after initial forecast check
-    const [weatherData, clearSkyData, pollutionData] = await Promise.all([
-      fetchWeatherData({ latitude, longitude }).catch(err => {
+    const weatherDataPromise = fetchWeatherData({ latitude, longitude })
+      .catch(err => {
         logError("Error fetching weather data", err);
         return null;
-      }),
-      fetchClearSkyRate(latitude, longitude).catch(err => {
+      });
+      
+    const clearSkyDataPromise = fetchClearSkyRate(latitude, longitude)
+      .catch(err => {
         logError("Error fetching clear sky rate", err);
         return null;
-      }),
-      fetchLightPollutionData(latitude, longitude).catch(err => {
+      });
+      
+    const pollutionDataPromise = fetchLightPollutionData(latitude, longitude)
+      .catch(err => {
         logError("Error fetching light pollution data", err);
         return null;
-      })
+      });
+      
+    const [weatherData, clearSkyData, pollutionData] = await Promise.all([
+      weatherDataPromise,
+      clearSkyDataPromise,
+      pollutionDataPromise
     ]);
     
     if (!weatherData) {
@@ -219,7 +237,7 @@ export async function calculateRealTimeSiqs(
         weatherDataWithClearSky.nighttimeCloudData = {
           average: singleHourCloudCover,
           timeRange: `${targetHour}:00-${targetHour+1}:00`,
-          sourceType: 'optimized'
+          sourceType: "optimized" as "forecast" | "calculated" | "historical"
         };
       }
     }

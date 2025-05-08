@@ -25,6 +25,7 @@ export interface SiqsFactor {
   name: string;
   score: number;
   description?: string;
+  nighttimeData?: any;
 }
 
 export interface SiqsMetadata {
@@ -43,6 +44,10 @@ export interface SiqsMetadata {
     version: string;
     adjustments?: string[];
   };
+  reliability?: {
+    score: number;
+    issues?: string[];
+  };
 }
 
 export interface SiqsResult {
@@ -59,4 +64,40 @@ export interface SiqsResult {
 export interface SiqsCache {
   timestamp: number;
   result: SiqsResult;
+}
+
+export interface SiqsDisplayOptions {
+  skipCache?: boolean;
+  useSingleHourSampling?: boolean;
+  targetHour?: number;
+  includeMetadata?: boolean;
+  anomalyDetection?: boolean;
+}
+
+export interface SiqsCalculationOptions {
+  useSingleHourSampling?: boolean;
+  targetHour?: number;
+  cacheDurationMins?: number;
+  useHistoricalData?: boolean;
+  skipCache?: boolean;
+  includeMetadata?: boolean;
+  anomalyDetection?: boolean;
+}
+
+export interface MoonPhaseInfo {
+  phase: number;
+  illumination: number;
+  name: string;
+  isNew?: boolean;
+  isFull?: boolean;
+  isWaxing?: boolean;
+  isWaning?: boolean;
+}
+
+export interface MoonlessNightInfo {
+  startDate: Date;
+  endDate: Date;
+  duration: number;
+  quality: number;
+  moonPhase: number;
 }

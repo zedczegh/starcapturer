@@ -1,55 +1,76 @@
 
+/**
+ * Batch processing for SIQS calculations
+ */
+import { SiqsResult } from './siqsTypes';
 import { calculateRealTimeSiqs } from './siqsCalculator';
-import { SharedAstroSpot } from '@/types/weather';
+import { logError } from '@/utils/debug/errorLogger';
 
 /**
- * Process a batch of locations for SIQS calculation efficiently
- * @param locations Array of location data to process
- * @returns Promise resolving to an array of locations with SIQS results
+ * Calculate SIQS for multiple locations in batch
+ * @param locations Array of locations with coordinates and optional Bortle scale
+ * @param concurrency Maximum number of parallel calculations
+ * @returns Array of SIQS results
  */
 export async function batchCalculateSiqs(
-  locations: SharedAstroSpot[]
-): Promise<SharedAstroSpot[]> {
-  if (!locations || locations.length === 0) {
+  locations: Array<{ 
+    latitude: number; 
+    longitude: number; 
+    bortleScale?: number;
+    id?: string;
+    name?: string; 
+  }>,
+  concurrency: number = 3
+): Promise<any[]> {
+  if (!locations || !locations.length) {
     return [];
   }
   
-  console.log(`Batch calculating SIQS for ${locations.length} locations`);
+  console.log(`Batch calculating SIQS for ${locations.length} locations with concurrency ${concurrency}`);
   
-  try {
-    // Process locations in parallel for efficiency but with a concurrency limit
-    const results = await Promise.all(
-      locations.map(async location => {
-        const siqsResult = await calculateRealTimeSiqs(
-          location.latitude, 
-          location.longitude, 
-          location.bortleScale || 5
-        );
-        
-        // Merge SIQS results with the original location data
-        return {
-          ...location,
-          siqs: siqsResult.siqs,
+  const results: any[] = [];
+  
+  // Process in batches to prevent overwhelming APIs
+  for (let i = 0; i < locations.length; i += concurrency) {
+    const batch = locations.slice(i, i + concurrency);
+    
+    const batchPromises = batch.map(loc => 
+      calculateRealTimeSiqs(
+        loc.latitude, 
+        loc.longitude, 
+        loc.bortleScale || 4
+      ).then(siqsResult => ({
+        ...loc,
+        siqs: siqsResult.siqs,
+        isViable: siqsResult.isViable,
+        siqsResult: {
+          score: siqsResult.siqs,
           isViable: siqsResult.isViable,
+          factors: siqsResult.factors || []
+        }
+      })).catch(err => {
+        logError(`Error calculating SIQS for location ${loc.name || `${loc.latitude},${loc.longitude}`}:`, err);
+        return {
+          ...loc,
+          siqs: 0,
+          isViable: false,
           siqsResult: {
-            score: siqsResult.siqs,
-            isViable: siqsResult.isViable,
-            factors: siqsResult.factors || []
+            score: 0,
+            isViable: false,
+            factors: [{ name: 'Error', score: 0, description: 'Failed to calculate' }]
           }
         };
       })
     );
     
-    return results;
-  } catch (error) {
-    console.error("Error in batch SIQS calculation:", error);
-    return locations.map(location => ({
-      ...location,
-      siqs: 0, 
-      isViable: false
-    }));
+    const batchResults = await Promise.all(batchPromises);
+    results.push(...batchResults);
+    
+    // Pause between batches if we have more to process
+    if (i + concurrency < locations.length) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }
+  
+  return results;
 }
-
-// Export as alias for backward compatibility
-export const batchCalculateRealTimeSiqs = batchCalculateSiqs;
