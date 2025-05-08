@@ -8,9 +8,10 @@ import { useLanguage } from "@/contexts/LanguageContext";
 interface CommentInputProps {
   onSubmit: (content: string, image?: File | null) => void;
   sending: boolean;
+  isReply?: boolean;
 }
 
-const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending }) => {
+const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply = false }) => {
   const { t } = useLanguage();
   const [commentText, setCommentText] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -52,8 +53,8 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending }) => {
       <Textarea
         value={commentText}
         onChange={(e) => setCommentText(e.target.value)}
-        placeholder={t("Add a comment...", "添加评论...")}
-        className="min-h-24 bg-cosmic-800/40 border-cosmic-700/40 focus:border-primary"
+        placeholder={isReply ? t("Write a reply...", "撰写回复...") : t("Add a comment...", "添加评论...")}
+        className={`${isReply ? 'min-h-16' : 'min-h-24'} bg-cosmic-800/40 border-cosmic-700/40 focus:border-primary`}
         disabled={sending}
       />
 
@@ -61,7 +62,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending }) => {
         <div className="relative inline-block">
           <img 
             src={imagePreview} 
-            alt="Comment attachment preview" 
+            alt={isReply ? "Reply attachment preview" : "Comment attachment preview"}
             className="h-24 w-auto rounded-md border border-cosmic-700/50"
           />
           <button
@@ -99,7 +100,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending }) => {
           ) : (
             <Send className="h-4 w-4" />
           )}
-          {t("Submit", "提交")}
+          {isReply ? t("Reply", "回复") : t("Submit", "提交")}
         </Button>
       </div>
     </form>
