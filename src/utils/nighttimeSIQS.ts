@@ -145,7 +145,7 @@ export const calculateTonightCloudCover = (
   
   // Apply historical pattern adjustment if available
   let avgCloudCover = cloudValues.reduce((sum, val) => sum + val, 0) / cloudValues.length;
-  const historicalPattern = getHistoricalPatternData(latitude, longitude);
+  const historicalPattern = getHistoricalPattern(latitude, longitude);
   
   if (historicalPattern && historicalPattern.cloudCoverAdjustment) {
     const month = new Date().getMonth();
@@ -203,7 +203,7 @@ export const calculateNighttimeSIQS = (
   let adjustedHumidity = avgHumidity;
   
   if (locationData.latitude && locationData.longitude) {
-    const historicalPattern = getHistoricalPatternData(locationData.latitude, locationData.longitude);
+    const historicalPattern = getHistoricalPattern(locationData.latitude, locationData.longitude);
     
     if (historicalPattern) {
       const month = new Date().getMonth();

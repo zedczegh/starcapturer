@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Badge } from '@/components/ui/badge';
 import { CloudSun, Calendar, ThermometerSun, Info, Star } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getRateColor, getMinimumClearNights, getBestMonths } from '@/utils/weather/clearSkyUtils';
+import { getRateColor, getMinimumClearNights, getBestMonths } from '@/utils/weather/clearSkyRateUtils';
 import ConditionItem from '@/components/weather/ConditionItem';
 
 interface ClearSkyRateDisplayProps {
@@ -27,12 +27,24 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
   
   // Calculate estimated clear nights per year
   const clearNightsPerYear = useMemo(() => {
-    return getMinimumClearNights(clearSkyRate, latitude, longitude);
+    try {
+      return getMinimumClearNights(clearSkyRate, latitude, longitude);
+    } catch (error) {
+      console.error("Error calculating clear nights:", error);
+      // Fallback to a simpler calculation if the enhanced method fails
+      return Math.round((clearSkyRate / 100) * 365 * 0.6);
+    }
   }, [clearSkyRate, latitude, longitude]);
   
   // Get best months for observation
   const bestMonthsText = useMemo(() => {
-    return getBestMonths(monthlyRates, clearestMonths, language, latitude);
+    try {
+      return getBestMonths(monthlyRates, clearestMonths, language, latitude);
+    } catch (error) {
+      console.error("Error getting best months:", error);
+      // Return a simple fallback
+      return language === 'en' ? 'Seasonal data not available' : '季节数据不可用';
+    }
   }, [monthlyRates, clearestMonths, language, latitude]);
   
   // New function to get rating based on clear night count

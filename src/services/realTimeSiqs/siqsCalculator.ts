@@ -1,4 +1,7 @@
 
+/**
+ * Optimized real-time SIQS calculation with enhanced historical data integration
+ */
 import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
@@ -310,7 +313,7 @@ export async function calculateRealTimeSiqs(
           lightPollution: !!pollutionData,
           terrainCorrected: !!terrainCorrectedScale,
           climate: !!climateRegion,
-          historicalPatterns: useHistoricalData && !!historicalPattern,
+          historicalPattern: useHistoricalData && !!historicalPattern,
           singleHourSampling: useSingleHourSampling && forecastData?.hourly ? true : false
         }
       }
