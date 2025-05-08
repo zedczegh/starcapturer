@@ -25,7 +25,8 @@ export default defineConfig(({ mode }) => ({
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
           ui: ['@/components/ui'],
-          vendor: ['suncalc'],
+          vendor: ['suncalc', 'date-fns'],
+          leaflet: ['leaflet'],
         }
       }
     },
@@ -34,6 +35,6 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     exclude: ['lovable-tagger'],
-    include: ['suncalc'],
+    include: ['suncalc', 'date-fns'],
   }
 }));

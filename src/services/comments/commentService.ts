@@ -59,7 +59,12 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
       created_at: comment.created_at,
       image_url: comment.image_url,
       parent_id: comment.parent_id,
-      profiles: profilesMap[comment.user_id] || { username: null, avatar_url: null },
+      profiles: profilesMap[comment.user_id] 
+        ? { 
+            username: profilesMap[comment.user_id].username || null, 
+            avatar_url: profilesMap[comment.user_id].avatar_url || null 
+          }
+        : null,
       replies: [] // Initialize empty replies array for each comment
     }));
     
