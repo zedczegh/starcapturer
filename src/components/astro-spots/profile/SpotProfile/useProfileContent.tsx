@@ -1,9 +1,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import useSpotData from '@/hooks/astro-spots/useSpotData';
+import useCreatorProfile from '@/hooks/astro-spots/useCreatorProfile';
+import useSpotImages from '@/hooks/astro-spots/useSpotImages';
+import useProfileActions from '@/hooks/astro-spots/useProfileActions';
 import useAstroSpotComments from '@/hooks/astro-spots/useAstroSpotComments';
 
 export const useProfileContent = (
@@ -12,12 +13,17 @@ export const useProfileContent = (
   comingFromCommunity: boolean,
   t: (key: string, fallback: string) => string
 ) => {
-  const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
   const [showInstantLoader, setShowInstantLoader] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Use our smaller hooks
+  const { spot, isLoading, refetch } = useSpotData(spotId, refreshTrigger);
+  const { creatorProfile, loadingCreator } = useCreatorProfile(spot?.user_id);
+  const { spotImages, loadingImages, refetchImages } = useSpotImages(spotId, refreshTrigger);
+  const { handleViewDetails, handleMessageCreator } = useProfileActions(spot);
   
   // Use our comment hook with improved state management
   const {
@@ -31,6 +37,15 @@ export const useProfileContent = (
   const triggerRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
   };
+
+  // Check if current user is the creator
+  useEffect(() => {
+    if (authUser && spot && spot.user_id === authUser.id) {
+      setIsCreator(true);
+    } else {
+      setIsCreator(false);
+    }
+  }, [authUser, spot]);
 
   // Load initial comments and set up refresh interval
   useEffect(() => {
@@ -65,120 +80,11 @@ export const useProfileContent = (
     }
   }, [spotId, fetchComments]);
 
-  // Main spot data query
-  const { data: spot, isLoading, error, refetch } = useQuery({
-    queryKey: ['astroSpot', spotId, refreshTrigger],
-    queryFn: async () => {
-      if (!spotId) throw new Error("No spot ID provided");
-      
-      const { data: spotData, error: spotError } = await supabase
-        .from('user_astro_spots')
-        .select('*')
-        .eq('id', spotId)
-        .single();
-        
-      if (spotError) throw spotError;
-      
-      if (authUser && spotData.user_id === authUser.id) setIsCreator(true);
-      else setIsCreator(false);
-
-      const { data: typeData } = await supabase
-        .from('astro_spot_types').select('*').eq('spot_id', spotId);
-        
-      const { data: advantageData } = await supabase
-        .from('astro_spot_advantages').select('*').eq('spot_id', spotId);
-      
-      return {
-        ...spotData,
-        astro_spot_types: typeData || [],
-        astro_spot_advantages: advantageData || [],
-      };
-    },
-    retry: 1,
-    staleTime: 1000 * 15,
-    refetchOnWindowFocus: false
-  });
-
-  // Creator profile query
-  const { data: creatorProfile, isLoading: loadingCreator } = useQuery({
-    queryKey: ['creatorProfile', spot?.user_id],
-    queryFn: async () => {
-      if (!spot?.user_id) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('username, avatar_url')
-        .eq('id', spot.user_id)
-        .maybeSingle();
-      if (error) {
-        console.error("Error fetching creator profile:", error);
-        return null;
-      }
-      return data;
-    },
-    enabled: !!spot?.user_id
-  });
-
-  // Spot images query
-  const { data: spotImages = [], isLoading: loadingImages, refetch: refetchImages } = useQuery({
-    queryKey: ['spotImages', spotId, refreshTrigger],
-    queryFn: async () => {
-      if (!spotId) return [];
-      
-      try {
-        console.log("Fetching images for spot:", spotId);
-        
-        const { data: files, error } = await supabase
-          .storage
-          .from('astro_spot_images')
-          .list(spotId);
-          
-        if (error) {
-          console.error("Error listing files:", error);
-          return [];
-        }
-        
-        if (!files || files.length === 0) {
-          console.log("No images found for spot:", spotId);
-          return [];
-        }
-        
-        console.log("Found", files.length, "images for spot:", spotId);
-        
-        return files.map(file => {
-          const { data } = supabase
-            .storage
-            .from('astro_spot_images')
-            .getPublicUrl(`${spotId}/${file.name}`);
-          return data.publicUrl;
-        });
-      } catch (error) {
-        console.error("Error fetching spot images:", error);
-        return [];
-      }
-    },
-    enabled: !!spotId,
-    staleTime: 1000 * 15
-  });
-
   useEffect(() => {
     if (!isLoading && !!spot) {
       setShowInstantLoader(false);
     }
   }, [isLoading, spot]);
-
-  const handleViewDetails = () => {
-    if (spot) {
-      navigate(`/location/${spot.latitude},${spot.longitude}`, {
-        state: {
-          latitude: spot.latitude,
-          longitude: spot.longitude,
-          name: spot.name,
-          bortleScale: spot.bortlescale,
-          siqs: spot.siqs
-        }
-      });
-    }
-  };
 
   const handleEditClose = () => {
     setShowEditDialog(false);
@@ -206,11 +112,6 @@ export const useProfileContent = (
     console.log("Images update triggered");
     await refetchImages();
     triggerRefresh();
-  };
-
-  const handleMessageCreator = () => {
-    if (!authUser || !spot?.user_id) return;
-    navigate('/messages', { state: { selectedUser: spot.user_id } });
   };
 
   return {
