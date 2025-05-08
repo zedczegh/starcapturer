@@ -9,23 +9,19 @@ import { v4 as uuidv4 } from 'uuid';
  */
 export const ensureCommentImagesBucket = async (): Promise<boolean> => {
   try {
-    // Instead of trying to create the bucket directly (which fails due to RLS),
-    // we'll just check if it exists by attempting a list operation
     console.log("Checking if comment_images bucket exists...");
     
-    // This will either succeed (bucket exists) or fail with a specific error
-    // that tells us if the bucket doesn't exist
-    const { data, error } = await supabase.storage
+    // Check bucket existence by attempting a list operation
+    const { error } = await supabase.storage
       .from('comment_images')
       .list('');
       
     if (error) {
-      // If the error is not because the bucket doesn't exist, it might be a permission issue
       console.error("Error checking comment_images bucket:", error);
       return false;
     }
     
-    // If we got here, the bucket exists and we have permissions to use it
+    // If we got here, the bucket exists and we have permissions
     console.log("comment_images bucket is available");
     return true;
   } catch (error) {
@@ -61,8 +57,8 @@ export const uploadCommentImage = async (
     
     console.log("Uploading comment image with filename:", fileName);
     
-    // Upload the image to the existing bucket
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    // Upload the image to the bucket
+    const { error: uploadError } = await supabase.storage
       .from('comment_images')
       .upload(fileName, imageFile, {
         contentType: imageFile.type,

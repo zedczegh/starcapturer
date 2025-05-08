@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Send, Image } from "lucide-react";
+import { Send, Image, X } from "lucide-react";
 
 interface MessageInputProps {
   onSend: (text: string, imageFile?: File | null) => void;
@@ -36,6 +36,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.type.startsWith('image/')) {
+        // Check file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+          alert(t('Image must be less than 5MB', '图片必须小于5MB'));
+          return;
+        }
+        
         setImageFile(file);
         
         // Create image preview
@@ -78,7 +84,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
             className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
             onClick={handleRemoveImage}
           >
-            ×
+            <X className="h-3 w-3" />
           </Button>
         </div>
       )}

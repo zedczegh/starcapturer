@@ -42,13 +42,27 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error(t('Only image files are allowed', '仅允许上传图片文件'));
+        return;
+      }
+      
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
         toast.error(t('Image must be less than 5MB', '图片必须小于5MB'));
         return;
       }
       
       setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -80,7 +94,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
           <button
             type="button"
             onClick={handleRemoveImage}
-            className="absolute -top-2 -right-2 bg-destructive text-white p-1 rounded-full"
+            className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground p-1 rounded-full"
           >
             <X className="h-3 w-3" />
           </button>
@@ -104,7 +118,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
         <Button 
           type="submit" 
           size="sm" 
-          disabled={sending || (!commentText.trim() && !imageFile) || (imageFile && !commentText.trim())}
+          disabled={sending || (!commentText.trim() && !imageFile)}
           className="flex gap-1 items-center"
         >
           {sending ? (
