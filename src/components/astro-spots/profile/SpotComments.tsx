@@ -14,7 +14,7 @@ interface SpotCommentsProps {
   comments: Comment[];
   user: boolean;
   onCommentsUpdate: () => void;
-  onSubmit?: (content: string, imageFile: File | null) => void;
+  onSubmit?: (content: string, imageFile: File | null) => Promise<void>;
   sending: boolean;
 }
 
@@ -42,6 +42,14 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     }
   };
 
+  const handleReplySubmit = async (content: string, imageFile: File | null, parentId: string) => {
+    if (onSubmit) {
+      // To add the parent ID, we can modify our hook to accept a parent ID parameter
+      await onSubmit(content, imageFile, parentId);
+      onCommentsUpdate();
+    }
+  };
+
   return (
     <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
       <CommentHeader 
@@ -56,7 +64,11 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         ) : (
           <motion.div layout className="space-y-6 mt-4">
             {localComments.slice(0, 2).map((comment) => (
-              <CommentItem key={comment.id} comment={comment} />
+              <CommentItem 
+                key={comment.id} 
+                comment={comment}
+                onReply={handleReplySubmit}
+              />
             ))}
           </motion.div>
         )}
@@ -77,6 +89,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         comments={localComments}
         user={user}
         onSubmit={handleCommentSubmit}
+        onReply={handleReplySubmit}
         sending={sending}
       />
     </div>

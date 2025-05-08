@@ -197,9 +197,13 @@ export const useProfileContent = (
   };
 
   // Handler for submitting a new comment
-  const handleCommentSubmit = async (content: string, imageFile: File | null) => {
-    console.log("Comment submission starting with image:", !!imageFile);
-    const result = await submitComment(content, imageFile);
+  const handleCommentSubmit = async (
+    content: string,
+    imageFile: File | null,
+    parentId?: string | null
+  ) => {
+    console.log(`Comment submission starting with image: ${!!imageFile}, parent: ${parentId || 'none'}`);
+    const result = await submitComment(content, imageFile, parentId);
     if (result.success && result.comments) {
       console.log("Comment posted successfully, updating list with", result.comments.length, "comments");
       setComments(result.comments);
