@@ -1,7 +1,6 @@
-
 import React, { useRef, useEffect } from 'react';
 import { motion } from "framer-motion";
-import { ChevronLeft, User, MessageCircle } from "lucide-react";
+import { ChevronLeft, User, MessageCircle, Image as ImageIcon, Link as LinkIcon } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -12,6 +11,7 @@ interface Message {
   id: string;
   sender_id: string;
   message: string;
+  image_url?: string | null;
   created_at: string;
   sender_profile?: {
     username: string | null;
@@ -51,6 +51,46 @@ const MessageList: React.FC<MessageListProps> = ({
     } else {
       return format(date, "MMM d, h:mm a");
     }
+  };
+  
+  // Function to linkify text (convert URLs to clickable links)
+  const linkifyText = (text: string) => {
+    // Regex to match URLs
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    
+    if (!text.match(urlRegex)) {
+      return <p>{text}</p>;
+    }
+    
+    // Split text by URLs and create array of text and link elements
+    const parts = text.split(urlRegex);
+    const matches = text.match(urlRegex) || [];
+    
+    return (
+      <p>
+        {parts.map((part, i) => {
+          // If this part is a URL (from the matches array), render it as a link
+          if (i < parts.length - 1 && i < matches.length) {
+            return (
+              <React.Fragment key={i}>
+                {part}
+                <a 
+                  href={matches[i]} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline inline-flex items-center"
+                >
+                  {matches[i]}
+                  <LinkIcon className="h-3 w-3 ml-1 inline" />
+                </a>
+              </React.Fragment>
+            );
+          }
+          // Otherwise render as regular text
+          return part;
+        })}
+      </p>
+    );
   };
 
   useEffect(() => {
@@ -106,7 +146,7 @@ const MessageList: React.FC<MessageListProps> = ({
             </div>
           </div>
         ) : (
-          messages.map(message => (
+          messages.map((message) => (
             <motion.div
               key={message.id}
               initial={{ opacity: 0, y: 20 }}
@@ -137,7 +177,25 @@ const MessageList: React.FC<MessageListProps> = ({
                     ? 'bg-primary text-white ml-auto' 
                     : 'bg-cosmic-800/50 text-cosmic-100'
                 }`}>
-                  <p>{message.message}</p>
+                  {linkifyText(message.message)}
+                  
+                  {/* Display image if present */}
+                  {message.image_url && (
+                    <div className="mt-2">
+                      <a 
+                        href={message.image_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        <img 
+                          src={message.image_url}
+                          alt={t("Shared image", "分享的图片")}
+                          className="max-w-full rounded-lg border border-cosmic-700/30 max-h-[200px] object-contain"
+                        />
+                      </a>
+                    </div>
+                  )}
                 </div>
                 <div className={`flex items-center gap-2 text-xs text-cosmic-400 ${
                   message.sender_id === currentUserId ? 'flex-row-reverse' : 'flex-row'

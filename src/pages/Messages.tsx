@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -105,9 +106,9 @@ const Messages = () => {
     setActiveConversation(null);
   };
 
-  const handleSendMessage = async (message: string) => {
+  const handleSendMessage = async (message: string, imageFile?: File | null) => {
     if (!activeConversation) return;
-    const success = await sendMessage(activeConversation.id, message);
+    const success = await sendMessage(activeConversation.id, message, imageFile);
     if (success) {
       fetchMessages(activeConversation.id);
     }

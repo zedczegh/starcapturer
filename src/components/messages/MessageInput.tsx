@@ -1,51 +1,120 @@
 
-import React, { useState } from 'react';
-import { Send } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Send, Image } from "lucide-react";
 
 interface MessageInputProps {
-  onSend: (message: string) => Promise<void>;
+  onSend: (text: string, imageFile?: File | null) => void;
   sending: boolean;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   const { t } = useLanguage();
   const [message, setMessage] = useState("");
-
-  const handleSend = async () => {
-    if (!message.trim() || sending) return;
-    await onSend(message);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const handleSend = () => {
+    if ((!message.trim() && !imageFile) || sending) return;
+    
+    onSend(message, imageFile);
     setMessage("");
+    setImageFile(null);
+    setImagePreview(null);
+  };
+  
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        setImageFile(file);
+        
+        // Create image preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setImagePreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // Not an image file
+        alert(t('Only image files are allowed', '仅允许上传图片文件'));
+      }
+    }
+  };
+  
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
   };
 
   return (
-    <div className="p-4 border-t border-cosmic-800/50 bg-cosmic-900/30">
-      <div className="flex gap-2">
-        <Input
-          placeholder={t("Type a message...", "输入消息...")}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-          disabled={sending}
-          className="flex-1 bg-cosmic-800/30 border-cosmic-700/50 focus:border-primary/50 
-            focus:ring-primary/20 placeholder:text-cosmic-500"
-        />
-        <Button 
-          onClick={handleSend} 
-          disabled={!message.trim() || sending}
-          className="px-6 bg-primary hover:bg-primary/90 text-white shadow-lg
-            disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+    <div className="border-t border-cosmic-800/50 p-4 bg-cosmic-900/20 space-y-3">
+      {imagePreview && (
+        <div className="relative inline-block">
+          <img 
+            src={imagePreview} 
+            alt="Preview" 
+            className="h-20 rounded-md border border-cosmic-700/50"
+          />
+          <Button
+            variant="destructive"
+            size="sm"
+            className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
+            onClick={handleRemoveImage}
+          >
+            ×
+          </Button>
+        </div>
+      )}
+      
+      <div className="flex items-end gap-2">
+        <div className="relative flex-grow">
+          <textarea
+            className="w-full bg-cosmic-800/30 border border-cosmic-700/50 rounded-lg py-2 px-4 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+            placeholder={t("Type your message...", "输入您的消息...")}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={1}
+          />
+          <input 
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept="image/*"
+            onChange={handleFileChange}
+          />
+          <button
+            className="absolute bottom-2 left-2 text-cosmic-400 hover:text-primary"
+            onClick={triggerFileInput}
+            type="button"
+          >
+            <Image className="h-5 w-5" />
+          </button>
+        </div>
+        <Button
+          className="flex-shrink-0"
+          onClick={handleSend}
+          disabled={sending || (!message.trim() && !imageFile)}
         >
-          {sending ? (
-            <div className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <>
-              <Send className="h-4 w-4 mr-2" />
-              {t("Send", "发送")}
-            </>
-          )}
+          <Send className="h-4 w-4" />
+          <span className="ml-2">{t("Send", "发送")}</span>
         </Button>
       </div>
     </div>

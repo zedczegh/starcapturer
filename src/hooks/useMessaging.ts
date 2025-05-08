@@ -4,12 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { uploadCommentImage } from "@/utils/comments/commentImageUtils";
 
 interface Message {
   id: string;
   sender_id: string;
   receiver_id: string;
   message: string;
+  image_url?: string | null;
   created_at: string;
   read: boolean;
   sender_profile?: {
@@ -169,17 +171,30 @@ export function useMessaging() {
     }
   };
 
-  const sendMessage = async (receiverId: string, message: string) => {
-    if (!user || !message.trim() || sending) return false;
+  const sendMessage = async (receiverId: string, message: string, imageFile?: File | null) => {
+    if (!user || (!message.trim() && !imageFile) || sending) return false;
     
     setSending(true);
     try {
+      let image_url = null;
+      
+      // If an image file was provided, upload it
+      if (imageFile) {
+        image_url = await uploadCommentImage(imageFile, t);
+        if (!image_url && !message.trim()) {
+          toast.error(t("Failed to upload image", "图片上传失败"));
+          return false;
+        }
+      }
+      
+      // Insert the message with the optional image URL
       const { error } = await supabase
         .from('user_messages')
         .insert({
           sender_id: user.id,
           receiver_id: receiverId,
-          message: message.trim()
+          message: message.trim(),
+          image_url
         });
         
       if (error) throw error;
