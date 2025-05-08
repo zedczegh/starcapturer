@@ -4,7 +4,6 @@ import { Smile } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
   DropdownMenuItem
 } from "@/components/ui/dropdown-menu";
@@ -21,8 +20,8 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
   const { t } = useLanguage();
   
   // Group emojis by categories
-  const siqsConditionEmojis = siqsEmojis.slice(0, 6); // Original SIQS condition emojis
-  const locationEmojis = siqsEmojis.slice(6); // New location-related emojis
+  const siqsConditionEmojis = siqsEmojis.filter(emoji => emoji.category === "siqs");
+  const locationEmojis = siqsEmojis.filter(emoji => emoji.category === "location");
   
   return (
     <DropdownMenu>
@@ -48,10 +47,10 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
               {siqsConditionEmojis.map((emoji) => (
                 <DropdownMenuItem
                   key={emoji.id}
-                  className="flex flex-col items-center justify-center p-2 hover:bg-cosmic-800/50 cursor-pointer rounded-lg"
+                  className="flex flex-col items-center justify-center p-2 hover:bg-cosmic-800/50 cursor-pointer rounded-lg transition-all hover:scale-110"
                   onClick={() => onEmojiSelect(`[${emoji.id}]`)}
                 >
-                  <div className="p-1">
+                  <div className="p-1 transform hover:scale-110 transition-transform">
                     {emoji.icon}
                   </div>
                   <span className="text-xs text-cosmic-300 mt-1 text-center">
@@ -67,10 +66,10 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
               {locationEmojis.map((emoji) => (
                 <DropdownMenuItem
                   key={emoji.id}
-                  className="flex flex-col items-center justify-center p-2 hover:bg-cosmic-800/50 cursor-pointer rounded-lg"
+                  className="flex flex-col items-center justify-center p-2 hover:bg-cosmic-800/50 cursor-pointer rounded-lg transition-all hover:scale-110"
                   onClick={() => onEmojiSelect(`[${emoji.id}]`)}
                 >
-                  <div className="p-1">
+                  <div className="p-1 transform hover:scale-110 transition-transform">
                     {emoji.icon}
                   </div>
                   <span className="text-xs text-cosmic-300 mt-1 text-center">
