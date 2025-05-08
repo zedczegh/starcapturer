@@ -18,6 +18,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     const checkStorage = async () => {
       try {
         console.log("Checking comment images bucket availability...");
+        // Make the delay long enough to ensure we have a proper check
         const available = await ensureCommentImagesBucket();
         console.log(`Comment images bucket available: ${available}`);
         setBucketAvailable(available);
@@ -79,19 +80,30 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       let imageUrl: string | null = null;
       if (imageFile) {
-        // Double check if bucket is available before trying to upload
-        if (bucketAvailable === false) {
-          toast.error(t("Image uploads are temporarily unavailable", "图片上传暂时不可用"));
-          console.error("Image upload skipped because storage bucket is not available");
+        // Double check bucket availability before attempting upload
+        if (bucketAvailable !== true) {
+          // Force a fresh check of bucket availability
+          console.log("Rechecking bucket availability before upload...");
+          const isAvailable = await ensureCommentImagesBucket();
+          setBucketAvailable(isAvailable);
+          
+          if (!isAvailable) {
+            toast.error(t("Image uploads are temporarily unavailable", "图片上传暂时不可用"));
+            console.error("Image upload skipped because storage bucket is not available");
+          } else {
+            console.log("Bucket is now available, proceeding with upload");
+            imageUrl = await uploadCommentImage(imageFile, t);
+          }
         } else {
           console.log("Attempting to upload image for comment...");
           imageUrl = await uploadCommentImage(imageFile, t);
-          if (!imageUrl) {
-            // Continue with text-only comment if image upload fails
-            toast.warning(t("Image couldn't be uploaded, posting text only", "图片无法上传，仅发布文字"));
-          } else {
-            console.log("Image uploaded successfully:", imageUrl);
-          }
+        }
+        
+        if (!imageUrl && bucketAvailable === true) {
+          // If bucket is available but upload still failed
+          toast.warning(t("Image couldn't be uploaded, posting text only", "图片无法上传，仅发布文字"));
+        } else if (imageUrl) {
+          console.log("Image uploaded successfully:", imageUrl);
         }
       }
       

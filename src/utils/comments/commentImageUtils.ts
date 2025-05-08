@@ -61,7 +61,7 @@ export const uploadCommentImage = async (
       return null;
     }
     
-    // Generate a unique filename with the current timestamp and user folder
+    // Generate a unique filename with UUID to avoid collisions
     const fileExt = imageFile.name.split('.').pop() || '';
     const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
     const timestamp = new Date().getTime();
