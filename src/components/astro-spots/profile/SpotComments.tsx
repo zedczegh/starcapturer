@@ -44,7 +44,9 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
       
       // If there's an image file, upload it first
       if (imageFile) {
-        const fileName = `${uuidv4()}-${imageFile.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
+        // Create a simple filename without special characters
+        const fileExt = imageFile.name.split('.').pop() || '';
+        const fileName = `${uuidv4()}.${fileExt}`;
         
         const { error: uploadError, data: uploadData } = await supabase.storage
           .from('comment_images')
@@ -70,25 +72,51 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         }
       }
       
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      
+      if (!userId) {
+        toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
+        setCommentSending(false);
+        return;
+      }
+      
       // Now insert the comment with the image URL if available
       const { error, data } = await supabase
         .from("astro_spot_comments")
         .insert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: userId,
           spot_id: spotId,
           content: content.trim() || " ", // Use a space if only image is submitted
           image_url: imageUrl
-        })
-        .select('*, profiles:user_id(username, avatar_url)');
+        });
       
       if (error) {
         console.error("Error posting comment:", error);
         toast.error(t("Failed to post comment.", "评论发送失败。"));
+        setCommentSending(false);
         return;
       }
       
-      if (data && data.length > 0) {
-        const newComment = data[0] as unknown as Comment;
+      // Fetch the newly created comment with profile data
+      const { data: newCommentData, error: fetchError } = await supabase
+        .from("astro_spot_comments")
+        .select(`
+          id,
+          content,
+          created_at,
+          image_url,
+          user_id,
+          profiles:user_id(username, avatar_url)
+        `)
+        .eq('spot_id', spotId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+        
+      if (fetchError || !newCommentData || newCommentData.length === 0) {
+        console.error("Error fetching new comment:", fetchError);
+        toast.error(t("Comment posted but couldn't refresh.", "评论已发表但无法刷新。"));
+      } else {
+        const newComment = newCommentData[0] as unknown as Comment;
         setLocalComments(prev => [newComment, ...prev]);
         toast.success(t("Comment posted!", "评论已发表！"));
       }

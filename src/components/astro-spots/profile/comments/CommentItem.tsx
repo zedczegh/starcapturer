@@ -48,7 +48,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
             <img 
               src={comment.image_url} 
               alt="Comment attachment" 
-              className="max-h-40 rounded-md border border-cosmic-700/30 hover:opacity-90 transition-opacity"
+              className="max-h-40 rounded-md border border-cosmic-700/30 hover:opacity-90 transition-opacity object-cover"
             />
           </a>
         )}
