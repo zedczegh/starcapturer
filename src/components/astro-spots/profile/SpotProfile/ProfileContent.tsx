@@ -8,7 +8,6 @@ import ProfileHeaderSection from './ProfileHeaderSection';
 import ProfileSectionsManager from './ProfileSectionsManager';
 import ProfileEditButton from './ProfileEditButton';
 import useProfileContent from './useProfileContent';
-import { Comment } from '../types/comments';
 
 interface ProfileContentProps {
   spotId: string;
@@ -38,8 +37,6 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     handleImagesUpdate,
     handleMessageCreator
   } = useProfileContent(spotId, user, comingFromCommunity, t);
-  
-  // No conversion needed as comments are now directly of type Comment[]
 
   if (isLoading || !spot) {
     return <LocationDetailsLoading />;

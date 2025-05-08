@@ -7,7 +7,6 @@ import useSpotImages from '@/hooks/astro-spots/useSpotImages';
 import useProfileActions from '@/hooks/astro-spots/useProfileActions';
 import useAstroSpotComments from '@/hooks/astro-spots/useAstroSpotComments';
 import { ensureCommentImagesBucket } from '@/utils/comments/commentImageUtils';
-import { Comment } from '../types/comments';
 
 export const useProfileContent = (
   spotId: string, 
@@ -28,13 +27,15 @@ export const useProfileContent = (
   const { spotImages, loadingImages, refetchImages } = useSpotImages(spotId, refreshTrigger);
   const { handleViewDetails, handleMessageCreator } = useProfileActions(spot);
   
-  // Check if bucket exists (don't try to create it)
+  // Check if bucket exists but don't try to create it
   useEffect(() => {
     const checkStorage = async () => {
       try {
         const available = await ensureCommentImagesBucket();
         setStorageChecked(true);
-        console.log(available ? "Comment images storage is ready" : "Comment images storage is not accessible");
+        if (!available) {
+          console.log("Comment images storage is not accessible - this will affect image uploads");
+        }
       } catch (err) {
         console.error("Error checking comment image storage:", err);
         setStorageChecked(true);
@@ -45,12 +46,10 @@ export const useProfileContent = (
   
   // Use our comment hook with improved state management
   const {
-    comments,
-    loading: commentsLoading,
     commentSending,
-    uploadingImage,
-    fetchComments,
-    submitComment
+    comments,
+    submitComment,
+    fetchComments
   } = useAstroSpotComments(spotId, t);
 
   // Function to trigger a refresh of all data
@@ -67,7 +66,7 @@ export const useProfileContent = (
     }
   }, [authUser, spot]);
 
-  // Initial load of comments
+  // Load initial comments and set up refresh interval
   useEffect(() => {
     let isMounted = true;
     
@@ -84,11 +83,20 @@ export const useProfileContent = (
     
     if (spotId) {
       loadInitialComments();
+      
+      // Set up refresh interval for comments
+      const intervalId = setInterval(() => {
+        if (isMounted) {
+          console.log("Refreshing comments automatically");
+          fetchComments();
+        }
+      }, 30000); // Refresh every 30 seconds
+      
+      return () => {
+        isMounted = false;
+        clearInterval(intervalId);
+      };
     }
-    
-    return () => {
-      isMounted = false;
-    };
   }, [spotId, fetchComments]);
 
   useEffect(() => {

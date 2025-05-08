@@ -1,227 +1,135 @@
 
-import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { uploadCommentImage } from '@/utils/comments/commentImageUtils';
+import { useState, useCallback, useEffect } from 'react';
+import { toast } from "sonner";
 import { Comment } from '@/components/astro-spots/profile/types/comments';
-
-export type CommentResponse = {
-  id: string;
-  comment: string;
-  created_at: string;
-  astro_spot_id: string;
-  user_id: string;
-  image_url?: string | null;
-  parent_id?: string | null;
-  profiles?: any;
-  replies?: CommentResponse[];
-};
+import { uploadCommentImage, ensureCommentImagesBucket } from '@/utils/comments/commentImageUtils';
+import { fetchComments, createComment } from '@/services/comments/commentService';
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: string) => string) => {
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [commentSending, setCommentSending] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [storageChecked, setStorageChecked] = useState(false);
+  const { user: authUser } = useAuth();
 
-  // Helper function to check if profile data is valid
-  const isValidProfile = (profile: any): boolean => {
-    return profile && typeof profile === 'object' && !profile.error;
-  };
-
-  // Helper function to safely extract profile info
-  const extractProfileInfo = (profileData: any) => {
-    if (!isValidProfile(profileData)) {
-      return {
-        username: "Anonymous",
-        avatar_url: null,
-        full_name: null
-      };
-    }
-    
-    return {
-      username: profileData.username || "Anonymous",
-      avatar_url: profileData.avatar_url || null,
-      full_name: profileData.full_name || null
-    };
-  };
-
-  const fetchComments = useCallback(async () => {
-    if (!spotId) return;
-    
-    try {
-      setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('astro_spot_comments')
-        .select(`
-          *,
-          profiles:user_id (username, avatar_url, full_name)
-        `)
-        .eq('spot_id', spotId)
-        .is('parent_id', null)
-        .order('created_at', { ascending: false });
-        
-      if (error) {
-        console.error('Error fetching comments:', error);
-        toast.error(t('Failed to load comments', '加载评论失败'));
-        return;
+  // Initialize bucket checking when hook is first used - don't try to create it anymore
+  useEffect(() => {
+    const checkStorage = async () => {
+      try {
+        const available = await ensureCommentImagesBucket();
+        setStorageChecked(true);
+        if (!available) {
+          console.log("Comment images storage is not accessible. Some features may be limited.");
+        }
+      } catch (err) {
+        console.error("Error checking comment image storage:", err);
+        setStorageChecked(true);
       }
-      
-      // Fetch replies for each comment
-      const commentsWithReplies = await Promise.all(
-        (data || []).map(async (comment) => {
-          const { data: replies, error: repliesError } = await supabase
-            .from('astro_spot_comments')
-            .select(`
-              *,
-              profiles:user_id (username, avatar_url, full_name)
-            `)
-            .eq('parent_id', comment.id)
-            .order('created_at', { ascending: true });
-            
-          if (repliesError) {
-            console.error('Error fetching replies:', repliesError);
-            return { ...comment, replies: [] };
-          }
-          
-          // Transform replies to match our Comment type
-          const typedReplies: Comment[] = (replies || []).map(reply => ({
-            id: reply.id,
-            content: reply.content || reply.comment || "",
-            created_at: reply.created_at,
-            image_url: reply.image_url,
-            parent_id: reply.parent_id,
-            profiles: extractProfileInfo(reply.profiles)
-          }));
-          
-          return {
-            ...comment,
-            replies: typedReplies
-          };
-        })
-      );
-      
-      // Transform the data to match our Comment type with proper handling for profiles
-      const typedComments: Comment[] = commentsWithReplies.map(comment => ({
-        id: comment.id,
-        content: comment.content || comment.comment || "",
-        created_at: comment.created_at,
-        image_url: comment.image_url,
-        parent_id: comment.parent_id,
-        profiles: extractProfileInfo(comment.profiles),
-        replies: comment.replies || []
-      }));
-      
-      setComments(typedComments);
-    } catch (err) {
-      console.error('Exception fetching comments:', err);
-      toast.error(t('Failed to load comments', '加载评论失败'));
-    } finally {
-      setLoading(false);
-    }
-  }, [spotId, t]);
+    };
+    checkStorage();
+  }, []);
 
-  const submitComment = useCallback(async (
+  // Load comments function with better error handling
+  const loadComments = useCallback(async () => {
+    try {
+      console.log(`Loading comments for spot: ${spotId}`);
+      const fetchedComments = await fetchComments(spotId);
+      console.log(`Loaded ${fetchedComments.length} comments`);
+      setComments(fetchedComments);
+      setLoaded(true);
+      return fetchedComments;
+    } catch (err) {
+      console.error("Error loading comments:", err);
+      setLoaded(true);
+      return [] as Comment[];
+    }
+  }, [spotId]);
+
+  const submitComment = async (
     content: string, 
-    imageFile: File | null = null, 
+    imageFile: File | null, 
     parentId?: string | null
-  ) => {
-    if (!spotId || (!content.trim() && !imageFile)) return null;
+  ): Promise<{ success: boolean, comments?: Comment[] }> => {
+    if (!authUser) {
+      toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
+      return { success: false };
+    }
+    
+    // Always require text content with an image
+    if (imageFile && !content.trim()) {
+      toast.error(t("Please add some text with your image", "请为您的图片添加一些文字"));
+      return { success: false };
+    }
+    
+    // Validate that there is either text or image
+    if (!content.trim() && !imageFile) {
+      toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
+      return { success: false };
+    }
+    
+    setCommentSending(true);
     
     try {
-      setCommentSending(true);
-      let image_url = null;
+      const userId = authUser.id;
       
+      let imageUrl: string | null = null;
       if (imageFile) {
-        setUploadingImage(true);
-        image_url = await uploadCommentImage(imageFile, t);
-        setUploadingImage(false);
+        // Check if storage is accessible
+        const bucketReady = await ensureCommentImagesBucket();
+        if (!bucketReady) {
+          console.error("Storage bucket is not accessible");
+          toast.error(t("Failed to access storage. Please try again later.", "无法访问存储。请稍后再试。"));
+          return { success: false };
+        }
         
-        // If image upload fails but we have text, continue with text-only comment
-        if (!image_url && !content.trim()) {
-          toast.error(t('Failed to upload image', '图片上传失败'));
-          setCommentSending(false);
-          return null;
+        imageUrl = await uploadCommentImage(imageFile, t);
+        if (!imageUrl) {
+          toast.error(t("Failed to upload image", "图片上传失败"));
+          return { success: false };
         }
       }
       
-      const currentUser = (await supabase.auth.getUser()).data.user;
-      if (!currentUser) {
-        toast.error(t('You must be logged in to comment', '您必须登录才能评论'));
-        setCommentSending(false);
-        return null;
-      }
+      const success = await createComment(userId, spotId, content, imageUrl, parentId);
       
-      const { data, error } = await supabase
-        .from('astro_spot_comments')
-        .insert([
-          { 
-            content: content.trim(), 
-            spot_id: spotId,
-            user_id: currentUser.id,
-            image_url,
-            parent_id: parentId || null
-          }
-        ])
-        .select(`
-          *,
-          profiles:user_id (username, avatar_url, full_name)
-        `)
-        .single();
-        
-      if (error) {
-        console.error('Error adding comment:', error);
-        toast.error(t('Failed to add comment', '添加评论失败'));
-        return null;
-      }
-      
-      // Convert the returned data to our Comment type with proper null handling
-      const newComment: Comment = {
-        id: data.id,
-        content: data.content || data.comment || "",
-        created_at: data.created_at,
-        image_url: data.image_url,
-        parent_id: data.parent_id,
-        profiles: extractProfileInfo(data.profiles),
-        replies: []
-      };
-      
-      // Update comments state
-      if (parentId) {
-        setComments(prevComments => 
-          prevComments.map(c => {
-            if (c.id === parentId) {
-              return {
-                ...c,
-                replies: [...(c.replies || []), newComment]
-              };
-            }
-            return c;
-          })
+      if (!success) {
+        toast.error(parentId 
+          ? t("Failed to post reply.", "回复发送失败。") 
+          : t("Failed to post comment.", "评论发送失败。")
         );
-      } else {
-        setComments(prev => [newComment, ...prev]);
+        return { success: false };
       }
       
-      return newComment;
+      // Immediately fetch updated comments to refresh the UI
+      const updatedComments = await fetchComments(spotId);
+      setComments(updatedComments); // Update local state immediately
+      
+      toast.success(parentId 
+        ? t("Reply posted!", "回复已发表！") 
+        : t("Comment posted!", "评论已发表！")
+      );
+      
+      return { success: true, comments: updatedComments };
+      
     } catch (err) {
-      console.error('Exception adding comment:', err);
-      toast.error(t('Failed to add comment', '添加评论失败'));
-      return null;
+      console.error("Exception when posting comment:", err);
+      toast.error(parentId 
+        ? t("Failed to post reply.", "回复发送失败。") 
+        : t("Failed to post comment.", "评论发送失败。")
+      );
+      return { success: false };
     } finally {
       setCommentSending(false);
-      setUploadingImage(false);
     }
-  }, [spotId, t]);
+  };
 
   return {
-    comments,
-    loading,
-    uploadingImage,
     commentSending,
-    fetchComments,
-    submitComment
+    comments,
+    loaded,
+    submitComment,
+    fetchComments: loadComments,
+    storageChecked
   };
 };
 

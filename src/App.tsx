@@ -24,14 +24,11 @@ import ProfileMini from "./pages/ProfileMini";
 import Messages from './pages/Messages';
 import './App.css';
 
-// Configure query client with optimized settings
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 60 * 1000,
-      gcTime: 5 * 60 * 1000
+      retry: false
     },
   },
 });

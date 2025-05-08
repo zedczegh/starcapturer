@@ -109,6 +109,7 @@ const MapContent: React.FC<MapContentProps> = ({
         activeView={activeView}
         searchRadius={searchRadius}
         effects={['zoom-controls']} 
+        // Removed 'legend' to prevent redundant legend icon
       />
       
       {onMapClick && (
@@ -121,7 +122,7 @@ const MapContent: React.FC<MapContentProps> = ({
       
       {userLocation && (
         <UserLocationMarker 
-          position={[userLocation.latitude, userLocation.longitude]}
+          position={[userLocation.latitude, userLocation.longitude]} 
           currentSiqs={currentSiqs}
         />
       )}

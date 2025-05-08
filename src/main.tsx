@@ -25,27 +25,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// Ensure Leaflet CSS is loaded
-const ensureLeafletCSS = () => {
-  if (typeof document !== 'undefined') {
-    // Check if Leaflet CSS is already loaded
-    const existingLink = document.querySelector('link[href*="leaflet.css"]');
-    if (!existingLink) {
-      console.log("Leaflet CSS not found, adding it");
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.7.1/dist/leaflet.css';
-      link.crossOrigin = '';
-      document.head.appendChild(link);
-    } else {
-      console.log("Leaflet CSS already loaded");
-    }
-  }
-};
-
-// Ensure Leaflet CSS is loaded immediately
-ensureLeafletCSS();
-
 // Create a wrapper component that uses hooks
 const AppWithProviders = () => {
   const { theme } = useTheme();
@@ -58,35 +37,16 @@ const AppWithProviders = () => {
   );
 };
 
-// Add a DOMContentLoaded listener for better mobile performance
-const renderApp = () => {
-  const rootElement = document.getElementById('root');
-  if (!rootElement) {
-    console.error("Root element not found, cannot render app");
-    return;
-  }
-
-  console.log("Rendering app to root element");
-  ReactDOM.createRoot(rootElement).render(
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <HelmetProvider>
-          <ThemeProvider>
-            <LanguageProvider>
-              <AppWithProviders />
-            </LanguageProvider>
-          </ThemeProvider>
-        </HelmetProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
-  );
-};
-
-// Check if document is already loaded, otherwise wait for it
-if (document.readyState === 'loading') {
-  console.log("Document still loading, waiting for DOMContentLoaded");
-  document.addEventListener('DOMContentLoaded', renderApp);
-} else {
-  console.log("Document already loaded, rendering immediately");
-  renderApp();
-}
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <HelmetProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            <AppWithProviders />
+          </LanguageProvider>
+        </ThemeProvider>
+      </HelmetProvider>
+    </QueryClientProvider>
+  </React.StrictMode>,
+);
