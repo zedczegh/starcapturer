@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from "sonner";
 import { Comment } from '@/components/astro-spots/profile/types/comments';
-import { uploadCommentImage, ensureCommentImagesBucket } from '@/utils/comments/commentImageUtils';
+import { uploadCommentImage, ensureCommentImagesBucket, createCommentImagesBucketIfNeeded } from '@/utils/comments/commentImageUtils';
 import { fetchComments, createComment } from '@/services/comments/commentService';
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,9 +17,16 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   // Check if bucket exists when hook is first used or when user changes
   useEffect(() => {
     const checkStorage = async () => {
+      if (!authUser) {
+        console.log("No authenticated user, marking bucket as unavailable");
+        setBucketAvailable(false);
+        return;
+      }
+      
       try {
         console.log("Checking comment images bucket availability...");
-        // First verify authentication
+        
+        // First verify user is authenticated
         const { data: authStatus } = await supabase.auth.getSession();
         
         if (!authStatus.session) {
@@ -28,11 +35,22 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
           return;
         }
         
+        // Check if bucket exists and is accessible
         const available = await ensureCommentImagesBucket();
         console.log(`Comment images bucket available: ${available}`);
-        setBucketAvailable(available);
+        
         if (!available) {
-          console.error("Comment images storage is not accessible - this will affect image uploads");
+          // Try to create the bucket if it doesn't exist
+          console.log("Bucket not available, attempting to create it");
+          const created = await createCommentImagesBucketIfNeeded();
+          console.log(`Create bucket attempt result: ${created}`);
+          setBucketAvailable(created);
+          
+          if (!created) {
+            console.error("Comment images storage is not accessible - this will affect image uploads");
+          }
+        } else {
+          setBucketAvailable(true);
         }
       } catch (err) {
         console.error("Error checking comment image storage:", err);
@@ -40,6 +58,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       }
     };
     
+    // Check storage on mount and when auth changes
     if (authUser) {
       checkStorage();
     } else {
@@ -98,21 +117,35 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         // Force a fresh check of bucket availability
         console.log("Verifying bucket availability before upload...");
         const isAvailable = await ensureCommentImagesBucket();
-        setBucketAvailable(isAvailable);
         
         if (!isAvailable) {
-          toast.error(t("Image uploads are temporarily unavailable", "图片上传暂时不可用"));
-          console.error("Image upload skipped because storage bucket is not available");
+          // Try to create the bucket if it doesn't exist
+          console.log("Bucket not available, attempting to create it");
+          const created = await createCommentImagesBucketIfNeeded();
+          
+          if (!created) {
+            toast.error(t("Image uploads are temporarily unavailable", "图片上传暂时不可用"));
+            console.error("Image upload skipped because storage bucket is not available");
+            // Continue with just text
+          } else {
+            // Bucket was created successfully, proceed with upload
+            console.log("Bucket was created successfully, proceeding with upload");
+            imageUrl = await uploadCommentImage(imageFile, t);
+          }
         } else {
+          // Bucket exists and is accessible
           console.log("Bucket is available, proceeding with upload");
           imageUrl = await uploadCommentImage(imageFile, t);
-          
-          if (!imageUrl) {
-            toast.warning(t("Image couldn't be uploaded, posting text only", "图片无法上传，仅发布文字"));
-            console.error("Upload failed despite bucket being available");
-          } else {
-            console.log("Image uploaded successfully:", imageUrl);
-          }
+        }
+        
+        // Update bucket state based on upload result
+        setBucketAvailable(!!imageUrl);
+        
+        if (!imageUrl && isAvailable) {
+          toast.warning(t("Image couldn't be uploaded, posting text only", "图片无法上传，仅发布文字"));
+          console.error("Upload failed despite bucket being available");
+        } else if (imageUrl) {
+          console.log("Image uploaded successfully:", imageUrl);
         }
       }
       
