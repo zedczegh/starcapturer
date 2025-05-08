@@ -44,7 +44,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
       
       // If there's an image file, upload it first
       if (imageFile) {
-        const fileName = `${spotId}/${Date.now()}-${uuidv4()}.${imageFile.name.split('.').pop()}`;
+        const fileName = `${uuidv4()}-${imageFile.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
         
         const { error: uploadError, data: uploadData } = await supabase.storage
           .from('comment_images')
@@ -56,6 +56,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         if (uploadError) {
           console.error("Error uploading image:", uploadError);
           toast.error(t("Failed to upload image", "图片上传失败"));
+          setCommentSending(false);
           return;
         }
         
@@ -78,7 +79,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
           content: content.trim() || " ", // Use a space if only image is submitted
           image_url: imageUrl
         })
-        .select();
+        .select('*, profiles:user_id(username, avatar_url)');
       
       if (error) {
         console.error("Error posting comment:", error);
@@ -87,21 +88,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
       }
       
       if (data && data.length > 0) {
-        const userResponse = await supabase.auth.getUser();
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('username, avatar_url')
-          .eq('id', userResponse.data.user?.id)
-          .single();
-          
-        const newComment = {
-          ...data[0],
-          profiles: {
-            username: profileData?.username || userResponse.data.user?.email?.split('@')[0] || t("Anonymous", "匿名用户"),
-            avatar_url: profileData?.avatar_url
-          }
-        };
-        
+        const newComment = data[0] as unknown as Comment;
         setLocalComments(prev => [newComment, ...prev]);
         toast.success(t("Comment posted!", "评论已发表！"));
       }
