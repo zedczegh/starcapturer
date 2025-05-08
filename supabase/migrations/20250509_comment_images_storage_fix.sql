@@ -10,6 +10,9 @@ WHERE NOT EXISTS (
 -- First drop existing policies if they exist
 DROP POLICY IF EXISTS "Anyone can upload comment images" ON storage.objects;
 DROP POLICY IF EXISTS "Anyone can view comment images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own comment images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own comment images" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload comment images" ON storage.objects;
 
 -- Create explicit upload policy for authenticated users
 CREATE POLICY "Authenticated users can upload comment images" 

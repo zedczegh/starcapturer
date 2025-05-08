@@ -17,7 +17,7 @@ export const ensureCommentImagesBucket = async (): Promise<boolean> => {
       return false;
     }
     
-    // First check if the bucket exists
+    // Check if the bucket exists
     const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
     
     if (bucketError) {
@@ -32,16 +32,15 @@ export const ensureCommentImagesBucket = async (): Promise<boolean> => {
     }
     
     // Try to list files in the bucket to verify access permissions
-    const { error } = await supabase.storage
+    const { data, error } = await supabase.storage
       .from('comment_images')
       .list('');
     
     if (error && error.message !== 'The resource was not found') {
-      console.error("Error checking comment_images bucket:", error);
+      console.error("Error checking comment_images bucket access:", error);
       return false;
     }
     
-    // If we get here, the bucket is accessible
     console.log("comment_images bucket is accessible");
     return true;
   } catch (error) {
@@ -60,6 +59,8 @@ export const uploadCommentImage = async (
   try {
     if (!imageFile) return null;
     
+    console.log(`Starting upload process for image: ${imageFile.name}, size: ${imageFile.size} bytes`);
+    
     // Check if user is authenticated
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -68,10 +69,12 @@ export const uploadCommentImage = async (
       return null;
     }
     
-    // Check if bucket is accessible
+    console.log(`User authenticated: ${user.id}, proceeding with bucket check`);
+    
+    // Check if bucket is accessible with explicit fresh check
     const bucketReady = await ensureCommentImagesBucket();
     if (!bucketReady) {
-      console.error("Failed to access comment_images bucket");
+      console.error("Failed to access comment_images bucket. It may not exist or user lacks permissions.");
       toast.error(t("Failed to access storage", "无法访问存储"));
       return null;
     }
@@ -83,7 +86,7 @@ export const uploadCommentImage = async (
     const uniqueId = uuidv4().substring(0, 8);
     const fileName = `${timestamp}-${uniqueId}.${sanitizedExt || 'jpg'}`;
     
-    console.log(`Uploading image: ${fileName}, size: ${imageFile.size} bytes, type: ${imageFile.type}`);
+    console.log(`Uploading image as: ${fileName}, size: ${imageFile.size} bytes, type: ${imageFile.type}`);
     
     // Upload the image with explicit content type
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -96,7 +99,15 @@ export const uploadCommentImage = async (
       
     if (uploadError) {
       console.error("Error uploading comment image:", uploadError);
-      toast.error(t("Failed to upload image", "图片上传失败"));
+      
+      // Provide more specific error message based on the error code
+      if (uploadError.message.includes("storage quota")) {
+        toast.error(t("Storage quota exceeded", "存储配额已超出"));
+      } else if (uploadError.message.includes("permission")) {
+        toast.error(t("Permission denied for image upload", "图片上传权限被拒绝"));
+      } else {
+        toast.error(t("Failed to upload image", "图片上传失败"));
+      }
       return null;
     }
     

@@ -86,6 +86,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         const { data: authData } = await supabase.auth.getSession();
         if (!authData.session) {
           toast.error(t("You must be logged in to upload images", "您必须登录才能上传图片"));
+          setCommentSending(false);
           return { success: false };
         }
         
@@ -100,13 +101,15 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         } else {
           console.log("Bucket is available, proceeding with upload");
           imageUrl = await uploadCommentImage(imageFile, t);
-        }
-        
-        if (!imageUrl && isAvailable) {
-          // If bucket is available but upload still failed
-          toast.warning(t("Image couldn't be uploaded, posting text only", "图片无法上传，仅发布文字"));
-        } else if (imageUrl) {
-          console.log("Image uploaded successfully:", imageUrl);
+          
+          // Double check if the upload was successful
+          if (!imageUrl) {
+            // If we got null but the bucket was available, there was an upload error
+            toast.warning(t("Image couldn't be uploaded, posting text only", "图片无法上传，仅发布文字"));
+            console.error("Upload failed despite bucket being available");
+          } else {
+            console.log("Image uploaded successfully:", imageUrl);
+          }
         }
       }
       
