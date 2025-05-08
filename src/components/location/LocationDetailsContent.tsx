@@ -7,8 +7,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Lazy load the grid component for faster initial load
-const LocationContentGrid = React.lazy(() => import("./LocationContentGrid"));
+// Import the component directly instead of lazy loading it
+import LocationContentGrid from "./LocationContentGrid";
 import { useLocationContentManager } from "./useLocationContentManager";
 
 interface LocationDetailsContentProps {
@@ -106,29 +106,27 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       {loading || !contentLoaded ? (
         <LocationContentLoader />
       ) : (
-        <Suspense fallback={<LocationContentLoader />}>
-          <LocationContentGrid 
-            locationData={memoizedLocationData}
-            forecastData={forecastData}
-            longRangeForecast={longRangeForecast}
-            forecastLoading={forecastLoading}
-            longRangeLoading={longRangeLoading}
-            gettingUserLocation={gettingUserLocation}
-            onLocationUpdate={onLocUpdate}
-            setGettingUserLocation={setGettingUserLocation}
-            setStatusMessage={setStatusMessage}
-            onRefreshForecast={() => {
-              if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
-                handleRefreshForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
-              }
-            }}
-            onRefreshLongRange={() => {
-              if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
-                handleRefreshLongRangeForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
-              }
-            }}
-          />
-        </Suspense>
+        <LocationContentGrid 
+          locationData={memoizedLocationData}
+          forecastData={forecastData}
+          longRangeForecast={longRangeForecast}
+          forecastLoading={forecastLoading}
+          longRangeLoading={longRangeLoading}
+          gettingUserLocation={gettingUserLocation}
+          onLocationUpdate={onLocUpdate}
+          setGettingUserLocation={setGettingUserLocation}
+          setStatusMessage={setStatusMessage}
+          onRefreshForecast={() => {
+            if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
+              handleRefreshForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
+            }
+          }}
+          onRefreshLongRange={() => {
+            if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
+              handleRefreshLongRangeForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
+            }
+          }}
+        />
       )}
     </div>
   );
