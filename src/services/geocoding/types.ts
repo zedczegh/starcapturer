@@ -1,40 +1,23 @@
 
+// Define types related to geocoding service
+
 export type Language = "en" | "zh";
 
 export interface Location {
   name: string;
   latitude: number;
   longitude: number;
-  placeDetails?: string;
-  bortleScale?: number;
-  formattedName?: string;
+  administrativeArea?: string;
+  country?: string;
+  formattedAddress?: string;
 }
 
-export interface CityAlternative {
-  name: string;
-  chinese: string;
-  alternatives: string[];
-  coordinates: [number, number];
-  placeDetails?: string;
+export interface GeocodingOptions {
+  cache?: boolean;
+  timeout?: number;
 }
 
-export interface ChineseLocation {
-  areaCode: string;
-  provinceCode: string;
-  province: string;
-  cityCode: string;
-  city: string;
-  districtCode: string;
-  district: string;
-  nameEn: string;
-  pinyin: string;
-  longitude: number;
-  latitude: number;
-  bortleScale?: number;
-}
-
-export interface GeocodeResponse {
-  success: boolean;
-  results: Location[];
-  error?: string;
+export interface CacheService {
+  getCachedData: (key: string) => Promise<any>;
+  setCachedData: (key: string, data: any, ttl?: number) => Promise<void>;
 }

@@ -1,8 +1,10 @@
 
-import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
-import { LocationCacheService } from "@/components/location/map/LocationNameService";
 import { Language } from "@/services/geocoding/types";
-import { identifyRemoteRegion, enhanceRemoteLocationName } from "@/services/geocoding/remoteRegionResolver";
+
+export interface LocationCacheService {
+  setCachedData: (key: string, data: any, ttl?: number) => Promise<void>;
+  getCachedData: (key: string) => any;
+}
 
 /**
  * Optimized function to update location names with improved geocoding
@@ -92,4 +94,30 @@ export async function updateLocationName(
     console.error("Error in updateLocationName utility:", error);
     return currentName;
   }
+}
+
+// Placeholder functions that would be implemented in the actual service
+function identifyRemoteRegion(latitude: number, longitude: number): boolean {
+  // Implementation would check if coordinates are in remote regions
+  return false;
+}
+
+async function getLocationNameForCoordinates(
+  latitude: number, 
+  longitude: number, 
+  language: Language, 
+  cacheService: LocationCacheService
+): Promise<string> {
+  // Implementation would fetch location name
+  return `Location (${latitude.toFixed(6)}, ${longitude.toFixed(6)})`;
+}
+
+function enhanceRemoteLocationName(
+  latitude: number, 
+  longitude: number, 
+  currentName: string, 
+  language: Language
+): string {
+  // Implementation would enhance location name for remote regions
+  return currentName;
 }
