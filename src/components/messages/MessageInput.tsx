@@ -23,6 +23,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showOptions, setShowOptions] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   
   const handleSend = () => {
     if ((!message.trim() && !imageFile) || sending) return;
@@ -91,6 +92,11 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
     setShowOptions(false);
   };
 
+  const toggleEmojiPicker = () => {
+    setShowEmojiPicker(!showEmojiPicker);
+    setShowOptions(false);
+  };
+
   const handleEmojiSelect = (emojiTag: string) => {
     if (textareaRef.current) {
       const start = textareaRef.current.selectionStart;
@@ -109,7 +115,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
       }, 10);
     }
     
-    setShowOptions(false);
+    setShowEmojiPicker(false);
   };
 
   // Auto-resize textarea as user types
@@ -177,13 +183,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
               <Button
                 className="flex flex-col items-center gap-1 w-16 h-16 p-1 rounded-lg hover:bg-cosmic-800/50"
                 variant="ghost"
-                onClick={() => {
-                  // Open emoji picker directly
-                  const emojiButton = document.querySelector('[aria-label="Insert emoji"]');
-                  if (emojiButton instanceof HTMLElement) {
-                    emojiButton.click();
-                  }
-                }}
+                onClick={toggleEmojiPicker}
                 disabled={sending}
               >
                 <div className="h-8 w-8 rounded-full bg-cosmic-800/50 flex items-center justify-center">
@@ -199,9 +199,6 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
         
         <div className="relative flex-grow bg-cosmic-800/30 rounded-full border border-cosmic-700/50">
           <div className="flex items-center">
-            <div className="absolute right-2 flex items-center space-x-1 py-2 z-10">
-              <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-            </div>
             <textarea
               ref={textareaRef}
               className="w-full bg-transparent rounded-full py-2 px-4 pr-12 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none"
@@ -212,6 +209,39 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
               rows={1}
               disabled={sending}
             />
+            <div className="absolute right-2 flex items-center space-x-1 py-2 z-10">
+              <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="p-0 h-8 w-8 rounded-full text-cosmic-400 hover:text-primary hover:bg-cosmic-800/30"
+                    aria-label={t("Insert emoji", "插入表情")}
+                  >
+                    <Smile className="h-5 w-5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" alignOffset={-40} className="p-2 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-lg w-72">
+                  <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                    {siqsEmojis.map((emoji) => (
+                      <Button
+                        key={emoji.id}
+                        variant="ghost"
+                        className="flex flex-col items-center justify-center p-2 hover:bg-cosmic-800/50 cursor-pointer rounded-lg transition-all hover:scale-110 h-auto"
+                        onClick={() => handleEmojiSelect(`[${emoji.id}]`)}
+                      >
+                        <div className="p-1 transform hover:scale-110 transition-transform">
+                          {emoji.icon}
+                        </div>
+                        <span className="text-xs text-cosmic-300 mt-1 text-center">
+                          {emoji.name}
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
             <input 
               type="file"
               ref={fileInputRef}
