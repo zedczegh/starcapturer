@@ -9,7 +9,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
   try {
     console.log("Fetching comments for spot ID:", spotId);
     
-    // Fetch all comments for the spot
+    // Fetch all comments for the spot - Changed query to avoid join issues
     const { data, error } = await supabase
       .from("astro_spot_comments")
       .select(`
@@ -18,8 +18,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
         created_at,
         image_url,
         user_id,
-        parent_id,
-        profiles:user_id(id, username, avatar_url)
+        parent_id
       `)
       .eq('spot_id', spotId)
       .order('created_at', { ascending: false });
@@ -36,6 +35,23 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
     
     console.log(`Found ${data.length} comments for spot:`, spotId);
     
+    // We need to fetch user profiles separately
+    const userIds = [...new Set(data.map(comment => comment.user_id))];
+    const { data: profilesData, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, username, avatar_url")
+      .in('id', userIds);
+      
+    if (profilesError) {
+      console.error("Error fetching profiles:", profilesError);
+    }
+    
+    // Create a map of profiles for easier lookup
+    const profilesMap = (profilesData || []).reduce((map, profile) => {
+      map[profile.id] = profile;
+      return map;
+    }, {} as Record<string, any>);
+    
     // Transform the data to match our Comment type
     const allComments = data.map((comment: any) => ({
       id: comment.id,
@@ -43,7 +59,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
       created_at: comment.created_at,
       image_url: comment.image_url,
       parent_id: comment.parent_id,
-      profiles: comment.profiles || { username: null, avatar_url: null },
+      profiles: profilesMap[comment.user_id] || { username: null, avatar_url: null },
       replies: [] // Initialize empty replies array for each comment
     }));
     
