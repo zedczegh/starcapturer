@@ -45,6 +45,12 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
       return;
     }
 
+    // Validate content is not empty when uploading an image
+    if (!content.trim() && imageFile) {
+      toast.error(t("Please add some text to your comment", "请为您的评论添加一些文字"));
+      return;
+    }
+
     if (onSubmit) {
       console.log("Submitting new comment");
       await onSubmit(content, imageFile);
@@ -56,6 +62,12 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
   const handleReplySubmit = async (content: string, imageFile: File | null, parentId: string) => {
     if (!authUser) {
       toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
+      return;
+    }
+
+    // Validate content is not empty when uploading an image
+    if (!content.trim() && imageFile) {
+      toast.error(t("Please add some text to your comment", "请为您的评论添加一些文字"));
       return;
     }
 

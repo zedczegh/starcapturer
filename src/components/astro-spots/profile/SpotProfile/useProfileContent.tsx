@@ -6,6 +6,7 @@ import useCreatorProfile from '@/hooks/astro-spots/useCreatorProfile';
 import useSpotImages from '@/hooks/astro-spots/useSpotImages';
 import useProfileActions from '@/hooks/astro-spots/useProfileActions';
 import useAstroSpotComments from '@/hooks/astro-spots/useAstroSpotComments';
+import { ensureCommentImagesBucket } from '@/utils/comments/commentImageUtils';
 
 export const useProfileContent = (
   spotId: string, 
@@ -24,6 +25,14 @@ export const useProfileContent = (
   const { creatorProfile, loadingCreator } = useCreatorProfile(spot?.user_id);
   const { spotImages, loadingImages, refetchImages } = useSpotImages(spotId, refreshTrigger);
   const { handleViewDetails, handleMessageCreator } = useProfileActions(spot);
+  
+  // Ensure comment images bucket exists when spot profile is loaded
+  useEffect(() => {
+    const initStorage = async () => {
+      await ensureCommentImagesBucket();
+    };
+    initStorage();
+  }, []);
   
   // Use our comment hook with improved state management
   const {

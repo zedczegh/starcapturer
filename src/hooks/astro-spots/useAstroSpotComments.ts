@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Comment } from '@/components/astro-spots/profile/types/comments';
-import { uploadCommentImage } from '@/utils/comments/commentImageUtils';
+import { uploadCommentImage, ensureCommentImagesBucket } from '@/utils/comments/commentImageUtils';
 import { fetchComments, createComment } from '@/services/comments/commentService';
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -12,6 +12,11 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   const [comments, setComments] = useState<Comment[]>([]);
   const [loaded, setLoaded] = useState(false);
   const { user: authUser } = useAuth();
+
+  // Initialize bucket if needed when hook is first used
+  useCallback(async () => {
+    await ensureCommentImagesBucket();
+  }, [])();
 
   // Load comments function with better error handling
   const loadComments = useCallback(async () => {
@@ -39,6 +44,12 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       return { success: false };
     }
     
+    // Validate content is not empty when uploading an image
+    if (!content.trim() && imageFile) {
+      toast.error(t("Please add some text to your comment", "请为您的评论添加一些文字"));
+      return { success: false };
+    }
+    
     setCommentSending(true);
     
     try {
@@ -46,6 +57,9 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       let imageUrl: string | null = null;
       if (imageFile) {
+        // Ensure bucket exists before trying to upload
+        await ensureCommentImagesBucket();
+        
         imageUrl = await uploadCommentImage(imageFile, t);
         if (!imageUrl) {
           toast.error(t("Failed to upload image", "图片上传失败"));

@@ -10,7 +10,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
     console.log("Fetching comments for spot ID:", spotId);
     
     // Fetch all comments for the spot - Changed query to avoid join issues
-    const { data, error } = await supabase
+    const { data: commentsData, error: commentsError } = await supabase
       .from("astro_spot_comments")
       .select(`
         id,
@@ -23,20 +23,20 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
       .eq('spot_id', spotId)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error("Error fetching comments:", error);
-      throw error;
+    if (commentsError) {
+      console.error("Error fetching comments:", commentsError);
+      throw commentsError;
     }
     
-    if (!data || data.length === 0) {
+    if (!commentsData || commentsData.length === 0) {
       console.log("No comments found for spot:", spotId);
       return [];
     }
     
-    console.log(`Found ${data.length} comments for spot:`, spotId);
+    console.log(`Found ${commentsData.length} comments for spot:`, spotId);
     
     // We need to fetch user profiles separately
-    const userIds = [...new Set(data.map(comment => comment.user_id))];
+    const userIds = [...new Set(commentsData.map(comment => comment.user_id))];
     const { data: profilesData, error: profilesError } = await supabase
       .from("profiles")
       .select("id, username, avatar_url")
@@ -53,7 +53,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
     }, {} as Record<string, any>);
     
     // Transform the data to match our Comment type
-    const allComments = data.map((comment: any) => ({
+    const allComments = commentsData.map((comment: any) => ({
       id: comment.id,
       content: comment.content,
       created_at: comment.created_at,
@@ -94,6 +94,12 @@ export const createComment = async (
   parentId?: string | null
 ): Promise<boolean> => {
   try {
+    // Validate that content is not empty if image is being added
+    if (!content.trim() && imageUrl) {
+      console.error("Comment content cannot be empty when uploading an image");
+      return false;
+    }
+    
     console.log(`Creating comment for user: ${userId}, spot: ${spotId}, parent: ${parentId || 'none'}`);
     
     const { error: insertError } = await supabase
@@ -101,7 +107,7 @@ export const createComment = async (
       .insert({
         user_id: userId,
         spot_id: spotId,
-        content: content.trim() || " ", // Use a space if only image is submitted
+        content: content.trim(),
         image_url: imageUrl,
         parent_id: parentId || null
       });

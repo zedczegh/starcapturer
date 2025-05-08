@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, ImagePlus, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { toast } from "sonner";
 
 interface CommentInputProps {
   onSubmit: (content: string, image?: File | null) => void;
@@ -19,6 +20,13 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate content is not empty if uploading an image
+    if (!commentText.trim() && imageFile) {
+      toast.error(t("Please add some text to your comment", "请为您的评论添加一些文字"));
+      return;
+    }
+    
     if (commentText.trim() || imageFile) {
       onSubmit(commentText.trim(), imageFile);
       setCommentText('');
@@ -31,7 +39,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        alert(t('Image must be less than 5MB', '图片必须小于5MB'));
+        toast.error(t('Image must be less than 5MB', '图片必须小于5MB'));
         return;
       }
       

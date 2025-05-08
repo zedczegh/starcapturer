@@ -4,6 +4,34 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
 
 /**
+ * Creates the comment_images bucket if it doesn't exist
+ */
+export const ensureCommentImagesBucket = async (): Promise<boolean> => {
+  try {
+    // Check if bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(bucket => bucket.name === 'comment_images');
+    
+    if (!bucketExists) {
+      const { error } = await supabase.storage.createBucket('comment_images', {
+        public: true,
+        fileSizeLimit: 5242880, // 5MB limit
+      });
+      
+      if (error) {
+        console.error("Error creating comment_images bucket:", error);
+        return false;
+      }
+      console.log("Created comment_images bucket");
+    }
+    return true;
+  } catch (error) {
+    console.error("Error checking/creating comment_images bucket:", error);
+    return false;
+  }
+};
+
+/**
  * Uploads an image to the comment_images bucket and returns the public URL
  */
 export const uploadCommentImage = async (
@@ -12,6 +40,13 @@ export const uploadCommentImage = async (
 ): Promise<string | null> => {
   try {
     if (!imageFile) return null;
+    
+    // Ensure the bucket exists
+    const bucketReady = await ensureCommentImagesBucket();
+    if (!bucketReady) {
+      toast.error(t("Failed to prepare storage", "存储准备失败"));
+      return null;
+    }
     
     // Generate a unique filename
     const uniqueId = uuidv4();
