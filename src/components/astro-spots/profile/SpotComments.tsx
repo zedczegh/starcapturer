@@ -34,6 +34,31 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     setLocalComments(comments);
   }, [comments]);
 
+  // Create comment bucket if it doesn't exist
+  const ensureCommentBucket = async () => {
+    try {
+      // Check if bucket exists
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const bucketExists = buckets?.some(bucket => bucket.name === 'comment_images');
+      
+      if (!bucketExists) {
+        const { error } = await supabase.storage.createBucket('comment_images', {
+          public: true
+        });
+        
+        if (error) {
+          console.error("Error creating comment_images bucket:", error);
+          return false;
+        }
+        console.log("Created comment_images bucket");
+      }
+      return true;
+    } catch (error) {
+      console.error("Error checking/creating bucket:", error);
+      return false;
+    }
+  };
+
   const handleCommentSubmit = async (content: string, imageFile: File | null = null) => {
     if (!user || !spotId || (!content.trim() && !imageFile)) return;
     
@@ -44,9 +69,18 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
       
       // If there's an image file, upload it first
       if (imageFile) {
-        // Create a simple filename without special characters
+        // Ensure bucket exists
+        const bucketReady = await ensureCommentBucket();
+        if (!bucketReady) {
+          toast.error(t("Failed to prepare storage", "存储准备失败"));
+          setCommentSending(false);
+          return;
+        }
+        
+        // Create a simple filename (avoid using uuid directly as filename)
+        const uniqueId = uuidv4();
         const fileExt = imageFile.name.split('.').pop() || '';
-        const fileName = `${uuidv4()}.${fileExt}`;
+        const fileName = `${uniqueId}.${fileExt}`;
         
         const { error: uploadError, data: uploadData } = await supabase.storage
           .from('comment_images')
@@ -81,7 +115,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
       }
       
       // Now insert the comment with the image URL if available
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from("astro_spot_comments")
         .insert({
           user_id: userId,
@@ -97,39 +131,44 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         return;
       }
       
-      // Fetch the newly created comment with profile data
-      const { data: newCommentData, error: fetchError } = await supabase
+      // After successful insertion, fetch all comments to refresh the list
+      const { data: refreshedComments, error: fetchError } = await supabase
         .from("astro_spot_comments")
         .select(`
           id,
           content,
           created_at,
           image_url,
-          user_id,
-          profiles:user_id(username, avatar_url)
+          profiles:user_id (
+            username,
+            avatar_url
+          )
         `)
         .eq('spot_id', spotId)
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .order('created_at', { ascending: false });
         
-      if (fetchError || !newCommentData || newCommentData.length === 0) {
-        console.error("Error fetching new comment:", fetchError);
-        toast.error(t("Comment posted but couldn't refresh.", "评论已发表但无法刷新。"));
-      } else {
-        const newComment = newCommentData[0] as unknown as Comment;
-        setLocalComments(prev => [newComment, ...prev]);
+      if (fetchError) {
+        console.error("Error fetching comments:", fetchError);
+        toast.error(t("Comment posted but couldn't refresh the list", "评论已发表但无法刷新列表"));
+      } else if (refreshedComments) {
+        const typedComments = refreshedComments.map((comment: any) => ({
+          id: comment.id,
+          content: comment.content,
+          created_at: comment.created_at,
+          image_url: comment.image_url,
+          profiles: comment.profiles || { username: null, avatar_url: null }
+        })) as Comment[];
+        
+        setLocalComments(typedComments);
         toast.success(t("Comment posted!", "评论已发表！"));
       }
-      
-      setTimeout(() => {
-        onCommentsUpdate();
-      }, 500);
-      
     } catch (err) {
       console.error("Exception when posting comment:", err);
       toast.error(t("Failed to post comment.", "评论发送失败。"));
     } finally {
       setCommentSending(false);
+      // Always call onCommentsUpdate to trigger a refresh from parent
+      onCommentsUpdate();
     }
   };
 

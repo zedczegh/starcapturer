@@ -1,14 +1,18 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { formatDistance } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Comment } from '../types/comments';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CommentItemProps {
   comment: Comment;
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  
   const formattedDate = formatDistance(
     new Date(comment.created_at), 
     new Date(), 
@@ -29,28 +33,55 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
           <div className="text-sm font-medium text-cosmic-200">
             {comment.profiles?.username || "Anonymous"}
           </div>
-          <div className="text-xs text-cosmic-400">
-            {formattedDate}
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-xs text-cosmic-400 cursor-help">
+                  {formattedDate}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs bg-cosmic-800/90 border-cosmic-700">
+                {new Date(comment.created_at).toLocaleString()}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         
         <div className="text-sm text-cosmic-300">
-          {comment.content}
+          {comment.content && comment.content.trim() !== " " ? comment.content : null}
         </div>
         
-        {comment.image_url && (
-          <a 
-            href={comment.image_url} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="block mt-2"
-          >
-            <img 
-              src={comment.image_url} 
-              alt="Comment attachment" 
-              className="max-h-40 rounded-md border border-cosmic-700/30 hover:opacity-90 transition-opacity object-cover"
-            />
-          </a>
+        {comment.image_url && !imageError && (
+          <div className="relative mt-2 max-w-xs">
+            {!imageLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center bg-cosmic-800/50 rounded-md">
+                <div className="h-5 w-5 border-2 border-t-transparent border-cosmic-300 rounded-full animate-spin"></div>
+              </div>
+            )}
+            <a 
+              href={comment.image_url} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="block"
+            >
+              <img 
+                src={comment.image_url} 
+                alt="Comment attachment" 
+                className={`max-h-40 rounded-md border border-cosmic-700/30 hover:opacity-90 transition-opacity object-cover ${!imageLoaded ? 'opacity-0' : 'opacity-100'}`}
+                onLoad={() => setImageLoaded(true)}
+                onError={() => {
+                  console.error("Failed to load image:", comment.image_url);
+                  setImageError(true);
+                }}
+              />
+            </a>
+          </div>
+        )}
+        
+        {comment.image_url && imageError && (
+          <div className="mt-2 text-xs text-cosmic-400 italic">
+            [Image unavailable]
+          </div>
         )}
       </div>
     </div>

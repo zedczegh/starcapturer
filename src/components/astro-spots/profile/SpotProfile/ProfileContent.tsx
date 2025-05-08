@@ -58,15 +58,14 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
       const { data: advantageData } = await supabase
         .from('astro_spot_advantages').select('*').eq('spot_id', spotId);
       
-      const { data: commentData } = await supabase
+      const { data: commentData, error: commentError } = await supabase
         .from('astro_spot_comments')
         .select(`
           id,
           content,
           created_at,
           image_url,
-          user_id,
-          profiles:user_id(
+          profiles:profiles!user_id(
             username,
             avatar_url
           )
@@ -74,6 +73,10 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
         .eq('spot_id', spotId)
         .order('created_at', { ascending: false });
 
+      if (commentError) {
+        console.error("Error fetching comments:", commentError);
+      }
+      
       let commentsWithProfiles: Comment[] = [];
       if (commentData) {
         commentsWithProfiles = commentData.map((comment: any) => ({
