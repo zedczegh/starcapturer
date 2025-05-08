@@ -8,61 +8,76 @@ interface EmojiRendererProps {
 }
 
 const EmojiRenderer: React.FC<EmojiRendererProps> = ({ text, inline = false }) => {
-  // Split text by emoji tags and render them accordingly
-  const renderTextWithEmojis = () => {
-    if (!text) return null;
+  // If no text is provided, return null
+  if (!text) return null;
+  
+  // Regular expression to match emoji tags [emoji-id]
+  const emojiRegex = /\[([\w-]+)\]/g;
+  
+  // Check if the text is just a single emoji
+  if (text.trim().match(/^\[([\w-]+)\]$/)) {
+    const emojiId = text.trim().replace('[', '').replace(']', '');
+    const emoji = siqsEmojis.find(e => e.id === emojiId);
     
-    // Updated regex to match all our emoji formats [emoji-id]
-    const regex = /\[(stellar-star|happy-moon|curious-cloud|content-observer|worried-weather|sad-satellite|location-pin|earth-globe|astro-compass|clear-night|cloudy-sky|navigation-point|bright-sun|stargazing-route|observatory|dark-site)\]/g;
-    
-    // If the text is just an emoji tag, only render the emoji
-    if (regex.test(text) && text.trim().match(regex)?.[0] === text.trim()) {
-      const emojiId = text.trim().replace('[', '').replace(']', '');
-      const emoji = siqsEmojis.find(e => e.id === emojiId);
-      
-      if (emoji) {
-        return (
-          <span className="inline-block align-middle mx-0.5" title={emoji.description}>
-            {emoji.icon}
-          </span>
-        );
-      }
+    if (emoji) {
+      return (
+        <span className="inline-block align-middle" title={emoji.description}>
+          {emoji.icon}
+        </span>
+      );
+    }
+  }
+  
+  // Split the text by emoji tags and render both text and emojis
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  
+  // Clone the regex to reset lastIndex
+  const regex = new RegExp(emojiRegex);
+  
+  while ((match = regex.exec(text)) !== null) {
+    // Add text before the emoji
+    if (match.index > lastIndex) {
+      parts.push(
+        <React.Fragment key={`text-${lastIndex}`}>
+          {text.substring(lastIndex, match.index)}
+        </React.Fragment>
+      );
     }
     
-    // Reset regex state after test
-    regex.lastIndex = 0;
+    // Find and add the emoji
+    const emojiId = match[1];
+    const emoji = siqsEmojis.find(e => e.id === emojiId);
     
-    // Split the text into parts that are either text or emoji tags
-    const parts = text.split(regex);
-    const matches = text.match(regex) || [];
+    if (emoji) {
+      parts.push(
+        <span key={`emoji-${match.index}`} className="inline-block align-middle mx-0.5" title={emoji.description}>
+          {emoji.icon}
+        </span>
+      );
+    } else {
+      // If emoji not found, just add the original tag
+      parts.push(
+        <React.Fragment key={`unknown-${match.index}`}>
+          {match[0]}
+        </React.Fragment>
+      );
+    }
     
-    return (
-      <>
-        {parts.map((part, i) => {
-          // If this is just text, render it as is
-          if (i === 0 || !matches[i - 1]) {
-            return part;
-          }
-          
-          // If this is an emoji tag, render only the emoji icon (skip the text part)
-          const emojiId = matches[i - 1].replace('[', '').replace(']', '');
-          const emoji = siqsEmojis.find(e => e.id === emojiId);
-          
-          if (!emoji) return part;
-          
-          return (
-            <React.Fragment key={i}>
-              <span className="inline-block align-middle mx-0.5" title={emoji.description}>
-                {emoji.icon}
-              </span>
-            </React.Fragment>
-          );
-        })}
-      </>
+    lastIndex = regex.lastIndex;
+  }
+  
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(
+      <React.Fragment key={`text-end`}>
+        {text.substring(lastIndex)}
+      </React.Fragment>
     );
-  };
-
-  return <span className={inline ? "inline" : ""}>{renderTextWithEmojis()}</span>;
+  }
+  
+  return <span className={inline ? "inline" : ""}>{parts}</span>;
 };
 
 export default EmojiRenderer;

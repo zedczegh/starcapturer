@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Smile } from "lucide-react";
 import { 
   DropdownMenu,
@@ -18,10 +18,15 @@ interface EmojiPickerProps {
 
 const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
   const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState("siqs");
   
   // Group emojis by categories
   const siqsConditionEmojis = siqsEmojis.filter(emoji => emoji.category === "siqs");
   const locationEmojis = siqsEmojis.filter(emoji => emoji.category === "location");
+  
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
   
   return (
     <DropdownMenu>
@@ -36,7 +41,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="p-2 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-lg w-72">
-        <Tabs defaultValue="siqs">
+        <Tabs defaultValue="siqs" value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-2 mb-2">
             <TabsTrigger value="siqs">{t("SIQS Emojis", "SIQS 表情")}</TabsTrigger>
             <TabsTrigger value="location">{t("Location Emojis", "位置表情")}</TabsTrigger>
@@ -67,7 +72,9 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
                 <DropdownMenuItem
                   key={emoji.id}
                   className="flex flex-col items-center justify-center p-2 hover:bg-cosmic-800/50 cursor-pointer rounded-lg transition-all hover:scale-110"
-                  onClick={() => onEmojiSelect(`[${emoji.id}]`)}
+                  onClick={() => {
+                    onEmojiSelect(`[${emoji.id}]`);
+                  }}
                 >
                   <div className="p-1 transform hover:scale-110 transition-transform">
                     {emoji.icon}
