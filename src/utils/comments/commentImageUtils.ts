@@ -10,6 +10,13 @@ export const ensureCommentImagesBucket = async (): Promise<boolean> => {
   try {
     console.log("Checking if comment_images bucket is accessible...");
     
+    // Check if the user is authenticated first
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.log("User is not authenticated, cannot access bucket");
+      return false;
+    }
+    
     // First check if the bucket exists
     const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
     
@@ -27,7 +34,7 @@ export const ensureCommentImagesBucket = async (): Promise<boolean> => {
     // Try to list files in the bucket to verify access permissions
     const { error } = await supabase.storage
       .from('comment_images')
-      .list('', { limit: 1 });
+      .list('');
     
     if (error && error.message !== 'The resource was not found') {
       console.error("Error checking comment_images bucket:", error);
@@ -53,6 +60,14 @@ export const uploadCommentImage = async (
   try {
     if (!imageFile) return null;
     
+    // Check if user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error("User is not authenticated, cannot upload image");
+      toast.error(t("You must be logged in to upload images", "您必须登录才能上传图片"));
+      return null;
+    }
+    
     // Check if bucket is accessible
     const bucketReady = await ensureCommentImagesBucket();
     if (!bucketReady) {
@@ -65,8 +80,8 @@ export const uploadCommentImage = async (
     const fileExt = imageFile.name.split('.').pop() || '';
     const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
     const timestamp = new Date().getTime();
-    const uniqueId = uuidv4();
-    const fileName = `${timestamp}-${uniqueId}.${sanitizedExt}`;
+    const uniqueId = uuidv4().substring(0, 8);
+    const fileName = `${timestamp}-${uniqueId}.${sanitizedExt || 'jpg'}`;
     
     console.log(`Uploading image: ${fileName}, size: ${imageFile.size} bytes, type: ${imageFile.type}`);
     
@@ -74,7 +89,7 @@ export const uploadCommentImage = async (
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('comment_images')
       .upload(fileName, imageFile, {
-        contentType: imageFile.type,
+        contentType: imageFile.type || 'image/jpeg',
         cacheControl: '3600',
         upsert: false
       });

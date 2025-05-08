@@ -5,6 +5,7 @@ import { Comment } from '@/components/astro-spots/profile/types/comments';
 import { uploadCommentImage, ensureCommentImagesBucket } from '@/utils/comments/commentImageUtils';
 import { fetchComments, createComment } from '@/services/comments/commentService';
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: string) => string) => {
   const [commentSending, setCommentSending] = useState(false);
@@ -18,7 +19,14 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     const checkStorage = async () => {
       try {
         console.log("Checking comment images bucket availability...");
-        // Make the delay long enough to ensure we have a proper check
+        const authStatus = await supabase.auth.getSession();
+        
+        if (!authStatus.data.session) {
+          console.log("No active session, bucket not accessible");
+          setBucketAvailable(false);
+          return;
+        }
+        
         const available = await ensureCommentImagesBucket();
         console.log(`Comment images bucket available: ${available}`);
         setBucketAvailable(available);
@@ -31,13 +39,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       }
     };
     
-    // Only check if user is authenticated
-    if (authUser) {
-      checkStorage();
-    } else {
-      // If no user, mark as unavailable
-      setBucketAvailable(false);
-    }
+    checkStorage();
   }, [authUser]);
 
   // Load comments function with better error handling
@@ -80,26 +82,27 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       let imageUrl: string | null = null;
       if (imageFile) {
-        // Double check bucket availability before attempting upload
-        if (bucketAvailable !== true) {
-          // Force a fresh check of bucket availability
-          console.log("Rechecking bucket availability before upload...");
-          const isAvailable = await ensureCommentImagesBucket();
-          setBucketAvailable(isAvailable);
-          
-          if (!isAvailable) {
-            toast.error(t("Image uploads are temporarily unavailable", "图片上传暂时不可用"));
-            console.error("Image upload skipped because storage bucket is not available");
-          } else {
-            console.log("Bucket is now available, proceeding with upload");
-            imageUrl = await uploadCommentImage(imageFile, t);
-          }
+        // Before upload, verify authentication status
+        const { data: authData } = await supabase.auth.getSession();
+        if (!authData.session) {
+          toast.error(t("You must be logged in to upload images", "您必须登录才能上传图片"));
+          return { success: false };
+        }
+        
+        // Force a fresh check of bucket availability
+        console.log("Verifying bucket availability before upload...");
+        const isAvailable = await ensureCommentImagesBucket();
+        setBucketAvailable(isAvailable);
+        
+        if (!isAvailable) {
+          toast.error(t("Image uploads are temporarily unavailable", "图片上传暂时不可用"));
+          console.error("Image upload skipped because storage bucket is not available");
         } else {
-          console.log("Attempting to upload image for comment...");
+          console.log("Bucket is available, proceeding with upload");
           imageUrl = await uploadCommentImage(imageFile, t);
         }
         
-        if (!imageUrl && bucketAvailable === true) {
+        if (!imageUrl && isAvailable) {
           // If bucket is available but upload still failed
           toast.warning(t("Image couldn't be uploaded, posting text only", "图片无法上传，仅发布文字"));
         } else if (imageUrl) {
