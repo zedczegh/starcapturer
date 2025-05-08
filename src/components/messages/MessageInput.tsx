@@ -116,7 +116,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   }, [message]);
 
   return (
-    <div className="border-t border-cosmic-800/50 p-4 bg-cosmic-900/20 space-y-3">
+    <div className="border-t border-cosmic-800/50 p-4 bg-cosmic-900/60 space-y-3 sticky bottom-0 backdrop-blur-sm">
       {imagePreview && (
         <div className="relative inline-block">
           <img 
@@ -150,7 +150,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
             />
             <div className="absolute bottom-2 left-2 flex items-center space-x-1">
               <button
-                className="text-cosmic-400 hover:text-primary"
+                className="text-cosmic-400 hover:text-primary p-1 rounded-full hover:bg-cosmic-800/30"
                 onClick={triggerFileInput}
                 type="button"
                 disabled={sending}

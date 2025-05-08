@@ -153,7 +153,8 @@ const MessageList: React.FC<MessageListProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-cosmic-800/50 bg-cosmic-900/50 flex items-center gap-3">
+      {/* Fixed header with improved styling and clear border */}
+      <div className="p-4 border-b border-cosmic-800/50 bg-cosmic-900/90 flex items-center gap-3 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
         <Button 
           variant="ghost" 
           className="md:hidden mr-2 text-cosmic-400 hover:text-white hover:bg-cosmic-800/50" 
@@ -188,8 +189,9 @@ const MessageList: React.FC<MessageListProps> = ({
         </div>
       </div>
 
+      {/* Messages container with padding to avoid overlap with header and input */}
       <div 
-        className="flex-1 overflow-y-auto p-4 space-y-4" 
+        className="flex-1 overflow-y-auto p-4 pb-2 space-y-4 max-h-[calc(100%-130px)]" 
         ref={scrollAreaRef}
       >
         {messages.length === 0 ? (
@@ -209,11 +211,11 @@ const MessageList: React.FC<MessageListProps> = ({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className={`flex gap-3 ${
+              className={`flex gap-3 group ${
                 message.sender_id === currentUserId ? 'flex-row-reverse' : 'flex-row'
               }`}
             >
-              <Avatar className="h-8 w-8 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20 flex-shrink-0">
+              <Avatar className="h-8 w-8 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20 flex-shrink-0 mt-1">
                 {message.sender_profile?.avatar_url ? (
                   <AvatarImage 
                     src={message.sender_profile.avatar_url} 
@@ -272,7 +274,7 @@ const MessageList: React.FC<MessageListProps> = ({
                           <span className="sr-only">{t("Message actions", "消息操作")}</span>
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align={message.sender_id === currentUserId ? "end" : "start"} className="bg-cosmic-900/95 border-cosmic-700">
+                      <DropdownMenuContent align={message.sender_id === currentUserId ? "end" : "start"} className="bg-cosmic-900/95 border-cosmic-700 z-50">
                         <DropdownMenuItem
                           className="flex gap-2 text-red-500 cursor-pointer"
                           onClick={() => {

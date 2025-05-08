@@ -191,11 +191,11 @@ const Messages = () => {
           
           <Card className={`${!activeConversation ? 'hidden md:flex' : 'flex'} 
             w-full md:w-2/3 glassmorphism overflow-hidden flex flex-col
-            border border-cosmic-800/30 shadow-xl backdrop-blur-lg`}
+            border border-cosmic-800/30 shadow-xl backdrop-blur-lg relative`}
             ref={messageListRef}
           >
             {activeConversation ? (
-              <>
+              <div className="flex flex-col h-full">
                 <MessageList 
                   messages={messages}
                   currentUserId={user.id}
@@ -207,7 +207,7 @@ const Messages = () => {
                   onSend={handleSendMessage}
                   sending={sending}
                 />
-              </>
+              </div>
             ) : (
               <div className="flex-1 flex items-center justify-center p-8">
                 <div className="text-center text-cosmic-400 space-y-4">
