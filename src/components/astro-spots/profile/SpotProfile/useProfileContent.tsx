@@ -19,6 +19,7 @@ export const useProfileContent = (
   const [isCreator, setIsCreator] = useState(false);
   const [showInstantLoader, setShowInstantLoader] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [storageChecked, setStorageChecked] = useState(false);
   
   // Use our smaller hooks
   const { spot, isLoading, refetch } = useSpotData(spotId, refreshTrigger);
@@ -26,12 +27,21 @@ export const useProfileContent = (
   const { spotImages, loadingImages, refetchImages } = useSpotImages(spotId, refreshTrigger);
   const { handleViewDetails, handleMessageCreator } = useProfileActions(spot);
   
-  // Ensure comment images bucket exists when spot profile is loaded
+  // Check if bucket exists but don't try to create it
   useEffect(() => {
-    const initStorage = async () => {
-      await ensureCommentImagesBucket();
+    const checkStorage = async () => {
+      try {
+        const available = await ensureCommentImagesBucket();
+        setStorageChecked(true);
+        if (!available) {
+          console.log("Comment images storage is not accessible - this will affect image uploads");
+        }
+      } catch (err) {
+        console.error("Error checking comment image storage:", err);
+        setStorageChecked(true);
+      }
     };
-    initStorage();
+    checkStorage();
   }, []);
   
   // Use our comment hook with improved state management
@@ -140,7 +150,8 @@ export const useProfileContent = (
     handleCommentsUpdate,
     handleCommentSubmit,
     handleImagesUpdate,
-    handleMessageCreator
+    handleMessageCreator,
+    storageChecked
   };
 };
 

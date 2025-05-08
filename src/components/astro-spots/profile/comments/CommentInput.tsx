@@ -21,18 +21,22 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate content is not empty if uploading an image
-    if (!commentText.trim() && imageFile) {
-      toast.error(t("Please add some text to your comment", "请为您的评论添加一些文字"));
+    // Require text content with images
+    if (imageFile && !commentText.trim()) {
+      toast.error(t("Please add some text with your image", "请为您的图片添加一些文字"));
       return;
     }
     
-    if (commentText.trim() || imageFile) {
-      onSubmit(commentText.trim(), imageFile);
-      setCommentText('');
-      setImageFile(null);
-      setImagePreview(null);
+    // Ensure there's either text or an image
+    if (!commentText.trim() && !imageFile) {
+      toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
+      return;
     }
+    
+    onSubmit(commentText.trim(), imageFile);
+    setCommentText('');
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
