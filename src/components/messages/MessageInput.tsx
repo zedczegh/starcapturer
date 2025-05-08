@@ -5,6 +5,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Send, Image, X } from "lucide-react";
 import { toast } from "sonner";
 import EmojiPicker from './EmojiPicker';
+import EmojiRenderer from './EmojiRenderer';
+import { siqsEmojis } from './SiqsEmojiData';
 
 interface MessageInputProps {
   onSend: (text: string, imageFile?: File | null) => void;
@@ -14,6 +16,7 @@ interface MessageInputProps {
 const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   const { t } = useLanguage();
   const [message, setMessage] = useState("");
+  const [displayMessage, setDisplayMessage] = useState<React.ReactNode>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -24,6 +27,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
     
     onSend(message, imageFile);
     setMessage("");
+    setDisplayMessage(null);
     setImageFile(null);
     setImagePreview(null);
     
@@ -34,6 +38,11 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
       }
     }, 100);
   };
+
+  // Update display message when message changes
+  useEffect(() => {
+    setDisplayMessage(<EmojiRenderer text={message} />);
+  }, [message]);
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -128,35 +137,37 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
       
       <div className="flex items-end gap-2">
         <div className="relative flex-grow">
-          <textarea
-            ref={textareaRef}
-            className="w-full bg-cosmic-800/30 border border-cosmic-700/50 rounded-lg py-2 px-4 pl-16 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none focus:ring-1 focus:ring-primary"
-            placeholder={t("Type your message...", "输入您的消息...")}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            disabled={sending}
-          />
-          <div className="absolute bottom-2 left-2 flex items-center space-x-1">
-            <button
-              className="text-cosmic-400 hover:text-primary"
-              onClick={triggerFileInput}
-              type="button"
+          <div className="relative">
+            <textarea
+              ref={textareaRef}
+              className="w-full bg-cosmic-800/30 border border-cosmic-700/50 rounded-lg py-2 px-4 pl-16 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder={t("Type your message...", "输入您的消息...")}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
               disabled={sending}
-            >
-              <Image className="h-5 w-5" />
-            </button>
-            <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+            />
+            <div className="absolute bottom-2 left-2 flex items-center space-x-1">
+              <button
+                className="text-cosmic-400 hover:text-primary"
+                onClick={triggerFileInput}
+                type="button"
+                disabled={sending}
+              >
+                <Image className="h-5 w-5" />
+              </button>
+              <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+            </div>
+            <input 
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileChange}
+              disabled={sending}
+            />
           </div>
-          <input 
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept="image/*"
-            onChange={handleFileChange}
-            disabled={sending}
-          />
         </div>
         <Button
           className="flex-shrink-0"

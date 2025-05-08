@@ -4,9 +4,10 @@ import { siqsEmojis } from "./SiqsEmojiData";
 
 interface EmojiRendererProps {
   text: string;
+  inline?: boolean;
 }
 
-const EmojiRenderer: React.FC<EmojiRendererProps> = ({ text }) => {
+const EmojiRenderer: React.FC<EmojiRendererProps> = ({ text, inline = false }) => {
   // Split text by emoji tags and render them accordingly
   const renderTextWithEmojis = () => {
     if (!text) return null;
@@ -22,7 +23,7 @@ const EmojiRenderer: React.FC<EmojiRendererProps> = ({ text }) => {
       <>
         {parts.map((part, i) => {
           // If this is just text, render it as is
-          if (i >= matches.length || !matches[i - 1]) {
+          if (i === 0 || !matches[i - 1]) {
             return part;
           }
           
@@ -45,7 +46,7 @@ const EmojiRenderer: React.FC<EmojiRendererProps> = ({ text }) => {
     );
   };
 
-  return <span>{renderTextWithEmojis()}</span>;
+  return <span className={inline ? "inline" : ""}>{renderTextWithEmojis()}</span>;
 };
 
 export default EmojiRenderer;

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from "framer-motion";
@@ -7,6 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
+import EmojiRenderer from './EmojiRenderer';
 
 interface ConversationPartner {
   id: string;
@@ -128,9 +128,9 @@ const ConversationList: React.FC<ConversationListProps> = ({
                     {formatMessageTime(conversation.last_message_time)}
                   </span>
                 </div>
-                <p className="text-sm text-cosmic-300 truncate mt-0.5">
-                  {conversation.last_message}
-                </p>
+                <div className="text-sm text-cosmic-300 truncate mt-0.5">
+                  <EmojiRenderer text={conversation.last_message} inline />
+                </div>
               </div>
             </motion.div>
           ))
