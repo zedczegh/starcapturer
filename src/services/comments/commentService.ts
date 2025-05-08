@@ -55,15 +55,19 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
     // Transform the data to match our Comment type
     const allComments = commentsData.map((comment: any) => ({
       id: comment.id,
-      content: comment.content,
+      content: comment.content || "",
       created_at: comment.created_at,
       image_url: comment.image_url,
       parent_id: comment.parent_id,
       profiles: profilesMap[comment.user_id] ? {
-        username: profilesMap[comment.user_id].username || null,
+        username: profilesMap[comment.user_id].username || "Anonymous",
         avatar_url: profilesMap[comment.user_id].avatar_url || null,
         full_name: null
-      } : null,
+      } : {
+        username: "Anonymous",
+        avatar_url: null,
+        full_name: null
+      },
       replies: [] // Initialize empty replies array for each comment
     }));
     

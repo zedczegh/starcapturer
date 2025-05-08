@@ -39,31 +39,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     handleMessageCreator
   } = useProfileContent(spotId, user, comingFromCommunity, t);
   
-  // Convert comments from hook format to component format
-  const convertedComments: Comment[] = comments.map(comment => ({
-    id: comment.id,
-    content: comment.comment || comment.content, // Handle both formats
-    created_at: comment.created_at,
-    image_url: comment.image_url || null,
-    profiles: comment.profiles ? {
-      username: comment.profiles.username || null,
-      avatar_url: comment.profiles.avatar_url || null,
-      full_name: comment.profiles.full_name || null
-    } : null,
-    parent_id: comment.parent_id || null,
-    replies: comment.replies?.map(reply => ({
-      id: reply.id,
-      content: reply.comment || reply.content, // Handle both formats
-      created_at: reply.created_at,
-      image_url: reply.image_url || null,
-      profiles: reply.profiles ? {
-        username: reply.profiles.username || null,
-        avatar_url: reply.profiles.avatar_url || null,
-        full_name: reply.profiles.full_name || null
-      } : null,
-      parent_id: reply.parent_id || null
-    })) || []
-  }));
+  // No conversion needed as comments are now directly of type Comment[]
 
   if (isLoading || !spot) {
     return <LocationDetailsLoading />;
@@ -98,7 +74,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
         loadingImages={loadingImages}
         user={user}
         isCreator={isCreator}
-        comments={convertedComments}
+        comments={comments}
         commentSending={commentSending}
         onImagesUpdate={handleImagesUpdate}
         onCommentsUpdate={handleCommentsUpdate}

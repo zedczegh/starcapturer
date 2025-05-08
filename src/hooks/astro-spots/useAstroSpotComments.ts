@@ -24,6 +24,28 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   const [uploadingImage, setUploadingImage] = useState(false);
   const [commentSending, setCommentSending] = useState(false);
 
+  // Helper function to check if profile data is valid
+  const isValidProfile = (profile: any): boolean => {
+    return profile && typeof profile === 'object' && !profile.error;
+  };
+
+  // Helper function to safely extract profile info
+  const extractProfileInfo = (profileData: any) => {
+    if (!isValidProfile(profileData)) {
+      return {
+        username: "Anonymous",
+        avatar_url: null,
+        full_name: null
+      };
+    }
+    
+    return {
+      username: profileData.username || "Anonymous",
+      avatar_url: profileData.avatar_url || null,
+      full_name: profileData.full_name || null
+    };
+  };
+
   const fetchComments = useCallback(async () => {
     if (!spotId) return;
     
@@ -48,7 +70,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       // Fetch replies for each comment
       const commentsWithReplies = await Promise.all(
-        data.map(async (comment) => {
+        (data || []).map(async (comment) => {
           const { data: replies, error: repliesError } = await supabase
             .from('astro_spot_comments')
             .select(`
@@ -64,19 +86,14 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
           }
           
           // Transform replies to match our Comment type
-          const typedReplies: Comment[] = replies?.map(reply => ({
+          const typedReplies: Comment[] = (replies || []).map(reply => ({
             id: reply.id,
-            content: reply.content,
+            content: reply.content || reply.comment || "",
             created_at: reply.created_at,
             image_url: reply.image_url,
             parent_id: reply.parent_id,
-            // Handle potentially missing profiles data
-            profiles: isValidProfile(reply.profiles) ? {
-              username: reply.profiles.username || "Anonymous",
-              avatar_url: reply.profiles.avatar_url || null,
-              full_name: reply.profiles.full_name || null
-            } : null
-          })) || [];
+            profiles: extractProfileInfo(reply.profiles)
+          }));
           
           return {
             ...comment,
@@ -88,17 +105,12 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       // Transform the data to match our Comment type with proper handling for profiles
       const typedComments: Comment[] = commentsWithReplies.map(comment => ({
         id: comment.id,
-        content: comment.content,
+        content: comment.content || comment.comment || "",
         created_at: comment.created_at,
         image_url: comment.image_url,
         parent_id: comment.parent_id,
-        // Ensure profiles is properly typed with null handling
-        profiles: isValidProfile(comment.profiles) ? {
-          username: comment.profiles.username || "Anonymous",
-          avatar_url: comment.profiles.avatar_url || null,
-          full_name: comment.profiles.full_name || null
-        } : null,
-        replies: comment.replies
+        profiles: extractProfileInfo(comment.profiles),
+        replies: comment.replies || []
       }));
       
       setComments(typedComments);
@@ -109,11 +121,6 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       setLoading(false);
     }
   }, [spotId, t]);
-
-  // Helper function to validate profile data
-  const isValidProfile = (profile: any): boolean => {
-    return profile && typeof profile === 'object' && !profile.error;
-  };
 
   const submitComment = useCallback(async (
     content: string, 
@@ -172,16 +179,11 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       // Convert the returned data to our Comment type with proper null handling
       const newComment: Comment = {
         id: data.id,
-        content: data.content,
+        content: data.content || data.comment || "",
         created_at: data.created_at,
         image_url: data.image_url,
         parent_id: data.parent_id,
-        // Ensure profiles is properly typed with null handling
-        profiles: isValidProfile(data.profiles) ? {
-          username: data.profiles.username || "Anonymous",
-          avatar_url: data.profiles.avatar_url || null,
-          full_name: data.profiles.full_name || null
-        } : null,
+        profiles: extractProfileInfo(data.profiles),
         replies: []
       };
       

@@ -7,6 +7,7 @@ import useSpotImages from '@/hooks/astro-spots/useSpotImages';
 import useProfileActions from '@/hooks/astro-spots/useProfileActions';
 import useAstroSpotComments from '@/hooks/astro-spots/useAstroSpotComments';
 import { ensureCommentImagesBucket } from '@/utils/comments/commentImageUtils';
+import { Comment } from '../types/comments';
 
 export const useProfileContent = (
   spotId: string, 
