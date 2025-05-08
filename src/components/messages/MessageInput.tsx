@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -8,6 +9,7 @@ import EmojiRenderer from './EmojiRenderer';
 import { siqsEmojis } from './SiqsEmojiData';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useLocationSharing } from '@/hooks/location/useLocationSharing';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MessageInputProps {
   onSend: (text: string, imageFile?: File | null, locationData?: any) => void;
@@ -25,6 +27,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   const [showOptions, setShowOptions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const { gettingLocation, shareCurrentLocation } = useLocationSharing();
+  const isMobile = useIsMobile();
   
   const handleSend = () => {
     if ((!message.trim() && !imageFile) || sending) return;
@@ -140,36 +143,39 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
     }
   }, [message]);
 
+  const buttonSize = isMobile ? "h-9 w-9" : "h-10 w-10";
+  const iconSize = isMobile ? "h-4 w-4" : "h-5 w-5";
+
   return (
-    <div className="border-t border-cosmic-800/50 p-4 bg-cosmic-900/70 space-y-3 sticky bottom-0 backdrop-blur-md z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+    <div className="border-t border-cosmic-800/50 p-2 sm:p-4 bg-cosmic-900/70 space-y-2 sm:space-y-3 sticky bottom-0 backdrop-blur-md z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
       {imagePreview && (
         <div className="relative inline-block">
           <img 
             src={imagePreview} 
             alt="Preview" 
-            className="h-20 rounded-md border border-cosmic-700/50"
+            className={`${isMobile ? 'h-16' : 'h-20'} rounded-md border border-cosmic-700/50`}
           />
           <Button
             variant="destructive"
             size="sm"
-            className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
+            className="absolute -top-2 -right-2 h-5 w-5 sm:h-6 sm:w-6 p-0 rounded-full"
             onClick={handleRemoveImage}
           >
-            <X className="h-3 w-3" />
+            <X className={isMobile ? "h-2.5 w-2.5" : "h-3 w-3"} />
           </Button>
         </div>
       )}
       
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-1.5 sm:gap-2">
         <Popover open={showOptions} onOpenChange={setShowOptions}>
           <PopoverTrigger asChild>
             <Button
-              className="h-10 w-10 p-0 rounded-full bg-cosmic-800/30 hover:bg-cosmic-700/50 text-cosmic-400 hover:text-primary transition-colors"
+              className={`${buttonSize} p-0 rounded-full bg-cosmic-800/30 hover:bg-cosmic-700/50 text-cosmic-400 hover:text-primary transition-colors`}
               variant="ghost"
               type="button"
               disabled={sending}
             >
-              <Plus className="h-5 w-5" />
+              <Plus className={iconSize} />
               <span className="sr-only">{t("Options", "选项")}</span>
             </Button>
           </PopoverTrigger>
@@ -181,13 +187,13 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
           >
             <div className="flex gap-2">
               <Button
-                className="flex flex-col items-center gap-1 w-16 h-16 p-1 rounded-lg hover:bg-cosmic-800/50"
+                className={`flex flex-col items-center gap-1 ${isMobile ? 'w-14 h-14' : 'w-16 h-16'} p-1 rounded-lg hover:bg-cosmic-800/50`}
                 variant="ghost"
                 onClick={triggerFileInput}
                 disabled={sending || gettingLocation}
               >
                 <div className="h-8 w-8 rounded-full bg-cosmic-800/50 flex items-center justify-center">
-                  <Image className="h-5 w-5 text-primary" />
+                  <Image className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-primary`} />
                 </div>
                 <span className="text-xs text-cosmic-300">
                   {t("Image", "图片")}
@@ -195,13 +201,13 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
               </Button>
               
               <Button
-                className="flex flex-col items-center gap-1 w-16 h-16 p-1 rounded-lg hover:bg-cosmic-800/50"
+                className={`flex flex-col items-center gap-1 ${isMobile ? 'w-14 h-14' : 'w-16 h-16'} p-1 rounded-lg hover:bg-cosmic-800/50`}
                 variant="ghost"
                 onClick={toggleEmojiPicker}
                 disabled={sending}
               >
                 <div className="h-8 w-8 rounded-full bg-cosmic-800/50 flex items-center justify-center">
-                  <Smile className="h-5 w-5 text-primary" />
+                  <Smile className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-primary`} />
                 </div>
                 <span className="text-xs text-cosmic-300">
                   {t("Emoji", "表情")}
@@ -209,13 +215,13 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
               </Button>
               
               <Button
-                className="flex flex-col items-center gap-1 w-16 h-16 p-1 rounded-lg hover:bg-cosmic-800/50"
+                className={`flex flex-col items-center gap-1 ${isMobile ? 'w-14 h-14' : 'w-16 h-16'} p-1 rounded-lg hover:bg-cosmic-800/50`}
                 variant="ghost"
                 onClick={handleShareLocation}
                 disabled={sending || gettingLocation}
               >
                 <div className="h-8 w-8 rounded-full bg-cosmic-800/50 flex items-center justify-center">
-                  <MapPin className="h-5 w-5 text-primary" />
+                  <MapPin className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} text-primary`} />
                 </div>
                 <span className="text-xs text-cosmic-300">
                   {t("Location", "位置")}
@@ -229,7 +235,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
           <div className="flex items-center">
             <textarea
               ref={textareaRef}
-              className="w-full bg-transparent rounded-full py-2 px-4 pr-12 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none"
+              className="w-full bg-transparent rounded-full py-2 px-3 sm:px-4 pr-10 text-cosmic-100 text-sm sm:text-base min-h-[40px] max-h-[120px] resize-none focus:outline-none"
               placeholder={t("Type your message...", "输入您的消息...")}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -243,25 +249,25 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="p-0 h-8 w-8 rounded-full text-cosmic-400 hover:text-primary hover:bg-cosmic-800/30"
+                    className={`p-0 h-7 w-7 sm:h-8 sm:w-8 rounded-full text-cosmic-400 hover:text-primary hover:bg-cosmic-800/30`}
                     aria-label={t("Insert emoji", "插入表情")}
                   >
-                    <Smile className="h-5 w-5" />
+                    <Smile className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" alignOffset={-40} className="p-2 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-lg w-72">
-                  <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+                <PopoverContent align="end" alignOffset={-40} className="p-2 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-lg w-64 sm:w-72">
+                  <div className="grid grid-cols-3 gap-2 max-h-48 sm:max-h-60 overflow-y-auto">
                     {siqsEmojis.map((emoji) => (
                       <Button
                         key={emoji.id}
                         variant="ghost"
-                        className="flex flex-col items-center justify-center p-2 hover:bg-cosmic-800/50 cursor-pointer rounded-lg transition-all hover:scale-110 h-auto"
+                        className="flex flex-col items-center justify-center p-1 sm:p-2 hover:bg-cosmic-800/50 cursor-pointer rounded-lg transition-all hover:scale-110 h-auto"
                         onClick={() => handleEmojiSelect(`[${emoji.id}]`)}
                       >
-                        <div className="p-1 transform hover:scale-110 transition-transform">
+                        <div className="p-0.5 sm:p-1 transform hover:scale-110 transition-transform">
                           {emoji.icon}
                         </div>
-                        <span className="text-xs text-cosmic-300 mt-1 text-center">
+                        <span className="text-[10px] sm:text-xs text-cosmic-300 mt-0.5 sm:mt-1 text-center">
                           {emoji.name}
                         </span>
                       </Button>
@@ -281,12 +287,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
           </div>
         </div>
         <Button
-          className="flex-shrink-0 rounded-full h-10 w-10 p-0"
+          className={`flex-shrink-0 rounded-full ${buttonSize} p-0`}
           onClick={handleSend}
           disabled={sending || (!message.trim() && !imageFile)}
           variant={message.trim() || imageFile ? "default" : "ghost"}
         >
-          <Send className="h-5 w-5" />
+          <Send className={iconSize} />
           <span className="sr-only">{t("Send", "发送")}</span>
         </Button>
       </div>

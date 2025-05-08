@@ -14,13 +14,15 @@ interface MessageItemProps {
   isSender: boolean;
   onUnsend: (id: string) => void;
   isProcessingAction?: boolean;
+  isMobile?: boolean;
 }
 
 const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isSender,
   onUnsend,
-  isProcessingAction = false
+  isProcessingAction = false,
+  isMobile = false
 }) => {
   const { language } = useLanguage();
   const [showUnsendDialog, setShowUnsendDialog] = useState(false);
@@ -37,10 +39,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
   if (!hasContent) return null;
   
   return (
-    <div className={`flex ${isSender ? 'justify-end' : 'justify-start'} mb-4`}>
-      <div className="max-w-[75%]">
+    <div className={`flex ${isSender ? 'justify-end' : 'justify-start'} mb-3`}>
+      <div className={`max-w-[85%] ${isMobile ? 'max-w-[85%]' : 'max-w-[75%]'}`}>
         <div
-          className={`relative group rounded-2xl p-3 ${
+          className={`relative group rounded-2xl p-2.5 sm:p-3 ${
             isSender
               ? 'bg-primary/90 text-white rounded-tr-none'
               : 'bg-cosmic-800/40 text-cosmic-100 rounded-tl-none'
@@ -50,17 +52,17 @@ const MessageItem: React.FC<MessageItemProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="absolute -top-3 -right-2 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-full bg-cosmic-900/50 text-cosmic-300 hover:text-cosmic-100 hover:bg-cosmic-800/70"
+              className="absolute -top-3 -right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-full bg-cosmic-900/50 text-cosmic-300 hover:text-cosmic-100 hover:bg-cosmic-800/70"
               onClick={() => setShowUnsendDialog(true)}
               disabled={isProcessingAction}
             >
-              <MoreVertical className="h-4 w-4" />
+              <MoreVertical className="h-3.5 w-3.5" />
               <span className="sr-only">Message options</span>
             </Button>
           )}
           
           {message.text && (
-            <div className="mb-2 whitespace-pre-wrap">
+            <div className="mb-2 whitespace-pre-wrap text-sm sm:text-base">
               <EmojiRenderer text={message.text} />
             </div>
           )}
@@ -71,7 +73,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 src={message.image_url}
                 alt="Message attachment"
                 className="w-full h-auto rounded-lg"
-                style={{ maxHeight: '200px', objectFit: 'cover' }}
+                style={{ maxHeight: isMobile ? '150px' : '200px', objectFit: 'cover' }}
                 onLoad={() => {
                   // Dispatch a custom event when an image loads to trigger scroll adjustment
                   window.dispatchEvent(new Event('message-image-loaded'));
@@ -88,6 +90,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 longitude={message.location.longitude}
                 timestamp={message.location.timestamp}
                 siqs={message.location.siqs}
+                isMobile={isMobile}
               />
             </div>
           )}
