@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Comment } from '../types/comments';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -24,6 +24,14 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
   sending
 }) => {
   const { t } = useLanguage();
+  const commentListRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom of comments when new ones are added
+  useEffect(() => {
+    if (open && commentListRef.current) {
+      commentListRef.current.scrollTop = 0; // Scroll to top since comments are shown newest first
+    }
+  }, [open, comments.length]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -35,7 +43,10 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
         </SheetHeader>
         
         <div className="mt-6 flex flex-col h-[calc(100vh-150px)]">
-          <div className="flex-1 space-y-4 overflow-y-auto pr-2">
+          <div 
+            ref={commentListRef}
+            className="flex-1 space-y-4 overflow-y-auto pr-2"
+          >
             {comments.length === 0 ? (
               <div className="text-center py-8 text-cosmic-400">
                 {t("No comments yet. Be the first to comment!", "暂无评论。成为第一个评论的人！")}

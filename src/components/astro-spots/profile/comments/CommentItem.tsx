@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Comment } from '../types/comments';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ImageIcon } from 'lucide-react';
 
 interface CommentItemProps {
   comment: Comment;
@@ -59,12 +60,14 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
         </div>
         
         <div className="bg-cosmic-800/40 p-3 rounded-lg rounded-tl-none border border-cosmic-700/20">
+          {/* Show comment text if it exists and isn't just a blank space */}
           {comment.content && comment.content.trim() !== " " && (
             <div className="text-sm text-cosmic-300 mb-2">
               {comment.content}
             </div>
           )}
           
+          {/* Comment image handling with better error states */}
           {comment.image_url && !imageError && (
             <div className="relative mt-1">
               {!imageLoaded && (
@@ -82,10 +85,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
                   src={comment.image_url} 
                   alt={t("Comment attachment", "评论附件")}
                   className={`max-h-60 w-auto rounded-md border border-cosmic-700/30 hover:opacity-90 transition-opacity ${!imageLoaded ? 'hidden' : 'block'}`}
-                  onLoad={() => {
-                    console.log("Image loaded successfully:", comment.image_url);
-                    setImageLoaded(true);
-                  }}
+                  onLoad={() => setImageLoaded(true)}
                   onError={() => {
                     console.error("Failed to load image:", comment.image_url);
                     setImageError(true);
@@ -96,8 +96,11 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
           )}
           
           {comment.image_url && imageError && (
-            <div className="p-2 bg-cosmic-800/20 text-xs text-cosmic-400 italic rounded border border-cosmic-700/20">
-              {t("Image unavailable", "图片不可用")}
+            <div className="p-3 bg-cosmic-800/20 rounded border border-cosmic-700/20 flex items-center">
+              <ImageIcon className="h-4 w-4 text-cosmic-400 mr-2" />
+              <span className="text-xs text-cosmic-400 italic">
+                {t("Image unavailable", "图片不可用")}
+              </span>
             </div>
           )}
         </div>

@@ -8,9 +8,10 @@ import { Comment } from '@/components/astro-spots/profile/types/comments';
 export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: string) => string) => {
   const [commentSending, setCommentSending] = useState(false);
 
-  const ensureCommentBucket = async (): Promise<boolean> => {
+  // Create bucket if it doesn't exist
+  const createBucketIfNeeded = async (): Promise<boolean> => {
     try {
-      console.log("Checking if comment_images bucket exists...");
+      console.log("Creating or checking comment_images bucket...");
       
       // Check if bucket exists
       const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
@@ -36,6 +37,19 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
           return false;
         }
         
+        // Create a policy to allow public access to the bucket
+        const { error: policyError } = await supabase.rpc('create_public_bucket_policy', {
+          bucket_name: 'comment_images'
+        }).catch(() => {
+          // Fallback for earlier Supabase versions
+          return { error: null };
+        });
+        
+        if (policyError) {
+          console.error("Error creating bucket policy:", policyError);
+          // Continue anyway as the bucket is created
+        }
+        
         console.log("Successfully created comment_images bucket");
       } else {
         console.log("comment_images bucket already exists");
@@ -49,15 +63,15 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   };
 
   const uploadImage = async (imageFile: File): Promise<string | null> => {
-    // Ensure bucket exists
-    const bucketReady = await ensureCommentBucket();
-    if (!bucketReady) {
-      toast.error(t("Failed to prepare storage", "存储准备失败"));
-      return null;
-    }
-    
     try {
-      // Generate a unique filename with uuid
+      // Ensure bucket exists before upload
+      const bucketReady = await createBucketIfNeeded();
+      if (!bucketReady) {
+        toast.error(t("Failed to prepare storage", "存储准备失败"));
+        return null;
+      }
+      
+      // Generate a unique filename
       const uniqueId = uuidv4();
       const fileExt = imageFile.name.split('.').pop() || '';
       const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -65,7 +79,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       console.log("Uploading image with filename:", fileName);
       
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('comment_images')
         .upload(fileName, imageFile, {
           contentType: imageFile.type,
@@ -78,7 +92,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         return null;
       }
       
-      // Get the public URL for the uploaded image
+      // Get the public URL
       const { data: publicUrlData } = supabase.storage
         .from('comment_images')
         .getPublicUrl(fileName);
@@ -150,8 +164,8 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       let imageUrl: string | null = null;
       if (imageFile) {
         imageUrl = await uploadImage(imageFile);
-        if (!imageUrl && imageFile) {
-          // If image upload failed but we had an image, return error
+        if (!imageUrl) {
+          toast.error(t("Failed to upload image", "图片上传失败"));
           return { success: false };
         }
       }

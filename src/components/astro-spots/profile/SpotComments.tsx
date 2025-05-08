@@ -37,6 +37,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
   const handleCommentSubmit = async (content: string, imageFile: File | null = null) => {
     if (onSubmit) {
       await onSubmit(content, imageFile);
+      onCommentsUpdate(); // Make sure we refresh comments after submission
     }
   };
 

@@ -34,32 +34,50 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [comments, setComments] = useState<Comment[]>([]);
   
+  // Use our comment hook
   const {
     commentSending,
     submitComment,
     fetchComments
   } = useAstroSpotComments(spotId, t);
 
+  // Function to trigger a refresh of all data
   const triggerRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  // Load initial comments
+  // Load initial comments and set up refresh interval
   useEffect(() => {
+    let isMounted = true;
+    
     const loadComments = async () => {
       try {
+        console.log("Loading comments for spot:", spotId);
         const fetchedComments = await fetchComments();
-        setComments(fetchedComments);
+        if (isMounted) {
+          setComments(fetchedComments);
+        }
       } catch (error) {
-        console.error("Error loading initial comments:", error);
+        console.error("Error loading comments:", error);
       }
     };
     
     if (spotId) {
       loadComments();
+      
+      // Set up refresh interval for comments
+      const intervalId = setInterval(() => {
+        if (isMounted) loadComments();
+      }, 30000); // Refresh every 30 seconds
+      
+      return () => {
+        isMounted = false;
+        clearInterval(intervalId);
+      };
     }
-  }, [spotId]);
+  }, [spotId, refreshTrigger]);
 
+  // Main spot data query
   const { data: spot, isLoading, error, refetch } = useQuery({
     queryKey: ['astroSpot', spotId, refreshTrigger],
     queryFn: async () => {
@@ -93,6 +111,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     refetchOnWindowFocus: false
   });
 
+  // Creator profile query
   const { data: creatorProfile, isLoading: loadingCreator } = useQuery({
     queryKey: ['creatorProfile', spot?.user_id],
     queryFn: async () => {
@@ -111,6 +130,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     enabled: !!spot?.user_id
   });
 
+  // Spot images query
   const { data: spotImages = [], isLoading: loadingImages, refetch: refetchImages } = useQuery({
     queryKey: ['spotImages', spotId, refreshTrigger],
     queryFn: async () => {
@@ -177,23 +197,32 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     refetch();
   };
 
+  // Handler specifically for refreshing comments
   const handleCommentsUpdate = async () => {
     console.log("Comments update triggered");
     try {
       const updatedComments = await fetchComments();
+      console.log("Fresh comments fetched:", updatedComments.length);
       setComments(updatedComments);
     } catch (error) {
       console.error("Error refreshing comments:", error);
     }
   };
 
+  // Handler for submitting a new comment
   const handleCommentSubmit = async (content: string, imageFile: File | null) => {
+    console.log("Comment submission starting with image:", !!imageFile);
     const result = await submitComment(content, imageFile);
     if (result.success && result.comments) {
+      console.log("Comment posted successfully, updating list with", result.comments.length, "comments");
       setComments(result.comments);
+    } else {
+      console.log("Comment submission failed, refreshing list anyway");
+      handleCommentsUpdate(); // Try to refresh anyway
     }
   };
 
+  // Handle images update (Gallery)
   const handleImagesUpdate = async () => {
     console.log("Images update triggered");
     await refetchImages();
