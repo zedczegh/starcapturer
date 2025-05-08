@@ -34,19 +34,32 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
     }
     
     onSubmit(commentText.trim(), imageFile);
-    setCommentText('');
-    setImageFile(null);
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-      setImagePreview(null);
+    
+    // Only clear the form if the submission was successful
+    if (!sending) {
+      setCommentText('');
+      setImageFile(null);
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+        setImagePreview(null);
+      }
     }
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) { 
         toast.error(t('Image must be less than 5MB', '图片必须小于5MB'));
+        return;
+      }
+      
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
+      if (!validTypes.includes(file.type)) {
+        toast.error(t('Please select a valid image file', '请选择有效的图片文件'));
         return;
       }
       
@@ -85,6 +98,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
             type="button"
             onClick={handleRemoveImage}
             className="absolute -top-2 -right-2 bg-destructive text-white p-1 rounded-full"
+            disabled={sending}
           >
             <X className="h-3 w-3" />
           </button>
@@ -92,7 +106,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
       )}
 
       <div className="flex gap-2 justify-end">
-        <label className="cursor-pointer">
+        <label className={`cursor-pointer ${sending ? 'opacity-50 pointer-events-none' : ''}`}>
           <div className="flex items-center gap-2 px-3 py-2 text-sm text-primary/90 hover:text-primary hover:bg-cosmic-800/30 rounded-md">
             <ImagePlus className="h-4 w-4" />
             <span>{t("Add Image", "添加图片")}</span>
@@ -112,11 +126,16 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
           className="flex gap-1 items-center"
         >
           {sending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              {t("Submitting...", "提交中...")}
+            </>
           ) : (
-            <span className="h-4 w-4">→</span>
+            <>
+              <span className="h-4 w-4">→</span>
+              {isReply ? t("Reply", "回复") : t("Submit", "提交")}
+            </>
           )}
-          {isReply ? t("Reply", "回复") : t("Submit", "提交")}
         </Button>
       </div>
     </form>

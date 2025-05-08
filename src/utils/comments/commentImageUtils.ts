@@ -45,43 +45,61 @@ export const uploadCommentImage = async (
       return null;
     }
     
-    // Generate a unique filename using UUID
+    // Generate a unique filename with increased randomness
     const uniqueId = uuidv4();
+    const timestamp = Date.now();
     const fileExt = imageFile.name.split('.').pop() || '';
     const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
     
-    // Use UUID as filename and append extension (avoid using dash in the actual filename)
-    const fileName = `${uniqueId}.${sanitizedExt}`; 
+    // Use timestamp + UUID as filename to ensure uniqueness
+    const fileName = `${timestamp}_${uniqueId}.${sanitizedExt}`; 
     
     console.log("Uploading comment image with filename:", fileName);
     
-    // Upload the image to the existing bucket
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('comment_images')
-      .upload(fileName, imageFile, {
-        contentType: imageFile.type,
-        cacheControl: '3600',
-        upsert: false
-      });
+    // Try uploading with progressive retries
+    let attempts = 0;
+    const maxAttempts = 2;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`Upload attempt ${attempts} for ${fileName}`);
       
-    if (uploadError) {
-      console.error("Error uploading image:", uploadError);
-      toast.error(t("Failed to upload image", "图片上传失败"));
-      return null;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('comment_images')
+        .upload(fileName, imageFile, {
+          contentType: imageFile.type,
+          cacheControl: '3600',
+          upsert: attempts > 1 // Only try upsert on retry
+        });
+        
+      if (!uploadError) {
+        // Get the public URL
+        const { data: publicUrlData } = supabase.storage
+          .from('comment_images')
+          .getPublicUrl(fileName);
+        
+        if (!publicUrlData?.publicUrl) {
+          console.error("Failed to get public URL for image");
+          return null;
+        }
+        
+        console.log("Image uploaded successfully, public URL:", publicUrlData.publicUrl);
+        return publicUrlData.publicUrl;
+      }
+      
+      console.error(`Error uploading image (attempt ${attempts}):`, uploadError);
+      
+      // If last attempt failed, break out
+      if (attempts >= maxAttempts) {
+        toast.error(t("Failed to upload image", "图片上传失败"));
+        break;
+      }
+      
+      // Wait a bit before retrying (500ms)
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    // Get the public URL
-    const { data: publicUrlData } = supabase.storage
-      .from('comment_images')
-      .getPublicUrl(fileName);
-    
-    if (!publicUrlData?.publicUrl) {
-      console.error("Failed to get public URL for image");
-      return null;
-    }
-    
-    console.log("Image uploaded successfully, public URL:", publicUrlData.publicUrl);
-    return publicUrlData.publicUrl;
+    return null;
   } catch (err) {
     console.error("Exception during image upload:", err);
     return null;

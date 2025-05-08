@@ -11,6 +11,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   const [comments, setComments] = useState<Comment[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [storageChecked, setStorageChecked] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const { user: authUser } = useAuth();
 
   // Check bucket access when hook is first used
@@ -76,33 +77,42 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       const userId = authUser.id;
       
       let imageUrl: string | null = null;
+      
+      // Handle image upload separately if there is an image
       if (imageFile) {
-        // Check if bucket exists and is accessible
-        const bucketReady = await ensureCommentImagesBucket();
-        if (!bucketReady) {
-          toast.error(t("Image upload is not available at this time. Please try again later or post without an image.", 
-                       "图片上传功能暂时不可用。请稍后再试或发布不含图片的评论。"));
-          
-          // Continue without the image if we have text content
-          if (!content.trim()) {
-            setCommentSending(false);
-            return { success: false };
-          }
-          // Proceed with just the text content
-        } else {
-          // Try to upload the image
-          imageUrl = await uploadCommentImage(imageFile, t);
-          if (!imageUrl) {
-            // Log the error but continue with the comment if we have text
-            console.warn("Failed to upload image, proceeding with text-only comment");
-            if (content.trim()) {
-              toast.warning(t("Failed to upload image. Posting comment without image.", "图片上传失败。发布不含图片的评论。"));
-            } else {
+        setImageUploading(true);
+        try {
+          // Check if bucket exists and is accessible
+          const bucketReady = await ensureCommentImagesBucket();
+          if (!bucketReady) {
+            toast.error(t("Image upload is not available at this time", "图片上传功能暂时不可用"));
+            
+            // Continue without the image if we have text content
+            if (!content.trim()) {
               setCommentSending(false);
-              toast.error(t("Failed to upload image and no text provided.", "图片上传失败，且未提供文本。"));
+              setImageUploading(false);
               return { success: false };
             }
+            // Proceed with just the text content
+          } else {
+            // Try to upload the image with better error handling
+            imageUrl = await uploadCommentImage(imageFile, t);
+            
+            if (!imageUrl) {
+              // Log the error but continue with the comment if we have text
+              console.warn("Failed to upload image, proceeding with text-only comment");
+              if (content.trim()) {
+                toast.warning(t("Failed to upload image. Posting comment without image.", "图片上传失败。发布不含图片的评论。"));
+              } else {
+                setCommentSending(false);
+                setImageUploading(false);
+                toast.error(t("Failed to upload image and no text provided.", "图片上传失败，且未提供文本。"));
+                return { success: false };
+              }
+            }
           }
+        } finally {
+          setImageUploading(false);
         }
       }
       
@@ -153,7 +163,8 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     loaded,
     submitComment,
     fetchComments: loadComments,
-    storageChecked
+    storageChecked,
+    imageUploading
   };
 };
 
