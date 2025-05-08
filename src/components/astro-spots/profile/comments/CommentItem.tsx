@@ -7,7 +7,7 @@ import CommentInput from './CommentInput';
 import { Button } from "@/components/ui/button";
 import { MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import defaultAvatar from '@/assets/default-avatar.png';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface CommentItemProps {
   comment: Comment;
@@ -43,16 +43,25 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, isReply = f
   };
 
   const formattedCreatedAt = formatDistanceToNow(new Date(comment.created_at), { addSuffix: true });
-  const username = comment.profiles.username || t("Anonymous", "匿名用户");
+  const username = comment.profiles?.username || t("Anonymous", "匿名用户");
+  const userInitial = username ? username.charAt(0).toUpperCase() : 'U';
 
   return (
     <div className={`flex gap-3 ${isReply ? 'pl-8 mt-3' : ''}`}>
       <div className="flex-shrink-0">
-        <img
-          src={comment.profiles.avatar_url || defaultAvatar}
-          alt={username}
-          className="w-9 h-9 rounded-full object-cover bg-cosmic-800"
-        />
+        <Avatar className="w-9 h-9">
+          {comment.profiles?.avatar_url ? (
+            <AvatarImage 
+              src={comment.profiles.avatar_url} 
+              alt={username} 
+              className="object-cover"
+            />
+          ) : (
+            <AvatarFallback className="bg-cosmic-800 text-cosmic-200">
+              {userInitial}
+            </AvatarFallback>
+          )}
+        </Avatar>
       </div>
       <div className="flex-grow">
         <div className="bg-cosmic-800/40 rounded-lg p-3">
@@ -76,7 +85,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, isReply = f
         </div>
         
         {/* Reply button */}
-        {!isReply && (
+        {!isReply && authUser && (
           <div className="mt-1">
             <Button 
               variant="ghost" 
@@ -91,7 +100,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, isReply = f
         )}
         
         {/* Reply input */}
-        {showReplyInput && (
+        {showReplyInput && authUser && (
           <div className="mt-2">
             <CommentInput
               onSubmit={handleReplySubmit}

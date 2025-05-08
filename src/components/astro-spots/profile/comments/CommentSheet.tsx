@@ -44,6 +44,12 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
       return;
     }
     
+    // Validate content is not empty when uploading an image
+    if (!content.trim() && imageFile) {
+      toast.error(t("Please add some text to your comment", "请为您的评论添加一些文字"));
+      return;
+    }
+    
     await onReply(content, imageFile, parentId);
   };
 
@@ -78,7 +84,7 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
             )}
           </div>
           
-          {user && (
+          {user && authUser && (
             <div className="pt-4 mt-4 border-t border-cosmic-700/30 sticky bottom-0 bg-cosmic-900/95">
               <CommentInput
                 onSubmit={onSubmit}

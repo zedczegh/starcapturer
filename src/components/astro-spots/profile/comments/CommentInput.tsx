@@ -100,7 +100,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
         <Button 
           type="submit" 
           size="sm" 
-          disabled={sending || (!commentText.trim() && !imageFile)}
+          disabled={sending || (!commentText.trim() && !imageFile) || (imageFile && !commentText.trim())}
           className="flex gap-1 items-center"
         >
           {sending ? (

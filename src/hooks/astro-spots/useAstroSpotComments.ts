@@ -1,6 +1,5 @@
 
-import { useState, useCallback } from 'react';
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from "sonner";
 import { Comment } from '@/components/astro-spots/profile/types/comments';
 import { uploadCommentImage, ensureCommentImagesBucket } from '@/utils/comments/commentImageUtils';
@@ -14,9 +13,12 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   const { user: authUser } = useAuth();
 
   // Initialize bucket if needed when hook is first used
-  useCallback(async () => {
-    await ensureCommentImagesBucket();
-  }, [])();
+  useEffect(() => {
+    const initBucket = async () => {
+      await ensureCommentImagesBucket();
+    };
+    initBucket();
+  }, []);
 
   // Load comments function with better error handling
   const loadComments = useCallback(async () => {
@@ -58,7 +60,11 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       let imageUrl: string | null = null;
       if (imageFile) {
         // Ensure bucket exists before trying to upload
-        await ensureCommentImagesBucket();
+        const bucketReady = await ensureCommentImagesBucket();
+        if (!bucketReady) {
+          toast.error(t("Failed to prepare storage", "存储准备失败"));
+          return { success: false };
+        }
         
         imageUrl = await uploadCommentImage(imageFile, t);
         if (!imageUrl) {
