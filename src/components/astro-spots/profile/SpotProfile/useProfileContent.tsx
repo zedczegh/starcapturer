@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -18,11 +19,11 @@ export const useProfileContent = (
   const [isCreator, setIsCreator] = useState(false);
   const [showInstantLoader, setShowInstantLoader] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [comments, setComments] = useState<Comment[]>([]);
   
-  // Use our comment hook with improved state management
+  // Use our comment hook
   const {
     commentSending,
-    comments,
     submitComment,
     fetchComments
   } = useAstroSpotComments(spotId, t);
@@ -36,22 +37,24 @@ export const useProfileContent = (
   useEffect(() => {
     let isMounted = true;
     
-    const loadInitialComments = async () => {
+    const loadComments = async () => {
       try {
+        console.log("Loading comments for spot:", spotId);
+        const fetchedComments = await fetchComments();
         if (isMounted) {
-          await fetchComments();
+          setComments(fetchedComments);
         }
       } catch (error) {
-        console.error("Error loading initial comments:", error);
+        console.error("Error loading comments:", error);
       }
     };
     
     if (spotId) {
-      loadInitialComments();
+      loadComments();
       
       // Set up refresh interval for comments
       const intervalId = setInterval(() => {
-        if (isMounted) fetchComments();
+        if (isMounted) loadComments();
       }, 30000); // Refresh every 30 seconds
       
       return () => {
@@ -59,7 +62,7 @@ export const useProfileContent = (
         clearInterval(intervalId);
       };
     }
-  }, [spotId, fetchComments]);
+  }, [spotId, refreshTrigger, fetchComments]);
 
   // Main spot data query
   const { data: spot, isLoading, error, refetch } = useQuery({
@@ -184,17 +187,26 @@ export const useProfileContent = (
   // Handler specifically for refreshing comments
   const handleCommentsUpdate = async () => {
     console.log("Comments update triggered");
-    await fetchComments();
+    try {
+      const updatedComments = await fetchComments();
+      console.log("Fresh comments fetched:", updatedComments.length);
+      setComments(updatedComments);
+    } catch (error) {
+      console.error("Error refreshing comments:", error);
+    }
   };
 
   // Handler for submitting a new comment
-  const handleCommentSubmit = async (
-    content: string,
-    imageFile: File | null,
-    parentId?: string | null
-  ) => {
-    console.log(`Comment submission starting with image: ${!!imageFile}, parent: ${parentId || 'none'}`);
-    await submitComment(content, imageFile, parentId);
+  const handleCommentSubmit = async (content: string, imageFile: File | null) => {
+    console.log("Comment submission starting with image:", !!imageFile);
+    const result = await submitComment(content, imageFile);
+    if (result.success && result.comments) {
+      console.log("Comment posted successfully, updating list with", result.comments.length, "comments");
+      setComments(result.comments);
+    } else {
+      console.log("Comment submission failed, refreshing list anyway");
+      handleCommentsUpdate(); // Try to refresh anyway
+    }
   };
 
   // Handle images update (Gallery)

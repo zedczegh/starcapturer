@@ -8,6 +8,4 @@ export interface Comment {
     username: string | null;
     avatar_url: string | null;
   };
-  parent_id?: string | null;
-  replies?: Comment[];
 }
