@@ -17,7 +17,7 @@ export type Comment = {
     username: string | null;
     avatar_url?: string | null;
     full_name?: string | null;
-  };
+  } | null;
   replies?: Comment[];
 };
 
@@ -66,9 +66,12 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
             return { ...comment, replies: [] };
           }
           
-          // Map the comment data to our Comment type
+          // Map the comment data to our Comment type with proper null handling
           return {
             ...comment,
+            // Handle potentially missing profiles data
+            profiles: comment.profiles && typeof comment.profiles === 'object' ? 
+              comment.profiles : { username: "Anonymous", avatar_url: null, full_name: null },
             replies: replies?.map(reply => ({
               id: reply.id,
               comment: reply.content,
@@ -77,13 +80,15 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
               user_id: reply.user_id,
               image_url: reply.image_url,
               parent_id: reply.parent_id,
-              profiles: reply.profiles
+              // Handle potentially missing profiles data
+              profiles: reply.profiles && typeof reply.profiles === 'object' ?
+                reply.profiles : { username: "Anonymous", avatar_url: null, full_name: null }
             })) || []
           };
         })
       );
       
-      // Map the data to match our Comment type
+      // Map the data to match our Comment type with proper null handling
       const typedComments: Comment[] = commentsWithReplies.map(comment => ({
         id: comment.id,
         comment: comment.content,
@@ -92,6 +97,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         user_id: comment.user_id,
         image_url: comment.image_url,
         parent_id: comment.parent_id,
+        // Ensure profiles is properly typed
         profiles: comment.profiles,
         replies: comment.replies
       }));
@@ -129,13 +135,20 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         }
       }
       
+      const currentUser = (await supabase.auth.getUser()).data.user;
+      if (!currentUser) {
+        toast.error(t('You must be logged in to comment', '您必须登录才能评论'));
+        setCommentSending(false);
+        return null;
+      }
+      
       const { data, error } = await supabase
         .from('astro_spot_comments')
         .insert([
           { 
             content: content.trim(), 
-            spot_id: spotId, 
-            user_id: (await supabase.auth.getUser()).data.user?.id,
+            spot_id: spotId,
+            user_id: currentUser.id,
             image_url,
             parent_id: parentId || null
           }
@@ -152,7 +165,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         return null;
       }
       
-      // Convert the returned data to our Comment type
+      // Convert the returned data to our Comment type with proper null handling
       const newComment: Comment = {
         id: data.id,
         comment: data.content,
@@ -161,7 +174,9 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         user_id: data.user_id,
         image_url: data.image_url,
         parent_id: data.parent_id,
-        profiles: data.profiles,
+        // Ensure profiles is properly typed
+        profiles: data.profiles && typeof data.profiles === 'object' ? 
+          data.profiles : { username: "Anonymous", avatar_url: null, full_name: null },
         replies: []
       };
       

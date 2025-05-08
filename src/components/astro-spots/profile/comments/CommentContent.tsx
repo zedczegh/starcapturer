@@ -49,6 +49,7 @@ const CommentContent: React.FC<CommentContentProps> = ({
               console.error(`Failed to load ${isReply ? 'reply' : 'comment'} image:`, imageUrl);
               (e.target as HTMLImageElement).style.display = 'none';
             }}
+            loading="lazy"
           />
         </div>
       )}

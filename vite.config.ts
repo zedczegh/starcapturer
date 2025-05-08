@@ -22,14 +22,19 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Put react and react-dom in the 'react' bundle
+          // Core React in a dedicated chunk
           if (id.includes('node_modules/react/') || 
-              id.includes('node_modules/react-dom/') || 
-              id.includes('node_modules/react-router-dom/')) {
-            return 'react';
+              id.includes('node_modules/react-dom/')) {
+            return 'react-core';
           }
           
-          // Map dependencies in separate chunk to prevent blank screens
+          // React router in its own chunk
+          if (id.includes('node_modules/react-router-dom/') ||
+              id.includes('node_modules/react-router/')) {
+            return 'router';
+          }
+          
+          // Map libraries in separate chunk
           if (id.includes('node_modules/leaflet') ||
               id.includes('node_modules/react-leaflet')) {
             return 'map-vendor';
@@ -40,7 +45,7 @@ export default defineConfig(({ mode }) => ({
             return 'ui';
           }
           
-          // Put third-party libraries in 'vendor' chunk
+          // All other third-party libraries in vendor chunk
           if (id.includes('node_modules/')) {
             return 'vendor';
           }
@@ -60,11 +65,6 @@ export default defineConfig(({ mode }) => ({
               id.includes('/components/astro-spots/profile/')) {
             return 'profile';
           }
-          
-          // Keep comments components together
-          if (id.includes('/components/astro-spots/profile/comments/')) {
-            return 'comments';
-          }
         },
         // Ensure chunk filenames are predictable for better caching
         chunkFileNames: 'assets/js/[name]-[hash].js',
@@ -74,26 +74,21 @@ export default defineConfig(({ mode }) => ({
     },
     assetsDir: 'assets',
     copyPublicDir: true,
-    // Add these optimization settings to prevent chunk loading failures
     chunkSizeWarningLimit: 2000,
     minify: 'esbuild',
-    sourcemap: true,
+    sourcemap: false, // Disable sourcemaps in production for better performance
     target: 'esnext',
-    // Disable dynamic imports that could cause blank screens
-    dynamicImportVarsOptions: {
-      warnOnError: true,
-    }
+    // Ensure HTML is properly cached
+    cssCodeSplit: true,
+    cssMinify: true,
   },
   optimizeDeps: {
-    include: ['suncalc', 'leaflet', 'react-leaflet'],
+    include: ['suncalc', 'leaflet', 'react-leaflet', '@supabase/supabase-js'],
     exclude: ['lovable-tagger'],
   },
   // Ensure HTML is properly cached
   experimental: {
     renderBuiltUrl(filename, { hostType }) {
-      if (hostType === 'html') {
-        return { relative: true };
-      }
       return { relative: true };
     }
   }

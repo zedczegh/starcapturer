@@ -28,12 +28,17 @@ const CommentAvatar: React.FC<CommentAvatarProps> = ({
           src={avatarUrl} 
           alt={displayName} 
           className="object-cover"
+          loading="lazy"
+          onError={(e) => {
+            // Fallback to initials on image load error
+            (e.target as HTMLImageElement).style.display = 'none';
+            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+          }}
         />
-      ) : (
-        <AvatarFallback className={`bg-cosmic-800 text-cosmic-200 ${fallbackSize}`}>
-          {userInitial}
-        </AvatarFallback>
-      )}
+      ) : null}
+      <AvatarFallback className={`bg-cosmic-800 text-cosmic-200 ${fallbackSize} ${avatarUrl ? 'hidden' : ''}`}>
+        {userInitial}
+      </AvatarFallback>
     </Avatar>
   );
 };

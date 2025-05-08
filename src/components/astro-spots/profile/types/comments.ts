@@ -6,7 +6,8 @@ export interface Comment {
   image_url?: string | null;
   profiles?: {
     username: string | null;
-    avatar_url: string | null;
+    avatar_url?: string | null;
+    full_name?: string | null;
   };
   parent_id?: string | null;
   replies?: Comment[];

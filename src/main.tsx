@@ -31,11 +31,14 @@ const ensureLeafletCSS = () => {
     // Check if Leaflet CSS is already loaded
     const existingLink = document.querySelector('link[href*="leaflet.css"]');
     if (!existingLink) {
+      console.log("Leaflet CSS not found, adding it");
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = 'https://unpkg.com/leaflet@1.7.1/dist/leaflet.css';
       link.crossOrigin = '';
       document.head.appendChild(link);
+    } else {
+      console.log("Leaflet CSS already loaded");
     }
   }
 };
@@ -58,8 +61,12 @@ const AppWithProviders = () => {
 // Add a DOMContentLoaded listener for better mobile performance
 const renderApp = () => {
   const rootElement = document.getElementById('root');
-  if (!rootElement) return;
+  if (!rootElement) {
+    console.error("Root element not found, cannot render app");
+    return;
+  }
 
+  console.log("Rendering app to root element");
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
@@ -71,13 +78,15 @@ const renderApp = () => {
           </ThemeProvider>
         </HelmetProvider>
       </QueryClientProvider>
-    </React.StrictMode>,
+    </React.StrictMode>
   );
 };
 
-// Only need this check in production - in development it adds extra overhead
+// Check if document is already loaded, otherwise wait for it
 if (document.readyState === 'loading') {
+  console.log("Document still loading, waiting for DOMContentLoaded");
   document.addEventListener('DOMContentLoaded', renderApp);
 } else {
+  console.log("Document already loaded, rendering immediately");
   renderApp();
 }

@@ -44,16 +44,24 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     id: comment.id,
     content: comment.comment,
     created_at: comment.created_at,
-    image_url: comment.image_url,
-    profiles: comment.profiles,
-    parent_id: comment.parent_id,
+    image_url: comment.image_url || null,
+    profiles: comment.profiles ? {
+      username: comment.profiles.username,
+      avatar_url: comment.profiles.avatar_url,
+      full_name: comment.profiles.full_name
+    } : undefined,
+    parent_id: comment.parent_id || null,
     replies: comment.replies?.map(reply => ({
       id: reply.id,
       content: reply.comment,
       created_at: reply.created_at,
-      image_url: reply.image_url,
-      profiles: reply.profiles,
-      parent_id: reply.parent_id
+      image_url: reply.image_url || null,
+      profiles: reply.profiles ? {
+        username: reply.profiles.username,
+        avatar_url: reply.profiles.avatar_url,
+        full_name: reply.profiles.full_name
+      } : undefined,
+      parent_id: reply.parent_id || null
     }))
   }));
 

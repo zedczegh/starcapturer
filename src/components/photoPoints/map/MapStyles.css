@@ -55,6 +55,7 @@
   .leaflet-container {
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
+    height: 100% !important; /* Ensure map container has full height on iOS */
   }
   
   /* iOS Safari specific optimizations */
@@ -98,4 +99,28 @@
   transform-origin: 0 0;
   -webkit-perspective: 1000;
   perspective: 1000;
+}
+
+/* Disable GPU effects on maps for better performance */
+.leaflet-container canvas {
+  image-rendering: optimizeSpeed;
+}
+
+/* Make sure the map container is visible */
+.leaflet-container {
+  opacity: 1 !important;
+  visibility: visible !important;
+  background-color: #02070e; /* Dark background for better loading appearance */
+}
+
+/* Add Visible Map Starting Styles */
+.leaflet-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(2, 7, 14, 0.8);
+  z-index: -1;
 }
