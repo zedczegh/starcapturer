@@ -1,5 +1,4 @@
 
-// Update the imports at the top of the file
 import { calculateMoonPhase, calculateMoonriseMoonsetTimes, getNextNewMoonDate } from '@/services/realTimeSiqs/moonPhaseCalculator';
 import type { MoonlessNightInfo } from '@/services/realTimeSiqs/siqsTypes';
 import { getAstronomicalNight, formatTimeString } from '@/utils/weather/astronomicalTimeUtils';

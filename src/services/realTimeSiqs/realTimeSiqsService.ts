@@ -60,12 +60,6 @@ export async function calculateEnhancedRealTimeSiqs(
         
         // Add reliability metadata
         if (options.includeMetadata !== false) {
-          if (!correctedResult.metadata) {
-            correctedResult.metadata = {
-              calculatedAt: new Date().toISOString()
-            };
-          }
-          
           return {
             ...correctedResult,
             metadata: {

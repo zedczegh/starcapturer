@@ -5,9 +5,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Badge } from '@/components/ui/badge';
 import { CloudSun, Calendar, ThermometerSun, Info, Star } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { getRateColor, getMinimumClearNights, getBestMonths } from '@/utils/weather/clearSkyRateUtils';
+import { getRateColor, getMinimumClearNights, getBestMonths } from '@/utils/weather/clearSkyUtils';
 import ConditionItem from '@/components/weather/ConditionItem';
-import { logWarning } from '@/utils/debug/errorLogger';
 
 interface ClearSkyRateDisplayProps {
   latitude: number;
@@ -26,45 +25,14 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
 }) => {
   const { language, t } = useLanguage();
   
-  // Calculate estimated clear nights per year with better error handling
+  // Calculate estimated clear nights per year
   const clearNightsPerYear = useMemo(() => {
-    try {
-      // Validate inputs first
-      if (!isFinite(latitude) || !isFinite(longitude) || !isFinite(clearSkyRate)) {
-        logWarning("Invalid coordinates or clear sky rate for clear nights calculation", {
-          latitude, longitude, clearSkyRate
-        });
-        return 0;
-      }
-      
-      return getMinimumClearNights(clearSkyRate, latitude, longitude);
-    } catch (error) {
-      logWarning("Error calculating clear nights:", error);
-      // Fallback to a simpler calculation if the enhanced method fails
-      const fallbackNights = Math.round((clearSkyRate / 100) * 365 * 0.6);
-      return Math.max(0, Math.min(365, fallbackNights)); // Ensure valid range
-    }
+    return getMinimumClearNights(clearSkyRate, latitude, longitude);
   }, [clearSkyRate, latitude, longitude]);
   
-  // Get best months for observation with better error handling
+  // Get best months for observation
   const bestMonthsText = useMemo(() => {
-    try {
-      // Validate monthly rates
-      const validMonthlyRates = typeof monthlyRates === 'object' && monthlyRates !== null 
-        ? monthlyRates 
-        : {};
-      
-      // Validate clearest months
-      const validClearestMonths = Array.isArray(clearestMonths)
-        ? clearestMonths
-        : [];
-        
-      return getBestMonths(validMonthlyRates, validClearestMonths, language, latitude);
-    } catch (error) {
-      logWarning("Error getting best months:", error);
-      // Return a simple fallback
-      return language === 'en' ? 'Seasonal data not available' : '季节数据不可用';
-    }
+    return getBestMonths(monthlyRates, clearestMonths, language, latitude);
   }, [monthlyRates, clearestMonths, language, latitude]);
   
   // New function to get rating based on clear night count

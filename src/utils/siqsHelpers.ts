@@ -45,7 +45,6 @@ export function getSiqsScore(siqs?: number | string | { score: number; isViable:
 
 /**
  * Normalize a score to ensure it's in the 0-10 range
- * Enhanced with more accurate handling of scale conversion
  */
 export function normalizeToSiqsScale(score: number): number {
   // Handle NaN
@@ -117,7 +116,6 @@ export function isSiqsGreaterThan(siqs: number | any, threshold: number): boolea
 
 /**
  * Sort locations by SIQS score (highest first)
- * Improved to handle historical data and weighted algorithms
  * @param locations Array of locations to sort
  * @returns Sorted array of locations
  */
@@ -126,7 +124,6 @@ export function sortLocationsBySiqs(locations: SharedAstroSpot[]): SharedAstroSp
     const aRealTime = (a as any).realTimeSiqs;
     const bRealTime = (b as any).realTimeSiqs;
     
-    // Enhanced prioritization of real-time data with historical trends
     const aSiqs = typeof aRealTime === "number" && aRealTime > 0
       ? aRealTime
       : getSiqsScore(a.siqs);
@@ -134,87 +131,7 @@ export function sortLocationsBySiqs(locations: SharedAstroSpot[]): SharedAstroSp
     const bSiqs = typeof bRealTime === "number" && bRealTime > 0
       ? bRealTime
       : getSiqsScore(b.siqs);
-    
-    // Handle edge cases where SIQS values might be zero
-    const finalA = aSiqs || 0;
-    const finalB = bSiqs || 0;
       
-    return finalB - finalA;
+    return (bSiqs || 0) - (aSiqs || 0);
   });
-}
-
-/**
- * Get SIQS score with historical weather pattern adjustments
- * Improves accuracy by integrating historical data
- * @param siqs Base SIQS value
- * @param location Location data with historical info
- * @returns Adjusted SIQS score
- */
-export function getSiqsWithHistoricalData(
-  siqs: number, 
-  location?: { 
-    latitude: number; 
-    longitude: number; 
-    historicalClearDays?: number;
-    seasonalVariation?: Record<string, number>;
-  }
-): number {
-  // Default to input SIQS if no location data provided
-  if (!location || !location.latitude || !location.longitude) {
-    return siqs;
-  }
-
-  let adjustedSiqs = siqs;
-  const currentMonth = new Date().getMonth();
-  const currentSeason = getSeason(currentMonth, location.latitude >= 0);
-  
-  // Apply seasonal adjustment if available
-  if (location.seasonalVariation && location.seasonalVariation[currentSeason]) {
-    const seasonFactor = location.seasonalVariation[currentSeason] / 100;
-    adjustedSiqs *= Math.max(0.8, Math.min(1.2, seasonFactor));
-  }
-  
-  // Apply historical clear days adjustment if available
-  if (location.historicalClearDays) {
-    const clearDaysAdjustment = getHistoricalClearDaysAdjustment(location.historicalClearDays);
-    adjustedSiqs = Math.min(10, adjustedSiqs * clearDaysAdjustment);
-  }
-  
-  return normalizeToSiqsScale(adjustedSiqs);
-}
-
-/**
- * Get current season based on month and hemisphere
- * @param month Month (0-11)
- * @param isNorthernHemisphere True if in northern hemisphere
- * @returns Season name
- */
-function getSeason(month: number, isNorthernHemisphere: boolean): string {
-  // Month is 0-indexed (0: January, 11: December)
-  if (isNorthernHemisphere) {
-    if (month >= 2 && month <= 4) return 'spring';
-    if (month >= 5 && month <= 7) return 'summer';
-    if (month >= 8 && month <= 10) return 'fall';
-    return 'winter';
-  } else {
-    // Southern hemisphere seasons are reversed
-    if (month >= 2 && month <= 4) return 'fall';
-    if (month >= 5 && month <= 7) return 'winter';
-    if (month >= 8 && month <= 10) return 'spring';
-    return 'summer';
-  }
-}
-
-/**
- * Calculate adjustment factor based on historical clear days data
- * @param clearDays Annual number of clear days
- * @returns Adjustment factor for SIQS
- */
-function getHistoricalClearDaysAdjustment(clearDays: number): number {
-  if (clearDays >= 200) return 1.2; // Excellent locations
-  if (clearDays >= 150) return 1.15; // Very good locations
-  if (clearDays >= 100) return 1.1; // Good locations
-  if (clearDays >= 60) return 1.0; // Average locations
-  if (clearDays >= 30) return 0.9; // Below average
-  return 0.8; // Poor locations
 }

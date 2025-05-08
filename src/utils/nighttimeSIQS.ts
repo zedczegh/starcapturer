@@ -1,10 +1,8 @@
 /**
  * Utility for calculating SIQS based specifically on nighttime conditions
- * Enhanced with improved historical data integration
  */
 import { calculateSIQS } from '@/lib/calculateSIQS';
 import { getNightHours } from './astronomy/nightTimeCalculator';
-import { getHistoricalPattern as getHistoricalPatternData } from './historicalPatterns';
 
 /**
  * Filter forecast data to include only nighttime hours (6 PM to 7 AM)
@@ -26,7 +24,6 @@ export const filterNighttimeForecast = (forecast: any[]): any[] => {
 
 /**
  * Calculate average value from an array of forecast items for a specific property
- * Enhanced with better handling of missing or invalid data
  * @param forecast Array of forecast items
  * @param property Property name to average
  * @param defaultValue Default value if property doesn't exist
@@ -51,7 +48,6 @@ export const calculateAverageValue = (
 
 /**
  * Calculate tonight's cloud cover using astronomical night hours
- * Enhanced with more accurate astronomical calculations
  * @param forecast Hourly forecast data
  * @param latitude Location latitude
  * @param longitude Location longitude
@@ -142,19 +138,7 @@ export const calculateTonightCloudCover = (
     .filter(value => typeof value === 'number' && !isNaN(value));
   
   if (cloudValues.length === 0) return null;
-  
-  // Apply historical pattern adjustment if available
-  let avgCloudCover = cloudValues.reduce((sum, val) => sum + val, 0) / cloudValues.length;
-  const historicalPattern = getHistoricalPattern(latitude, longitude);
-  
-  if (historicalPattern && historicalPattern.cloudCoverAdjustment) {
-    const month = new Date().getMonth();
-    const adjustment = historicalPattern.cloudCoverAdjustment[month] || 1.0;
-    avgCloudCover *= adjustment;
-    console.log(`Applied historical cloud cover adjustment factor: ${adjustment}`);
-  }
-  
-  return Math.min(100, Math.max(0, avgCloudCover));
+  return cloudValues.reduce((sum, val) => sum + val, 0) / cloudValues.length;
 };
 
 /**
@@ -168,7 +152,6 @@ export const isImagingImpossible = (cloudCover: number): boolean => {
 
 /**
  * Calculate SIQS score focusing on nighttime conditions from forecast data
- * Enhanced with historical data integration
  * @param locationData Current location data
  * @param forecastData Hourly forecast data
  * @param translator Translation function
@@ -197,42 +180,9 @@ export const calculateNighttimeSIQS = (
   const avgWindSpeed = calculateAverageValue(nightForecast, 'windSpeed');
   const avgHumidity = calculateAverageValue(nightForecast, 'humidity');
   
-  // Apply historical pattern adjustments if available
-  let adjustedCloudCover = avgCloudCover;
-  let adjustedWindSpeed = avgWindSpeed;
-  let adjustedHumidity = avgHumidity;
-  
-  if (locationData.latitude && locationData.longitude) {
-    const historicalPattern = getHistoricalPattern(locationData.latitude, locationData.longitude);
-    
-    if (historicalPattern) {
-      const month = new Date().getMonth();
-      
-      if (historicalPattern.cloudCoverAdjustment && historicalPattern.cloudCoverAdjustment[month]) {
-        adjustedCloudCover *= historicalPattern.cloudCoverAdjustment[month];
-        console.log(`Applied historical cloud cover adjustment: ${historicalPattern.cloudCoverAdjustment[month]}`);
-      }
-      
-      if (historicalPattern.windAdjustment && historicalPattern.windAdjustment[month]) {
-        adjustedWindSpeed *= historicalPattern.windAdjustment[month];
-        console.log(`Applied historical wind adjustment: ${historicalPattern.windAdjustment[month]}`);
-      }
-      
-      if (historicalPattern.humidityAdjustment && historicalPattern.humidityAdjustment[month]) {
-        adjustedHumidity *= historicalPattern.humidityAdjustment[month];
-        console.log(`Applied historical humidity adjustment: ${historicalPattern.humidityAdjustment[month]}`);
-      }
-    }
-  }
-  
-  // Ensure values are within valid ranges
-  adjustedCloudCover = Math.min(100, Math.max(0, adjustedCloudCover));
-  adjustedWindSpeed = Math.max(0, adjustedWindSpeed);
-  adjustedHumidity = Math.min(100, Math.max(0, adjustedHumidity));
-  
-  // Check if adjusted cloud cover makes imaging impossible
-  if (isImagingImpossible(adjustedCloudCover)) {
-    console.log(`Average nighttime cloud cover is ${Math.round(adjustedCloudCover)}%, which exceeds 40% threshold`);
+  // Check if average cloud cover makes imaging impossible
+  if (isImagingImpossible(avgCloudCover)) {
+    console.log(`Average nighttime cloud cover is ${avgCloudCover}%, which exceeds 40% threshold`);
     return {
       score: 0,
       isViable: false,
@@ -241,21 +191,21 @@ export const calculateNighttimeSIQS = (
           name: translator ? translator("Cloud Cover", "云量") : "Cloud Cover",
           score: 0,
           description: translator ? translator(
-            `Cloud cover of ${Math.round(adjustedCloudCover)}% makes imaging impossible`,
-            `${Math.round(adjustedCloudCover)}%的云量使成像不可能`
-          ) : `Cloud cover of ${Math.round(adjustedCloudCover)}% makes imaging impossible`
+            `Cloud cover of ${Math.round(avgCloudCover)}% makes imaging impossible`,
+            `${Math.round(avgCloudCover)}%的云量使成像不可能`
+          ) : `Cloud cover of ${Math.round(avgCloudCover)}% makes imaging impossible`
         }
       ]
     };
   }
   
-  // Calculate SIQS using the average nighttime conditions with historical adjustments
+  // Calculate SIQS using the average nighttime conditions
   const siqsResult = calculateSIQS({
-    cloudCover: adjustedCloudCover,
+    cloudCover: avgCloudCover,
     bortleScale: locationData.bortleScale || 5,
     seeingConditions: locationData.seeingConditions || 3,
-    windSpeed: adjustedWindSpeed,
-    humidity: adjustedHumidity,
+    windSpeed: avgWindSpeed,
+    humidity: avgHumidity,
     moonPhase: locationData.moonPhase || 0,
     precipitation: calculateAverageValue(nightForecast, 'precipitation'),
     aqi: locationData.weatherData?.aqi,
@@ -263,18 +213,8 @@ export const calculateNighttimeSIQS = (
     nightForecast: nightForecast
   });
   
-  console.log(`Calculated nighttime SIQS with historical adjustments: ${siqsResult.score}`);
+  console.log(`Calculated nighttime SIQS: ${siqsResult.score}`);
+  console.log(`Using nighttime forecast for SIQS calculation: ${siqsResult.score}`);
   
   return siqsResult;
 };
-
-/**
- * Get historical pattern for location if available
- * Uses the imported function from historicalPatterns.ts
- * @param latitude Location latitude
- * @param longitude Location longitude
- * @returns Historical pattern data or null if not available
- */
-export function getHistoricalPattern(latitude: number, longitude: number): any {
-  return getHistoricalPatternData(latitude, longitude);
-}
