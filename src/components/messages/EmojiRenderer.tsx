@@ -22,7 +22,6 @@ const EmojiRenderer: React.FC<EmojiRendererProps> = ({ text }) => {
           
           if (emoji) {
             // Render the emoji icon if found in emoji data
-            // Important: Do NOT add data-lov-id attribute to React.Fragment
             return <span key={`emoji-${index}`}>{emoji.icon}</span>;
           }
         }

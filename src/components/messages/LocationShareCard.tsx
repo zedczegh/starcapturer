@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Navigation, Star, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatSIQSScore } from "@/utils/mapUtils";
 import { useNavigate } from "react-router-dom";
+import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 
 interface LocationShareCardProps {
   id?: string;
@@ -25,17 +26,47 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
   timestamp,
   isCertified = false
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const [locationName, setLocationName] = useState(name);
   
   // Format SIQS score for display
   const formattedSiqs = formatSIQSScore(siqs);
   
+  // Use reverse geocoding to get better location name
+  useEffect(() => {
+    const fetchLocationName = async () => {
+      try {
+        const details = await getEnhancedLocationDetails(
+          latitude, 
+          longitude, 
+          language === 'zh' ? 'zh' : 'en'
+        );
+        
+        if (details && details.formattedName && 
+            !details.formattedName.includes("°") && 
+            details.formattedName !== name) {
+          setLocationName(details.formattedName);
+        }
+      } catch (error) {
+        console.error("Error fetching location name:", error);
+      }
+    };
+    
+    // Only fetch if we have coordinates and the name isn't very detailed
+    if (latitude && longitude && 
+        (name === t("Shared Location", "共享位置") || 
+         name.includes("°") || 
+         name.includes("Location"))) {
+      fetchLocationName();
+    }
+  }, [latitude, longitude, name, language, t]);
+
   const handleViewDetails = () => {
     navigate(`/location/${latitude.toFixed(6)},${longitude.toFixed(6)}`, {
       state: {
         id: id || `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`,
-        name,
+        name: locationName,
         latitude,
         longitude,
         // Ensure isViable is always defined if siqs is an object
@@ -51,7 +82,7 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
   return (
     <div className="bg-cosmic-900/70 backdrop-blur-md border border-cosmic-700/50 hover:border-cosmic-600/70 transition-colors duration-300 p-4 rounded-lg shadow-md">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold text-gray-50">{name}</h3>
+        <h3 className="text-lg font-semibold text-gray-50">{locationName}</h3>
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
           <span className="text-xs font-medium">{formattedSiqs}</span>
