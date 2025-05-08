@@ -11,7 +11,7 @@ interface LocationShareCardProps {
   name: string;
   latitude: number;
   longitude: number;
-  siqs?: number | { score: number; isViable?: boolean } | undefined;
+  siqs?: number | { score: number; isViable: boolean } | undefined;
   timestamp: string;
   isCertified?: boolean;
 }
@@ -38,7 +38,10 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
         name,
         latitude,
         longitude,
-        siqs: typeof siqs === 'number' ? { score: siqs } : siqs,
+        // Ensure isViable is always defined if siqs is an object
+        siqs: typeof siqs === 'number' 
+          ? { score: siqs, isViable: siqs >= 5.0 } 
+          : siqs ? { ...siqs, isViable: siqs.isViable ?? (siqs.score >= 5.0) } : undefined,
         timestamp,
         fromMessage: true
       }

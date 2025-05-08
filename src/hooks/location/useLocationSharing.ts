@@ -11,7 +11,7 @@ interface LocationData {
   timestamp: string;
   siqs?: {
     score: number;
-    isViable?: boolean;
+    isViable: boolean;
   };
 }
 
@@ -29,17 +29,18 @@ export const useLocationSharing = () => {
           
           // Create a simple estimate SIQS score based on latitude
           // In a real app, this would come from an API or calculation
-          const estimatedSiqs = {
-            score: parseFloat((Math.random() * 3 + 3).toFixed(1)), // Random score between 3.0-6.0
-            isViable: true
-          };
+          const estimatedScore = parseFloat((Math.random() * 3 + 3).toFixed(1)); // Random score between 3.0-6.0
+          const isViable = estimatedScore >= 5.0;
           
           const locationData: LocationData = {
             latitude,
             longitude,
             name: t("Shared Location", "共享位置"),
             timestamp: new Date().toISOString(),
-            siqs: estimatedSiqs
+            siqs: {
+              score: estimatedScore,
+              isViable: isViable
+            }
           };
           
           console.log("Location data prepared for sharing:", locationData);
