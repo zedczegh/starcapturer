@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
 import EmojiRenderer from './EmojiRenderer';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ConversationPartner {
   id: string;
@@ -71,72 +72,74 @@ const ConversationList: React.FC<ConversationListProps> = ({
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-2 space-y-1">
-        {loading ? (
-          <div className="p-8 flex flex-col items-center justify-center space-y-3 text-cosmic-400">
-            <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"/>
-            <p className="text-sm">{t("Loading conversations...", "加载对话中...")}</p>
-          </div>
-        ) : filteredConversations.length === 0 ? (
-          <div className="p-8 text-center text-cosmic-400 space-y-2">
-            <MessageCircle className="mx-auto h-12 w-12 opacity-30 mb-2" />
-            <p>{searchQuery ? t("No conversations match your search", "没有匹配的对话") 
-              : t("No conversations yet", "暂无对话")}</p>
-          </div>
-        ) : (
-          filteredConversations.map(conversation => (
-            <motion.div
-              key={conversation.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => onSelectConversation(conversation)}
-              className={`p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 
-                hover:bg-primary/5 border border-transparent
-                ${activeConversation?.id === conversation.id 
-                  ? 'bg-primary/10 border-primary/20 shadow-lg' 
-                  : 'hover:border-cosmic-700/30'
-                }`}
-            >
-              <div className="relative">
-                <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20">
-                  {conversation.avatar_url ? (
-                    <AvatarImage
-                      src={conversation.avatar_url}
-                      alt={conversation.username || "User"}
-                      className="object-cover"
-                    />
-                  ) : (
-                    <AvatarFallback className="bg-primary/10">
-                      <User className="h-6 w-6 text-primary" />
-                    </AvatarFallback>
+      <ScrollArea className="flex-1 p-2">
+        <div className="space-y-1">
+          {loading ? (
+            <div className="p-8 flex flex-col items-center justify-center space-y-3 text-cosmic-400">
+              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"/>
+              <p className="text-sm">{t("Loading conversations...", "加载对话中...")}</p>
+            </div>
+          ) : filteredConversations.length === 0 ? (
+            <div className="p-8 text-center text-cosmic-400 space-y-2">
+              <MessageCircle className="mx-auto h-12 w-12 opacity-30 mb-2" />
+              <p>{searchQuery ? t("No conversations match your search", "没有匹配的对话") 
+                : t("No conversations yet", "暂无对话")}</p>
+            </div>
+          ) : (
+            filteredConversations.map(conversation => (
+              <motion.div
+                key={conversation.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => onSelectConversation(conversation)}
+                className={`p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 
+                  hover:bg-primary/5 border border-transparent
+                  ${activeConversation?.id === conversation.id 
+                    ? 'bg-primary/10 border-primary/20 shadow-lg' 
+                    : 'hover:border-cosmic-700/30'
+                  }`}
+              >
+                <div className="relative">
+                  <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20">
+                    {conversation.avatar_url ? (
+                      <AvatarImage
+                        src={conversation.avatar_url}
+                        alt={conversation.username || "User"}
+                        className="object-cover"
+                      />
+                    ) : (
+                      <AvatarFallback className="bg-primary/10">
+                        <User className="h-6 w-6 text-primary" />
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  {conversation.unread_count > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-primary text-white rounded-full w-5 h-5 
+                      flex items-center justify-center text-xs font-medium shadow-lg
+                      ring-2 ring-cosmic-900">
+                      {conversation.unread_count}
+                    </span>
                   )}
-                </Avatar>
-                {conversation.unread_count > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-white rounded-full w-5 h-5 
-                    flex items-center justify-center text-xs font-medium shadow-lg
-                    ring-2 ring-cosmic-900">
-                    {conversation.unread_count}
-                  </span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-center">
-                  <p className="font-medium text-white truncate">
-                    {conversation.username || t("User", "用户")}
-                  </p>
-                  <span className="text-xs text-cosmic-400">
-                    {formatMessageTime(conversation.last_message_time)}
-                  </span>
                 </div>
-                <div className="text-sm text-cosmic-300 truncate mt-0.5">
-                  <EmojiRenderer text={conversation.last_message} inline />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center">
+                    <p className="font-medium text-white truncate">
+                      {conversation.username || t("User", "用户")}
+                    </p>
+                    <span className="text-xs text-cosmic-400">
+                      {formatMessageTime(conversation.last_message_time)}
+                    </span>
+                  </div>
+                  <div className="text-sm text-cosmic-300 truncate mt-0.5">
+                    <EmojiRenderer text={conversation.last_message} inline />
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 };

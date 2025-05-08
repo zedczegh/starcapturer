@@ -6,6 +6,7 @@ import { ConversationPartner } from '@/hooks/messaging/useConversations';
 import MessageItem from './message/MessageItem';
 import MessageHeader from './message/MessageHeader';
 import EmptyMessages from './message/EmptyMessages';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface MessageListProps {
   messages: any[];
@@ -52,23 +53,25 @@ const MessageList: React.FC<MessageListProps> = ({
         onBack={onBack}
       />
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 pt-6">
-        {messages.length === 0 ? (
-          <EmptyMessages />
-        ) : (
-          <>
-            {messages.map((message) => (
-              <MessageItem
-                key={message.id}
-                message={message}
-                isSender={message.sender_id === currentUserId}
-                onUnsend={onUnsendMessage}
-              />
-            ))}
-            <div ref={messagesEndRef} />
-          </>
-        )}
-      </div>
+      <ScrollArea className="flex-1 p-4 pt-6">
+        <div className="space-y-2">
+          {messages.length === 0 ? (
+            <EmptyMessages />
+          ) : (
+            <>
+              {messages.map((message) => (
+                <MessageItem
+                  key={message.id}
+                  message={message}
+                  isSender={message.sender_id === currentUserId}
+                  onUnsend={onUnsendMessage}
+                />
+              ))}
+              <div ref={messagesEndRef} />
+            </>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 };

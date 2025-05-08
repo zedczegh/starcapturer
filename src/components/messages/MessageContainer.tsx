@@ -6,7 +6,7 @@ import MessageList from "@/components/messages/MessageList";
 import MessageInput from "@/components/messages/MessageInput";
 import EmptyConversationState from "@/components/messages/EmptyConversationState";
 import { ConversationPartner } from "@/hooks/messaging/useConversations";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
 interface MessageContainerProps {
   activeConversation: ConversationPartner | null;
@@ -42,7 +42,7 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
   const messageListRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 h-[80vh]">
+    <div className="flex flex-col md:flex-row gap-4 h-[80vh] scrollbar-hide">
       <Card className={`${activeConversation ? 'hidden md:flex' : 'flex'} 
         w-full md:w-1/3 glassmorphism overflow-hidden flex-col
         border border-cosmic-800/30 shadow-xl backdrop-blur-lg`}
@@ -62,7 +62,6 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
           w-full md:w-2/3 glassmorphism overflow-hidden flex flex-col
           border border-cosmic-800/30 shadow-xl backdrop-blur-lg relative h-full`}
         ref={messageListRef}
-        // Add data attribute for active conversation ID
         data-active-conversation-id={activeConversation?.id || ''}
       >
         {activeConversation ? (

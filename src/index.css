@@ -129,6 +129,26 @@
     display: none;  /* Chrome, Safari and Opera */
   }
   
+  /* Enhanced scrollbar styles when needed */
+  .styled-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  
+  .styled-scrollbar::-webkit-scrollbar-track {
+    background: rgba(10, 17, 34, 0.3);
+    border-radius: 10px;
+  }
+  
+  .styled-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(104, 117, 255, 0.4);
+    border-radius: 10px;
+  }
+  
+  .styled-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(104, 117, 255, 0.6);
+  }
+  
   @keyframes tooltip-appear {
     from {
       opacity: 0;
