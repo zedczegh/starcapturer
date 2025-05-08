@@ -4,32 +4,48 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Creates the comment_images bucket if it doesn't exist
- * Uses a "try-it-and-see" approach rather than trying to create the bucket first
+ * Checks if the comment_images bucket exists and is accessible
+ * Uses a "try-it-and-see" approach rather than attempting bucket creation
  */
 export const ensureCommentImagesBucket = async (): Promise<boolean> => {
   try {
-    // Instead of trying to create the bucket directly (which fails due to RLS),
-    // we'll just check if it exists by attempting a list operation
-    console.log("Checking if comment_images bucket exists...");
+    // First check if the bucket exists by listing buckets
+    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
     
-    // This will either succeed (bucket exists) or fail with a specific error
-    // that tells us if the bucket doesn't exist
+    if (bucketsError) {
+      console.error("Error checking buckets:", bucketsError);
+      return false;
+    }
+    
+    const bucketExists = buckets?.some(bucket => bucket.name === 'comment_images');
+    
+    if (!bucketExists) {
+      // Create the bucket only if it doesn't exist
+      const { error } = await supabase.storage.createBucket('comment_images', {
+        public: true
+      });
+      
+      if (error) {
+        console.error("Failed to create comment_images bucket:", error);
+        return false;
+      }
+      console.log("Created comment_images bucket successfully");
+    }
+    
+    // Double-check we can access the bucket now
     const { data, error } = await supabase.storage
       .from('comment_images')
       .list('');
       
     if (error) {
-      // If the error is not because the bucket doesn't exist, it might be a permission issue
-      console.error("Error checking comment_images bucket:", error);
+      console.error("Error accessing comment_images bucket:", error);
       return false;
     }
     
-    // If we got here, the bucket exists and we have permissions to use it
     console.log("comment_images bucket is available");
     return true;
   } catch (error) {
-    console.error("Exception checking comment_images bucket:", error);
+    console.error("Exception checking/creating comment_images bucket:", error);
     return false;
   }
 };
@@ -44,7 +60,7 @@ export const uploadCommentImage = async (
   try {
     if (!imageFile) return null;
     
-    // Check if bucket is accessible
+    // Check if bucket is accessible and create if needed
     const bucketReady = await ensureCommentImagesBucket();
     if (!bucketReady) {
       console.error("Comment images bucket is not accessible");

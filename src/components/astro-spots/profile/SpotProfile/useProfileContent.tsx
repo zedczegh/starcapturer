@@ -27,17 +27,19 @@ export const useProfileContent = (
   const { spotImages, loadingImages, refetchImages } = useSpotImages(spotId, refreshTrigger);
   const { handleViewDetails, handleMessageCreator } = useProfileActions(spot);
   
-  // Check if bucket exists but don't try to create it
+  // Check if bucket exists and try to create it if needed
   useEffect(() => {
     const checkStorage = async () => {
       try {
         const available = await ensureCommentImagesBucket();
         setStorageChecked(true);
         if (!available) {
-          console.log("Comment images storage is not accessible - this will affect image uploads");
+          console.log("Comment images storage is not accessible or couldn't be created");
+        } else {
+          console.log("Comment images storage is ready for use");
         }
       } catch (err) {
-        console.error("Error checking comment image storage:", err);
+        console.error("Error checking/creating comment image storage:", err);
         setStorageChecked(true);
       }
     };
@@ -66,7 +68,7 @@ export const useProfileContent = (
     }
   }, [authUser, spot]);
 
-  // Load initial comments and set up refresh interval
+  // Remove the automatic refresh interval that could cause comments to disappear
   useEffect(() => {
     let isMounted = true;
     
@@ -83,20 +85,11 @@ export const useProfileContent = (
     
     if (spotId) {
       loadInitialComments();
-      
-      // Set up refresh interval for comments
-      const intervalId = setInterval(() => {
-        if (isMounted) {
-          console.log("Refreshing comments automatically");
-          fetchComments();
-        }
-      }, 30000); // Refresh every 30 seconds
-      
-      return () => {
-        isMounted = false;
-        clearInterval(intervalId);
-      };
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [spotId, fetchComments]);
 
   useEffect(() => {

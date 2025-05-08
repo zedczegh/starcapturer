@@ -13,17 +13,19 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   const [storageChecked, setStorageChecked] = useState(false);
   const { user: authUser } = useAuth();
 
-  // Initialize bucket checking when hook is first used - don't try to create it anymore
+  // Initialize bucket checking when hook is first used
   useEffect(() => {
     const checkStorage = async () => {
       try {
         const available = await ensureCommentImagesBucket();
         setStorageChecked(true);
         if (!available) {
-          console.log("Comment images storage is not accessible. Some features may be limited.");
+          console.log("Comment images storage is not accessible or couldn't be created. Some features may be limited.");
+        } else {
+          console.log("Comment images storage is ready for use");
         }
       } catch (err) {
-        console.error("Error checking comment image storage:", err);
+        console.error("Error checking/creating comment image storage:", err);
         setStorageChecked(true);
       }
     };
@@ -75,17 +77,19 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       let imageUrl: string | null = null;
       if (imageFile) {
-        // Check if storage is accessible
+        // Make sure bucket exists and is accessible
         const bucketReady = await ensureCommentImagesBucket();
         if (!bucketReady) {
-          console.error("Storage bucket is not accessible");
+          console.error("Failed to ensure comment_images bucket exists");
           toast.error(t("Failed to access storage. Please try again later.", "无法访问存储。请稍后再试。"));
+          setCommentSending(false);
           return { success: false };
         }
         
         imageUrl = await uploadCommentImage(imageFile, t);
         if (!imageUrl) {
           toast.error(t("Failed to upload image", "图片上传失败"));
+          setCommentSending(false);
           return { success: false };
         }
       }
@@ -122,6 +126,13 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       setCommentSending(false);
     }
   };
+
+  // Run loadComments on mount and when spotId changes
+  useEffect(() => {
+    if (spotId) {
+      loadComments();
+    }
+  }, [spotId, loadComments]);
 
   return {
     commentSending,

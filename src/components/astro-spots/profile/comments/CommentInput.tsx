@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, ImagePlus, X } from "lucide-react";
+import { Loader2, ImagePlus, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
@@ -36,7 +36,10 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
     onSubmit(commentText.trim(), imageFile);
     setCommentText('');
     setImageFile(null);
-    setImagePreview(null);
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+      setImagePreview(null);
+    }
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,7 +51,8 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
       }
       
       setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      const objectUrl = URL.createObjectURL(file);
+      setImagePreview(objectUrl);
     }
   };
 
@@ -110,7 +114,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
           {sending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Send className="h-4 w-4" />
+            <span className="h-4 w-4">→</span>
           )}
           {isReply ? t("Reply", "回复") : t("Submit", "提交")}
         </Button>

@@ -19,6 +19,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
   const { user: authUser } = useAuth();
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState(false);
+  const [replySubmitting, setReplySubmitting] = useState(false);
   
   // Determine if we should collapse replies
   const hasReplies = comment.replies && comment.replies.length > 0;
@@ -37,15 +38,21 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
 
   const handleReplySubmit = async (content: string, imageFile: File | null) => {
     if (!authUser) return;
-    await onReply(content, imageFile, comment.id);
-    setShowReplyInput(false);
+    
+    try {
+      setReplySubmitting(true);
+      await onReply(content, imageFile, comment.id);
+      setShowReplyInput(false);
+    } finally {
+      setReplySubmitting(false);
+    }
   };
 
   const getFormattedDate = (dateString: string) => {
     try {
       return formatDistanceToNow(new Date(dateString), { addSuffix: true });
     } catch (error) {
-      console.error("Invalid date format:", dateString);
+      console.error("Invalid date format:", dateString, error);
       return "recently";
     }
   };
@@ -90,6 +97,11 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
                 src={comment.image_url}
                 alt={t("Comment attachment", "评论附件")}
                 className="max-h-48 rounded-md border border-cosmic-700/50"
+                onError={(e) => {
+                  // Handle image loading errors
+                  console.error("Failed to load comment image:", comment.image_url);
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
             </div>
           )}
@@ -115,7 +127,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
           <div className="mt-2">
             <CommentInput
               onSubmit={handleReplySubmit}
-              sending={false}
+              sending={replySubmitting}
               isReply={true}
             />
           </div>
@@ -160,6 +172,11 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
                           src={reply.image_url}
                           alt={t("Reply attachment", "回复附件")}
                           className="max-h-32 rounded-md border border-cosmic-700/50"
+                          onError={(e) => {
+                            // Handle image loading errors
+                            console.error("Failed to load reply image:", reply.image_url);
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
                         />
                       </div>
                     )}
