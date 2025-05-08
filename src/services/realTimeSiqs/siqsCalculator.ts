@@ -1,4 +1,3 @@
-
 /**
  * Optimized real-time SIQS calculation with enhanced historical data integration
  */
@@ -313,7 +312,7 @@ export async function calculateRealTimeSiqs(
           lightPollution: !!pollutionData,
           terrainCorrected: !!terrainCorrectedScale,
           climate: !!climateRegion,
-          historicalPattern: useHistoricalData && !!historicalPattern,
+          historicalData: useHistoricalData && !!historicalPattern,
           singleHourSampling: useSingleHourSampling && forecastData?.hourly ? true : false
         }
       }
