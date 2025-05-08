@@ -7,7 +7,6 @@ import MessageInput from "@/components/messages/MessageInput";
 import EmptyConversationState from "@/components/messages/EmptyConversationState";
 import { ConversationPartner } from "@/hooks/messaging/useConversations";
 import { useRef } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MessageContainerProps {
   activeConversation: ConversationPartner | null;
@@ -41,14 +40,12 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
   currentUserId,
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 h-[85vh] md:h-[80vh] scrollbar-hide">
-      <Card 
-        className={`${activeConversation ? 'hidden md:flex' : 'flex'} 
-          w-full md:w-1/3 glassmorphism overflow-hidden flex-col
-          border border-cosmic-800/30 shadow-xl backdrop-blur-lg`}
+    <div className="flex flex-col md:flex-row gap-4 h-[80vh] scrollbar-hide">
+      <Card className={`${activeConversation ? 'hidden md:flex' : 'flex'} 
+        w-full md:w-1/3 glassmorphism overflow-hidden flex-col
+        border border-cosmic-800/30 shadow-xl backdrop-blur-lg`}
       >
         <ConversationList 
           conversations={conversations}
@@ -75,7 +72,6 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
               activeConversation={activeConversation}
               onBack={onBack}
               onUnsendMessage={onUnsendMessage}
-              isMobile={isMobile}
             />
             <MessageInput 
               onSend={onSendMessage}
