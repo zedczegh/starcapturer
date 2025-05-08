@@ -36,11 +36,9 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
 
   const handleCommentSubmit = async (content: string, imageFile: File | null = null) => {
     if (onSubmit) {
-      const result = await onSubmit(content, imageFile);
+      await onSubmit(content, imageFile);
       // Make sure we refresh comments after submission, regardless of whether the parent component does
-      setTimeout(() => {
-        onCommentsUpdate();
-      }, 500);
+      onCommentsUpdate();
     }
   };
 

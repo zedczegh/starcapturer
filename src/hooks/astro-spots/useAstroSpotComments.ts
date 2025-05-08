@@ -8,62 +8,8 @@ import { Comment } from '@/components/astro-spots/profile/types/comments';
 export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: string) => string) => {
   const [commentSending, setCommentSending] = useState(false);
 
-  // Create bucket if it doesn't exist
-  const createBucketIfNeeded = async (): Promise<boolean> => {
-    try {
-      console.log("Creating or checking comment_images bucket...");
-      
-      // Check if bucket exists
-      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-      
-      if (bucketsError) {
-        console.error("Error listing buckets:", bucketsError);
-        return false;
-      }
-      
-      const bucketExists = buckets?.some(bucket => bucket.name === 'comment_images');
-      
-      if (!bucketExists) {
-        console.log("Creating comment_images bucket...");
-        // Create bucket with public access
-        const { error: createError } = await supabase.storage.createBucket('comment_images', {
-          public: true,
-          fileSizeLimit: 5242880, // 5MB
-          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp']
-        });
-        
-        if (createError) {
-          console.error("Error creating comment_images bucket:", createError);
-          return false;
-        }
-        
-        // Instead of using RPC for policy creation, we'll use SQL directly
-        console.log("Setting bucket to public...");
-        
-        // No RPC call here, as it causes TypeScript errors
-        // We'll apply the public policy when the image is uploaded instead
-        
-        console.log("Successfully created comment_images bucket");
-      } else {
-        console.log("comment_images bucket already exists");
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Error checking/creating bucket:", error);
-      return false;
-    }
-  };
-
   const uploadImage = async (imageFile: File): Promise<string | null> => {
     try {
-      // Ensure bucket exists before upload
-      const bucketReady = await createBucketIfNeeded();
-      if (!bucketReady) {
-        toast.error(t("Failed to prepare storage", "存储准备失败"));
-        return null;
-      }
-      
       // Generate a unique filename
       const uniqueId = uuidv4();
       const fileExt = imageFile.name.split('.').pop() || '';
@@ -72,6 +18,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       console.log("Uploading image with filename:", fileName);
       
+      // Upload the image to the existing bucket
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('comment_images')
         .upload(fileName, imageFile, {

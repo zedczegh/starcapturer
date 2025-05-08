@@ -79,23 +79,16 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
                   <div className="h-5 w-5 border-2 border-t-transparent border-cosmic-300 rounded-full animate-spin"></div>
                 </div>
               )}
-              <a 
-                href={comment.image_url} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="block"
-              >
-                <img 
-                  src={comment.image_url} 
-                  alt={t("Comment attachment", "评论附件")}
-                  className={`max-h-60 w-auto rounded-md border border-cosmic-700/30 hover:opacity-90 transition-opacity ${!imageLoaded ? 'hidden' : 'block'}`}
-                  onLoad={() => setImageLoaded(true)}
-                  onError={() => {
-                    console.error("Failed to load image:", comment.image_url);
-                    setImageError(true);
-                  }}
-                />
-              </a>
+              <img 
+                src={comment.image_url} 
+                alt={t("Comment attachment", "评论附件")}
+                className={`max-h-60 w-auto rounded-md border border-cosmic-700/30 hover:opacity-90 transition-opacity ${!imageLoaded ? 'hidden' : 'block'}`}
+                onLoad={() => setImageLoaded(true)}
+                onError={() => {
+                  console.error("Failed to load image:", comment.image_url);
+                  setImageError(true);
+                }}
+              />
             </div>
           )}
           
