@@ -36,7 +36,8 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
       created_at: comment.created_at,
       image_url: comment.image_url,
       parent_id: comment.parent_id,
-      profiles: comment.profiles || { username: null, avatar_url: null }
+      profiles: comment.profiles || { username: null, avatar_url: null },
+      replies: [] // Initialize empty replies array for each comment
     }));
     
     // Separate top-level comments and replies

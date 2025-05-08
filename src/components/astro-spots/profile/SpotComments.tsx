@@ -14,7 +14,7 @@ interface SpotCommentsProps {
   comments: Comment[];
   user: boolean;
   onCommentsUpdate: () => void;
-  onSubmit?: (content: string, imageFile: File | null) => Promise<void>;
+  onSubmit?: (content: string, imageFile: File | null, parentId?: string | null) => Promise<void>;
   sending: boolean;
 }
 
@@ -44,7 +44,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
 
   const handleReplySubmit = async (content: string, imageFile: File | null, parentId: string) => {
     if (onSubmit) {
-      // To add the parent ID, we can modify our hook to accept a parent ID parameter
+      // Pass the parent ID parameter
       await onSubmit(content, imageFile, parentId);
       onCommentsUpdate();
     }

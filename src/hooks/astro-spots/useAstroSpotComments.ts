@@ -8,6 +8,22 @@ import { fetchComments, createComment } from '@/services/comments/commentService
 
 export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: string) => string) => {
   const [commentSending, setCommentSending] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  // Initial load of comments
+  const loadComments = async () => {
+    try {
+      const fetchedComments = await fetchComments(spotId);
+      setComments(fetchedComments);
+      setLoaded(true);
+      return fetchedComments;
+    } catch (err) {
+      console.error("Error loading comments:", err);
+      setLoaded(true);
+      return [] as Comment[];
+    }
+  };
 
   const submitComment = async (
     content: string, 
@@ -44,10 +60,11 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       }
       
       // Fetch updated comments
-      const comments = await fetchComments(spotId);
+      const updatedComments = await fetchComments(spotId);
+      setComments(updatedComments); // Update local state immediately
       
       toast.success(parentId ? t("Reply posted!", "回复已发表！") : t("Comment posted!", "评论已发表！"));
-      return { success: true, comments };
+      return { success: true, comments: updatedComments };
       
     } catch (err) {
       console.error("Exception when posting comment:", err);
@@ -60,8 +77,10 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
 
   return {
     commentSending,
+    comments,
+    loaded,
     submitComment,
-    fetchComments: () => fetchComments(spotId)
+    fetchComments: loadComments
   };
 };
 
