@@ -11,6 +11,7 @@ import {
 import { siqsEmojis } from "./SiqsEmojiData";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface EmojiPickerProps {
   onEmojiSelect: (emoji: string) => void;
@@ -18,6 +19,10 @@ interface EmojiPickerProps {
 
 const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
   const { t } = useLanguage();
+  
+  // Group emojis by categories
+  const siqsConditionEmojis = siqsEmojis.slice(0, 6); // Original SIQS condition emojis
+  const locationEmojis = siqsEmojis.slice(6); // New location-related emojis
   
   return (
     <DropdownMenu>
@@ -31,26 +36,51 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
           <Smile className="h-5 w-5" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="p-2 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-lg">
-        <DropdownMenuLabel className="text-cosmic-200">
-          {t("SIQS Emojis", "SIQS 表情")}
-        </DropdownMenuLabel>
-        <div className="grid grid-cols-3 gap-2 mt-1">
-          {siqsEmojis.map((emoji) => (
-            <DropdownMenuItem
-              key={emoji.id}
-              className="flex flex-col items-center justify-center p-2 hover:bg-cosmic-800/50 cursor-pointer rounded-lg"
-              onClick={() => onEmojiSelect(`[${emoji.id}]`)}
-            >
-              <div className="p-1">
-                {emoji.icon}
-              </div>
-              <span className="text-xs text-cosmic-300 mt-1 text-center">
-                {emoji.name}
-              </span>
-            </DropdownMenuItem>
-          ))}
-        </div>
+      <DropdownMenuContent align="start" className="p-2 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-lg w-72">
+        <Tabs defaultValue="siqs">
+          <TabsList className="grid w-full grid-cols-2 mb-2">
+            <TabsTrigger value="siqs">{t("SIQS Emojis", "SIQS 表情")}</TabsTrigger>
+            <TabsTrigger value="location">{t("Location Emojis", "位置表情")}</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="siqs" className="mt-0">
+            <div className="grid grid-cols-3 gap-2">
+              {siqsConditionEmojis.map((emoji) => (
+                <DropdownMenuItem
+                  key={emoji.id}
+                  className="flex flex-col items-center justify-center p-2 hover:bg-cosmic-800/50 cursor-pointer rounded-lg"
+                  onClick={() => onEmojiSelect(`[${emoji.id}]`)}
+                >
+                  <div className="p-1">
+                    {emoji.icon}
+                  </div>
+                  <span className="text-xs text-cosmic-300 mt-1 text-center">
+                    {emoji.name}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="location" className="mt-0">
+            <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
+              {locationEmojis.map((emoji) => (
+                <DropdownMenuItem
+                  key={emoji.id}
+                  className="flex flex-col items-center justify-center p-2 hover:bg-cosmic-800/50 cursor-pointer rounded-lg"
+                  onClick={() => onEmojiSelect(`[${emoji.id}]`)}
+                >
+                  <div className="p-1">
+                    {emoji.icon}
+                  </div>
+                  <span className="text-xs text-cosmic-300 mt-1 text-center">
+                    {emoji.name}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </DropdownMenuContent>
     </DropdownMenu>
   );

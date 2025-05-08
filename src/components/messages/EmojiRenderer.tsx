@@ -12,8 +12,8 @@ const EmojiRenderer: React.FC<EmojiRendererProps> = ({ text, inline = false }) =
   const renderTextWithEmojis = () => {
     if (!text) return null;
     
-    // Regex to match our emoji format [emoji-id]
-    const regex = /\[(stellar-star|happy-moon|curious-cloud|content-observer|worried-weather|sad-satellite)\]/g;
+    // Updated regex to match all our emoji formats [emoji-id]
+    const regex = /\[(stellar-star|happy-moon|curious-cloud|content-observer|worried-weather|sad-satellite|location-pin|earth-globe|astro-compass|clear-night|cloudy-sky|navigation-point|bright-sun|stargazing-route|observatory|dark-site)\]/g;
     
     // If the text is just an emoji tag, only render the emoji
     if (regex.test(text) && text.trim().match(regex)?.[0] === text.trim()) {
