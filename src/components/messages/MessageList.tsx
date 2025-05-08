@@ -142,7 +142,7 @@ const MessageList: React.FC<MessageListProps> = ({
         onBack={onBack} 
       />
 
-      {/* Messages container with hidden scrollbars - adjusted for better spacing */}
+      {/* Messages container with improved spacing and padding */}
       <div 
         className="flex-1 overflow-y-auto scrollbar-hide p-4 pb-6 space-y-4 h-[calc(100%-130px)]" 
         ref={scrollAreaRef}
@@ -150,11 +150,11 @@ const MessageList: React.FC<MessageListProps> = ({
           overflowX: "hidden", 
           msOverflowStyle: "none", 
           scrollbarWidth: "none",
-          paddingTop: "0.75rem" // Added extra padding at the top
+          paddingTop: "1rem" // Increased padding at the top
         }}
       >
         {/* Add a spacer div to prevent first message from being hidden under header */}
-        <div className="h-1"></div>
+        <div className="h-2"></div>
         
         {messages.length === 0 ? (
           <EmptyMessages />

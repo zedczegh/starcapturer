@@ -19,12 +19,14 @@ export const useMessageActions = (
   ) => {
     if (!user) return;
     
-    // Find the active conversation partner ID
-    const urlParams = new URLSearchParams(window.location.search);
-    const conversationPartnerId = urlParams.get('with');
+    // Find the active conversation partner ID from active conversation state instead of URL
+    // This fixes the "No conversation partner found" error
+    const activeElement = document.querySelector('[data-active-conversation-id]');
+    const conversationPartnerId = activeElement?.getAttribute('data-active-conversation-id');
     
     if (!conversationPartnerId) {
-      console.error("No conversation partner found");
+      console.error("No active conversation partner found");
+      toast.error(t("Please select a conversation partner", "请选择聊天对象"));
       return;
     }
     
