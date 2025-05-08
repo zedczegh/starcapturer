@@ -1,7 +1,8 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Send, Image, X } from "lucide-react";
+import { Send, Image, X, Smile } from "lucide-react";
 import { toast } from "sonner";
 import EmojiPicker from './EmojiPicker';
 import EmojiRenderer from './EmojiRenderer';
@@ -135,21 +136,11 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
       )}
       
       <div className="flex items-end gap-2">
-        <div className="relative flex-grow">
-          <div className="relative">
-            <textarea
-              ref={textareaRef}
-              className="w-full bg-cosmic-800/30 border border-cosmic-700/50 rounded-lg py-2 px-4 pl-16 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder={t("Type your message...", "输入您的消息...")}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              disabled={sending}
-            />
-            <div className="absolute bottom-2 left-2 flex items-center space-x-1">
+        <div className="relative flex-grow bg-cosmic-800/30 rounded-full border border-cosmic-700/50">
+          <div className="flex items-center">
+            <div className="absolute left-2 flex items-center space-x-1 py-2">
               <button
-                className="text-cosmic-400 hover:text-primary p-1 rounded-full hover:bg-cosmic-800/30"
+                className="text-cosmic-400 hover:text-primary p-1.5 rounded-full hover:bg-cosmic-800/30 transition-colors"
                 onClick={triggerFileInput}
                 type="button"
                 disabled={sending}
@@ -158,6 +149,16 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
               </button>
               <EmojiPicker onEmojiSelect={handleEmojiSelect} />
             </div>
+            <textarea
+              ref={textareaRef}
+              className="w-full bg-transparent rounded-full py-2 px-4 pl-16 pr-4 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none"
+              placeholder={t("Type your message...", "输入您的消息...")}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              disabled={sending}
+            />
             <input 
               type="file"
               ref={fileInputRef}
@@ -169,12 +170,13 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
           </div>
         </div>
         <Button
-          className="flex-shrink-0"
+          className="flex-shrink-0 rounded-full h-10 w-10 p-0"
           onClick={handleSend}
           disabled={sending || (!message.trim() && !imageFile)}
+          variant={message.trim() || imageFile ? "default" : "ghost"}
         >
-          <Send className="h-4 w-4" />
-          <span className="ml-2">{t("Send", "发送")}</span>
+          <Send className="h-5 w-5" />
+          <span className="sr-only">{t("Send", "发送")}</span>
         </Button>
       </div>
     </div>

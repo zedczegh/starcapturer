@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, User, MessageCircle, Image as ImageIcon, Link as LinkIcon, MoreVertical, Trash2 } from "lucide-react";
@@ -188,11 +189,11 @@ const MessageList: React.FC<MessageListProps> = ({
         </div>
       </div>
 
-      {/* Messages container with improved padding and sizing */}
+      {/* Messages container with hidden scrollbars */}
       <div 
-        className="flex-1 overflow-y-auto p-4 pb-6 space-y-4 h-[calc(100%-130px)]" 
+        className="flex-1 overflow-y-auto scrollbar-hide p-4 pb-6 space-y-4 h-[calc(100%-130px)]" 
         ref={scrollAreaRef}
-        style={{overflowX: "hidden"}}
+        style={{ overflowX: "hidden", msOverflowStyle: "none", scrollbarWidth: "none" }}
       >
         {messages.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
