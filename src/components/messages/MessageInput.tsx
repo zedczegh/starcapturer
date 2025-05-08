@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Send, Image, X } from "lucide-react";
 import { toast } from "sonner";
+import EmojiPicker from './EmojiPicker';
 
 interface MessageInputProps {
   onSend: (text: string, imageFile?: File | null) => void;
@@ -78,6 +79,25 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
     fileInputRef.current?.click();
   };
 
+  const handleEmojiSelect = (emojiTag: string) => {
+    if (textareaRef.current) {
+      const start = textareaRef.current.selectionStart;
+      const end = textareaRef.current.selectionEnd;
+      const newMessage = message.substring(0, start) + emojiTag + message.substring(end);
+      setMessage(newMessage);
+      
+      // Focus back on textarea and place cursor after the inserted emoji
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          const newCursorPos = start + emojiTag.length;
+          textareaRef.current.selectionStart = newCursorPos;
+          textareaRef.current.selectionEnd = newCursorPos;
+        }
+      }, 10);
+    }
+  };
+
   // Auto-resize textarea as user types
   useEffect(() => {
     if (textareaRef.current) {
@@ -110,7 +130,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
         <div className="relative flex-grow">
           <textarea
             ref={textareaRef}
-            className="w-full bg-cosmic-800/30 border border-cosmic-700/50 rounded-lg py-2 px-4 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full bg-cosmic-800/30 border border-cosmic-700/50 rounded-lg py-2 px-4 pl-16 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none focus:ring-1 focus:ring-primary"
             placeholder={t("Type your message...", "输入您的消息...")}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -118,6 +138,17 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
             rows={1}
             disabled={sending}
           />
+          <div className="absolute bottom-2 left-2 flex items-center space-x-1">
+            <button
+              className="text-cosmic-400 hover:text-primary"
+              onClick={triggerFileInput}
+              type="button"
+              disabled={sending}
+            >
+              <Image className="h-5 w-5" />
+            </button>
+            <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+          </div>
           <input 
             type="file"
             ref={fileInputRef}
@@ -126,14 +157,6 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
             onChange={handleFileChange}
             disabled={sending}
           />
-          <button
-            className="absolute bottom-2 left-2 text-cosmic-400 hover:text-primary"
-            onClick={triggerFileInput}
-            type="button"
-            disabled={sending}
-          >
-            <Image className="h-5 w-5" />
-          </button>
         </div>
         <Button
           className="flex-shrink-0"

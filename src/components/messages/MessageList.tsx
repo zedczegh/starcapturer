@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import { motion } from "framer-motion";
 import { ChevronLeft, User, MessageCircle, Image as ImageIcon, Link as LinkIcon } from "lucide-react";
@@ -8,6 +7,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import EmojiRenderer from './EmojiRenderer';
 
 interface Message {
   id: string;
@@ -62,7 +62,7 @@ const MessageList: React.FC<MessageListProps> = ({
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     
     if (!text.match(urlRegex)) {
-      return <p>{text}</p>;
+      return <EmojiRenderer text={text} />;
     }
     
     // Split text by URLs and create array of text and link elements
@@ -76,7 +76,7 @@ const MessageList: React.FC<MessageListProps> = ({
           if (i < parts.length - 1 && i < matches.length) {
             return (
               <React.Fragment key={i}>
-                {part}
+                <EmojiRenderer text={part} />
                 <a 
                   href={matches[i]} 
                   target="_blank" 
@@ -90,7 +90,7 @@ const MessageList: React.FC<MessageListProps> = ({
             );
           }
           // Otherwise render as regular text
-          return part;
+          return <EmojiRenderer text={part} />;
         })}
       </p>
     );
