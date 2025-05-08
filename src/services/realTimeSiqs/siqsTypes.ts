@@ -1,88 +1,62 @@
 
-// Define types for SIQS calculation
-export interface SiqsResult {
-  siqs: number;
-  isViable: boolean;
-  weatherData?: WeatherDataWithClearSky;
-  forecastData?: any;
-  factors?: {
-    name: string;
-    score: number;
-    description: string;
-  }[];
-  metadata?: {
-    calculatedAt: string;
-    sources: {
-      weather: boolean;
-      forecast: boolean;
-      clearSky: boolean;
-      lightPollution: boolean;
-      terrainCorrected?: boolean;
-      climate?: boolean;
-      singleHourSampling?: boolean;
-    };
-    reliability?: {
-      score: number;
-      issues: string[];
-    };
-  };
-}
+/**
+ * Type definitions for SIQS calculation
+ */
 
 export interface WeatherDataWithClearSky {
   temperature: number;
   humidity: number;
-  cloudCover: number;
   windSpeed: number;
-  precipitation: number;
-  clearSkyRate?: number;
-  latitude: number;
-  longitude: number;
-  time?: string;
-  condition?: string;
+  cloudCover: number;
+  precipitation?: number;
   aqi?: number;
+  clearSkyRate?: number;
+  latitude?: number;
+  longitude?: number;
   _forecast?: any;
   nighttimeCloudData?: {
     average: number;
     timeRange: string;
-    sourceType: 'forecast' | 'calculated' | 'historical' | 'optimized';
+    sourceType?: "forecast" | "calculated" | "historical";
   };
 }
 
-export interface MoonlessNightInfo {
-  duration: number; // in hours
-  startTime: string;
-  endTime: string;
-  moonrise: Date | string;
-  moonset: Date | string;
-  nextNewMoon: string;
-  daysUntilNewMoon: number;
-  astronomicalNightStart: string;
-  astronomicalNightEnd: string;
-  astronomicalNightDuration: number;
-}
-
-export interface MoonPhaseInfo {
-  phase: number; // 0-1 normalized value
+export interface SiqsFactor {
   name: string;
-  illumination: number; // percentage 0-100
-  isGoodForAstronomy: boolean;
+  score: number;
+  description?: string;
 }
 
-// Add SiqsCalculationOptions interface
-export interface SiqsCalculationOptions {
-  anomalyDetection?: boolean;
-  includeMetadata?: boolean;
-  includeForecast?: boolean;
-  reliability?: boolean;
-  adjustForLatitude?: boolean;
-  useSingleHourSampling?: boolean;
-  targetHour?: number;
-  cacheDurationMins?: number;
+export interface SiqsMetadata {
+  calculatedAt: string;
+  sources?: {
+    weather: boolean;
+    forecast?: boolean;
+    clearSky?: boolean;
+    lightPollution?: boolean;
+    terrainCorrected?: boolean;
+    climate?: boolean;
+    historicalData?: boolean;
+    singleHourSampling?: boolean;
+  };
+  algorithm?: {
+    version: string;
+    adjustments?: string[];
+  };
 }
 
-// Add interface for display options
-export interface SiqsDisplayOptions {
-  skipCache?: boolean;
-  useSingleHourSampling?: boolean;
-  targetHour?: number;
+export interface SiqsResult {
+  siqs: number;
+  isViable: boolean;
+  factors?: SiqsFactor[];
+  level?: string;
+  weatherData?: WeatherDataWithClearSky;
+  forecastData?: any;
+  metadata?: SiqsMetadata;
+  nighttimeCloudData?: any;
+}
+
+export interface SiqsCache {
+  timestamp: number;
+  result: SiqsResult;
 }

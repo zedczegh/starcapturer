@@ -135,6 +135,43 @@ function isDesertRegion(latitude: number, longitude: number): boolean {
 }
 
 /**
+ * Enhanced function to determine high-altitude regions which typically have clearer skies
+ * @param latitude Latitude of location
+ * @param longitude Longitude of location
+ * @returns Boolean indicating if location is in a high-altitude region
+ */
+function isHighAltitudeRegion(latitude: number, longitude: number): boolean {
+  // Major high-altitude regions with typically clearer skies
+  
+  // Andes region
+  if ((latitude >= -40 && latitude <= 10) && (longitude >= -80 && longitude <= -65)) {
+    return true;
+  }
+  
+  // Rocky Mountains
+  if ((latitude >= 35 && latitude <= 60) && (longitude >= -125 && longitude <= -105)) {
+    return true;
+  }
+  
+  // Alps
+  if ((latitude >= 43 && latitude <= 48) && (longitude >= 5 && longitude <= 16)) {
+    return true;
+  }
+  
+  // Tibetan Plateau
+  if ((latitude >= 28 && latitude <= 40) && (longitude >= 75 && longitude <= 100)) {
+    return true;
+  }
+  
+  // Ethiopian Highlands
+  if ((latitude >= 5 && latitude <= 15) && (longitude >= 35 && longitude <= 42)) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * Get color based on clear sky rate
  * @param rate Clear sky rate as a percentage
  * @returns Color class for styling
@@ -151,7 +188,7 @@ export function getRateColor(rate: number): string {
 
 /**
  * Calculate the minimum number of clear nights per year based on clear sky rate and location
- * Includes adjustments for location-specific factors
+ * Enhanced with more accurate astronomical viewing conditions
  * @param clearSkyRate Clear sky rate percentage
  * @param latitude Location latitude
  * @param longitude Location longitude
@@ -211,6 +248,34 @@ export function getMinimumClearNights(
   } else if (isMediterraneanRegion(latitude, longitude)) {
     // Mediterranean regions have seasonal patterns
     baseNights = Math.round(baseNights * 1.1);
+  } else if (isHighAltitudeRegion(latitude, longitude)) {
+    // High altitude regions often have clearer nights due to thinner atmosphere
+    baseNights = Math.round(baseNights * 1.15);
+  }
+
+  // Enhanced lunar phase adjustment - exclude nights with full moon
+  // Roughly 3-4 nights per month are significantly affected by full moon
+  baseNights = Math.round(baseNights * 0.9); // Reduce by ~10% for full moon nights
+  
+  // Astronomical twilight adjustment - in summer at high latitudes, 
+  // true astronomical darkness may not occur
+  if (Math.abs(latitude) > 45) {
+    // Further reduce by ~5% for reduced astronomical darkness in summer
+    baseNights = Math.round(baseNights * 0.95);
+  }
+  
+  // Final adjustment to account for light pollution in populated areas
+  // This is a crude estimate - ideally this would use actual Bortle scale data
+  try {
+    // If we're within 50km of a major urban area, reduce clear nights
+    // This is a placeholder for a more sophisticated calculation
+    const isNearUrbanArea = false; // Would be determined by a geo database
+    
+    if (isNearUrbanArea) {
+      baseNights = Math.round(baseNights * 0.85);
+    }
+  } catch (error) {
+    console.error("Error applying urban area adjustment:", error);
   }
   
   return Math.max(5, baseNights); // Ensure a minimum of 5 nights
@@ -279,5 +344,78 @@ export function getBestMonths(
   }
 }
 
+/**
+ * Calculate enhanced clear night quality score
+ * This function evaluates how good a clear night is for astronomical viewing
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @param date Date to evaluate (defaults to current date)
+ * @returns Quality score from 0-10
+ */
+export function calculateClearNightQuality(
+  latitude: number,
+  longitude: number,
+  date: Date = new Date()
+): number {
+  // Baseline score
+  let qualityScore = 7.5;
+  
+  // Get month and season
+  const month = date.getMonth(); // 0-11
+  const isNorthernHemisphere = latitude >= 0;
+  
+  // Calculate seasonality factor (0-2)
+  let seasonalityFactor = 0;
+  
+  // Northern hemisphere: winter is better, summer worse
+  // Southern hemisphere: opposite
+  if (isNorthernHemisphere) {
+    // Nov-Feb are best in Northern hemisphere (winter)
+    if (month >= 10 || month <= 1) {
+      seasonalityFactor = 2;
+    } 
+    // Mar-Apr, Sep-Oct are good (spring/fall)
+    else if ((month >= 2 && month <= 3) || (month >= 8 && month <= 9)) {
+      seasonalityFactor = 1;  
+    }
+    // May-Aug are worst (summer)
+    else {
+      seasonalityFactor = 0;
+    }
+  } else {
+    // May-Aug are best in Southern hemisphere (winter)
+    if (month >= 4 && month <= 7) {
+      seasonalityFactor = 2;
+    }
+    // Mar-Apr, Sep-Oct are good (spring/fall)
+    else if ((month >= 2 && month <= 3) || (month >= 8 && month <= 9)) {
+      seasonalityFactor = 1;
+    }
+    // Nov-Feb are worst (summer)
+    else {
+      seasonalityFactor = 0;
+    }
+  }
+  
+  // Adjust base quality by seasonality
+  qualityScore += (seasonalityFactor - 1); // -1 to +1 adjustment
+  
+  // Climate region adjustments
+  if (isDesertRegion(latitude, longitude)) {
+    qualityScore += 1.5; // Deserts have excellent seeing conditions
+  } else if (isHighAltitudeRegion(latitude, longitude)) {
+    qualityScore += 1; // High altitudes have good seeing
+  } else if (isTropicalMonsoonRegion(latitude, longitude)) {
+    qualityScore -= 0.5; // Tropical regions often have more humidity
+  }
+  
+  // Return normalized score between 0-10
+  return Math.max(0, Math.min(10, qualityScore));
+}
+
 // Export the regional pattern function as well
-export { getRegionalPattern };
+export { 
+  getRegionalPattern,
+  isHighAltitudeRegion,
+  calculateClearNightQuality
+};

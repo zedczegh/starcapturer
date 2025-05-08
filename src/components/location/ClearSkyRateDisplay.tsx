@@ -7,6 +7,7 @@ import { CloudSun, Calendar, ThermometerSun, Info, Star } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getRateColor, getMinimumClearNights, getBestMonths } from '@/utils/weather/clearSkyRateUtils';
 import ConditionItem from '@/components/weather/ConditionItem';
+import { logWarning } from '@/utils/debug/errorLogger';
 
 interface ClearSkyRateDisplayProps {
   latitude: number;
@@ -30,7 +31,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
     try {
       // Validate inputs first
       if (!isFinite(latitude) || !isFinite(longitude) || !isFinite(clearSkyRate)) {
-        console.error("Invalid coordinates or clear sky rate for clear nights calculation", {
+        logWarning("Invalid coordinates or clear sky rate for clear nights calculation", {
           latitude, longitude, clearSkyRate
         });
         return 0;
@@ -38,7 +39,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
       
       return getMinimumClearNights(clearSkyRate, latitude, longitude);
     } catch (error) {
-      console.error("Error calculating clear nights:", error);
+      logWarning("Error calculating clear nights:", error);
       // Fallback to a simpler calculation if the enhanced method fails
       const fallbackNights = Math.round((clearSkyRate / 100) * 365 * 0.6);
       return Math.max(0, Math.min(365, fallbackNights)); // Ensure valid range
@@ -60,7 +61,7 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
         
       return getBestMonths(validMonthlyRates, validClearestMonths, language, latitude);
     } catch (error) {
-      console.error("Error getting best months:", error);
+      logWarning("Error getting best months:", error);
       // Return a simple fallback
       return language === 'en' ? 'Seasonal data not available' : '季节数据不可用';
     }

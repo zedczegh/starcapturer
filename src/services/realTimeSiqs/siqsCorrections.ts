@@ -45,11 +45,36 @@ export function correctPhysicalImpossibilities(
     correctedSiqs.siqs = Math.min(correctedSiqs.siqs, 6);
   }
   
+  // If temperature is extremely cold (<-20°C), reduce SIQS slightly due to viewing difficulty
+  if (weatherData.temperature < -20 && correctedSiqs.siqs > 7) {
+    logWarning(`Adjusting SIQS for extreme cold temperature (${weatherData.temperature}°C)`);
+    correctedSiqs.siqs = Math.min(correctedSiqs.siqs, 7);
+  }
+  
+  // If wind speed is very high (>30 km/h), reduce SIQS due to telescope stability issues
+  if (weatherData.windSpeed > 30 && correctedSiqs.siqs > 7) {
+    logWarning(`Adjusting SIQS for high wind conditions (${weatherData.windSpeed} km/h)`);
+    correctedSiqs.siqs = Math.min(correctedSiqs.siqs, 7);
+  }
+  
+  // If humidity is extremely high (>90%), reduce SIQS due to dewing issues
+  if (weatherData.humidity > 90 && correctedSiqs.siqs > 6.5) {
+    logWarning(`Adjusting SIQS for high humidity conditions (${weatherData.humidity}%)`);
+    correctedSiqs.siqs = Math.min(correctedSiqs.siqs, 6.5);
+  }
+  
   // Ensure the SIQS is in the valid range
   correctedSiqs.siqs = Math.max(0, Math.min(10, correctedSiqs.siqs));
   
   // Update viability flag
   correctedSiqs.isViable = correctedSiqs.siqs >= 3.0;
+  
+  // Update level based on corrected score
+  if (correctedSiqs.siqs >= 8) correctedSiqs.level = 'excellent';
+  else if (correctedSiqs.siqs >= 6) correctedSiqs.level = 'good';
+  else if (correctedSiqs.siqs >= 4) correctedSiqs.level = 'average';
+  else if (correctedSiqs.siqs >= 2) correctedSiqs.level = 'poor';
+  else correctedSiqs.level = 'bad';
   
   return correctedSiqs;
 }
@@ -101,4 +126,53 @@ export function prioritizeNighttimeCloudCover(
   }
   
   return siqs;
+}
+
+/**
+ * Apply seasonal corrections based on time of year and location
+ * @param siqs The SIQS result to adjust
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns Seasonally-corrected SIQS result
+ */
+export function applySeasonalCorrections(
+  siqs: SiqsResult,
+  latitude: number, 
+  longitude: number
+): SiqsResult {
+  if (!siqs) return siqs;
+  
+  const currentMonth = new Date().getMonth(); // 0-11
+  const isNorthernHemisphere = latitude >= 0;
+  
+  // Simple seasonal adjustments
+  let seasonalFactor = 1.0;
+  
+  // Northern Hemisphere: Winter better, summer worse
+  // Southern Hemisphere: opposite
+  if (isNorthernHemisphere) {
+    // Winter months (Nov-Feb in Northern)
+    if (currentMonth <= 1 || currentMonth >= 10) {
+      seasonalFactor = 1.05;
+    }
+    // Summer months (Jun-Aug in Northern)
+    else if (currentMonth >= 5 && currentMonth <= 7) {
+      seasonalFactor = 0.95; 
+    }
+  } else {
+    // Winter months (May-Aug in Southern)
+    if (currentMonth >= 4 && currentMonth <= 7) {
+      seasonalFactor = 1.05;
+    }
+    // Summer months (Dec-Feb in Southern)
+    else if (currentMonth <= 1 || currentMonth === 11) {
+      seasonalFactor = 0.95;
+    }
+  }
+  
+  // Apply seasonal correction
+  const correctedSiqs = { ...siqs };
+  correctedSiqs.siqs = Math.max(0, Math.min(10, correctedSiqs.siqs * seasonalFactor));
+  
+  return correctedSiqs;
 }

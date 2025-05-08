@@ -42,6 +42,22 @@ function formatError(error: unknown): string {
 }
 
 /**
+ * Format data for logging
+ */
+function formatData(data: any): string {
+  if (data === undefined || data === '') return '';
+  
+  try {
+    if (typeof data === 'object' && data !== null) {
+      return JSON.stringify(data, null, 2);
+    }
+    return String(data);
+  } catch (err) {
+    return '[Unserializable data]';
+  }
+}
+
+/**
  * Log a debug message
  */
 export function logDebug(message: string, data?: any): void {
@@ -72,7 +88,7 @@ export function logError(message: string, error?: unknown, additionalData?: any)
   if (!shouldLog('error')) return;
   
   const errorDetails = error ? `\n${formatError(error)}` : '';
-  const dataDetails = additionalData ? `\nAdditional data: ${JSON.stringify(additionalData, null, 2)}` : '';
+  const dataDetails = additionalData ? `\nAdditional data: ${formatData(additionalData)}` : '';
   
   console.error(`[ERROR] ${message}${errorDetails}${dataDetails}`);
 }
@@ -134,4 +150,39 @@ export function createPerformanceTracker(operationName: string) {
       return duration;
     }
   };
+}
+
+/**
+ * Group related log messages together
+ * @param groupName Name of the log group
+ * @param fn Function to execute within the group
+ */
+export function logGroup<T>(groupName: string, fn: () => T): T {
+  if (shouldLog('debug')) {
+    console.group(`[GROUP] ${groupName}`);
+    try {
+      return fn();
+    } finally {
+      console.groupEnd();
+    }
+  } else {
+    return fn();
+  }
+}
+
+/**
+ * Attach a value to the console for debugging
+ * Useful when you want to expose an object globally for browser debugging
+ * @param name Name to attach to window.console
+ * @param value Value to expose
+ */
+export function exposeForDebugging(name: string, value: any): void {
+  if (!shouldLog('debug')) return;
+  
+  try {
+    (console as any)[`$${name}`] = value;
+    console.log(`[DEBUG] Exposed ${name} to console.$${name}`);
+  } catch (error) {
+    console.warn(`[DEBUG] Failed to expose ${name} for debugging`);
+  }
 }
