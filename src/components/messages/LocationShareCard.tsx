@@ -11,7 +11,7 @@ interface LocationShareCardProps {
   name: string;
   latitude: number;
   longitude: number;
-  siqs?: number | { score: number; isViable: boolean } | undefined;
+  siqs?: number | { score: number; isViable?: boolean } | undefined;
   timestamp: string;
   isCertified?: boolean;
 }

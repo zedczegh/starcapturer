@@ -35,16 +35,31 @@ export const useMessages = () => {
       console.log("Fetched messages:", messagesData);
       
       // Transform the messages to the expected format
-      const formattedMessages = messagesData.map(msg => ({
-        id: msg.id,
-        sender_id: msg.sender_id,
-        receiver_id: msg.receiver_id,
-        text: msg.message, // Map message field to text for compatibility
-        created_at: msg.created_at,
-        image_url: msg.image_url,
-        location: msg.location, // Include location data
-        read: msg.read // Include read status for checkmark functionality
-      }));
+      const formattedMessages = messagesData.map(msg => {
+        // Parse location from message JSON if it exists
+        let locationData = null;
+        if (msg.message && msg.message.startsWith('{"type":"location"')) {
+          try {
+            const parsedData = JSON.parse(msg.message);
+            if (parsedData.type === 'location' && parsedData.data) {
+              locationData = parsedData.data;
+            }
+          } catch (e) {
+            console.error("Failed to parse location data:", e);
+          }
+        }
+        
+        return {
+          id: msg.id,
+          sender_id: msg.sender_id,
+          receiver_id: msg.receiver_id,
+          text: locationData ? '' : msg.message, // If it's a location message, set text to empty
+          created_at: msg.created_at,
+          image_url: msg.image_url,
+          location: locationData, // Use parsed location data
+          read: msg.read // Include read status for checkmark functionality
+        };
+      });
       
       setMessages(formattedMessages);
       

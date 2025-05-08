@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +15,7 @@ export const useMessageActions = (
   const sendMessage = useCallback(async (
     text: string, 
     imageFile?: File | null,
-    locationData?: { latitude: number; longitude: number; name: string; timestamp: string }
+    locationData?: { latitude: number; longitude: number; name: string; timestamp: string; siqs?: any }
   ) => {
     if (!user) return;
     
@@ -61,7 +60,6 @@ export const useMessageActions = (
       const messageData: any = {
         sender_id: user.id,
         receiver_id: conversationPartnerId,
-        message: text,
         read: false,
       };
       
@@ -70,9 +68,17 @@ export const useMessageActions = (
         messageData.image_url = imageUrl;
       }
       
-      // Add location data if provided
+      // Handle location data - store as a JSON string in the message field
       if (locationData) {
-        messageData.location = locationData;
+        // Use message field to store location as a JSON string
+        messageData.message = JSON.stringify({
+          type: 'location',
+          data: locationData
+        });
+        console.log("Sending location in message:", messageData.message);
+      } else {
+        // Regular text message
+        messageData.message = text;
       }
       
       console.log("Sending message with data:", messageData);
@@ -95,7 +101,7 @@ export const useMessageActions = (
           id: newMessage.id,
           sender_id: user.id,
           receiver_id: conversationPartnerId,
-          text: text,
+          text: locationData ? '' : text,
           created_at: newMessage.created_at,
           image_url: imageUrl,
           location: locationData,
