@@ -265,6 +265,7 @@ const AstroSpotProfile = () => {
               spotImages={spotImages}
               loadingImages={loadingImages}
               user={!!user}
+              isCreator={isCreator} // Pass isCreator to SpotImageGallery
               onImagesUpdate={handleImagesUpdate}
             />
             

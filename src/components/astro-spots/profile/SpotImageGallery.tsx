@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Album, ImagePlus, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,6 +16,7 @@ interface SpotImageGalleryProps {
   spotImages: string[];
   loadingImages: boolean;
   user: boolean;
+  isCreator: boolean; // Added isCreator prop to control upload access
   onImagesUpdate: () => void;
 }
 
@@ -24,6 +26,7 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
   spotImages,
   loadingImages,
   user,
+  isCreator, // Using the isCreator prop to control access
   onImagesUpdate
 }) => {
   const { t } = useLanguage();
@@ -37,7 +40,7 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
   }, [spotImages]);
 
   const handleUploadImages = async (files: File[]) => {
-    if (!spotId || !files.length) return;
+    if (!spotId || !files.length || !isCreator) return; // Check if user is creator
     
     try {
       const uploadResults = [];
@@ -109,7 +112,7 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
           </span>
         </h2>
         
-        {user && localImages.length < 10 && (
+        {user && isCreator && localImages.length < 10 && (
           <Button 
             variant="ghost" 
             size="sm"
@@ -133,7 +136,7 @@ const SpotImageGallery: React.FC<SpotImageGalleryProps> = ({
             <Album className="h-12 w-12 text-gray-500 mb-3" />
             <p className="text-gray-400">{t("No images available", "暂无图片")}</p>
             
-            {user && (
+            {user && isCreator && (
               <Button
                 variant="outline"
                 size="sm"

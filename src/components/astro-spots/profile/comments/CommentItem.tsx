@@ -1,53 +1,59 @@
 
 import React from 'react';
-import { useLanguage } from "@/contexts/LanguageContext";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { motion } from 'framer-motion';
+import { formatDistance } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Comment } from '../types/comments';
 
 interface CommentItemProps {
-  comment: {
-    id: string;
-    content: string;
-    created_at: string;
-    profiles?: {
-      username: string | null;
-      avatar_url: string | null;
-    };
-  };
+  comment: Comment;
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
-  const { t } = useLanguage();
-  const username = comment.profiles?.username || t("Anonymous", "匿名用户");
-  const initial = username.charAt(0).toUpperCase();
+  const formattedDate = formatDistance(
+    new Date(comment.created_at), 
+    new Date(), 
+    { addSuffix: true }
+  );
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="flex gap-3 p-3 bg-cosmic-800/20 rounded-lg border border-cosmic-600/20"
-    >
-      <Avatar className="h-8 w-8 border border-cosmic-700/30">
-        {comment.profiles?.avatar_url ? (
-          <AvatarImage src={comment.profiles.avatar_url} alt={username} />
-        ) : (
-          <AvatarFallback className="bg-cosmic-800 text-primary">{initial}</AvatarFallback>
-        )}
+    <div className="flex space-x-3 p-3 bg-cosmic-800/20 rounded-lg border border-cosmic-700/20">
+      <Avatar className="h-8 w-8 bg-cosmic-800 border border-cosmic-700/30">
+        <AvatarImage src={comment.profiles?.avatar_url || undefined} />
+        <AvatarFallback className="text-sm text-cosmic-400">
+          {comment.profiles?.username?.[0]?.toUpperCase() || "?"}
+        </AvatarFallback>
       </Avatar>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <span className="font-medium text-gray-200 truncate">
-            {username}
-          </span>
-          <span className="text-xs text-gray-500 whitespace-nowrap">
-            {new Date(comment.created_at).toLocaleDateString()}
-          </span>
+      
+      <div className="flex-1 space-y-1">
+        <div className="flex justify-between">
+          <div className="text-sm font-medium text-cosmic-200">
+            {comment.profiles?.username || "Anonymous"}
+          </div>
+          <div className="text-xs text-cosmic-400">
+            {formattedDate}
+          </div>
         </div>
-        <p className="text-gray-300 break-words">{comment.content}</p>
+        
+        <div className="text-sm text-cosmic-300">
+          {comment.content}
+        </div>
+        
+        {comment.image_url && (
+          <a 
+            href={comment.image_url} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="block mt-2"
+          >
+            <img 
+              src={comment.image_url} 
+              alt="Comment attachment" 
+              className="max-h-40 rounded-md border border-cosmic-700/30 hover:opacity-90 transition-opacity"
+            />
+          </a>
+        )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 

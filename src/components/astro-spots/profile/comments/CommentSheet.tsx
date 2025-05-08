@@ -1,18 +1,17 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Comment } from '../types/comments';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { AnimatePresence } from 'framer-motion';
 import CommentItem from './CommentItem';
 import CommentInput from './CommentInput';
-import { Comment } from '../types/comments';
 
 interface CommentSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   comments: Comment[];
   user: boolean;
-  onSubmit: (content: string) => Promise<void>;
+  onSubmit: (content: string, image?: File | null) => void;
   sending: boolean;
 }
 
@@ -22,38 +21,41 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
   comments,
   user,
   onSubmit,
-  sending,
+  sending
 }) => {
   const { t } = useLanguage();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent 
-        side="bottom" 
-        className="h-[85vh] bg-cosmic-900 border-cosmic-700 text-gray-100 rounded-t-xl"
-      >
+      <SheetContent className="w-full sm:max-w-md md:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-gray-100">
+          <SheetTitle>
             {t("All Comments", "所有评论")} ({comments.length})
           </SheetTitle>
         </SheetHeader>
         
-        <div className="mt-6 space-y-4 max-h-[calc(85vh-220px)] overflow-y-auto pr-1">
-          <AnimatePresence mode="popLayout">
+        <div className="mt-6">
+          {user && (
+            <div className="mb-6">
+              <CommentInput
+                onSubmit={onSubmit}
+                sending={sending}
+              />
+            </div>
+          )}
+          
+          <div className="space-y-4">
             {comments.map((comment) => (
-              <CommentItem key={`sheet-comment-${comment.id}`} comment={comment} />
+              <CommentItem key={comment.id} comment={comment} />
             ))}
-          </AnimatePresence>
-        </div>
-
-        {user && (
-          <div className="sticky bottom-0 pt-4 mt-4 border-t border-cosmic-700/30 bg-cosmic-900">
-            <CommentInput
-              onSubmit={onSubmit}
-              sending={sending}
-            />
+            
+            {comments.length === 0 && (
+              <div className="text-center py-8 text-cosmic-400">
+                {t("No comments yet. Be the first to comment!", "暂无评论。成为第一个评论的人！")}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </SheetContent>
     </Sheet>
   );

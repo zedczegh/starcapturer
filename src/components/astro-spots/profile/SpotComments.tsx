@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Comment } from './types/comments';
+import { v4 as uuidv4 } from 'uuid';
 
 interface SpotCommentsProps {
   spotId: string;
@@ -33,18 +34,49 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     setLocalComments(comments);
   }, [comments]);
 
-  const handleCommentSubmit = async (content: string) => {
-    if (!user || !spotId || !content.trim()) return;
+  const handleCommentSubmit = async (content: string, imageFile: File | null = null) => {
+    if (!user || !spotId || (!content.trim() && !imageFile)) return;
     
     setCommentSending(true);
     
     try {
+      let imageUrl: string | null = null;
+      
+      // If there's an image file, upload it first
+      if (imageFile) {
+        const fileName = `${spotId}/${Date.now()}-${uuidv4()}.${imageFile.name.split('.').pop()}`;
+        
+        const { error: uploadError, data: uploadData } = await supabase.storage
+          .from('comment_images')
+          .upload(fileName, imageFile, {
+            contentType: imageFile.type,
+            cacheControl: '3600'
+          });
+          
+        if (uploadError) {
+          console.error("Error uploading image:", uploadError);
+          toast.error(t("Failed to upload image", "图片上传失败"));
+          return;
+        }
+        
+        // Get the public URL for the uploaded image
+        const { data: publicUrlData } = supabase.storage
+          .from('comment_images')
+          .getPublicUrl(fileName);
+          
+        if (publicUrlData) {
+          imageUrl = publicUrlData.publicUrl;
+        }
+      }
+      
+      // Now insert the comment with the image URL if available
       const { error, data } = await supabase
         .from("astro_spot_comments")
         .insert({
           user_id: (await supabase.auth.getUser()).data.user?.id,
           spot_id: spotId,
-          content: content.trim(),
+          content: content.trim() || " ", // Use a space if only image is submitted
+          image_url: imageUrl
         })
         .select();
       
