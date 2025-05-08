@@ -1,36 +1,43 @@
 
-/* Base map container styles */
-.map-container {
+/* Global map style optimizations for mobile */
+.leaflet-map {
   width: 100%;
   height: 100%;
   z-index: 1;
+  outline: none;
 }
 
-/* Mobile optimized map */
-.mobile-optimized {
-  /* Disable unnecessary animations */
-  pointer-events: auto;
-}
-
-/* Remove transition effects for better mobile performance */
-.mobile-optimized .leaflet-fade-anim .leaflet-tile,
-.mobile-optimized .leaflet-zoom-anim .leaflet-zoom-animated {
-  transition: none !important;
-}
-
-/* Speed up loading tile effect on mobile */
-.mobile-optimized .leaflet-tile-loaded {
+/* Optimize tile loading for mobile devices */
+.mobile-optimized .leaflet-tile {
   transition: opacity 0.1s !important;
 }
 
-/* Optimize marker positioning */
-.leaflet-marker-icon {
-  transform-origin: bottom center !important;
+/* Hardware accelerated transformations */
+.leaflet-container .leaflet-overlay-pane svg,
+.leaflet-container .leaflet-marker-pane,
+.leaflet-container .leaflet-shadow-pane,
+.leaflet-container .leaflet-tile-pane,
+.leaflet-container .leaflet-zoom-box,
+.leaflet-container .leaflet-image-layer {
   will-change: transform;
+  transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
 }
 
-/* Optimize controls for mobile touch */
+/* Fix for flickering markers on mobile */
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+  transform-origin: bottom center;
+  backface-visibility: hidden;
+}
+
+/* Improved tap area for mobile interactions */
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+  border: none;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+}
+
 .leaflet-touch .leaflet-control-zoom a {
   width: 36px !important;
   height: 36px !important;
@@ -38,9 +45,42 @@
   font-size: 18px !important;
 }
 
-/* Fix iOS Safari issues with fixed positioning */
-@supports (-webkit-touch-callout: none) {
-  .map-container {
-    transform: translateZ(0);
+/* Reduce map clutter on mobile */
+@media (max-width: 768px) {
+  .leaflet-control-zoom {
+    margin-right: 10px !important;
   }
+  
+  .leaflet-bottom {
+    bottom: 10px;
+  }
+}
+
+/* Smoother map animations */
+.leaflet-fade-anim .leaflet-tile,
+.leaflet-fade-anim .leaflet-popup {
+  will-change: opacity;
+  transition-duration: 0.15s;
+}
+
+/* Enhanced mobile touch area */
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+  box-shadow: none;
+}
+
+/* Fix for link auto-focus on mobile */
+.leaflet-container a {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+/* Fix for iOS Safari rendering issues */
+.ios-device .leaflet-tile-container {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.ios-device .leaflet-marker-icon {
+  transform-style: preserve-3d;
 }

@@ -17,6 +17,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
   const [commentText, setCommentText] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,26 +47,38 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
     }
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
-      // Validate file size (5MB limit)
-      if (file.size > 5 * 1024 * 1024) { 
-        toast.error(t('Image must be less than 5MB', '图片必须小于5MB'));
-        return;
-      }
+      // Show loading indicator
+      setImageLoading(true);
       
-      // Validate file type
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
-      if (!validTypes.includes(file.type)) {
-        toast.error(t('Please select a valid image file', '请选择有效的图片文件'));
-        return;
+      try {
+        // Validate file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) { 
+          toast.error(t('Image must be less than 5MB', '图片必须小于5MB'));
+          setImageLoading(false);
+          return;
+        }
+        
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
+        if (!validTypes.includes(file.type)) {
+          toast.error(t('Please select a valid image file', '请选择有效的图片文件'));
+          setImageLoading(false);
+          return;
+        }
+        
+        setImageFile(file);
+        const objectUrl = URL.createObjectURL(file);
+        setImagePreview(objectUrl);
+      } catch (err) {
+        console.error("Error processing image:", err);
+        toast.error(t('Error processing image', '处理图片时出错'));
+      } finally {
+        setImageLoading(false);
       }
-      
-      setImageFile(file);
-      const objectUrl = URL.createObjectURL(file);
-      setImagePreview(objectUrl);
     }
   };
 
@@ -84,7 +97,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
         onChange={(e) => setCommentText(e.target.value)}
         placeholder={isReply ? t("Write a reply...", "撰写回复...") : t("Add a comment...", "添加评论...")}
         className={`${isReply ? 'min-h-16' : 'min-h-24'} bg-cosmic-800/40 border-cosmic-700/40 focus:border-primary`}
-        disabled={sending}
+        disabled={sending || imageLoading}
       />
 
       {imagePreview && (
@@ -106,23 +119,32 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
       )}
 
       <div className="flex gap-2 justify-end">
-        <label className={`cursor-pointer ${sending ? 'opacity-50 pointer-events-none' : ''}`}>
+        <label className={`cursor-pointer ${(sending || imageLoading) ? 'opacity-50 pointer-events-none' : ''}`}>
           <div className="flex items-center gap-2 px-3 py-2 text-sm text-primary/90 hover:text-primary hover:bg-cosmic-800/30 rounded-md">
-            <ImagePlus className="h-4 w-4" />
-            <span>{t("Add Image", "添加图片")}</span>
+            {imageLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>{t("Processing...", "处理中...")}</span>
+              </>
+            ) : (
+              <>
+                <ImagePlus className="h-4 w-4" />
+                <span>{t("Add Image", "添加图片")}</span>
+              </>
+            )}
           </div>
           <input 
             type="file"
             className="hidden"
             accept="image/*"
             onChange={handleImageSelect}
-            disabled={sending}
+            disabled={sending || imageLoading}
           />
         </label>
         <Button 
           type="submit" 
           size="sm" 
-          disabled={sending || (!commentText.trim() && !imageFile) || (imageFile && !commentText.trim())}
+          disabled={sending || imageLoading || (!commentText.trim() && !imageFile) || (imageFile && !commentText.trim())}
           className="flex gap-1 items-center"
         >
           {sending ? (

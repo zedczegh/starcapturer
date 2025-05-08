@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+import React, { useCallback, useEffect, useRef, useState, memo } from 'react';
 import 'leaflet/dist/leaflet.css';
 import './MarkerStyles.css';
 import './MapStyles.css';
@@ -8,6 +9,7 @@ import { filterLocations, optimizeLocationsForMobile } from './MapUtils';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import MapContent from './components/MapContent';
 
+// Configure Leaflet immediately
 configureLeaflet();
 
 interface LazyMapContainerProps {
@@ -55,15 +57,30 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
   const previousLocations = useRef<SharedAstroSpot[]>([]);
+  const [optimizedLocations, setOptimizedLocations] = useState<SharedAstroSpot[]>([]);
   
-  console.log(`LazyMapContainer rendering with ${locations.length} locations, activeView: ${activeView}`);
+  // Pre-compute the locations only when the actual dependencies change
+  useEffect(() => {
+    if (!isMountedRef.current) return;
+    
+    const filtered = filterLocations(
+      locations || [],
+      userLocation, 
+      searchRadius,
+      activeView
+    );
+    
+    const optimized = optimizeLocationsForMobile(
+      filtered, 
+      Boolean(isMobile), 
+      activeView
+    );
+    
+    setOptimizedLocations(optimized);
+    
+  }, [locations, userLocation, searchRadius, activeView, isMobile]);
   
-  const handleUserLocationSiqs = useCallback((siqs: number | null, loading: boolean) => {
-    if (!loading && siqs !== null) {
-      setCurrentSiqs(siqs);
-    }
-  }, []);
-  
+  // Handle component lifecycle
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -71,34 +88,13 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
     };
   }, []);
   
-  useEffect(() => {
-    if (locations && locations.length > 0) {
-      const locationIds = new Set(locations.map(loc => 
-        `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`
-      ));
-      
-      const previousToKeep = previousLocations.current.filter(loc => {
-        const locId = `${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`;
-        return !locationIds.has(locId);
-      });
-      
-      const combinedLocations = activeView === 'calculated' 
-        ? [...locations, ...previousToKeep] 
-        : locations;
-      
-      previousLocations.current = combinedLocations;
+  const handleUserLocationSiqs = useCallback((siqs: number | null, loading: boolean) => {
+    if (!loading && siqs !== null) {
+      setCurrentSiqs(siqs);
     }
-  }, [locations, activeView]);
+  }, []);
   
-  const filteredLocations = useCallback(() => {
-    if (!previousLocations.current || previousLocations.current.length === 0) {
-      return locations || [];
-    }
-    
-    const filtered = filterLocations(previousLocations.current, userLocation, searchRadius, activeView);
-    return optimizeLocationsForMobile(filtered, Boolean(isMobile), activeView);
-  }, [locations, userLocation, searchRadius, activeView, isMobile]);
-
+  // Improve map handling to avoid unnecessary reloads
   useEffect(() => {
     if (!mapRef.current) return;
     
@@ -112,24 +108,39 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       resizeTimeout = window.setTimeout(() => {
         if (map) map.invalidateSize();
         resizeTimeout = null;
-      }, 300);
+      }, 200);
     };
     
     window.addEventListener('resize', handleResize);
     
-    const timeoutId = setTimeout(() => {
-      if (map) map.invalidateSize();
-    }, 300);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (resizeTimeout) {
-        window.clearTimeout(resizeTimeout);
-      }
-      clearTimeout(timeoutId);
-    };
-  }, []);
-
+    // Ensure map is properly sized
+    if (isMobile) {
+      // Mobile devices often need multiple invalidation attempts
+      const timeoutIds = [
+        setTimeout(() => { if (map) map.invalidateSize(); }, 100),
+        setTimeout(() => { if (map) map.invalidateSize(); }, 500),
+        setTimeout(() => { if (map) map.invalidateSize(); }, 1500)
+      ];
+      
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        if (resizeTimeout) window.clearTimeout(resizeTimeout);
+        timeoutIds.forEach(clearTimeout);
+      };
+    } else {
+      const timeoutId = setTimeout(() => {
+        if (map) map.invalidateSize();
+      }, 300);
+      
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        if (resizeTimeout) window.clearTimeout(resizeTimeout);
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [isMobile]);
+  
+  // Export map instance for debugging
   useEffect(() => {
     if (mapRef.current) {
       (window as any).leafletMap = mapRef.current;
@@ -139,8 +150,6 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
       };
     }
   }, [mapRef.current]);
-
-  const displayLocations = filteredLocations();
   
   const handleMapReady = useCallback(() => {
     setMapReady(true);
@@ -163,7 +172,7 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
         center={center}
         userLocation={userLocation}
         zoom={zoom}
-        displayLocations={displayLocations}
+        displayLocations={optimizedLocations}
         isMobile={Boolean(isMobile)}
         activeView={activeView}
         searchRadius={searchRadius}
@@ -184,4 +193,5 @@ const LazyMapContainer: React.FC<LazyMapContainerProps> = ({
   );
 };
 
-export default React.memo(LazyMapContainer);
+// Memoize to avoid unnecessary rerenders
+export default memo(LazyMapContainer);

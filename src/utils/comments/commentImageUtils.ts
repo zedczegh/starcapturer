@@ -29,6 +29,7 @@ export const ensureCommentImagesBucket = async (): Promise<boolean> => {
 
 /**
  * Uploads an image to the comment_images bucket and returns the public URL
+ * Improved for mobile reliability with optimal file size and better error handling
  */
 export const uploadCommentImage = async (
   imageFile: File, 
@@ -36,6 +37,17 @@ export const uploadCommentImage = async (
 ): Promise<string | null> => {
   try {
     if (!imageFile) return null;
+    
+    // Optimize image size for mobile if file is large (over 1MB)
+    let fileToUpload = imageFile;
+    if (imageFile.size > 1024 * 1024) {
+      try {
+        fileToUpload = await optimizeImageForUpload(imageFile);
+      } catch (err) {
+        console.warn("Image optimization failed, using original:", err);
+        // Continue with original file if optimization fails
+      }
+    }
     
     // Check if bucket is accessible
     const bucketReady = await ensureCommentImagesBucket();
@@ -58,16 +70,21 @@ export const uploadCommentImage = async (
     
     // Try uploading with progressive retries
     let attempts = 0;
-    const maxAttempts = 2;
+    const maxAttempts = 3;
     
     while (attempts < maxAttempts) {
       attempts++;
       console.log(`Upload attempt ${attempts} for ${fileName}`);
       
+      // Add a small delay between retries to avoid overwhelming mobile connections
+      if (attempts > 1) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+      
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('comment_images')
-        .upload(fileName, imageFile, {
-          contentType: imageFile.type,
+        .upload(fileName, fileToUpload, {
+          contentType: fileToUpload.type,
           cacheControl: '3600',
           upsert: attempts > 1 // Only try upsert on retry
         });
@@ -94,9 +111,6 @@ export const uploadCommentImage = async (
         toast.error(t("Failed to upload image", "图片上传失败"));
         break;
       }
-      
-      // Wait a bit before retrying (500ms)
-      await new Promise(resolve => setTimeout(resolve, 500));
     }
     
     return null;
@@ -105,3 +119,89 @@ export const uploadCommentImage = async (
     return null;
   }
 };
+
+/**
+ * Helper function to optimize image size for mobile uploads
+ * Uses canvas to resize large images to reduce bandwidth usage
+ */
+async function optimizeImageForUpload(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    // Mobile-optimized image size thresholds
+    const MAX_WIDTH = 1200;
+    const MAX_HEIGHT = 1200;
+    const QUALITY = 0.85;
+    
+    // Create image element to load the file
+    const img = new Image();
+    img.onload = () => {
+      // Determine if resizing is needed
+      let width = img.width;
+      let height = img.height;
+      
+      // Calculate new dimensions if image is too large
+      if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+        if (width > height) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        } else {
+          width = Math.round((width * MAX_HEIGHT) / height);
+          height = MAX_HEIGHT;
+        }
+      } else {
+        // If image is already small enough, use original
+        URL.revokeObjectURL(img.src);
+        resolve(file);
+        return;
+      }
+      
+      // Create canvas for resizing
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Draw resized image on canvas
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        URL.revokeObjectURL(img.src);
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Convert to blob with optimal quality
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            URL.revokeObjectURL(img.src);
+            reject(new Error('Could not create blob'));
+            return;
+          }
+          
+          // Create new optimized file
+          const optimizedFile = new File(
+            [blob], 
+            file.name, 
+            { 
+              type: 'image/jpeg',
+              lastModified: Date.now() 
+            }
+          );
+          
+          URL.revokeObjectURL(img.src);
+          console.log(`Image optimized: ${(file.size / 1024).toFixed(1)}KB → ${(optimizedFile.size / 1024).toFixed(1)}KB`);
+          resolve(optimizedFile);
+        },
+        'image/jpeg',
+        QUALITY
+      );
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      reject(new Error('Failed to load image for optimization'));
+    };
+    
+    img.src = URL.createObjectURL(file);
+  });
+}

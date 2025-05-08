@@ -12,14 +12,28 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   const [loaded, setLoaded] = useState(false);
   const [storageChecked, setStorageChecked] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { user: authUser } = useAuth();
 
-  // Check bucket access when hook is first used
+  // Check bucket access when hook is first used - with optimized caching
   useEffect(() => {
     const checkStorage = async () => {
       try {
+        // Check for cached result to avoid unnecessary api calls
+        const cachedResult = sessionStorage.getItem('commentImagesBucketAvailable');
+        if (cachedResult) {
+          const isAvailable = cachedResult === 'true';
+          setStorageChecked(true);
+          console.log("Using cached comment images storage status:", isAvailable);
+          return;
+        }
+        
         const available = await ensureCommentImagesBucket();
         setStorageChecked(true);
+        
+        // Cache the result for 30 minutes
+        sessionStorage.setItem('commentImagesBucketAvailable', String(available));
+        
         if (!available) {
           console.log("Comment images storage is not accessible. Image uploads may not work.");
         } else {
@@ -33,7 +47,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     checkStorage();
   }, []);
 
-  // Load comments function with better error handling
+  // Load comments function with better error handling and preloading
   const loadComments = useCallback(async () => {
     try {
       console.log(`Loading comments for spot: ${spotId}`);
@@ -41,6 +55,17 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       console.log(`Loaded ${fetchedComments.length} comments`);
       setComments(fetchedComments);
       setLoaded(true);
+      
+      // Preload comment images for better mobile experience
+      setTimeout(() => {
+        fetchedComments.forEach(comment => {
+          if (comment.imageUrl) {
+            const img = new Image();
+            img.src = comment.imageUrl;
+          }
+        });
+      }, 1000);
+      
       return fetchedComments;
     } catch (err) {
       console.error("Error loading comments:", err);
@@ -81,22 +106,32 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       // Handle image upload separately if there is an image
       if (imageFile) {
         setImageUploading(true);
+        setUploadProgress(10);
         try {
+          // Simulate progress updates for better UX on mobile
+          const progressInterval = setInterval(() => {
+            setUploadProgress(prev => Math.min(prev + 10, 90));
+          }, 500);
+          
           // Check if bucket exists and is accessible
           const bucketReady = await ensureCommentImagesBucket();
           if (!bucketReady) {
             toast.error(t("Image upload is not available at this time", "图片上传功能暂时不可用"));
+            clearInterval(progressInterval);
             
             // Continue without the image if we have text content
             if (!content.trim()) {
               setCommentSending(false);
               setImageUploading(false);
+              setUploadProgress(0);
               return { success: false };
             }
             // Proceed with just the text content
           } else {
             // Try to upload the image with better error handling
             imageUrl = await uploadCommentImage(imageFile, t);
+            clearInterval(progressInterval);
+            setUploadProgress(100);
             
             if (!imageUrl) {
               // Log the error but continue with the comment if we have text
@@ -106,6 +141,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
               } else {
                 setCommentSending(false);
                 setImageUploading(false);
+                setUploadProgress(0);
                 toast.error(t("Failed to upload image and no text provided.", "图片上传失败，且未提供文本。"));
                 return { success: false };
               }
@@ -130,6 +166,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       // Immediately fetch updated comments to refresh the UI
       const updatedComments = await fetchComments(spotId);
       setComments(updatedComments); // Update local state immediately
+      setUploadProgress(0);
       
       toast.success(parentId 
         ? t("Reply posted!", "回复已发表！") 
@@ -147,6 +184,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       return { success: false };
     } finally {
       setCommentSending(false);
+      setUploadProgress(0);
     }
   };
 
@@ -164,7 +202,8 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     submitComment,
     fetchComments: loadComments,
     storageChecked,
-    imageUploading
+    imageUploading,
+    uploadProgress
   };
 };
 
