@@ -154,12 +154,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   // Enhanced loading animation with smoother transition
   if (loadingState && !stableScoreRef.current) {
     return (
-      <motion.div 
-        className="flex items-center bg-cosmic-700/50 text-muted-foreground px-2 py-0.5 rounded-full border border-cosmic-600/30"
-        layout
-        animate={{ opacity: [0.6, 0.8, 0.6] }}
-        transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
-      >
+      <div className="flex items-center bg-cosmic-700/50 text-muted-foreground px-2 py-0.5 rounded-full border border-cosmic-600/30">
         <Star 
           className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-gray-400 mr-1`} 
           fill="#475569" 
@@ -167,7 +162,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
         <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
           ...
         </span>
-      </motion.div>
+      </div>
     );
   }
   
@@ -176,24 +171,19 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     return null;
   }
 
+  // Use a simpler animation approach for better Safari compatibility
   return (
-    <AnimatePresence>
-      <motion.div 
-        className={`flex items-center ${getColor()} ${compact ? 'px-1.5 py-0.5' : 'px-2 py-0.5'} rounded-full border`}
-        initial={{ opacity: 0.6 }}
-        animate={{ opacity: isTransitioning ? 0.5 : 1 }}
-        transition={{ duration: 0.2 }}
-        layout
-      >
-        <Star 
-          className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-yellow-400 mr-1`} 
-          fill="#facc15" 
-        />
-        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
-          {formattedScore}
-        </span>
-      </motion.div>
-    </AnimatePresence>
+    <div 
+      className={`flex items-center ${getColor()} ${compact ? 'px-1.5 py-0.5' : 'px-2 py-0.5'} rounded-full border transition-opacity duration-200 ${isTransitioning ? 'opacity-60' : 'opacity-100'}`}
+    >
+      <Star 
+        className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-yellow-400 mr-1`} 
+        fill="#facc15" 
+      />
+      <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
+        {formattedScore}
+      </span>
+    </div>
   );
 };
 

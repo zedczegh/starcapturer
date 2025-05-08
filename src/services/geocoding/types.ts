@@ -34,14 +34,16 @@ export interface CityAlternative {
 }
 
 export interface ChineseLocation {
+  // Required fields
   name: string;
   chinese: string;
   pinyin: string;
   longitude: number;
   latitude: number;
+  
+  // Optional fields
   bortleScale?: number;
   type?: string;
-  // Add missing properties found in chineseLocationData.ts
   areaCode?: string;
   provinceCode?: string;
   province?: string;
