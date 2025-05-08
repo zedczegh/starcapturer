@@ -27,7 +27,7 @@ const EmojiRenderer: React.FC<EmojiRendererProps> = ({ text, inline = false }) =
             return part;
           }
           
-          // If this is an emoji tag, render the corresponding emoji without the text
+          // If this is an emoji tag, render the corresponding emoji without the emoji ID text
           const emojiId = matches[i - 1].replace('[', '').replace(']', '');
           const emoji = siqsEmojis.find(e => e.id === emojiId);
           
@@ -35,10 +35,10 @@ const EmojiRenderer: React.FC<EmojiRendererProps> = ({ text, inline = false }) =
           
           return (
             <React.Fragment key={i}>
-              {part}
               <span className="inline-block align-middle mx-0.5" title={emoji.description}>
                 {emoji.icon}
               </span>
+              {part}
             </React.Fragment>
           );
         })}
