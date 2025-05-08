@@ -47,7 +47,7 @@ export const useMessageConversation = () => {
     await sendMessage(text, imageFile, locationData);
   };
   
-  const handleUnsendMessage = async (messageId: string) => {
+  const handleUnsendMessage = async (messageId: string): Promise<boolean> => {
     setIsProcessingAction(true);
     try {
       const result = await unsendMessage(messageId);

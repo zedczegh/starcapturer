@@ -12,7 +12,7 @@ import LocationShareCard from '../LocationShareCard';
 interface MessageItemProps {
   message: any;
   isSender: boolean;
-  onUnsend: (id: string) => Promise<boolean>;
+  onUnsend: (id: string) => void;
   isProcessingAction?: boolean;
 }
 
@@ -72,6 +72,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 alt="Message attachment"
                 className="w-full h-auto rounded-lg"
                 style={{ maxHeight: '200px', objectFit: 'cover' }}
+                onLoad={() => {
+                  // Dispatch a custom event when an image loads to trigger scroll adjustment
+                  window.dispatchEvent(new Event('message-image-loaded'));
+                }}
               />
             </div>
           )}

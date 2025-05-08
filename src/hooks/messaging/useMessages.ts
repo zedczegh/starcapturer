@@ -12,41 +12,54 @@ export const useMessages = () => {
   const { t } = useLanguage();
   
   const fetchMessages = useCallback(async (conversationPartnerId: string) => {
-    if (!user || !conversationPartnerId) return;
+    if (!user || !conversationPartnerId) {
+      console.log("Missing user or conversation partner ID");
+      return;
+    }
     
     setLoading(true);
+    console.log("Fetching messages between", user.id, "and", conversationPartnerId);
     
     try {
-      // In a real app, fetch messages from your API or database
-      // For this demo, we'll simulate fetching messages after a delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Fetch actual messages from the database
+      const { data: messagesData, error } = await supabase
+        .from('user_messages')
+        .select('*')
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${conversationPartnerId}),and(sender_id.eq.${conversationPartnerId},receiver_id.eq.${user.id})`)
+        .order('created_at', { ascending: true });
       
-      // Simulate some test messages
-      const demoMessages = [
-        {
-          id: 'msg-1',
-          sender_id: user.id,
-          receiver_id: conversationPartnerId,
-          text: 'Hi there! 👋',
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          id: 'msg-2',
-          sender_id: conversationPartnerId,
-          receiver_id: user.id,
-          text: 'Hello! How are you? 😊',
-          created_at: new Date(Date.now() - 3500000).toISOString(),
-        },
-        {
-          id: 'msg-3',
-          sender_id: user.id,
-          receiver_id: conversationPartnerId,
-          text: 'I\'m doing great! Just checking the cool location sharing feature.',
-          created_at: new Date(Date.now() - 3400000).toISOString(),
+      if (error) {
+        throw error;
+      }
+      
+      console.log("Fetched messages:", messagesData);
+      
+      // Transform the messages to the expected format
+      const formattedMessages = messagesData.map(msg => ({
+        id: msg.id,
+        sender_id: msg.sender_id,
+        receiver_id: msg.receiver_id,
+        text: msg.message, // Map message field to text for compatibility
+        created_at: msg.created_at,
+        image_url: msg.image_url,
+        location: msg.location
+      }));
+      
+      setMessages(formattedMessages);
+      
+      // Mark messages as read
+      if (messagesData && messagesData.length > 0) {
+        const messagesToUpdate = messagesData
+          .filter(msg => msg.receiver_id === user.id && !msg.read)
+          .map(msg => msg.id);
+        
+        if (messagesToUpdate.length > 0) {
+          await supabase
+            .from('user_messages')
+            .update({ read: true })
+            .in('id', messagesToUpdate);
         }
-      ];
-      
-      setMessages(demoMessages);
+      }
       
     } catch (error) {
       console.error("Error fetching messages:", error);

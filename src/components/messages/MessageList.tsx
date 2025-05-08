@@ -34,7 +34,7 @@ interface MessageListProps {
   currentUserId: string;
   activeConversation: ConversationPartner;
   onBack: () => void;
-  onUnsendMessage?: (messageId: string) => Promise<boolean>;
+  onUnsendMessage: (messageId: string) => Promise<boolean>;
 }
 
 const MessageList: React.FC<MessageListProps> = ({
