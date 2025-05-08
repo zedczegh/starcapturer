@@ -24,3 +24,4 @@ CREATE POLICY IF NOT EXISTS "Anyone can view comment images"
   USING (
     bucket_id = 'comment_images'
   );
+

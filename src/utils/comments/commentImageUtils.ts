@@ -65,7 +65,7 @@ export const uploadCommentImage = async (
     
     console.log(`Uploading image: ${fileName}, size: ${imageFile.size} bytes, type: ${imageFile.type}`);
     
-    // Upload the image
+    // Upload the image with explicit content type
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('comment_images')
       .upload(fileName, imageFile, {
