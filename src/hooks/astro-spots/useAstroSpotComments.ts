@@ -13,21 +13,29 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   const [bucketAvailable, setBucketAvailable] = useState<boolean | null>(null);
   const { user: authUser } = useAuth();
 
-  // Check if bucket exists when hook is first used
+  // Check if bucket exists when hook is first used or when user changes
   useEffect(() => {
     const checkStorage = async () => {
       try {
+        console.log("Checking comment images bucket availability...");
         const available = await ensureCommentImagesBucket();
         console.log(`Comment images bucket available: ${available}`);
         setBucketAvailable(available);
+        if (!available) {
+          console.error("Comment images storage is not accessible - this will affect image uploads");
+        }
       } catch (err) {
         console.error("Error checking comment image storage:", err);
         setBucketAvailable(false);
       }
     };
     
+    // Only check if user is authenticated
     if (authUser) {
       checkStorage();
+    } else {
+      // If no user, mark as unavailable
+      setBucketAvailable(false);
     }
   }, [authUser]);
 
@@ -66,16 +74,17 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     setCommentSending(true);
     
     try {
+      console.log("Starting comment submission process...");
       const userId = authUser.id;
       
       let imageUrl: string | null = null;
       if (imageFile) {
-        // Check if bucket is available before trying to upload
+        // Double check if bucket is available before trying to upload
         if (bucketAvailable === false) {
           toast.error(t("Image uploads are temporarily unavailable", "图片上传暂时不可用"));
-          console.log("Image upload skipped because storage bucket is not available");
+          console.error("Image upload skipped because storage bucket is not available");
         } else {
-          console.log("Uploading image for comment...");
+          console.log("Attempting to upload image for comment...");
           imageUrl = await uploadCommentImage(imageFile, t);
           if (!imageUrl) {
             // Continue with text-only comment if image upload fails

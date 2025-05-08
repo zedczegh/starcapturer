@@ -10,8 +10,22 @@ export const ensureCommentImagesBucket = async (): Promise<boolean> => {
   try {
     console.log("Checking if comment_images bucket is accessible...");
     
+    // First check if the bucket exists
+    const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
+    
+    if (bucketError) {
+      console.error("Error listing buckets:", bucketError);
+      return false;
+    }
+    
+    const bucketExists = buckets?.some(bucket => bucket.name === 'comment_images');
+    if (!bucketExists) {
+      console.error("comment_images bucket doesn't exist");
+      return false;
+    }
+    
     // Try to list files in the bucket to verify access permissions
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('comment_images')
       .list('', { limit: 1 });
     
@@ -47,7 +61,7 @@ export const uploadCommentImage = async (
       return null;
     }
     
-    // Generate a unique filename with the current timestamp
+    // Generate a unique filename with the current timestamp and user folder
     const fileExt = imageFile.name.split('.').pop() || '';
     const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
     const timestamp = new Date().getTime();
