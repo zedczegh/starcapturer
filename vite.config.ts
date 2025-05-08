@@ -1,4 +1,3 @@
-
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -22,15 +21,43 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['@/components/ui'],
-          vendor: ['suncalc'],
+        manualChunks: (id) => {
+          // Put react and react-dom in the 'react' bundle
+          if (id.includes('node_modules/react/') || 
+              id.includes('node_modules/react-dom/') || 
+              id.includes('node_modules/react-router-dom/')) {
+            return 'react';
+          }
+          
+          // UI components in separate chunk
+          if (id.includes('/components/ui/')) {
+            return 'ui';
+          }
+          
+          // Put third-party libraries in 'vendor' chunk
+          if (id.includes('node_modules/')) {
+            return 'vendor';
+          }
+          
+          // Keep location-related components together
+          if (id.includes('/components/location/')) {
+            return 'location';
+          }
+          
+          // For nested imports of common components, avoid too much chunking
+          if (id.includes('/components/photoPoints/')) {
+            return 'photoPoints';
+          }
         }
       }
     },
     assetsDir: 'assets',
-    copyPublicDir: true, // Ensures public directory is copied to dist
+    copyPublicDir: true,
+    // Add these optimization settings to prevent chunk loading failures
+    chunkSizeWarningLimit: 2000,
+    minify: 'esbuild',
+    sourcemap: true,
+    target: 'esnext',
   },
   optimizeDeps: {
     exclude: ['lovable-tagger'],
