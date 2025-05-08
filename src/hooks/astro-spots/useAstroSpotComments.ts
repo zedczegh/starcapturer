@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadCommentImage } from '@/utils/comments/commentImageUtils';
+import { Comment } from '@/components/astro-spots/profile/types/comments';
 
-export type Comment = {
+export type CommentResponse = {
   id: string;
   comment: string;
   created_at: string;
@@ -13,12 +14,8 @@ export type Comment = {
   user_id: string;
   image_url?: string | null;
   parent_id?: string | null;
-  profiles?: {
-    username: string | null;
-    avatar_url?: string | null;
-    full_name?: string | null;
-  } | null;
-  replies?: Comment[];
+  profiles?: any;
+  replies?: CommentResponse[];
 };
 
 export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: string) => string) => {
@@ -66,39 +63,41 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
             return { ...comment, replies: [] };
           }
           
-          // Map the comment data to our Comment type with proper null handling
+          // Transform replies to match our Comment type
+          const typedReplies: Comment[] = replies?.map(reply => ({
+            id: reply.id,
+            content: reply.content,
+            created_at: reply.created_at,
+            image_url: reply.image_url,
+            parent_id: reply.parent_id,
+            // Handle potentially missing profiles data
+            profiles: isValidProfile(reply.profiles) ? {
+              username: reply.profiles.username || "Anonymous",
+              avatar_url: reply.profiles.avatar_url || null,
+              full_name: reply.profiles.full_name || null
+            } : null
+          })) || [];
+          
           return {
             ...comment,
-            // Handle potentially missing profiles data
-            profiles: comment.profiles && typeof comment.profiles === 'object' ? 
-              comment.profiles : { username: "Anonymous", avatar_url: null, full_name: null },
-            replies: replies?.map(reply => ({
-              id: reply.id,
-              comment: reply.content,
-              created_at: reply.created_at,
-              astro_spot_id: reply.spot_id,
-              user_id: reply.user_id,
-              image_url: reply.image_url,
-              parent_id: reply.parent_id,
-              // Handle potentially missing profiles data
-              profiles: reply.profiles && typeof reply.profiles === 'object' ?
-                reply.profiles : { username: "Anonymous", avatar_url: null, full_name: null }
-            })) || []
+            replies: typedReplies
           };
         })
       );
       
-      // Map the data to match our Comment type with proper null handling
+      // Transform the data to match our Comment type with proper handling for profiles
       const typedComments: Comment[] = commentsWithReplies.map(comment => ({
         id: comment.id,
-        comment: comment.content,
+        content: comment.content,
         created_at: comment.created_at,
-        astro_spot_id: comment.spot_id,
-        user_id: comment.user_id,
         image_url: comment.image_url,
         parent_id: comment.parent_id,
-        // Ensure profiles is properly typed
-        profiles: comment.profiles,
+        // Ensure profiles is properly typed with null handling
+        profiles: isValidProfile(comment.profiles) ? {
+          username: comment.profiles.username || "Anonymous",
+          avatar_url: comment.profiles.avatar_url || null,
+          full_name: comment.profiles.full_name || null
+        } : null,
         replies: comment.replies
       }));
       
@@ -110,6 +109,11 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       setLoading(false);
     }
   }, [spotId, t]);
+
+  // Helper function to validate profile data
+  const isValidProfile = (profile: any): boolean => {
+    return profile && typeof profile === 'object' && !profile.error;
+  };
 
   const submitComment = useCallback(async (
     content: string, 
@@ -168,15 +172,16 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       // Convert the returned data to our Comment type with proper null handling
       const newComment: Comment = {
         id: data.id,
-        comment: data.content,
+        content: data.content,
         created_at: data.created_at,
-        astro_spot_id: data.spot_id,
-        user_id: data.user_id,
         image_url: data.image_url,
         parent_id: data.parent_id,
-        // Ensure profiles is properly typed
-        profiles: data.profiles && typeof data.profiles === 'object' ? 
-          data.profiles : { username: "Anonymous", avatar_url: null, full_name: null },
+        // Ensure profiles is properly typed with null handling
+        profiles: isValidProfile(data.profiles) ? {
+          username: data.profiles.username || "Anonymous",
+          avatar_url: data.profiles.avatar_url || null,
+          full_name: data.profiles.full_name || null
+        } : null,
         replies: []
       };
       

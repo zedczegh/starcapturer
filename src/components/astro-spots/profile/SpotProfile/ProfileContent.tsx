@@ -8,7 +8,7 @@ import ProfileHeaderSection from './ProfileHeaderSection';
 import ProfileSectionsManager from './ProfileSectionsManager';
 import ProfileEditButton from './ProfileEditButton';
 import useProfileContent from './useProfileContent';
-import { Comment as ComponentComment } from '../types/comments';
+import { Comment } from '../types/comments';
 
 interface ProfileContentProps {
   spotId: string;
@@ -40,29 +40,29 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
   } = useProfileContent(spotId, user, comingFromCommunity, t);
   
   // Convert comments from hook format to component format
-  const convertedComments: ComponentComment[] = comments.map(comment => ({
+  const convertedComments: Comment[] = comments.map(comment => ({
     id: comment.id,
-    content: comment.comment,
+    content: comment.comment || comment.content, // Handle both formats
     created_at: comment.created_at,
     image_url: comment.image_url || null,
     profiles: comment.profiles ? {
-      username: comment.profiles.username,
-      avatar_url: comment.profiles.avatar_url,
-      full_name: comment.profiles.full_name
-    } : undefined,
+      username: comment.profiles.username || null,
+      avatar_url: comment.profiles.avatar_url || null,
+      full_name: comment.profiles.full_name || null
+    } : null,
     parent_id: comment.parent_id || null,
     replies: comment.replies?.map(reply => ({
       id: reply.id,
-      content: reply.comment,
+      content: reply.comment || reply.content, // Handle both formats
       created_at: reply.created_at,
       image_url: reply.image_url || null,
       profiles: reply.profiles ? {
-        username: reply.profiles.username,
-        avatar_url: reply.profiles.avatar_url,
-        full_name: reply.profiles.full_name
-      } : undefined,
+        username: reply.profiles.username || null,
+        avatar_url: reply.profiles.avatar_url || null,
+        full_name: reply.profiles.full_name || null
+      } : null,
       parent_id: reply.parent_id || null
-    }))
+    })) || []
   }));
 
   if (isLoading || !spot) {
