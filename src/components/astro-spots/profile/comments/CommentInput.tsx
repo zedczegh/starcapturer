@@ -120,14 +120,14 @@ const CommentInput: React.FC<CommentInputProps> = ({
               className="hidden"
               accept="image/*"
               onChange={handleImageSelect}
-              disabled={sending || imageUploadsAvailable === false}
+              disabled={sending}
             />
           </label>
         )}
         <Button 
           type="submit" 
           size="sm" 
-          disabled={sending || (!commentText.trim() && !imageFile) || (imageFile && !commentText.trim())}
+          disabled={sending || (!commentText.trim() && !imageFile)}
           className="flex gap-1 items-center"
         >
           {sending ? (

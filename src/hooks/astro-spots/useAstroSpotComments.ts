@@ -19,9 +19,10 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     const checkStorage = async () => {
       try {
         console.log("Checking comment images bucket availability...");
-        const authStatus = await supabase.auth.getSession();
+        // First verify authentication
+        const { data: authStatus } = await supabase.auth.getSession();
         
-        if (!authStatus.data.session) {
+        if (!authStatus.session) {
           console.log("No active session, bucket not accessible");
           setBucketAvailable(false);
           return;
@@ -39,7 +40,11 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       }
     };
     
-    checkStorage();
+    if (authUser) {
+      checkStorage();
+    } else {
+      setBucketAvailable(false);
+    }
   }, [authUser]);
 
   // Load comments function with better error handling
@@ -68,7 +73,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       return { success: false };
     }
     
-    // Always require text content (even with an image)
+    // Always require text content
     if (!content.trim()) {
       toast.error(t("Please enter a comment", "请输入评论"));
       return { success: false };
@@ -102,9 +107,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
           console.log("Bucket is available, proceeding with upload");
           imageUrl = await uploadCommentImage(imageFile, t);
           
-          // Double check if the upload was successful
           if (!imageUrl) {
-            // If we got null but the bucket was available, there was an upload error
             toast.warning(t("Image couldn't be uploaded, posting text only", "图片无法上传，仅发布文字"));
             console.error("Upload failed despite bucket being available");
           } else {
@@ -124,7 +127,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         return { success: false };
       }
       
-      // Immediately fetch updated comments to refresh the UI
+      // Immediately fetch updated comments
       const updatedComments = await fetchComments(spotId);
       setComments(updatedComments); // Update local state immediately
       
