@@ -9,7 +9,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
   try {
     console.log("Fetching comments for spot ID:", spotId);
     
-    // Fetch all comments for the spot
+    // Fix the join relationship - use profiles(id) instead of profiles
     const { data, error } = await supabase
       .from("astro_spot_comments")
       .select(`
@@ -18,7 +18,6 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
         created_at,
         image_url,
         user_id,
-        parent_id,
         profiles:user_id(id, username, avatar_url)
       `)
       .eq('spot_id', spotId)
@@ -30,28 +29,13 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
     }
     
     // Transform the data to match our Comment type
-    const allComments = data.map((comment: any) => ({
+    return data.map((comment: any) => ({
       id: comment.id,
       content: comment.content,
       created_at: comment.created_at,
       image_url: comment.image_url,
-      parent_id: comment.parent_id,
-      profiles: comment.profiles || { username: null, avatar_url: null },
-      replies: [] // Initialize empty replies array for each comment
+      profiles: comment.profiles || { username: null, avatar_url: null }
     }));
-    
-    // Separate top-level comments and replies
-    const topLevelComments = allComments.filter(comment => !comment.parent_id);
-    const replies = allComments.filter(comment => comment.parent_id);
-    
-    // Attach replies to their parent comments
-    topLevelComments.forEach(comment => {
-      comment.replies = replies
-        .filter(reply => reply.parent_id === comment.id)
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    });
-    
-    return topLevelComments;
   } catch (error) {
     console.error("Error in fetchComments:", error);
     return [];
@@ -65,8 +49,7 @@ export const createComment = async (
   userId: string,
   spotId: string,
   content: string,
-  imageUrl: string | null,
-  parentId?: string | null
+  imageUrl: string | null
 ): Promise<boolean> => {
   try {
     console.log("Creating comment for user:", userId, "spot:", spotId);
@@ -77,8 +60,7 @@ export const createComment = async (
         user_id: userId,
         spot_id: spotId,
         content: content.trim() || " ", // Use a space if only image is submitted
-        image_url: imageUrl,
-        parent_id: parentId || null
+        image_url: imageUrl
       });
     
     if (insertError) {
