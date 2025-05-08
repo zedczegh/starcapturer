@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import ConversationList from "@/components/messages/ConversationList";
 import MessageList from "@/components/messages/MessageList";
 import MessageInput from "@/components/messages/MessageInput";
+import EmptyConversationState from "@/components/messages/EmptyConversationState";
 import { ConversationPartner } from "@/hooks/messaging/useConversations";
 import { useRef, useState } from "react";
 
