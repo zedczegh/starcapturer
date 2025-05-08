@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -39,6 +40,7 @@ const Messages = () => {
     sending,
     fetchMessages,
     sendMessage,
+    unsendMessage,
   } = useMessaging();
 
   // Handle incoming user from navigation
@@ -121,6 +123,23 @@ const Messages = () => {
       toast.error(t("Failed to send message", "发送消息失败"));
     }
   };
+  
+  const handleUnsendMessage = async (messageId: string) => {
+    if (!activeConversation) return false;
+    
+    try {
+      const success = await unsendMessage(messageId);
+      if (success) {
+        // No need to re-fetch as useMessaging already updates local state
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error unsending message:", error);
+      toast.error(t("Failed to unsend message", "撤回消息失败"));
+      return false;
+    }
+  };
 
   if (!user) {
     return (
@@ -182,6 +201,7 @@ const Messages = () => {
                   currentUserId={user.id}
                   activeConversation={activeConversation}
                   onBack={handleBack}
+                  onUnsendMessage={handleUnsendMessage}
                 />
                 <MessageInput 
                   onSend={handleSendMessage}
