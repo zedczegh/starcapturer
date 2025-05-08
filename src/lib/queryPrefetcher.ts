@@ -1,6 +1,5 @@
-
 import { QueryClient } from '@tanstack/react-query';
-import { fetchWeatherData, fetchLightPollutionData, fetchForecastData } from './api';
+import { fetchWeatherData, fetchLightPollutionData, fetchForecastData, fetchLongRangeForecastData } from './api';
 
 // Cache keys generator to ensure consistency
 const generateCacheKeys = (latitude: number, longitude: number) => {
@@ -49,41 +48,50 @@ export const prefetchLocationData = async (
   console.log("Prefetching data for location:", locationKey);
   
   // Use Promise.allSettled to fetch all data in parallel without blocking on errors
-  const results = await Promise.allSettled([
-    // Fetch weather and light pollution in parallel
-    queryClient.prefetchQuery({
-      queryKey: weatherKey,
-      queryFn: () => fetchWeatherData({ latitude, longitude }),
-      staleTime: 5 * 60 * 1000 // 5 minutes
-    }),
-    queryClient.prefetchQuery({
-      queryKey: lightPollutionKey,
-      queryFn: () => fetchLightPollutionData(latitude, longitude),
-      staleTime: 60 * 60 * 1000 // 1 hour
-    }),
-    // Also fetch forecast data in parallel
-    queryClient.prefetchQuery({
-      queryKey: forecastKey,
-      queryFn: () => fetchForecastData({ 
-        latitude, 
-        longitude, 
-        days: 3 
+  try {
+    const results = await Promise.allSettled([
+      // Fetch weather data
+      queryClient.prefetchQuery({
+        queryKey: weatherKey,
+        queryFn: () => fetchWeatherData({ latitude, longitude }),
+        staleTime: 5 * 60 * 1000 // 5 minutes
       }),
-      staleTime: 30 * 60 * 1000 // 30 minutes
-    }),
-    // Long range forecast for SIQS calculation
-    queryClient.prefetchQuery({
-      queryKey: longRangeForecastKey,
-      queryFn: () => fetchForecastData({ 
-        latitude, 
-        longitude, 
-        days: 7 
+      
+      // Fetch light pollution data
+      queryClient.prefetchQuery({
+        queryKey: lightPollutionKey,
+        queryFn: () => fetchLightPollutionData(latitude, longitude),
+        staleTime: 60 * 60 * 1000 // 1 hour
       }),
-      staleTime: 2 * 60 * 60 * 1000 // 2 hours
-    })
-  ]);
-
-  console.log("Prefetch completed:", results.map(r => r.status).join(', '));
+      
+      // Fetch forecast data
+      queryClient.prefetchQuery({
+        queryKey: forecastKey,
+        queryFn: () => fetchForecastData({ latitude, longitude }),
+        staleTime: 30 * 60 * 1000 // 30 minutes
+      }),
+      
+      // Fetch long-range forecast data
+      queryClient.prefetchQuery({
+        queryKey: longRangeForecastKey,
+        queryFn: () => fetchLongRangeForecastData({ latitude, longitude }),
+        staleTime: 60 * 60 * 1000 // 1 hour
+      })
+    ]);
+    
+    // Log success/failure of each prefetch
+    results.forEach((result, index) => {
+      const queries = ['weather', 'light pollution', 'forecast', 'long-range forecast'];
+      if (result.status === 'fulfilled') {
+        console.log(`✓ Successfully prefetched ${queries[index]} data`);
+      } else {
+        console.error(`✗ Failed to prefetch ${queries[index]} data:`, result.reason);
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error during data prefetching:", error);
+  }
 };
 
 /**

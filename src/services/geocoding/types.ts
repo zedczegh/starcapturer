@@ -10,8 +10,8 @@ export interface Location {
   administrativeArea?: string;
   country?: string;
   formattedAddress?: string;
-  placeDetails?: string; // Add this property to fix the type errors
-  chineseName?: string; // Add this for Chinese location support
+  placeDetails?: string;
+  chineseName?: string;
 }
 
 export interface GeocodingOptions {
@@ -37,9 +37,20 @@ export interface ChineseLocation {
   name: string;
   chinese: string;
   pinyin: string;
-  coordinates: [number, number];
+  longitude: number;
+  latitude: number;
   bortleScale?: number;
   type?: string;
+  // Add missing properties found in chineseLocationData.ts
+  areaCode?: string;
+  provinceCode?: string;
+  province?: string;
+  cityCode?: string;
+  city?: string;
+  districtCode?: string;
+  district?: string;
+  nameEn?: string;
+  coordinates?: [number, number];
 }
 
 // Add a shared interface for geocoding responses

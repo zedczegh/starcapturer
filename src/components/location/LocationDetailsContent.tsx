@@ -1,5 +1,5 @@
 
-import React, { memo, Suspense, useEffect, useState } from "react";
+import React, { memo, Suspense, useEffect, useState, useRef } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import LocationContentLoader from "./LocationContentLoader";
 import LocationFaultedMessage from "./LocationFaultedMessage";
@@ -26,6 +26,8 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
 }) => {
   const { t } = useLanguage();
   const [contentVisible, setContentVisible] = useState(false);
+  const retryCount = useRef(0);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   const {
     containerRef,
@@ -69,35 +71,87 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
 
   const handleManualRefresh = () => {
     resetUpdateState();
+    setIsRetrying(true);
+    retryCount.current += 1;
+    
     if (locationData?.latitude && locationData?.longitude) {
+      console.log(`Manually refreshing data (attempt ${retryCount.current})`);
       handleRefreshForecast(locationData.latitude, locationData.longitude);
       handleRefreshLongRangeForecast(locationData.latitude, locationData.longitude);
+      
+      // Reset retry state after a delay
+      setTimeout(() => {
+        setIsRetrying(false);
+      }, 2000);
     }
   };
+
+  // Automatically retry loading data if it fails initially
+  useEffect(() => {
+    if (faulted && retryCount.current === 0 && !isRetrying) {
+      console.log("Initial load failed, attempting automatic retry");
+      const timer = setTimeout(() => {
+        handleManualRefresh();
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [faulted]);
 
   if (!memoizedLocationData) {
     return (
       <div className="p-8 text-center">
-        <Loader className="animate-spin h-8 w-8 mx-auto mb-4" />
+        <Loader className="mx-auto mb-4 h-8 w-8 animate-spin" />
         <p>{t("Loading location data...", "正在加载位置数据...")}</p>
       </div>
     );
   }
 
   if (faulted && showFaultedMessage) {
-    return <LocationFaultedMessage show />;
+    return (
+      <div className="p-8 text-center">
+        <LocationFaultedMessage show />
+        <Button 
+          variant="outline" 
+          className="mt-4"
+          onClick={handleManualRefresh}
+          disabled={isRetrying}
+        >
+          {isRetrying ? (
+            <>
+              <Loader className="mr-2 h-4 w-4 animate-spin" />
+              {t("Retrying...", "重试中...")}
+            </>
+          ) : (
+            t("Retry Loading Data", "重试加载数据")
+          )}
+        </Button>
+      </div>
+    );
   }
 
   return (
-    <div className={`transition-all duration-300 ${contentVisible ? 'opacity-100' : 'opacity-0'}`} ref={containerRef}>
+    <div 
+      className={`transition-all duration-300 ${contentVisible ? 'opacity-100' : 'opacity-0'}`} 
+      ref={containerRef}
+      data-location-id={locationData?.id}
+    >
       <StatusMessage 
         message={statusMessage} 
         onClear={() => setStatusMessage(null)} 
       />
 
       {shouldShowManualRefresh && (
-        <div className="flex justify-center mb-4">
-          <Button variant="outline" onClick={handleManualRefresh}>
+        <div className="mb-4 flex justify-center">
+          <Button 
+            variant="outline" 
+            onClick={handleManualRefresh}
+            disabled={isRetrying}
+            className="flex items-center gap-2"
+          >
+            {isRetrying ? (
+              <Loader className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
             {t("Manually Refresh Data", "手动刷新数据")}
           </Button>
         </div>
