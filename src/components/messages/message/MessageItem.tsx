@@ -98,13 +98,13 @@ const MessageItem: React.FC<MessageItemProps> = ({
             isSender ? 'justify-end' : 'justify-start'
           }`}
         >
-          {/* Message read status indicators, only shown for sent messages */}
+          {/* Message read status indicators with improved styling */}
           {isSender && (
             <span className="mr-2 flex items-center">
               {message.read ? (
-                <CheckCheck className="h-3 w-3 text-green-500" />
+                <CheckCheck className="h-3 w-3 text-green-500 drop-shadow-sm" />
               ) : (
-                <Check className="h-3 w-3 text-gray-400" />
+                <Check className="h-3 w-3 text-cosmic-400 opacity-75" />
               )}
             </span>
           )}
