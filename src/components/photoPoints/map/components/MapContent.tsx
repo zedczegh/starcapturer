@@ -1,41 +1,12 @@
 
-import React, { useMemo, memo } from 'react';
-import { MapContainer, TileLayer, useMapEvents } from 'react-leaflet';
+import React from 'react';
+import { MapContainer, TileLayer, Circle } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { MapUpdater, MapEvents, DarkSkyOverlay, MapInteractionManager } from '@/components/location/map/MapEffectsComponents';
-import MarkerClusterGroup from '@/components/location/map/MarkerClusterGroup';
-import { LocationMarker } from '@/components/photoPoints/map/components/LocationMarker';
-import SearchRadiusCircle from '@/components/photoPoints/map/components/SearchRadiusCircle';
-import UserLocationMarker from '@/components/photoPoints/map/components/UserLocationMarker';
-import MobileMapFixer from '@/components/photoPoints/map/MobileMapFixer';
-import MapAttribution from '@/components/photoPoints/map/components/MapAttribution';
-
-// Load tiles with priority system for mobile optimization
-const LoadTilesWithPriority = memo(() => {
-  const map = useMapEvents({
-    // Prioritize map loading on mobile devices
-    load: () => {
-      // Apply hardware acceleration to map panes
-      const panes = map._panes;
-      if (!panes) return;
-      
-      for (const key in panes) {
-        if (panes[key] && panes[key].style) {
-          panes[key].style.transform = 'translate3d(0, 0, 0)';
-          panes[key].style.backfaceVisibility = 'hidden';
-        }
-      }
-      
-      // Force immediate load and redraw of visible tiles
-      setTimeout(() => {
-        map.invalidateSize();
-        map._onResize();
-      }, 100);
-    }
-  });
-  
-  return null;
-});
+import { LocationMarker, UserLocationMarker } from '../MarkerComponents';
+import { MapEffectsComposer } from '../MapComponents';
+import MapController from '../MapController';
+import MobileMapFixer from '../MobileMapFixer';
+import { getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
 
 interface MapContentProps {
   center: [number, number];
@@ -53,10 +24,10 @@ interface MapContentProps {
   handleTouchStart?: (e: React.TouchEvent, id: string) => void;
   handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
   handleTouchMove?: (e: React.TouchEvent) => void;
-  useMobileMapFixer?: boolean;
-  mapRef: React.MutableRefObject<any>;
-  onMapReady?: () => void;
-  currentSiqs?: number | null;
+  useMobileMapFixer: boolean;
+  mapRef: React.RefObject<any>;
+  onMapReady: () => void;
+  currentSiqs: number | null;
 }
 
 const MapContent: React.FC<MapContentProps> = ({
@@ -75,115 +46,114 @@ const MapContent: React.FC<MapContentProps> = ({
   handleTouchStart,
   handleTouchEnd,
   handleTouchMove,
-  useMobileMapFixer = false,
+  useMobileMapFixer,
   mapRef,
   onMapReady,
   currentSiqs
 }) => {
-  // Memoize markers to prevent rerenders
-  const locationMarkers = useMemo(() => {
-    return displayLocations.map(location => (
-      <LocationMarker
-        key={location.id || `${location.latitude}-${location.longitude}`}
-        location={location}
-        isHovered={hoveredLocationId === location.id}
-        onClick={() => onLocationClick?.(location)}
-        onHover={onMarkerHover}
-        onTouchStart={handleTouchStart ? (e) => handleTouchStart(e, location.id || '') : undefined}
-        onTouchEnd={handleTouchEnd ? (e) => handleTouchEnd(e, location.id || '') : undefined} 
-        certifiedView={activeView === 'certified'}
-      />
-    ));
-  }, [
-    displayLocations, 
-    hoveredLocationId, 
-    onLocationClick, 
-    onMarkerHover,
-    handleTouchStart,
-    handleTouchEnd,
-    activeView
-  ]);
+  const tileOptions = getTileLayerOptions(Boolean(isMobile));
+  
+  const getDefaultZoom = () => {
+    if (activeView === 'calculated') {
+      return isMobile ? 3 : 4;
+    }
+    return isMobile ? zoom - 1 : zoom;
+  };
 
-  // Configure map tile layers for better mobile performance
-  const tileLayerUrl = useMemo(() => {
-    // Use a caching proxy or optimized tile server if on mobile
-    return isMobile 
-      ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'  // Consider a mobile-optimized tile server here
-      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-  }, [isMobile]);
+  const stableOnLocationClick = React.useCallback((location: SharedAstroSpot) => {
+    if (onLocationClick) {
+      onLocationClick(location);
+    }
+  }, [onLocationClick]);
+
+  const stableOnMapClick = React.useCallback((lat: number, lng: number) => {
+    if (onMapClick) {
+      onMapClick(lat, lng);
+    }
+  }, [onMapClick]);
 
   return (
     <MapContainer
       center={center}
-      zoom={zoom}
-      scrollWheelZoom={true}
-      attributionControl={false}
-      className="leaflet-map"
+      zoom={getDefaultZoom()}
+      style={{ height: "100%", width: "100%" }}
+      scrollWheelZoom={!isMobile}
       ref={mapRef}
-      zoomControl={!isMobile}
-      touchZoom={true}
-      dragging={true}
-      preferCanvas={true}
-      worldCopyJump={false}
-      fadeAnimation={!isMobile} // Disable fade animations on mobile for better performance
-      markerZoomAnimation={!isMobile} // Disable marker animations on mobile
+      className={`map-container ${isMobile ? 'mobile-optimized' : ''}`}
+      whenReady={onMapReady}
+      attributionControl={false}
+      worldCopyJump={true}
     >
-      {/* Add mobile-specific fixes */}
-      <LoadTilesWithPriority />
-      
-      {/* Mobile optimized tile layer */}
       <TileLayer
-        attribution="&copy; OpenStreetMap contributors"
-        url={tileLayerUrl}
-        maxNativeZoom={19}
-        maxZoom={19}
-        subdomains="abc"
-        keepBuffer={isMobile ? 2 : 4} // Smaller buffer for mobile to save memory
+        attribution={tileOptions.attribution}
+        url={tileOptions.url}
+        maxZoom={isMobile ? tileOptions.maxZoom - 2 : tileOptions.maxZoom}
       />
       
-      {/* Map interactions and effects */}
-      <MapUpdater position={center} />
-      {onMapClick && <MapEvents onMapClick={onMapClick} />}
-      <MapInteractionManager onReady={onMapReady} />
+      {showRadiusCircles && userLocation && !isMobile && (
+        <Circle
+          center={[userLocation.latitude, userLocation.longitude]}
+          pathOptions={{
+            color: 'rgb(99, 102, 241)',
+            fillColor: 'rgb(99, 102, 241)',
+            fillOpacity: 0.05,
+            weight: 1,
+            dashArray: '5, 5',
+          }}
+          radius={searchRadius * 1000}
+        />
+      )}
       
-      {/* User location and search radius */}
+      <MapEffectsComposer 
+        userLocation={userLocation}
+        activeView={activeView}
+        searchRadius={searchRadius}
+        effects={['zoom-controls']} 
+        // Removed 'legend' to prevent redundant legend icon
+      />
+      
+      {onMapClick && (
+        <MapController 
+          userLocation={userLocation} 
+          searchRadius={searchRadius} 
+          onMapClick={stableOnMapClick}
+        />
+      )}
+      
       {userLocation && (
         <UserLocationMarker 
           position={[userLocation.latitude, userLocation.longitude]} 
-          siqs={currentSiqs} 
-          isMobile={isMobile}
+          currentSiqs={currentSiqs}
         />
       )}
       
-      {showRadiusCircles && userLocation && (
-        <SearchRadiusCircle 
-          center={[userLocation.latitude, userLocation.longitude]} 
-          radius={searchRadius * 1000}
-          isCalculatedView={activeView === 'calculated'}
-          isMobile={isMobile}
-        />
-      )}
+      {displayLocations.map(location => {
+        if (!location || !location.latitude || !location.longitude) return null;
+        
+        const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+        const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
+        const isHovered = hoveredLocationId === locationId;
+        
+        return (
+          <LocationMarker
+            key={locationId}
+            location={location}
+            onClick={stableOnLocationClick}
+            isHovered={isHovered}
+            onHover={onMarkerHover || (() => {})}
+            locationId={locationId}
+            isCertified={isCertified}
+            activeView={activeView}
+            handleTouchStart={handleTouchStart}
+            handleTouchEnd={handleTouchEnd}
+            handleTouchMove={handleTouchMove}
+          />
+        );
+      })}
       
-      {/* Location markers with clustering for better performance */}
-      <MarkerClusterGroup
-        chunkedLoading={true}
-        showCoverageOnHover={false}
-        maxClusterRadius={isMobile ? 60 : 40}
-        disableClusteringAtZoom={activeView === 'certified' ? 8 : 10}
-        spiderfyOnMaxZoom={activeView === 'certified'}
-        zoomToBoundsOnClick={true}
-        animate={!isMobile} // Disable animations on mobile for better performance
-      >
-        {locationMarkers}
-      </MarkerClusterGroup>
-      
-      {/* Map attribution */}
-      <MapAttribution isMobile={isMobile} />
-      
-      {/* Additional mobile optimizations */}
-      {useMobileMapFixer && <MobileMapFixer />}
+      {useMobileMapFixer && isMobile && <MobileMapFixer />}
     </MapContainer>
   );
 };
 
-export default memo(MapContent);
+export default React.memo(MapContent);

@@ -3,120 +3,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#121212" />
-    <meta name="description" content="Find the best spots for astronomy and astrophotography" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <!-- Preload critical assets -->
-    <link rel="preload" as="image" href="/favicon.svg" />
-    <link rel="preload" as="style" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <title>StarCapturer</title>
-    <style>
-      /* Critical CSS for faster initial rendering */
-      body {
-        margin: 0;
-        padding: 0;
-        background-color: #0A0A0A;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      }
-      
-      #root {
-        height: 100%;
-      }
-      
-      /* Loading spinner for initial page load */
-      .app-loading {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: #0A0A0A;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-        z-index: 9999;
-        opacity: 1;
-        transition: opacity 0.3s ease-out;
-      }
-      
-      .loading-spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        border-top-color: #7E22CE;
-        animation: spin 1s ease-in-out infinite;
-      }
-      
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-      
-      .loading-text {
-        margin-top: 16px;
-        color: rgba(255, 255, 255, 0.7);
-        font-size: 14px;
-      }
-      
-      /* Apply hardware acceleration on mobile devices */
-      @media (max-width: 768px) {
-        html, body {
-          overscroll-behavior-y: contain;
-        }
-        
-        * {
-          -webkit-tap-highlight-color: transparent;
-        }
-      }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>starcapturer</title>
+    <meta name="description" content="Lovable Generated Project" />
+    <meta name="author" content="Lovable" />
+    <meta property="og:image" content="/og-image.png" />
   </head>
-  <body>
-    <div id="root">
-      <!-- Initial loading state -->
-      <div class="app-loading">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">Loading StarCapturer...</div>
-      </div>
-    </div>
-    <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // Remove loading screen when app is ready
-      document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(function() {
-          const loading = document.querySelector('.app-loading');
-          if (loading) {
-            loading.style.opacity = '0';
-            setTimeout(function() {
-              if (loading.parentNode) {
-                loading.parentNode.removeChild(loading);
-              }
-            }, 300);
-          }
-        }, 500);
-      });
-      
-      // Handle service worker registration
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js').then(function() {
-            console.log('Service worker registered');
-          }).catch(function(error) {
-            console.log('Service worker registration failed:', error);
-          });
-        });
-      }
 
-      // Add detection for iOS devices to apply specific fixes
-      document.addEventListener('DOMContentLoaded', function() {
-        const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        if (iOS) {
-          document.documentElement.classList.add('ios-device');
-        }
-      });
-    </script>
+  <body>
+    <div id="root"></div>
+    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
