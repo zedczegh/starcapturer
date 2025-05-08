@@ -11,20 +11,43 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   const ensureCommentBucket = async (): Promise<boolean> => {
     try {
       // Check if bucket exists
-      const { data: buckets } = await supabase.storage.listBuckets();
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      
+      if (bucketsError) {
+        console.error("Error listing buckets:", bucketsError);
+        return false;
+      }
+      
       const bucketExists = buckets?.some(bucket => bucket.name === 'comment_images');
       
       if (!bucketExists) {
-        const { error } = await supabase.storage.createBucket('comment_images', {
-          public: true
+        console.log("Creating comment_images bucket...");
+        // Create bucket with public access
+        const { error: createError } = await supabase.storage.createBucket('comment_images', {
+          public: true,
+          fileSizeLimit: 5242880, // 5MB
         });
         
-        if (error) {
-          console.error("Error creating comment_images bucket:", error);
+        if (createError) {
+          console.error("Error creating comment_images bucket:", createError);
           return false;
         }
-        console.log("Created comment_images bucket");
+        
+        // Set CORS policy for the bucket
+        const { error: corsError } = await supabase.storage.updateBucket('comment_images', {
+          public: true,
+          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'],
+          fileSizeLimit: 5242880, // 5MB
+        });
+        
+        if (corsError) {
+          console.error("Error updating bucket policy:", corsError);
+          // Continue anyway as the bucket was created
+        }
+        
+        console.log("Successfully created comment_images bucket");
       }
+      
       return true;
     } catch (error) {
       console.error("Error checking/creating bucket:", error);
@@ -40,34 +63,50 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       return null;
     }
     
-    // Create a simple filename (avoid using uuid directly as filename)
-    const uniqueId = uuidv4();
-    const fileExt = imageFile.name.split('.').pop() || '';
-    const fileName = `${uniqueId}.${fileExt}`;
-    
-    const { error: uploadError } = await supabase.storage
-      .from('comment_images')
-      .upload(fileName, imageFile, {
-        contentType: imageFile.type,
-        cacheControl: '3600'
-      });
+    try {
+      // Create a simple filename (avoid using uuid directly as filename)
+      const uniqueId = uuidv4();
+      const fileExt = imageFile.name.split('.').pop() || '';
+      const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const fileName = `${uniqueId}.${sanitizedExt || 'jpg'}`;
       
-    if (uploadError) {
-      console.error("Error uploading image:", uploadError);
-      toast.error(t("Failed to upload image", "图片上传失败"));
+      console.log("Uploading image with filename:", fileName);
+      
+      const { error: uploadError, data: uploadData } = await supabase.storage
+        .from('comment_images')
+        .upload(fileName, imageFile, {
+          contentType: imageFile.type,
+          cacheControl: '3600'
+        });
+        
+      if (uploadError) {
+        console.error("Error uploading image:", uploadError);
+        toast.error(t("Failed to upload image", "图片上传失败"));
+        return null;
+      }
+      
+      // Get the public URL for the uploaded image
+      const { data: publicUrlData } = supabase.storage
+        .from('comment_images')
+        .getPublicUrl(fileName);
+      
+      if (!publicUrlData?.publicUrl) {
+        console.error("Failed to get public URL for image");
+        return null;
+      }
+      
+      console.log("Image uploaded successfully, public URL:", publicUrlData.publicUrl);
+      return publicUrlData.publicUrl;
+    } catch (err) {
+      console.error("Exception during image upload:", err);
       return null;
     }
-    
-    // Get the public URL for the uploaded image
-    const { data: publicUrlData } = supabase.storage
-      .from('comment_images')
-      .getPublicUrl(fileName);
-    
-    return publicUrlData?.publicUrl || null;
   };
 
   const fetchComments = async (): Promise<Comment[]> => {
     try {
+      console.log("Fetching comments for spot ID:", spotId);
+      
       const { data, error } = await supabase
         .from("astro_spot_comments")
         .select(`
@@ -75,7 +114,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
           content,
           created_at,
           image_url,
-          profiles:profiles!user_id(
+          profiles:user_id (
             username,
             avatar_url
           )
@@ -83,7 +122,12 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         .eq('spot_id', spotId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching comments:", error);
+        throw error;
+      }
+      
+      console.log("Fetched comments:", data);
       
       return data.map((comment: any) => ({
         id: comment.id,
@@ -102,33 +146,44 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     setCommentSending(true);
     
     try {
-      const userId = (await supabase.auth.getUser()).data.user?.id;
+      const { data: userData, error: userError } = await supabase.auth.getUser();
       
-      if (!userId) {
+      if (userError || !userData.user?.id) {
+        console.error("Auth error:", userError);
         toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
         return { success: false };
       }
       
+      const userId = userData.user.id;
+      
       let imageUrl: string | null = null;
       if (imageFile) {
         imageUrl = await uploadImage(imageFile);
-        if (!imageUrl) return { success: false };
+        if (!imageUrl && imageFile) {
+          // If image upload failed but we had an image, return error
+          return { success: false };
+        }
       }
       
-      const { error } = await supabase
+      console.log("Inserting comment for user:", userId, "spot:", spotId);
+      
+      const { error: insertError, data: insertData } = await supabase
         .from("astro_spot_comments")
         .insert({
           user_id: userId,
           spot_id: spotId,
           content: content.trim() || " ", // Use a space if only image is submitted
           image_url: imageUrl
-        });
+        })
+        .select();
       
-      if (error) {
-        console.error("Error posting comment:", error);
+      if (insertError) {
+        console.error("Error posting comment:", insertError);
         toast.error(t("Failed to post comment.", "评论发送失败。"));
         return { success: false };
       }
+      
+      console.log("Comment inserted successfully:", insertData);
       
       // Fetch updated comments
       const comments = await fetchComments();

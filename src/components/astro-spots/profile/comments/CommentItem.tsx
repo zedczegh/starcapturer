@@ -19,6 +19,12 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
     { addSuffix: true }
   );
 
+  // Reset image states when the comment prop changes
+  React.useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+  }, [comment.image_url]);
+
   return (
     <div className="flex space-x-3 p-3 bg-cosmic-800/20 rounded-lg border border-cosmic-700/20">
       <Avatar className="h-8 w-8 bg-cosmic-800 border border-cosmic-700/30">
@@ -68,7 +74,10 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
                 src={comment.image_url} 
                 alt="Comment attachment" 
                 className={`max-h-40 rounded-md border border-cosmic-700/30 hover:opacity-90 transition-opacity object-cover ${!imageLoaded ? 'opacity-0' : 'opacity-100'}`}
-                onLoad={() => setImageLoaded(true)}
+                onLoad={() => {
+                  console.log("Image loaded successfully:", comment.image_url);
+                  setImageLoaded(true);
+                }}
                 onError={() => {
                   console.error("Failed to load image:", comment.image_url);
                   setImageError(true);

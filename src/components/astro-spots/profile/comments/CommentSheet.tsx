@@ -44,7 +44,7 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
             </div>
           )}
           
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
             {comments.map((comment) => (
               <CommentItem key={comment.id} comment={comment} />
             ))}

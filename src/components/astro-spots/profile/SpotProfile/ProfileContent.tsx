@@ -16,6 +16,7 @@ import SpotComments from '@/components/astro-spots/profile/SpotComments';
 import TimeSlotManager from '@/components/bookings/TimeSlotManager';
 import LocationDetailsLoading from "@/components/location/LocationDetailsLoading";
 import { Comment } from '../types/comments';
+import useAstroSpotComments from '@/hooks/astro-spots/useAstroSpotComments';
 
 interface ProfileContentProps {
   spotId: string;
@@ -31,10 +32,33 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
   const [isCreator, setIsCreator] = useState(false);
   const [showInstantLoader, setShowInstantLoader] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [comments, setComments] = useState<Comment[]>([]);
+  
+  const {
+    commentSending,
+    submitComment,
+    fetchComments
+  } = useAstroSpotComments(spotId, t);
 
   const triggerRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
   };
+
+  // Load initial comments
+  useEffect(() => {
+    const loadComments = async () => {
+      try {
+        const fetchedComments = await fetchComments();
+        setComments(fetchedComments);
+      } catch (error) {
+        console.error("Error loading initial comments:", error);
+      }
+    };
+    
+    if (spotId) {
+      loadComments();
+    }
+  }, [spotId]);
 
   const { data: spot, isLoading, error, refetch } = useQuery({
     queryKey: ['astroSpot', spotId, refreshTrigger],
@@ -58,41 +82,10 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
       const { data: advantageData } = await supabase
         .from('astro_spot_advantages').select('*').eq('spot_id', spotId);
       
-      const { data: commentData, error: commentError } = await supabase
-        .from('astro_spot_comments')
-        .select(`
-          id,
-          content,
-          created_at,
-          image_url,
-          profiles:profiles!user_id(
-            username,
-            avatar_url
-          )
-        `)
-        .eq('spot_id', spotId)
-        .order('created_at', { ascending: false });
-
-      if (commentError) {
-        console.error("Error fetching comments:", commentError);
-      }
-      
-      let commentsWithProfiles: Comment[] = [];
-      if (commentData) {
-        commentsWithProfiles = commentData.map((comment: any) => ({
-          id: comment.id,
-          content: comment.content,
-          created_at: comment.created_at,
-          image_url: comment.image_url,
-          profiles: comment.profiles || { username: null, avatar_url: null }
-        }));
-      }
-
       return {
         ...spotData,
         astro_spot_types: typeData || [],
         astro_spot_advantages: advantageData || [],
-        astro_spot_comments: commentsWithProfiles || [],
       };
     },
     retry: 1,
@@ -186,7 +179,19 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
 
   const handleCommentsUpdate = async () => {
     console.log("Comments update triggered");
-    await refetch();
+    try {
+      const updatedComments = await fetchComments();
+      setComments(updatedComments);
+    } catch (error) {
+      console.error("Error refreshing comments:", error);
+    }
+  };
+
+  const handleCommentSubmit = async (content: string, imageFile: File | null) => {
+    const result = await submitComment(content, imageFile);
+    if (result.success && result.comments) {
+      setComments(result.comments);
+    }
   };
 
   const handleImagesUpdate = async () => {
@@ -252,9 +257,11 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
         
         <SpotComments
           spotId={spotId}
-          comments={spot.astro_spot_comments || []}
+          comments={comments}
           user={user}
           onCommentsUpdate={handleCommentsUpdate}
+          onSubmit={handleCommentSubmit}
+          sending={commentSending}
         />
       </div>
 
