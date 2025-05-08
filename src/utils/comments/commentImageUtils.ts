@@ -17,7 +17,8 @@ export const uploadCommentImage = async (
     const uniqueId = uuidv4();
     const fileExt = imageFile.name.split('.').pop() || '';
     const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const fileName = `${uniqueId}.${sanitizedExt || 'jpg'}`;
+    // Store filename as a path (without dot notation which causes issues)
+    const fileName = `${uniqueId}-${sanitizedExt}`; 
     
     console.log("Uploading comment image with filename:", fileName);
     

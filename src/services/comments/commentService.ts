@@ -9,6 +9,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
   try {
     console.log("Fetching comments for spot ID:", spotId);
     
+    // Fix the join relationship - use profiles(id) instead of profiles
     const { data, error } = await supabase
       .from("astro_spot_comments")
       .select(`
@@ -16,10 +17,8 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
         content,
         created_at,
         image_url,
-        profiles:user_id (
-          username,
-          avatar_url
-        )
+        user_id,
+        profiles:user_id(id, username, avatar_url)
       `)
       .eq('spot_id', spotId)
       .order('created_at', { ascending: false });
@@ -29,6 +28,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
       throw error;
     }
     
+    // Transform the data to match our Comment type
     return data.map((comment: any) => ({
       id: comment.id,
       content: comment.content,
