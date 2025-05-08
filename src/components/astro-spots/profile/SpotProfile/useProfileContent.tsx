@@ -44,10 +44,12 @@ export const useProfileContent = (
   
   // Use our comment hook with improved state management
   const {
-    commentSending,
     comments,
-    submitComment,
-    fetchComments
+    loading: commentsLoading,
+    commentSending,
+    uploadingImage,
+    fetchComments,
+    submitComment
   } = useAstroSpotComments(spotId, t);
 
   // Function to trigger a refresh of all data

@@ -34,12 +34,13 @@ const ensureLeafletCSS = () => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = 'https://unpkg.com/leaflet@1.7.1/dist/leaflet.css';
+      link.crossOrigin = '';
       document.head.appendChild(link);
     }
   }
 };
 
-// Ensure Leaflet CSS is loaded
+// Ensure Leaflet CSS is loaded immediately
 ensureLeafletCSS();
 
 // Create a wrapper component that uses hooks
@@ -54,16 +55,29 @@ const AppWithProviders = () => {
   );
 };
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <HelmetProvider>
-        <ThemeProvider>
-          <LanguageProvider>
-            <AppWithProviders />
-          </LanguageProvider>
-        </ThemeProvider>
-      </HelmetProvider>
-    </QueryClientProvider>
-  </React.StrictMode>,
-);
+// Add a DOMContentLoaded listener for better mobile performance
+const renderApp = () => {
+  const rootElement = document.getElementById('root');
+  if (!rootElement) return;
+
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <HelmetProvider>
+          <ThemeProvider>
+            <LanguageProvider>
+              <AppWithProviders />
+            </LanguageProvider>
+          </ThemeProvider>
+        </HelmetProvider>
+      </QueryClientProvider>
+    </React.StrictMode>,
+  );
+};
+
+// Only need this check in production - in development it adds extra overhead
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderApp);
+} else {
+  renderApp();
+}

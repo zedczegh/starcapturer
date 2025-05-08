@@ -8,6 +8,7 @@ import ProfileHeaderSection from './ProfileHeaderSection';
 import ProfileSectionsManager from './ProfileSectionsManager';
 import ProfileEditButton from './ProfileEditButton';
 import useProfileContent from './useProfileContent';
+import { Comment as ComponentComment } from '../types/comments';
 
 interface ProfileContentProps {
   spotId: string;
@@ -37,6 +38,24 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     handleImagesUpdate,
     handleMessageCreator
   } = useProfileContent(spotId, user, comingFromCommunity, t);
+  
+  // Convert comments from hook format to component format
+  const convertedComments: ComponentComment[] = comments.map(comment => ({
+    id: comment.id,
+    content: comment.comment,
+    created_at: comment.created_at,
+    image_url: comment.image_url,
+    profiles: comment.profiles,
+    parent_id: comment.parent_id,
+    replies: comment.replies?.map(reply => ({
+      id: reply.id,
+      content: reply.comment,
+      created_at: reply.created_at,
+      image_url: reply.image_url,
+      profiles: reply.profiles,
+      parent_id: reply.parent_id
+    }))
+  }));
 
   if (isLoading || !spot) {
     return <LocationDetailsLoading />;
@@ -71,7 +90,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
         loadingImages={loadingImages}
         user={user}
         isCreator={isCreator}
-        comments={comments}
+        comments={convertedComments}
         commentSending={commentSending}
         onImagesUpdate={handleImagesUpdate}
         onCommentsUpdate={handleCommentsUpdate}

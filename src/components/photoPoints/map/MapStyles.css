@@ -56,6 +56,15 @@
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
   }
+  
+  /* iOS Safari specific optimizations */
+  .leaflet-marker-icon,
+  .leaflet-marker-shadow,
+  .leaflet-control,
+  .leaflet-pane {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 /* Improve performance for tiled map layers */
@@ -76,4 +85,17 @@
   .leaflet-container {
     -webkit-overflow-scrolling: touch;
   }
+  
+  /* Disable animations on panning to improve mobile performance */
+  .leaflet-container.moving-panning {
+    -webkit-transition: none !important;
+    transition: none !important;
+  }
+}
+
+/* Fix for flickering issue on Safari mobile */
+.leaflet-zoom-animated {
+  transform-origin: 0 0;
+  -webkit-perspective: 1000;
+  perspective: 1000;
 }

@@ -1,4 +1,3 @@
-
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -55,7 +54,22 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/components/photoPoints/')) {
             return 'photoPoints';
           }
-        }
+
+          // Keep profile components together
+          if (id.includes('/components/profile/') || 
+              id.includes('/components/astro-spots/profile/')) {
+            return 'profile';
+          }
+          
+          // Keep comments components together
+          if (id.includes('/components/astro-spots/profile/comments/')) {
+            return 'comments';
+          }
+        },
+        // Ensure chunk filenames are predictable for better caching
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
       }
     },
     assetsDir: 'assets',
@@ -73,5 +87,14 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: ['suncalc', 'leaflet', 'react-leaflet'],
     exclude: ['lovable-tagger'],
+  },
+  // Ensure HTML is properly cached
+  experimental: {
+    renderBuiltUrl(filename, { hostType }) {
+      if (hostType === 'html') {
+        return { relative: true };
+      }
+      return { relative: true };
+    }
   }
 }));
