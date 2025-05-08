@@ -15,24 +15,12 @@ export const ensureCommentImagesBucket = async (): Promise<boolean> => {
     const bucketExists = buckets?.some(bucket => bucket.name === 'comment_images');
     
     if (!bucketExists) {
-      console.log("Creating comment_images bucket...");
-      const { error: createError } = await supabase.storage
-        .createBucket('comment_images', {
-          public: true,
-          fileSizeLimit: 5242880 // 5MB
-        });
-      
-      if (createError) {
-        console.error("Error creating comment_images bucket:", createError);
-        return false;
-      }
-      
-      console.log("comment_images bucket created successfully");
+      console.log("comment_images bucket doesn't exist. This requires admin privileges to create.");
+      return false;
     } else {
       console.log("comment_images bucket already exists");
+      return true;
     }
-    
-    return true;
   } catch (error) {
     console.error("Exception in ensureCommentImagesBucket:", error);
     return false;
@@ -49,10 +37,10 @@ export const uploadCommentImage = async (
   try {
     if (!imageFile) return null;
     
-    // Ensure bucket exists
+    // Check if bucket exists
     const bucketReady = await ensureCommentImagesBucket();
     if (!bucketReady) {
-      console.error("Failed to ensure comment_images bucket exists");
+      console.error("Failed to access comment_images bucket");
       toast.error(t("Failed to access storage", "无法访问存储"));
       return null;
     }

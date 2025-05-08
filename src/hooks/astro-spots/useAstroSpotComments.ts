@@ -10,18 +10,24 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   const [commentSending, setCommentSending] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [bucketAvailable, setBucketAvailable] = useState<boolean | null>(null);
   const { user: authUser } = useAuth();
 
-  // Initialize bucket when hook is first used
+  // Check if bucket exists when hook is first used
   useEffect(() => {
-    const initStorage = async () => {
+    const checkStorage = async () => {
       try {
-        await ensureCommentImagesBucket();
+        const available = await ensureCommentImagesBucket();
+        setBucketAvailable(available);
+        if (!available) {
+          console.log("Comment images storage is not accessible - this will affect image uploads");
+        }
       } catch (err) {
-        console.error("Error initializing comment image storage:", err);
+        console.error("Error checking comment image storage:", err);
+        setBucketAvailable(false);
       }
     };
-    initStorage();
+    checkStorage();
   }, []);
 
   // Load comments function with better error handling
@@ -63,14 +69,18 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       let imageUrl: string | null = null;
       if (imageFile) {
-        console.log("Uploading image for comment...");
-        imageUrl = await uploadCommentImage(imageFile, t);
-        if (!imageUrl) {
-          toast.error(t("Failed to upload image", "图片上传失败"));
-          setCommentSending(false);
-          return { success: false };
+        // Check if bucket is available before trying to upload
+        if (bucketAvailable === false) {
+          toast.error(t("Image uploads are temporarily unavailable", "图片上传暂时不可用"));
+          console.log("Image upload skipped because storage bucket is not available");
+        } else {
+          console.log("Uploading image for comment...");
+          imageUrl = await uploadCommentImage(imageFile, t);
+          if (!imageUrl) {
+            // Continue with text-only comment if image upload fails
+            toast.warning(t("Image couldn't be uploaded, posting text only", "图片无法上传，仅发布文字"));
+          }
         }
-        console.log("Image uploaded successfully:", imageUrl);
       }
       
       const success = await createComment(userId, spotId, content, imageUrl, parentId);
@@ -110,6 +120,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     commentSending,
     comments,
     loaded,
+    bucketAvailable,
     submitComment,
     fetchComments: loadComments
   };

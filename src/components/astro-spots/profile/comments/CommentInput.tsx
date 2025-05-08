@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, ImagePlus, X } from "lucide-react";
+import { Loader2, Send, ImagePlus, X, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
@@ -10,13 +10,27 @@ interface CommentInputProps {
   onSubmit: (content: string, image?: File | null) => void;
   sending: boolean;
   isReply?: boolean;
+  imageUploadsAvailable?: boolean | null;
 }
 
-const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply = false }) => {
+const CommentInput: React.FC<CommentInputProps> = ({ 
+  onSubmit, 
+  sending, 
+  isReply = false,
+  imageUploadsAvailable = true
+}) => {
   const { t } = useLanguage();
   const [commentText, setCommentText] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Clear image if uploads become unavailable
+  useEffect(() => {
+    if (imageUploadsAvailable === false && imageFile) {
+      handleRemoveImage();
+      toast.warning(t("Image uploads are currently unavailable", "图片上传当前不可用"));
+    }
+  }, [imageUploadsAvailable, t, imageFile]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,20 +101,29 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
         </div>
       )}
 
+      {imageUploadsAvailable === false && (
+        <div className="flex items-center gap-2 text-amber-400 text-sm">
+          <AlertTriangle className="h-4 w-4" />
+          <span>{t("Image uploads unavailable", "图片上传不可用")}</span>
+        </div>
+      )}
+
       <div className="flex gap-2 justify-end">
-        <label className="cursor-pointer">
-          <div className="flex items-center gap-2 px-3 py-2 text-sm text-primary/90 hover:text-primary hover:bg-cosmic-800/30 rounded-md">
-            <ImagePlus className="h-4 w-4" />
-            <span>{t("Add Image", "添加图片")}</span>
-          </div>
-          <input 
-            type="file"
-            className="hidden"
-            accept="image/*"
-            onChange={handleImageSelect}
-            disabled={sending}
-          />
-        </label>
+        {imageUploadsAvailable !== false && (
+          <label className={`cursor-pointer ${imageUploadsAvailable === false ? 'opacity-50' : ''}`}>
+            <div className="flex items-center gap-2 px-3 py-2 text-sm text-primary/90 hover:text-primary hover:bg-cosmic-800/30 rounded-md">
+              <ImagePlus className="h-4 w-4" />
+              <span>{t("Add Image", "添加图片")}</span>
+            </div>
+            <input 
+              type="file"
+              className="hidden"
+              accept="image/*"
+              onChange={handleImageSelect}
+              disabled={sending || imageUploadsAvailable === false}
+            />
+          </label>
+        )}
         <Button 
           type="submit" 
           size="sm" 

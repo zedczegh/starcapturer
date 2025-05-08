@@ -16,6 +16,7 @@ interface CommentSheetProps {
   onSubmit: (content: string, image?: File | null) => void;
   onReply: (content: string, image: File | null, parentId: string) => Promise<void>;
   sending: boolean;
+  imageUploadsAvailable?: boolean | null;
 }
 
 const CommentSheet: React.FC<CommentSheetProps> = ({
@@ -25,7 +26,8 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
   user,
   onSubmit,
   onReply,
-  sending
+  sending,
+  imageUploadsAvailable = true
 }) => {
   const { t } = useLanguage();
   const { user: authUser } = useAuth();
@@ -89,6 +91,7 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
               <CommentInput
                 onSubmit={onSubmit}
                 sending={sending}
+                imageUploadsAvailable={imageUploadsAvailable}
               />
             </div>
           )}

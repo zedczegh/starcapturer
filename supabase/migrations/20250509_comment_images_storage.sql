@@ -8,7 +8,7 @@ WHERE NOT EXISTS (
 
 -- Set RLS policies for the comment_images bucket
 -- Allow any authenticated user to upload files
-CREATE POLICY IF NOT EXISTS "Anyone can upload comment images" 
+CREATE POLICY "Anyone can upload comment images" 
   ON storage.objects 
   FOR INSERT 
   TO authenticated 
@@ -17,7 +17,7 @@ CREATE POLICY IF NOT EXISTS "Anyone can upload comment images"
   );
 
 -- Allow anyone to read comment images (public access)
-CREATE POLICY IF NOT EXISTS "Anyone can view comment images" 
+CREATE POLICY "Anyone can view comment images" 
   ON storage.objects 
   FOR SELECT 
   TO public 
@@ -25,3 +25,5 @@ CREATE POLICY IF NOT EXISTS "Anyone can view comment images"
     bucket_id = 'comment_images'
   );
 
+-- Enable RLS on storage.objects table (just to be extra safe)
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;

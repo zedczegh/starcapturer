@@ -18,6 +18,7 @@ interface SpotCommentsProps {
   onCommentsUpdate: () => void;
   onSubmit?: (content: string, imageFile: File | null, parentId?: string | null) => Promise<void>;
   sending: boolean;
+  bucketAvailable?: boolean | null;
 }
 
 const SpotComments: React.FC<SpotCommentsProps> = ({
@@ -26,7 +27,8 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
   user,
   onCommentsUpdate,
   onSubmit,
-  sending
+  sending,
+  bucketAvailable = true
 }) => {
   const { t } = useLanguage();
   const { user: authUser } = useAuth();
@@ -108,6 +110,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
           <CommentInput
             onSubmit={handleCommentSubmit}
             sending={sending}
+            imageUploadsAvailable={bucketAvailable}
           />
         </div>
       )}
@@ -120,6 +123,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         onSubmit={handleCommentSubmit}
         onReply={handleReplySubmit}
         sending={sending}
+        imageUploadsAvailable={bucketAvailable}
       />
     </div>
   );

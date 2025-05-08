@@ -19,7 +19,7 @@ export const useProfileContent = (
   const [isCreator, setIsCreator] = useState(false);
   const [showInstantLoader, setShowInstantLoader] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [storageChecked, setStorageChecked] = useState(false);
+  const [storageAvailable, setStorageAvailable] = useState<boolean | null>(null);
   
   // Use our smaller hooks
   const { spot, isLoading, refetch } = useSpotData(spotId, refreshTrigger);
@@ -32,13 +32,13 @@ export const useProfileContent = (
     const checkStorage = async () => {
       try {
         const available = await ensureCommentImagesBucket();
-        setStorageChecked(true);
+        setStorageAvailable(available);
         if (!available) {
           console.log("Comment images storage is not accessible - this will affect image uploads");
         }
       } catch (err) {
         console.error("Error checking comment image storage:", err);
-        setStorageChecked(true);
+        setStorageAvailable(false);
       }
     };
     checkStorage();
@@ -49,7 +49,8 @@ export const useProfileContent = (
     commentSending,
     comments,
     submitComment,
-    fetchComments
+    fetchComments,
+    bucketAvailable
   } = useAstroSpotComments(spotId, t);
 
   // Function to trigger a refresh of all data
@@ -151,7 +152,8 @@ export const useProfileContent = (
     handleCommentSubmit,
     handleImagesUpdate,
     handleMessageCreator,
-    storageChecked
+    storageAvailable,
+    bucketAvailable
   };
 };
 
