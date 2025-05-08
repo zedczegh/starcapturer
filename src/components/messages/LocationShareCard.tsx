@@ -29,6 +29,7 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [locationName, setLocationName] = useState(name);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Format SIQS score for display
   const formattedSiqs = formatSIQSScore(siqs);
@@ -36,6 +37,9 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
   // Use reverse geocoding to get better location name
   useEffect(() => {
     const fetchLocationName = async () => {
+      if (!latitude || !longitude) return;
+      
+      setIsLoading(true);
       try {
         const details = await getEnhancedLocationDetails(
           latitude, 
@@ -50,10 +54,12 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
         }
       } catch (error) {
         console.error("Error fetching location name:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
-    // Only fetch if we have coordinates and the name isn't very detailed
+    // Only fetch if we have coordinates and the name looks like a default one
     if (latitude && longitude && 
         (name === t("Shared Location", "共享位置") || 
          name.includes("°") || 
@@ -82,11 +88,22 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
   return (
     <div className="bg-cosmic-900/70 backdrop-blur-md border border-cosmic-700/50 hover:border-cosmic-600/70 transition-colors duration-300 p-4 rounded-lg shadow-md">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold text-gray-50">{locationName}</h3>
-        <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
-          <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
-          <span className="text-xs font-medium">{formattedSiqs}</span>
-        </div>
+        <h3 className="text-lg font-semibold text-gray-50">
+          {isLoading ? (
+            <span className="inline-flex items-center">
+              <span className="h-4 w-4 mr-2 rounded-full border-2 border-primary border-t-transparent animate-spin"></span>
+              {locationName}
+            </span>
+          ) : (
+            locationName
+          )}
+        </h3>
+        {siqs && (
+          <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
+            <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
+            <span className="text-xs font-medium">{formattedSiqs}</span>
+          </div>
+        )}
       </div>
       
       <div className="space-y-2 text-sm text-gray-400">
