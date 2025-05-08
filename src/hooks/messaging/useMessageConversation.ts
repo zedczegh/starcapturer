@@ -24,7 +24,7 @@ export const useMessageConversation = () => {
   useEffect(() => {
     if (location.state?.selectedUser && conversations.length > 0) {
       const conversation = conversations.find(
-        conv => conv.user_id === location.state.selectedUser
+        conv => conv.id === location.state.selectedUser
       );
       
       if (conversation) {
@@ -35,7 +35,7 @@ export const useMessageConversation = () => {
   
   const handleSelectConversation = (conversation: ConversationPartner) => {
     setActiveConversation(conversation);
-    fetchMessages(conversation.user_id);
+    fetchMessages(conversation.id);
   };
   
   const handleBack = () => {

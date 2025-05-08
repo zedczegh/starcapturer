@@ -16,7 +16,7 @@ interface UnsendDialogProps {
   open: boolean;
   isProcessing: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onUnsend: () => Promise<void>;
+  onUnsend: () => void;
   onCancel: () => void;
 }
 

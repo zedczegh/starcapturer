@@ -100,11 +100,16 @@ const MessageItem: React.FC<MessageItemProps> = ({
       {showUnsendDialog && (
         <UnsendDialog
           open={showUnsendDialog}
-          onClose={() => setShowUnsendDialog(false)}
-          onConfirm={() => {
+          onOpenChange={(isOpen) => {
+            if (!isProcessingAction && !isOpen) {
+              setShowUnsendDialog(false);
+            }
+          }}
+          onUnsend={() => {
             onUnsend(message.id);
             setShowUnsendDialog(false);
           }}
+          onCancel={() => setShowUnsendDialog(false)}
           isProcessing={isProcessingAction}
         />
       )}

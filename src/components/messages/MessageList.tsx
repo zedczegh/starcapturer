@@ -19,6 +19,8 @@ interface Message {
     avatar_url: string | null;
   };
   is_unsent?: boolean;
+  text?: string;
+  location?: any;
 }
 
 interface ConversationPartner {
@@ -152,10 +154,9 @@ const MessageList: React.FC<MessageListProps> = ({
             <MessageItem
               key={message.id}
               message={message}
-              currentUserId={currentUserId}
-              formatMessageTime={formatMessageTime}
-              onUnsendMessage={handleUnsendRequest}
-              isProcessing={isProcessing}
+              isSender={message.sender_id === currentUserId}
+              onUnsend={(id) => handleUnsendRequest(id)}
+              isProcessingAction={isProcessing}
             />
           ))
         )}
