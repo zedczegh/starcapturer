@@ -36,8 +36,11 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
 
   const handleCommentSubmit = async (content: string, imageFile: File | null = null) => {
     if (onSubmit) {
-      await onSubmit(content, imageFile);
-      onCommentsUpdate(); // Make sure we refresh comments after submission
+      const result = await onSubmit(content, imageFile);
+      // Make sure we refresh comments after submission, regardless of whether the parent component does
+      setTimeout(() => {
+        onCommentsUpdate();
+      }, 500);
     }
   };
 
@@ -53,7 +56,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         {localComments.length === 0 ? (
           <EmptyComments />
         ) : (
-          <motion.div layout className="space-y-4 mt-4">
+          <motion.div layout className="space-y-6 mt-4">
             {localComments.slice(0, 2).map((comment) => (
               <CommentItem key={comment.id} comment={comment} />
             ))}

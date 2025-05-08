@@ -30,10 +30,14 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
 
   const username = comment.profiles?.username || t("Anonymous", "匿名用户");
   const initials = username ? username[0]?.toUpperCase() : "?";
+  
+  // Check if comment has only content (no image) or both
+  const hasImage = comment.image_url && !imageError;
+  const hasContent = comment.content && comment.content.trim() !== " ";
 
   return (
     <div className="flex space-x-3">
-      <Avatar className="h-8 w-8 shrink-0 bg-cosmic-800 border border-cosmic-700/30">
+      <Avatar className="h-10 w-10 shrink-0 bg-cosmic-800 border border-cosmic-700/30">
         <AvatarImage src={comment.profiles?.avatar_url || undefined} alt={username} />
         <AvatarFallback className="text-sm text-cosmic-400">
           {initials}
@@ -41,7 +45,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
       </Avatar>
       
       <div className="flex-1 space-y-1">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-1">
           <div className="text-sm font-medium text-cosmic-200">
             {username}
           </div>
@@ -61,15 +65,15 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment }) => {
         
         <div className="bg-cosmic-800/40 p-3 rounded-lg rounded-tl-none border border-cosmic-700/20">
           {/* Show comment text if it exists and isn't just a blank space */}
-          {comment.content && comment.content.trim() !== " " && (
-            <div className="text-sm text-cosmic-300 mb-2">
+          {hasContent && (
+            <div className="text-sm text-cosmic-300">
               {comment.content}
             </div>
           )}
           
           {/* Comment image handling with better error states */}
-          {comment.image_url && !imageError && (
-            <div className="relative mt-1">
+          {hasImage && (
+            <div className={`relative ${hasContent ? 'mt-3' : 'mt-0'}`}>
               {!imageLoaded && (
                 <div className="h-24 w-full max-w-xs flex items-center justify-center bg-cosmic-800/50 rounded-md">
                   <div className="h-5 w-5 border-2 border-t-transparent border-cosmic-300 rounded-full animate-spin"></div>

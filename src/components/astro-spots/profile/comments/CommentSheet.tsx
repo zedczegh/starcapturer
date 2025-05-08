@@ -45,7 +45,7 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
         <div className="mt-6 flex flex-col h-[calc(100vh-150px)]">
           <div 
             ref={commentListRef}
-            className="flex-1 space-y-4 overflow-y-auto pr-2"
+            className="flex-1 space-y-6 overflow-y-auto pr-2"
           >
             {comments.length === 0 ? (
               <div className="text-center py-8 text-cosmic-400">

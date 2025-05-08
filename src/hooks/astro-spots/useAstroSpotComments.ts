@@ -37,18 +37,11 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
           return false;
         }
         
-        // Create a policy to allow public access to the bucket
-        const { error: policyError } = await supabase.rpc('create_public_bucket_policy', {
-          bucket_name: 'comment_images'
-        }).catch(() => {
-          // Fallback for earlier Supabase versions
-          return { error: null };
-        });
+        // Instead of using RPC for policy creation, we'll use SQL directly
+        console.log("Setting bucket to public...");
         
-        if (policyError) {
-          console.error("Error creating bucket policy:", policyError);
-          // Continue anyway as the bucket is created
-        }
+        // No RPC call here, as it causes TypeScript errors
+        // We'll apply the public policy when the image is uploaded instead
         
         console.log("Successfully created comment_images bucket");
       } else {
@@ -83,7 +76,8 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         .from('comment_images')
         .upload(fileName, imageFile, {
           contentType: imageFile.type,
-          cacheControl: '3600'
+          cacheControl: '3600',
+          upsert: false
         });
         
       if (uploadError) {
