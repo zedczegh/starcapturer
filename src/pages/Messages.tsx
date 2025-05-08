@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
@@ -13,6 +12,7 @@ import MessageList from "@/components/messages/MessageList";
 import MessageInput from "@/components/messages/MessageInput";
 import { fetchUserProfile } from "@/utils/profileUtils";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface ConversationPartner {
   id: string;
@@ -30,6 +30,7 @@ const Messages = () => {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeConversation, setActiveConversation] = useState<ConversationPartner | null>(null);
+  const messageListRef = useRef<HTMLDivElement>(null);
   
   const {
     conversations,
@@ -108,9 +109,16 @@ const Messages = () => {
 
   const handleSendMessage = async (message: string, imageFile?: File | null) => {
     if (!activeConversation) return;
-    const success = await sendMessage(activeConversation.id, message, imageFile);
-    if (success) {
-      fetchMessages(activeConversation.id);
+    
+    try {
+      const success = await sendMessage(activeConversation.id, message, imageFile);
+      if (success) {
+        // Re-fetch messages after successful send
+        await fetchMessages(activeConversation.id);
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error(t("Failed to send message", "发送消息失败"));
     }
   };
 
@@ -165,6 +173,7 @@ const Messages = () => {
           <Card className={`${!activeConversation ? 'hidden md:flex' : 'flex'} 
             w-full md:w-2/3 glassmorphism overflow-hidden flex flex-col
             border border-cosmic-800/30 shadow-xl backdrop-blur-lg`}
+            ref={messageListRef}
           >
             {activeConversation ? (
               <>

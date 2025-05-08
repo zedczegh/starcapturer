@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { motion } from "framer-motion";
 import { ChevronLeft, User, MessageCircle, Image as ImageIcon, Link as LinkIcon } from "lucide-react";
@@ -6,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Message {
   id: string;
@@ -41,6 +43,7 @@ const MessageList: React.FC<MessageListProps> = ({
   const { t } = useLanguage();
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -93,9 +96,27 @@ const MessageList: React.FC<MessageListProps> = ({
     );
   };
 
+  // Improved scroll handling - called both on new messages AND when images load
+  const scrollToBottom = () => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current;
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    }
+    
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Handle scrolling when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollToBottom();
   }, [messages]);
+
+  // Handle image loading to ensure scroll works after images load
+  const handleImageLoad = () => {
+    scrollToBottom();
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -134,7 +155,10 @@ const MessageList: React.FC<MessageListProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div 
+        className="flex-1 overflow-y-auto p-4 space-y-4" 
+        ref={scrollAreaRef}
+      >
         {messages.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center text-cosmic-400 space-y-2">
@@ -179,7 +203,7 @@ const MessageList: React.FC<MessageListProps> = ({
                 }`}>
                   {linkifyText(message.message)}
                   
-                  {/* Display image if present */}
+                  {/* Display image if present with onLoad handler */}
                   {message.image_url && (
                     <div className="mt-2">
                       <a 
@@ -192,6 +216,7 @@ const MessageList: React.FC<MessageListProps> = ({
                           src={message.image_url}
                           alt={t("Shared image", "分享的图片")}
                           className="max-w-full rounded-lg border border-cosmic-700/30 max-h-[200px] object-contain"
+                          onLoad={handleImageLoad}
                         />
                       </a>
                     </div>
