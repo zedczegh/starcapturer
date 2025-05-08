@@ -52,7 +52,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         {localComments.length === 0 ? (
           <EmptyComments />
         ) : (
-          <motion.div layout className="space-y-3">
+          <motion.div layout className="space-y-4 mt-4">
             {localComments.slice(0, 2).map((comment) => (
               <CommentItem key={comment.id} comment={comment} />
             ))}

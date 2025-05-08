@@ -10,6 +10,8 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
 
   const ensureCommentBucket = async (): Promise<boolean> => {
     try {
+      console.log("Checking if comment_images bucket exists...");
+      
       // Check if bucket exists
       const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
       
@@ -26,6 +28,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         const { error: createError } = await supabase.storage.createBucket('comment_images', {
           public: true,
           fileSizeLimit: 5242880, // 5MB
+          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp']
         });
         
         if (createError) {
@@ -33,19 +36,9 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
           return false;
         }
         
-        // Set CORS policy for the bucket
-        const { error: corsError } = await supabase.storage.updateBucket('comment_images', {
-          public: true,
-          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'],
-          fileSizeLimit: 5242880, // 5MB
-        });
-        
-        if (corsError) {
-          console.error("Error updating bucket policy:", corsError);
-          // Continue anyway as the bucket was created
-        }
-        
         console.log("Successfully created comment_images bucket");
+      } else {
+        console.log("comment_images bucket already exists");
       }
       
       return true;
@@ -64,7 +57,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     }
     
     try {
-      // Create a simple filename (avoid using uuid directly as filename)
+      // Generate a unique filename with uuid
       const uniqueId = uuidv4();
       const fileExt = imageFile.name.split('.').pop() || '';
       const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -72,7 +65,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       console.log("Uploading image with filename:", fileName);
       
-      const { error: uploadError, data: uploadData } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('comment_images')
         .upload(fileName, imageFile, {
           contentType: imageFile.type,
@@ -127,8 +120,6 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         throw error;
       }
       
-      console.log("Fetched comments:", data);
-      
       return data.map((comment: any) => ({
         id: comment.id,
         content: comment.content,
@@ -167,23 +158,20 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       console.log("Inserting comment for user:", userId, "spot:", spotId);
       
-      const { error: insertError, data: insertData } = await supabase
+      const { error: insertError } = await supabase
         .from("astro_spot_comments")
         .insert({
           user_id: userId,
           spot_id: spotId,
           content: content.trim() || " ", // Use a space if only image is submitted
           image_url: imageUrl
-        })
-        .select();
+        });
       
       if (insertError) {
         console.error("Error posting comment:", insertError);
         toast.error(t("Failed to post comment.", "评论发送失败。"));
         return { success: false };
       }
-      
-      console.log("Comment inserted successfully:", insertData);
       
       // Fetch updated comments
       const comments = await fetchComments();
