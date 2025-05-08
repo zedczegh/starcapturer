@@ -1,3 +1,4 @@
+
 /**
  * Optimized real-time SIQS calculation with enhanced historical data integration
  */
@@ -312,20 +313,27 @@ export async function calculateRealTimeSiqs(
           lightPollution: !!pollutionData,
           terrainCorrected: !!terrainCorrectedScale,
           climate: !!climateRegion,
-          historicalData: useHistoricalData && !!historicalPattern,
+          useHistoricalData: useHistoricalData && !!historicalPattern, // Fixed property name from historicalData to useHistoricalData
           singleHourSampling: useSingleHourSampling && forecastData?.hourly ? true : false
         }
       }
     };
     
-    // Cache the result
-    setSiqsCache(latitude, longitude, result);
-    
-    // Add to memory cache
-    memoizedResults.set(cacheKey, {
-      result,
-      timestamp: Date.now()
-    });
+    // Add better debugging information in try-catch to handle local storage issues
+    try {
+      // Cache the result
+      setSiqsCache(latitude, longitude, result);
+      
+      // Add to memory cache
+      memoizedResults.set(cacheKey, {
+        result,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      // Better error handling for storage quota exceeded
+      console.error("Error saving SIQS to cache:", error);
+      // Continue execution despite storage error - the calculation is still valid
+    }
     
     return result;
     

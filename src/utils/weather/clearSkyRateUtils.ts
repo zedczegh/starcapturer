@@ -140,6 +140,7 @@ function isDesertRegion(latitude: number, longitude: number): boolean {
  * @returns Color class for styling
  */
 export function getRateColor(rate: number): string {
+  if (!isFinite(rate) || rate < 0) return "text-gray-400"; // Added safety check
   if (rate >= 75) return "text-green-500";
   if (rate >= 60) return "text-emerald-400";
   if (rate >= 45) return "text-yellow-400";
@@ -161,6 +162,12 @@ export function getMinimumClearNights(
   latitude: number, 
   longitude: number
 ): number {
+  // Safety check for invalid inputs
+  if (!isFinite(clearSkyRate) || !isFinite(latitude) || !isFinite(longitude)) {
+    console.warn("Invalid parameters for getMinimumClearNights:", { clearSkyRate, latitude, longitude });
+    return 0;
+  }
+  
   // Base calculation: percentage of nights that are clear
   let baseNights = Math.round((clearSkyRate / 100) * 365 * 0.6);
   
@@ -223,8 +230,14 @@ export function getBestMonths(
   language: string = 'en',
   latitude: number = 0
 ): string {
+  // Safety check for monthlyRates - ensure it's an object
+  if (typeof monthlyRates !== 'object' || monthlyRates === null) {
+    console.warn("Invalid monthlyRates provided to getBestMonths:", monthlyRates);
+    monthlyRates = {};
+  }
+  
   // If clearestMonths is provided and not empty, use that
-  if (clearestMonths && clearestMonths.length > 0) {
+  if (Array.isArray(clearestMonths) && clearestMonths.length > 0) {
     const monthsText = clearestMonths.join(', ');
     return language === 'en' 
       ? `Best months: ${monthsText}` 
@@ -233,17 +246,22 @@ export function getBestMonths(
   
   // If monthly rates are provided, determine the best months
   if (Object.keys(monthlyRates).length > 0) {
-    // Sort months by clear sky rate
-    const sortedMonths = Object.entries(monthlyRates)
-      .sort(([, rateA], [, rateB]) => rateB - rateA)
-      .map(([month]) => month)
-      .slice(0, 3);
-      
-    if (sortedMonths.length > 0) {
-      const monthsText = sortedMonths.join(', ');
-      return language === 'en' 
-        ? `Best months: ${monthsText}` 
-        : `最佳月份: ${monthsText}`;
+    try {
+      // Sort months by clear sky rate
+      const sortedMonths = Object.entries(monthlyRates)
+        .sort(([, rateA], [, rateB]) => rateB - rateA)
+        .map(([month]) => month)
+        .slice(0, 3);
+        
+      if (sortedMonths.length > 0) {
+        const monthsText = sortedMonths.join(', ');
+        return language === 'en' 
+          ? `Best months: ${monthsText}` 
+          : `最佳月份: ${monthsText}`;
+      }
+    } catch (error) {
+      console.error("Error processing monthly rates:", error);
+      // Fall through to default
     }
   }
   

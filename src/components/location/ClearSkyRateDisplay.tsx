@@ -25,21 +25,40 @@ const ClearSkyRateDisplay: React.FC<ClearSkyRateDisplayProps> = ({
 }) => {
   const { language, t } = useLanguage();
   
-  // Calculate estimated clear nights per year
+  // Calculate estimated clear nights per year with better error handling
   const clearNightsPerYear = useMemo(() => {
     try {
+      // Validate inputs first
+      if (!isFinite(latitude) || !isFinite(longitude) || !isFinite(clearSkyRate)) {
+        console.error("Invalid coordinates or clear sky rate for clear nights calculation", {
+          latitude, longitude, clearSkyRate
+        });
+        return 0;
+      }
+      
       return getMinimumClearNights(clearSkyRate, latitude, longitude);
     } catch (error) {
       console.error("Error calculating clear nights:", error);
       // Fallback to a simpler calculation if the enhanced method fails
-      return Math.round((clearSkyRate / 100) * 365 * 0.6);
+      const fallbackNights = Math.round((clearSkyRate / 100) * 365 * 0.6);
+      return Math.max(0, Math.min(365, fallbackNights)); // Ensure valid range
     }
   }, [clearSkyRate, latitude, longitude]);
   
-  // Get best months for observation
+  // Get best months for observation with better error handling
   const bestMonthsText = useMemo(() => {
     try {
-      return getBestMonths(monthlyRates, clearestMonths, language, latitude);
+      // Validate monthly rates
+      const validMonthlyRates = typeof monthlyRates === 'object' && monthlyRates !== null 
+        ? monthlyRates 
+        : {};
+      
+      // Validate clearest months
+      const validClearestMonths = Array.isArray(clearestMonths)
+        ? clearestMonths
+        : [];
+        
+      return getBestMonths(validMonthlyRates, validClearestMonths, language, latitude);
     } catch (error) {
       console.error("Error getting best months:", error);
       // Return a simple fallback
