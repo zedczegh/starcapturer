@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, User, MessageCircle, Image as ImageIcon, Link as LinkIcon, MoreVertical, Trash2 } from "lucide-react";
@@ -66,6 +65,7 @@ const MessageList: React.FC<MessageListProps> = ({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [messageToUnsend, setMessageToUnsend] = useState<string | null>(null);
   const [unsendDialogOpen, setUnsendDialogOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -112,7 +112,7 @@ const MessageList: React.FC<MessageListProps> = ({
             );
           }
           // Otherwise render as regular text
-          return <EmojiRenderer text={part} />;
+          return <EmojiRenderer key={`text-${i}`} text={part} />;
         })}
       </p>
     );
@@ -140,15 +140,37 @@ const MessageList: React.FC<MessageListProps> = ({
     scrollToBottom();
   };
   
-  // Handle unsend message
+  // Handle unsend message with improved error handling
   const handleUnsendMessage = async () => {
-    if (messageToUnsend && onUnsendMessage) {
-      const success = await onUnsendMessage(messageToUnsend);
-      if (success) {
-        setMessageToUnsend(null);
+    if (messageToUnsend && onUnsendMessage && !isProcessing) {
+      try {
+        setIsProcessing(true);
+        const success = await onUnsendMessage(messageToUnsend);
+        
+        // Add a small delay before clearing state to ensure everything processes correctly
+        setTimeout(() => {
+          if (success) {
+            setMessageToUnsend(null);
+          }
+          setUnsendDialogOpen(false);
+          setIsProcessing(false);
+        }, 300);
+      } catch (error) {
+        console.error("Error during unsend operation:", error);
+        setIsProcessing(false);
+        setUnsendDialogOpen(false);
       }
+    } else {
+      setUnsendDialogOpen(false);
     }
-    setUnsendDialogOpen(false);
+  };
+  
+  // Handle dialog closing separately
+  const handleDialogClose = () => {
+    if (!isProcessing) {
+      setUnsendDialogOpen(false);
+      setMessageToUnsend(null);
+    }
   };
 
   return (
@@ -279,9 +301,12 @@ const MessageList: React.FC<MessageListProps> = ({
                         <DropdownMenuItem
                           className="flex gap-2 text-red-500 cursor-pointer"
                           onClick={() => {
-                            setMessageToUnsend(message.id);
-                            setUnsendDialogOpen(true);
+                            if (!isProcessing) {
+                              setMessageToUnsend(message.id);
+                              setUnsendDialogOpen(true);
+                            }
                           }}
+                          disabled={isProcessing}
                         >
                           <Trash2 className="h-4 w-4" />
                           {t("Unsend", "撤回")}
@@ -305,7 +330,14 @@ const MessageList: React.FC<MessageListProps> = ({
       </div>
       
       {/* Unsend Message Confirmation Dialog */}
-      <AlertDialog open={unsendDialogOpen} onOpenChange={setUnsendDialogOpen}>
+      <AlertDialog 
+        open={unsendDialogOpen} 
+        onOpenChange={(isOpen) => {
+          if (!isProcessing && !isOpen) {
+            handleDialogClose();
+          }
+        }}
+      >
         <AlertDialogContent className="bg-cosmic-900 border-cosmic-700">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white">
@@ -319,14 +351,18 @@ const MessageList: React.FC<MessageListProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-cosmic-800 text-cosmic-100 hover:bg-cosmic-700">
+            <AlertDialogCancel 
+              className="bg-cosmic-800 text-cosmic-100 hover:bg-cosmic-700" 
+              disabled={isProcessing}
+            >
               {t("Cancel", "取消")}
             </AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleUnsendMessage}
               className="bg-red-600 text-white hover:bg-red-700"
+              disabled={isProcessing}
             >
-              {t("Unsend", "撤回")}
+              {isProcessing ? t("Processing...", "处理中...") : t("Unsend", "撤回")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

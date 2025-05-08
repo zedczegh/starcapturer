@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -114,7 +115,7 @@ export function useMessaging() {
     }
   };
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
@@ -189,9 +190,9 @@ export function useMessaging() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, t]);
 
-  const fetchMessages = async (partnerId: string) => {
+  const fetchMessages = useCallback(async (partnerId: string) => {
     if (!user || !partnerId) return;
 
     try {
@@ -246,9 +247,9 @@ export function useMessaging() {
       console.error("Error fetching messages:", error);
       toast.error(t("Failed to load messages", "加载消息失败"));
     }
-  };
+  }, [user, t]);
 
-  const sendMessage = async (receiverId: string, message: string, imageFile?: File | null) => {
+  const sendMessage = useCallback(async (receiverId: string, message: string, imageFile?: File | null) => {
     if (!user || (!message.trim() && !imageFile) || sending) return false;
     
     setSending(true);
@@ -283,27 +284,14 @@ export function useMessaging() {
     } finally {
       setSending(false);
     }
-  };
+  }, [user, t, sending, uploadMessageImage]);
 
-  // New function to unsend a message
-  const unsendMessage = async (messageId: string) => {
+  // Optimized unsend message function to prevent UI freezes
+  const unsendMessage = useCallback(async (messageId: string) => {
     if (!user) return false;
     
     try {
-      // Update the message to show it was unsent
-      const { error } = await supabase
-        .from('user_messages')
-        .update({ message: t("[This message was unsent]", "[此消息已撤回]"), image_url: null })
-        .eq('id', messageId)
-        .eq('sender_id', user.id); // Ensure only the sender can unsend
-      
-      if (error) {
-        console.error("Error unsending message:", error);
-        toast.error(t("Failed to unsend message", "撤回消息失败"));
-        return false;
-      }
-      
-      // Update the message in the local state
+      // First update local state to provide immediate feedback
       setMessages(prevMessages => 
         prevMessages.map(msg => 
           msg.id === messageId 
@@ -317,6 +305,26 @@ export function useMessaging() {
         )
       );
       
+      // Then update the database
+      const { error } = await supabase
+        .from('user_messages')
+        .update({ 
+          message: t("[This message was unsent]", "[此消息已撤回]"), 
+          image_url: null 
+        })
+        .eq('id', messageId)
+        .eq('sender_id', user.id); // Ensure only the sender can unsend
+      
+      if (error) {
+        console.error("Error unsending message:", error);
+        
+        // Revert local state if database update failed
+        fetchMessages(messages[0]?.receiver_id || messages[0]?.sender_id);
+        
+        toast.error(t("Failed to unsend message", "撤回消息失败"));
+        return false;
+      }
+      
       toast.success(t("Message unsent", "消息已撤回"));
       return true;
     } catch (error) {
@@ -324,7 +332,7 @@ export function useMessaging() {
       toast.error(t("Failed to unsend message", "撤回消息失败"));
       return false;
     }
-  };
+  }, [user, messages, t, fetchMessages]);
 
   useEffect(() => {
     if (!user) return;
@@ -349,7 +357,7 @@ export function useMessaging() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, fetchConversations]);
 
   return {
     conversations,
@@ -358,6 +366,6 @@ export function useMessaging() {
     sending,
     fetchMessages,
     sendMessage,
-    unsendMessage, // Export the new function
+    unsendMessage,
   };
 }

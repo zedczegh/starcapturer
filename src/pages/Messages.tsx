@@ -32,6 +32,7 @@ const Messages = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeConversation, setActiveConversation] = useState<ConversationPartner | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
   
   const {
     conversations,
@@ -98,7 +99,7 @@ const Messages = () => {
     if (user) {
       initializeFromNavigation();
     }
-  }, [user, location.state, conversations]);
+  }, [user, location.state, conversations, fetchMessages]);
 
   const handleSelectConversation = (conversation: ConversationPartner) => {
     setActiveConversation(conversation);
@@ -110,10 +111,12 @@ const Messages = () => {
   };
 
   const handleSendMessage = async (message: string, imageFile?: File | null) => {
-    if (!activeConversation) return;
+    if (!activeConversation || isProcessingAction) return;
     
     try {
+      setIsProcessingAction(true);
       const success = await sendMessage(activeConversation.id, message, imageFile);
+      
       if (success) {
         // Re-fetch messages after successful send
         await fetchMessages(activeConversation.id);
@@ -121,22 +124,27 @@ const Messages = () => {
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error(t("Failed to send message", "发送消息失败"));
+    } finally {
+      setIsProcessingAction(false);
     }
   };
   
   const handleUnsendMessage = async (messageId: string) => {
-    if (!activeConversation) return false;
+    if (!activeConversation || isProcessingAction) return false;
     
     try {
+      setIsProcessingAction(true);
       const success = await unsendMessage(messageId);
-      if (success) {
-        // No need to re-fetch as useMessaging already updates local state
-        return true;
-      }
-      return false;
+      
+      setTimeout(() => {
+        setIsProcessingAction(false);
+      }, 300);
+      
+      return success;
     } catch (error) {
       console.error("Error unsending message:", error);
       toast.error(t("Failed to unsend message", "撤回消息失败"));
+      setIsProcessingAction(false);
       return false;
     }
   };
@@ -205,7 +213,7 @@ const Messages = () => {
                 />
                 <MessageInput 
                   onSend={handleSendMessage}
-                  sending={sending}
+                  sending={sending || isProcessingAction}
                 />
               </div>
             ) : (
