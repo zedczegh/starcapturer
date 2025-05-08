@@ -2,11 +2,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Send, Image, X, Smile } from "lucide-react";
+import { Send, Image, X, Smile, Plus } from "lucide-react";
 import { toast } from "sonner";
 import EmojiPicker from './EmojiPicker';
 import EmojiRenderer from './EmojiRenderer';
 import { siqsEmojis } from './SiqsEmojiData';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface MessageInputProps {
   onSend: (text: string, imageFile?: File | null) => void;
@@ -21,6 +22,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showOptions, setShowOptions] = useState(false);
   
   const handleSend = () => {
     if ((!message.trim() && !imageFile) || sending) return;
@@ -86,6 +88,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+    setShowOptions(false);
   };
 
   const handleEmojiSelect = (emojiTag: string) => {
@@ -105,6 +108,8 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
         }
       }, 10);
     }
+    
+    setShowOptions(false);
   };
 
   // Auto-resize textarea as user types
@@ -136,22 +141,70 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
       )}
       
       <div className="flex items-end gap-2">
-        <div className="relative flex-grow bg-cosmic-800/30 rounded-full border border-cosmic-700/50">
-          <div className="flex items-center">
-            <div className="absolute left-2 flex items-center space-x-1 py-2">
-              <button
-                className="text-cosmic-400 hover:text-primary p-1.5 rounded-full hover:bg-cosmic-800/30 transition-colors"
+        <Popover open={showOptions} onOpenChange={setShowOptions}>
+          <PopoverTrigger asChild>
+            <Button
+              className="h-10 w-10 p-0 rounded-full bg-cosmic-800/30 hover:bg-cosmic-700/50 text-cosmic-400 hover:text-primary transition-colors"
+              variant="ghost"
+              type="button"
+              disabled={sending}
+            >
+              <Plus className="h-5 w-5" />
+              <span className="sr-only">{t("Options", "选项")}</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent 
+            className="p-2 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-lg w-auto"
+            side="top"
+            align="start"
+            sideOffset={10}
+          >
+            <div className="flex gap-2">
+              <Button
+                className="flex flex-col items-center gap-1 w-16 h-16 p-1 rounded-lg hover:bg-cosmic-800/50"
+                variant="ghost"
                 onClick={triggerFileInput}
-                type="button"
                 disabled={sending}
               >
-                <Image className="h-5 w-5" />
-              </button>
+                <div className="h-8 w-8 rounded-full bg-cosmic-800/50 flex items-center justify-center">
+                  <Image className="h-5 w-5 text-primary" />
+                </div>
+                <span className="text-xs text-cosmic-300">
+                  {t("Image", "图片")}
+                </span>
+              </Button>
+              
+              <Button
+                className="flex flex-col items-center gap-1 w-16 h-16 p-1 rounded-lg hover:bg-cosmic-800/50"
+                variant="ghost"
+                onClick={() => {
+                  // Open emoji picker directly
+                  const emojiButton = document.querySelector('[aria-label="Insert emoji"]');
+                  if (emojiButton instanceof HTMLElement) {
+                    emojiButton.click();
+                  }
+                }}
+                disabled={sending}
+              >
+                <div className="h-8 w-8 rounded-full bg-cosmic-800/50 flex items-center justify-center">
+                  <Smile className="h-5 w-5 text-primary" />
+                </div>
+                <span className="text-xs text-cosmic-300">
+                  {t("Emoji", "表情")}
+                </span>
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+        
+        <div className="relative flex-grow bg-cosmic-800/30 rounded-full border border-cosmic-700/50">
+          <div className="flex items-center">
+            <div className="absolute right-2 flex items-center space-x-1 py-2 z-10">
               <EmojiPicker onEmojiSelect={handleEmojiSelect} />
             </div>
             <textarea
               ref={textareaRef}
-              className="w-full bg-transparent rounded-full py-2 px-4 pl-16 pr-4 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none"
+              className="w-full bg-transparent rounded-full py-2 px-4 pr-12 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none"
               placeholder={t("Type your message...", "输入您的消息...")}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
