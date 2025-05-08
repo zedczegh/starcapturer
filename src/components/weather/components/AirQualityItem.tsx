@@ -30,11 +30,11 @@ const AirQualityItem: React.FC<AirQualityItemProps> = ({ aqi }) => {
   };
   
   return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2 mb-1">
+    <div>
+      <div className="flex items-center gap-2 mb-2">
         <Wind className="w-4 h-4 text-purple-400" />
         <div className="flex items-center">
-          <span className="text-xs font-medium">{t("Air Quality", "空气质量")}</span>
+          <span className="text-sm font-medium">{t("Air Quality", "空气质量")}</span>
           <Tooltip>
             <TooltipTrigger asChild>
               <Info className="h-3.5 w-3.5 ml-1 text-cosmic-400 cursor-help" />
@@ -48,18 +48,20 @@ const AirQualityItem: React.FC<AirQualityItemProps> = ({ aqi }) => {
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-        <span className="text-xs text-muted-foreground">{t('AQI', 'AQI')}</span>
-        <span className={`text-right text-sm font-medium ${getAQIColorClass(aqi)}`}>
-          {aqi}
-        </span>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
-        <span className="text-xs text-muted-foreground">{t('Quality', '质量')}</span>
-        <span className={`text-right text-xs ${getAQIColorClass(aqi)}`}>
-          {getAQIDescription(aqi)}
-        </span>
+      <div className="bg-cosmic-800/50 rounded-md p-2 mt-1">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-muted-foreground">{t('AQI', 'AQI')}</span>
+          <span className={`text-right text-base font-medium ${getAQIColorClass(aqi)}`}>
+            {aqi}
+          </span>
+        </div>
+        
+        <div className="flex justify-between items-center mt-1">
+          <span className="text-sm text-muted-foreground">{t('Quality', '质量')}</span>
+          <span className={`text-right text-sm ${getAQIColorClass(aqi)}`}>
+            {getAQIDescription(aqi)}
+          </span>
+        </div>
       </div>
     </div>
   );
