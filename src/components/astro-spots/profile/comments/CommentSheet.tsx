@@ -12,6 +12,7 @@ interface CommentSheetProps {
   comments: Comment[];
   user: boolean;
   onSubmit: (content: string, image?: File | null) => void;
+  onReply: (content: string, image: File | null, parentId: string) => Promise<void>;
   sending: boolean;
 }
 
@@ -21,12 +22,13 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
   comments,
   user,
   onSubmit,
+  onReply,
   sending
 }) => {
   const { t } = useLanguage();
   const commentListRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom of comments when new ones are added
+  // Auto-scroll to top of comments when new ones are added
   useEffect(() => {
     if (open && commentListRef.current) {
       commentListRef.current.scrollTop = 0; // Scroll to top since comments are shown newest first
@@ -53,7 +55,11 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
               </div>
             ) : (
               comments.map((comment) => (
-                <CommentItem key={comment.id} comment={comment} />
+                <CommentItem 
+                  key={comment.id} 
+                  comment={comment} 
+                  onReply={onReply}
+                />
               ))
             )}
           </div>

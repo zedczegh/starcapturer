@@ -8,8 +8,28 @@ import { fetchComments, createComment } from '@/services/comments/commentService
 
 export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: string) => string) => {
   const [commentSending, setCommentSending] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-  const submitComment = async (content: string, imageFile: File | null): Promise<{ success: boolean, comments?: Comment[] }> => {
+  // Initial load of comments
+  const loadComments = async () => {
+    try {
+      const fetchedComments = await fetchComments(spotId);
+      setComments(fetchedComments);
+      setLoaded(true);
+      return fetchedComments;
+    } catch (err) {
+      console.error("Error loading comments:", err);
+      setLoaded(true);
+      return [] as Comment[];
+    }
+  };
+
+  const submitComment = async (
+    content: string, 
+    imageFile: File | null, 
+    parentId?: string | null
+  ): Promise<{ success: boolean, comments?: Comment[] }> => {
     setCommentSending(true);
     
     try {
@@ -32,22 +52,23 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         }
       }
       
-      const success = await createComment(userId, spotId, content, imageUrl);
+      const success = await createComment(userId, spotId, content, imageUrl, parentId);
       
       if (!success) {
-        toast.error(t("Failed to post comment.", "评论发送失败。"));
+        toast.error(parentId ? t("Failed to post reply.", "回复发送失败。") : t("Failed to post comment.", "评论发送失败。"));
         return { success: false };
       }
       
       // Fetch updated comments
-      const comments = await fetchComments(spotId);
+      const updatedComments = await fetchComments(spotId);
+      setComments(updatedComments); // Update local state immediately
       
-      toast.success(t("Comment posted!", "评论已发表！"));
-      return { success: true, comments };
+      toast.success(parentId ? t("Reply posted!", "回复已发表！") : t("Comment posted!", "评论已发表！"));
+      return { success: true, comments: updatedComments };
       
     } catch (err) {
       console.error("Exception when posting comment:", err);
-      toast.error(t("Failed to post comment.", "评论发送失败。"));
+      toast.error(parentId ? t("Failed to post reply.", "回复发送失败。") : t("Failed to post comment.", "评论发送失败。"));
       return { success: false };
     } finally {
       setCommentSending(false);
@@ -56,8 +77,10 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
 
   return {
     commentSending,
+    comments,
+    loaded,
     submitComment,
-    fetchComments: () => fetchComments(spotId)
+    fetchComments: loadComments
   };
 };
 
