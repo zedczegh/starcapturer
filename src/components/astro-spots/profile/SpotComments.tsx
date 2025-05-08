@@ -7,6 +7,8 @@ import CommentHeader from './comments/CommentHeader';
 import EmptyComments from './comments/EmptyComments';
 import CommentSheet from './comments/CommentSheet';
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import { Comment } from './types/comments';
 
 interface SpotCommentsProps {
@@ -27,6 +29,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
   sending
 }) => {
   const { t } = useLanguage();
+  const { user: authUser } = useAuth();
   const [showCommentsSheet, setShowCommentsSheet] = useState(false);
   const [localComments, setLocalComments] = useState<Comment[]>(comments);
 
@@ -37,6 +40,11 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
   }, [comments]);
 
   const handleCommentSubmit = async (content: string, imageFile: File | null = null) => {
+    if (!authUser) {
+      toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
+      return;
+    }
+
     if (onSubmit) {
       console.log("Submitting new comment");
       await onSubmit(content, imageFile);
@@ -46,6 +54,11 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
   };
 
   const handleReplySubmit = async (content: string, imageFile: File | null, parentId: string) => {
+    if (!authUser) {
+      toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
+      return;
+    }
+
     if (onSubmit) {
       console.log(`Submitting reply to comment: ${parentId}`);
       // Pass the parent ID parameter

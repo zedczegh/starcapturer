@@ -3,8 +3,10 @@ import React, { useRef, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Comment } from '../types/comments';
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import CommentItem from './CommentItem';
 import CommentInput from './CommentInput';
+import { toast } from "sonner";
 
 interface CommentSheetProps {
   open: boolean;
@@ -26,6 +28,7 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
   sending
 }) => {
   const { t } = useLanguage();
+  const { user: authUser } = useAuth();
   const commentListRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to top of comments when new ones are added
@@ -34,6 +37,15 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
       commentListRef.current.scrollTop = 0; // Scroll to top since comments are shown newest first
     }
   }, [open, comments.length]);
+
+  const handleReply = async (content: string, imageFile: File | null, parentId: string) => {
+    if (!authUser) {
+      toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
+      return;
+    }
+    
+    await onReply(content, imageFile, parentId);
+  };
 
   console.log(`CommentSheet received ${comments.length} comments`);
 
@@ -60,7 +72,7 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
                 <CommentItem 
                   key={comment.id} 
                   comment={comment} 
-                  onReply={onReply}
+                  onReply={handleReply}
                 />
               ))
             )}

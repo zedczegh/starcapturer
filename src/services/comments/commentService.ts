@@ -69,6 +69,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
     
     // Attach replies to their parent comments
     topLevelComments.forEach(comment => {
+      // Sort replies by creation date (oldest first)
       comment.replies = replies
         .filter(reply => reply.parent_id === comment.id)
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());

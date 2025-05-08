@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatDistance } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ImageIcon, Reply, ChevronDown, ChevronUp } from 'lucide-react';
 import CommentInput from './CommentInput';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CommentItemProps {
   comment: Comment;
@@ -17,11 +18,23 @@ interface CommentItemProps {
 
 const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, depth = 0 }) => {
   const { t } = useLanguage();
+  const { user: authUser } = useAuth();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [showReplies, setShowReplies] = useState(true);
+  const [expandedReplies, setExpandedReplies] = useState(true);
   
+  // Auto collapse replies if there are more than 5
+  const hasCollapsibleReplies = comment.replies && comment.replies.length > 5;
+  
+  useEffect(() => {
+    // Auto-collapse if there are many replies
+    if (hasCollapsibleReplies) {
+      setExpandedReplies(false);
+    }
+  }, [hasCollapsibleReplies]);
+
   const formattedDate = formatDistance(
     new Date(comment.created_at), 
     new Date(), 
@@ -47,10 +60,16 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, depth = 0 }
       await onReply(content, imageFile, comment.id);
       setShowReplyInput(false);
       setShowReplies(true);
+      setExpandedReplies(true); // Show all replies after posting a new one
     }
   };
 
   const toggleReplyInput = () => {
+    // Check if user is logged in
+    if (!authUser) {
+      console.error("User must be logged in to reply");
+      return;
+    }
     setShowReplyInput(prev => !prev);
   };
 
@@ -58,6 +77,15 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, depth = 0 }
     setShowReplies(prev => !prev);
   };
 
+  const toggleExpandReplies = () => {
+    setExpandedReplies(prev => !prev);
+  };
+
+  // Get visible replies based on expanded state
+  const visibleReplies = hasReplies && comment.replies ? 
+    (expandedReplies ? comment.replies : comment.replies.slice(0, 5)) : 
+    [];
+  
   return (
     <div className={`flex space-x-3 ${depth > 0 ? 'ml-6 mt-3' : ''}`}>
       <Avatar className="h-10 w-10 shrink-0 bg-cosmic-800 border border-cosmic-700/30">
@@ -133,6 +161,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, depth = 0 }
               size="sm" 
               className="text-xs text-cosmic-400 hover:text-cosmic-100 p-0 h-auto"
               onClick={toggleReplyInput}
+              disabled={!authUser}
             >
               <Reply className="h-3.5 w-3.5 mr-1" />
               {t("Reply", "回复")}
@@ -162,7 +191,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, depth = 0 }
         )}
 
         {/* Reply input */}
-        {showReplyInput && depth < 2 && onReply && (
+        {showReplyInput && depth < 2 && onReply && authUser && (
           <div className="mt-2 mb-3">
             <CommentInput
               onSubmit={handleReply}
@@ -175,7 +204,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, depth = 0 }
         {/* Display replies */}
         {hasReplies && showReplies && (
           <div className="mt-3 space-y-3 border-l-2 border-cosmic-700/30 pl-3">
-            {comment.replies?.map((reply) => (
+            {visibleReplies.map((reply) => (
               <CommentItem 
                 key={reply.id} 
                 comment={reply} 
@@ -183,6 +212,29 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, depth = 0 }
                 depth={depth + 1}
               />
             ))}
+            
+            {/* Show expand/collapse button if more than 5 replies */}
+            {hasCollapsibleReplies && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleExpandReplies}
+                className="text-xs text-cosmic-400 hover:text-cosmic-100 mt-2"
+              >
+                {expandedReplies ? (
+                  <>
+                    <ChevronUp className="h-3.5 w-3.5 mr-1" />
+                    {t("Show fewer replies", "显示较少回复")}
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-3.5 w-3.5 mr-1" />
+                    {t("Show all replies", "显示全部回复")} 
+                    ({comment.replies ? comment.replies.length - 5 : 0} {t("more", "更多")})
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         )}
       </div>

@@ -5,11 +5,13 @@ import { toast } from "sonner";
 import { Comment } from '@/components/astro-spots/profile/types/comments';
 import { uploadCommentImage } from '@/utils/comments/commentImageUtils';
 import { fetchComments, createComment } from '@/services/comments/commentService';
+import { useAuth } from "@/contexts/AuthContext";
 
 export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: string) => string) => {
   const [commentSending, setCommentSending] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const { user: authUser } = useAuth();
 
   // Load comments function with better error handling
   const loadComments = useCallback(async () => {
@@ -32,18 +34,15 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     imageFile: File | null, 
     parentId?: string | null
   ): Promise<{ success: boolean, comments?: Comment[] }> => {
+    if (!authUser) {
+      toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
+      return { success: false };
+    }
+    
     setCommentSending(true);
     
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !userData.user?.id) {
-        console.error("Auth error:", userError);
-        toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
-        return { success: false };
-      }
-      
-      const userId = userData.user.id;
+      const userId = authUser.id;
       
       let imageUrl: string | null = null;
       if (imageFile) {
