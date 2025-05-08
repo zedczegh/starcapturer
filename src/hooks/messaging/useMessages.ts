@@ -42,7 +42,7 @@ export const useMessages = () => {
         text: msg.message, // Map message field to text for compatibility
         created_at: msg.created_at,
         image_url: msg.image_url,
-        location: msg.location,
+        location: msg.location, // Include location data
         read: msg.read // Include read status for checkmark functionality
       }));
       

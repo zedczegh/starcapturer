@@ -28,6 +28,9 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
   const { t } = useLanguage();
   const navigate = useNavigate();
   
+  // Format SIQS score for display
+  const formattedSiqs = formatSIQSScore(siqs);
+  
   const handleViewDetails = () => {
     navigate(`/location/${latitude.toFixed(6)},${longitude.toFixed(6)}`, {
       state: {
@@ -35,9 +38,7 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
         name,
         latitude,
         longitude,
-        siqs: {
-          score: typeof siqs === 'number' ? siqs : siqs?.score || 0
-        },
+        siqs: typeof siqs === 'number' ? { score: siqs } : siqs,
         timestamp,
         fromMessage: true
       }
@@ -50,7 +51,7 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
         <h3 className="text-lg font-semibold text-gray-50">{name}</h3>
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
-          <span className="text-xs font-medium">{formatSIQSScore(siqs)}</span>
+          <span className="text-xs font-medium">{formattedSiqs}</span>
         </div>
       </div>
       

@@ -87,6 +87,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 latitude={message.location.latitude}
                 longitude={message.location.longitude}
                 timestamp={message.location.timestamp}
+                siqs={message.location.siqs}
               />
             </div>
           )}

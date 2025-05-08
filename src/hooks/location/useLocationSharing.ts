@@ -30,6 +30,7 @@ export const useLocationSharing = () => {
             timestamp: new Date().toISOString()
           };
           
+          console.log("Location data prepared for sharing:", locationData);
           setGettingLocation(false);
           resolve(locationData);
         },

@@ -75,6 +75,8 @@ export const useMessageActions = (
         messageData.location = locationData;
       }
       
+      console.log("Sending message with data:", messageData);
+      
       // Insert the message into the database
       const { data: newMessage, error } = await supabase
         .from('user_messages')
