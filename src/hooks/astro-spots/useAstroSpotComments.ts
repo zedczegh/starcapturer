@@ -10,24 +10,18 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   const [commentSending, setCommentSending] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [storageChecked, setStorageChecked] = useState(false);
   const { user: authUser } = useAuth();
 
-  // Initialize bucket checking when hook is first used - don't try to create it anymore
+  // Initialize bucket when hook is first used
   useEffect(() => {
-    const checkStorage = async () => {
+    const initStorage = async () => {
       try {
-        const available = await ensureCommentImagesBucket();
-        setStorageChecked(true);
-        if (!available) {
-          console.log("Comment images storage is not accessible. Some features may be limited.");
-        }
+        await ensureCommentImagesBucket();
       } catch (err) {
-        console.error("Error checking comment image storage:", err);
-        setStorageChecked(true);
+        console.error("Error initializing comment image storage:", err);
       }
     };
-    checkStorage();
+    initStorage();
   }, []);
 
   // Load comments function with better error handling
@@ -56,15 +50,9 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       return { success: false };
     }
     
-    // Always require text content with an image
-    if (imageFile && !content.trim()) {
-      toast.error(t("Please add some text with your image", "请为您的图片添加一些文字"));
-      return { success: false };
-    }
-    
-    // Validate that there is either text or image
-    if (!content.trim() && !imageFile) {
-      toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
+    // Always require text content (even with an image)
+    if (!content.trim()) {
+      toast.error(t("Please enter a comment", "请输入评论"));
       return { success: false };
     }
     
@@ -75,19 +63,14 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       let imageUrl: string | null = null;
       if (imageFile) {
-        // Check if storage is accessible
-        const bucketReady = await ensureCommentImagesBucket();
-        if (!bucketReady) {
-          console.error("Storage bucket is not accessible");
-          toast.error(t("Failed to access storage. Please try again later.", "无法访问存储。请稍后再试。"));
-          return { success: false };
-        }
-        
+        console.log("Uploading image for comment...");
         imageUrl = await uploadCommentImage(imageFile, t);
         if (!imageUrl) {
           toast.error(t("Failed to upload image", "图片上传失败"));
+          setCommentSending(false);
           return { success: false };
         }
+        console.log("Image uploaded successfully:", imageUrl);
       }
       
       const success = await createComment(userId, spotId, content, imageUrl, parentId);
@@ -128,8 +111,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     comments,
     loaded,
     submitComment,
-    fetchComments: loadComments,
-    storageChecked
+    fetchComments: loadComments
   };
 };
 

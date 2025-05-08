@@ -100,12 +100,13 @@ export const createComment = async (
 ): Promise<boolean> => {
   try {
     // Validate that content is not empty if image is being added
-    if (!content.trim() && imageUrl) {
-      console.error("Comment content cannot be empty when uploading an image");
+    if (!content.trim() && !imageUrl) {
+      console.error("Comment content cannot be empty when no image is provided");
       return false;
     }
     
     console.log(`Creating comment for user: ${userId}, spot: ${spotId}, parent: ${parentId || 'none'}`);
+    console.log(`Comment has image URL: ${imageUrl ? 'Yes' : 'No'}`);
     
     const { error: insertError } = await supabase
       .from("astro_spot_comments")
