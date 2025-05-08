@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, User, MessageCircle, Image as ImageIcon, Link as LinkIcon, MoreVertical, Trash2 } from "lucide-react";
@@ -154,7 +153,7 @@ const MessageList: React.FC<MessageListProps> = ({
   return (
     <div className="flex flex-col h-full">
       {/* Fixed header with improved styling and clear border */}
-      <div className="p-4 border-b border-cosmic-800/50 bg-cosmic-900/90 flex items-center gap-3 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
+      <div className="p-4 border-b border-cosmic-800/50 bg-cosmic-900/90 flex items-center gap-3 sticky top-0 z-30 backdrop-blur-md shadow-sm">
         <Button 
           variant="ghost" 
           className="md:hidden mr-2 text-cosmic-400 hover:text-white hover:bg-cosmic-800/50" 
@@ -189,10 +188,11 @@ const MessageList: React.FC<MessageListProps> = ({
         </div>
       </div>
 
-      {/* Messages container with padding to avoid overlap with header and input */}
+      {/* Messages container with improved padding and sizing */}
       <div 
-        className="flex-1 overflow-y-auto p-4 pb-2 space-y-4 max-h-[calc(100%-130px)]" 
+        className="flex-1 overflow-y-auto p-4 pb-6 space-y-4 h-[calc(100%-130px)]" 
         ref={scrollAreaRef}
+        style={{overflowX: "hidden"}}
       >
         {messages.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">

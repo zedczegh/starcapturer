@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -116,7 +115,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   }, [message]);
 
   return (
-    <div className="border-t border-cosmic-800/50 p-4 bg-cosmic-900/60 space-y-3 sticky bottom-0 backdrop-blur-sm">
+    <div className="border-t border-cosmic-800/50 p-4 bg-cosmic-900/70 space-y-3 sticky bottom-0 backdrop-blur-md z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
       {imagePreview && (
         <div className="relative inline-block">
           <img 
