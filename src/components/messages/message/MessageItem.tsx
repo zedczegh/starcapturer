@@ -4,7 +4,7 @@ import { formatRelative } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
 import { useLanguage } from '@/contexts/LanguageContext';
 import EmojiRenderer from '../EmojiRenderer';
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, CheckCheck, Check } from 'lucide-react';
 import UnsendDialog from './UnsendDialog';
 import { Button } from '@/components/ui/button';
 import LocationShareCard from '../LocationShareCard';
@@ -93,10 +93,20 @@ const MessageItem: React.FC<MessageItemProps> = ({
         </div>
         
         <div
-          className={`text-xs text-gray-500 mt-1 ${
-            isSender ? 'text-right' : 'text-left'
+          className={`flex items-center text-xs text-gray-500 mt-1 ${
+            isSender ? 'justify-end' : 'justify-start'
           }`}
         >
+          {/* Message read status indicators, only shown for sent messages */}
+          {isSender && (
+            <span className="mr-2 flex items-center">
+              {message.read ? (
+                <CheckCheck className="h-3 w-3 text-green-500" />
+              ) : (
+                <Check className="h-3 w-3 text-gray-400" />
+              )}
+            </span>
+          )}
           {formattedDate}
         </div>
       </div>

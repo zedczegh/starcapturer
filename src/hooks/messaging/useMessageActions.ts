@@ -96,7 +96,8 @@ export const useMessageActions = (
           text: text,
           created_at: newMessage.created_at,
           image_url: imageUrl,
-          location: locationData
+          location: locationData,
+          read: false // New message starts as unread
         }
       ]);
       

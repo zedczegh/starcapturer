@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { format } from "date-fns";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -11,7 +10,8 @@ import { Trash2 } from "lucide-react";
 interface Message {
   id: string;
   sender_id: string;
-  message: string;
+  message?: string;
+  text?: string;
   image_url?: string | null;
   created_at: string;
   sender_profile?: {
@@ -19,8 +19,8 @@ interface Message {
     avatar_url: string | null;
   };
   is_unsent?: boolean;
-  text?: string;
   location?: any;
+  read?: boolean;
 }
 
 interface ConversationPartner {
