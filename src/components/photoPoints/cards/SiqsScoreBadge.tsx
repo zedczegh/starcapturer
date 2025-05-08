@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
-import { getSiqsScore, normalizeToSiqsScale } from '@/utils/siqsHelpers';
-import { motion, AnimatePresence } from 'framer-motion';
-import { formatSiqsForDisplay } from '@/utils/siqsHelpers';
+import { getSiqsScore, formatSiqsForDisplay } from '@/utils/siqsHelpers';
 
 interface SiqsScoreBadgeProps {
   score: number | string | { score: number; isViable: boolean } | any;
@@ -171,7 +169,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     return null;
   }
 
-  // Use a simpler animation approach for better Safari compatibility
+  // Use a simpler approach for better Safari compatibility
   return (
     <div 
       className={`flex items-center ${getColor()} ${compact ? 'px-1.5 py-0.5' : 'px-2 py-0.5'} rounded-full border transition-opacity duration-200 ${isTransitioning ? 'opacity-60' : 'opacity-100'}`}

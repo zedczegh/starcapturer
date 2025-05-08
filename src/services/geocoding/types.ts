@@ -12,6 +12,8 @@ export interface Location {
   formattedAddress?: string;
   placeDetails?: string;
   chineseName?: string;
+  bortleScale?: number;
+  formattedName?: string;
 }
 
 export interface GeocodingOptions {
@@ -53,6 +55,13 @@ export interface ChineseLocation {
   district?: string;
   nameEn?: string;
   coordinates?: [number, number];
+  villageZh?: string;
+  village?: string;
+  countyZh?: string;
+  county?: string;
+  provinceZh?: string;
+  cityZh?: string;
+  population?: number;
 }
 
 // Add a shared interface for geocoding responses

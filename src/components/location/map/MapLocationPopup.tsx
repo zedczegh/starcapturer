@@ -10,7 +10,7 @@ interface MapLocationPopupProps {
   position: [number, number];
   isDarkSkyReserve?: boolean;
   certification?: string;
-  siqs?: number | null;
+  siqs?: number | null | { score: number; isViable: boolean } | any;
 }
 
 const MapLocationPopup: React.FC<MapLocationPopupProps> = ({ 

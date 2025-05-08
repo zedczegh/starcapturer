@@ -91,3 +91,47 @@ export function formatSiqsScore(siqs?: number | { score: number; isViable: boole
   const score = getSiqsScore(siqs);
   return formatSiqsForDisplay(score);
 }
+
+/**
+ * Compare if a SIQS value is at least a certain threshold
+ * @param siqs SIQS value which could be a number or object
+ * @param threshold Minimum threshold to compare against
+ * @returns true if the SIQS is at least the threshold
+ */
+export function isSiqsAtLeast(siqs: number | any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score >= threshold;
+}
+
+/**
+ * Compare if a SIQS value is greater than a certain threshold
+ * @param siqs SIQS value which could be a number or object
+ * @param threshold Threshold to compare against
+ * @returns true if the SIQS is greater than the threshold
+ */
+export function isSiqsGreaterThan(siqs: number | any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score > threshold;
+}
+
+/**
+ * Sort locations by SIQS score (highest first)
+ * @param locations Array of locations to sort
+ * @returns Sorted array of locations
+ */
+export function sortLocationsBySiqs(locations: SharedAstroSpot[]): SharedAstroSpot[] {
+  return [...locations].sort((a, b) => {
+    const aRealTime = (a as any).realTimeSiqs;
+    const bRealTime = (b as any).realTimeSiqs;
+    
+    const aSiqs = typeof aRealTime === "number" && aRealTime > 0
+      ? aRealTime
+      : getSiqsScore(a.siqs);
+      
+    const bSiqs = typeof bRealTime === "number" && bRealTime > 0
+      ? bRealTime
+      : getSiqsScore(b.siqs);
+      
+    return (bSiqs || 0) - (aSiqs || 0);
+  });
+}
