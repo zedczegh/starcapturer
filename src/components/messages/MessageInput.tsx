@@ -1,16 +1,16 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Send, Image, X, Smile, Plus } from "lucide-react";
+import { Send, Image, X, Smile, Plus, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import EmojiPicker from './EmojiPicker';
 import EmojiRenderer from './EmojiRenderer';
 import { siqsEmojis } from './SiqsEmojiData';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useLocationSharing } from '@/hooks/location/useLocationSharing';
 
 interface MessageInputProps {
-  onSend: (text: string, imageFile?: File | null) => void;
+  onSend: (text: string, imageFile?: File | null, locationData?: any) => void;
   sending: boolean;
 }
 
@@ -24,6 +24,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showOptions, setShowOptions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const { gettingLocation, shareCurrentLocation } = useLocationSharing();
   
   const handleSend = () => {
     if ((!message.trim() && !imageFile) || sending) return;
@@ -118,6 +119,19 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
     setShowEmojiPicker(false);
   };
 
+  const handleShareLocation = async () => {
+    if (sending || gettingLocation) return;
+    
+    toast.info(t("Getting your location...", "正在获取您的位置..."));
+    setShowOptions(false);
+    
+    const locationData = await shareCurrentLocation();
+    if (locationData) {
+      onSend("", null, locationData);
+      toast.success(t("Location shared successfully", "位置已成功共享"));
+    }
+  };
+
   // Auto-resize textarea as user types
   useEffect(() => {
     if (textareaRef.current) {
@@ -170,7 +184,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
                 className="flex flex-col items-center gap-1 w-16 h-16 p-1 rounded-lg hover:bg-cosmic-800/50"
                 variant="ghost"
                 onClick={triggerFileInput}
-                disabled={sending}
+                disabled={sending || gettingLocation}
               >
                 <div className="h-8 w-8 rounded-full bg-cosmic-800/50 flex items-center justify-center">
                   <Image className="h-5 w-5 text-primary" />
@@ -191,6 +205,20 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
                 </div>
                 <span className="text-xs text-cosmic-300">
                   {t("Emoji", "表情")}
+                </span>
+              </Button>
+              
+              <Button
+                className="flex flex-col items-center gap-1 w-16 h-16 p-1 rounded-lg hover:bg-cosmic-800/50"
+                variant="ghost"
+                onClick={handleShareLocation}
+                disabled={sending || gettingLocation}
+              >
+                <div className="h-8 w-8 rounded-full bg-cosmic-800/50 flex items-center justify-center">
+                  <MapPin className="h-5 w-5 text-primary" />
+                </div>
+                <span className="text-xs text-cosmic-300">
+                  {t("Location", "位置")}
                 </span>
               </Button>
             </div>

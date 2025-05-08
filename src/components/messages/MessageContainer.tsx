@@ -17,7 +17,7 @@ interface MessageContainerProps {
   setSearchQuery: (query: string) => void;
   onSelectConversation: (conversation: ConversationPartner) => void;
   onBack: () => void;
-  onSendMessage: (message: string, imageFile?: File | null) => Promise<void>;
+  onSendMessage: (message: string, imageFile?: File | null, locationData?: any) => Promise<void>;
   onUnsendMessage: (messageId: string) => Promise<boolean>;
   sending: boolean;
   isProcessingAction: boolean;
