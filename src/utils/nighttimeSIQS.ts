@@ -1,11 +1,10 @@
-
 /**
  * Utility for calculating SIQS based specifically on nighttime conditions
  * Enhanced with improved historical data integration
  */
 import { calculateSIQS } from '@/lib/calculateSIQS';
 import { getNightHours } from './astronomy/nightTimeCalculator';
-import { getHistoricalPattern } from './historicalPatterns';
+import { getHistoricalPattern as getHistoricalPatternData } from './historicalPatterns';
 
 /**
  * Filter forecast data to include only nighttime hours (6 PM to 7 AM)
@@ -146,7 +145,7 @@ export const calculateTonightCloudCover = (
   
   // Apply historical pattern adjustment if available
   let avgCloudCover = cloudValues.reduce((sum, val) => sum + val, 0) / cloudValues.length;
-  const historicalPattern = getHistoricalPattern(latitude, longitude);
+  const historicalPattern = getHistoricalPatternData(latitude, longitude);
   
   if (historicalPattern && historicalPattern.cloudCoverAdjustment) {
     const month = new Date().getMonth();
@@ -204,7 +203,7 @@ export const calculateNighttimeSIQS = (
   let adjustedHumidity = avgHumidity;
   
   if (locationData.latitude && locationData.longitude) {
-    const historicalPattern = getHistoricalPattern(locationData.latitude, locationData.longitude);
+    const historicalPattern = getHistoricalPatternData(locationData.latitude, locationData.longitude);
     
     if (historicalPattern) {
       const month = new Date().getMonth();
@@ -271,13 +270,11 @@ export const calculateNighttimeSIQS = (
 
 /**
  * Get historical pattern for location if available
- * Placeholder function - in production this would query a historical data service
+ * Uses the imported function from historicalPatterns.ts
  * @param latitude Location latitude
  * @param longitude Location longitude
  * @returns Historical pattern data or null if not available
  */
 export function getHistoricalPattern(latitude: number, longitude: number): any {
-  // This would typically fetch from a database or API
-  // For now, return null until we implement the historical data service
-  return null;
+  return getHistoricalPatternData(latitude, longitude);
 }

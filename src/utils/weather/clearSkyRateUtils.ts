@@ -1,3 +1,4 @@
+
 /**
  * Clear sky rate utility functions with enhanced historical data
  */
@@ -217,7 +218,7 @@ function applyRegionalAdjustments(baseNights: number, latitude?: number, longitu
   // Tibetan plateau - enhanced with actual observatory data
   if (latitude >= 28 && latitude <= 36 && longitude >= 78 && longitude <= 92) {
     // Updated based on 30 years of observation data from Tibetan observatories
-    const tibetBaseline = Math.max(clearSkyRate * 1.25, 75); 
+    const tibetBaseline = Math.max(baseNights * 1.25, 75); 
     clearNights = Math.round((tibetBaseline / 100) * 365 * 0.75) - 40;
     clearNights = Math.max(120, clearNights);
     
@@ -228,19 +229,19 @@ function applyRegionalAdjustments(baseNights: number, latitude?: number, longitu
   }
   // Atacama Desert - updated with ESO observatory records
   else if (latitude >= -27 && latitude <= -22 && longitude >= -71 && longitude <= -68) {
-    clearNights = Math.max(160, Math.round((clearSkyRate * 1.35) / 100 * 365 * 0.75) - 40);
+    clearNights = Math.max(160, Math.round((baseNights * 1.35) / 100 * 365 * 0.75) - 40);
   }
   // Namibian desert - updated with HESS telescope data
   else if (latitude >= -27 && latitude <= -20 && longitude >= 14 && longitude <= 20) {
-    clearNights = Math.max(125, Math.round((clearSkyRate * 1.2) / 100 * 365 * 0.7) - 50);
+    clearNights = Math.max(125, Math.round((baseNights * 1.2) / 100 * 365 * 0.7) - 50);
   }
   // Mauna Kea - updated with Keck Observatory records
   else if (latitude >= 19 && latitude <= 20 && longitude >= -156 && longitude <= -155) {
-    clearNights = Math.max(135, Math.round((clearSkyRate * 1.25) / 100 * 365 * 0.7) - 45);
+    clearNights = Math.max(135, Math.round((baseNights * 1.25) / 100 * 365 * 0.7) - 45);
   }
   // Arizona - updated with Lowell Observatory data
   else if (latitude >= 31 && latitude <= 35 && longitude >= -112 && longitude <= -109) {
-    clearNights = Math.max(105, Math.round((clearSkyRate * 1.15) / 100 * 365 * 0.65) - 50);
+    clearNights = Math.max(105, Math.round((baseNights * 1.15) / 100 * 365 * 0.65) - 50);
   }
   // Guizhou province - updated with Chinese meteorological records
   else if (latitude >= 24.5 && latitude <= 29 && longitude >= 104 && longitude <= 109.5) {
