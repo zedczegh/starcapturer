@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, ImagePlus, X, AlertTriangle } from "lucide-react";
+import { Loader2, Send, ImagePlus, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 
@@ -10,28 +10,13 @@ interface CommentInputProps {
   onSubmit: (content: string, image?: File | null) => void;
   sending: boolean;
   isReply?: boolean;
-  imageUploadsAvailable?: boolean | null;
 }
 
-const CommentInput: React.FC<CommentInputProps> = ({ 
-  onSubmit, 
-  sending, 
-  isReply = false,
-  imageUploadsAvailable = true
-}) => {
+const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply = false }) => {
   const { t } = useLanguage();
   const [commentText, setCommentText] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [showFilePicker, setShowFilePicker] = useState(false);
-
-  // Clear image if uploads become unavailable
-  useEffect(() => {
-    if (imageUploadsAvailable === false && imageFile) {
-      handleRemoveImage();
-      toast.warning(t("Image uploads are currently unavailable", "图片上传当前不可用"));
-    }
-  }, [imageUploadsAvailable, t, imageFile]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +37,6 @@ const CommentInput: React.FC<CommentInputProps> = ({
     setCommentText('');
     setImageFile(null);
     setImagePreview(null);
-    setShowFilePicker(false);
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,7 +49,6 @@ const CommentInput: React.FC<CommentInputProps> = ({
       
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
-      setShowFilePicker(false);
     }
   };
 
@@ -104,42 +87,24 @@ const CommentInput: React.FC<CommentInputProps> = ({
         </div>
       )}
 
-      {imageUploadsAvailable === false && (
-        <div className="flex items-center gap-2 text-amber-400 text-sm">
-          <AlertTriangle className="h-4 w-4" />
-          <span>{t("Image uploads unavailable", "图片上传不可用")}</span>
-        </div>
-      )}
-
       <div className="flex gap-2 justify-end">
-        {imageUploadsAvailable !== false && !imageFile && (
-          <>
-            {showFilePicker ? (
-              <input 
-                type="file"
-                className="text-sm text-primary/90 file:mr-2 file:py-1 file:px-2 file:text-xs file:bg-cosmic-800/50 file:border-0 file:rounded file:text-primary"
-                accept="image/*"
-                onChange={handleImageSelect}
-                disabled={sending}
-              />
-            ) : (
-              <Button
-                type="button"
-                variant="ghost" 
-                size="sm"
-                onClick={() => setShowFilePicker(true)}
-                className="text-primary/90 hover:text-primary hover:bg-cosmic-800/30"
-              >
-                <ImagePlus className="h-4 w-4 mr-1" />
-                <span>{t("Add Image", "添加图片")}</span>
-              </Button>
-            )}
-          </>
-        )}
+        <label className="cursor-pointer">
+          <div className="flex items-center gap-2 px-3 py-2 text-sm text-primary/90 hover:text-primary hover:bg-cosmic-800/30 rounded-md">
+            <ImagePlus className="h-4 w-4" />
+            <span>{t("Add Image", "添加图片")}</span>
+          </div>
+          <input 
+            type="file"
+            className="hidden"
+            accept="image/*"
+            onChange={handleImageSelect}
+            disabled={sending}
+          />
+        </label>
         <Button 
           type="submit" 
           size="sm" 
-          disabled={sending || (!commentText.trim() && !imageFile)}
+          disabled={sending || (!commentText.trim() && !imageFile) || (imageFile && !commentText.trim())}
           className="flex gap-1 items-center"
         >
           {sending ? (

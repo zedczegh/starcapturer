@@ -59,12 +59,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
       created_at: comment.created_at,
       image_url: comment.image_url,
       parent_id: comment.parent_id,
-      profiles: profilesMap[comment.user_id] 
-        ? { 
-            username: profilesMap[comment.user_id].username || null, 
-            avatar_url: profilesMap[comment.user_id].avatar_url || null 
-          }
-        : null,
+      profiles: profilesMap[comment.user_id] || { username: null, avatar_url: null },
       replies: [] // Initialize empty replies array for each comment
     }));
     
@@ -100,13 +95,12 @@ export const createComment = async (
 ): Promise<boolean> => {
   try {
     // Validate that content is not empty if image is being added
-    if (!content.trim() && !imageUrl) {
-      console.error("Comment content cannot be empty when no image is provided");
+    if (!content.trim() && imageUrl) {
+      console.error("Comment content cannot be empty when uploading an image");
       return false;
     }
     
     console.log(`Creating comment for user: ${userId}, spot: ${spotId}, parent: ${parentId || 'none'}`);
-    console.log(`Comment has image URL: ${imageUrl ? 'Yes' : 'No'}`);
     
     const { error: insertError } = await supabase
       .from("astro_spot_comments")

@@ -5,7 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Comment } from '../types/comments';
 import CommentInput from './CommentInput';
 import { Button } from "@/components/ui/button";
-import { MessageSquare, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -19,7 +19,6 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
   const { user: authUser } = useAuth();
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState(false);
-  const [imageExpanded, setImageExpanded] = useState(false);
   
   // Determine if we should collapse replies
   const hasReplies = comment.replies && comment.replies.length > 0;
@@ -40,10 +39,6 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
     if (!authUser) return;
     await onReply(content, imageFile, comment.id);
     setShowReplyInput(false);
-  };
-
-  const handleToggleImageExpand = () => {
-    setImageExpanded(!imageExpanded);
   };
 
   const getFormattedDate = (dateString: string) => {
@@ -70,11 +65,6 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
               src={comment.profiles.avatar_url} 
               alt={username} 
               className="object-cover"
-              onError={(e) => {
-                // Fallback if image fails to load
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
             />
           ) : (
             <AvatarFallback className="bg-cosmic-800 text-cosmic-200">
@@ -93,34 +83,14 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
             {comment.content}
           </p>
           
-          {/* Image attachment with improved handling */}
+          {/* Image attachment */}
           {comment.image_url && (
             <div className="mt-2">
-              <div className="relative">
-                <img 
-                  src={comment.image_url}
-                  alt={t("Comment attachment", "评论附件")}
-                  className={`rounded-md border border-cosmic-700/50 cursor-pointer transition-all ${
-                    imageExpanded ? "max-w-full" : "max-h-48"
-                  }`}
-                  onClick={handleToggleImageExpand}
-                  onError={(e) => {
-                    console.error("Image failed to load:", comment.image_url);
-                    const target = e.target as HTMLImageElement;
-                    target.src = 'https://placehold.co/300x200/121927/8888aa?text=Image+Not+Available';
-                  }}
-                />
-                {comment.image_url && (
-                  <Button
-                    variant="ghost" 
-                    size="sm" 
-                    className="absolute top-2 right-2 bg-cosmic-900/70 p-1 rounded-full hover:bg-cosmic-900"
-                    onClick={() => window.open(comment.image_url, "_blank")}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+              <img 
+                src={comment.image_url}
+                alt={t("Comment attachment", "评论附件")}
+                className="max-h-48 rounded-md border border-cosmic-700/50"
+              />
             </div>
           )}
         </div>
@@ -163,11 +133,6 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
                         src={reply.profiles.avatar_url} 
                         alt={reply.profiles?.username || t("Anonymous", "匿名用户")} 
                         className="object-cover"
-                        onError={(e) => {
-                          // Fallback if image fails to load
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                        }}
                       />
                     ) : (
                       <AvatarFallback className="bg-cosmic-800 text-cosmic-200 text-xs">
@@ -188,22 +153,14 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
                       {reply.content}
                     </p>
                     
-                    {/* Reply image attachment with improved handling */}
+                    {/* Reply image attachment */}
                     {reply.image_url && (
                       <div className="mt-2">
-                        <div className="relative">
-                          <img 
-                            src={reply.image_url}
-                            alt={t("Reply attachment", "回复附件")}
-                            className="max-h-32 rounded-md border border-cosmic-700/50 cursor-pointer"
-                            onClick={() => window.open(reply.image_url, "_blank")}
-                            onError={(e) => {
-                              console.error("Image failed to load:", reply.image_url);
-                              const target = e.target as HTMLImageElement;
-                              target.src = 'https://placehold.co/200x150/121927/8888aa?text=Image+Not+Available';
-                            }}
-                          />
-                        </div>
+                        <img 
+                          src={reply.image_url}
+                          alt={t("Reply attachment", "回复附件")}
+                          className="max-h-32 rounded-md border border-cosmic-700/50"
+                        />
                       </div>
                     )}
                   </div>

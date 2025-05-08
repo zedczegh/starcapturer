@@ -1,11 +1,13 @@
 
-import React, { memo, useEffect, useState, useRef } from "react";
+import React, { memo, Suspense, useEffect, useState, useRef } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import LocationContentLoader from "./LocationContentLoader";
 import LocationFaultedMessage from "./LocationFaultedMessage";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+// Import the component directly instead of lazy loading it
 import LocationContentGrid from "./LocationContentGrid";
 import { useLocationContentManager } from "./useLocationContentManager";
 
