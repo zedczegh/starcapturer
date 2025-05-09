@@ -1,5 +1,5 @@
 
-import { getSiqsScore, normalizeToSiqsScale } from './siqsHelpers';
+import { getSiqsScore, normalizeToSiqsScale, SiqsValue } from './siqsHelpers';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 
 /**
@@ -128,7 +128,7 @@ export async function getCompleteSiqsDisplay({
 }
 
 // Get the appropriate color class based on SIQS score
-export function getSiqsColorClass(score: number | null | undefined): string {
+export function getSiqsColorClass(score: SiqsValue): string {
   const normalizedScore = getSiqsScore(score);
   
   if (!normalizedScore || normalizedScore <= 0) {
@@ -143,7 +143,7 @@ export function getSiqsColorClass(score: number | null | undefined): string {
 }
 
 // Format SIQS score for display with proper precision
-export function formatSiqsForDisplay(score: number | null | undefined): string {
+export function formatSiqsForDisplay(score: SiqsValue): string {
   const normalizedScore = getSiqsScore(score);
   
   if (!normalizedScore || normalizedScore <= 0) {
@@ -155,7 +155,7 @@ export function formatSiqsForDisplay(score: number | null | undefined): string {
 
 // Determine if score should be shown on mobile
 export function shouldShowScoreOnMobile(
-  score: number | null | undefined,
+  score: SiqsValue,
   isCertified: boolean
 ): boolean {
   const normalizedScore = getSiqsScore(score);

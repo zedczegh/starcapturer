@@ -1,11 +1,18 @@
-
 /**
  * Utility functions for SIQS score handling and display
  */
 
+// Define common SIQS types for better type safety
+export type SiqsValue = number | null | undefined | { score: number; isViable: boolean };
+
 // Normalize any SIQS value to the standard 0-10 scale
-export function normalizeToSiqsScale(value: number | null | undefined): number {
+export function normalizeToSiqsScale(value: SiqsValue): number {
   if (value === null || value === undefined) return 0;
+  
+  // Handle object format
+  if (typeof value === 'object' && 'score' in value) {
+    value = value.score;
+  }
   
   // Already in 0-10 range
   if (value >= 0 && value <= 10) {
@@ -25,7 +32,7 @@ export function normalizeToSiqsScale(value: number | null | undefined): number {
 }
 
 // Extract SIQS score from various formats
-export function getSiqsScore(siqs: any): number {
+export function getSiqsScore(siqs: SiqsValue): number {
   if (siqs === null || siqs === undefined) return 0;
   
   // Handle number directly
@@ -50,13 +57,14 @@ export function getSiqsScore(siqs: any): number {
 }
 
 // Format SIQS for display with proper precision
-export function formatSiqsForDisplay(siqs: number | null): string {
-  if (siqs === null || siqs <= 0) {
+export function formatSiqsForDisplay(siqs: SiqsValue): string {
+  const score = getSiqsScore(siqs);
+  if (score <= 0) {
     return "—";
   }
   
   // Keep one decimal place for visual consistency
-  return siqs.toFixed(1);
+  return score.toFixed(1);
 }
 
 // Export formatSiqsScore as an alias for formatSiqsForDisplay for backward compatibility
@@ -112,13 +120,13 @@ export function getDisplaySiqs({
 }
 
 // Compare SIQS scores - check if first score is greater than second
-export function isSiqsGreaterThan(siqs: any, threshold: number): boolean {
+export function isSiqsGreaterThan(siqs: SiqsValue, threshold: number): boolean {
   const score = getSiqsScore(siqs);
   return score > threshold;
 }
 
 // Check if SIQS score is at least a certain value
-export function isSiqsAtLeast(siqs: any, threshold: number): boolean {
+export function isSiqsAtLeast(siqs: SiqsValue, threshold: number): boolean {
   const score = getSiqsScore(siqs);
   return score >= threshold;
 }
