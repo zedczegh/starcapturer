@@ -1,31 +1,84 @@
 
-// Cache configuration for SIQS calculator
-
-// Cache durations for different scenarios
-export const NIGHT_CACHE_DURATION = 20 * 60 * 1000; // 20 minutes at night
-export const DAY_CACHE_DURATION = 10 * 60 * 1000;  // 10 minutes during day
-export const AUTO_CLEANUP_INTERVAL = 5 * 60 * 1000; // Automatic cleanup every 5 minutes
-
 /**
- * Determine if it's nighttime for cache duration purposes
+ * Configuration for SIQS caching system
+ * Optimized for mobile performance
  */
-export const isNighttime = (): boolean => {
-  const hour = new Date().getHours();
-  return hour >= 18 || hour < 8; // 6 PM to 8 AM
+
+// Standard cache duration: 10 minutes
+const DEFAULT_CACHE_DURATION = 10 * 60 * 1000; 
+
+// Mobile-optimized cache duration: 15 minutes (longer to reduce API calls)
+const MOBILE_CACHE_DURATION = 15 * 60 * 1000;
+
+// Auto cleanup interval: 2 minutes
+export const AUTO_CLEANUP_INTERVAL = 2 * 60 * 1000;
+
+// Get the appropriate cache duration based on platform
+export function getCacheDuration(): number {
+  // Detect if running on mobile
+  const isMobile = typeof window !== 'undefined' && 
+    (window.innerWidth < 768 || 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+  
+  return isMobile ? MOBILE_CACHE_DURATION : DEFAULT_CACHE_DURATION;
+}
+
+// Generate a consistent location key for caching
+export function getLocationKey(latitude: number, longitude: number): string {
+  // Use 4 decimal places for location (~11m accuracy)
+  const latKey = latitude.toFixed(4);
+  const lngKey = longitude.toFixed(4);
+  return `${latKey},${lngKey}`;
+}
+
+// Configuration for optimizing network requests
+export const networkConfig = {
+  // Minimum time between requests to the same endpoint (ms)
+  rateLimitInterval: 500,
+  
+  // Maximum concurrent requests
+  maxConcurrentRequests: 3,
+  
+  // Request timeout (ms)
+  timeout: 8000,
+  
+  // Network conditions detection
+  detectSlowConnection: true,
+  
+  // Reduce quality on slow connections
+  adaptToNetworkSpeed: true
 };
 
-/**
- * Get the appropriate cache duration based on time of day
- */
-export const getCacheDuration = (): number => {
-  return isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
+// Mobile-specific optimizations
+export const mobileOptimizations = {
+  // Reduce animation complexity
+  reduceAnimations: true,
+  
+  // Use compact UI elements
+  useCompactUI: true,
+  
+  // Prioritize essential API calls
+  deprioritizeNonEssential: true,
+  
+  // Lazy load images and heavy components
+  enableLazyLoading: true
 };
 
-/**
- * Generate a consistent cache key for a location
- * @param latitude Latitude of the location
- * @param longitude Longitude of the location
- */
-export const getLocationKey = (latitude: number, longitude: number): string => {
-  return `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-};
+// Export a function to detect if we should apply mobile optimizations
+export function shouldApplyMobileOptimizations(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  // Check screen width
+  const isMobileWidth = window.innerWidth < 768;
+  
+  // Check for mobile user agent
+  const isMobileAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+  
+  // Check for touch capability
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  // Apply mobile optimizations if any of these are true
+  return isMobileWidth || isMobileAgent || isTouch;
+}

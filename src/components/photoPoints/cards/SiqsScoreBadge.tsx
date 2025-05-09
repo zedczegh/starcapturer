@@ -27,10 +27,10 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   const loadingTimeoutRef = useRef<number | null>(null);
   const stableScoreRef = useRef<number | null>(null);
   
-  // Convert score to number using our helper function which now properly normalizes
+  // Convert score to number using our helper function
   const numericScore = score === null ? 0 : getSiqsScore(score);
   
-  // For certified locations with no valid score, show loading state only initially
+  // Only show loading for initial load on certified locations
   const showLoading = loading && !stableScoreRef.current;
   
   // Update displayed score with smooth transition when real score changes
@@ -64,7 +64,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
           setLoadingState(false);
         }
         loadingTimeoutRef.current = null;
-      }, 600);
+      }, 500);
       
       return () => {
         if (loadingTimeoutRef.current) {
@@ -157,8 +157,10 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
           className={`${compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-gray-400 mr-1`} 
           fill="#475569" 
         />
-        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
-          ...
+        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium loading-dot-animation`}>
+          <span className="loading-dot">.</span>
+          <span className="loading-dot">.</span>
+          <span className="loading-dot">.</span>
         </span>
       </div>
     );

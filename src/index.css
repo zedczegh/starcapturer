@@ -2,161 +2,183 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+ 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 263 53% 75%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --background: 220 100% 99%;
+    --foreground: 220 10% 0%;
+    
+    --muted: 220 10% 92%;
+    --muted-foreground: 220 10% 40%;
+    
+    --popover: 220 100% 99%;
+    --popover-foreground: 220 10% 10%;
+    
+    --card: 220 100% 98%;
+    --card-foreground: 220 10% 10%;
+    
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    
+    --primary: 258 90% 66%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 220 10% 90%;
+    --secondary-foreground: 220 10% 10%;
+    
+    --accent: 220 100% 96%;
+    --accent-foreground: 220 10% 10%;
+    
+    --destructive: 0 100% 66%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --ring: 258 90% 66%;
+    
     --radius: 0.5rem;
     
-    /* Color palette for SIQS score ranges */
-    --red-500: rgb(239, 68, 68);
-    --orange-400: rgb(251, 146, 60);
-    --yellow-400: rgb(250, 204, 21);
-    --olive-500: rgb(128, 128, 0);
-    --green-500: rgb(34, 197, 94);
-    --cosmic-100: rgb(226, 232, 240);
-    --cosmic-200: rgb(203, 213, 225);
-    --cosmic-300: rgb(148, 163, 184);
-    --cosmic-400: rgb(100, 116, 139);
-    --cosmic-500: rgb(71, 85, 105);
-    --cosmic-600: rgb(51, 65, 85);
-    --cosmic-700: rgb(30, 41, 59);
-    --cosmic-800: rgb(15, 23, 42);
-    --cosmic-900: rgb(10, 17, 34);
-    --cosmic-950: rgb(2, 6, 23);
+    --cosmic-50: 225 100% 98%;
+    --cosmic-100: 226 100% 96%;
+    --cosmic-200: 228 100% 93%;
+    --cosmic-300: 227 100% 87%;
+    --cosmic-400: 229 100% 80%;
+    --cosmic-500: 231 98% 71%;
+    --cosmic-600: 235 89% 63%;
+    --cosmic-700: 240 68% 54%;
+    --cosmic-800: 244 62% 40%;
+    --cosmic-900: 245 58% 27%;
+    --cosmic-950: 244 65% 16%;
+  }
+ 
+  .dark {
+    --background: 220 10% 4%;
+    --foreground: 220 10% 98%;
+    
+    --muted: 220 10% 15%;
+    --muted-foreground: 220 10% 65%;
+    
+    --popover: 220 45% 5%;
+    --popover-foreground: 220 10% 98%;
+    
+    --card: 220 45% 6%;
+    --card-foreground: 220 10% 98%;
+    
+    --border: 220 15% 18%;
+    --input: 220 15% 18%;
+    
+    --primary: 258 90% 66%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 220 10% 15%;
+    --secondary-foreground: 220 10% 98%;
+    
+    --accent: 220 70% 12%;
+    --accent-foreground: 220 10% 98%;
+    
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --ring: 258 90% 66%;
+    
+    --cosmic-50: 230 61% 14%;
+    --cosmic-100: 232 59% 15%;
+    --cosmic-200: 232 55% 18%;
+    --cosmic-300: 230 47% 22%;
+    --cosmic-400: 231 41% 29%;
+    --cosmic-500: 231 36% 36%;
+    --cosmic-600: 230 33% 45%;
+    --cosmic-700: 232 31% 56%;
+    --cosmic-800: 231 39% 72%;
+    --cosmic-900: 232 49% 85%;
+    --cosmic-950: 230 62% 94%;
+  }
+
+  /* General styling */
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Hide scrollbars but allow scrolling */
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  /* Read status checkmarks */
+  .read-checkmark {
+    @apply text-green-500 drop-shadow-sm;
+  }
+  .unread-checkmark {
+    @apply text-cosmic-400 opacity-75;
+  }
+  
+  /* SIQS Loading dots animation */
+  .loading-dot-animation {
+    display: inline-flex;
+    align-items: center;
+  }
+  
+  .loading-dot {
+    animation: loadingDot 1.4s infinite both;
+    opacity: 0.5;
+  }
+  
+  .loading-dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  .loading-dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  
+  @keyframes loadingDot {
+    0%, 80%, 100% {
+      opacity: 0.5;
+      transform: scale(0.8);
+    }
+    40% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+  
+  /* Mobile-optimized hover and touch states */
+  @media (hover: none) {
+    .touch-highlight {
+      @apply active:bg-cosmic-800/30 transition-colors duration-200;
+    }
+  }
+  
+  /* Mobile optimized lazy loading */
+  .lazy-fade-in {
+    opacity: 0;
+    transition: opacity 0.5s ease-in;
+  }
+  
+  .lazy-fade-in.loaded {
+    opacity: 1;
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-cosmic-950 text-foreground;
-  }
-  
-  /* Add necessary styles for score classes */
-  .score-excellent {
-    background-color: var(--green-500);
-  }
-  .score-good {
-    background: linear-gradient(to right, #8A9A5B, #606C38);
-  }
-  .score-above-average {
-    background-color: var(--olive-500); 
-  }
-  .score-average {
-    background-color: var(--yellow-400);
-  }
-  .score-poor {
-    background-color: var(--orange-400);
-  }
-  .score-bad {
-    background-color: var(--red-500);
-  }
-  
-  /* Glass card styling with enhanced transparency */
-  .glass-card {
-    @apply bg-cosmic-800/30 backdrop-blur-sm border border-cosmic-700/30 rounded-lg hover:bg-cosmic-700/40 transition-all duration-300;
-  }
-  
-  /* Add glassmorphism utility classes */
+@layer components {
+  /* Glassmorphism styles */
   .glassmorphism {
-    @apply bg-cosmic-800/40 backdrop-blur-sm border border-cosmic-700/30 transition-all duration-300;
+    @apply bg-background/70 backdrop-blur-md border border-border/50;
   }
   
   .glassmorphism-strong {
-    @apply bg-cosmic-800/60 backdrop-blur-md border border-cosmic-700/40 transition-all duration-300;
+    @apply bg-background/80 backdrop-blur-lg border border-border/50;
   }
   
-  .glassmorphism-light {
-    @apply bg-cosmic-800/20 backdrop-blur-sm border border-cosmic-700/20 transition-all duration-300;
+  /* Custom message styles */
+  .message-bubble-sender {
+    @apply bg-primary/90 text-white rounded-2xl rounded-tr-none;
   }
   
-  /* Interactive elements with hover effects */
-  .interactive-card {
-    @apply transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:bg-cosmic-700/40;
-  }
-  
-  .interactive-button {
-    @apply transition-all duration-300 hover:opacity-90 hover:scale-[1.02] active:scale-[0.98];
-  }
-  
-  .link-button {
-    @apply hover:text-primary/90 transition-colors duration-300;
-  }
-  
-  /* Cosmic glow styles for better visual effects */
-  .bg-cosmic-glow {
-    background: radial-gradient(circle, rgba(138, 43, 226, 0.3), rgba(25, 25, 112, 0.1));
-  }
-  
-  /* Enhanced Facts Tooltip Styling */
-  .facts-tooltip {
-    @apply bg-gradient-to-br from-cosmic-800/95 to-cosmic-900/95 border-cosmic-700/50 backdrop-blur-lg shadow-xl;
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
-    animation: tooltip-appear 0.2s ease-out;
-  }
-  
-  .facts-tooltip p {
-    @apply text-cosmic-100 leading-relaxed;
-  }
-  
-  /* Hide scrollbars but keep functionality */
-  .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari and Opera */
-  }
-  
-  /* Enhanced scrollbar styles when needed */
-  .styled-scrollbar::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-  
-  .styled-scrollbar::-webkit-scrollbar-track {
-    background: rgba(10, 17, 34, 0.3);
-    border-radius: 10px;
-  }
-  
-  .styled-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(104, 117, 255, 0.4);
-    border-radius: 10px;
-  }
-  
-  .styled-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(104, 117, 255, 0.6);
-  }
-  
-  @keyframes tooltip-appear {
-    from {
-      opacity: 0;
-      transform: translateY(5px) scale(0.98);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
+  .message-bubble-receiver {
+    @apply bg-cosmic-800/40 text-cosmic-100 rounded-2xl rounded-tl-none;
   }
 }

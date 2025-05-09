@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatRelative } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -24,6 +24,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
 }) => {
   const { language } = useLanguage();
   const [showUnsendDialog, setShowUnsendDialog] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   
   const locale = language === 'zh' ? zhCN : enUS;
   const messageDate = new Date(message.created_at);
@@ -34,16 +35,25 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
   const hasContent = message.text || message.image_url || message.location;
   
+  // Effect to delay showing message options for smoother rendering
+  useEffect(() => {
+    // Prevent flash of options button on initial render
+    const timer = setTimeout(() => {
+      // Just a timing effect, no state changes needed
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+  
   if (!hasContent) return null;
   
   return (
-    <div className={`flex ${isSender ? 'justify-end' : 'justify-start'} mb-4`}>
-      <div className="max-w-[75%]">
+    <div className={`flex ${isSender ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in`}>
+      <div className="max-w-[75%] sm:max-w-[70%]">
         <div
           className={`relative group rounded-2xl p-3 ${
             isSender
-              ? 'bg-primary/90 text-white rounded-tr-none'
-              : 'bg-cosmic-800/40 text-cosmic-100 rounded-tl-none'
+              ? 'message-bubble-sender'
+              : 'message-bubble-receiver'
           }`}
         >
           {isSender && (
@@ -66,14 +76,16 @@ const MessageItem: React.FC<MessageItemProps> = ({
           )}
           
           {message.image_url && (
-            <div className="mt-2">
+            <div className={`mt-2 ${!imageLoaded ? 'lazy-fade-in' : 'lazy-fade-in loaded'}`}>
               <img
                 src={message.image_url}
                 alt="Message attachment"
                 className="w-full h-auto rounded-lg"
                 style={{ maxHeight: '200px', objectFit: 'cover' }}
+                loading="lazy"
                 onLoad={() => {
-                  // Dispatch a custom event when an image loads to trigger scroll adjustment
+                  setImageLoaded(true);
+                  // Dispatch event for scroll adjustment
                   window.dispatchEvent(new Event('message-image-loaded'));
                 }}
               />
@@ -98,13 +110,12 @@ const MessageItem: React.FC<MessageItemProps> = ({
             isSender ? 'justify-end' : 'justify-start'
           }`}
         >
-          {/* Message read status indicators with improved styling */}
           {isSender && (
             <span className="mr-2 flex items-center">
               {message.read ? (
-                <CheckCheck className="h-3 w-3 text-green-500 drop-shadow-sm" />
+                <CheckCheck className="h-3 w-3 read-checkmark" />
               ) : (
-                <Check className="h-3 w-3 text-cosmic-400 opacity-75" />
+                <Check className="h-3 w-3 unread-checkmark" />
               )}
             </span>
           )}
@@ -132,4 +143,4 @@ const MessageItem: React.FC<MessageItemProps> = ({
   );
 };
 
-export default MessageItem;
+export default React.memo(MessageItem);
