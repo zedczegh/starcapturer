@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for SIQS score handling and display
  */
@@ -58,6 +59,9 @@ export function formatSiqsForDisplay(siqs: number | null): string {
   return siqs.toFixed(1);
 }
 
+// Export formatSiqsScore as an alias for formatSiqsForDisplay for backward compatibility
+export const formatSiqsScore = formatSiqsForDisplay;
+
 // Cache timing parameters for SIQS loading
 const cachedTimingParams = {
   certified: {
@@ -107,9 +111,34 @@ export function getDisplaySiqs({
   return 0;
 }
 
+// Compare SIQS scores - check if first score is greater than second
+export function isSiqsGreaterThan(siqs: any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score > threshold;
+}
+
+// Check if SIQS score is at least a certain value
+export function isSiqsAtLeast(siqs: any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score >= threshold;
+}
+
+// Sort locations by SIQS score (highest first)
+export function sortLocationsBySiqs(locations: any[]): any[] {
+  return [...locations].sort((a, b) => {
+    const scoreA = getSiqsScore(a.siqs) || 0;
+    const scoreB = getSiqsScore(b.siqs) || 0;
+    return scoreB - scoreA;
+  });
+}
+
 export default {
   normalizeToSiqsScale,
   getSiqsScore,
   formatSiqsForDisplay,
-  getDisplaySiqs
+  getDisplaySiqs,
+  formatSiqsScore,
+  isSiqsGreaterThan,
+  isSiqsAtLeast,
+  sortLocationsBySiqs
 };

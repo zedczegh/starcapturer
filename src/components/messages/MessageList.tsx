@@ -26,6 +26,7 @@ const MessageList: React.FC<MessageListProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<number | null>(null);
   
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -65,13 +66,25 @@ const MessageList: React.FC<MessageListProps> = ({
   // Handle scroll events to update UI state
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     setIsScrolling(true);
-    clearTimeout(window.scrollTimeout);
     
-    // @ts-ignore - custom property for cleanup
-    window.scrollTimeout = setTimeout(() => {
+    if (scrollTimeoutRef.current !== null) {
+      window.clearTimeout(scrollTimeoutRef.current);
+    }
+    
+    scrollTimeoutRef.current = window.setTimeout(() => {
       setIsScrolling(false);
+      scrollTimeoutRef.current = null;
     }, 200);
   };
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current !== null) {
+        window.clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
   
   return (
     <div className="flex flex-col h-full overflow-hidden bg-gradient-to-b from-cosmic-900/40 to-cosmic-950/40">
