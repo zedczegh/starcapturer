@@ -77,8 +77,8 @@ export const useMessages = () => {
           .map(msg => msg.id);
         
         if (messagesToUpdate.length > 0) {
-          // Don't await this - let it happen in the background
-          supabase
+          // Fix: Convert to a proper Promise with catch handling
+          void supabase
             .from('user_messages')
             .update({ read: true })
             .in('id', messagesToUpdate)

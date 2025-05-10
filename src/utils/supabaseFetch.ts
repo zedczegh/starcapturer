@@ -6,6 +6,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getCachedSupabaseData, cacheSupabaseData } from "./cache/supabaseCache";
 import { CacheOptions } from "./cache/cacheTypes";
+import { PostgrestQueryBuilder } from "@supabase/supabase-js";
+import { Database } from "@/integrations/supabase/types";
+
+// Define the valid table names from our Supabase schema to ensure type safety
+type TableNames = keyof Database['public']['Tables'];
 
 // Track ongoing requests to prevent duplicates
 const pendingRequests: Map<string, Promise<any>> = new Map();
@@ -19,8 +24,8 @@ interface FetchOptions extends CacheOptions {
  * Fetch data from Supabase with optimized caching and deduplication
  */
 export async function fetchFromSupabase<T = any>(
-  tableName: string,
-  queryBuilder: (query: any) => any,
+  tableName: TableNames,
+  queryBuilder: (query: PostgrestQueryBuilder<Database['public']['Tables'][TableNames]>) => any,
   options?: FetchOptions
 ): Promise<T> {
   const {
@@ -42,7 +47,7 @@ export async function fetchFromSupabase<T = any>(
   
   // Check cache if not skipping
   if (!skipCache && !forceRefresh) {
-    const cachedData = getCachedSupabaseData<T>(tableName, cacheKey);
+    const cachedData = getCachedSupabaseData<T>(tableName as string, cacheKey);
     if (cachedData) {
       console.log(`Using cached data for ${tableName}`);
       return cachedData;
@@ -53,9 +58,9 @@ export async function fetchFromSupabase<T = any>(
   const fetchPromise = new Promise<T>(async (resolve, reject) => {
     try {
       let query = supabase.from(tableName);
-      query = queryBuilder(query);
+      const builtQuery = queryBuilder(query);
       
-      const { data, error } = await query;
+      const { data, error } = await builtQuery;
       
       if (error) {
         throw error;
@@ -63,7 +68,7 @@ export async function fetchFromSupabase<T = any>(
       
       // Cache the result unless explicitly disabled
       if (!skipCache) {
-        cacheSupabaseData(tableName, cacheKey, data, {
+        cacheSupabaseData(tableName as string, cacheKey, data, {
           ttl,
           persistToStorage,
           namespace
@@ -91,7 +96,7 @@ export async function fetchFromSupabase<T = any>(
 /**
  * Clear cached data for a specific table
  */
-export function clearTableCache(tableName: string): void {
+export function clearTableCache(tableName: TableNames): void {
   const pendingKeys = Array.from(pendingRequests.keys())
     .filter(key => key.startsWith(`${tableName}:`));
     

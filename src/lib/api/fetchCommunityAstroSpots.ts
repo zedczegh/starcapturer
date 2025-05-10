@@ -51,6 +51,6 @@ export async function fetchCommunityAstroSpots() {
  */
 export function prefetchCommunityAstroSpots(): Promise<void> {
   // Make the request in the background and don't wait for it
-  fetchCommunityAstroSpots().catch(console.error);
+  void fetchCommunityAstroSpots().catch(console.error);
   return Promise.resolve();
 }
