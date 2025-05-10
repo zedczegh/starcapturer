@@ -109,7 +109,6 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       ref={markerRef}
     >
       <Popup
-        autoPan={isMobile}
         closeOnClick={false}
         onClose={handlePopupClose}
       >
