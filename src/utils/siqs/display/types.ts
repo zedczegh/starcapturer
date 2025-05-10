@@ -10,7 +10,7 @@ export interface SiqsDisplayOpts {
   bortleScale?: number;
   isCertified?: boolean;
   isDarkSkyReserve?: boolean;
-  existingSiqs?: number | { score: number; isViable?: boolean } | any;
+  existingSiqs?: number | any;
   skipCache?: boolean;
   useSingleHourSampling?: boolean;
   targetHour?: number;
@@ -22,7 +22,5 @@ export interface SiqsResult {
   loading: boolean;
   formattedSiqs: string;
   colorClass: string;
-  source: 'realtime' | 'cached' | 'default' | string;
-  isViable?: boolean;
-  metadata?: any;
+  source: 'realtime' | 'cached' | 'default';
 }

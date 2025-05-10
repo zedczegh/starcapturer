@@ -1,13 +1,9 @@
-import React from "react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { Card, CardContent } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
-import { formatDistance } from "@/utils/geoUtils";
-import SiqsScoreBadge from "@/components/photoPoints/cards/SiqsScoreBadge"; 
-import { MapPin, Star } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { getSiqsScore } from "@/utils/siqsHelpers";
+
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from "framer-motion";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import LocationCard from "@/components/LocationCard";
 import MiniRemoveButton from "@/components/collections/MiniRemoveButton";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 
@@ -19,54 +15,6 @@ interface AstroSpotGridProps {
   realTimeSiqs: Record<string, number | null>;
 }
 
-interface AstroSpotCardProps {
-  spot: SharedAstroSpot;
-  onClick: (spot: SharedAstroSpot) => void;
-}
-
-const AstroSpotCard: React.FC<AstroSpotCardProps> = ({ spot, onClick }) => {
-  const { t, language } = useLanguage();
-  
-  // Get name based on language
-  const displayName = language === "zh" && spot.chineseName 
-    ? spot.chineseName 
-    : spot.name;
-  
-  // Safely handle SIQS score - handle complex objects
-  const siqsScore = getSiqsScore(spot.siqs);
-
-  return (
-    <Card 
-      className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] bg-card border border-border/50"
-      onClick={() => onClick(spot)}
-    >
-      <CardContent className="p-4">
-        <div className="space-y-2">
-          <div className="flex justify-between items-start">
-            <h3 className="text-sm font-medium line-clamp-1">{displayName}</h3>
-            <SiqsScoreBadge 
-              score={siqsScore} 
-              compact
-            />
-          </div>
-          
-          <div className="flex items-center text-xs text-muted-foreground">
-            <MapPin className="mr-2 h-4 w-4 opacity-70" />
-            {spot.latitude.toFixed(4)}, {spot.longitude.toFixed(4)}
-          </div>
-          
-          {spot.isDarkSkyReserve && (
-            <div className="flex items-center text-xs text-primary">
-              <Star className="mr-2 h-4 w-4" />
-              {t("Dark Sky Reserve", "暗夜天空保护区")}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
 const AstroSpotGrid: React.FC<AstroSpotGridProps> = ({
   spots,
   editMode,
@@ -76,10 +24,10 @@ const AstroSpotGrid: React.FC<AstroSpotGridProps> = ({
 }) => {
   const navigate = useNavigate();
   
-  const handleSpotClick = (spot: SharedAstroSpot) => {
+  const handleSpotClick = (spotId: string) => {
     if (!editMode) {
-      console.log("Navigating to astro spot profile:", spot.id);
-      navigate(`/astro-spot/${spot.id}`);
+      console.log("Navigating to astro spot profile:", spotId);
+      navigate(`/astro-spot/${spotId}`);
     }
   };
   
@@ -92,6 +40,7 @@ const AstroSpotGrid: React.FC<AstroSpotGridProps> = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, delay: index * 0.10 }}
           className="relative group"
+          onClick={() => handleSpotClick(spot.id)}
         >
           {editMode && (
             <div className="absolute top-3 right-3 z-20">
@@ -110,8 +59,16 @@ const AstroSpotGrid: React.FC<AstroSpotGridProps> = ({
             existingSiqs={spot.siqs}
             onSiqsCalculated={(siqs, loading) => onSiqsCalculated(spot.id, siqs, loading)}
           />
-          <div className={`cursor-${editMode ? 'default' : 'pointer'} transition duration-200 hover:scale-[1.025]`} onClick={() => handleSpotClick(spot)}>
-            <AstroSpotCard spot={spot} onClick={() => handleSpotClick(spot)}/>
+          <div className={`cursor-${editMode ? 'default' : 'pointer'} transition duration-200 hover:scale-[1.025]`}>
+            <LocationCard
+              id={spot.id}
+              name={spot.name}
+              latitude={spot.latitude}
+              longitude={spot.longitude}
+              siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+              timestamp={spot.timestamp}
+              isCertified={false}
+            />
           </div>
         </motion.div>
       ))}

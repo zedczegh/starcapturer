@@ -3,7 +3,7 @@
  * SIQS data fetching functions
  */
 
-import { getCompleteSiqsDisplay, SiqsDisplayOptions } from '@/utils/unifiedSiqsDisplay';
+import { getCompleteSiqsDisplay, SiqsDisplayOpts } from '@/utils/unifiedSiqsDisplay';
 import { executeQueuedFetch } from './queueManager';
 import { updateSiqsCache, getSiqsCacheKey } from './cacheManager';
 
@@ -45,17 +45,19 @@ export async function fetchSiqsData({
   // Queue or execute the fetch based on current load
   return executeQueuedFetch(cacheKey, async () => {
     try {
-      const result = await getCompleteSiqsDisplay({
+      const options: SiqsDisplayOpts = {
+        skipCache,
+        useSingleHourSampling: true,
+        targetHour: 1,
         latitude,
         longitude,
         bortleScale,
         isCertified,
         isDarkSkyReserve,
-        existingSiqs: existingSiqsNumber,
-        skipCache,
-        useSingleHourSampling: true,
-        targetHour: 1
-      });
+        existingSiqs: existingSiqsNumber
+      };
+      
+      const result = await getCompleteSiqsDisplay(options);
       
       // Update the caches
       if (cacheKey) {

@@ -1,98 +1,99 @@
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { useMapLocations } from './useMapUtils';
+import useMapMarkers from '@/hooks/map/useMapMarkers';
+import { usePhotoPointsMap } from '@/hooks/photoPoints/usePhotoPointsMap';
+import { useMapState } from './map/useMapState';
+import { useLocationManagement } from './map/useLocationManagement';
+import { useLocationsPersistence } from './map/useLocationsPersistence';
 
 interface UsePhotoPointsMapContainerProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   certifiedLocations: SharedAstroSpot[];
   calculatedLocations: SharedAstroSpot[];
-  searchRadius: number;
   activeView: 'certified' | 'calculated';
-  onLocationClick: (location: SharedAstroSpot) => void;
-  onLocationUpdate: (latitude: number, longitude: number) => void;
+  searchRadius: number;
+  onLocationClick?: (location: SharedAstroSpot) => void;
+  onLocationUpdate?: (latitude: number, longitude: number) => void;
 }
 
-export function usePhotoPointsMapContainer({
+export const usePhotoPointsMapContainer = ({
   userLocation,
   locations,
   certifiedLocations,
   calculatedLocations,
-  searchRadius,
   activeView,
+  searchRadius,
   onLocationClick,
   onLocationUpdate
-}: UsePhotoPointsMapContainerProps) {
-  const isMobile = useIsMobile();
+}: UsePhotoPointsMapContainerProps) => {
   const [mapReady, setMapReady] = useState(false);
-  const [legendOpen, setLegendOpen] = useState(false);
   
-  // Determine map center based on user location
-  const mapCenter = useMemo((): [number, number] => {
-    return userLocation 
-      ? [userLocation.latitude, userLocation.longitude] 
-      : [35.8617, 104.1954]; // Default center (China)
-  }, [userLocation]);
+  const { 
+    mapContainerHeight,
+    legendOpen,
+    isUpdatingLocation,
+    handleLegendToggle,
+    isMobile
+  } = useMapState();
   
-  // Get appropriate zoom level based on search radius
-  const initialZoom = useMemo(() => {
-    if (activeView === 'certified') return 4;
-    
-    // Dynamic zoom based on search radius for calculated view
-    const radiusToZoom: Record<number, number> = {
-      100: 12,
-      200: 10,
-      300: 9,
-      400: 8,
-      500: 8,
-      600: 7,
-      700: 7,
-      800: 6,
-      900: 6,
-      1000: 5
-    };
-    
-    return radiusToZoom[searchRadius] || 8;
-  }, [activeView, searchRadius]);
+  const {
+    handleMapClick,
+    handleGetLocation
+  } = useLocationManagement(onLocationUpdate);
   
-  // Process locations for display
-  const { processedLocations } = useMapLocations({
+  const { 
+    hoveredLocationId, 
+    handleHover,
+    handleTouchStart,
+    handleTouchEnd,
+    handleTouchMove
+  } = useMapMarkers();
+  
+  const { 
+    mapReady: mapIsReady,
+    handleMapReady,
+    validLocations,
+    mapCenter,
+    initialZoom,
+    certifiedLocationsLoaded,
+    certifiedLocationsLoading
+  } = usePhotoPointsMap({
     userLocation,
-    locations: activeView === 'certified' ? certifiedLocations : calculatedLocations,
+    locations: locations,
     searchRadius,
-    activeView,
-    mapReady
+    activeView
   });
   
-  // Map click handler for updating location
-  const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (onLocationUpdate && activeView === 'calculated') {
-      onLocationUpdate(lat, lng);
+  // Use locations persistence hook
+  useLocationsPersistence(locations, activeView);
+  
+  const handleLocationClicked = useCallback((location: SharedAstroSpot) => {
+    if (onLocationClick) {
+      onLocationClick(location);
     }
-  }, [onLocationUpdate, activeView]);
-  
-  // Map ready handler
-  const handleMapReady = useCallback(() => {
-    setMapReady(true);
-  }, []);
-  
-  // Determine container height
-  const mapContainerHeight = useMemo(() => {
-    return isMobile ? '50vh' : '60vh';
-  }, [isMobile]);
-  
-  // Return combined data
+  }, [onLocationClick]);
+
   return {
     mapContainerHeight,
     legendOpen,
-    mapReady,
+    mapReady: mapIsReady,
     handleMapReady,
-    optimizedLocations: processedLocations,
+    optimizedLocations: validLocations,
     mapCenter,
     initialZoom,
+    hoveredLocationId,
+    handleHover,
+    handleTouchStart,
+    handleTouchEnd,
+    handleTouchMove,
     handleMapClick,
-    onLegendToggle: (isOpen: boolean) => setLegendOpen(isOpen)
+    handleLocationClicked,
+    handleGetLocation,
+    handleLegendToggle,
+    isMobile,
+    certifiedLocationsLoaded,
+    certifiedLocationsLoading
   };
-}
+};

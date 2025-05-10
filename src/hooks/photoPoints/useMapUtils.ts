@@ -1,90 +1,77 @@
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { calculateDistance } from '@/utils/geoUtils';
+import { useCallback } from 'react';
+import { SharedAstroSpot } from '@/types/weather';
+import { useNavigate } from 'react-router-dom';
+import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 
-interface UseMapLocationsProps {
-  userLocation: { latitude: number; longitude: number } | null;
-  locations: SharedAstroSpot[];
-  searchRadius: number;
-  activeView: 'certified' | 'calculated';
-  mapReady: boolean;
-}
+export const useMapUtils = () => {
+  const navigate = useNavigate();
 
-export function useMapLocations({
+  const getZoomLevel = useCallback((radius: number): number => {
+    // Adjust zoom level based on search radius
+    if (radius <= 10) return 12;
+    if (radius <= 50) return 10;
+    if (radius <= 100) return 9;
+    if (radius <= 300) return 8;
+    if (radius <= 500) return 7;
+    return 6;
+  }, []);
+
+  const handleLocationClick = useCallback((location: SharedAstroSpot) => {
+    if (!location) return;
+    
+    try {
+      const navigationData = prepareLocationForNavigation(location);
+      
+      if (navigationData) {
+        navigate(`/location/${navigationData.locationId}`, { 
+          state: navigationData.locationState 
+        });
+        console.log("Opening location details", navigationData.locationId);
+      }
+    } catch (error) {
+      console.error("Error navigating to location details:", error, location);
+    }
+  }, [navigate]);
+
+  return {
+    getZoomLevel,
+    handleLocationClick
+  };
+};
+
+export const useMapLocations = ({
   userLocation,
   locations,
   searchRadius,
   activeView,
   mapReady
-}: UseMapLocationsProps) {
-  // Process and filter locations based on view and distance
-  const processedLocations = useMemo(() => {
-    if (!Array.isArray(locations)) {
-      return [];
-    }
-    
-    // Filter out invalid locations
-    const validLocations = locations.filter(
-      loc => loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
-    );
-    
-    // For certified view, show all certified locations without distance filtering
-    if (activeView === 'certified') {
-      return validLocations;
-    }
-    
-    // For calculated view with user location, apply distance filtering
-    if (activeView === 'calculated' && userLocation) {
-      return validLocations.map(loc => {
-        // Calculate distance
-        const distance = calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          loc.latitude,
-          loc.longitude
-        );
-        
-        return {
-          ...loc,
-          distance
-        };
-      }).filter(loc => {
-        // Apply search radius filter
-        return loc.distance <= searchRadius;
-      }).sort((a, b) => {
-        // Sort by distance
-        return (a.distance || 0) - (b.distance || 0);
-      });
-    }
-    
-    return validLocations;
-  }, [locations, userLocation, activeView, searchRadius]);
+}: {
+  userLocation: { latitude: number; longitude: number } | null;
+  locations: SharedAstroSpot[];
+  searchRadius: number;
+  activeView: 'certified' | 'calculated';
+  mapReady: boolean;
+}) => {
+  // Ensure locations is always an array even if it's undefined or null
+  const safeLocations = Array.isArray(locations) ? locations : [];
+  
+  // Log counts of locations by type for debugging
+  const certifiedCount = safeLocations.filter(loc => 
+    Boolean(loc?.isDarkSkyReserve || loc?.certification)
+  ).length;
+  
+  const calculatedCount = safeLocations.length - certifiedCount;
+  
+  console.log(`Location counts - certified: ${certifiedCount}, calculated: ${calculatedCount}, total: ${safeLocations.length}`);
+  
+  // Apply basic filtering to remove invalid locations
+  const validLocations = safeLocations.filter(loc => 
+    loc && typeof loc.latitude === 'number' && typeof loc.longitude === 'number'
+  );
   
   return {
-    processedLocations
+    // Return all valid locations without further filtering
+    processedLocations: validLocations
   };
-}
-
-export function useMapUtils() {
-  // Get appropriate zoom level based on search radius
-  const getZoomLevel = useCallback((radius: number): number => {
-    if (radius <= 100) return 12;
-    if (radius <= 300) return 10;
-    if (radius <= 500) return 8;
-    if (radius <= 800) return 7;
-    return 6;
-  }, []);
-  
-  // Handle location click
-  const handleLocationClick = useCallback((location: SharedAstroSpot, onClick?: (loc: SharedAstroSpot) => void) => {
-    if (onClick && location) {
-      onClick(location);
-    }
-  }, []);
-  
-  return {
-    getZoomLevel,
-    handleLocationClick
-  };
-}
+};

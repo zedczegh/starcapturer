@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
@@ -8,7 +9,6 @@ import SiqsScoreBadge from "@/components/photoPoints/cards/SiqsScoreBadge";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
-import { getSiqsScore } from "@/utils/siqsHelpers";
 
 function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.DivIcon {
   const size = isMobile ? (isHovered ? 28 : 20) : (isHovered ? 32 : 26);
@@ -54,7 +54,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState<boolean>(false);
   
-  // Handler for SIQS calculation results - handle complex SIQS objects
+  // Handler for SIQS calculation results
   const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(siqs);
     setLoadingSiqs(loading);
@@ -86,7 +86,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
           {/* SIQS Score Display */}
           <div className="flex items-center mb-2">
             <SiqsScoreBadge 
-              score={realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(spot.siqs)} 
+              score={realTimeSiqs ?? spot.siqs} 
               loading={loadingSiqs} 
             />
           </div>

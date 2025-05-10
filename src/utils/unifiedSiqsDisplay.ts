@@ -14,6 +14,7 @@ import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeS
 // Re-exports from the refactored utility files
 import { 
   formatSiqsForDisplay, 
+  getDisplaySiqs, 
   getLocationSiqs, 
   calculateSimplifiedSiqs,
   DEFAULT_SIQS 
@@ -27,56 +28,21 @@ import {
   getCompleteSiqsDisplay 
 } from './siqs/display/siqsCalculator';
 
-export interface SiqsDisplayOpts {
-  realTimeSiqs: number | { score: number; isViable?: boolean } | null;
-  staticSiqs: number;
-  isCertified?: boolean;
-  isDarkSkyReserve?: boolean;
-}
+import type { 
+  SiqsDisplayOpts, 
+  SiqsResult 
+} from './siqs/display/types';
 
-// Helper function to safely get display SIQS, with type-safety
-export function getDisplaySiqs(options: SiqsDisplayOpts): number {
-  const { realTimeSiqs, staticSiqs, isCertified = false, isDarkSkyReserve = false } = options;
-  
-  // Always prefer real-time SIQS if available
-  if (realTimeSiqs !== null) {
-    if (typeof realTimeSiqs === 'object' && 'score' in realTimeSiqs) {
-      return realTimeSiqs.score > 0 ? realTimeSiqs.score : 0;
-    }
-    if (typeof realTimeSiqs === 'number' && realTimeSiqs > 0) {
-      return realTimeSiqs;
-    }
-  }
-  
-  // Use static SIQS if available
-  if (staticSiqs > 0) {
-    return staticSiqs;
-  }
-  
-  // Return 0 as last resort - no default scores
-  return 0;
-}
-
+// Export everything for backwards compatibility
 export {
   DEFAULT_SIQS,
   formatSiqsForDisplay,
+  getDisplaySiqs,
   getLocationSiqs,
   getCachedRealTimeSiqs,
   calculateSimplifiedSiqs,
   getCompleteSiqsDisplay,
   // Re-export the types
-  type SiqsDisplayOpts as SiqsDisplayOptions,
-};
-
-export type SiqsResult = {
-  siqs: number;
-  isViable?: boolean;
-  loading?: boolean;
-  formattedSiqs?: string;
-  colorClass?: string;
-  source?: string;
-  metadata?: any;
-  factors?: Array<{name: string; score: number; description?: string}>;
-  weatherData?: any;
-  forecastData?: any;
+  type SiqsDisplayOpts,
+  type SiqsResult
 };

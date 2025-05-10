@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState, useEffect } from 'react';
 import { Marker } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -40,7 +41,6 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
   const [forceUpdate, setForceUpdate] = useState<boolean>(false);
 
-  // Use our unified marker state hook
   const { siqsScore, displayName, icon } = useMarkerState({
     location,
     realTimeSiqs,
@@ -169,7 +169,7 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
           siqsLoading={siqsLoading}
           displayName={displayName}
           isCertified={isCertified}
-          onViewDetails={handleViewDetails}
+          onViewDetails={handleViewDetails} // Use the correct navigation callback
         />
       </Marker>
     </>
