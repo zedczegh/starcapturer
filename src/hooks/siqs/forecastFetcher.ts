@@ -56,7 +56,7 @@ export async function fetchForecastForLocation(lat: number, lng: number): Promis
       latitude: lat,
       longitude: lng,
       days: 3
-    }, { signal: abortController.signal }).then(forecastData => {
+    }, { signal: abortController.signal as AbortSignal }).then(forecastData => {
       clearTimeout(timeoutId);
       
       if (forecastData && forecastData.hourly) {

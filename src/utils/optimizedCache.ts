@@ -60,7 +60,7 @@ export function getCachedItem<T>(key: string): T | null {
  * @param key Cache key
  * @param data Data to store
  * @param ttlMs Time to live in milliseconds
- * @param priority Cache priority (affects retention during cleanup)
+ * @param options Cache options
  */
 export function setCachedItem<T>(
   key: string, 
@@ -70,14 +70,14 @@ export function setCachedItem<T>(
 ): void {
   try {
     // Store in memory cache first
-    setInMemoryCache(key, data, ttlMs, options);
+    setInMemoryCache(key, data, ttlMs);
     
     // Then persist to localStorage if available
-    const storageSuccess = setInStorageCache(key, data, ttlMs, options);
+    const storageSuccess = setInStorageCache(key, data, ttlMs);
     if (!storageSuccess) {
       // Handle storage quota exceeded
       clearOldestCacheItems();
-      setInStorageCache(key, data, ttlMs, options);
+      setInStorageCache(key, data, ttlMs);
     }
   } catch (error) {
     console.error('Cache write error:', error);
@@ -123,8 +123,7 @@ export function prioritizeCacheItems(items: string[]): void {
             setInMemoryCache(
               memoryKey, 
               parsed.data, 
-              parsed.expires - Date.now(), 
-              { priority: 'high' }
+              parsed.expires - Date.now()
             );
           }
         }
