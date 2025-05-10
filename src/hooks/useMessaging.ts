@@ -1,30 +1,20 @@
 
-import { useState, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useConversations } from '@/hooks/messaging/useConversations';
-import { useMessages } from '@/hooks/messaging/useMessages';
-import { useMessageActions } from '@/hooks/messaging/useMessageActions';
+import { useConversations } from './messaging/useConversations';
+import { useMessages } from './messaging/useMessages';
+import { useMessageActions } from './messaging/useMessageActions';
 
-export const useMessaging = () => {
-  const { user } = useAuth();
-  
-  // Use the hooks for conversations and messages
-  const { conversations, loading: conversationsLoading, fetchConversations } = useConversations();
-  const { messages, setMessages, fetchMessages, loading: messagesLoading } = useMessages();
-  
-  // Use message actions for sending and managing messages
+export function useMessaging() {
+  const { conversations, loading, fetchConversations } = useConversations();
+  const { messages, fetchMessages, setMessages } = useMessages();
   const { sending, sendMessage, unsendMessage } = useMessageActions(fetchMessages, setMessages);
-  
+
   return {
-    user,
     conversations,
     messages,
-    loading: conversationsLoading || messagesLoading,
+    loading,
     sending,
     fetchMessages,
     sendMessage,
-    unsendMessage
+    unsendMessage,
   };
-};
-
-export default useMessaging;
+}

@@ -14,7 +14,6 @@ interface MessageListProps {
   activeConversation: ConversationPartner;
   onBack: () => void;
   onUnsendMessage: (id: string) => Promise<boolean>;
-  isMobile?: boolean; // Added prop for mobile-specific UI
 }
 
 const MessageList: React.FC<MessageListProps> = ({
@@ -22,8 +21,7 @@ const MessageList: React.FC<MessageListProps> = ({
   currentUserId,
   activeConversation,
   onBack,
-  onUnsendMessage,
-  isMobile
+  onUnsendMessage
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -53,7 +51,6 @@ const MessageList: React.FC<MessageListProps> = ({
       <MessageHeader 
         conversation={activeConversation} 
         onBack={onBack}
-        isMobile={isMobile}
       />
       
       <ScrollArea className="flex-1 p-4 pt-6">

@@ -4,28 +4,21 @@ import NavBar from "@/components/NavBar";
 import { useAuth } from "@/contexts/AuthContext";
 import LoginPrompt from "@/components/messages/LoginPrompt";
 import MessageContainer from "@/components/messages/MessageContainer";
-import { useMessageNavigation } from "@/hooks/useMessageNavigation";
 import { useMessageConversation } from "@/hooks/messaging/useMessageConversation";
 
 const Messages = () => {
   const { user } = useAuth();
   const {
-    activeConversation,
-    showConversationView,
-    handleBack,
-    isMobile
-  } = useMessageNavigation();
-
-  // Get conversation data from useMessageConversation hook
-  const {
     searchQuery,
     setSearchQuery,
+    activeConversation,
     messages,
     loading,
     sending,
     isProcessingAction,
     conversations,
     handleSelectConversation,
+    handleBack,
     handleSendMessage,
     handleUnsendMessage
   } = useMessageConversation();
@@ -40,7 +33,6 @@ const Messages = () => {
         <div className="container mx-auto px-4 py-6 pt-20 max-w-6xl">
           <MessageContainer
             activeConversation={activeConversation}
-            showConversationView={showConversationView}
             conversations={conversations}
             loading={loading}
             messages={messages}
@@ -53,7 +45,6 @@ const Messages = () => {
             sending={sending}
             isProcessingAction={isProcessingAction}
             currentUserId={user.id}
-            isMobile={isMobile}
           />
         </div>
       )}
