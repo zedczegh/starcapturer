@@ -1,48 +1,69 @@
 
-/**
- * Batch helpers for safely modifying files that have SIQS comparison/arithmetic issues
- * This utility is designed to be imported in multiple places to standardize SIQS handling
- */
-
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getSiqsScore, isSiqsGreaterThan, isSiqsAtLeast } from './siqsHelpers';
+import { 
+  getSiqsScore, 
+  isSiqsAtLeast,
+  sortLocationsBySiqs 
+} from './siqsHelpers';
+
+// Threshold for including a spot in filtered results
+const DEFAULT_MINIMUM_SIQS = 5.0;
 
 /**
- * Apply standard SIQS filters to a list of locations
+ * Filter locations that meet minimum SIQS requirements
+ * 
  * @param locations Array of locations to filter
- * @param minScore Minimum SIQS score to include
+ * @param minimumSiqs Optional minimum SIQS threshold
  * @returns Filtered array of locations
  */
-export function filterLocationsBySiqsScore(
-  locations: SharedAstroSpot[],
-  minScore: number = 0
+export function filterBySiqs(
+  locations: SharedAstroSpot[], 
+  minimumSiqs = DEFAULT_MINIMUM_SIQS
 ): SharedAstroSpot[] {
-  return locations.filter(loc => {
-    // Skip undefined SIQS values
-    if (loc.siqs === undefined) return false;
+  return locations.filter(location => {
+    // Check for real-time SIQS first
+    if ('realTimeSiqs' in location && typeof location.realTimeSiqs === 'number') {
+      return location.realTimeSiqs >= minimumSiqs;
+    }
     
-    // Use the helper to safely compare
-    return isSiqsGreaterThan(loc.siqs, minScore);
+    // Then check regular SIQS
+    return isSiqsAtLeast(location.siqs, minimumSiqs);
   });
 }
 
 /**
- * Compare two locations by SIQS score for sorting
- * @param a First location
- * @param b Second location
- * @returns Sort comparison result
+ * Get the best locations based on SIQS score
+ * 
+ * @param locations Array of all locations
+ * @param count Optional maximum number of locations to return
+ * @param minimumSiqs Optional minimum SIQS threshold
+ * @returns Array of best locations
  */
-export function compareBySiqsScore(a: SharedAstroSpot, b: SharedAstroSpot): number {
-  return (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0);
+export function getBestSiqsLocations(
+  locations: SharedAstroSpot[],
+  count = 5,
+  minimumSiqs = DEFAULT_MINIMUM_SIQS
+): SharedAstroSpot[] {
+  const filtered = filterBySiqs(locations, minimumSiqs);
+  const sorted = sortLocationsBySiqs(filtered);
+  return sorted.slice(0, count);
 }
 
 /**
- * Sort locations by SIQS score (highest first)
- * @param locations Array of locations to sort
- * @returns Sorted array of locations
+ * Calculate average SIQS score across multiple locations
+ * 
+ * @param locations Array of locations to average
+ * @returns Average SIQS score or null if no valid scores
  */
-export function sortLocationsBySiqsScore(
-  locations: SharedAstroSpot[]
-): SharedAstroSpot[] {
-  return [...locations].sort(compareBySiqsScore);
+export function calculateAverageSiqs(locations: SharedAstroSpot[]): number | null {
+  if (!locations.length) return null;
+  
+  const validScores = locations
+    .map(location => getSiqsScore(location.siqs))
+    .filter(score => score > 0);
+  
+  if (!validScores.length) return null;
+  
+  const sum = validScores.reduce((acc, score) => acc + score, 0);
+  return sum / validScores.length;
 }

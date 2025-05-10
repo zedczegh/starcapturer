@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { checkSiqsCache, getSiqsCacheKey } from './siqsProvider/cacheManager';
 import { fetchSiqsData, handleSiqsError } from './siqsProvider/siqsFetcher';
 import { processQueue } from './siqsProvider/queueManager';
 import type { RealTimeSiqsProviderProps } from './siqsProvider/types';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculatorAdapter';
 
 const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   isVisible,

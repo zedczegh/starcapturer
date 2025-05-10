@@ -1,228 +1,85 @@
-
-import L, { Icon, Marker } from 'leaflet';
+// Import correct types and functions
+import { divIcon } from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getSiqsScore, formatSiqsScore } from '@/utils/siqsHelpers';
+import { getSiqsScore, formatSiqsForDisplay } from '@/utils/siqsHelpers';
+import { SiqsScore } from '@/utils/siqs/types';
+
+interface MarkerOptions {
+  isHovered?: boolean;
+  isCertified?: boolean;
+  isSelected?: boolean;
+  showLabel?: boolean;
+  isDestination?: boolean;
+  isMobile?: boolean;
+  realTimeSiqs?: SiqsScore | null;
+}
 
 /**
- * Manages marker creation, rendering, and cleanup for the map
+ * Create marker icon for a location
  */
-export class MarkerManager {
-  private visibleMarkers: Map<string, Marker> = new Map();
-  private markerCluster: L.MarkerClusterGroup | null = null;
-  private map: L.Map | null = null;
+export function createLocationMarkerIcon(
+  location: SharedAstroSpot,
+  options: {
+    isHovered?: boolean;
+    isCertified?: boolean;
+    isSelected?: boolean;
+    showLabel?: boolean;
+    isDestination?: boolean;
+    isMobile?: boolean;
+    realTimeSiqs?: SiqsScore | null;
+  } = {}
+): any {
+  const {
+    isHovered = false,
+    isCertified = false,
+    isSelected = false,
+    showLabel = false,
+    isDestination = false,
+    isMobile = false,
+    realTimeSiqs = null
+  } = options;
   
-  /**
-   * Initialize with a Leaflet map instance
-   */
-  public initialize(map: L.Map): void {
-    this.map = map;
-    
-    // Create a marker cluster group if not exists
-    if (!this.markerCluster && map) {
-      // Check if MarkerClusterGroup is available
-      if (L.MarkerClusterGroup) {
-        this.markerCluster = L.MarkerClusterGroup({
-          maxClusterRadius: 40,
-          spiderfyOnMaxZoom: true,
-          showCoverageOnHover: false,
-          zoomToBoundsOnClick: true,
-          chunkedLoading: true,
-          chunkProgress: (processed, total) => {
-            console.log(`Processed ${processed} of ${total} markers`);
-          }
-        });
-        
-        this.markerCluster.addTo(map);
-      }
-    }
-  }
+  const baseHue = isCertified ? 55 : isDestination ? 210 : 280;
+  const saturation = isHovered || isSelected ? 90 : 70;
+  const lightness = isHovered || isSelected ? 50 : 40;
+  const hueShift = isHovered ? 20 : 0;
   
-  /**
-   * Render markers with throttling for better performance
-   */
-  public renderMarkers(
-    locations: SharedAstroSpot[], 
-    selectedId?: string,
-    bounds?: L.LatLngBounds
-  ): void {
-    if (!this.map) return;
-    
-    console.log(`Rendering ${locations.length} optimized markers`);
-    
-    // Get current bounds if not provided
-    const mapBounds = bounds || this.map.getBounds();
-    
-    // Get existing marker IDs
-    const existingIds = new Set(this.visibleMarkers.keys());
-    
-    // Track which markers we've processed
-    const processedIds = new Set<string>();
-    
-    // Process in chunks for smoother rendering
-    const chunkSize = 50;
-    let index = 0;
-    
-    const processNextChunk = () => {
-      if (index >= locations.length) {
-        // Remove markers that no longer exist
-        existingIds.forEach(id => {
-          if (!processedIds.has(id)) {
-            const marker = this.visibleMarkers.get(id);
-            if (marker) {
-              if (this.markerCluster) {
-                this.markerCluster.removeLayer(marker);
-              } else {
-                marker.remove();
-              }
-              this.visibleMarkers.delete(id);
-            }
-          }
-        });
-        return;
-      }
-      
-      const endIndex = Math.min(index + chunkSize, locations.length);
-      
-      for (let i = index; i < endIndex; i++) {
-        const location = locations[i];
-        const id = location.id || `loc-${location.latitude}-${location.longitude}`;
-        processedIds.add(id);
-        
-        // Check if marker is within visible bounds
-        if (location.latitude && location.longitude) {
-          const latLng = L.latLng(location.latitude, location.longitude);
-          
-          // Only create/update markers if they're visible or near visible area
-          if (this.isMarkerInBounds(latLng, mapBounds)) {
-            // If marker already exists, update it
-            if (this.visibleMarkers.has(id)) {
-              const marker = this.visibleMarkers.get(id)!;
-              marker.setLatLng(latLng);
-            } else {
-              // Create new marker
-              const marker = this.createMarker(location, id === selectedId);
-              this.visibleMarkers.set(id, marker);
-              
-              // Add to cluster if available, otherwise to map
-              if (this.markerCluster) {
-                this.markerCluster.addLayer(marker);
-              } else {
-                marker.addTo(this.map!);
-              }
-            }
-          }
-        }
-      }
-      
-      index = endIndex;
-      setTimeout(processNextChunk, 0);
-    };
-    
-    // Start processing
-    processNextChunk();
-  }
+  const calculatedHue = (baseHue + hueShift) % 360;
+  const hslColor = `hsl(${calculatedHue}, ${saturation}%, ${lightness}%)`;
   
-  /**
-   * Check if marker is within or near visible bounds
-   * Includes a small buffer around visible area to prevent pop-in
-   */
-  private isMarkerInBounds(latLng: L.LatLng, bounds: L.LatLngBounds): boolean {
-    // Add padding to bounds
-    const sw = bounds.getSouthWest();
-    const ne = bounds.getNorthEast();
-    const latPadding = (ne.lat - sw.lat) * 0.2; // 20% padding
-    const lngPadding = (ne.lng - sw.lng) * 0.2;
-    
-    const paddedBounds = L.latLngBounds(
-      L.latLng(sw.lat - latPadding, sw.lng - lngPadding),
-      L.latLng(ne.lat + latPadding, ne.lng + lngPadding)
-    );
-    
-    return paddedBounds.contains(latLng);
-  }
+  const shadowSize = isMobile ? 1 : 2;
+  const iconSize = isMobile ? 20 : 24;
+  const fontSize = isMobile ? '0.6rem' : '0.7rem';
+
+  // Get the correct SIQS score
+  let siqsScore = options.realTimeSiqs !== null && options.realTimeSiqs !== undefined 
+    ? getSiqsScore(options.realTimeSiqs)
+    : getSiqsScore(location.siqs);
   
-  /**
-   * Create a marker for a location
-   */
-  private createMarker(location: SharedAstroSpot, isSelected: boolean): L.Marker {
-    const isCertified = location.isDarkSkyReserve === true || 
-      (typeof location.certification === 'string' && location.certification !== '');
-    const siqs = location.siqs || 0;
-    
-    // Choose icon based on location type
-    const icon = this.getMarkerIcon(isCertified, siqs, isSelected);
-    
-    // Create the marker
-    const marker = L.marker([location.latitude, location.longitude], { icon });
-    
-    // Add tooltip
-    marker.bindTooltip(`${location.name || 'Unknown Location'} (SIQS: ${formatSiqsScore(siqs)})`);
-    
-    return marker;
-  }
-  
-  /**
-   * Get appropriate icon based on location type
-   */
-  private getMarkerIcon(
-    isCertified: boolean, 
-    siqs: number | { score: number; isViable: boolean }, 
-    isSelected: boolean
-  ): Icon {
-    // Default icon properties
-    let iconUrl = '/markers/marker-default.svg';
-    let iconSize: [number, number] = [30, 30];
-    
-    // Get numeric siqs score
-    const siqsScore = getSiqsScore(siqs);
-    
-    // Select icon based on location type and SIQS
-    if (isCertified) {
-      iconUrl = '/markers/marker-certified.svg';
-      iconSize = [36, 36];
-    } else if (siqsScore >= 8) {
-      iconUrl = '/markers/marker-excellent.svg';
-    } else if (siqsScore >= 6) {
-      iconUrl = '/markers/marker-good.svg';
-    } else if (siqsScore >= 4) {
-      iconUrl = '/markers/marker-average.svg';
-    } else {
-      iconUrl = '/markers/marker-poor.svg';
-    }
-    
-    // Use selected icon if selected
-    if (isSelected) {
-      iconUrl = '/markers/marker-selected.svg';
-      iconSize = [40, 40];
-    }
-    
-    return L.icon({
-      iconUrl,
-      iconSize,
-      iconAnchor: [iconSize[0] / 2, iconSize[1]],
-      popupAnchor: [0, -iconSize[1]]
-    });
+  // Format it for display  
+  const formattedSiqs = formatSiqsForDisplay(siqsScore);
+
+  const labelClass = `marker-label ${isHovered ? 'marker-label-hovered' : ''} ${isSelected ? 'marker-label-selected' : ''}`;
+
+  let htmlContent = `
+    <div class="custom-marker ${isHovered ? 'marker-hovered' : ''} ${isSelected ? 'marker-selected' : ''}"
+         style="background-color: ${hslColor}; width: ${iconSize}px; height: ${iconSize}px; font-size: ${fontSize};">
+      ${isCertified ? '<div class="marker-star">★</div>' : ''}
+      ${formattedSiqs !== "N/A" && formattedSiqs !== "NaN" ? `<div class="marker-siqs">${formattedSiqs}</div>` : ''}
+      ${isDestination ? '<div class="marker-destination"></div>' : ''}
+    </div>
+  `;
+
+  if (showLabel) {
+    htmlContent += `<div class="${labelClass}">${location.name || 'Location'}</div>`;
   }
 
-  /**
-   * Clear all markers
-   */
-  public clearMarkers(): void {
-    // Clear marker cluster if available
-    if (this.markerCluster) {
-      this.markerCluster.clearLayers();
-    }
-    
-    // Clear visible markers map
-    this.visibleMarkers.clear();
-  }
-  
-  /**
-   * Clean up resources
-   */
-  public destroy(): void {
-    this.clearMarkers();
-    this.map = null;
-    this.markerCluster = null;
-  }
+  return divIcon({
+    html: htmlContent,
+    className: 'custom-marker-icon',
+    iconSize: [iconSize + shadowSize, iconSize + shadowSize],
+    iconAnchor: [iconSize / 2, iconSize / 2],
+    shadowSize: [0, 0],
+    popupAnchor: [0, -(iconSize / 2)]
+  });
 }

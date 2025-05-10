@@ -23,4 +23,12 @@ export interface SiqsResult {
   formattedSiqs: string;
   colorClass: string;
   source: 'realtime' | 'cached' | 'default';
+  confidence?: number;
+}
+
+// Simplified SIQS calculation options
+export interface SiqsCalculationOptions {
+  skipCache?: boolean;
+  useSingleHourSampling?: boolean;
+  targetHour?: number;
 }
