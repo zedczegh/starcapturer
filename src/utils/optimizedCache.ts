@@ -1,4 +1,3 @@
-
 /**
  * Optimized cache utility with memory and persistence layers
  * Improves application performance by reducing API calls and calculations
@@ -22,10 +21,9 @@ import {
 import {
   DEFAULT_TTL,
   LOW_PRIORITY_TTL,
-  HIGH_PRIORITY_TTL
+  HIGH_PRIORITY_TTL,
+  CacheOptions
 } from './cache/cacheTypes';
-
-import type { CacheOptions } from './cache/cacheTypes';
 
 /**
  * Get item from cache with fast access
