@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import LoginPrompt from "@/components/messages/LoginPrompt";
 import MessageContainer from "@/components/messages/MessageContainer";
 import { useMessageNavigation } from "@/hooks/useMessageNavigation";
+import { useMessageConversation } from "@/hooks/messaging/useMessageConversation";
 
 const Messages = () => {
   const { user } = useAuth();
