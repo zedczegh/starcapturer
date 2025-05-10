@@ -1,3 +1,4 @@
+
 import React, { memo, Suspense, useEffect, useState, useRef } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import LocationContentLoader from "./LocationContentLoader";
@@ -29,6 +30,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   const retryCount = useRef(0);
   const [isRetrying, setIsRetrying] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const loadStateTimerRef = useRef<number | null>(null);
 
   const {
     containerRef,
@@ -58,13 +60,21 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       setContentMounted(true);
       
       // Small delay for smoother transitions
-      const timer = setTimeout(() => {
+      if (loadStateTimerRef.current) {
+        clearTimeout(loadStateTimerRef.current);
+      }
+      
+      loadStateTimerRef.current = window.setTimeout(() => {
         if (contentRef.current) {
           setContentVisible(true);
         }
       }, 150);
       
-      return () => clearTimeout(timer);
+      return () => {
+        if (loadStateTimerRef.current) {
+          clearTimeout(loadStateTimerRef.current);
+        }
+      };
     }
     return undefined;
   }, [loading, contentLoaded, memoizedLocationData]);
@@ -72,11 +82,17 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   // Keep mounted content visible even during prop changes
   useEffect(() => {
     if (contentMounted && memoizedLocationData) {
+      // This ensures the component doesn't unmount during updates
       return () => {
-        // This cleanup only runs when component unmounts
-        // or when dependencies change
+        // Clean up only when truly unmounting
       };
     }
+    
+    return () => {
+      if (loadStateTimerRef.current) {
+        clearTimeout(loadStateTimerRef.current);
+      }
+    };
   }, [contentMounted, memoizedLocationData]);
 
   // Fix for cases where SIQS is unavailable – show manual refresh button when loaded but no SIQS

@@ -18,6 +18,7 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
   const queriesInitializedRef = useRef(false);
   const previousLocationDataRef = useRef(null);
   const queryClient = useQueryClient();
+  const loadingMessageTimeoutRef = useRef(null);
   
   const {
     locationData, 
@@ -40,8 +41,30 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
       previousLocationDataRef.current = locationData;
       // Data is now initialized
       setDataInitializing(false);
+      
+      // Clear loading message if it's about getting location
+      if (statusMessage?.includes("Getting your current location") || 
+          statusMessage?.includes("正在获取您的位置")) {
+        // Use a slight delay to ensure all data is rendered before clearing message
+        if (loadingMessageTimeoutRef.current) {
+          clearTimeout(loadingMessageTimeoutRef.current);
+        }
+        loadingMessageTimeoutRef.current = setTimeout(() => {
+          setStatusMessage(null);
+          setLoadingCurrentLocation(false);
+        }, 500);
+      }
     }
-  }, [locationData, isLoading]);
+  }, [locationData, isLoading, statusMessage, setStatusMessage]);
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (loadingMessageTimeoutRef.current) {
+        clearTimeout(loadingMessageTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Use the SIQS updater to keep scores in sync with forecast data
   const { resetUpdateState } = useLocationSIQSUpdater(
@@ -107,7 +130,7 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
           replace: true 
         });
         
-        setLoadingCurrentLocation(false);
+        // Don't clear loading state here - we'll do it when location data is set
       },
       (error) => {
         console.error("Error getting location:", error);

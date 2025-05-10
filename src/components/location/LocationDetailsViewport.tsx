@@ -42,6 +42,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const refreshAttempts = useRef(0);
   const [contentKey, setContentKey] = useState<number>(1);
   const locationIdRef = useRef<string | null>(null);
+  const statusMessageTimeoutRef = useRef<number | null>(null);
 
   // Check if we came from a redirect
   const isRedirect = locationData?.fromPhotoPoints || locationData?.fromCalculator;
@@ -62,6 +63,26 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       refreshAttempts.current = 0;
     }
   }, [locationData?.id]);
+
+  // Clear loading status message after data is loaded
+  useEffect(() => {
+    if (statusMessage && locationData && 
+       (statusMessage.includes("Getting your current location") || 
+        statusMessage.includes("正在获取您的位置"))) {
+      if (statusMessageTimeoutRef.current) {
+        clearTimeout(statusMessageTimeoutRef.current);
+      }
+      statusMessageTimeoutRef.current = window.setTimeout(() => {
+        setStatusMessage(null);
+      }, 1000);
+    }
+    
+    return () => {
+      if (statusMessageTimeoutRef.current) {
+        clearTimeout(statusMessageTimeoutRef.current);
+      }
+    };
+  }, [statusMessage, locationData, setStatusMessage]);
 
   // Function to handle the location update
   const onLocationUpdate = useCallback(async (location: any) => {
@@ -129,6 +150,15 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     }
   }, [refreshing, onRefresh, setStatusMessage, t]);
 
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (statusMessageTimeoutRef.current) {
+        clearTimeout(statusMessageTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div 
       className={`container relative z-10 mx-auto px-4 py-8 ${paddingTop}`}
@@ -179,10 +209,12 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         </DialogContent>
       </Dialog>
       
-      <LocationStatusMessage 
-        message={statusMessage}
-        type={messageType}
-      />
+      {statusMessage && (
+        <LocationStatusMessage 
+          message={statusMessage}
+          type={messageType}
+        />
+      )}
       
       {errorState && (
         <div className="mb-4 rounded-md border border-red-800/40 bg-red-900/20 p-3 text-sm">
