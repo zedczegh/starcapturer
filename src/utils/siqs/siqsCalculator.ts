@@ -3,22 +3,48 @@
  * Improved SIQS calculation algorithm with better performance and accuracy
  */
 
-import { SiqsCalculationOptions, SiqsCalculationResult } from './types';
+import { SiqsCalculationOptions, SiqsCalculationResult } from '../siqs/types';
 import { normalizeToSiqsScale } from '../siqsHelpers';
-import { siqsCalculationCache } from './calculation/siqs-cache';
-import { 
-  calculateTemperatureScore,
-  calculateHumidityScore,
-  calculateWindScore,
-  calculateCloudCoverScore,
-  calculatePrecipitationScore,
-  calculateBortleScaleScore,
-  calculateWeightedScore
-} from './calculation/weatherScoring';
-import { 
-  fetchWeatherData, 
-  fetchForecastData 
-} from './calculation/weatherFetcher';
+
+// LRU cache for calculation results
+class SiqsCache {
+  private cache = new Map<string, {result: SiqsCalculationResult, timestamp: number}>();
+  private maxSize = 100;
+  private defaultTTL = 5 * 60 * 1000; // 5 minutes
+  
+  getCached(key: string): SiqsCalculationResult | null {
+    const cached = this.cache.get(key);
+    if (!cached) return null;
+    
+    // Check if expired
+    if (Date.now() - cached.timestamp > this.defaultTTL) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return cached.result;
+  }
+  
+  setCached(key: string, result: SiqsCalculationResult): void {
+    // Clear old entries if cache is full
+    if (this.cache.size >= this.maxSize) {
+      const oldestKey = this.cache.keys().next().value;
+      this.cache.delete(oldestKey);
+    }
+    
+    this.cache.set(key, {
+      result,
+      timestamp: Date.now()
+    });
+  }
+  
+  clearCache(): void {
+    this.cache.clear();
+  }
+}
+
+// Global cache instance
+const siqsCalculationCache = new SiqsCache();
 
 /**
  * Enhanced SIQS calculation with improved caching and accuracy
@@ -98,6 +124,54 @@ export async function calculateSiqs(
 }
 
 /**
+ * Simplified API to fetch weather data
+ */
+async function fetchWeatherData({ latitude, longitude }: { latitude: number; longitude: number }): Promise<any> {
+  try {
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,precipitation,cloud_cover,wind_speed_10m&timezone=auto`);
+    
+    if (!response.ok) {
+      throw new Error(`Weather API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    return {
+      temperature: data.current?.temperature_2m || 15,
+      humidity: data.current?.relative_humidity_2m || 50,
+      precipitation: data.current?.precipitation || 0,
+      cloudCover: data.current?.cloud_cover || 50,
+      windSpeed: data.current?.wind_speed_10m || 5,
+      latitude,
+      longitude
+    };
+  } catch (error) {
+    console.error("Error fetching weather data:", error);
+    return null;
+  }
+}
+
+/**
+ * Simplified API to fetch forecast data
+ */
+async function fetchForecastData({ latitude, longitude }: { latitude: number; longitude: number; days?: number }): Promise<any> {
+  try {
+    const response = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m,cloud_cover,precipitation_probability&forecast_days=2&timezone=auto`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Forecast API error: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching forecast data:", error);
+    return null;
+  }
+}
+
+/**
  * Core SIQS calculation algorithm
  */
 async function performSiqsCalculation(
@@ -140,12 +214,12 @@ async function performSiqsCalculation(
   }
   
   // Calculate individual factor scores
-  const cloudCoverScore = calculateCloudCoverScore(effectiveCloudCover);
-  const bortleScaleScore = calculateBortleScaleScore(bortleScale);
+  const cloudCoverScore = 10 - effectiveCloudCover / 10;
+  const bortleScaleScore = Math.max(0, 10 - bortleScale * 0.9);
   const temperatureScore = calculateTemperatureScore(weatherData.temperature);
   const humidityScore = calculateHumidityScore(weatherData.humidity);
   const windScore = calculateWindScore(weatherData.windSpeed);
-  const precipitationScore = calculatePrecipitationScore(weatherData.precipitation);
+  const precipitationScore = weatherData.precipitation > 0 ? 0 : 10;
   
   // Apply intelligent scoring algorithm
   const rawScore = calculateWeightedScore({
@@ -192,11 +266,56 @@ async function performSiqsCalculation(
 }
 
 /**
+ * Calculate weighted score from factor components
+ */
+function calculateWeightedScore(factors: { [key: string]: { score: number; weight: number } }): number {
+  let weightedSum = 0;
+  let totalWeight = 0;
+  
+  for (const key in factors) {
+    const factor = factors[key];
+    weightedSum += factor.score * factor.weight;
+    totalWeight += factor.weight;
+  }
+  
+  return totalWeight > 0 ? weightedSum / totalWeight : 0;
+}
+
+/**
+ * Calculate temperature score - ideal temp is around 15°C
+ */
+function calculateTemperatureScore(temperature: number): number {
+  // Assume 15°C is ideal, and score decreases as temp deviates
+  return 10 - Math.min(10, Math.abs(temperature - 15) / 2);
+}
+
+/**
+ * Calculate humidity score - lower humidity is better
+ */
+function calculateHumidityScore(humidity: number): number {
+  // Lower humidity is better for viewing
+  return 10 - (humidity / 10);
+}
+
+/**
+ * Calculate wind score - lower wind is better
+ */
+function calculateWindScore(windSpeed: number): number {
+  // Lower wind is better for viewing stability
+  if (windSpeed < 5) return 10;
+  if (windSpeed < 10) return 8;
+  if (windSpeed < 15) return 6;
+  if (windSpeed < 20) return 4;
+  if (windSpeed < 30) return 2;
+  return 0;
+}
+
+/**
  * Provide fallback SIQS calculation with minimal data
  */
 function provideFallbackSiqs(latitude: number, longitude: number, bortleScale: number): SiqsCalculationResult {
   // Calculate a basic score based on just Bortle Scale
-  const bortleScoreComponent = calculateBortleScaleScore(bortleScale);
+  const bortleScoreComponent = Math.max(0, 10 - bortleScale * 0.9);
   
   // Add latitude adjustment (higher latitudes tend to have clearer skies)
   const latitudeAdjustment = Math.abs(latitude) > 45 ? 1 : 0;
