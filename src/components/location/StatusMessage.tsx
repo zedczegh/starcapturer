@@ -23,10 +23,10 @@ const StatusMessage: React.FC<StatusMessageProps> = ({
     }
   }, [message, onClear, autoHideDuration]);
   
-  // Don't render anything if no message
+  // Don't render anything if no message - improves performance
   if (!message) return null;
   
-  // Don't show "Getting your current location..." messages if they persist too long
+  // Optimize rendering of location messages by using simpler styling
   if (message.includes("Getting your current location") || 
       message.includes("正在获取您的位置")) {
     return (
@@ -43,4 +43,4 @@ const StatusMessage: React.FC<StatusMessageProps> = ({
   );
 };
 
-export default StatusMessage;
+export default React.memo(StatusMessage);
