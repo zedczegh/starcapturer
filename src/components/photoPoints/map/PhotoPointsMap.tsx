@@ -231,7 +231,6 @@ const PhotoPointsMapBase: React.FC<PhotoPointsMapProps> = (props) => {
         center={mapCenter}
         zoom={initialZoom}
         style={{ height: '100%', width: '100%' }}
-        zoomControl={false}
         attributionControl={false}
       >
         <TileLayer 

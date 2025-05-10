@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { calculateSiqs } from '@/services/realTimeSiqs/siqsCalculatorAdapter';
 
@@ -10,7 +11,7 @@ interface RealTimeSiqsProviderProps {
   bortleScale?: number;
   isCertified?: boolean;
   isDarkSkyReserve?: boolean;
-  existingSiqs?: number | null;
+  existingSiqs?: number | { score: number; isViable?: boolean } | null;
 }
 
 const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
@@ -90,8 +91,17 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         if (onSiqsCalculated) onSiqsCalculated(siqs.score, false, siqs.confidence);
       } else {
         // Use existing SIQS if available as fallback
-        if (existingSiqs && onSiqsCalculated) {
-          onSiqsCalculated(existingSiqs, false, 5);
+        if (existingSiqs) {
+          const existingSiqsNumber = typeof existingSiqs === 'number' ? 
+            existingSiqs : 
+            (typeof existingSiqs === 'object' && existingSiqs && 'score' in existingSiqs) ? 
+            existingSiqs.score : 0;
+            
+          if (existingSiqsNumber > 0 && onSiqsCalculated) {
+            onSiqsCalculated(existingSiqsNumber, false, 5);
+          } else if (onSiqsCalculated) {
+            onSiqsCalculated(null, false);
+          }
         } else if (onSiqsCalculated) {
           onSiqsCalculated(null, false);
         }
@@ -101,8 +111,17 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     } catch (error) {
       console.error("Error calculating SIQS:", error);
       // Use existing SIQS if available as fallback after error
-      if (existingSiqs && onSiqsCalculated) {
-        onSiqsCalculated(existingSiqs, false, 5);
+      if (existingSiqs) {
+        const existingSiqsNumber = typeof existingSiqs === 'number' ? 
+          existingSiqs : 
+          (typeof existingSiqs === 'object' && existingSiqs && 'score' in existingSiqs) ? 
+          existingSiqs.score : 0;
+          
+        if (existingSiqsNumber > 0 && onSiqsCalculated) {
+          onSiqsCalculated(existingSiqsNumber, false, 5);
+        } else if (onSiqsCalculated) {
+          onSiqsCalculated(null, false);
+        }
       } else if (onSiqsCalculated) {
         onSiqsCalculated(null, false);
       }

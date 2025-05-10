@@ -14,7 +14,6 @@ import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeS
 // Re-exports from the refactored utility files
 import { 
   formatSiqsForDisplay, 
-  getDisplaySiqs, 
   getLocationSiqs, 
   calculateSimplifiedSiqs,
   DEFAULT_SIQS 
@@ -28,8 +27,8 @@ import {
   getCompleteSiqsDisplay 
 } from './siqs/display/siqsCalculator';
 
-interface SiqsDisplayOpts {
-  realTimeSiqs: number | null;
+export interface SiqsDisplayOpts {
+  realTimeSiqs: number | { score: number; isViable?: boolean } | null;
   staticSiqs: number;
   isCertified?: boolean;
   isDarkSkyReserve?: boolean;
@@ -40,8 +39,13 @@ export function getDisplaySiqs(options: SiqsDisplayOpts): number {
   const { realTimeSiqs, staticSiqs, isCertified = false, isDarkSkyReserve = false } = options;
   
   // Always prefer real-time SIQS if available
-  if (realTimeSiqs !== null && realTimeSiqs > 0) {
-    return realTimeSiqs;
+  if (realTimeSiqs !== null) {
+    if (typeof realTimeSiqs === 'object' && 'score' in realTimeSiqs) {
+      return realTimeSiqs.score > 0 ? realTimeSiqs.score : 0;
+    }
+    if (typeof realTimeSiqs === 'number' && realTimeSiqs > 0) {
+      return realTimeSiqs;
+    }
   }
   
   // Use static SIQS if available
@@ -61,7 +65,7 @@ export {
   calculateSimplifiedSiqs,
   getCompleteSiqsDisplay,
   // Re-export the types
-  type SiqsDisplayOpts,
+  type SiqsDisplayOpts as SiqsDisplayOptions,
 };
 
 export type SiqsResult = {

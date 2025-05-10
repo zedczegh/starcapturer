@@ -12,7 +12,7 @@ export function calculateSiqs(
     useCache?: boolean;
     fallbackToExisting?: boolean;
   }
-): Promise<{ score: number; confidence?: number } | null> {
+): Promise<{ score: number; confidence?: number; isViable?: boolean } | null> {
   // Map old options to new options format
   const calcOptions = {
     useSingleHourSampling: true,
