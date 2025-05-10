@@ -1,52 +1,74 @@
 
-import React, { useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
+import { MapContainer, TileLayer, useMap, ZoomControl } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { useIsMobile } from '@/hooks/use-mobile';
+import LocationMarker from './LocationMarker';
+import UserLocationMarker from './UserLocationMarker';
+import 'leaflet/dist/leaflet.css';
+import { handleMapComponentErrors } from '@/utils/errorHandling';
+import { useMapInteractions } from '@/hooks/photoPoints/useMapInteractions';
+import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { getFastTileLayer, getTileLayerOptions } from '@/components/location/map/MapMarkerUtils';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
-import MapContainer from './MapContainer';
-import PageLoader from '@/components/loaders/PageLoader';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
+  onLocationClick: (location: SharedAstroSpot) => void;
+  onLocationUpdate: (latitude: number, longitude: number) => void;
+  searchRadius: number;
   certifiedLocations: SharedAstroSpot[];
   calculatedLocations: SharedAstroSpot[];
   activeView: 'certified' | 'calculated';
-  searchRadius: number;
-  onLocationClick?: (location: SharedAstroSpot) => void;
-  onLocationUpdate?: (latitude: number, longitude: number) => void;
 }
 
-const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => { 
+// Maximum zoom level for performance
+const MAX_ZOOM_LEVEL = 19;
+
+// Error Boundary HOC
+const PhotoPointsMap: React.FC<PhotoPointsMapProps> = handleMapComponentErrors((props) => {
   const { 
-    userLocation,
+    userLocation, 
     locations,
-    certifiedLocations,
+    certifiedLocations, 
     calculatedLocations,
-    activeView,
+    onLocationClick, 
+    onLocationUpdate,
     searchRadius,
-    onLocationClick,
-    onLocationUpdate
+    activeView
   } = props;
   
-  console.log(`PhotoPointsMap rendering - activeView: ${activeView}, locations: ${locations?.length || 0}, certified: ${certifiedLocations?.length || 0}, calculated: ${calculatedLocations?.length || 0}`);
+  const { t } = useLanguage();
+  const isMobile = useIsMobile();
+  const [mapReady, setMapReady] = useState(false);
+  const [mapMounted, setMapMounted] = useState(false);
   
+  // Optimized map interactions using hooks
   const {
-    mapContainerHeight,
-    mapReady,
-    handleMapReady,
-    optimizedLocations,
+    hoveredLocationId,
+    hideMarkerPopups,
+    handleMarkerHover,
+    handleLocationClick,
+    handleMapDragStart,
+    handleMapDragEnd
+  } = useMapInteractions({
+    onLocationClick
+  });
+  
+  // Get optimized tile layer
+  const { url: tileUrl } = getFastTileLayer();
+  const tileOptions = getTileLayerOptions(isMobile);
+
+  // Get consolidated map props from hook
+  const {
     mapCenter,
     initialZoom,
-    hoveredLocationId,
-    handleHover,
-    handleTouchStart,
-    handleTouchEnd,
-    handleTouchMove,
+    validLocations,
     handleMapClick,
-    handleLocationClicked,
-    handleGetLocation,
-    handleLegendToggle,
-    isMobile
+    handleMapReady: onMapReady,
+    loadingProgress
   } = usePhotoPointsMapContainer({
     userLocation,
     locations,
@@ -58,115 +80,154 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
     onLocationUpdate
   });
   
-  // Add persistent storage for locations
-  useEffect(() => {
-    if (locations && locations.length > 0) {
-      try {
-        // Store ALL locations in session storage for persistence
-        const storageKey = activeView === 'certified' ? 
-          'persistent_certified_locations' : 
-          'persistent_calculated_locations';
-        
-        // Load existing locations first to avoid overwriting 
-        const existingData = sessionStorage.getItem(storageKey);
-        
-        // Only store the most important fields to reduce storage size
-        const simplifiedLocations = locations.map(loc => ({
-          id: loc.id || `loc-${loc.latitude?.toFixed(6)}-${loc.longitude?.toFixed(6)}`,
-          name: loc.name || 'Unknown Location',
-          latitude: loc.latitude,
-          longitude: loc.longitude,
-          siqs: loc.siqs,
-          isDarkSkyReserve: loc.isDarkSkyReserve,
-          certification: loc.certification,
-          distance: loc.distance
-        }));
-        
-        let combinedLocations = simplifiedLocations;
-        
-        if (existingData) {
-          try {
-            const existingLocations = JSON.parse(existingData);
-            
-            // Create a map to deduplicate by coordinates
-            const locationMap = new Map();
-            
-            // Add existing locations first
-            if (Array.isArray(existingLocations)) {
-              existingLocations.forEach(loc => {
-                if (loc && loc.latitude && loc.longitude) {
-                  const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-                  locationMap.set(key, loc);
-                }
-              });
-            }
-            
-            // Add new locations, overwriting existing ones if they have the same coordinates
-            simplifiedLocations.forEach(loc => {
-              if (loc && loc.latitude && loc.longitude) {
-                const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-                locationMap.set(key, loc);
-              }
-            });
-            
-            // Convert back to array
-            combinedLocations = Array.from(locationMap.values());
-          } catch (err) {
-            console.error('Error parsing existing locations:', err);
-          }
-        }
-        
-        // Store the merged locations
-        sessionStorage.setItem(storageKey, JSON.stringify(combinedLocations));
-        console.log(`Stored ${combinedLocations.length} ${activeView} locations to session storage`);
-      } catch (err) {
-        console.error('Error storing locations in session storage:', err);
+  // Handle marker touch events for mobile
+  const [touchStartId, setTouchStartId] = useState<string | null>(null);
+  const [isTouchMoving, setIsTouchMoving] = useState(false);
+  
+  const handleTouchStart = useCallback((e: React.TouchEvent, id: string) => {
+    setTouchStartId(id);
+    setIsTouchMoving(false);
+  }, []);
+  
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    setIsTouchMoving(true);
+  }, []);
+  
+  const handleTouchEnd = useCallback((e: React.TouchEvent, id: string | null) => {
+    if (!isTouchMoving && id && id === touchStartId) {
+      const location = validLocations.find(loc => loc.id === id);
+      if (location) {
+        handleLocationClick(location);
       }
     }
-  }, [locations, activeView]);
+    setTouchStartId(null);
+  }, [isTouchMoving, touchStartId, validLocations, handleLocationClick]);
   
-  // Load persisted locations on component mount
+  // Custom map ready handler
+  const handleMapReady = useCallback(() => {
+    console.log("PhotoPointsMap: Map is ready");
+    setMapReady(true);
+    if (onMapReady) {
+      onMapReady();
+    }
+  }, [onMapReady]);
+  
+  // Component mount handler
   useEffect(() => {
-    try {
-      const storageKey = activeView === 'certified' ? 
-        'persistent_certified_locations' : 
-        'persistent_calculated_locations';
-        
-      const storedData = sessionStorage.getItem(storageKey);
+    setMapMounted(true);
+    return () => setMapMounted(false);
+  }, []);
+  
+  // Notify failure after timeout
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (!mapReady && mapMounted) {
+        console.warn("Map failed to load within timeout period");
+        toast.error(t("Map is taking longer than expected to load", "地图加载时间超过预期"));
+      }
+    }, 10000); // 10 second timeout
+    
+    return () => clearTimeout(timeoutId);
+  }, [mapReady, mapMounted, t]);
+  
+  // Map event handlers and positioning
+  const MapController = () => {
+    const map = useMap();
+    
+    useEffect(() => {
+      // Register drag handlers
+      map.on('dragstart', handleMapDragStart);
+      map.on('dragend', handleMapDragEnd);
       
-      if (storedData) {
-        console.log(`Found ${storageKey} in session storage, available for fallback`);
+      // Register click handler for location update
+      if (activeView === 'calculated') {
+        map.on('click', (e) => {
+          if (handleMapClick) {
+            handleMapClick(e.latlng.lat, e.latlng.lng);
+          }
+        });
       }
-    } catch (err) {
-      console.error('Error checking session storage:', err);
-    }
-  }, [activeView]);
+      
+      // Set up map
+      handleMapReady();
+      
+      return () => {
+        map.off('dragstart', handleMapDragStart);
+        map.off('dragend', handleMapDragEnd);
+        if (handleMapClick) {
+          map.off('click');
+        }
+      };
+    }, [map]);
+    
+    // Update center when user location changes
+    useEffect(() => {
+      if (mapCenter && map && mapReady) {
+        map.setView(mapCenter, map.getZoom(), { animate: true });
+      }
+    }, [mapCenter?.[0], mapCenter?.[1]]);
+    
+    return null;
+  };
   
-  console.log(`PhotoPointsMap: optimizedLocations=${optimizedLocations?.length || 0}, mapReady=${mapReady}`);
+  // Determine which user location to show (actual or center of China)
+  const effectiveUserLocation = userLocation 
+    ? [userLocation.latitude, userLocation.longitude] as [number, number]
+    : [35.8617, 104.1954] as [number, number];  // Default center (China)
   
   return (
-    <MapContainer
-      userLocation={userLocation}
-      locations={optimizedLocations}
-      searchRadius={searchRadius}
-      activeView={activeView}
-      mapReady={mapReady}
-      handleMapReady={handleMapReady}
-      handleLocationClicked={handleLocationClicked}
-      handleMapClick={handleMapClick}
-      mapCenter={mapCenter}
-      initialZoom={initialZoom}
-      mapContainerHeight={mapContainerHeight}
-      isMobile={isMobile}
-      hoveredLocationId={hoveredLocationId}
-      handleHover={handleHover}
-      handleTouchStart={handleTouchStart}
-      handleTouchEnd={handleTouchEnd}
-      handleTouchMove={handleTouchMove}
-      handleGetLocation={handleGetLocation}
-      onLegendToggle={handleLegendToggle}
-    />
+    <div className="relative w-full h-[50vh] md:h-[60vh] rounded-xl overflow-hidden border border-border/40">
+      {locations.length === 0 && loadingProgress < 100 && (
+        <div className="absolute inset-0 z-10 bg-background/80 flex flex-col items-center justify-center">
+          <div className="w-48 h-2 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary transition-all duration-300" 
+              style={{ width: `${loadingProgress}%` }}
+            ></div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {t("Loading locations...", "正在加载位置...")} ({loadingProgress}%)
+          </p>
+        </div>
+      )}
+      
+      <MapContainer
+        center={mapCenter}
+        zoom={initialZoom}
+        maxZoom={MAX_ZOOM_LEVEL}
+        style={{ height: '100%', width: '100%' }}
+        zoomControl={false}
+        attributionControl={false}
+      >
+        <TileLayer url={tileOptions.url} maxZoom={tileOptions.maxZoom} />
+        <ZoomControl position="bottomright" />
+        <MapController />
+        
+        {mapReady && userLocation && (
+          <UserLocationMarker 
+            position={[userLocation.latitude, userLocation.longitude]} 
+            onLocationUpdate={onLocationUpdate}
+          />
+        )}
+        
+        {!hideMarkerPopups && validLocations.map(location => (
+          <LocationMarker
+            key={`${location.id || location.name}-${location.latitude.toFixed(5)}-${location.longitude.toFixed(5)}`}
+            location={location}
+            onClick={handleLocationClick}
+            isHovered={hoveredLocationId === location.id}
+            onHover={handleMarkerHover}
+            locationId={location.id || `${location.latitude}-${location.longitude}`}
+            isCertified={Boolean(location.isDarkSkyReserve || location.certification)}
+            activeView={activeView}
+            handleTouchStart={handleTouchStart}
+            handleTouchEnd={handleTouchEnd}
+            handleTouchMove={handleTouchMove}
+          />
+        ))}
+      </MapContainer>
+    </div>
   );
-};
+});
 
-export default PhotoPointsMap;
+export default React.memo(PhotoPointsMap);
