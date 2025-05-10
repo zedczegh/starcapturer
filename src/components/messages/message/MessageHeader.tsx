@@ -5,6 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
+import BackButton from "@/components/navigation/BackButton";
 
 interface MessageHeaderProps {
   conversation: {
@@ -13,21 +14,24 @@ interface MessageHeaderProps {
     avatar_url: string | null;
   };
   onBack: () => void;
+  isMobile?: boolean; // Added prop for mobile-specific UI
 }
 
-const MessageHeader: React.FC<MessageHeaderProps> = ({ conversation, onBack }) => {
+const MessageHeader: React.FC<MessageHeaderProps> = ({ conversation, onBack, isMobile }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   
   return (
     <div className="p-4 border-b border-cosmic-800/50 bg-cosmic-900/90 flex items-center gap-3 sticky top-0 z-30 backdrop-blur-md shadow-sm">
+      {/* Always show back button on mobile, use className to control visibility on desktop */}
       <Button 
         variant="ghost" 
-        className="md:hidden mr-2 text-cosmic-400 hover:text-white hover:bg-cosmic-800/50" 
+        className={`${isMobile ? '' : 'md:hidden'} mr-2 text-cosmic-400 hover:text-white hover:bg-cosmic-800/50`} 
         onClick={onBack}
       >
         <ChevronLeft className="h-5 w-5" />
       </Button>
+      
       <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20">
         {conversation.avatar_url ? (
           <AvatarImage

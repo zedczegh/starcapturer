@@ -14,17 +14,26 @@ interface ConversationPartner {
 export function useMessageNavigation() {
   const [activeConversation, setActiveConversation] = useState<ConversationPartner | null>(null);
   const isMobile = useIsMobile();
+  const [showConversationView, setShowConversationView] = useState(false);
 
   const handleSelectConversation = (conversation: ConversationPartner) => {
     setActiveConversation(conversation);
+    if (isMobile) {
+      setShowConversationView(true);
+    }
   };
 
   const handleBack = () => {
-    setActiveConversation(null);
+    if (isMobile) {
+      setShowConversationView(false);
+    } else {
+      setActiveConversation(null);
+    }
   };
 
   return {
     activeConversation,
+    showConversationView,
     setActiveConversation: handleSelectConversation,
     handleBack,
     isMobile

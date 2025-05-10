@@ -10,6 +10,7 @@ import { useRef } from "react";
 
 interface MessageContainerProps {
   activeConversation: ConversationPartner | null;
+  showConversationView?: boolean; // New prop for mobile navigation
   conversations: ConversationPartner[];
   loading: boolean;
   messages: any[];
@@ -22,10 +23,12 @@ interface MessageContainerProps {
   sending: boolean;
   isProcessingAction: boolean;
   currentUserId: string;
+  isMobile?: boolean; // New prop for responsive design
 }
 
 const MessageContainer: React.FC<MessageContainerProps> = ({
   activeConversation,
+  showConversationView,
   conversations,
   loading,
   messages,
@@ -38,14 +41,20 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
   sending,
   isProcessingAction,
   currentUserId,
+  isMobile,
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
 
+  // Determine visibility of conversation list and message view based on mobile state
+  const showConversationList = !isMobile || (isMobile && !showConversationView);
+  const showMessageView = !isMobile || (isMobile && showConversationView);
+  
   return (
     <div className="flex flex-col md:flex-row gap-4 h-[80vh] scrollbar-hide">
-      <Card className={`${activeConversation ? 'hidden md:flex' : 'flex'} 
-        w-full md:w-1/3 glassmorphism overflow-hidden flex-col
-        border border-cosmic-800/30 shadow-xl backdrop-blur-lg`}
+      <Card 
+        className={`${showConversationList ? 'flex' : 'hidden'} 
+          w-full md:w-1/3 glassmorphism overflow-hidden flex-col
+          border border-cosmic-800/30 shadow-xl backdrop-blur-lg`}
       >
         <ConversationList 
           conversations={conversations}
@@ -58,7 +67,7 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
       </Card>
       
       <Card 
-        className={`${!activeConversation ? 'hidden md:flex' : 'flex'} 
+        className={`${showMessageView ? 'flex' : 'hidden'} 
           w-full md:w-2/3 glassmorphism overflow-hidden flex flex-col
           border border-cosmic-800/30 shadow-xl backdrop-blur-lg relative h-full`}
         ref={messageListRef}
@@ -72,6 +81,7 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
               activeConversation={activeConversation}
               onBack={onBack}
               onUnsendMessage={onUnsendMessage}
+              isMobile={isMobile}
             />
             <MessageInput 
               onSend={onSendMessage}

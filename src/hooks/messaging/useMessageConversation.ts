@@ -3,12 +3,15 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMessaging } from '@/hooks/useMessaging';
 import { ConversationPartner } from './useConversations';
+import { useMessageNavigation } from '@/hooks/useMessageNavigation';
 
 export const useMessageConversation = () => {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeConversation, setActiveConversation] = useState<ConversationPartner | null>(null);
   const [isProcessingAction, setIsProcessingAction] = useState(false);
+  
+  // Use the centralized message navigation hook instead of local state
+  const { activeConversation, setActiveConversation: handleSelectConversation, handleBack } = useMessageNavigation();
   
   const {
     conversations,
@@ -31,16 +34,14 @@ export const useMessageConversation = () => {
         handleSelectConversation(conversation);
       }
     }
-  }, [location.state?.selectedUser, conversations]);
+  }, [location.state?.selectedUser, conversations, handleSelectConversation]);
   
-  const handleSelectConversation = (conversation: ConversationPartner) => {
-    setActiveConversation(conversation);
-    fetchMessages(conversation.id);
-  };
-  
-  const handleBack = () => {
-    setActiveConversation(null);
-  };
+  // Fetch messages when conversation is selected
+  useEffect(() => {
+    if (activeConversation) {
+      fetchMessages(activeConversation.id);
+    }
+  }, [activeConversation, fetchMessages]);
   
   const handleSendMessage = async (text: string, imageFile?: File | null, locationData?: any) => {
     if (!activeConversation) return;
