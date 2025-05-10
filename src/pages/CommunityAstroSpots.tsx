@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -13,34 +13,59 @@ import CommunityMap from "@/components/community/CommunityMap";
 import { Loader2 } from "@/components/ui/loader";
 import CommunityLocationsSkeleton from "@/components/community/CommunityLocationsSkeleton";
 import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
 const CommunityAstroSpots: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
+  // Use React Query to fetch data with improved caching
   const { data: astrospots, isLoading } = useQuery({
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
+  const [siqsConfidence, setSiqsConfidence] = useState<Record<string, number>>({});
+  const [stabilizedSiqs, setStabilizedSiqs] = useState<Record<string, number | null>>({});
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
-  const handleSiqsCalculated = (spotId: string, siqs: number | null, loading: boolean) => {
-    setRealTimeSiqs(prev => ({
-      ...prev,
-      [spotId]: siqs
-    }));
+  // Handle SIQS calculation results with rate limiting for mobile
+  const handleSiqsCalculated = useCallback((spotId: string, siqs: number | null, loading: boolean, confidence?: number) => {
     setLoadingSiqs(prev => ({
       ...prev,
       [spotId]: loading
     }));
-  };
+    
+    if (siqs !== null) {
+      setRealTimeSiqs(prev => ({
+        ...prev,
+        [spotId]: siqs
+      }));
+      
+      // Update stabilized scores to prevent flickering
+      if (siqs > 0) {
+        setStabilizedSiqs(prev => ({
+          ...prev, 
+          [spotId]: siqs
+        }));
+      }
+    }
+    
+    if (confidence) {
+      setSiqsConfidence(prev => ({
+        ...prev,
+        [spotId]: confidence
+      }));
+    }
+  }, []);
 
+  // Track user location for better map experience
   const handleLocationUpdate = useCallback((lat: number, lng: number) => {
     console.log("Location updated:", lat, lng);
     setUserLocation([lat, lng]);
@@ -53,13 +78,14 @@ const CommunityAstroSpots: React.FC = () => {
     // Add real-time SIQS values to spots for sorting
     const spotsWithRealtimeSiqs = astrospots.map(spot => ({
       ...spot,
-      realTimeSiqs: realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs
+      realTimeSiqs: stabilizedSiqs[spot.id] ?? realTimeSiqs[spot.id] ?? spot.siqs
     }));
     
     // Sort using the utility function
     return sortLocationsBySiqs(spotsWithRealtimeSiqs);
-  }, [astrospots, realTimeSiqs]);
+  }, [astrospots, realTimeSiqs, stabilizedSiqs]);
 
+  // Animation variants
   const titleVariants = {
     hidden: { opacity: 0, scale: 0.96, y: -10 },
     visible: { opacity: 1, scale: 1, y: 0, transition: { delay: 0.1, duration: 0.6, ease: "easeOut" } }
@@ -73,11 +99,39 @@ const CommunityAstroSpots: React.FC = () => {
     visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
   };
 
+  // Navigate to astro spot profile
   const handleCardClick = (id: string) => {
     navigate(`/astro-spot/${id}`, { 
       state: { from: 'community' } 
     });
   };
+
+  // Effect to start staggered loading of SIQS data
+  useEffect(() => {
+    if (!astrospots || astrospots.length === 0) return;
+    
+    // On mobile, we'll load SIQS data in batches to optimize performance
+    const spotsThatNeedLoading = astrospots.filter(spot => 
+      !realTimeSiqs[spot.id] && !loadingSiqs[spot.id]
+    );
+    
+    if (spotsThatNeedLoading.length === 0) return;
+    
+    // Prioritize spots in viewport
+    const batchSize = isMobile ? 2 : 5;
+    const delay = isMobile ? 400 : 200;
+    
+    // Schedule loading of each batch
+    spotsThatNeedLoading.slice(0, 10).forEach((spot, index) => {
+      const batchIndex = Math.floor(index / batchSize);
+      setTimeout(() => {
+        setLoadingSiqs(prev => ({
+          ...prev,
+          [spot.id]: true
+        }));
+      }, delay * batchIndex);
+    });
+  }, [astrospots, realTimeSiqs, loadingSiqs, isMobile]);
 
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>
@@ -120,7 +174,7 @@ const CommunityAstroSpots: React.FC = () => {
               center={userLocation || DEFAULT_CENTER}
               locations={sortedAstroSpots ?? []}
               hoveredLocationId={null}
-              isMobile={false}
+              isMobile={isMobile}
               zoom={userLocation ? 8 : 3}
               onLocationUpdate={handleLocationUpdate}
             />
@@ -155,14 +209,16 @@ const CommunityAstroSpots: React.FC = () => {
               >
                 <div className="w-full h-full">
                   <RealTimeSiqsProvider
-                    isVisible={true}
+                    isVisible={loadingSiqs[spot.id] || (!realTimeSiqs[spot.id] && !stabilizedSiqs[spot.id])}
                     latitude={spot.latitude}
                     longitude={spot.longitude}
                     bortleScale={spot.bortleScale}
                     existingSiqs={spot.siqs}
-                    onSiqsCalculated={(siqs, loading) =>
-                      handleSiqsCalculated(spot.id, siqs, loading)
+                    onSiqsCalculated={(siqs, loading, confidence) =>
+                      handleSiqsCalculated(spot.id, siqs, loading, confidence)
                     }
+                    priorityLevel={isMobile ? 'low' : 'medium'}
+                    debugLabel={`community-card-${spot.id.substring(0, 6)}`}
                   />
                   <div className="transition-shadow group-hover:shadow-xl group-hover:ring-2 group-hover:ring-primary rounded-xl">
                     <LocationCard
@@ -170,9 +226,10 @@ const CommunityAstroSpots: React.FC = () => {
                       name={spot.name}
                       latitude={spot.latitude}
                       longitude={spot.longitude}
-                      siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                      siqs={stabilizedSiqs[spot.id] ?? realTimeSiqs[spot.id] ?? spot.siqs}
                       timestamp={spot.timestamp}
                       isCertified={false}
+                      siqsLoading={loadingSiqs[spot.id] && !stabilizedSiqs[spot.id]}
                     />
                   </div>
                   <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />

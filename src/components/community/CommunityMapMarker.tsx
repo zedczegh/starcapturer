@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
@@ -53,21 +53,52 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   const icon = createCommunityMarkerIcon(isHovered, isMobile);
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState<boolean>(false);
+  const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
+  const [openPopup, setOpenPopup] = useState<boolean>(false);
+  const markerRef = useRef<L.Marker>(null);
+  
+  // Stabilize SIQS score to prevent flicker
+  const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
+  
+  useEffect(() => {
+    if (realTimeSiqs !== null && realTimeSiqs > 0) {
+      setStabilizedScore(realTimeSiqs);
+    }
+  }, [realTimeSiqs]);
   
   // Handler for SIQS calculation results
-  const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
+  const handleSiqsCalculated = (siqs: number | null, loading: boolean, confidence?: number) => {
     setRealTimeSiqs(siqs);
     setLoadingSiqs(loading);
+    if (confidence) {
+      setSiqsConfidence(confidence);
+    }
   };
 
   const handleClick = () => {
     if (onMarkerClick) {
       onMarkerClick(spot);
     } else {
-      // Navigate to the astro spot page
-      navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } });
+      // Open popup when clicked on mobile
+      if (isMobile) {
+        setOpenPopup(true);
+        if (markerRef.current) {
+          markerRef.current.openPopup();
+        }
+      } else {
+        // Navigate directly on desktop
+        navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } });
+      }
     }
   };
+
+  // Handle popup close
+  const handlePopupClose = () => {
+    setOpenPopup(false);
+  };
+
+  // Display the best available score
+  const displayScore = stabilizedScore ?? realTimeSiqs ?? spot.siqs;
 
   // Use onClick directly with Marker (not eventHandlers which was causing the error)
   return (
@@ -75,9 +106,14 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       position={[spot.latitude, spot.longitude]}
       icon={icon}
       onClick={handleClick}
+      ref={markerRef}
     >
-      <Popup>
-        <div className="community-popup px-1 py-2">
+      <Popup
+        autoPan={isMobile}
+        closeOnClick={false}
+        onClose={handlePopupClose}
+      >
+        <div className={`community-popup px-1 py-2 ${isMobile ? 'min-w-[200px]' : ''}`}>
           <div className="text-base font-medium mb-1">{spot.name}</div>
           <div className="text-xs text-muted-foreground mb-2">
             {spot.latitude.toFixed(4)}, {spot.longitude.toFixed(4)}
@@ -86,15 +122,16 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
           {/* SIQS Score Display */}
           <div className="flex items-center mb-2">
             <SiqsScoreBadge 
-              score={realTimeSiqs ?? spot.siqs} 
-              loading={loadingSiqs} 
+              score={displayScore} 
+              loading={loadingSiqs && !stabilizedScore}
+              confidenceScore={siqsConfidence}
             />
           </div>
           
           {/* View Profile Button */}
           <Button 
             size="sm" 
-            className="w-full text-xs flex items-center justify-center gap-1 mt-1"
+            className={`w-full text-xs flex items-center justify-center gap-1 mt-1 ${isMobile ? 'py-3' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } });
@@ -106,12 +143,14 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
           
           {/* Hidden SIQS Provider Component */}
           <RealTimeSiqsProvider
-            isVisible={true}
+            isVisible={openPopup || !isMobile}
             latitude={spot.latitude}
             longitude={spot.longitude}
             bortleScale={spot.bortleScale}
             existingSiqs={spot.siqs}
             onSiqsCalculated={handleSiqsCalculated}
+            priorityLevel={openPopup ? 'high' : 'medium'}
+            debugLabel={`community-${spot.id.substring(0, 6)}`}
           />
         </div>
       </Popup>
@@ -119,4 +158,4 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   );
 };
 
-export default CommunityMapMarker;
+export default React.memo(CommunityMapMarker);
