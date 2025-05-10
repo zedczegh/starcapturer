@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -33,7 +32,12 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => {
+import useAppInitializer from './hooks/useAppInitializer';
+
+function App() {
+  // Add the initializer hook to setup performance optimizations
+  useAppInitializer();
+  
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
@@ -68,6 +72,6 @@ const App = () => {
       </QueryClientProvider>
     </HelmetProvider>
   );
-};
+}
 
 export default App;

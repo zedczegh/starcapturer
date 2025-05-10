@@ -1,3 +1,4 @@
+
 /**
  * Unified SIQS Display Utility
  * 
@@ -13,7 +14,8 @@ import { hasCachedSiqs, getCachedSiqs, setSiqsCache } from '@/services/realTimeS
 // No default SIQS values, show loading state or nothing instead
 export const DEFAULT_SIQS = 0;
 
-interface SiqsDisplayOptions {
+// Rename to avoid the conflict with imported type
+export interface SiqsDisplayOpts {
   latitude: number;
   longitude: number;
   bortleScale?: number;
@@ -21,6 +23,8 @@ interface SiqsDisplayOptions {
   isDarkSkyReserve?: boolean;
   existingSiqs?: number | any;
   skipCache?: boolean;
+  useSingleHourSampling?: boolean;
+  targetHour?: number;
 }
 
 interface SiqsResult {
@@ -133,7 +137,7 @@ export function calculateSimplifiedSiqs(cloudCover: number, bortleScale: number 
  * All-in-one function to get complete SIQS display information
  * No default scores for certified locations
  */
-export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promise<SiqsResult> {
+export async function getCompleteSiqsDisplay(options: SiqsDisplayOpts): Promise<SiqsResult> {
   const { 
     latitude, 
     longitude, 
@@ -141,7 +145,9 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     isCertified = false, 
     isDarkSkyReserve = false,
     existingSiqs = null,
-    skipCache = false
+    skipCache = false,
+    useSingleHourSampling = false,
+    targetHour = 1
   } = options;
   
   // Get existing SIQS, without defaults - never use default scores
@@ -182,10 +188,15 @@ export async function getCompleteSiqsDisplay(options: SiqsDisplayOptions): Promi
     // For certified locations, use simplified calculation if the full calculation fails
     try {
       // Try the full calculation first
+      const calcOptions = useSingleHourSampling ? 
+        { targetHour, useSingleHourSampling } : 
+        undefined;
+        
       const result = await calculateRealTimeSiqs(
         latitude,
         longitude,
-        bortleScale
+        bortleScale,
+        calcOptions
       );
       
       if (result && result.siqs > 0) {
