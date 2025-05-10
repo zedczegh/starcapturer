@@ -2,6 +2,7 @@
 import { testViewToggle } from './photoPoints/viewToggle.test';
 import { testSiqsDisplay } from './photoPoints/siqsDisplay.test';
 import { testLocationHandling } from './photoPoints/locationHandling.test';
+import { testCoreSiqsFunctions } from './utils/coreSiqsFunctions.test';
 
 export function runAllTests() {
   console.log('Running ViewToggle tests...');
@@ -12,6 +13,9 @@ export function runAllTests() {
   
   console.log('\nRunning Location Handling tests...');
   testLocationHandling();
+  
+  console.log('\nRunning Core SIQS Functions tests...');
+  testCoreSiqsFunctions();
 }
 
 // Add to window for manual execution in browser console
