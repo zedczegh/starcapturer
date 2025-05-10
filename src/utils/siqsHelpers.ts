@@ -22,9 +22,11 @@ export {
   formatSiqsScore,
   isSiqsAtLeast,
   isSiqsGreaterThan,
-  sortLocationsBySiqs,
-  SiqsValue
+  sortLocationsBySiqs
 };
+
+// Export the SiqsValue type properly with 'export type' syntax for isolatedModules
+export type { SiqsValue };
 
 // Additional SIQS helper functions can be added here but they should use the
 // core protected functions rather than duplicating their logic
