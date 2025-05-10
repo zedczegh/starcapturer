@@ -1,6 +1,5 @@
 
-import { getSiqsScore, normalizeToSiqsScale, SiqsValue } from './siqsHelpers';
-import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
+import { getSiqsScore, normalizeToSiqsScale } from './siqsHelpers';
 
 /**
  * Unified display logic for SIQS scores
@@ -41,94 +40,8 @@ export function getDisplaySiqs({
   return 0;
 }
 
-/**
- * Get complete SIQS display data including real-time calculations when needed
- */
-export async function getCompleteSiqsDisplay({
-  latitude,
-  longitude,
-  bortleScale,
-  isCertified,
-  isDarkSkyReserve,
-  existingSiqs,
-  skipCache = false,
-  useSingleHourSampling = true,
-  targetHour = 1
-}: {
-  latitude: number;
-  longitude: number;
-  bortleScale?: number;
-  isCertified?: boolean;
-  isDarkSkyReserve?: boolean;
-  existingSiqs?: number | null;
-  skipCache?: boolean;
-  useSingleHourSampling?: boolean;
-  targetHour?: number;
-}): Promise<{
-  siqs: number;
-  source: 'realtime' | 'static' | 'default';
-  confidence: number;
-}> {
-  try {
-    // Calculate real-time SIQS
-    const realTimeSiqsResult = await calculateRealTimeSiqs(
-      latitude,
-      longitude,
-      bortleScale || 4,
-      {
-        useSingleHourSampling,
-        targetHour,
-        cacheDurationMins: skipCache ? 0 : 5
-      }
-    );
-    
-    if (realTimeSiqsResult && realTimeSiqsResult.siqs > 0) {
-      return {
-        siqs: realTimeSiqsResult.siqs,
-        source: 'realtime',
-        confidence: 9
-      };
-    }
-    
-    // Fall back to existing SIQS if available
-    if (existingSiqs && existingSiqs > 0) {
-      return {
-        siqs: getSiqsScore(existingSiqs),
-        source: 'static',
-        confidence: 7
-      };
-    }
-    
-    // Use default values based on certification
-    const defaultScore = isDarkSkyReserve ? 8.0 : (isCertified ? 6.5 : 0);
-    
-    return {
-      siqs: defaultScore,
-      source: 'default',
-      confidence: isCertified ? 6 : 4
-    };
-  } catch (error) {
-    console.error("Error in getCompleteSiqsDisplay:", error);
-    
-    // Fallback to static score in case of error
-    if (existingSiqs && existingSiqs > 0) {
-      return {
-        siqs: getSiqsScore(existingSiqs),
-        source: 'static',
-        confidence: 5
-      };
-    }
-    
-    return {
-      siqs: isDarkSkyReserve ? 8.0 : (isCertified ? 6.5 : 0),
-      source: 'default',
-      confidence: 4
-    };
-  }
-}
-
 // Get the appropriate color class based on SIQS score
-export function getSiqsColorClass(score: SiqsValue): string {
+export function getSiqsColorClass(score: number | null | undefined): string {
   const normalizedScore = getSiqsScore(score);
   
   if (!normalizedScore || normalizedScore <= 0) {
@@ -143,7 +56,7 @@ export function getSiqsColorClass(score: SiqsValue): string {
 }
 
 // Format SIQS score for display with proper precision
-export function formatSiqsForDisplay(score: SiqsValue): string {
+export function formatSiqsForDisplay(score: number | null | undefined): string {
   const normalizedScore = getSiqsScore(score);
   
   if (!normalizedScore || normalizedScore <= 0) {
@@ -155,7 +68,7 @@ export function formatSiqsForDisplay(score: SiqsValue): string {
 
 // Determine if score should be shown on mobile
 export function shouldShowScoreOnMobile(
-  score: SiqsValue,
+  score: number | null | undefined,
   isCertified: boolean
 ): boolean {
   const normalizedScore = getSiqsScore(score);
@@ -171,6 +84,5 @@ export default {
   getDisplaySiqs,
   getSiqsColorClass,
   formatSiqsForDisplay,
-  shouldShowScoreOnMobile,
-  getCompleteSiqsDisplay
+  shouldShowScoreOnMobile
 };

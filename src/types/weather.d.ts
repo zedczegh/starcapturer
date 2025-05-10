@@ -1,4 +1,3 @@
-
 declare module "@/types/weather" {
   export interface WeatherData {
     temperature: number;
@@ -40,8 +39,6 @@ declare module "@/types/weather" {
       morning: number | null;
     } | null;
   }
-
-  export type SiqsValueType = number | null | undefined | { score: number; isViable: boolean };
 
   export interface SharedAstroSpot {
     id: string;

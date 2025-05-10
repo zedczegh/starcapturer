@@ -5,7 +5,7 @@
  */
 
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getSiqsScore, isSiqsGreaterThan, isSiqsAtLeast, SiqsValue } from './siqsHelpers';
+import { getSiqsScore, isSiqsGreaterThan, isSiqsAtLeast } from './siqsHelpers';
 
 /**
  * Apply standard SIQS filters to a list of locations

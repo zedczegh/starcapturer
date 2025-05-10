@@ -2,17 +2,9 @@
  * Utility functions for SIQS score handling and display
  */
 
-// Define common SIQS types for better type safety
-export type SiqsValue = number | null | undefined | { score: number; isViable: boolean };
-
 // Normalize any SIQS value to the standard 0-10 scale
-export function normalizeToSiqsScale(value: SiqsValue): number {
+export function normalizeToSiqsScale(value: number | null | undefined): number {
   if (value === null || value === undefined) return 0;
-  
-  // Handle object format
-  if (typeof value === 'object' && 'score' in value) {
-    value = value.score;
-  }
   
   // Already in 0-10 range
   if (value >= 0 && value <= 10) {
@@ -32,7 +24,7 @@ export function normalizeToSiqsScale(value: SiqsValue): number {
 }
 
 // Extract SIQS score from various formats
-export function getSiqsScore(siqs: SiqsValue): number {
+export function getSiqsScore(siqs: any): number {
   if (siqs === null || siqs === undefined) return 0;
   
   // Handle number directly
@@ -57,18 +49,14 @@ export function getSiqsScore(siqs: SiqsValue): number {
 }
 
 // Format SIQS for display with proper precision
-export function formatSiqsForDisplay(siqs: SiqsValue): string {
-  const score = getSiqsScore(siqs);
-  if (score <= 0) {
+export function formatSiqsForDisplay(siqs: number | null): string {
+  if (siqs === null || siqs <= 0) {
     return "—";
   }
   
   // Keep one decimal place for visual consistency
-  return score.toFixed(1);
+  return siqs.toFixed(1);
 }
-
-// Export formatSiqsScore as an alias for formatSiqsForDisplay for backward compatibility
-export const formatSiqsScore = formatSiqsForDisplay;
 
 // Cache timing parameters for SIQS loading
 const cachedTimingParams = {
@@ -119,34 +107,9 @@ export function getDisplaySiqs({
   return 0;
 }
 
-// Compare SIQS scores - check if first score is greater than second
-export function isSiqsGreaterThan(siqs: SiqsValue, threshold: number): boolean {
-  const score = getSiqsScore(siqs);
-  return score > threshold;
-}
-
-// Check if SIQS score is at least a certain value
-export function isSiqsAtLeast(siqs: SiqsValue, threshold: number): boolean {
-  const score = getSiqsScore(siqs);
-  return score >= threshold;
-}
-
-// Sort locations by SIQS score (highest first)
-export function sortLocationsBySiqs(locations: any[]): any[] {
-  return [...locations].sort((a, b) => {
-    const scoreA = getSiqsScore(a.siqs) || 0;
-    const scoreB = getSiqsScore(b.siqs) || 0;
-    return scoreB - scoreA;
-  });
-}
-
 export default {
   normalizeToSiqsScale,
   getSiqsScore,
   formatSiqsForDisplay,
-  getDisplaySiqs,
-  formatSiqsScore,
-  isSiqsGreaterThan,
-  isSiqsAtLeast,
-  sortLocationsBySiqs
+  getDisplaySiqs
 };
