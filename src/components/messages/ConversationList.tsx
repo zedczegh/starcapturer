@@ -9,6 +9,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
 import EmojiRenderer from './EmojiRenderer';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ConversationPartner {
   id: string;
@@ -38,6 +39,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
 }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const formatMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -56,8 +58,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="p-4 border-b border-cosmic-800/50 bg-cosmic-900/50">
-        <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-4">
+      <div className={`${isMobile ? 'p-2 pb-3' : 'p-4'} border-b border-cosmic-800/50 bg-cosmic-900/50`}>
+        <h2 className={`${isMobile ? 'text-lg mb-2' : 'text-xl mb-4'} font-semibold text-white flex items-center gap-2`}>
           <MessageCircle className="h-5 w-5 text-primary" /> {t("Messages", "消息")}
         </h2>
         <div className="relative">
@@ -75,12 +77,12 @@ const ConversationList: React.FC<ConversationListProps> = ({
       <ScrollArea className="flex-1 p-2">
         <div className="space-y-1">
           {loading ? (
-            <div className="p-8 flex flex-col items-center justify-center space-y-3 text-cosmic-400">
+            <div className={`${isMobile ? 'p-4' : 'p-8'} flex flex-col items-center justify-center space-y-3 text-cosmic-400`}>
               <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"/>
               <p className="text-sm">{t("Loading conversations...", "加载对话中...")}</p>
             </div>
           ) : filteredConversations.length === 0 ? (
-            <div className="p-8 text-center text-cosmic-400 space-y-2">
+            <div className={`${isMobile ? 'p-4' : 'p-8'} text-center text-cosmic-400 space-y-2`}>
               <MessageCircle className="mx-auto h-12 w-12 opacity-30 mb-2" />
               <p>{searchQuery ? t("No conversations match your search", "没有匹配的对话") 
                 : t("No conversations yet", "暂无对话")}</p>
@@ -93,7 +95,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.2 }}
                 onClick={() => onSelectConversation(conversation)}
-                className={`p-3 rounded-xl cursor-pointer transition-all flex items-center gap-3 
+                className={`${isMobile ? 'p-2' : 'p-3'} rounded-xl cursor-pointer transition-all flex items-center gap-2 
                   hover:bg-primary/5 border border-transparent
                   ${activeConversation?.id === conversation.id 
                     ? 'bg-primary/10 border-primary/20 shadow-lg' 
@@ -101,7 +103,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                   }`}
               >
                 <div className="relative">
-                  <Avatar className="h-12 w-12 ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20">
+                  <Avatar className={`${isMobile ? 'h-10 w-10' : 'h-12 w-12'} ring-2 ring-offset-2 ring-offset-cosmic-900 ring-primary/20`}>
                     {conversation.avatar_url ? (
                       <AvatarImage
                         src={conversation.avatar_url}
@@ -110,7 +112,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
                       />
                     ) : (
                       <AvatarFallback className="bg-primary/10">
-                        <User className="h-6 w-6 text-primary" />
+                        <User className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'} text-primary`} />
                       </AvatarFallback>
                     )}
                   </Avatar>
@@ -124,14 +126,14 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center">
-                    <p className="font-medium text-white truncate">
+                    <p className={`font-medium text-white truncate ${isMobile ? 'text-sm' : ''}`}>
                       {conversation.username || t("User", "用户")}
                     </p>
-                    <span className="text-xs text-cosmic-400">
+                    <span className={`text-cosmic-400 ${isMobile ? 'text-xs' : 'text-xs'}`}>
                       {formatMessageTime(conversation.last_message_time)}
                     </span>
                   </div>
-                  <div className="text-sm text-cosmic-300 truncate mt-0.5">
+                  <div className={`text-cosmic-300 truncate mt-0.5 ${isMobile ? 'text-xs' : 'text-sm'}`}>
                     <EmojiRenderer text={conversation.last_message} inline />
                   </div>
                 </div>

@@ -7,6 +7,7 @@ import MessageInput from "@/components/messages/MessageInput";
 import EmptyConversationState from "@/components/messages/EmptyConversationState";
 import { ConversationPartner } from "@/hooks/messaging/useConversations";
 import { useRef } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MessageContainerProps {
   activeConversation: ConversationPartner | null;
@@ -40,12 +41,14 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
   currentUserId,
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 h-[80vh] scrollbar-hide">
+    <div className={`flex flex-col md:flex-row gap-4 ${isMobile ? 'h-[calc(100vh-5rem)]' : 'h-[80vh]'} scrollbar-hide`}>
       <Card className={`${activeConversation ? 'hidden md:flex' : 'flex'} 
         w-full md:w-1/3 glassmorphism overflow-hidden flex-col
-        border border-cosmic-800/30 shadow-xl backdrop-blur-lg`}
+        border border-cosmic-800/30 shadow-xl backdrop-blur-lg
+        ${isMobile && !activeConversation ? 'h-full max-h-[calc(100vh-5rem)]' : ''}`}
       >
         <ConversationList 
           conversations={conversations}
@@ -60,7 +63,8 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
       <Card 
         className={`${!activeConversation ? 'hidden md:flex' : 'flex'} 
           w-full md:w-2/3 glassmorphism overflow-hidden flex flex-col
-          border border-cosmic-800/30 shadow-xl backdrop-blur-lg relative h-full`}
+          border border-cosmic-800/30 shadow-xl backdrop-blur-lg relative h-full
+          ${isMobile && activeConversation ? 'h-full max-h-[calc(100vh-5rem)]' : ''}`}
         ref={messageListRef}
         data-active-conversation-id={activeConversation?.id || ''}
       >
