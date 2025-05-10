@@ -31,6 +31,13 @@ export function formatSiqsForDisplay(siqs: number | null): string {
 }
 
 /**
+ * Backwards compatibility: Alias for formatSiqsForDisplay
+ */
+export function formatSiqsScore(siqs: number | null): string {
+  return formatSiqsForDisplay(siqs);
+}
+
+/**
  * Formats an array of SIQS factors for display
  * @param factors SIQS factors
  * @returns Formatted factors
@@ -46,6 +53,14 @@ export function formatSiqsFactors(factors: Array<{name: string; score: number}> 
 export function isSiqsGreaterThan(siqs: number | { score: number } | null | undefined, threshold: number): boolean {
   const score = getSiqsScore(siqs);
   return score > threshold;
+}
+
+/**
+ * Check if SIQS is at least a threshold value
+ */
+export function isSiqsAtLeast(siqs: number | { score: number } | null | undefined, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score >= threshold;
 }
 
 /**
@@ -76,4 +91,23 @@ export function processRawSiqsValue(rawValue: number | { score: number } | null 
   
   // Ensure score is within proper range
   return Math.round(Math.min(Math.max(score, 0), 10) * 10) / 10;
+}
+
+/**
+ * Compare two locations by SIQS score for sorting
+ * @param a First location
+ * @param b Second location
+ * @returns Sort comparison result
+ */
+export function compareBySiqsScore(a: any, b: any): number {
+  return (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0);
+}
+
+/**
+ * Sort locations by SIQS score (highest first)
+ * @param locations Array of locations to sort
+ * @returns Sorted array of locations
+ */
+export function sortLocationsBySiqs(locations: any[]): any[] {
+  return [...locations].sort(compareBySiqsScore);
 }
