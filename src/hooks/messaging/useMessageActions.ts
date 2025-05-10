@@ -1,61 +1,48 @@
-
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { v4 as uuid } from 'uuid';
-import { toast } from 'sonner';
+import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { formatLocationShareMessage } from '@/utils/messageUtils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export const useMessageActions = (
-  fetchMessages: (conversationId: string) => Promise<void>,
+  refreshMessages: (conversationPartnerId: string) => Promise<void>, 
   setMessages: React.Dispatch<React.SetStateAction<any[]>>
 ) => {
   const [sending, setSending] = useState(false);
   const { user } = useAuth();
-
-  const sendMessage = async (
-    content: string, 
-    imageFile?: File | null, 
-    locationData?: any
+  const { t } = useLanguage();
+  
+  const sendMessage = useCallback(async (
+    text: string, 
+    imageFile?: File | null,
+    locationData?: { latitude: number; longitude: number; name: string; timestamp: string; siqs?: any }
   ) => {
     if (!user) return;
+    
+    // Find the active conversation partner ID from active conversation state instead of URL
+    // This fixes the "No conversation partner found" error
+    const activeElement = document.querySelector('[data-active-conversation-id]');
+    const conversationPartnerId = activeElement?.getAttribute('data-active-conversation-id');
+    
+    if (!conversationPartnerId) {
+      console.error("No active conversation partner found");
+      toast.error(t("Please select a conversation partner", "请选择聊天对象"));
+      return;
+    }
     
     setSending(true);
     
     try {
-      const receiverId = content.startsWith('@') 
-        ? content.split(' ')[0].substring(1) 
-        : null;
+      let imageUrl = null;
       
-      let finalContent = content;
-      let payload = null;
-      
-      // If locationData is provided, format it as a location share message
-      if (locationData) {
-        const formattedMessage = formatLocationShareMessage(locationData, content);
-        finalContent = formattedMessage.text;
-        payload = formattedMessage.payload;
-      }
-      
-      const messageId = uuid();
-      
-      let messageData = {
-        id: messageId,
-        sender_id: user.id,
-        receiver_id: receiverId,
-        content: finalContent,
-        payload: payload,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        read: false
-      };
-      
+      // Upload image if provided
       if (imageFile) {
-        // Handle image upload and add image URL to message
         const fileExt = imageFile.name.split('.').pop();
-        const filePath = `messages/${user.id}/${messageId}.${fileExt}`;
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
         
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError, data } = await supabase
+          .storage
           .from('message_images')
           .upload(filePath, imageFile);
           
@@ -63,53 +50,123 @@ export const useMessageActions = (
           throw uploadError;
         }
         
-        const { data: { publicUrl } } = supabase.storage
+        const { data: { publicUrl } } = supabase
+          .storage
           .from('message_images')
           .getPublicUrl(filePath);
           
-        messageData.image_url = publicUrl;
+        imageUrl = publicUrl;
       }
       
-      const { error } = await supabase
-        .from('messages')
-        .insert(messageData);
-        
-      if (error) throw error;
+      // Create the message object
+      const messageData: any = {
+        sender_id: user.id,
+        receiver_id: conversationPartnerId,
+        read: false,
+      };
       
-      // Optimistic update of messages
-      setMessages(prev => [...prev, messageData]);
+      // Add image URL if available
+      if (imageUrl) {
+        messageData.image_url = imageUrl;
+      }
+      
+      // Handle location data - store as a JSON string in the message field
+      if (locationData) {
+        // Use message field to store location as a JSON string
+        messageData.message = JSON.stringify({
+          type: 'location',
+          data: locationData
+        });
+        console.log("Sending location in message:", messageData.message);
+      } else {
+        // Regular text message
+        messageData.message = text;
+      }
+      
+      console.log("Sending message with data:", messageData);
+      
+      // Insert the message into the database
+      const { data: newMessage, error } = await supabase
+        .from('user_messages')
+        .insert(messageData)
+        .select()
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update the messages in the UI optimistically
+      setMessages(prevMessages => [
+        ...prevMessages, 
+        {
+          id: newMessage.id,
+          sender_id: user.id,
+          receiver_id: conversationPartnerId,
+          text: locationData ? '' : text,
+          created_at: newMessage.created_at,
+          image_url: imageUrl,
+          location: locationData,
+          read: false // New message starts as unread
+        }
+      ]);
+      
+      // Refresh messages from the server
+      await refreshMessages(conversationPartnerId);
       
     } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error('Failed to send message');
+      console.error("Error sending message:", error);
+      toast.error(t("Failed to send message", "发送消息失败"));
     } finally {
       setSending(false);
     }
-  };
-
-  const unsendMessage = async (messageId: string): Promise<boolean> => {
+  }, [user, setMessages, refreshMessages, t]);
+  
+  const unsendMessage = useCallback(async (messageId: string): Promise<boolean> => {
+    if (!user) return false;
+    
     try {
-      const { error } = await supabase
-        .from('messages')
-        .delete()
+      // Find the message
+      const { data: messageData, error: fetchError } = await supabase
+        .from('user_messages')
+        .select('*')
         .eq('id', messageId)
-        .eq('sender_id', user?.id);
+        .single();
         
-      if (error) throw error;
+      if (fetchError) {
+        throw fetchError;
+      }
       
-      // Update local state
-      setMessages(prev => prev.filter(m => m.id !== messageId));
+      // Check if user is the sender
+      if (messageData.sender_id !== user.id) {
+        toast.error(t("You can only unsend your own messages", "只能撤回自己的消息"));
+        return false;
+      }
+      
+      // Delete the message
+      const { error: deleteError } = await supabase
+        .from('user_messages')
+        .delete()
+        .eq('id', messageId);
+        
+      if (deleteError) {
+        throw deleteError;
+      }
+      
+      // Update the UI
+      setMessages(prevMessages => prevMessages.filter(msg => msg.id !== messageId));
+      
+      toast.success(t("Message unsent", "消息已撤回"));
       return true;
+      
     } catch (error) {
-      console.error('Error unsending message:', error);
-      toast.error('Failed to unsend message');
+      console.error("Error unsending message:", error);
+      toast.error(t("Failed to unsend message", "撤回消息失败"));
       return false;
     }
-  };
-
-  return {
-    sending,
-    sendMessage,
-    unsendMessage
-  };
+  }, [user, setMessages, t]);
+  
+  return { sending, sendMessage, unsendMessage };
 };
+
+export default useMessageActions;
