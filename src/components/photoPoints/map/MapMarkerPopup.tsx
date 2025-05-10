@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,15 @@ import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
 import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
+
+// Type definition for the displaySiqs result
+interface DisplaySiqsResult {
+  siqs: number;
+  formattedSiqs: string;
+  loading?: boolean;
+  colorClass?: string;
+  source?: string;
+}
 
 interface MapMarkerPopupProps {
   location: SharedAstroSpot;
@@ -48,7 +56,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
       (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
   
   // Use our unified display SIQS function - no default scores for certified locations
-  const staticSiqs = getSiqsScore(location);
+  const staticSiqs = getSiqsScore(location.siqs);
   const displaySiqs = getDisplaySiqs({
     realTimeSiqs,
     staticSiqs,
@@ -73,7 +81,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
         <h4 className="font-semibold text-sm line-clamp-1">{displayName}</h4>
       </div>
       
-      {/* Show SIQS with more detailed info - no default scores for certified locations */}
+      {/* Show SIQS with more detailed info */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center">
           <SiqsScoreBadge 

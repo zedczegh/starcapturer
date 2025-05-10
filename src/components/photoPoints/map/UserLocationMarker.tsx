@@ -63,7 +63,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
   useEffect(() => {
     setIsMarkerReady(true);
     handleRefreshSiqs();
-  }, []);
+  }, [handleRefreshSiqs]);
 
   // Fetch location name when position changes
   useEffect(() => {
@@ -154,9 +154,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
       <Marker 
         position={position} 
         icon={userMarkerIcon}
-        eventHandlers={{
-          click: handleMarkerClick
-        }}
+        onClick={handleMarkerClick}
       >
         <Popup
           offset={[0, 10]}

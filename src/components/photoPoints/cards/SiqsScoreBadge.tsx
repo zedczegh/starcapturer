@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 import { getSiqsScore, formatSiqsForDisplay } from '@/utils/siqsHelpers';
 
 interface SiqsScoreBadgeProps {
-  score: number | string | { score: number; isViable: boolean } | any;
+  score: number | null | { score: number; isViable: boolean } | any;
   loading?: boolean;
   compact?: boolean;
   isCertified?: boolean;

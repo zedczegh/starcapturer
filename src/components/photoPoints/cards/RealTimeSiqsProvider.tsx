@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { calculateSiqs } from '@/services/realTimeSiqs/siqsCalculator';
+import { calculateSiqs } from '@/services/realTimeSiqs/siqsCalculatorAdapter';
 
 interface RealTimeSiqsProviderProps {
   latitude: number;

@@ -1,12 +1,11 @@
 
 import React, { useCallback, useState, useEffect } from 'react';
-import { MapContainer, TileLayer, useMap, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useIsMobile } from '@/hooks/use-mobile';
 import LocationMarker from './LocationMarker';
 import UserLocationMarker from './UserLocationMarker';
 import 'leaflet/dist/leaflet.css';
-import { handleMapComponentErrors } from '@/utils/errorHandling';
 import { useMapInteractions } from '@/hooks/photoPoints/useMapInteractions';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -27,8 +26,23 @@ interface PhotoPointsMapProps {
 // Maximum zoom level for performance
 const MAX_ZOOM_LEVEL = 19;
 
-// Error Boundary HOC
-const PhotoPointsMap: React.FC<PhotoPointsMapProps> = handleMapComponentErrors((props) => {
+// Simple error boundary HOC
+const withErrorHandling = (Component: React.ComponentType<any>) => {
+  return (props: any) => {
+    try {
+      return <Component {...props} />;
+    } catch (error) {
+      console.error("Map component error:", error);
+      return (
+        <div className="p-4 bg-destructive/10 text-destructive rounded-lg">
+          There was an error loading the map. Please try refreshing the page.
+        </div>
+      );
+    }
+  };
+};
+
+const PhotoPointsMapBase: React.FC<PhotoPointsMapProps> = (props) => {
   const { 
     userLocation, 
     locations,
@@ -65,10 +79,11 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = handleMapComponentErrors((
   const {
     mapCenter,
     initialZoom,
-    validLocations,
+    optimizedLocations,
     handleMapClick,
     handleMapReady: onMapReady,
-    loadingProgress
+    mapContainerHeight,
+    legendOpen
   } = usePhotoPointsMapContainer({
     userLocation,
     locations,
@@ -79,6 +94,27 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = handleMapComponentErrors((
     onLocationClick,
     onLocationUpdate
   });
+  
+  // Loading state for locations
+  const [loadingState, setLoadingState] = useState({
+    loading: true,
+    progress: 0
+  });
+  
+  // Update loading state based on locations
+  useEffect(() => {
+    if (locations.length > 0) {
+      setLoadingState({
+        loading: false,
+        progress: 100
+      });
+    } else {
+      setLoadingState({
+        loading: true,
+        progress: 50
+      });
+    }
+  }, [locations]);
   
   // Handle marker touch events for mobile
   const [touchStartId, setTouchStartId] = useState<string | null>(null);
@@ -95,13 +131,13 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = handleMapComponentErrors((
   
   const handleTouchEnd = useCallback((e: React.TouchEvent, id: string | null) => {
     if (!isTouchMoving && id && id === touchStartId) {
-      const location = validLocations.find(loc => loc.id === id);
+      const location = optimizedLocations.find(loc => loc.id === id);
       if (location) {
         handleLocationClick(location);
       }
     }
     setTouchStartId(null);
-  }, [isTouchMoving, touchStartId, validLocations, handleLocationClick]);
+  }, [isTouchMoving, touchStartId, optimizedLocations, handleLocationClick]);
   
   // Custom map ready handler
   const handleMapReady = useCallback(() => {
@@ -177,16 +213,16 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = handleMapComponentErrors((
   
   return (
     <div className="relative w-full h-[50vh] md:h-[60vh] rounded-xl overflow-hidden border border-border/40">
-      {locations.length === 0 && loadingProgress < 100 && (
+      {locations.length === 0 && loadingState.loading && (
         <div className="absolute inset-0 z-10 bg-background/80 flex flex-col items-center justify-center">
           <div className="w-48 h-2 bg-muted rounded-full overflow-hidden">
             <div 
               className="h-full bg-primary transition-all duration-300" 
-              style={{ width: `${loadingProgress}%` }}
+              style={{ width: `${loadingState.progress}%` }}
             ></div>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            {t("Loading locations...", "正在加载位置...")} ({loadingProgress}%)
+            {t("Loading locations...", "正在加载位置...")} ({loadingState.progress}%)
           </p>
         </div>
       )}
@@ -194,13 +230,15 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = handleMapComponentErrors((
       <MapContainer
         center={mapCenter}
         zoom={initialZoom}
-        maxZoom={MAX_ZOOM_LEVEL}
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
         attributionControl={false}
       >
-        <TileLayer url={tileOptions.url} maxZoom={tileOptions.maxZoom} />
-        <ZoomControl position="bottomright" />
+        <TileLayer 
+          url={tileOptions.url} 
+          maxZoom={MAX_ZOOM_LEVEL} 
+        />
+        
         <MapController />
         
         {mapReady && userLocation && (
@@ -210,7 +248,7 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = handleMapComponentErrors((
           />
         )}
         
-        {!hideMarkerPopups && validLocations.map(location => (
+        {!hideMarkerPopups && optimizedLocations.map(location => (
           <LocationMarker
             key={`${location.id || location.name}-${location.latitude.toFixed(5)}-${location.longitude.toFixed(5)}`}
             location={location}
@@ -228,6 +266,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = handleMapComponentErrors((
       </MapContainer>
     </div>
   );
-});
+};
+
+// Apply error handling HOC
+const PhotoPointsMap = withErrorHandling(PhotoPointsMapBase);
 
 export default React.memo(PhotoPointsMap);

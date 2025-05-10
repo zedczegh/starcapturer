@@ -1,110 +1,74 @@
 
 /**
- * SIQS Display Formatters
+ * SIQS Display Formatting Utilities
  */
 
-import { normalizeToSiqsScale } from '@/utils/siqsHelpers';
-import { getSiqsColorClass } from '@/utils/mapSiqsDisplay';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
-// Default SIQS value constant
-export const DEFAULT_SIQS = 0;
+// Default SIQS values
+export const DEFAULT_SIQS = 0; // No default scores, use 0 instead
 
 /**
- * Format SIQS for display with consistent formatting
+ * Format a SIQS score for display 
  */
-export function formatSiqsForDisplay(siqs: number | null): string {
-  if (siqs === null || siqs <= 0) {
-    return "N/A";
-  }
+export function formatSiqsForDisplay(score: number | null): string {
+  if (score === null || score <= 0) return 'N/A';
   
-  // Normalize before displaying
-  return normalizeToSiqsScale(siqs).toFixed(1);
+  // Format to one decimal point
+  const formatted = score.toFixed(1);
+  
+  // Remove trailing zeros if it's a whole number
+  return formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted;
 }
 
 /**
- * Get the appropriate display SIQS score based on available data
- * Never use default scores - return 0 if no real data available
+ * Get the SIQS value from a location object
+ */
+export function getLocationSiqs(location: any): number {
+  if (!location) return 0;
+  
+  // Extract SIQS from various possible structures
+  return getSiqsScore(location.siqs || location.siqs_score || location.siqsResult?.score || 0);
+}
+
+/**
+ * Get the display SIQS value based on available data
  */
 export function getDisplaySiqs(options: {
   realTimeSiqs: number | null;
   staticSiqs: number;
-  isCertified: boolean;
-  isDarkSkyReserve: boolean;
+  isCertified?: boolean;
+  isDarkSkyReserve?: boolean;
 }): number {
-  const { realTimeSiqs, staticSiqs } = options;
+  const { realTimeSiqs, staticSiqs, isCertified = false } = options;
   
-  // Use realtime SIQS if available, ensuring it's on 0-10 scale
+  // Always prefer real-time SIQS if available
   if (realTimeSiqs !== null && realTimeSiqs > 0) {
-    return normalizeToSiqsScale(realTimeSiqs);
+    return realTimeSiqs;
   }
   
-  // Use static SIQS if available, ensuring it's on 0-10 scale
+  // Use static SIQS if available
   if (staticSiqs > 0) {
-    return normalizeToSiqsScale(staticSiqs);
+    return staticSiqs;
   }
   
-  // Return 0 for no valid score - will trigger loading state or no display
+  // No default scores
   return 0;
 }
 
 /**
- * Get the appropriate SIQS score from any location object
+ * Calculate a simplified SIQS score based on cloud cover and bortle scale
  */
-export function getLocationSiqs(location: any, realTimeSiqs: number | null = null): number {
-  // Extract certification status
-  const isCertified = Boolean(
-    location?.isDarkSkyReserve || 
-    location?.certification || 
-    location?.type === 'lodging' || 
-    location?.type === 'dark-site'
-  );
-  
-  const isDarkSkyReserve = Boolean(location?.isDarkSkyReserve);
-  
-  // Get static SIQS from location
-  const staticSiqs = getSiqsScore(location);
-  
-  // Get appropriate display SIQS
-  return getDisplaySiqs({
-    realTimeSiqs,
-    staticSiqs,
-    isCertified,
-    isDarkSkyReserve
-  });
-}
-
-// Helper function for simplified SIQS calculation based on cloud cover
 export function calculateSimplifiedSiqs(cloudCover: number, bortleScale: number = 4): number {
-  // Base score determined by cloud cover (0-100%)
-  // 0% clouds = 10, 100% clouds = 0
-  const cloudScore = Math.max(0, 10 - (cloudCover / 10));
+  // Base score inversely related to Bortle Scale (1-9)
+  const baseScore = Math.max(0, 10 - bortleScale);
   
-  // Adjust for Bortle scale (1-9)
-  // Lower Bortle = better score
-  const bortleAdjustment = Math.max(0, 5 - (bortleScale / 2));
+  // Cloud factor (0-100% -> 0-1 factor reduction)
+  const cloudFactor = Math.max(0, 1 - (cloudCover / 100));
   
-  // Simple weighted combination
-  // 70% cloud cover, 30% Bortle scale
-  const rawScore = (cloudScore * 0.7) + (bortleAdjustment * 0.3);
+  // Calculate final score (0-10 scale)
+  const finalScore = baseScore * cloudFactor;
   
-  // Round to one decimal place and ensure within 0-10 range
-  return Math.round(Math.min(10, Math.max(0, rawScore)) * 10) / 10;
+  // Round to 1 decimal place
+  return Math.round(finalScore * 10) / 10;
 }
-
-// Import from siqsHelpers but defined here to avoid circular dependencies
-export const getSiqsScore = (location: any): number => {
-  if (!location) return 0;
-  
-  // Handle if it's a raw siqs value
-  if (typeof location === 'number') return location;
-  
-  // Handle location object with score field
-  if (location.score !== undefined) return location.score;
-  if (location.siqs !== undefined) return location.siqs;
-  if (location.siqsScore !== undefined) return location.siqsScore;
-  
-  // Handle location with siqsResult object
-  if (location.siqsResult?.score !== undefined) return location.siqsResult.score;
-  
-  return 0;
-};

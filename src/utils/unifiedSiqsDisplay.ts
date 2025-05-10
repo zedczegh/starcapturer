@@ -28,21 +28,51 @@ import {
   getCompleteSiqsDisplay 
 } from './siqs/display/siqsCalculator';
 
-import type { 
-  SiqsDisplayOpts, 
-  SiqsResult 
-} from './siqs/display/types';
+interface SiqsDisplayOpts {
+  realTimeSiqs: number | null;
+  staticSiqs: number;
+  isCertified?: boolean;
+  isDarkSkyReserve?: boolean;
+}
 
-// Export everything for backwards compatibility
+// Helper function to safely get display SIQS, with type-safety
+export function getDisplaySiqs(options: SiqsDisplayOpts): number {
+  const { realTimeSiqs, staticSiqs, isCertified = false, isDarkSkyReserve = false } = options;
+  
+  // Always prefer real-time SIQS if available
+  if (realTimeSiqs !== null && realTimeSiqs > 0) {
+    return realTimeSiqs;
+  }
+  
+  // Use static SIQS if available
+  if (staticSiqs > 0) {
+    return staticSiqs;
+  }
+  
+  // Return 0 as last resort - no default scores
+  return 0;
+}
+
 export {
   DEFAULT_SIQS,
   formatSiqsForDisplay,
-  getDisplaySiqs,
   getLocationSiqs,
   getCachedRealTimeSiqs,
   calculateSimplifiedSiqs,
   getCompleteSiqsDisplay,
   // Re-export the types
   type SiqsDisplayOpts,
-  type SiqsResult
+};
+
+export type SiqsResult = {
+  siqs: number;
+  isViable?: boolean;
+  loading?: boolean;
+  formattedSiqs?: string;
+  colorClass?: string;
+  source?: string;
+  metadata?: any;
+  factors?: Array<{name: string; score: number; description?: string}>;
+  weatherData?: any;
+  forecastData?: any;
 };

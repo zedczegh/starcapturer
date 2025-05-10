@@ -1,77 +1,36 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 interface UseMapInteractionsProps {
-  onLocationClick?: (location: SharedAstroSpot) => void;
-  onMarkerHover?: (id: string | null) => void;
+  onLocationClick: (location: SharedAstroSpot) => void;
 }
 
-export const useMapInteractions = ({
-  onLocationClick,
-  onMarkerHover
-}: UseMapInteractionsProps) => {
+export function useMapInteractions({ onLocationClick }: UseMapInteractionsProps) {
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
   const [hideMarkerPopups, setHideMarkerPopups] = useState(false);
-  const [lastClickTime, setLastClickTime] = useState<number>(0);
-  const [lastHoverId, setLastHoverId] = useState<string | null>(null);
   
-  // Handle marker hover
+  // Handle hover events
   const handleMarkerHover = useCallback((id: string | null) => {
-    // Simple hover debounce to prevent flickering
-    if (id !== lastHoverId) {
-      setLastHoverId(id);
-      if (id === null) {
-        // Add delay when clearing hover state
-        setTimeout(() => {
-          setHoveredLocationId(null);
-        }, 50);
-      } else {
-        setHoveredLocationId(id);
-      }
-    }
-    
-    if (onMarkerHover) {
-      onMarkerHover(id);
-    }
-  }, [onMarkerHover, lastHoverId]);
+    setHoveredLocationId(id);
+  }, []);
   
   // Handle location click
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
-    // Simple debounce for clicks
-    const now = Date.now();
-    if (now - lastClickTime < 300) {
-      return;
-    }
-    setLastClickTime(now);
-    
     if (onLocationClick) {
       onLocationClick(location);
     }
-  }, [onLocationClick, lastClickTime]);
-
-  // Handle map interaction to hide popups while interacting
+  }, [onLocationClick]);
+  
+  // Handle map drag events
   const handleMapDragStart = useCallback(() => {
     setHideMarkerPopups(true);
-    handleMarkerHover(null);
-  }, [handleMarkerHover]);
-  
-  const handleMapDragEnd = useCallback(() => {
-    // Small delay to prevent immediate popup reappearance
-    setTimeout(() => {
-      setHideMarkerPopups(false);
-    }, 100);
   }, []);
   
-  // Clear hover when component unmounts or on certain conditions
-  useEffect(() => {
-    return () => {
-      if (onMarkerHover) {
-        onMarkerHover(null);
-      }
-    };
-  }, [onMarkerHover]);
-
+  const handleMapDragEnd = useCallback(() => {
+    setHideMarkerPopups(false);
+  }, []);
+  
   return {
     hoveredLocationId,
     hideMarkerPopups,
@@ -80,6 +39,4 @@ export const useMapInteractions = ({
     handleMapDragStart,
     handleMapDragEnd
   };
-};
-
-export default useMapInteractions;
+}

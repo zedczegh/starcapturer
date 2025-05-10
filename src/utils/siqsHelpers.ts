@@ -1,4 +1,3 @@
-
 /**
  * Helper functions for safely working with SIQS values that might be numbers or objects
  */
@@ -6,40 +5,25 @@
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * Get numeric SIQS score from any SIQS format (number or object)
- * @param siqs SIQS value which could be a number or object
- * @returns number value of SIQS or 0 if undefined
+ * Safely extracts a numeric SIQS score from various possible input formats
  */
-export function getSiqsScore(siqs?: number | string | { score: number; isViable: boolean } | any): number {
-  if (siqs === undefined || siqs === null) {
-    return 0;
+export function getSiqsScore(input: any): number {
+  if (input === null || input === undefined) return 0;
+  
+  // Handle simple number case
+  if (typeof input === 'number') return input;
+  
+  // Handle object with score property
+  if (typeof input === 'object') {
+    if ('score' in input && typeof input.score === 'number') return input.score;
+    if ('siqs' in input && typeof input.siqs === 'number') return input.siqs;
   }
   
-  // Handle string values (parsing to number)
-  if (typeof siqs === 'string') {
-    const parsed = parseFloat(siqs);
-    return isNaN(parsed) ? 0 : normalizeToSiqsScale(parsed);
+  // Handle string that might be parsable as a number
+  if (typeof input === 'string' && !isNaN(Number(input))) {
+    return Number(input);
   }
   
-  // Handle numeric values directly
-  if (typeof siqs === 'number') {
-    return isNaN(siqs) ? 0 : normalizeToSiqsScale(siqs);
-  }
-  
-  // Handle SharedAstroSpot object with siqs property
-  if (typeof siqs === 'object' && siqs !== null) {
-    // Case: location.siqs passed directly as an object with score property
-    if ('siqs' in siqs && typeof siqs.siqs !== 'undefined') {
-      return getSiqsScore(siqs.siqs);
-    }
-    
-    // Case: { score: number } object
-    if ('score' in siqs && typeof siqs.score === 'number') {
-      return isNaN(siqs.score) ? 0 : normalizeToSiqsScale(siqs.score);
-    }
-  }
-  
-  // Default to 0 if no valid score found
   return 0;
 }
 
