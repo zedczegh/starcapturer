@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { 
@@ -57,7 +58,7 @@ export const useMapLocations = ({
     processingRef.current = true;
     
     // Use a Map for more efficient lookups compared to array
-    const newLocationsMap = new Map<string, SharedAstroSpot>();
+    let newLocationsMap = new Map<string, SharedAstroSpot>();
     
     // Add all current locations to the map
     locations.forEach(loc => {
