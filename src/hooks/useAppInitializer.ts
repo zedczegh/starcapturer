@@ -12,16 +12,29 @@ export function useAppInitializer() {
     // Initialize performance optimizations
     const startTime = performance.now();
     
-    // Initialize caches
-    initializeCache();
-    initSiqsCache();
+    // Initialize caches in parallel
+    Promise.all([
+      // Initialize main cache
+      new Promise<void>(resolve => {
+        initializeCache();
+        resolve();
+      }),
+      
+      // Initialize SIQS cache
+      new Promise<void>(resolve => {
+        initSiqsCache();
+        resolve();
+      })
+    ]).then(() => {
+      console.log(`Caches initialized in ${(performance.now() - startTime).toFixed(2)}ms`);
+      
+      // Prefetch critical resources after small delay
+      setTimeout(() => {
+        prefetchCriticalResources();
+      }, 1000);
+    });
     
-    // Prefetch critical resources after small delay
-    setTimeout(() => {
-      prefetchCriticalResources();
-    }, 1000);
-    
-    console.log(`App initialization completed in ${(performance.now() - startTime).toFixed(2)}ms`);
+    console.log(`App initialization started in ${(performance.now() - startTime).toFixed(2)}ms`);
     
     // Clean up any resources if needed
     return () => {
