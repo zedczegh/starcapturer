@@ -7,7 +7,7 @@ import EmojiRenderer from '../EmojiRenderer';
 import { MoreVertical, CheckCheck, Check } from 'lucide-react';
 import UnsendDialog from './UnsendDialog';
 import { Button } from '@/components/ui/button';
-import LocationShareCard from '../LocationShareCard';
+import LocationMessageRenderer from './LocationMessageRenderer';
 
 interface MessageItemProps {
   message: any;
@@ -82,13 +82,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
           
           {message.location && (
             <div className="mt-2">
-              <LocationShareCard 
-                name={message.location.name}
-                latitude={message.location.latitude}
-                longitude={message.location.longitude}
-                timestamp={message.location.timestamp}
-                siqs={message.location.siqs}
-              />
+              <LocationMessageRenderer location={message.location} />
             </div>
           )}
         </div>

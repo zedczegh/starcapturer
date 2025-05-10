@@ -1,5 +1,5 @@
 
-import { fetchForecastData } from "@/lib/api";
+import { fetchForecastData } from "@/lib/api/forecast";
 
 /**
  * Optimized forecast data fetcher with enhanced caching
