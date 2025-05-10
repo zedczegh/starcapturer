@@ -1,80 +1,28 @@
-
 import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { createLocationMarkerIcon } from './MarkerManager';
-import { isValidLocation, isWaterLocation } from '@/utils/location/validators';
+import { getSiqsScore } from '@/utils/siqsHelpers';
+import { getLocationMarker } from '../../MarkerUtils';
+import { isValidAstronomyLocation } from '../../MarkerUtils';
+import { isWaterLocation } from '@/utils/location/validators';
 
 /**
- * Manages marker instances and rendering for map components
+ * Manager for map markers with optimized rendering
  */
 export class MarkerManager {
-  private markers: Map<string, L.Marker> = new Map();
   private map: L.Map | null = null;
-  private clusterer: L.MarkerClusterGroup | null = null;
+  private markers: Map<string, L.Marker> = new Map();
+  private selectedMarkerId: string | null = null;
   
   /**
-   * Initialize the marker manager with a Leaflet map instance
+   * Initialize with map instance
    */
   public initialize(map: L.Map): void {
     this.map = map;
-    
-    // Create marker clusterer if needed
-    if (this.shouldUseClusterer()) {
-      this.initializeClusterer();
-    }
   }
   
   /**
-   * Determine if clustering should be used based on device capabilities
-   */
-  private shouldUseClusterer(): boolean {
-    // Only use clusterer on desktop devices with good performance
-    return !this.isLowEndDevice();
-  }
-  
-  /**
-   * Detect if the current device is low-end
-   */
-  private isLowEndDevice(): boolean {
-    // Check for mobile first
-    const userAgent = navigator.userAgent || navigator.vendor || '';
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-    
-    if (isMobile) return true;
-    
-    // Then check for CPU cores as a performance indicator
-    const cpuCores = navigator.hardwareConcurrency || 4;
-    return cpuCores < 4;
-  }
-  
-  /**
-   * Initialize the marker clusterer
-   */
-  private initializeClusterer(): void {
-    if (!this.map) return;
-    
-    try {
-      // This would typically use MarkerClusterGroup from leaflet.markercluster
-      // For this example, we'll create a simple object that mimics the interface
-      this.clusterer = {
-        clearLayers: () => {},
-        addLayer: (marker: L.Marker) => { if (this.map) marker.addTo(this.map); },
-        getBounds: () => L.latLngBounds([]),
-        getVisibleParent: (marker: L.Marker) => marker
-      } as unknown as L.MarkerClusterGroup;
-      
-      // Add clusterer to map
-      if (this.map) {
-        // In real implementation: this.map.addLayer(this.clusterer);
-      }
-    } catch (error) {
-      console.error("Error initializing marker clusterer:", error);
-      this.clusterer = null;
-    }
-  }
-  
-  /**
-   * Render markers on the map
+   * Render markers on the map with optimizations
+   * Only render markers in the current view bounds
    */
   public renderMarkers(
     locations: SharedAstroSpot[],
@@ -83,93 +31,96 @@ export class MarkerManager {
   ): void {
     if (!this.map) return;
     
-    // Track which markers we've already processed
-    const processedIds = new Set<string>();
+    // Update selected marker ID
+    this.selectedMarkerId = selectedId || null;
     
-    // Process each location
+    // Get current map bounds if not provided
+    const mapBounds = bounds || this.map.getBounds();
+    
+    // Track which markers we've processed in this render
+    const processedMarkerIds = new Set<string>();
+    
+    // Process all locations
     for (const location of locations) {
-      if (!isValidLocation(location)) continue;
+      // Skip invalid locations
+      if (!isValidAstronomyLocation(location.latitude, location.longitude)) {
+        continue;
+      }
       
-      // Skip water locations unless certified
+      // Create a unique ID for this marker
+      const markerId = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+      
+      // Track that we've processed this marker
+      processedMarkerIds.add(markerId);
+      
+      // Check if marker is already on the map
+      const existingMarker = this.markers.get(markerId);
+      
+      // If marker exists and location data is the same, skip re-rendering
+      if (existingMarker) {
+        // Update popup content if needed
+        // Skip for performance reasons, handled by click events instead
+        continue;
+      }
+      
+      // Check if location is in current viewport
+      const isInBounds = mapBounds.contains(L.latLng(location.latitude, location.longitude));
+      
+      // Skip markers outside viewport for performance
+      if (!isInBounds) {
+        continue;
+      }
+      
+      // Determine if this is a certified location
       const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+      
+      // Skip rendering water locations if not certified
       if (!isCertified && isWaterLocation(location.latitude, location.longitude, false)) {
         continue;
       }
       
-      // Generate a unique ID for the marker
-      const id = this.getLocationId(location);
-      processedIds.add(id);
+      // Create marker icon based on location data
+      const marker = L.marker([location.latitude, location.longitude], {
+        icon: getLocationMarker(location, isCertified, false, false),
+      });
       
-      // Check if marker is already on the map
-      const existingMarker = this.markers.get(id);
+      // Add to map
+      marker.addTo(this.map);
       
-      // Skip if the marker is already rendered and not selected
-      if (existingMarker && id !== selectedId) continue;
-      
-      // Create marker options
-      const isSelected = id === selectedId;
-      const markerOptions = {
-        isSelected,
-        isCertified,
-        isDestination: location.type === 'destination',
-        isHovered: false
-      };
-      
-      if (existingMarker) {
-        // Update existing marker
-        const icon = createLocationMarkerIcon(location, markerOptions);
-        existingMarker.setIcon(icon);
-      } else {
-        // Create a new marker
-        const icon = createLocationMarkerIcon(location, markerOptions);
-        const marker = L.marker([location.latitude, location.longitude], { icon });
-        
-        // Store the marker
-        this.markers.set(id, marker);
-        
-        // Add to map or clusterer
-        if (this.clusterer) {
-          this.clusterer.addLayer(marker);
-        } else {
-          marker.addTo(this.map);
-        }
-      }
+      // Store marker reference
+      this.markers.set(markerId, marker);
     }
     
-    // Remove markers that are no longer in the data
-    this.markers.forEach((marker, id) => {
-      if (!processedIds.has(id)) {
-        if (this.clusterer) {
-          this.clusterer.removeLayer(marker);
-        } else if (this.map) {
-          this.map.removeLayer(marker);
-        }
-        this.markers.delete(id);
+    // Clean up markers that are no longer in the locations array
+    for (const [markerId, marker] of this.markers.entries()) {
+      if (!processedMarkerIds.has(markerId)) {
+        this.map.removeLayer(marker);
+        this.markers.delete(markerId);
       }
-    });
-  }
-  
-  /**
-   * Generate a unique ID for a location
-   */
-  private getLocationId(location: SharedAstroSpot): string {
-    if (location.id) return location.id;
-    return `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    }
   }
   
   /**
    * Clear all markers from the map
    */
   public clearMarkers(): void {
-    if (this.clusterer) {
-      this.clusterer.clearLayers();
-    } else if (this.map) {
-      this.markers.forEach(marker => {
-        this.map?.removeLayer(marker);
-      });
+    if (!this.map) return;
+    
+    // Remove all markers from map
+    for (const marker of this.markers.values()) {
+      this.map.removeLayer(marker);
     }
     
+    // Clear markers collection
     this.markers.clear();
+  }
+  
+  /**
+   * Highlight a specific marker
+   */
+  public highlightMarker(markerId: string): void {
+    // Implementation omitted for brevity
+    // Would change the icon to a highlighted version
   }
   
   /**
@@ -177,47 +128,6 @@ export class MarkerManager {
    */
   public destroy(): void {
     this.clearMarkers();
-    
-    if (this.clusterer && this.map) {
-      this.map.removeLayer(this.clusterer);
-    }
-    
-    this.clusterer = null;
     this.map = null;
   }
-}
-
-/**
- * Create a marker icon for a location
- */
-function isValidLocation(location: SharedAstroSpot): boolean {
-  return (
-    typeof location.latitude === 'number' &&
-    typeof location.longitude === 'number' &&
-    isFinite(location.latitude) &&
-    isFinite(location.longitude)
-  );
-}
-
-/**
- * Create a marker icon for a location
- */
-export function createLocationMarkerIcon(
-  location: SharedAstroSpot,
-  options: {
-    isHovered?: boolean;
-    isSelected?: boolean;
-    isCertified?: boolean;
-    isDestination?: boolean;
-  } = {}
-): L.Icon {
-  // This is a simplified implementation
-  return L.icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-    shadowSize: [41, 41]
-  });
 }
