@@ -1,6 +1,5 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from "@/integrations/supabase/client";
 import { fetchFromSupabase } from "@/utils/supabaseFetch";
 
 export const useSpotData = (spotId: string, refreshTrigger: number) => {

@@ -77,17 +77,17 @@ export const useMessages = () => {
           .map(msg => msg.id);
         
         if (messagesToUpdate.length > 0) {
-          // Fix: Convert to a proper Promise with catch handling
-          void supabase
-            .from('user_messages')
-            .update({ read: true })
-            .in('id', messagesToUpdate)
-            .then(() => {
-              console.log("Updated read status for", messagesToUpdate.length, "messages");
-            })
-            .catch(error => {
-              console.error("Error updating message read status:", error);
-            });
+          // Fix: Using a proper pattern for background Promise handling
+          Promise.resolve().then(() => {
+            return supabase
+              .from('user_messages')
+              .update({ read: true })
+              .in('id', messagesToUpdate);
+          }).then(() => {
+            console.log("Updated read status for", messagesToUpdate.length, "messages");
+          }).catch(error => {
+            console.error("Error updating message read status:", error);
+          });
         }
       }
     } catch (error) {

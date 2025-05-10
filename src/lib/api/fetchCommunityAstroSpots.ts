@@ -1,5 +1,4 @@
 
-import { supabase } from "@/integrations/supabase/client";
 import { fetchFromSupabase } from "@/utils/supabaseFetch";
 
 /**
@@ -51,6 +50,12 @@ export async function fetchCommunityAstroSpots() {
  */
 export function prefetchCommunityAstroSpots(): Promise<void> {
   // Make the request in the background and don't wait for it
-  void fetchCommunityAstroSpots().catch(console.error);
+  // Fix: Proper promise handling pattern
+  Promise.resolve().then(() => {
+    return fetchCommunityAstroSpots();
+  }).catch(error => {
+    console.error("Error prefetching community spots:", error);
+  });
+  
   return Promise.resolve();
 }

@@ -6,11 +6,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getCachedSupabaseData, cacheSupabaseData } from "./cache/supabaseCache";
 import { CacheOptions } from "./cache/cacheTypes";
-import { PostgrestQueryBuilder } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { Database } from "@/integrations/supabase/types";
 
 // Define the valid table names from our Supabase schema to ensure type safety
 type TableNames = keyof Database['public']['Tables'];
+type GenericTable = Database['public']['Tables'][TableNames];
 
 // Track ongoing requests to prevent duplicates
 const pendingRequests: Map<string, Promise<any>> = new Map();
@@ -25,7 +26,7 @@ interface FetchOptions extends CacheOptions {
  */
 export async function fetchFromSupabase<T = any>(
   tableName: TableNames,
-  queryBuilder: (query: PostgrestQueryBuilder<Database['public']['Tables'][TableNames]>) => any,
+  queryBuilder: (query: ReturnType<SupabaseClient<Database>['from']>) => any,
   options?: FetchOptions
 ): Promise<T> {
   const {
