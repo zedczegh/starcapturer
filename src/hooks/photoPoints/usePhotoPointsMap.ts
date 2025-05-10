@@ -1,7 +1,7 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useMapLocations, useMapUtils } from './useMapUtils';
+import { useMapLocations } from './mapLocations';
+import { useMapUtils } from './useMapUtils';
 import { addLocationToStore } from '@/services/calculatedLocationsService';
 import { useCertifiedLocationsLoader } from './useCertifiedLocationsLoader';
 
