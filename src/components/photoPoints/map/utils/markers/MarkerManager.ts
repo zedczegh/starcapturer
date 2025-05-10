@@ -1,85 +1,223 @@
-// Import correct types and functions
-import { divIcon } from 'leaflet';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getSiqsScore, formatSiqsForDisplay } from '@/utils/siqsHelpers';
-import { SiqsScore } from '@/utils/siqs/types';
 
-interface MarkerOptions {
-  isHovered?: boolean;
-  isCertified?: boolean;
-  isSelected?: boolean;
-  showLabel?: boolean;
-  isDestination?: boolean;
-  isMobile?: boolean;
-  realTimeSiqs?: SiqsScore | null;
+import L from 'leaflet';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { createLocationMarkerIcon } from './MarkerManager';
+import { isValidLocation, isWaterLocation } from '@/utils/location/validators';
+
+/**
+ * Manages marker instances and rendering for map components
+ */
+export class MarkerManager {
+  private markers: Map<string, L.Marker> = new Map();
+  private map: L.Map | null = null;
+  private clusterer: L.MarkerClusterGroup | null = null;
+  
+  /**
+   * Initialize the marker manager with a Leaflet map instance
+   */
+  public initialize(map: L.Map): void {
+    this.map = map;
+    
+    // Create marker clusterer if needed
+    if (this.shouldUseClusterer()) {
+      this.initializeClusterer();
+    }
+  }
+  
+  /**
+   * Determine if clustering should be used based on device capabilities
+   */
+  private shouldUseClusterer(): boolean {
+    // Only use clusterer on desktop devices with good performance
+    return !this.isLowEndDevice();
+  }
+  
+  /**
+   * Detect if the current device is low-end
+   */
+  private isLowEndDevice(): boolean {
+    // Check for mobile first
+    const userAgent = navigator.userAgent || navigator.vendor || '';
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    
+    if (isMobile) return true;
+    
+    // Then check for CPU cores as a performance indicator
+    const cpuCores = navigator.hardwareConcurrency || 4;
+    return cpuCores < 4;
+  }
+  
+  /**
+   * Initialize the marker clusterer
+   */
+  private initializeClusterer(): void {
+    if (!this.map) return;
+    
+    try {
+      // This would typically use MarkerClusterGroup from leaflet.markercluster
+      // For this example, we'll create a simple object that mimics the interface
+      this.clusterer = {
+        clearLayers: () => {},
+        addLayer: (marker: L.Marker) => { if (this.map) marker.addTo(this.map); },
+        getBounds: () => L.latLngBounds([]),
+        getVisibleParent: (marker: L.Marker) => marker
+      } as unknown as L.MarkerClusterGroup;
+      
+      // Add clusterer to map
+      if (this.map) {
+        // In real implementation: this.map.addLayer(this.clusterer);
+      }
+    } catch (error) {
+      console.error("Error initializing marker clusterer:", error);
+      this.clusterer = null;
+    }
+  }
+  
+  /**
+   * Render markers on the map
+   */
+  public renderMarkers(
+    locations: SharedAstroSpot[],
+    selectedId?: string,
+    bounds?: L.LatLngBounds
+  ): void {
+    if (!this.map) return;
+    
+    // Track which markers we've already processed
+    const processedIds = new Set<string>();
+    
+    // Process each location
+    for (const location of locations) {
+      if (!isValidLocation(location)) continue;
+      
+      // Skip water locations unless certified
+      const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+      if (!isCertified && isWaterLocation(location.latitude, location.longitude, false)) {
+        continue;
+      }
+      
+      // Generate a unique ID for the marker
+      const id = this.getLocationId(location);
+      processedIds.add(id);
+      
+      // Check if marker is already on the map
+      const existingMarker = this.markers.get(id);
+      
+      // Skip if the marker is already rendered and not selected
+      if (existingMarker && id !== selectedId) continue;
+      
+      // Create marker options
+      const isSelected = id === selectedId;
+      const markerOptions = {
+        isSelected,
+        isCertified,
+        isDestination: location.type === 'destination',
+        isHovered: false
+      };
+      
+      if (existingMarker) {
+        // Update existing marker
+        const icon = createLocationMarkerIcon(location, markerOptions);
+        existingMarker.setIcon(icon);
+      } else {
+        // Create a new marker
+        const icon = createLocationMarkerIcon(location, markerOptions);
+        const marker = L.marker([location.latitude, location.longitude], { icon });
+        
+        // Store the marker
+        this.markers.set(id, marker);
+        
+        // Add to map or clusterer
+        if (this.clusterer) {
+          this.clusterer.addLayer(marker);
+        } else {
+          marker.addTo(this.map);
+        }
+      }
+    }
+    
+    // Remove markers that are no longer in the data
+    this.markers.forEach((marker, id) => {
+      if (!processedIds.has(id)) {
+        if (this.clusterer) {
+          this.clusterer.removeLayer(marker);
+        } else if (this.map) {
+          this.map.removeLayer(marker);
+        }
+        this.markers.delete(id);
+      }
+    });
+  }
+  
+  /**
+   * Generate a unique ID for a location
+   */
+  private getLocationId(location: SharedAstroSpot): string {
+    if (location.id) return location.id;
+    return `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+  }
+  
+  /**
+   * Clear all markers from the map
+   */
+  public clearMarkers(): void {
+    if (this.clusterer) {
+      this.clusterer.clearLayers();
+    } else if (this.map) {
+      this.markers.forEach(marker => {
+        this.map?.removeLayer(marker);
+      });
+    }
+    
+    this.markers.clear();
+  }
+  
+  /**
+   * Clean up resources
+   */
+  public destroy(): void {
+    this.clearMarkers();
+    
+    if (this.clusterer && this.map) {
+      this.map.removeLayer(this.clusterer);
+    }
+    
+    this.clusterer = null;
+    this.map = null;
+  }
 }
 
 /**
- * Create marker icon for a location
+ * Create a marker icon for a location
+ */
+function isValidLocation(location: SharedAstroSpot): boolean {
+  return (
+    typeof location.latitude === 'number' &&
+    typeof location.longitude === 'number' &&
+    isFinite(location.latitude) &&
+    isFinite(location.longitude)
+  );
+}
+
+/**
+ * Create a marker icon for a location
  */
 export function createLocationMarkerIcon(
   location: SharedAstroSpot,
   options: {
     isHovered?: boolean;
-    isCertified?: boolean;
     isSelected?: boolean;
-    showLabel?: boolean;
+    isCertified?: boolean;
     isDestination?: boolean;
-    isMobile?: boolean;
-    realTimeSiqs?: SiqsScore | null;
   } = {}
-): any {
-  const {
-    isHovered = false,
-    isCertified = false,
-    isSelected = false,
-    showLabel = false,
-    isDestination = false,
-    isMobile = false,
-    realTimeSiqs = null
-  } = options;
-  
-  const baseHue = isCertified ? 55 : isDestination ? 210 : 280;
-  const saturation = isHovered || isSelected ? 90 : 70;
-  const lightness = isHovered || isSelected ? 50 : 40;
-  const hueShift = isHovered ? 20 : 0;
-  
-  const calculatedHue = (baseHue + hueShift) % 360;
-  const hslColor = `hsl(${calculatedHue}, ${saturation}%, ${lightness}%)`;
-  
-  const shadowSize = isMobile ? 1 : 2;
-  const iconSize = isMobile ? 20 : 24;
-  const fontSize = isMobile ? '0.6rem' : '0.7rem';
-
-  // Get the correct SIQS score
-  let siqsScore = options.realTimeSiqs !== null && options.realTimeSiqs !== undefined 
-    ? getSiqsScore(options.realTimeSiqs)
-    : getSiqsScore(location.siqs);
-  
-  // Format it for display  
-  const formattedSiqs = formatSiqsForDisplay(siqsScore);
-
-  const labelClass = `marker-label ${isHovered ? 'marker-label-hovered' : ''} ${isSelected ? 'marker-label-selected' : ''}`;
-
-  let htmlContent = `
-    <div class="custom-marker ${isHovered ? 'marker-hovered' : ''} ${isSelected ? 'marker-selected' : ''}"
-         style="background-color: ${hslColor}; width: ${iconSize}px; height: ${iconSize}px; font-size: ${fontSize};">
-      ${isCertified ? '<div class="marker-star">★</div>' : ''}
-      ${formattedSiqs !== "N/A" && formattedSiqs !== "NaN" ? `<div class="marker-siqs">${formattedSiqs}</div>` : ''}
-      ${isDestination ? '<div class="marker-destination"></div>' : ''}
-    </div>
-  `;
-
-  if (showLabel) {
-    htmlContent += `<div class="${labelClass}">${location.name || 'Location'}</div>`;
-  }
-
-  return divIcon({
-    html: htmlContent,
-    className: 'custom-marker-icon',
-    iconSize: [iconSize + shadowSize, iconSize + shadowSize],
-    iconAnchor: [iconSize / 2, iconSize / 2],
-    shadowSize: [0, 0],
-    popupAnchor: [0, -(iconSize / 2)]
+): L.Icon {
+  // This is a simplified implementation
+  return L.icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+    shadowSize: [41, 41]
   });
 }
