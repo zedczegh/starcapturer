@@ -1,4 +1,3 @@
-
 import React, { memo, Suspense, useEffect, useState, useRef } from "react";
 import StatusMessage from "@/components/location/StatusMessage";
 import LocationContentLoader from "./LocationContentLoader";
@@ -26,8 +25,10 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
 }) => {
   const { t } = useLanguage();
   const [contentVisible, setContentVisible] = useState(false);
+  const [contentMounted, setContentMounted] = useState(false);
   const retryCount = useRef(0);
   const [isRetrying, setIsRetrying] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const {
     containerRef,
@@ -50,17 +51,33 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     resetUpdateState
   } = useLocationContentManager(locationData, setLocationData, onLocationUpdate);
 
-  // Fade in content for smoother loading experience
+  // Improved loading state management to prevent content disappearing
   useEffect(() => {
-    if (!loading && contentLoaded) {
-      // Small delay to allow browser painting to complete
+    if (!loading && contentLoaded && memoizedLocationData) {
+      // Mark as mounted first to prevent unmounting during state changes
+      setContentMounted(true);
+      
+      // Small delay for smoother transitions
       const timer = setTimeout(() => {
-        setContentVisible(true);
-      }, 100);
+        if (contentRef.current) {
+          setContentVisible(true);
+        }
+      }, 150);
+      
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [loading, contentLoaded]);
+  }, [loading, contentLoaded, memoizedLocationData]);
+
+  // Keep mounted content visible even during prop changes
+  useEffect(() => {
+    if (contentMounted && memoizedLocationData) {
+      return () => {
+        // This cleanup only runs when component unmounts
+        // or when dependencies change
+      };
+    }
+  }, [contentMounted, memoizedLocationData]);
 
   // Fix for cases where SIQS is unavailable – show manual refresh button when loaded but no SIQS
   const shouldShowManualRefresh = 
@@ -133,8 +150,12 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   return (
     <div 
       className={`transition-all duration-300 ${contentVisible ? 'opacity-100' : 'opacity-0'}`} 
-      ref={containerRef}
+      ref={(node) => {
+        containerRef.current = node;
+        contentRef.current = node;
+      }}
       data-location-id={locationData?.id}
+      data-content-mounted={contentMounted ? "true" : "false"}
     >
       <StatusMessage 
         message={statusMessage} 
@@ -158,29 +179,31 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       )}
 
       {loading || !contentLoaded ? (
-        <LocationContentLoader />
+        <LocationContentLoader loadingText={t("Preparing data...", "正在准备数据...")} />
       ) : (
-        <LocationContentGrid 
-          locationData={memoizedLocationData}
-          forecastData={forecastData}
-          longRangeForecast={longRangeForecast}
-          forecastLoading={forecastLoading}
-          longRangeLoading={longRangeLoading}
-          gettingUserLocation={gettingUserLocation}
-          onLocationUpdate={onLocUpdate}
-          setGettingUserLocation={setGettingUserLocation}
-          setStatusMessage={setStatusMessage}
-          onRefreshForecast={() => {
-            if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
-              handleRefreshForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
-            }
-          }}
-          onRefreshLongRange={() => {
-            if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
-              handleRefreshLongRangeForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
-            }
-          }}
-        />
+        <div className="content-container" style={{ minHeight: '300px' }}>
+          <LocationContentGrid 
+            locationData={memoizedLocationData}
+            forecastData={forecastData}
+            longRangeForecast={longRangeForecast}
+            forecastLoading={forecastLoading}
+            longRangeLoading={longRangeLoading}
+            gettingUserLocation={gettingUserLocation}
+            onLocationUpdate={onLocUpdate}
+            setGettingUserLocation={setGettingUserLocation}
+            setStatusMessage={setStatusMessage}
+            onRefreshForecast={() => {
+              if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
+                handleRefreshForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
+              }
+            }}
+            onRefreshLongRange={() => {
+              if (memoizedLocationData?.latitude && memoizedLocationData?.longitude) {
+                handleRefreshLongRangeForecast(memoizedLocationData.latitude, memoizedLocationData.longitude);
+              }
+            }}
+          />
+        </div>
       )}
     </div>
   );

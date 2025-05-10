@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
 import { useLocationDataCache } from "@/hooks/useLocationData";
@@ -12,10 +11,12 @@ import { prefetchLocationData } from "@/lib/queryPrefetcher";
 
 export function useLocationDetailsLogic({ id, location, navigate, t, setCachedData, getCachedData }) {
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
+  const [dataInitializing, setDataInitializing] = useState(true);
   const locationInitializedRef = useRef(false);
   const initialRenderRef = useRef(true);
   const siqsUpdateRequiredRef = useRef(true);
   const queriesInitializedRef = useRef(false);
+  const previousLocationDataRef = useRef(null);
   const queryClient = useQueryClient();
   
   const {
@@ -33,27 +34,37 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
     noRedirect: true
   });
 
+  // Store previous location data to prevent disappearing content
+  useEffect(() => {
+    if (locationData && !isLoading) {
+      previousLocationDataRef.current = locationData;
+      // Data is now initialized
+      setDataInitializing(false);
+    }
+  }, [locationData, isLoading]);
+
   // Use the SIQS updater to keep scores in sync with forecast data
   const { resetUpdateState } = useLocationSIQSUpdater(
-    locationData,
-    locationData?.forecastData,
+    locationData || previousLocationDataRef.current,
+    locationData?.forecastData || (previousLocationDataRef.current?.forecastData),
     setLocationData,
     t
   );
 
   // Pre-fetch data as soon as we have location coordinates
   useEffect(() => {
+    const locData = locationData || previousLocationDataRef.current;
     if (
-      locationData?.latitude && 
-      locationData?.longitude && 
+      locData?.latitude && 
+      locData?.longitude && 
       !queriesInitializedRef.current
     ) {
       queriesInitializedRef.current = true;
       
       // Use prefetcher to load data in parallel
-      prefetchLocationData(queryClient, locationData.latitude, locationData.longitude);
+      prefetchLocationData(queryClient, locData.latitude, locData.longitude);
       
-      console.log("Prefetching data for location:", locationData.name);
+      console.log("Prefetching data for location:", locData.name);
     }
   }, [locationData?.latitude, locationData?.longitude, queryClient]);
 
@@ -61,7 +72,7 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
   useEffect(() => {
     // Only proceed if we're not loading, don't have location data, not already getting location,
     // and haven't already initialized location
-    if (!isLoading && !locationData && !loadingCurrentLocation && !locationInitializedRef.current) {
+    if (!isLoading && !locationData && !loadingCurrentLocation && !locationInitializedRef.current && !previousLocationDataRef.current) {
       locationInitializedRef.current = true; // Mark as initialized to prevent multiple calls
       handleUseCurrentLocation();
     }
@@ -71,7 +82,7 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
     if (loadingCurrentLocation) return; // Prevent multiple simultaneous calls
     
     setLoadingCurrentLocation(true);
-    t("Getting your current location...", "正在获取您的位置...");
+    setStatusMessage(t("Getting your current location...", "正在获取您的位置..."));
     
     getCurrentPosition(
       (position) => {
@@ -100,8 +111,8 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
       },
       (error) => {
         console.error("Error getting location:", error);
-        t("Could not get your location. Please check browser permissions.", 
-                     "无法获取您的位置。请检查浏览器权限。");
+        setStatusMessage(t("Could not get your location. Please check browser permissions.", 
+                     "无法获取您的位置。请检查浏览器权限。"));
         setLoadingCurrentLocation(false);
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
@@ -152,29 +163,30 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
   const { updateBortleScale } = useBortleUpdater();
   useEffect(() => {
     const updateBortleScaleData = async () => {
-      if (!locationData || isLoading) return;
+      const locData = locationData || previousLocationDataRef.current;
+      if (!locData || isLoading) return;
       
       // Check if we're in any Chinese region to update Bortle data
-      const inChina = locationData.latitude && locationData.longitude ? 
-        isInChina(locationData.latitude, locationData.longitude) : false;
+      const inChina = locData.latitude && locData.longitude ? 
+        isInChina(locData.latitude, locData.longitude) : false;
       
       // For Chinese locations, or if Bortle scale is missing, update it
-      if (inChina || locationData.bortleScale === null || locationData.bortleScale === undefined) {
+      if (inChina || locData.bortleScale === null || locData.bortleScale === undefined) {
         try {
-          console.log("Location may be in China or needs Bortle update:", locationData.name);
+          console.log("Location may be in China or needs Bortle update:", locData.name);
           
           // Use our improved Bortle updater for more accurate data
           const newBortleScale = await updateBortleScale(
-            locationData.latitude,
-            locationData.longitude,
-            locationData.name,
-            locationData.bortleScale
+            locData.latitude,
+            locData.longitude,
+            locData.name,
+            locData.bortleScale
           );
           
-          if (newBortleScale !== null && newBortleScale !== locationData.bortleScale) {
-            console.log(`Bortle scale updated: ${locationData.bortleScale} -> ${newBortleScale}`);
+          if (newBortleScale !== null && newBortleScale !== locData.bortleScale) {
+            console.log(`Bortle scale updated: ${locData.bortleScale} -> ${newBortleScale}`);
             setLocationData({
-              ...locationData,
+              ...locData,
               bortleScale: newBortleScale
             });
             
@@ -201,17 +213,18 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
 
   // Whenever the page loads with only coordinates but no name, we replace with our best DB estimate:
   useEffect(() => {
+    const locData = locationData || previousLocationDataRef.current;
     if (
-      locationData &&
-      (locationData.name === t("Current Location", "当前位置") || !locationData.name) &&
-      typeof locationData.latitude === "number" &&
-      typeof locationData.longitude === "number"
+      locData &&
+      (locData.name === t("Current Location", "当前位置") || !locData.name) &&
+      typeof locData.latitude === "number" &&
+      typeof locData.longitude === "number"
     ) {
       // Get internal DB estimate for the coordinates, prefer user language
-      const locationInfo = getLocationInfo(locationData.latitude, locationData.longitude);
+      const locationInfo = getLocationInfo(locData.latitude, locData.longitude);
       if (locationInfo && locationInfo.name) {
         setLocationData({
-          ...locationData,
+          ...locData,
           name: locationInfo.formattedName,
           bortleScale: locationInfo.bortleScale
         });
@@ -220,13 +233,13 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
   }, [locationData, t, setLocationData]);
 
   return {
-    locationData,
+    locationData: locationData || previousLocationDataRef.current,
     setLocationData,
     statusMessage,
     messageType,
     setStatusMessage,
     handleUpdateLocation,
-    isLoading,
+    isLoading: isLoading || dataInitializing,
     loadingCurrentLocation,
     setLoadingCurrentLocation
   };
