@@ -56,41 +56,42 @@ export async function fetchForecastForLocation(lat: number, lng: number): Promis
       latitude: lat,
       longitude: lng,
       days: 3
-    }, { signal: abortController.signal as AbortSignal }).then(forecastData => {
-      clearTimeout(timeoutId);
-      
-      if (forecastData && forecastData.hourly) {
-        // Cache the new data
-        try {
-          // Update both caches
-          const timestamp = Date.now();
-          memoryCache.set(cacheKey, { data: forecastData, timestamp });
-          
-          sessionStorage.setItem(cacheKey, JSON.stringify({
-            data: forecastData,
-            timestamp
-          }));
-          
-          // Store reference to last fetched location for faster lookup
-          sessionStorage.setItem('last_forecast_location', `${lat.toFixed(4)}-${lng.toFixed(4)}`);
-        } catch (e) {
-          console.error("Failed to cache forecast data:", e);
+    }, abortController.signal) // Pass the signal directly, not wrapped in an object
+      .then(forecastData => {
+        clearTimeout(timeoutId);
+        
+        if (forecastData && forecastData.hourly) {
+          // Cache the new data
+          try {
+            // Update both caches
+            const timestamp = Date.now();
+            memoryCache.set(cacheKey, { data: forecastData, timestamp });
+            
+            sessionStorage.setItem(cacheKey, JSON.stringify({
+              data: forecastData,
+              timestamp
+            }));
+            
+            // Store reference to last fetched location for faster lookup
+            sessionStorage.setItem('last_forecast_location', `${lat.toFixed(4)}-${lng.toFixed(4)}`);
+          } catch (e) {
+            console.error("Failed to cache forecast data:", e);
+          }
         }
-      }
-      return forecastData;
-    }).catch(error => {
-      clearTimeout(timeoutId);
-      
-      // Don't throw for abort errors
-      if (error.name === 'AbortError') {
-        console.warn("Forecast request aborted due to timeout");
-        return null;
-      }
-      throw error;
-    }).finally(() => {
-      // Remove from pending fetches when done
-      pendingFetches.delete(cacheKey);
-    });
+        return forecastData;
+      }).catch(error => {
+        clearTimeout(timeoutId);
+        
+        // Don't throw for abort errors
+        if (error.name === 'AbortError') {
+          console.warn("Forecast request aborted due to timeout");
+          return null;
+        }
+        throw error;
+      }).finally(() => {
+        // Remove from pending fetches when done
+        pendingFetches.delete(cacheKey);
+      });
     
     // Store the promise for deduplication
     pendingFetches.set(cacheKey, fetchPromise);
