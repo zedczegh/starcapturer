@@ -151,9 +151,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             longitude={spot.longitude}
             bortleScale={spot.bortleScale}
             existingSiqs={spot.siqs}
-            onSiqsCalculated={(siqs, loading, confidence) =>
-              handleSiqsCalculated(spot.id, siqs, loading, confidence)
-            }
+            onSiqsCalculated={handleSiqsCalculated}
             priorityLevel={openPopup ? 'high' : 'medium'}
             debugLabel={`community-${spot.id.substring(0, 6)}`}
           />
