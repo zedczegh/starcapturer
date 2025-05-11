@@ -14,6 +14,7 @@ import { Loader2 } from "@/components/ui/loader";
 import CommunityLocationsSkeleton from "@/components/community/CommunityLocationsSkeleton";
 import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { SharedAstroSpot } from "@/types/weather";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
@@ -99,12 +100,22 @@ const CommunityAstroSpots: React.FC = () => {
     visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
   };
 
-  // Navigate to astro spot profile
+  // Navigate to astro spot profile with proper state
   const handleCardClick = (id: string) => {
+    // Ensure we're passing the correct state to properly identify where we came from
     navigate(`/astro-spot/${id}`, { 
-      state: { from: 'community' } 
+      state: { 
+        from: 'community',
+        spotId: id 
+      } 
     });
+    console.log("Navigating to astro spot:", id);
   };
+  
+  // Modified handler for map marker clicks that accepts SharedAstroSpot
+  const handleMarkerClick = useCallback((spot: SharedAstroSpot) => {
+    handleCardClick(spot.id);
+  }, [navigate]);
 
   // Effect to start staggered loading of SIQS data
   useEffect(() => {
@@ -177,6 +188,7 @@ const CommunityAstroSpots: React.FC = () => {
               isMobile={isMobile}
               zoom={userLocation ? 8 : 3}
               onLocationUpdate={handleLocationUpdate}
+              onMarkerClick={handleMarkerClick} // Pass the correctly typed handler
             />
           )}
         </div>

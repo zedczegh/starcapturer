@@ -120,13 +120,26 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   // Handle navigation to location details page from popup
   const handleViewDetails = useCallback((loc: SharedAstroSpot) => {
     try {
-      const navigationData = prepareLocationForNavigation(loc);
-      
-      if (navigationData) {
-        navigate(`/location/${navigationData.locationId}`, { 
-          state: navigationData.locationState 
+      // Check if the location is an astrospot
+      if (loc.id && loc.user_id) {
+        // This is an astrospot with a specific ID
+        navigate(`/astro-spot/${loc.id}`, { 
+          state: { 
+            from: "map",
+            spotId: loc.id 
+          } 
         });
-        console.log("Opening location details", navigationData.locationId);
+        console.log("Opening astrospot details", loc.id);
+      } else {
+        // Regular location
+        const navigationData = prepareLocationForNavigation(loc);
+        
+        if (navigationData) {
+          navigate(`/location/${navigationData.locationId}`, { 
+            state: navigationData.locationState 
+          });
+          console.log("Opening location details", navigationData.locationId);
+        }
       }
     } catch (error) {
       console.error("Error navigating to location details:", error, loc);

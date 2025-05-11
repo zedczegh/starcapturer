@@ -53,22 +53,26 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     resetUpdateState
   } = useLocationContentManager(locationData, setLocationData, onLocationUpdate);
 
-  // Improved loading state management to prevent content disappearing
+  // Improved loading state management with faster transitions
   useEffect(() => {
     if (!loading && contentLoaded && memoizedLocationData) {
       // Mark as mounted first to prevent unmounting during state changes
       setContentMounted(true);
       
-      // Small delay for smoother transitions
+      // Reduced delay for faster visible content
       if (loadStateTimerRef.current) {
         clearTimeout(loadStateTimerRef.current);
       }
       
+      // Use requestAnimationFrame for smoother transitions
       loadStateTimerRef.current = window.setTimeout(() => {
         if (contentRef.current) {
-          setContentVisible(true);
+          // Use requestAnimationFrame for better performance
+          requestAnimationFrame(() => {
+            setContentVisible(true);
+          });
         }
-      }, 150);
+      }, 50); // Reduced from 150ms to 50ms for faster display
       
       return () => {
         if (loadStateTimerRef.current) {
@@ -119,13 +123,13 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     }
   };
 
-  // Automatically retry loading data if it fails initially
+  // Automatically retry loading data if it fails initially (once)
   useEffect(() => {
     if (faulted && retryCount.current === 0 && !isRetrying) {
       console.log("Initial load failed, attempting automatic retry");
       const timer = setTimeout(() => {
         handleManualRefresh();
-      }, 1500);
+      }, 800); // Reduced from 1500ms to 800ms
       
       return () => clearTimeout(timer);
     }
@@ -133,16 +137,16 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
 
   if (!memoizedLocationData) {
     return (
-      <div className="p-8 text-center">
-        <Loader className="mx-auto mb-4 h-8 w-8 animate-spin" />
-        <p>{t("Loading location data...", "正在加载位置数据...")}</p>
+      <div className="p-4 text-center">
+        <Loader className="mx-auto mb-2 h-6 w-6 animate-spin" />
+        <p className="text-sm">{t("Loading location data...", "正在加载位置数据...")}</p>
       </div>
     );
   }
 
   if (faulted && showFaultedMessage) {
     return (
-      <div className="p-8 text-center">
+      <div className="p-4 text-center">
         <LocationFaultedMessage show />
         <Button 
           variant="outline" 
@@ -165,7 +169,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
 
   return (
     <div 
-      className={`transition-all duration-300 ${contentVisible ? 'opacity-100' : 'opacity-0'}`} 
+      className={`transition-all duration-200 ${contentVisible ? 'opacity-100' : 'opacity-0'}`} 
       ref={(node) => {
         containerRef.current = node;
         contentRef.current = node;
@@ -176,6 +180,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
       <StatusMessage 
         message={statusMessage} 
         onClear={() => setStatusMessage(null)} 
+        autoHideDuration={2000} // Reduced from 3000ms to 2000ms
       />
 
       {shouldShowManualRefresh && (

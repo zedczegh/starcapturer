@@ -26,9 +26,10 @@ const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
       spot={spot}
       creatorProfile={creatorProfile}
       loadingCreator={loadingCreator}
-      spotId={spot.user_id}
+      spotId={spot.id}
       onViewDetails={onViewDetails}
       comingFromCommunity={comingFromCommunity}
+      onMessageCreator={onMessageCreator}
     />
   );
 };

@@ -77,6 +77,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
 
   const handleClick = () => {
     if (onMarkerClick) {
+      // Use the provided click handler which will handle navigation
       onMarkerClick(spot);
     } else {
       // Open popup when clicked on mobile
@@ -87,9 +88,20 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
         }
       } else {
         // Navigate directly on desktop
-        navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } });
+        navigateToSpotProfile();
       }
     }
+  };
+
+  // Navigation function to ensure consistent navigation
+  const navigateToSpotProfile = () => {
+    navigate(`/astro-spot/${spot.id}`, { 
+      state: { 
+        from: "community", 
+        spotId: spot.id 
+      } 
+    });
+    console.log("Navigating to spot from marker:", spot.id);
   };
 
   // Handle popup close
@@ -133,7 +145,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             className={`w-full text-xs flex items-center justify-center gap-1 mt-1 ${isMobile ? 'py-3' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } });
+              navigateToSpotProfile();
             }}
           >
             <ExternalLink size={14} />
