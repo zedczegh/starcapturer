@@ -99,16 +99,11 @@ const CommunityAstroSpots: React.FC = () => {
     visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
   };
 
-  // Navigate to astro spot profile with proper state
+  // Navigate to astro spot profile
   const handleCardClick = (id: string) => {
-    // Ensure we're passing the correct state to properly identify where we came from
     navigate(`/astro-spot/${id}`, { 
-      state: { 
-        from: 'community',
-        spotId: id 
-      } 
+      state: { from: 'community' } 
     });
-    console.log("Navigating to astro spot:", id);
   };
 
   // Effect to start staggered loading of SIQS data
@@ -182,7 +177,6 @@ const CommunityAstroSpots: React.FC = () => {
               isMobile={isMobile}
               zoom={userLocation ? 8 : 3}
               onLocationUpdate={handleLocationUpdate}
-              onMarkerClick={handleCardClick} // Pass the click handler to the map
             />
           )}
         </div>

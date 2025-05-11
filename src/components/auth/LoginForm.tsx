@@ -16,13 +16,7 @@ interface LoginFormProps {
 const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const { signIn, isLoading } = useAuth();
   const { t } = useLanguage();
-  const form = useForm({
-    defaultValues: {
-      email: '',
-      password: ''
-    },
-    mode: 'onChange' // More responsive validation
-  });
+  const form = useForm();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = React.useState(false);
   const [formSubmitted, setFormSubmitted] = React.useState(false);
@@ -31,11 +25,8 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
     try {
       setFormSubmitted(true);
       await signIn(data.email, data.password);
-      // Use callback for guaranteed execution
-      window.requestAnimationFrame(() => {
-        onSuccess();
-        navigate('/photo-points', { replace: true });
-      });
+      onSuccess();
+      navigate('/photo-points');
       // Toast notification is handled in AuthContext for a more consistent experience
     } catch (error: any) {
       // Error handling is done in AuthContext
@@ -141,4 +132,4 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   );
 };
 
-export default React.memo(LoginForm);
+export default LoginForm;
