@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
@@ -60,7 +60,7 @@ export const useCommunityAstroSpots = () => {
   }, []);
 
   // Sort locations by SIQS scores (highest first)
-  const sortedAstroSpots = React.useMemo(() => {
+  const sortedAstroSpots = useMemo(() => {
     if (!astrospots) return [];
     
     // Add real-time SIQS values to spots for sorting
