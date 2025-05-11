@@ -112,12 +112,13 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   // Display the best available score
   const displayScore = stabilizedScore ?? realTimeSiqs ?? spot.siqs;
 
-  // Use onClick directly with Marker (not eventHandlers which was causing the error)
   return (
     <Marker
       position={[spot.latitude, spot.longitude]}
       icon={icon}
-      onClick={handleClick}
+      eventHandlers={{
+        click: handleClick
+      }}
       ref={markerRef}
     >
       <Popup

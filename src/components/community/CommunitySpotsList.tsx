@@ -42,6 +42,11 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
     );
   }
 
+  const handleCardClick = (id: string) => {
+    console.log("Card clicked:", id);
+    onCardClick(id);
+  };
+
   return (
     <>
       <h2 className="font-bold text-xl mt-12 mb-5 flex items-center gap-2 text-gradient-blue">
@@ -58,10 +63,10 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
             key={spot.id}
             className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
             tabIndex={0}
-            onClick={() => onCardClick(spot.id)}
+            onClick={() => handleCardClick(spot.id)}
             onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {
-                onCardClick(spot.id);
+                handleCardClick(spot.id);
               }
             }}
             aria-label={spot.name}

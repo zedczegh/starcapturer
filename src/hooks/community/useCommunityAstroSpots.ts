@@ -73,22 +73,28 @@ export const useCommunityAstroSpots = () => {
     return sortLocationsBySiqs(spotsWithRealtimeSiqs);
   }, [astrospots, realTimeSiqs, stabilizedSiqs]);
 
-  // Navigate to astro spot profile with proper state
-  const handleCardClick = useCallback((id: string) => {
-    // Ensure we're passing the correct state to properly identify where we came from
-    navigate(`/astro-spot/${id}`, { 
+  // Navigate to astro spot profile with proper state - FIXED shared navigation logic
+  const navigateToAstroSpot = useCallback((spotId: string) => {
+    navigate(`/astro-spot/${spotId}`, { 
       state: { 
         from: 'community',
-        spotId: id 
+        spotId: spotId 
       } 
     });
-    console.log("Navigating to astro spot:", id);
+    console.log("Navigating to astro spot:", spotId);
   }, [navigate]);
+
+  // Handle card click by using the shared navigation function
+  const handleCardClick = useCallback((id: string) => {
+    navigateToAstroSpot(id);
+  }, [navigateToAstroSpot]);
   
-  // Modified handler for map marker clicks that accepts SharedAstroSpot
+  // Handle map marker click by extracting the ID and using the shared navigation function
   const handleMarkerClick = useCallback((spot: SharedAstroSpot) => {
-    handleCardClick(spot.id);
-  }, [handleCardClick]);
+    if (spot && spot.id) {
+      navigateToAstroSpot(spot.id);
+    }
+  }, [navigateToAstroSpot]);
 
   // Effect to start staggered loading of SIQS data
   useEffect(() => {
