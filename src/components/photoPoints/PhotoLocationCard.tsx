@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -57,13 +56,36 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
     smallName !== mainName;
 
   const getLocationId = useCallback(() => {
-    if (!location || !location.latitude || !location.longitude) return null;
-    return location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    if (!location) return null;
+    
+    // If it's an AstroSpot with an ID, use that specific ID
+    if (location.id && location.user_id) {
+      return `astrospot-${location.id}`;
+    }
+    
+    // Otherwise use coordinates
+    if (location.latitude && location.longitude) {
+      return location.id || `loc-${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
+    }
+    
+    return null;
   }, [location]);
 
   const handleViewDetails = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     
+    // If this is an AstroSpot with an ID, navigate to the AstroSpot page
+    if (location.id && location.user_id) {
+      navigate(`/astro-spot/${location.id}`, {
+        state: {
+          from: "photoPoints",
+          spotId: location.id
+        }
+      });
+      return;
+    }
+    
+    // Otherwise handle as a regular location
     const locationId = getLocationId();
     if (!locationId) return;
     

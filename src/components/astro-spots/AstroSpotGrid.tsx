@@ -27,7 +27,7 @@ const AstroSpotGrid: React.FC<AstroSpotGridProps> = ({
   const handleSpotClick = (spotId: string) => {
     if (!editMode) {
       console.log("Navigating to astro spot profile:", spotId);
-      navigate(`/astro-spot/${spotId}`);
+      navigate(`/astro-spot/${spotId}`, { state: { from: "grid" } });
     }
   };
   

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
@@ -87,7 +86,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
         }
       } else {
         // Navigate directly on desktop
-        navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } });
+        navigate(`/astro-spot/${spot.id}`, { state: { from: "community", spotId: spot.id } });
       }
     }
   };
@@ -133,7 +132,12 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             className={`w-full text-xs flex items-center justify-center gap-1 mt-1 ${isMobile ? 'py-3' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/astro-spot/${spot.id}`, { state: { from: "community" } });
+              navigate(`/astro-spot/${spot.id}`, { 
+                state: { 
+                  from: "community",
+                  spotId: spot.id
+                } 
+              });
             }}
           >
             <ExternalLink size={14} />
@@ -147,7 +151,9 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             longitude={spot.longitude}
             bortleScale={spot.bortleScale}
             existingSiqs={spot.siqs}
-            onSiqsCalculated={handleSiqsCalculated}
+            onSiqsCalculated={(siqs, loading, confidence) =>
+              handleSiqsCalculated(spot.id, siqs, loading, confidence)
+            }
             priorityLevel={openPopup ? 'high' : 'medium'}
             debugLabel={`community-${spot.id.substring(0, 6)}`}
           />
