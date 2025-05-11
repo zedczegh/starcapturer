@@ -1,12 +1,13 @@
 
 import React from "react";
+import { Loader } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Props {
   loadingText?: string;
 }
 
-const LocationContentLoader: React.FC<Props> = React.memo(({ loadingText }) => {
+const LocationContentLoader: React.FC<Props> = ({ loadingText }) => {
   const { t } = useLanguage();
   
   return (
@@ -26,8 +27,6 @@ const LocationContentLoader: React.FC<Props> = React.memo(({ loadingText }) => {
       </div>
     </div>
   );
-});
-
-LocationContentLoader.displayName = 'LocationContentLoader';
+};
 
 export default LocationContentLoader;

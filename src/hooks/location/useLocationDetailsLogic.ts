@@ -19,7 +19,6 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
   const previousLocationDataRef = useRef(null);
   const queryClient = useQueryClient();
   const loadingMessageTimeoutRef = useRef(null);
-  const dataLoadStartTime = useRef(Date.now());
   
   const {
     locationData, 
@@ -43,22 +42,17 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
       // Data is now initialized
       setDataInitializing(false);
       
-      // Clear loading message if it's about getting location - more aggressively
+      // Clear loading message if it's about getting location
       if (statusMessage?.includes("Getting your current location") || 
           statusMessage?.includes("正在获取您的位置")) {
-        // Use a shorter delay and make sure it clears
+        // Use a slight delay to ensure all data is rendered before clearing message
         if (loadingMessageTimeoutRef.current) {
           clearTimeout(loadingMessageTimeoutRef.current);
         }
-        
-        // Calculate how long the message has been shown already
-        const timeElapsed = Date.now() - dataLoadStartTime.current;
-        const clearDelay = timeElapsed > 800 ? 50 : 250; // Very short delay if it's been showing a while
-        
         loadingMessageTimeoutRef.current = setTimeout(() => {
           setStatusMessage(null);
           setLoadingCurrentLocation(false);
-        }, clearDelay);
+        }, 500);
       }
     }
   }, [locationData, isLoading, statusMessage, setStatusMessage]);
@@ -80,7 +74,7 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
     t
   );
 
-  // Pre-fetch data as soon as we have location coordinates - with parallel loading
+  // Pre-fetch data as soon as we have location coordinates
   useEffect(() => {
     const locData = locationData || previousLocationDataRef.current;
     if (
@@ -90,14 +84,14 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
     ) {
       queriesInitializedRef.current = true;
       
-      // Immediate prefetch for faster loading - don't wait for next tick
+      // Use prefetcher to load data in parallel
       prefetchLocationData(queryClient, locData.latitude, locData.longitude);
       
       console.log("Prefetching data for location:", locData.name);
     }
   }, [locationData?.latitude, locationData?.longitude, queryClient]);
 
-  // Handle using current location when no location data is available - with faster timeout
+  // Handle using current location when no location data is available
   useEffect(() => {
     // Only proceed if we're not loading, don't have location data, not already getting location,
     // and haven't already initialized location
@@ -110,7 +104,6 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
   const handleUseCurrentLocation = () => {
     if (loadingCurrentLocation) return; // Prevent multiple simultaneous calls
     
-    dataLoadStartTime.current = Date.now(); // Record when we started loading
     setLoadingCurrentLocation(true);
     setStatusMessage(t("Getting your current location...", "正在获取您的位置..."));
     
@@ -145,19 +138,28 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
                      "无法获取您的位置。请检查浏览器权限。"));
         setLoadingCurrentLocation(false);
       },
-      { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 } // Reduced timeout from 5000 to 4000
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
   };
 
-  // Run once on initial render to trigger page refresh - Optimized
+  // Run once on initial render to trigger page refresh
   useEffect(() => {
     if (initialRenderRef.current && locationData) {
       initialRenderRef.current = false;
       console.log("Initial render, triggering lazy data loading");
       
-      // Immediate action for faster response
-      resetUpdateState();
-      siqsUpdateRequiredRef.current = true;
+      // Small delay to ensure everything is loaded
+      const timer = setTimeout(() => {
+        try {
+          // Reset SIQS update state to force recalculation
+          resetUpdateState();
+          siqsUpdateRequiredRef.current = true;
+        } catch (error) {
+          console.error("Error triggering refresh:", error);
+        }
+      }, 100); // Reduced delay for better performance
+      
+      return () => clearTimeout(timer);
     }
   }, [locationData, resetUpdateState]);
 
