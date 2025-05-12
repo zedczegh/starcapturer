@@ -1,13 +1,17 @@
 
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MapPin, Navigation, Star, ExternalLink } from "lucide-react";
+import { MapPin, Navigation, Star, ExternalLink, Telescope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatSIQSScore } from "@/utils/mapUtils";
 import { useNavigate } from "react-router-dom";
 import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchFromSupabase } from '@/utils/supabaseFetch';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import RealTimeSiqsProvider from '@/components/photoPoints/cards/RealTimeSiqsProvider';
+import SiqsScoreBadge from '@/components/photoPoints/cards/SiqsScoreBadge';
+import useCreatorProfile from '@/hooks/astro-spots/useCreatorProfile';
 
 interface LocationShareCardProps {
   id?: string;
@@ -20,6 +24,7 @@ interface LocationShareCardProps {
   spotId?: string;
   isAstroSpot?: boolean;
   fromLink?: boolean;
+  userId?: string;
 }
 
 const LocationShareCard: React.FC<LocationShareCardProps> = ({
@@ -32,13 +37,19 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
   isCertified = false,
   spotId,
   isAstroSpot = false,
-  fromLink = false
+  fromLink = false,
+  userId
 }) => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [locationName, setLocationName] = useState(name);
   const [isLoading, setIsLoading] = useState(false);
   const [spotData, setSpotData] = useState<any>(null);
+  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
+  const [isLoadingSiqs, setIsLoadingSiqs] = useState(false);
+  
+  // Get creator profile for AstroSpots
+  const { creatorProfile } = useCreatorProfile(isAstroSpot ? (spotData?.user_id || userId) : undefined);
   
   // Format SIQS score for display
   const formattedSiqs = formatSIQSScore(siqs);
@@ -53,7 +64,7 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
         const spotDetails = await fetchFromSupabase(
           'user_astro_spots', // Changed from 'astro_spots' to 'user_astro_spots'
           (query) => query
-            .select('id, name, latitude, longitude, siqs, created_at')
+            .select('id, name, latitude, longitude, siqs, created_at, user_id')
             .eq('id', spotId)
             .single(),
           { skipCache: fromLink } // Skip cache if this came from a link
@@ -139,25 +150,44 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
   // If we're showing an AstroSpot and have spot data, use that data
   const displayLatitude = spotData?.latitude || latitude;
   const displayLongitude = spotData?.longitude || longitude;
-  const displaySiqs = spotData?.siqs || siqs;
+  const displaySiqs = realTimeSiqs || spotData?.siqs || siqs;
+
+  // Handle SIQS calculation result
+  const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
+    setRealTimeSiqs(siqs);
+    setIsLoadingSiqs(loading);
+  };
 
   return (
     <div className="bg-cosmic-900/70 backdrop-blur-md border border-cosmic-700/50 hover:border-cosmic-600/70 transition-colors duration-300 p-4 rounded-lg shadow-md">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold text-gray-50">
-          {isLoading ? (
-            <span className="inline-flex items-center">
-              <span className="h-4 w-4 mr-2 rounded-full border-2 border-primary border-t-transparent animate-spin"></span>
-              {locationName}
-            </span>
-          ) : (
-            locationName
+        <div className="flex items-center gap-2">
+          {isAstroSpot && (
+            <Avatar className="h-7 w-7 border border-cosmic-700/50">
+              <AvatarImage src={creatorProfile?.avatar_url} />
+              <AvatarFallback className="bg-primary/20 text-primary-foreground text-xs">
+                {creatorProfile?.username?.substring(0, 2) || '?'}
+              </AvatarFallback>
+            </Avatar>
           )}
-        </h3>
+          <h3 className="text-lg font-semibold text-gray-50">
+            {isLoading ? (
+              <span className="inline-flex items-center">
+                <span className="h-4 w-4 mr-2 rounded-full border-2 border-primary border-t-transparent animate-spin"></span>
+                {locationName}
+              </span>
+            ) : (
+              locationName
+            )}
+          </h3>
+        </div>
         {displaySiqs && (
-          <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
-            <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
-            <span className="text-xs font-medium">{formatSIQSScore(displaySiqs)}</span>
+          <div className="flex items-center">
+            <SiqsScoreBadge 
+              score={displaySiqs} 
+              loading={isLoadingSiqs} 
+              isCertified={isCertified}
+            />
           </div>
         )}
       </div>
@@ -171,7 +201,11 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
         )}
         
         <div className="flex items-center">
-          <Navigation className="h-4 w-4 mr-2 text-cosmic-400" />
+          {isAstroSpot ? (
+            <Telescope className="h-4 w-4 mr-2 text-cosmic-400" />
+          ) : (
+            <Navigation className="h-4 w-4 mr-2 text-cosmic-400" />
+          )}
           <span>
             {isAstroSpot ? 
               t("Shared AstroSpot", "共享观星点") : 
@@ -182,18 +216,32 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
       
       <div className="mt-3 flex justify-end">
         <Button
-          variant="outline"
+          variant={isAstroSpot ? "secondary" : "outline"}
           size="sm"
           onClick={handleViewDetails}
-          className="flex items-center gap-1.5 text-xs"
+          className={`flex items-center gap-1.5 text-xs ${isAstroSpot ? "bg-primary/80 text-primary-foreground hover:bg-primary/70" : ""}`}
         >
           <ExternalLink className="h-3.5 w-3.5" />
-          {t("View Details", "查看详情")}
+          {isAstroSpot ? 
+            t("View AstroSpot", "查看观星点") : 
+            t("View Details", "查看详情")}
         </Button>
       </div>
+
+      {/* Real-time SIQS Provider (invisible component) */}
+      {(displayLatitude && displayLongitude) && (
+        <RealTimeSiqsProvider
+          latitude={displayLatitude}
+          longitude={displayLongitude}
+          isVisible={true}
+          onSiqsCalculated={handleSiqsCalculated}
+          existingSiqs={spotData?.siqs || siqs}
+          isCertified={isCertified}
+          priorityLevel="medium"
+        />
+      )}
     </div>
   );
 };
 
 export default LocationShareCard;
-
