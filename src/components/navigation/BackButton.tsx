@@ -81,7 +81,7 @@ const BackButton: React.FC<BackButtonProps> = ({
       variant={variant}
       size={size}
       onClick={handleClick}
-      className={cn("flex items-center gap-1 font-medium transition-all duration-200", className)}
+      className={cn("flex items-center gap-1 font-medium", className)}
     >
       <ArrowLeft className="h-4 w-4" />
       {t("Back", "返回")}

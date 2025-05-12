@@ -9,6 +9,7 @@ import { useAnimationVariants } from "@/hooks/community/useAnimationVariants";
 import CommunitySpotHeader from "@/components/community/CommunitySpotHeader";
 import CommunityMapSection from "@/components/community/CommunityMapSection";
 import CommunitySpotsList from "@/components/community/CommunitySpotsList";
+import { toast } from "sonner";
 
 // Default map center coordinates
 const DEFAULT_CENTER: [number, number] = [30, 104];
@@ -34,7 +35,7 @@ const CommunityAstroSpots: React.FC = () => {
     refreshData
   } = useCommunityAstroSpots();
   
-  // Handle refresh when returning from spot profile - without toast
+  // Handle refresh when returning from spot profile
   useEffect(() => {
     const refreshTimestamp = location.state?.refreshTimestamp;
     const forceRefresh = location.state?.forceRefresh;
@@ -43,8 +44,13 @@ const CommunityAstroSpots: React.FC = () => {
     if (refreshTimestamp && (forceRefresh || returnedFromSpot)) {
       console.log("Community page: Forcing data refresh from navigation state");
       refreshData();
+      
+      // Show a toast for improved UX
+      if (!isMobile) {
+        toast.info("Community data refreshed");
+      }
     }
-  }, [location.state, refreshData]);
+  }, [location.state, refreshData, isMobile]);
 
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>
