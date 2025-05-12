@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMessaging } from '@/hooks/useMessaging';
 import { ConversationPartner } from './useConversations';
+import { toast } from 'sonner';
 
 export const useMessageConversation = () => {
   const location = useLocation();
@@ -17,21 +18,44 @@ export const useMessageConversation = () => {
     sending,
     fetchMessages,
     sendMessage,
-    unsendMessage
+    unsendMessage,
+    fetchConversations
   } = useMessaging();
   
-  // Check if we should select a conversation from route state
+  // Handle incoming selectedUserId from navigation state
   useEffect(() => {
-    if (location.state?.selectedUser && conversations.length > 0) {
-      const conversation = conversations.find(
-        conv => conv.id === location.state.selectedUser
+    const selectedUserId = location.state?.selectedUserId;
+    
+    if (selectedUserId && conversations.length > 0) {
+      console.log("Looking for conversation with user:", selectedUserId);
+      
+      // Try to find existing conversation
+      const existingConversation = conversations.find(
+        conv => conv.id === selectedUserId
       );
       
-      if (conversation) {
-        handleSelectConversation(conversation);
+      if (existingConversation) {
+        console.log("Found existing conversation, selecting:", existingConversation);
+        handleSelectConversation(existingConversation);
+      } else {
+        // Create a placeholder conversation if none exists
+        console.log("No existing conversation found, creating placeholder for:", selectedUserId);
+        const placeholderConversation: ConversationPartner = {
+          id: selectedUserId,
+          username: location.state?.selectedUsername || "User",
+          avatar_url: null,
+          last_message: "",
+          last_message_time: new Date().toISOString(),
+          unread_count: 0
+        };
+        
+        handleSelectConversation(placeholderConversation);
+        
+        // Refresh conversations to ensure we have the latest data
+        fetchConversations();
       }
     }
-  }, [location.state?.selectedUser, conversations]);
+  }, [location.state, conversations]);
   
   const handleSelectConversation = (conversation: ConversationPartner) => {
     setActiveConversation(conversation);
@@ -43,8 +67,17 @@ export const useMessageConversation = () => {
   };
   
   const handleSendMessage = async (text: string, imageFile?: File | null, locationData?: any) => {
-    if (!activeConversation) return;
-    await sendMessage(text, imageFile, locationData);
+    if (!activeConversation) {
+      toast.error("No active conversation selected");
+      return;
+    }
+    
+    try {
+      await sendMessage(text, imageFile, locationData);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message");
+    }
   };
   
   const handleUnsendMessage = async (messageId: string): Promise<boolean> => {
@@ -52,6 +85,10 @@ export const useMessageConversation = () => {
     try {
       const result = await unsendMessage(messageId);
       return result;
+    } catch (error) {
+      console.error("Error unsending message:", error);
+      toast.error("Failed to unsend message");
+      return false;
     } finally {
       setIsProcessingAction(false);
     }

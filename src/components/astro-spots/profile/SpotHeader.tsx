@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Star, MapPin, Calendar, ExternalLink, MessageCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ interface SpotHeaderProps {
   spotId: string;
   onViewDetails: () => void;
   comingFromCommunity: boolean;
-  onMessageCreator: () => void; // Added this missing prop
+  onMessageCreator: () => void;
 }
 
 const SpotHeader: React.FC<SpotHeaderProps> = ({
@@ -38,18 +39,6 @@ const SpotHeader: React.FC<SpotHeaderProps> = ({
   const { t } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
-
-  const handleMessageCreator = () => {
-    if (!user || !spot.user_id) return;
-    
-    // Navigate to messages page with state information about the selected user
-    navigate('/messages', { 
-      state: { 
-        selectedUserId: spot.user_id,
-        selectedUsername: creatorProfile?.username || 'User'
-      } 
-    });
-  };
 
   const navigateToProfile = () => {
     navigate(`/profile/${spot.user_id}`);
@@ -121,7 +110,7 @@ const SpotHeader: React.FC<SpotHeaderProps> = ({
             {comingFromCommunity && user && spot.user_id !== user.id && (
               <Button
                 variant="outline"
-                onClick={handleMessageCreator}
+                onClick={onMessageCreator}
                 className="flex items-center gap-2 bg-cosmic-700/40 hover:bg-cosmic-700/60 text-primary-foreground border-cosmic-600/40 backdrop-blur-sm transition-all duration-300"
               >
                 <MessageCircle className="h-4 w-4 text-primary" />

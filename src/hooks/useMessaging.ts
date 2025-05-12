@@ -16,5 +16,6 @@ export function useMessaging() {
     fetchMessages,
     sendMessage,
     unsendMessage,
+    fetchConversations, // Add this to expose the function
   };
 }

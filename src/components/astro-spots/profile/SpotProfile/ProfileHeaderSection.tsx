@@ -28,27 +28,6 @@ const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
     return <div className="animate-pulse h-32 bg-cosmic-800/50 rounded-lg mb-6"></div>;
   }
 
-  // Enhanced onMessageCreator handler with better error handling
-  const handleMessageCreator = () => {
-    if (!spot.user_id) {
-      console.error("Cannot message creator: Missing user ID");
-      return;
-    }
-    
-    if (onMessageCreator) {
-      onMessageCreator();
-    } else {
-      // Fallback direct navigation with improved state
-      navigate('/messages', { 
-        state: { 
-          selectedUserId: spot.user_id,
-          selectedUsername: creatorProfile?.username || "Creator",
-          timestamp: Date.now() // Ensure message UI refreshes
-        }
-      });
-    }
-  };
-
   return (
     <SpotHeader
       spot={spot}
@@ -57,7 +36,7 @@ const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
       spotId={spot.id}
       onViewDetails={onViewDetails}
       comingFromCommunity={comingFromCommunity}
-      onMessageCreator={handleMessageCreator}
+      onMessageCreator={onMessageCreator}
     />
   );
 };

@@ -1,6 +1,7 @@
 
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export const useProfileActions = (spot: any) => {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ export const useProfileActions = (spot: any) => {
         bortleScale: spot.bortlescale,
         siqs: spot.siqs,
         timestamp, // Add timestamp to force state refresh
-        from: 'astrospot-profile'
+        from: 'astro-spot-profile'
       },
       replace: false // Create a new history entry
     });
@@ -39,10 +40,11 @@ export const useProfileActions = (spot: any) => {
   const handleMessageCreator = useCallback(() => {
     if (!spot?.user_id) {
       console.error("Cannot message creator: Missing user ID");
+      toast.error("Could not message creator: Missing user information");
       return;
     }
     
-    // Add timestamp to ensure UI refreshes properly
+    // Add timestamp to ensure UI refreshes properly and selectedUserId to select the right conversation
     navigate('/messages', { 
       state: { 
         selectedUserId: spot.user_id,
@@ -52,7 +54,7 @@ export const useProfileActions = (spot: any) => {
     });
     
     console.log("Navigating to message creator:", spot.user_id);
-  }, [spot?.user_id, navigate]);
+  }, [spot, navigate]);
 
   return {
     handleViewDetails,
