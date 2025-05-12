@@ -12,7 +12,8 @@ export const useProfileContent = (
   spotId: string, 
   user: boolean, 
   comingFromCommunity: boolean,
-  t: (key: string, fallback: string) => string
+  t: (key: string, fallback: string) => string,
+  noRefresh: boolean = false
 ) => {
   const { user: authUser } = useAuth();
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -22,10 +23,9 @@ export const useProfileContent = (
   const [storageChecked, setStorageChecked] = useState(false);
   
   // Use our smaller hooks with the refresh trigger
-  const { spot, isLoading, refetch } = useSpotData(spotId, refreshTrigger);
-  // Fix: Destructure only what's available from useCreatorProfile
-  const { creatorProfile, loadingCreator } = useCreatorProfile(spot?.user_id);
-  const { spotImages, loadingImages, refetchImages } = useSpotImages(spotId, refreshTrigger);
+  const { spot, isLoading, refetch } = useSpotData(spotId, refreshTrigger, noRefresh);
+  const { creatorProfile, loadingCreator } = useCreatorProfile(spot?.user_id, noRefresh);
+  const { spotImages, loadingImages, refetchImages } = useSpotImages(spotId, refreshTrigger, noRefresh);
   const { handleViewDetails, handleMessageCreator } = useProfileActions(spot);
   
   // Check if bucket exists but don't try to create it
@@ -51,16 +51,26 @@ export const useProfileContent = (
     comments,
     submitComment,
     fetchComments
-  } = useAstroSpotComments(spotId, t);
+  } = useAstroSpotComments(spotId, t, noRefresh);
 
   // Function to trigger a refresh of all data
   const triggerRefresh = useCallback(() => {
+    if (noRefresh) {
+      console.log("Skipping refresh as noRefresh flag is set");
+      return;
+    }
+    
     console.log("Triggering refresh for spot:", spotId);
     setRefreshTrigger(prev => prev + 1);
-  }, [spotId]);
+  }, [spotId, noRefresh]);
   
   // Explicit refresh function to reload all data
   const refreshData = useCallback(async () => {
+    if (noRefresh) {
+      console.log("Skipping refresh as noRefresh flag is set");
+      return;
+    }
+    
     console.log("Refreshing all spot data for ID:", spotId);
     // Increment refresh counter to trigger data reload
     setRefreshTrigger(prev => prev + 1);
@@ -70,13 +80,7 @@ export const useProfileContent = (
       fetchComments(),
       refetchImages()
     ]);
-    
-    // Fix: Don't try to access refetch on creatorProfile since it doesn't exist
-    if (spot?.user_id) {
-      // Simply log that we would refresh creator data if possible
-      console.log("Would refresh creator profile for user ID:", spot.user_id);
-    }
-  }, [spotId, refetch, fetchComments, refetchImages, spot?.user_id]);
+  }, [spotId, refetch, fetchComments, refetchImages, noRefresh]);
 
   // Check if current user is the creator
   useEffect(() => {
@@ -89,6 +93,11 @@ export const useProfileContent = (
 
   // Load initial comments and set up refresh interval
   useEffect(() => {
+    if (noRefresh) {
+      console.log("Skipping comments auto-refresh as noRefresh flag is set");
+      return;
+    }
+    
     let isMounted = true;
     
     const loadInitialComments = async () => {
@@ -118,7 +127,7 @@ export const useProfileContent = (
         clearInterval(intervalId);
       };
     }
-  }, [spotId, fetchComments]);
+  }, [spotId, fetchComments, noRefresh]);
 
   useEffect(() => {
     if (!isLoading && !!spot) {
@@ -128,14 +137,14 @@ export const useProfileContent = (
 
   const handleEditClose = () => {
     setShowEditDialog(false);
-    refetch();
+    if (!noRefresh) refetch();
   };
 
   // Handler specifically for refreshing comments
   const handleCommentsUpdate = useCallback(async () => {
     console.log("Comments update triggered");
-    await fetchComments();
-  }, [fetchComments]);
+    if (!noRefresh) await fetchComments();
+  }, [fetchComments, noRefresh]);
 
   // Handler for submitting a new comment
   const handleCommentSubmit = useCallback(async (
@@ -149,6 +158,8 @@ export const useProfileContent = (
 
   // Handle images update (Gallery)
   const handleImagesUpdate = async () => {
+    if (noRefresh) return;
+    
     console.log("Images update triggered");
     await refetchImages();
     triggerRefresh();

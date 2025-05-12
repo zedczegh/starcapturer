@@ -9,7 +9,6 @@ import { useAnimationVariants } from "@/hooks/community/useAnimationVariants";
 import CommunitySpotHeader from "@/components/community/CommunitySpotHeader";
 import CommunityMapSection from "@/components/community/CommunityMapSection";
 import CommunitySpotsList from "@/components/community/CommunitySpotsList";
-import { toast } from "sonner";
 
 // Default map center coordinates
 const DEFAULT_CENTER: [number, number] = [30, 104];
@@ -44,11 +43,7 @@ const CommunityAstroSpots: React.FC = () => {
     if (refreshTimestamp && (forceRefresh || returnedFromSpot)) {
       console.log("Community page: Forcing data refresh from navigation state");
       refreshData();
-      
-      // Show a toast for improved UX
-      if (!isMobile) {
-        toast.info("Community data refreshed");
-      }
+      // Toast notification removed as requested
     }
   }, [location.state, refreshData, isMobile]);
 

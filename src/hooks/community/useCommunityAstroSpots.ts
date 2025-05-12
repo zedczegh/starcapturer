@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
@@ -18,6 +18,9 @@ export const useCommunityAstroSpots = () => {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
   const [lastClickTime, setLastClickTime] = useState<number>(0);
+  
+  // Use a ref to track if navigation is in progress
+  const navigatingRef = useRef<boolean>(false);
 
   // Use React Query to fetch data with improved caching
   const { data: astrospots, isLoading, refetch } = useQuery({
@@ -86,7 +89,7 @@ export const useCommunityAstroSpots = () => {
   }, [astrospots, realTimeSiqs, stabilizedSiqs]);
 
   // Improved navigation function with better error handling and detailed logging
-  const navigateToAstroSpot = useCallback((spotId: string) => {
+  const navigateToAstroSpot = useCallback((spotId: string, fromMarker: boolean = false) => {
     if (!spotId) {
       console.error("Cannot navigate: Invalid spot ID");
       return;
@@ -94,18 +97,27 @@ export const useCommunityAstroSpots = () => {
     
     const now = Date.now();
     
+    // Check if we're already navigating
+    if (navigatingRef.current) {
+      console.log("Navigation already in progress, ignoring click");
+      return;
+    }
+    
     // Prevent rapid double-clicking issues by tracking last clicked ID and time
     if (spotId === lastClickedId && now - lastClickTime < 800) {
       console.log("Ignoring rapid double click on same spot:", spotId);
       return;
     }
     
+    // Set navigating state
+    navigatingRef.current = true;
+    
     setLastClickedId(spotId);
     setLastClickTime(now);
     
     // Always use a unique timestamp for each navigation to force remounting
     const timestamp = now;
-    console.log("Navigating to astro spot profile:", spotId, "timestamp:", timestamp);
+    console.log("Navigating to astro spot profile:", spotId, "timestamp:", timestamp, "from marker:", fromMarker);
     
     // The key is to completely replace any existing navigation state and use
     // a unique timestamp for each navigation
@@ -113,16 +125,22 @@ export const useCommunityAstroSpots = () => {
       state: { 
         from: 'community',
         spotId: spotId,
-        timestamp 
+        timestamp,
+        noRefresh: fromMarker // Set to true when coming from marker popup
       },
       replace: false // Create a new history entry
     });
+    
+    // Reset navigation flag after a delay
+    setTimeout(() => {
+      navigatingRef.current = false;
+    }, 1000);
   }, [navigate, lastClickedId, lastClickTime]);
 
   // Handle card click by using the shared navigation function
   const handleCardClick = useCallback((id: string) => {
     console.log("Card click handler received ID:", id);
-    navigateToAstroSpot(id);
+    navigateToAstroSpot(id, false); // Not from marker
   }, [navigateToAstroSpot]);
   
   // Handle map marker click by extracting the ID and using the shared navigation function
@@ -132,7 +150,7 @@ export const useCommunityAstroSpots = () => {
       return;
     }
     console.log("Marker click handler received spot:", spot.id);
-    navigateToAstroSpot(spot.id);
+    navigateToAstroSpot(spot.id, true); // From marker
   }, [navigateToAstroSpot]);
 
   // Effect to start staggered loading of SIQS data

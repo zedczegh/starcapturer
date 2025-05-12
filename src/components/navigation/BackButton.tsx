@@ -34,34 +34,36 @@ const BackButton: React.FC<BackButtonProps> = ({
       return;
     }
     
-    // Always clear any spot cache to ensure fresh data when navigating back
-    clearSpotCache();
+    // Check if we should avoid clearing cache (for popup navigation)
+    const noRefresh = location.state?.noRefresh === true;
+    
+    // Only clear cache if not coming from a marker popup
+    if (!noRefresh) {
+      clearSpotCache();
+    }
     
     // Use state-based routing if there's "from" information available
     const fromPage = location.state?.from;
     
     if (fromPage === 'community') {
-      // Always use a fresh timestamp to force community page update
-      const refreshTimestamp = Date.now();
-      console.log(`Navigating back to community with refresh timestamp: ${refreshTimestamp}`);
-      
-      // When returning to the community page, add a refresh timestamp to ensure 
-      // the community page loads fresh data and doesn't use stale state
+      // When returning to the community page, add proper state
       navigate('/community', { 
         replace,
         state: { 
-          refreshTimestamp,
-          returnedFromSpot: true,
-          forceRefresh: true  // Add explicit flag for forcing refresh
+          refreshTimestamp: noRefresh ? undefined : Date.now(),
+          returnedFromSpot: !noRefresh,
+          forceRefresh: !noRefresh,
+          noRefresh: noRefresh
         }
       });
     } else if (fromPage === 'photoPoints') {
       navigate('/photo-points', {
         replace,
         state: { 
-          refreshTimestamp: Date.now(),
-          returnedFromSpot: true,
-          forceRefresh: true
+          refreshTimestamp: noRefresh ? undefined : Date.now(),
+          returnedFromSpot: !noRefresh,
+          forceRefresh: !noRefresh,
+          noRefresh: noRefresh
         }
       });
     } else {
@@ -69,8 +71,9 @@ const BackButton: React.FC<BackButtonProps> = ({
       navigate(destination, { 
         replace,
         state: {
-          refreshTimestamp: Date.now(),
-          forceRefresh: true
+          refreshTimestamp: noRefresh ? undefined : Date.now(),
+          forceRefresh: !noRefresh,
+          noRefresh: noRefresh
         }
       });
     }

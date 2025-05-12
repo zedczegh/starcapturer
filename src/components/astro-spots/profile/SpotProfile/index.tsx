@@ -24,8 +24,9 @@ const AstroSpotProfile = () => {
     // Generate a unique identifier for this specific profile view
     const timestamp = location.state?.timestamp || Date.now();
     const newProfileKey = `${id}-${timestamp}`;
+    const noRefresh = location.state?.noRefresh === true;
     
-    console.log(`Profile opened for spot ID: ${id}, timestamp: ${timestamp}, prevId: ${previousIdRef.current}`);
+    console.log(`Profile opened for spot ID: ${id}, timestamp: ${timestamp}, prevId: ${previousIdRef.current}, noRefresh: ${noRefresh}`);
     setProfileKey(newProfileKey);
     
     // Track where we came from for proper back button behavior
@@ -33,13 +34,13 @@ const AstroSpotProfile = () => {
       setComingFromCommunity(true);
     }
     
-    // Always clear the specific spot cache on mount to ensure fresh data
-    if (id) {
+    // Only clear cache when not coming from a marker popup (to prevent flashing)
+    if (id && !noRefresh) {
       clearSpotCache(id);
     }
     
     // If the ID has changed but we didn't get a new timestamp, force a reload
-    if (id !== previousIdRef.current && !location.state?.forcedReset) {
+    if (id !== previousIdRef.current && !location.state?.forcedReset && !noRefresh) {
       console.log("ID changed without proper navigation state, forcing refresh");
       const newTimestamp = Date.now();
       mountTimeRef.current = newTimestamp;
@@ -49,7 +50,8 @@ const AstroSpotProfile = () => {
         state: { 
           ...(location.state || {}),
           timestamp: newTimestamp,
-          forcedReset: true 
+          forcedReset: true,
+          noRefresh: location.state?.noRefresh
         },
         replace: true
       });
@@ -98,6 +100,7 @@ const AstroSpotProfile = () => {
           user={!!user} 
           comingFromCommunity={comingFromCommunity}
           key={profileKey} // Key ensures re-render when profile changes
+          noRefresh={location.state?.noRefresh === true}
         />
       </div>
       
