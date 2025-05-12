@@ -23,7 +23,8 @@ const Messages = () => {
     handleSelectConversation,
     handleBack,
     handleSendMessage,
-    handleUnsendMessage
+    handleUnsendMessage,
+    handleDeleteConversation
   } = useMessageConversation();
 
   return (
@@ -45,6 +46,7 @@ const Messages = () => {
             onBack={handleBack}
             onSendMessage={handleSendMessage}
             onUnsendMessage={handleUnsendMessage}
+            onDeleteConversation={handleDeleteConversation}
             sending={sending}
             isProcessingAction={isProcessingAction}
             currentUserId={user.id}

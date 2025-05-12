@@ -20,6 +20,7 @@ interface MessageContainerProps {
   onBack: () => void;
   onSendMessage: (message: string, imageFile?: File | null, locationData?: any) => Promise<void>;
   onUnsendMessage: (messageId: string) => Promise<boolean>;
+  onDeleteConversation: (partnerId: string) => Promise<boolean>;
   sending: boolean;
   isProcessingAction: boolean;
   currentUserId: string;
@@ -36,6 +37,7 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
   onBack,
   onSendMessage,
   onUnsendMessage,
+  onDeleteConversation,
   sending,
   isProcessingAction,
   currentUserId,
@@ -57,6 +59,8 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
           onSearchChange={setSearchQuery}
           activeConversation={activeConversation}
           onSelectConversation={onSelectConversation}
+          onDeleteConversation={onDeleteConversation}
+          isProcessingAction={isProcessingAction}
         />
       </Card>
       

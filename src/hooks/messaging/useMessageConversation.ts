@@ -19,7 +19,8 @@ export const useMessageConversation = () => {
     fetchMessages,
     sendMessage,
     unsendMessage,
-    fetchConversations
+    fetchConversations,
+    deleteConversation
   } = useMessaging();
   
   // Handle incoming selectedUserId from navigation state
@@ -94,6 +95,24 @@ export const useMessageConversation = () => {
     }
   };
   
+  const handleDeleteConversation = async (partnerId: string): Promise<boolean> => {
+    setIsProcessingAction(true);
+    try {
+      const result = await deleteConversation(partnerId);
+      if (result && activeConversation?.id === partnerId) {
+        handleBack();
+      }
+      await fetchConversations();
+      return result;
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      toast.error("Failed to delete conversation");
+      return false;
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+  
   return {
     searchQuery,
     setSearchQuery,
@@ -106,7 +125,8 @@ export const useMessageConversation = () => {
     handleSelectConversation,
     handleBack,
     handleSendMessage,
-    handleUnsendMessage
+    handleUnsendMessage,
+    handleDeleteConversation
   };
 };
 

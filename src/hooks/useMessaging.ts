@@ -6,7 +6,7 @@ import { useMessageActions } from './messaging/useMessageActions';
 export function useMessaging() {
   const { conversations, loading, fetchConversations } = useConversations();
   const { messages, fetchMessages, setMessages } = useMessages();
-  const { sending, sendMessage, unsendMessage } = useMessageActions(fetchMessages, setMessages);
+  const { sending, sendMessage, unsendMessage, deleteConversation } = useMessageActions(fetchMessages, setMessages);
 
   return {
     conversations,
@@ -16,6 +16,7 @@ export function useMessaging() {
     fetchMessages,
     sendMessage,
     unsendMessage,
-    fetchConversations, // Add this to expose the function
+    fetchConversations,
+    deleteConversation,
   };
 }
