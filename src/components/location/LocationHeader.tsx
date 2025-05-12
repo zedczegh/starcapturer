@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Share2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
-import { shareAstroSpot } from "@/lib/api/astroSpots";
 
 interface LocationHeaderProps {
   name: string;
@@ -105,6 +104,50 @@ const LocationHeader = ({
       );
     }
   };
+  
+  // Handle copying the current URL to clipboard
+  const handleCopyLink = () => {
+    const locationUrl = window.location.href;
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(locationUrl)
+        .then(() => {
+          toast.success(t("Link copied to clipboard!", "链接已复制到剪贴板！"));
+        })
+        .catch((err) => {
+          console.error("Failed to copy: ", err);
+          // Fallback method
+          try {
+            const tempInput = document.createElement("input");
+            tempInput.style.position = "absolute";
+            tempInput.style.left = "-9999px";
+            tempInput.value = locationUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            toast.success(t("Link copied to clipboard!", "链接已复制到剪贴板！"));
+          } catch (err) {
+            toast.error(t("Failed to copy link", "复制链接失败"));
+          }
+        });
+    } else {
+      // Fallback for browsers without clipboard API
+      try {
+        const tempInput = document.createElement("input");
+        tempInput.style.position = "absolute";
+        tempInput.style.left = "-9999px";
+        tempInput.value = locationUrl;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+        toast.success(t("Link copied to clipboard!", "链接已复制到剪贴板！"));
+      } catch (err) {
+        toast.error(t("Failed to copy link", "复制链接失败"));
+      }
+    }
+  };
 
   return (
     <div className="mb-8 pt-20 mt-4"> {/* Increased pt-20 for more space from navbar */}
@@ -112,6 +155,15 @@ const LocationHeader = ({
         <h1 className="text-3xl font-bold text-center md:text-left">{name || t("Unnamed Location", "未命名位置")}</h1>
         
         <div className="flex flex-wrap gap-2 justify-center md:justify-end">
+          <Button 
+            onClick={handleCopyLink}
+            variant="outline"
+            className="z-20 relative"
+          >
+            <Share2 className="mr-2 h-4 w-4" />
+            {t("Copy Link", "复制链接")}
+          </Button>
+          
           <Button 
             onClick={handleShareLocation}
             disabled={loading}
