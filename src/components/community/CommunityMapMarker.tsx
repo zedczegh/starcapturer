@@ -9,6 +9,7 @@ import SiqsScoreBadge from "@/components/photoPoints/cards/SiqsScoreBadge";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
+import { prepareForProfileTransition } from "@/utils/cache/spotCacheCleaner";
 
 function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.DivIcon {
   const size = isMobile ? (isHovered ? 28 : 20) : (isHovered ? 32 : 26);
@@ -101,7 +102,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     }
   };
 
-  // Navigation function to ensure consistent navigation
+  // Navigation function to ensure consistent navigation with anti-flashing measures
   const navigateToSpotProfile = () => {
     if (!spot || !spot.id) {
       console.error("Invalid spot data:", spot);
@@ -111,11 +112,17 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     // Always generate a unique timestamp for each navigation
     const timestamp = Date.now();
     
+    // Prepare cache for smoother transition
+    prepareForProfileTransition();
+    
+    // Add noRefresh flag to indicate this is coming from a marker
+    // This helps prevent unnecessary data refreshes
     navigate(`/astro-spot/${spot.id}`, { 
       state: { 
         from: "community", 
         spotId: spot.id,
-        timestamp // Essential for forcing component remount
+        timestamp, // Essential for forcing component remount
+        noRefresh: true // Signal to prevent unnecessary data refreshes
       },
       replace: false // Important to create new history entry
     });
@@ -162,32 +169,23 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             className={`w-full text-xs flex items-center justify-center gap-1 mt-1 ${isMobile ? 'py-3' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
-              // Use the timestamp technique for unique navigation state
-              const timestamp = Date.now();
-              navigate(`/astro-spot/${spot.id}`, { 
-                state: { 
-                  from: "community", 
-                  spotId: spot.id,
-                  timestamp // Essential for forcing component remount
-                },
-                replace: false 
-              });
-              console.log("Popup button navigation to spot:", spot.id, timestamp);
+              // Call the optimized navigation function
+              navigateToSpotProfile();
             }}
           >
             <ExternalLink size={14} />
             View Profile
           </Button>
           
-          {/* Hidden SIQS Provider Component */}
+          {/* Hidden SIQS Provider Component - only enabled when popup is open to save resources */}
           <RealTimeSiqsProvider
-            isVisible={openPopup || !isMobile}
+            isVisible={openPopup}
             latitude={spot.latitude}
             longitude={spot.longitude}
             bortleScale={spot.bortleScale}
             existingSiqs={spot.siqs}
             onSiqsCalculated={handleSiqsCalculated}
-            priorityLevel={openPopup ? 'high' : 'medium'}
+            priorityLevel={openPopup ? 'high' : 'low'}
             debugLabel={`community-${spot.id.substring(0, 6)}`}
             forceUpdate={forceUpdate}
           />

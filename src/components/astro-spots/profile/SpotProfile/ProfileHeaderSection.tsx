@@ -11,6 +11,7 @@ interface ProfileHeaderSectionProps {
   onViewDetails: () => void;
   comingFromCommunity: boolean;
   onMessageCreator: () => void;
+  isCreator?: boolean; // Added isCreator prop to match the error
 }
 
 const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
@@ -19,7 +20,8 @@ const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
   loadingCreator,
   onViewDetails,
   comingFromCommunity,
-  onMessageCreator
+  onMessageCreator,
+  isCreator
 }) => {
   const navigate = useNavigate();
 
@@ -58,6 +60,8 @@ const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
       onViewDetails={onViewDetails}
       comingFromCommunity={comingFromCommunity}
       onMessageCreator={handleMessageCreator}
+      // Pass isCreator to SpotHeader to fix the TypeScript error
+      isCreator={!!isCreator}
     />
   );
 };

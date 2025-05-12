@@ -18,6 +18,7 @@ interface ProfileSectionsManagerProps {
   onImagesUpdate: () => void;
   onCommentsUpdate: () => void;
   onCommentSubmit: (content: string, imageFile: File | null, parentId?: string | null) => Promise<void>;
+  storageChecked?: boolean;
 }
 
 const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
@@ -31,7 +32,8 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
   commentSending,
   onImagesUpdate,
   onCommentsUpdate,
-  onCommentSubmit
+  onCommentSubmit,
+  storageChecked
 }) => {
   console.log(`ProfileSectionsManager received ${comments.length} comments`);
   
@@ -59,9 +61,12 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
         spotId={spotId}
         comments={comments}
         user={user}
+        isCreator={isCreator}
         onCommentsUpdate={onCommentsUpdate}
         onSubmit={onCommentSubmit}
         sending={commentSending}
+        storageInitialized={!!storageChecked}
+        isLoggedIn={!!user}
       />
     </div>
   );

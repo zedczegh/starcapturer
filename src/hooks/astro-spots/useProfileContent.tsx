@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import useSpotData from '@/hooks/astro-spots/useSpotData';
 import useCreatorProfile from '@/hooks/astro-spots/useCreatorProfile';
@@ -20,12 +20,12 @@ export const useProfileContent = (
   const [showInstantLoader, setShowInstantLoader] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [storageChecked, setStorageChecked] = useState(false);
+  const initialLoadCompleted = useRef(false);
   
-  // Use our smaller hooks with the refresh trigger
-  const { spot, isLoading, refetch } = useSpotData(spotId, refreshTrigger);
-  // Fix: Destructure only what's available from useCreatorProfile
+  // Use our smaller hooks with improved refresh control
+  const { spot, isLoading, refetch } = useSpotData(spotId);
   const { creatorProfile, loadingCreator } = useCreatorProfile(spot?.user_id);
-  const { spotImages, loadingImages, refetchImages } = useSpotImages(spotId, refreshTrigger);
+  const { spotImages, loadingImages, refetchImages } = useSpotImages(spotId);
   const { handleViewDetails, handleMessageCreator } = useProfileActions(spot);
   
   // Check if bucket exists but don't try to create it
@@ -71,14 +71,13 @@ export const useProfileContent = (
       refetchImages()
     ]);
     
-    // Fix: Don't try to access refetch on creatorProfile since it doesn't exist
+    // Creator profile refresh if needed
     if (spot?.user_id) {
-      // Simply log that we would refresh creator data if possible
       console.log("Would refresh creator profile for user ID:", spot.user_id);
     }
   }, [spotId, refetch, fetchComments, refetchImages, spot?.user_id]);
 
-  // Check if current user is the creator
+  // Check if current user is the creator - use memoization to prevent re-renders
   useEffect(() => {
     if (authUser && spot && spot.user_id === authUser.id) {
       setIsCreator(true);
@@ -87,15 +86,16 @@ export const useProfileContent = (
     }
   }, [authUser, spot]);
 
-  // Load initial comments and set up refresh interval
+  // Load initial comments once on mount
   useEffect(() => {
     let isMounted = true;
     
     const loadInitialComments = async () => {
       try {
-        if (isMounted) {
+        if (isMounted && spotId && !initialLoadCompleted.current) {
           console.log("Loading initial comments for spot:", spotId);
           await fetchComments();
+          initialLoadCompleted.current = true;
         }
       } catch (error) {
         console.error("Error loading initial comments:", error);
@@ -105,13 +105,13 @@ export const useProfileContent = (
     if (spotId) {
       loadInitialComments();
       
-      // Set up refresh interval for comments
+      // Set up refresh interval for comments - but less frequent
       const intervalId = setInterval(() => {
-        if (isMounted) {
+        if (isMounted && document.visibilityState === 'visible') {
           console.log("Refreshing comments automatically");
           fetchComments();
         }
-      }, 30000); // Refresh every 30 seconds
+      }, 60000); // Refresh every 60 seconds instead of 30
       
       return () => {
         isMounted = false;
@@ -148,13 +148,13 @@ export const useProfileContent = (
   }, [submitComment]);
 
   // Handle images update (Gallery)
-  const handleImagesUpdate = async () => {
+  const handleImagesUpdate = useCallback(async () => {
     console.log("Images update triggered");
     await refetchImages();
-    triggerRefresh();
-  };
+  }, [refetchImages]);
 
-  return {
+  // Memoize our return object to prevent unnecessary rerenders
+  const profileContentData = useMemo(() => ({
     spot,
     isLoading,
     creatorProfile,
@@ -175,7 +175,15 @@ export const useProfileContent = (
     storageChecked,
     refreshData,
     triggerRefresh
-  };
+  }), [
+    spot, isLoading, creatorProfile, loadingCreator, isCreator,
+    spotImages, loadingImages, showEditDialog, comments, commentSending,
+    handleViewDetails, handleEditClose, handleCommentsUpdate,
+    handleCommentSubmit, handleImagesUpdate, handleMessageCreator,
+    storageChecked, refreshData, triggerRefresh
+  ]);
+
+  return profileContentData;
 };
 
 export default useProfileContent;

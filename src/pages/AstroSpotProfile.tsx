@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import AstroSpotProfile from '@/components/astro-spots/profile/SpotProfile';
 import { clearSpotCache, makeSureProfileLoadsCorrectly, detectProfileCacheLoop } from '@/utils/cache/spotCacheCleaner';
@@ -11,18 +11,28 @@ const AstroSpotProfilePage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mountKey, setMountKey] = useState<string>(`profile-${id}-${Date.now()}`);
-  const [isExiting, setIsExiting] = useState(false);
+  const initialProcessingDone = useRef(false);
   
   // Force a complete remount when ID or state changes
   useEffect(() => {
+    // Only process once per mount to prevent flashing
+    if (initialProcessingDone.current) return;
+    initialProcessingDone.current = true;
+    
     // Ensure we have an ID parameter
     if (!id) {
       console.error("No AstroSpot ID provided in URL params");
       return;
     }
     
-    // Clear any cached data for the previous spot
-    clearSpotCache(id);
+    // Don't clear cache if we have the noRefresh flag set
+    // This helps when coming from map markers to prevent flashing
+    if (!location.state?.noRefresh) {
+      // Clear any cached data for the previous spot
+      clearSpotCache(id);
+    } else {
+      console.log("Skipping cache clear due to noRefresh flag");
+    }
     
     // Generate a unique mount key using ID and timestamp
     const newMountKey = `profile-${id}-${location.state?.timestamp || Date.now()}`;
@@ -30,7 +40,10 @@ const AstroSpotProfilePage = () => {
     setMountKey(newMountKey);
     
     // Make sure profile loads correctly by clearing spot-specific cache
-    makeSureProfileLoadsCorrectly(id);
+    // But only if we're not specifically asked to avoid refreshing
+    if (!location.state?.noRefresh) {
+      makeSureProfileLoadsCorrectly(id);
+    }
     
     // Check for potential cache loop issues
     const isCacheLoop = detectProfileCacheLoop(id);
@@ -44,14 +57,18 @@ const AstroSpotProfilePage = () => {
       console.log("Adding timestamp to AstroSpot profile:", id, timestamp);
       
       // Replace current navigation state with timestamp to ensure fresh rendering
-      navigate(`/astro-spot/${id}`, {
-        state: { 
-          ...(location.state || {}),
-          timestamp,
-          forcedReset: true
-        },
-        replace: true
-      });
+      // But only do this if not already coming from a transition
+      if (!location.state?.profileMounted) {
+        navigate(`/astro-spot/${id}`, {
+          state: { 
+            ...(location.state || {}),
+            timestamp,
+            forcedReset: true,
+            profileMounted: true
+          },
+          replace: true
+        });
+      }
     }
   }, [id, location.state, navigate]);
   
@@ -64,7 +81,7 @@ const AstroSpotProfilePage = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.2 }} // Faster transition to reduce perceived flashing
       >
         <AstroSpotProfile key={mountKey} />
       </motion.div>

@@ -14,6 +14,7 @@ interface BackButtonProps {
   size?: "default" | "sm" | "lg" | "icon";
   replace?: boolean;
   onClick?: () => void;
+  state?: Record<string, any>; // Add state prop to fix TypeScript error
 }
 
 const BackButton: React.FC<BackButtonProps> = ({
@@ -22,7 +23,8 @@ const BackButton: React.FC<BackButtonProps> = ({
   variant = "outline",
   size = "default",
   replace = false,
-  onClick
+  onClick,
+  state
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,6 +39,13 @@ const BackButton: React.FC<BackButtonProps> = ({
     // Always clear any spot cache to ensure fresh data when navigating back
     clearSpotCache();
     
+    // Use custom state if provided or create a standard one
+    const navState = state || {
+      refreshTimestamp: Date.now(),
+      returnedFromSpot: true,
+      forceRefresh: true
+    };
+    
     // Use state-based routing if there's "from" information available
     const fromPage = location.state?.from;
     
@@ -50,6 +59,7 @@ const BackButton: React.FC<BackButtonProps> = ({
       navigate('/community', { 
         replace,
         state: { 
+          ...navState,
           refreshTimestamp,
           returnedFromSpot: true,
           forceRefresh: true  // Add explicit flag for forcing refresh
@@ -59,6 +69,7 @@ const BackButton: React.FC<BackButtonProps> = ({
       navigate('/photo-points', {
         replace,
         state: { 
+          ...navState,
           refreshTimestamp: Date.now(),
           returnedFromSpot: true,
           forceRefresh: true
@@ -68,10 +79,7 @@ const BackButton: React.FC<BackButtonProps> = ({
       // Default behavior
       navigate(destination, { 
         replace,
-        state: {
-          refreshTimestamp: Date.now(),
-          forceRefresh: true
-        }
+        state: navState
       });
     }
   };

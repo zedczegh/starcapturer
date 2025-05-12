@@ -2,8 +2,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchFromSupabase } from "@/utils/supabaseFetch";
 
-export const useSpotData = (spotId: string, refreshTrigger: number) => {
-  // Main spot data query
+export const useSpotData = (spotId: string, refreshTrigger: number = 0) => {
+  // Main spot data query with increased staleTime to reduce flickering
   const { data: spot, isLoading, error, refetch } = useQuery({
     queryKey: ['astroSpot', spotId, refreshTrigger],
     queryFn: async () => {
@@ -39,7 +39,7 @@ export const useSpotData = (spotId: string, refreshTrigger: number) => {
       };
     },
     retry: 1,
-    staleTime: 1000 * 15,
+    staleTime: 1000 * 60 * 5, // Increase staleTime to 5 minutes to prevent flickering
     refetchOnWindowFocus: false
   });
 
