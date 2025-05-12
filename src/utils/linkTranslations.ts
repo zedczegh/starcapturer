@@ -74,7 +74,12 @@ export function translateProfileTag(tag: string): string {
     "Meteorology Enthusiast": "气象爱好者",
     "Cosmos Lover": "宇宙爱好者",
     "Traveler": "旅行者",
-    "Dark Sky Volunteer": "暗夜志愿者"
+    "Dark Sky Volunteer": "暗夜志愿者",
+    "Nebulae Observer": "星云观测员",
+    "Astronomy Student": "天文学学生",
+    "Planet Watcher": "行星观察者",
+    "Telescope Maker": "望远镜制造者",
+    "Star Gazer": "观星者"
   };
   return tagMap[tag] || tag;
 }

@@ -1,25 +1,9 @@
 
-import React, { useEffect, useRef, useCallback } from 'react';
-import { useRealTimeSiqs } from '@/hooks/siqs/useRealTimeSiqs';
-import { getSiqsScore } from '@/utils/siqsHelpers';
-
-interface RealTimeSiqsProviderProps {
-  isVisible: boolean;
-  latitude?: number;
-  longitude?: number;
-  bortleScale?: number;
-  isCertified?: boolean;
-  isDarkSkyReserve?: boolean;
-  existingSiqs?: number | any;
-  onSiqsCalculated: (siqs: number | null, loading: boolean, confidence?: number) => void;
-  onError?: (error: any) => void;
-  forceUpdate?: boolean;
-  skipCache?: boolean;
-  priority?: number; // Higher number = higher priority (1-10)
-}
-
-// Global map to track pending calculations across components
-const pendingCalculations = new Map<string, number>();
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { checkSiqsCache, getSiqsCacheKey } from './siqsProvider/cacheManager';
+import { fetchSiqsData, handleSiqsError } from './siqsProvider/siqsFetcher';
+import { processQueue } from './siqsProvider/queueManager';
+import type { RealTimeSiqsProviderProps } from './siqsProvider/types';
 
 const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   isVisible,
@@ -30,166 +14,181 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   isDarkSkyReserve = false,
   existingSiqs,
   onSiqsCalculated,
-  onError,
-  forceUpdate = false,
-  skipCache = false,
-  priority = 1 // Default to lowest priority
+  forceUpdate = false
 }) => {
-  const positionRef = useRef<string>('');
-  const lastCalculationRef = useRef<number>(0);
-  const hasNotifiedRef = useRef<boolean>(false);
-  const timeoutRef = useRef<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
+  const [isInitialFetch, setIsInitialFetch] = useState(true);
+  const [fetchAttempted, setFetchAttempted] = useState(false);
+  const [calculationComplete, setCalculationComplete] = useState(false);
+  const isMounted = useRef(true);
+  const fetchTimeoutRef = useRef<number | null>(null);
+  const positionKey = useRef<string>('');
   
-  // Configuration based on location type
-  const refreshInterval = isCertified ? 300000 : 900000; // 5 mins for certified, 15 for others
+  const REFRESH_INTERVAL = isCertified ? 5 * 60 * 1000 : 5 * 60 * 1000; // 5 minutes for all
   
-  // Calculate priority based on certification status if not specified
-  const effectivePriority = priority || (isDarkSkyReserve ? 8 : (isCertified ? 5 : 1));
+  const existingSiqsNumber = typeof existingSiqs === 'number' ? existingSiqs : 
+    (typeof existingSiqs === 'object' && existingSiqs && 'score' in existingSiqs) ? existingSiqs.score : 0;
   
-  const { siqsScore, loading, calculateSiqs } = useRealTimeSiqs({
-    skipCache: skipCache || forceUpdate,
-    refreshInterval,
-    priority: effectivePriority
-  });
-  
-  // Only perform calculation if the component is visible and we have coordinates
-  const performSiqsCalculation = useCallback(() => {
-    if (!latitude || !longitude || !isVisible) return;
+  const getCacheKey = useCallback(() => {
+    return getSiqsCacheKey(latitude, longitude, bortleScale);
+  }, [latitude, longitude, bortleScale]);
+
+  // Execute fetch with queueing
+  const executeFetch = useCallback((fetchFn: () => Promise<void>) => {
+    const cacheKey = getCacheKey();
     
-    const now = Date.now();
-    const newPositionKey = `${latitude.toFixed(5)}-${longitude.toFixed(5)}`;
-    
-    // Skip if same position and not forced
-    if (positionRef.current === newPositionKey && !forceUpdate) {
-      // But still refresh if enough time has passed
-      if (now - lastCalculationRef.current < refreshInterval) {
-        return;
-      }
+    // First check both caches
+    const cachedData = checkSiqsCache(cacheKey, forceUpdate);
+    if (cachedData) {
+      onSiqsCalculated(cachedData.siqs, false, cachedData.source === 'realtime' ? 9 : 7);
+      setFetchAttempted(true);
+      setCalculationComplete(true);
+      console.log(`Using cached SIQS result for ${latitude},${longitude}`);
+      return Promise.resolve();
     }
     
-    positionRef.current = newPositionKey;
-    lastCalculationRef.current = now;
+    // Queue or execute the fetch based on current load
+    setLoading(true);
+    setFetchAttempted(true);
+    onSiqsCalculated(null, true);
     
-    // Throttle calculations based on priority and pending calculations
-    const pendingCount = pendingCalculations.size;
-    const calculationKey = `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+    return fetchSiqsData({
+      latitude,
+      longitude,
+      bortleScale,
+      isCertified,
+      isDarkSkyReserve,
+      existingSiqs,
+      skipCache: forceUpdate,
+      cacheKey,
+      onSuccess: (result) => {
+        if (!isMounted.current) return;
+        
+        setCalculationComplete(true);
+        onSiqsCalculated(result.siqs, false, result.source === 'realtime' ? 9 : 7);
+        setLastFetchTimestamp(Date.now());
+        setLoading(false);
+      },
+      onError: (error) => {
+        if (!isMounted.current) return;
+        
+        handleSiqsError({ 
+          isCertified, 
+          existingSiqsNumber, 
+          onSiqsCalculated 
+        });
+        
+        setLoading(false);
+      }
+    });
+  }, [
+    getCacheKey, 
+    latitude, 
+    longitude, 
+    bortleScale, 
+    isCertified, 
+    isDarkSkyReserve, 
+    existingSiqs, 
+    onSiqsCalculated, 
+    forceUpdate, 
+    existingSiqsNumber
+  ]);
+  
+  useEffect(() => {
+    isMounted.current = true;
     
-    // Check if this location is already being calculated
-    if (pendingCalculations.has(calculationKey) && !forceUpdate) {
+    // Check for cached results first
+    const cacheKey = getCacheKey();
+    const cachedData = checkSiqsCache(cacheKey, forceUpdate);
+    
+    if (cachedData) {
+      onSiqsCalculated(cachedData.siqs, false, cachedData.source === 'realtime' ? 9 : 7);
+      setFetchAttempted(true);
+      setCalculationComplete(true);
+      console.log(`Using cached SIQS result for ${latitude},${longitude}`);
       return;
     }
     
-    // Add this calculation to pending map
-    pendingCalculations.set(calculationKey, now);
-    
-    // Calculate delay based on priority and pending calculations
-    let delay = 0;
-    if (pendingCount > 3 && effectivePriority < 5) {
-      delay = Math.min(pendingCount * 50, 400);
+    if (isCertified && !fetchAttempted && isVisible) {
+      console.log(`RealTimeSiqsProvider: Initiating immediate fetch for certified location at ${latitude},${longitude}`);
+      executeFetch(() => Promise.resolve());
     }
     
-    if (delay > 0) {
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
-      }
-      
-      timeoutRef.current = window.setTimeout(() => {
-        calculateSiqs(latitude, longitude, bortleScale)
-          .catch(error => {
-            if (onError) {
-              onError(error);
-            } else {
-              console.error("SIQS calculation error:", error);
-            }
-          })
-          .finally(() => {
-            pendingCalculations.delete(calculationKey);
-          });
-        timeoutRef.current = null;
-      }, delay);
-    } else {
-      calculateSiqs(latitude, longitude, bortleScale)
-        .catch(error => {
-          if (onError) {
-            onError(error);
-          } else {
-            console.error("SIQS calculation error:", error);
-          }
-        })
-        .finally(() => {
-          pendingCalculations.delete(calculationKey);
-        });
-    }
-  }, [latitude, longitude, bortleScale, calculateSiqs, forceUpdate, refreshInterval, isVisible, effectivePriority, skipCache, onError]);
-  
-  // Cleanup timeout on unmount
-  useEffect(() => {
     return () => {
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
+      isMounted.current = false;
+      if (fetchTimeoutRef.current) {
+        window.clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = null;
       }
     };
   }, []);
-  
-  // Calculate when visible and have coordinates
+
   useEffect(() => {
-    if (!isVisible) return;
-    
-    // Use a priority-based delay to prevent all calculations starting simultaneously
-    // Higher priority = lower delay
-    const priorityDelay = Math.max(10, 250 - (effectivePriority * 20));
-    const randomDelay = Math.random() * 50; // Small random component to avoid exact timing collisions
-    
-    const timer = window.setTimeout(() => {
-      performSiqsCalculation();
-    }, priorityDelay + randomDelay);
-    
-    return () => window.clearTimeout(timer);
-  }, [isVisible, performSiqsCalculation, forceUpdate, effectivePriority]);
-  
-  // Notify parent of SIQS updates
-  useEffect(() => {
-    // Always notify parent of loading state changes
-    onSiqsCalculated(
-      siqsScore, 
-      loading,
-      siqsScore ? (forceUpdate ? 9 : 7) : undefined
-    );
-    
-    // Mark that we've notified the parent
-    hasNotifiedRef.current = true;
-  }, [siqsScore, loading, onSiqsCalculated, forceUpdate]);
-  
-  // Handle existing SIQS data properly
-  useEffect(() => {
-    if (loading && !hasNotifiedRef.current && existingSiqs) {
-      let staticSiqs: number | null = null;
-      
-      // Handle different formats of existing SIQS
-      if (typeof existingSiqs === 'number') {
-        staticSiqs = existingSiqs;
-      } else if (existingSiqs && typeof existingSiqs === 'object') {
-        if ('score' in existingSiqs) {
-          staticSiqs = existingSiqs.score;
+    if (latitude && longitude) {
+      const newPositionKey = `${latitude.toFixed(5)}-${longitude.toFixed(5)}`;
+      if (newPositionKey !== positionKey.current) {
+        positionKey.current = newPositionKey;
+        if (!isInitialFetch) {
+          console.log(`Position changed to ${latitude.toFixed(5)},${longitude.toFixed(5)}, forcing new SIQS calculation`);
+          setFetchAttempted(false);
+          setCalculationComplete(false);
+          executeFetch(() => Promise.resolve());
         }
-      } else {
-        // Try using the helper function as fallback
-        staticSiqs = getSiqsScore(existingSiqs);
-      }
-      
-      if (staticSiqs !== null && staticSiqs > 0) {
-        onSiqsCalculated(staticSiqs, false, 5);
-        hasNotifiedRef.current = true;
       }
     }
-  }, [loading, existingSiqs, onSiqsCalculated]);
-
-  // Debug the SIQS data
+  }, [latitude, longitude]);
+  
   useEffect(() => {
-    const staticSiqs = getSiqsScore(existingSiqs);
-    console.log(`RealTimeSiqsProvider debug - existingSiqs:`, existingSiqs, 
-                `parsed: ${staticSiqs}, realTime: ${siqsScore}, loading: ${loading}`);
-  }, [existingSiqs, siqsScore, loading]);
+    if (isInitialFetch && isCertified) {
+      onSiqsCalculated(null, true);
+      setIsInitialFetch(false);
+      executeFetch(() => Promise.resolve());
+    }
+  }, [isInitialFetch, isCertified]);
+  
+  useEffect(() => {
+    if (fetchTimeoutRef.current) {
+      window.clearTimeout(fetchTimeoutRef.current);
+      fetchTimeoutRef.current = null;
+    }
+    
+    if (forceUpdate && !calculationComplete) {
+      console.log("Force update triggered for SIQS calculation");
+      executeFetch(() => Promise.resolve());
+      return;
+    }
+    
+    // Only fetch if we haven't already completed the calculation
+    if (calculationComplete) {
+      return;
+    }
+    
+    // Reduce unnecessary fetches by checking visibility and cache
+    const shouldFetch = 
+      isVisible && 
+      latitude && 
+      longitude && 
+      (!fetchAttempted || (Date.now() - lastFetchTimestamp > REFRESH_INTERVAL));
+    
+    if (shouldFetch) {
+      // Use a staggered delay to prevent all components from fetching at once
+      const delay = isCertified ? 
+        Math.random() * 500 + (Math.abs(latitude || 0) + Math.abs(longitude || 0)) % 1000 : 0;
+      
+      fetchTimeoutRef.current = window.setTimeout(() => {
+        executeFetch(() => Promise.resolve());
+        fetchTimeoutRef.current = null;
+      }, delay);
+    }
+    
+    return () => {
+      if (fetchTimeoutRef.current) {
+        window.clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = null;
+      }
+    };
+  }, [isVisible, latitude, longitude, lastFetchTimestamp, executeFetch, forceUpdate, isCertified, REFRESH_INTERVAL, fetchAttempted, calculationComplete]);
   
   return null;
 };

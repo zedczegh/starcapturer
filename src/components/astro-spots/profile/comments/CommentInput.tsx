@@ -1,68 +1,135 @@
 
 import React, { useState } from 'react';
-import { Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Send, ImagePlus, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { cn } from '@/lib/utils';
+import { toast } from "sonner";
 
 interface CommentInputProps {
-  onSubmit: (content: string) => Promise<void>;
+  onSubmit: (content: string, image?: File | null) => void;
   sending: boolean;
-  className?: string;
+  isReply?: boolean;
 }
 
-const CommentInput: React.FC<CommentInputProps> = ({
-  onSubmit,
-  sending,
-  className
-}) => {
+const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply = false }) => {
   const { t } = useLanguage();
-  const [content, setContent] = useState("");
+  const [commentText, setCommentText] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
-    if (!content.trim() || sending) return;
-    await onSubmit(content);
-    setContent("");
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Require text content with images
+    if (imageFile && !commentText.trim()) {
+      toast.error(t("Please add some text with your image", "请为您的图片添加一些文字"));
+      return;
+    }
+    
+    // Ensure there's either text or an image
+    if (!commentText.trim() && !imageFile) {
+      toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
+      return;
+    }
+    
+    onSubmit(commentText.trim(), imageFile);
+    setCommentText('');
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error(t('Only image files are allowed', '仅允许上传图片文件'));
+        return;
+      }
+      
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(t('Image must be less than 5MB', '图片必须小于5MB'));
+        return;
+      }
+      
+      setImageFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+      setImagePreview(null);
+    }
   };
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <form onSubmit={handleSubmit} className="space-y-3">
       <Textarea
-        placeholder={t("Write your comment here...", "在此处写下您的评论...")}
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        className="bg-cosmic-900/40 border-cosmic-700/30 text-gray-300 resize-none min-h-[100px]
-          focus:border-primary/50 focus:ring-primary/20"
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && e.metaKey) {
-            handleSubmit();
-          }
-        }}
+        value={commentText}
+        onChange={(e) => setCommentText(e.target.value)}
+        placeholder={isReply ? t("Write a reply...", "撰写回复...") : t("Add a comment...", "添加评论...")}
+        className={`${isReply ? 'min-h-16' : 'min-h-24'} bg-cosmic-800/40 border-cosmic-700/40 focus:border-primary`}
+        disabled={sending}
       />
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-cosmic-400">
-          {t("Press ⌘ + Enter to submit", "按 ⌘ + Enter 发送")}
-        </p>
-        <Button
-          onClick={handleSubmit}
-          disabled={!content.trim() || sending}
-          size="sm"
+
+      {imagePreview && (
+        <div className="relative inline-block">
+          <img 
+            src={imagePreview} 
+            alt={isReply ? "Reply attachment preview" : "Comment attachment preview"}
+            className="h-24 w-auto rounded-md border border-cosmic-700/50"
+          />
+          <button
+            type="button"
+            onClick={handleRemoveImage}
+            className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground p-1 rounded-full"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
+      <div className="flex gap-2 justify-end">
+        <label className="cursor-pointer">
+          <div className="flex items-center gap-2 px-3 py-2 text-sm text-primary/90 hover:text-primary hover:bg-cosmic-800/30 rounded-md">
+            <ImagePlus className="h-4 w-4" />
+            <span>{t("Add Image", "添加图片")}</span>
+          </div>
+          <input 
+            type="file"
+            className="hidden"
+            accept="image/*"
+            onChange={handleImageSelect}
+            disabled={sending}
+          />
+        </label>
+        <Button 
+          type="submit" 
+          size="sm" 
+          disabled={sending || (!commentText.trim() && !imageFile)}
+          className="flex gap-1 items-center"
         >
           {sending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {t("Posting...", "发布中...")}
-            </>
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <>
-              <Send className="mr-2 h-4 w-4" />
-              {t("Post Comment", "发布评论")}
-            </>
+            <Send className="h-4 w-4" />
           )}
+          {isReply ? t("Reply", "回复") : t("Submit", "提交")}
         </Button>
       </div>
-    </div>
+    </form>
   );
 };
 

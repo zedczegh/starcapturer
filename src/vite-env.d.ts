@@ -34,7 +34,7 @@ declare module 'react-leaflet' {
   export interface MarkerProps extends L.MarkerOptions {
     position: L.LatLngExpression;
     icon?: L.Icon | L.DivIcon;
-    onClick?: () => void; // Add onClick to the interface
+    onClick?: () => void;
     children?: React.ReactNode;
   }
 

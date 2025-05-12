@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -21,14 +22,59 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [networkError, setNetworkError] = React.useState<string | null>(null);
 
   const onSubmit = async (data: any) => {
     try {
       setIsLoading(true);
+      setNetworkError(null);
+      
+      // Check network connectivity before attempting signup
+      if (!navigator.onLine) {
+        setNetworkError(t(
+          "You appear to be offline. Please check your internet connection and try again.",
+          "您似乎处于离线状态。请检查您的互联网连接，然后重试。"
+        ));
+        return;
+      }
+      
+      // Attempt to ping the Supabase URL to see if it's reachable
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch('https://fmnivvwpyriufxaebbzi.supabase.co/auth/v1/health', { 
+          method: 'GET',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          console.warn('Supabase health check failed:', response.status);
+          // Continue anyway, the signup might still work
+        }
+      } catch (error) {
+        console.warn('Error checking Supabase reachability:', error);
+        setNetworkError(t(
+          "Unable to connect to our servers. This might be due to network issues or our servers may be experiencing problems.",
+          "无法连接至我们的服务器。这可能是由于网络问题，或者我们的服务器可能遇到了问题。"
+        ));
+        return;
+      }
+      
+      // Proceed with signup
       await signUp(data.email, data.password);
       onSuccess();
       navigate('/photo-points');
     } catch (error: any) {
+      console.error('Sign up error:', error);
+      if (error.message === 'Failed to fetch' || !navigator.onLine) {
+        setNetworkError(t(
+          "Network connection issue. Please check your internet connection and try again.",
+          "网络连接问题。请检查您的互联网连接，然后重试。"
+        ));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -112,6 +158,16 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
             </FormItem>
           )}
         />
+
+        {networkError && (
+          <div className="p-3 text-sm rounded-md bg-red-500/10 border border-red-500/20 text-red-500">
+            <p>{networkError}</p>
+            <p className="mt-1 text-xs opacity-80">
+              {t("Tip: Make sure you're connected to the internet and the server is accessible.",
+                "提示：确保您已连接到互联网，并且服务器可访问。")}
+            </p>
+          </div>
+        )}
 
         <Button 
           type="submit" 

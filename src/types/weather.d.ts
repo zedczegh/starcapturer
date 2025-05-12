@@ -1,4 +1,3 @@
-
 declare module "@/types/weather" {
   export interface WeatherData {
     temperature: number;
@@ -78,17 +77,5 @@ declare module "@/types/weather" {
     };
     date?: string | Date;
     user_id?: string;
-    username?: string; // Added username property
-    weatherData?: {
-      temperature?: number;
-      humidity?: number;
-      cloudCover: number;
-      windSpeed?: number;
-      precipitation?: number;
-      weatherCondition?: string;
-      clearSky?: {
-        annualRate?: number;
-      };
-    };
   }
 }

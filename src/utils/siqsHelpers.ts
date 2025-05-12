@@ -1,136 +1,137 @@
-/**
- * Helper functions for working with SIQS (Sky Quality Score) data
- */
 
 /**
- * Extract a numeric SIQS score from various data formats
- * @param siqs - SIQS data in various possible formats
- * @returns Numeric SIQS score or null if not available
+ * Helper functions for safely working with SIQS values that might be numbers or objects
  */
-export function getSiqsScore(siqs: any): number | null {
-  // If it's already a number, return it directly
-  if (typeof siqs === 'number') {
-    return siqs;
-  }
-  
-  // If null or undefined, return null
-  if (siqs === null || siqs === undefined) {
-    return null;
-  }
-  
-  // If it's an object with a score property
-  if (typeof siqs === 'object' && 'score' in siqs) {
-    return typeof siqs.score === 'number' ? siqs.score : null;
-  }
-  
-  // Try to parse it as a number if it's a string
-  if (typeof siqs === 'string') {
-    const parsed = parseFloat(siqs);
-    return isNaN(parsed) ? null : parsed;
-  }
-  
-  // If we can't determine the SIQS score, return null
-  return null;
-}
+
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * Format a SIQS score for display
- * @param siqs - SIQS score number or object
- * @returns Formatted string or "--" if not available
+ * Get numeric SIQS score from any SIQS format (number or object)
+ * @param siqs SIQS value which could be a number or object
+ * @returns number value of SIQS or 0 if undefined
  */
-export function formatSiqsForDisplay(siqs: any): string {
-  const score = getSiqsScore(siqs);
-  if (score === null) {
-    return "--";
-  }
-  return score.toFixed(1);
-}
-
-/**
- * Check if a location has valid SIQS data
- * @param location - Location data object
- * @returns Boolean indicating if valid SIQS data exists
- */
-export function hasValidSiqs(location: any): boolean {
-  return getSiqsScore(location?.siqs) !== null;
-}
-
-/**
- * Compare two locations based on SIQS scores
- * @param a - First location
- * @param b - Second location
- * @returns Comparison result (-1, 0, 1)
- */
-export function compareBySiqs(a: any, b: any): number {
-  const scoreA = getSiqsScore(a?.siqs) || 0;
-  const scoreB = getSiqsScore(b?.siqs) || 0;
-  return scoreB - scoreA; // Higher scores first
-}
-
-/**
- * Get SIQS quality level based on score
- * @param score - SIQS score
- * @returns Quality level string
- */
-export function getSiqsQuality(score: number | null): string {
-  if (score === null) return "Unknown";
-  if (score >= 8.5) return "Excellent";
-  if (score >= 7.0) return "Very Good";
-  if (score >= 5.5) return "Good";
-  if (score >= 4.0) return "Average";
-  if (score >= 2.5) return "Poor";
-  return "Very Poor";
-}
-
-/**
- * Normalize a score to the 0-10 SIQS scale
- * Some systems might use different scales (0-100, 0-1, etc.)
- * @param score - Input score in any scale
- * @returns Normalized score on 0-10 scale
- */
-export function normalizeToSiqsScale(score: number): number {
-  // Handle invalid input
-  if (score === null || score === undefined || isNaN(score)) {
+export function getSiqsScore(siqs?: number | string | { score: number; isViable: boolean } | any): number {
+  if (siqs === undefined || siqs === null) {
     return 0;
   }
+  
+  // Handle string values (parsing to number)
+  if (typeof siqs === 'string') {
+    const parsed = parseFloat(siqs);
+    return isNaN(parsed) ? 0 : normalizeToSiqsScale(parsed);
+  }
+  
+  // Handle numeric values directly
+  if (typeof siqs === 'number') {
+    return isNaN(siqs) ? 0 : normalizeToSiqsScale(siqs);
+  }
+  
+  // Handle SharedAstroSpot object with siqs property
+  if (typeof siqs === 'object' && siqs !== null) {
+    // Case: location.siqs passed directly as an object with score property
+    if ('siqs' in siqs && typeof siqs.siqs !== 'undefined') {
+      return getSiqsScore(siqs.siqs);
+    }
+    
+    // Case: { score: number } object
+    if ('score' in siqs && typeof siqs.score === 'number') {
+      return isNaN(siqs.score) ? 0 : normalizeToSiqsScale(siqs.score);
+    }
+  }
+  
+  // Default to 0 if no valid score found
+  return 0;
+}
+
+/**
+ * Normalize a score to ensure it's in the 0-10 range
+ */
+export function normalizeToSiqsScale(score: number): number {
+  // Handle NaN
+  if (isNaN(score)) return 0;
   
   // If score is already in 0-10 range, return as is
   if (score >= 0 && score <= 10) {
     return score;
   }
   
-  // If score is in 0-100 range (percentage), convert to 0-10
+  // If score is on 0-100 scale, normalize to 0-10
   if (score > 10 && score <= 100) {
     return score / 10;
   }
   
-  // If score is in 0-1 range (normalized), convert to 0-10
-  if (score >= 0 && score < 1) {
-    return score * 10;
+  // Cap values outside of accepted ranges
+  if (score > 100) return 10;
+  if (score < 0) return 0;
+  
+  return score;
+}
+
+/**
+ * Format SIQS score for display
+ * @param score SIQS score
+ * @returns Formatted string representation with one decimal place or "N/A"
+ */
+export function formatSiqsForDisplay(score: number | null): string {
+  if (score === null || score <= 0) {
+    return "N/A";
   }
   
-  // For any other range, clamp between 0-10
-  return Math.max(0, Math.min(10, score));
+  // Ensure score is normalized to 0-10 scale and format with one decimal place
+  const normalizedScore = normalizeToSiqsScale(score);
+  return normalizedScore.toFixed(1);
 }
 
 /**
- * Check if a SIQS value is greater than a threshold
- * @param siqs - SIQS value in any format
- * @param threshold - Threshold to compare against
- * @returns Boolean indicating if SIQS is greater than threshold
+ * Get formatted SIQS score from any SIQS format
+ * @param siqs SIQS value which could be a number or object
+ * @returns Formatted string representation
  */
-export function isSiqsGreaterThan(siqs: any, threshold: number): boolean {
+export function formatSiqsScore(siqs?: number | { score: number; isViable: boolean } | any): string {
   const score = getSiqsScore(siqs);
-  return score !== null && score > threshold;
+  return formatSiqsForDisplay(score);
 }
 
 /**
- * Check if a SIQS value is at least a threshold value
- * @param siqs - SIQS value in any format
- * @param threshold - Threshold to compare against
- * @returns Boolean indicating if SIQS is at least the threshold
+ * Compare if a SIQS value is at least a certain threshold
+ * @param siqs SIQS value which could be a number or object
+ * @param threshold Minimum threshold to compare against
+ * @returns true if the SIQS is at least the threshold
  */
-export function isSiqsAtLeast(siqs: any, threshold: number): boolean {
+export function isSiqsAtLeast(siqs: number | any, threshold: number): boolean {
   const score = getSiqsScore(siqs);
-  return score !== null && score >= threshold;
+  return score >= threshold;
+}
+
+/**
+ * Compare if a SIQS value is greater than a certain threshold
+ * @param siqs SIQS value which could be a number or object
+ * @param threshold Threshold to compare against
+ * @returns true if the SIQS is greater than the threshold
+ */
+export function isSiqsGreaterThan(siqs: number | any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score > threshold;
+}
+
+/**
+ * Sort locations by SIQS score (highest first)
+ * @param locations Array of locations to sort
+ * @returns Sorted array of locations
+ */
+export function sortLocationsBySiqs(locations: SharedAstroSpot[]): SharedAstroSpot[] {
+  return [...locations].sort((a, b) => {
+    const aRealTime = (a as any).realTimeSiqs;
+    const bRealTime = (b as any).realTimeSiqs;
+    
+    const aSiqs = typeof aRealTime === "number" && aRealTime > 0
+      ? aRealTime
+      : getSiqsScore(a.siqs);
+      
+    const bSiqs = typeof bRealTime === "number" && bRealTime > 0
+      ? bRealTime
+      : getSiqsScore(b.siqs);
+      
+    return (bSiqs || 0) - (aSiqs || 0);
+  });
 }

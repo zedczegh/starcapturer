@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface SpotHeaderProps {
   spot: {
@@ -39,30 +40,39 @@ const SpotHeader: React.FC<SpotHeaderProps> = ({
 
   const handleMessageCreator = () => {
     if (!user || !spot.user_id) return;
-    navigate('/messages', { state: { selectedUser: spot.user_id } });
+    
+    // Navigate to messages page with state information about the selected user
+    navigate('/messages', { 
+      state: { 
+        selectedUserId: spot.user_id,
+        selectedUsername: creatorProfile?.username || 'User'
+      } 
+    });
+  };
+
+  const navigateToProfile = () => {
+    navigate(`/profile/${spot.user_id}`);
   };
 
   const renderCreatorAvatar = () => {
     if (loadingCreator) {
       return (
-        <div className="h-10 w-10 rounded-full bg-cosmic-700 animate-pulse mr-3" />
+        <div className="h-12 w-12 rounded-full bg-cosmic-700 animate-pulse mr-3" />
       );
     }
-    if (creatorProfile?.avatar_url) {
-      return (
-        <img
-          src={creatorProfile.avatar_url}
-          alt="Creator Avatar"
-          className="h-10 w-10 rounded-full object-cover mr-3 border-2 border-primary shadow"
-        />
-      );
-    }
+    
     return (
-      <span className="h-10 w-10 flex items-center justify-center bg-cosmic-700 rounded-full mr-3 border-2 border-cosmic-700">
-        <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M16 19a4 4 0 0 0-8 0m8 0v2a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3v-2m8 0H8a8 8 0 0 1 8-8h0a8 8 0 0 1 8 8z"/>
-        </svg>
-      </span>
+      <Link to={`/profile/${spot.user_id}`}>
+        <Avatar className="h-12 w-12 border-2 border-primary shadow transition-all duration-300 hover:scale-105 cursor-pointer">
+          {creatorProfile?.avatar_url ? (
+            <AvatarImage src={creatorProfile.avatar_url} alt="Creator" className="object-cover" />
+          ) : (
+            <AvatarFallback className="bg-cosmic-700 text-primary-foreground">
+              {creatorProfile?.username ? creatorProfile.username.substring(0, 2).toUpperCase() : "?"}
+            </AvatarFallback>
+          )}
+        </Avatar>
+      </Link>
     );
   };
 
@@ -75,7 +85,7 @@ const SpotHeader: React.FC<SpotHeaderProps> = ({
             <div className="h-4 w-32 rounded bg-cosmic-700 animate-pulse" />
           ) : creatorProfile && creatorProfile.username ? (
             <Link
-              to={`/profile/${spotId}`}
+              to={`/profile/${spot.user_id}`}
               className="text-base font-semibold underline hover:text-primary text-gray-200 truncate max-w-[10rem]"
               title={creatorProfile.username}
             >

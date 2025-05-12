@@ -1,43 +1,31 @@
+
+// Cache configuration for SIQS calculator
+
+// Cache durations for different scenarios
+export const NIGHT_CACHE_DURATION = 20 * 60 * 1000; // 20 minutes at night
+export const DAY_CACHE_DURATION = 10 * 60 * 1000;  // 10 minutes during day
+export const AUTO_CLEANUP_INTERVAL = 5 * 60 * 1000; // Automatic cleanup every 5 minutes
+
 /**
- * Configuration for SIQS caching system
+ * Determine if it's nighttime for cache duration purposes
  */
+export const isNighttime = (): boolean => {
+  const hour = new Date().getHours();
+  return hour >= 18 || hour < 8; // 6 PM to 8 AM
+};
 
-// Cache duration in milliseconds
-export const DEFAULT_CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
-export const CERTIFIED_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for certified locations
-export const DSR_CACHE_DURATION = 60 * 60 * 1000; // 60 minutes for dark sky reserves
+/**
+ * Get the appropriate cache duration based on time of day
+ */
+export const getCacheDuration = (): number => {
+  return isNighttime() ? NIGHT_CACHE_DURATION : DAY_CACHE_DURATION;
+};
 
-// Auto cleanup interval in milliseconds
-export const AUTO_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
-
-// Maximum items to keep in memory cache
-export const MAX_MEMORY_CACHE_SIZE = 300;
-
-// Get location key for cache lookup
-export function getLocationKey(latitude: number, longitude: number): string {
+/**
+ * Generate a consistent cache key for a location
+ * @param latitude Latitude of the location
+ * @param longitude Longitude of the location
+ */
+export const getLocationKey = (latitude: number, longitude: number): string => {
   return `${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
-}
-
-// Get cache duration based on location type
-export function getCacheDuration(isDarkSkyReserve = false, isCertified = false): number {
-  if (isDarkSkyReserve) {
-    return DSR_CACHE_DURATION;
-  }
-  if (isCertified) {
-    return CERTIFIED_CACHE_DURATION;
-  }
-  return DEFAULT_CACHE_DURATION;
-}
-
-// Lookup coordinates by cache key
-export function coordsFromKey(key: string): [number, number] | null {
-  const parts = key.split('-');
-  if (parts.length !== 2) return null;
-  
-  const lat = parseFloat(parts[0]);
-  const lng = parseFloat(parts[1]);
-  
-  if (isNaN(lat) || isNaN(lng)) return null;
-  
-  return [lat, lng];
-}
+};

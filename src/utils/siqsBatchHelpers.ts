@@ -4,7 +4,7 @@
  * This utility is designed to be imported in multiple places to standardize SIQS handling
  */
 
-import { SharedAstroSpot } from '@/types/weather';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSiqsScore, isSiqsGreaterThan, isSiqsAtLeast } from './siqsHelpers';
 
 /**

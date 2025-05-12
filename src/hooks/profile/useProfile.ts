@@ -1,17 +1,11 @@
 
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { getRandomAstronomyTip } from '@/utils/astronomyTips';
-
-interface Profile {
-  username: string | null;
-  avatar_url: string | null;
-  date_of_birth: string | null;
-  tags: string[];
-}
+import { fetchUserProfile, ensureUserProfile } from '@/utils/profileUtils';
+import type { ProfileData } from '@/utils/profile/profileCore';
 
 export function useProfile() {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -20,47 +14,36 @@ export function useProfile() {
 
   // Fetch profile, including tags
   const fetchProfile = useCallback(async (userId: string, setValue: any) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('username, avatar_url')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (!error && data) {
-      // Fetch tags
-      const { data: tagsData } = await supabase
-        .from('profile_tags')
-        .select('tag')
-        .eq('user_id', userId);
-
-      const tagArr = tagsData ? tagsData.map(t => t.tag) : [];
+    try {
+      console.log("Fetching profile in useProfile hook for user:", userId);
+      
+      // Ensure the user profile exists in the database
+      await ensureUserProfile(userId);
+      
+      const profileData = await fetchUserProfile(userId);
+      
+      if (!profileData) {
+        console.error("No profile data returned");
+        return { data: null, error: "No profile data returned" };
+      }
+      
+      console.log("Profile loaded in useProfile hook:", profileData);
+      
       setProfile({
-        username: data.username || '',
-        avatar_url: data.avatar_url,
-        date_of_birth: null,
-        tags: tagArr,
+        username: profileData.username || null,
+        avatar_url: profileData.avatar_url,
+        tags: profileData.tags || [],
       });
-      setValue('username', data.username || '');
-      setTags(tagArr);
-      setAvatarUrl(data.avatar_url);
+      
+      setValue('username', profileData.username || '');
+      setTags(profileData.tags || []);
+      setAvatarUrl(profileData.avatar_url);
+      
+      return { data: { username: profileData.username, avatar_url: profileData.avatar_url, tags: profileData.tags }, error: null };
+    } catch (error) {
+      console.error("Error in fetchProfile:", error);
+      return { data: null, error };
     }
-    return { data, error };
-  }, []);
-
-  // Save profile tags
-  const saveProfileTags = useCallback(async (userId: string, newTags: string[]) => {
-    // Remove all current tags for this user, then insert selected ones
-    await supabase.from('profile_tags').delete().eq('user_id', userId);
-    if (newTags.length === 0) return;
-    const tagRows = newTags.map((tag) => ({
-      user_id: userId,
-      tag,
-    }));
-    await supabase.from('profile_tags').insert(tagRows);
-    setTags(newTags);
-    setProfile((prev) =>
-      prev ? { ...prev, tags: newTags } : prev
-    );
   }, []);
 
   return {
@@ -77,6 +60,5 @@ export function useProfile() {
     fetchProfile,
     tags,
     setTags,
-    saveProfileTags,
   }
 }

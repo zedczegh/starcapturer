@@ -6,9 +6,9 @@ import CommentInput from './comments/CommentInput';
 import CommentHeader from './comments/CommentHeader';
 import EmptyComments from './comments/EmptyComments';
 import CommentSheet from './comments/CommentSheet';
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import { Comment } from './types/comments';
 
 interface SpotCommentsProps {
@@ -16,73 +16,66 @@ interface SpotCommentsProps {
   comments: Comment[];
   user: boolean;
   onCommentsUpdate: () => void;
+  onSubmit?: (content: string, imageFile: File | null, parentId?: string | null) => Promise<void>;
+  sending: boolean;
 }
 
 const SpotComments: React.FC<SpotCommentsProps> = ({
   spotId,
   comments,
   user,
-  onCommentsUpdate
+  onCommentsUpdate,
+  onSubmit,
+  sending
 }) => {
   const { t } = useLanguage();
+  const { user: authUser } = useAuth();
   const [showCommentsSheet, setShowCommentsSheet] = useState(false);
-  const [commentSending, setCommentSending] = useState(false);
   const [localComments, setLocalComments] = useState<Comment[]>(comments);
 
+  // Update local comments when props change
   useEffect(() => {
+    console.log(`SpotComments received ${comments.length} comments`);
     setLocalComments(comments);
   }, [comments]);
 
-  const handleCommentSubmit = async (content: string) => {
-    if (!user || !spotId || !content.trim()) return;
-    
-    setCommentSending(true);
-    
-    try {
-      const { error, data } = await supabase
-        .from("astro_spot_comments")
-        .insert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          spot_id: spotId,
-          content: content.trim(),
-        })
-        .select();
-      
-      if (error) {
-        console.error("Error posting comment:", error);
-        toast.error(t("Failed to post comment.", "评论发送失败。"));
-        return;
-      }
-      
-      if (data && data.length > 0) {
-        const userResponse = await supabase.auth.getUser();
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('username, avatar_url')
-          .eq('id', userResponse.data.user?.id)
-          .single();
-          
-        const newComment = {
-          ...data[0],
-          profiles: {
-            username: profileData?.username || userResponse.data.user?.email?.split('@')[0] || t("Anonymous", "匿名用户"),
-            avatar_url: profileData?.avatar_url
-          }
-        };
-        
-        setLocalComments(prev => [newComment, ...prev]);
-        toast.success(t("Comment posted!", "评论已发表！"));
-      }
-      
-      setTimeout(() => {
-        onCommentsUpdate();
-      }, 500);
-      
-    } catch (err) {
-      console.error("Exception when posting comment:", err);
-      toast.error(t("Failed to post comment.", "评论发送失败。"));
-    } finally {
-      setCommentSending(false);
+  const handleCommentSubmit = async (content: string, imageFile: File | null = null) => {
+    if (!authUser) {
+      toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
+      return;
+    }
+
+    // Validate content is not empty when uploading an image
+    if (!content.trim() && imageFile) {
+      toast.error(t("Please add some text to your comment", "请为您的评论添加一些文字"));
+      return;
+    }
+
+    if (onSubmit) {
+      console.log("Submitting new comment");
+      await onSubmit(content, imageFile);
+      // Make sure we refresh comments after submission
+      onCommentsUpdate();
+    }
+  };
+
+  const handleReplySubmit = async (content: string, imageFile: File | null, parentId: string) => {
+    if (!authUser) {
+      toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
+      return;
+    }
+
+    // Validate content is not empty when uploading an image
+    if (!content.trim() && imageFile) {
+      toast.error(t("Please add some text to your comment", "请为您的评论添加一些文字"));
+      return;
+    }
+
+    if (onSubmit) {
+      console.log(`Submitting reply to comment: ${parentId}`);
+      // Pass the parent ID parameter
+      await onSubmit(content, imageFile, parentId);
+      onCommentsUpdate();
     }
   };
 
@@ -98,9 +91,13 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         {localComments.length === 0 ? (
           <EmptyComments />
         ) : (
-          <motion.div layout className="space-y-3">
+          <motion.div layout className="space-y-6 mt-4">
             {localComments.slice(0, 2).map((comment) => (
-              <CommentItem key={comment.id} comment={comment} />
+              <CommentItem 
+                key={comment.id} 
+                comment={comment}
+                onReply={handleReplySubmit}
+              />
             ))}
           </motion.div>
         )}
@@ -110,7 +107,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         <div className="mt-4 pt-4 border-t border-cosmic-700/30">
           <CommentInput
             onSubmit={handleCommentSubmit}
-            sending={commentSending}
+            sending={sending}
           />
         </div>
       )}
@@ -121,7 +118,8 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         comments={localComments}
         user={user}
         onSubmit={handleCommentSubmit}
-        sending={commentSending}
+        onReply={handleReplySubmit}
+        sending={sending}
       />
     </div>
   );

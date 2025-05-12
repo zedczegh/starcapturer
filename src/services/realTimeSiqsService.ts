@@ -1,6 +1,6 @@
 
 import { calculateRealTimeSiqs } from './realTimeSiqs/siqsCalculator';
-import { processBatchSiqs, batchCalculateSiqs } from './realTimeSiqs/batchProcessor';
+import { batchCalculateSiqs } from './realTimeSiqs/batchProcessor';
 import { 
   clearSiqsCache, 
   clearLocationSiqsCache, 
@@ -11,7 +11,6 @@ import {
 // Export all the main functions to maintain API compatibility
 export { 
   calculateRealTimeSiqs,
-  processBatchSiqs,
   batchCalculateSiqs,
   clearSiqsCache,
   clearLocationSiqsCache,

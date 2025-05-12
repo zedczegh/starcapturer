@@ -1,8 +1,7 @@
-
 import React, { useMemo, useState, useEffect } from "react";
 import { usePhotoPointsSearch } from "@/hooks/usePhotoPointsSearch";
 import PhotoPointCard from "./photoPoints/PhotoPointCard";
-import { SharedAstroSpot } from "@/types/weather";
+import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { Button } from "./ui/button";
 import { ChevronRight, Loader2, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -11,8 +10,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { currentSiqsStore } from "./index/CalculatorSection";
 import CurrentLocationReminder from "./photoPoints/CurrentLocationReminder";
 import { updateLocationsWithRealTimeSiqs } from "@/services/realTimeSiqsService/locationUpdateService";
-import { getEffectiveCloudCover } from "@/lib/siqs/weatherDataUtils";
-import { getSiqsScore } from "@/utils/siqsHelpers";
 
 interface RecommendedPhotoPointsProps {
   onSelectPoint?: (point: SharedAstroSpot) => void;
@@ -57,7 +54,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
   } = usePhotoPointsSearch({
     userLocation,
     currentSiqs,
-    maxInitialResults: limit + 10 // Request more to ensure we have enough even after filtering
+    maxInitialResults: limit + 5 // Request more to ensure we have enough even after filtering
   });
 
   // Mark as initialized after initial load and save to cache
@@ -95,45 +92,7 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     }
   }, [displayedLocations, cachedLocations, userLocation]);
 
-  // Filter locations to only show meaningful ones
-  const filterMeaningfulLocations = (locations: SharedAstroSpot[]): SharedAstroSpot[] => {
-    return locations.filter(loc => {
-      // Always include certified locations
-      if (loc.isDarkSkyReserve || loc.certification) {
-        return true;
-      }
-      
-      // Ensure SIQS score meets minimum quality threshold
-      const siqsScore = getSiqsScore(loc.siqs);
-      if (siqsScore === null || siqsScore < 50) {
-        return false;
-      }
-      
-      // Check weather data if available
-      if (loc.weatherData) {
-        // Get effective cloud cover considering precipitation and conditions
-        const effectiveCloudCover = getEffectiveCloudCover(
-          loc.weatherData.cloudCover,
-          loc.weatherData.precipitation,
-          loc.weatherData.weatherCondition
-        );
-        
-        // Filter out locations with poor viewing conditions
-        if (effectiveCloudCover > 75) {
-          return false;
-        }
-      }
-      
-      // Always include viable spots
-      if (loc.isViable) {
-        return true;
-      }
-      
-      return true;
-    });
-  };
-
-  // Only show limited number of locations after filtering for meaningful ones
+  // Only show limited number of locations
   const limitedLocations = useMemo(() => {
     // Use enhanced data if available, otherwise fresh data, then cached data
     const locationsToUse = enhancedLocations.length > 0 
@@ -142,15 +101,12 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
         ? displayedLocations 
         : cachedLocations;
     
-    // Filter for meaningful locations
-    const meaningfulLocations = filterMeaningfulLocations(locationsToUse);
-    
     // Prioritize certified locations 
-    const certified = meaningfulLocations.filter(loc => 
+    const certified = locationsToUse.filter(loc => 
       loc.isDarkSkyReserve || loc.certification
     );
     
-    const nonCertified = meaningfulLocations.filter(loc => 
+    const nonCertified = locationsToUse.filter(loc => 
       !loc.isDarkSkyReserve && !loc.certification
     );
     

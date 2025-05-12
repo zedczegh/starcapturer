@@ -1,142 +1,192 @@
 
-import React, { useState, useCallback, Suspense, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Circle } from "lucide-react";
+import { Loader, Star, Circle } from "lucide-react";
+import LocationCard from "@/components/LocationCard";
+import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import CommunityMap from "@/components/community/CommunityMap";
 import { Loader2 } from "@/components/ui/loader";
-import CommunityLocationsList from "@/components/community/CommunityLocationsList";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { useUserGeolocation } from "@/hooks/community/useUserGeolocation";
+import CommunityLocationsSkeleton from "@/components/community/CommunityLocationsSkeleton";
+import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
 
 const DEFAULT_CENTER: [number, number] = [30, 104];
 
 const CommunityAstroSpots: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const userPosition = useUserGeolocation();
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(userPosition);
 
   const { data: astrospots, isLoading } = useQuery({
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    refetchOnReconnect: true,
-    refetchInterval: 1000 * 60 * 15, // Refresh every 15 minutes
+    staleTime: 1000 * 60 * 5,
   });
+
+  const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
+  const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+
+  const handleSiqsCalculated = (spotId: string, siqs: number | null, loading: boolean) => {
+    setRealTimeSiqs(prev => ({
+      ...prev,
+      [spotId]: siqs
+    }));
+    setLoadingSiqs(prev => ({
+      ...prev,
+      [spotId]: loading
+    }));
+  };
 
   const handleLocationUpdate = useCallback((lat: number, lng: number) => {
     console.log("Location updated:", lat, lng);
     setUserLocation([lat, lng]);
   }, []);
 
-  // Effect to update user location when geolocation is available
-  useEffect(() => {
-    if (userPosition) {
-      setUserLocation(userPosition);
-    }
-  }, [userPosition]);
+  // Sort locations by SIQS scores (highest first)
+  const sortedAstroSpots = React.useMemo(() => {
+    if (!astrospots) return [];
+    
+    // Add real-time SIQS values to spots for sorting
+    const spotsWithRealtimeSiqs = astrospots.map(spot => ({
+      ...spot,
+      realTimeSiqs: realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs
+    }));
+    
+    // Sort using the utility function
+    return sortLocationsBySiqs(spotsWithRealtimeSiqs);
+  }, [astrospots, realTimeSiqs]);
 
   const titleVariants = {
     hidden: { opacity: 0, scale: 0.96, y: -10 },
     visible: { opacity: 1, scale: 1, y: 0, transition: { delay: 0.1, duration: 0.6, ease: "easeOut" } }
   };
-  
   const lineVariants = {
     hidden: { width: 0, opacity: 0 },
     visible: { width: 90, opacity: 1, transition: { delay: 0.35, duration: 0.7, ease: "easeOut" } }
   };
-  
   const descVariants = {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.6, ease: "easeOut" } }
   };
 
-  // Log the data to help with debugging
-  useEffect(() => {
-    console.log("Astrospots data:", astrospots);
-  }, [astrospots]);
+  const handleCardClick = (id: string) => {
+    navigate(`/astro-spot/${id}`, { 
+      state: { from: 'community' } 
+    });
+  };
 
   return (
-    <TooltipProvider>
-      <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>
-        <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
-          <motion.div
-            className="flex flex-col items-center justify-center gap-3 mb-9"
-            initial="hidden"
-            animate="visible"
-            variants={{}}
+    <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>
+      <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
+        <motion.div
+          className="flex flex-col items-center justify-center gap-3 mb-9"
+          initial="hidden"
+          animate="visible"
+          variants={{}}
+        >
+          <motion.h1
+            className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-3xl md:text-4xl text-center drop-shadow tracking-tight"
+            variants={titleVariants}
           >
-            <motion.h1
-              className="font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent text-3xl md:text-4xl text-center drop-shadow tracking-tight"
-              variants={titleVariants}
-            >
-              {t("Astrospots Community", "观星社区")}
-            </motion.h1>
-            <motion.div
-              className="rounded-full h-1 bg-gradient-to-r from-blue-400 to-purple-400 mb-1"
-              style={{ width: 90, maxWidth: "40vw" }}
-              variants={lineVariants}
+            {t("Astrospots Community", "观星社区")}
+          </motion.h1>
+          <motion.div
+            className="rounded-full h-1 bg-gradient-to-r from-blue-400 to-purple-400 mb-1"
+            style={{ width: 90, maxWidth: "40vw" }}
+            variants={lineVariants}
+          />
+          <motion.p
+            className="text-center mb-2 mt-1 max-w-2xl text-base md:text-lg text-muted-foreground leading-relaxed"
+            variants={descVariants}
+          >
+            {t(
+              "Discover and explore astrospots contributed by our SIQS community members. View their favorite stargazing locations on the interactive map and find inspiration for your next adventure.",
+              "由SIQS社区成员贡献的观星点，在这里一览无余。浏览大家推荐的拍摄位置，探索灵感，发现下次观星之旅的新去处。"
+            )}
+          </motion.p>
+        </motion.div>
+
+        <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 380, minHeight: 275 }}>
+          {isLoading ? (
+            <div className="absolute inset-0 flex justify-center items-center bg-cosmic-900/20 backdrop-blur-sm">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/80" />
+            </div>
+          ) : (
+            <CommunityMap
+              center={userLocation || DEFAULT_CENTER}
+              locations={sortedAstroSpots ?? []}
+              hoveredLocationId={null}
+              isMobile={false}
+              zoom={userLocation ? 8 : 3}
+              onLocationUpdate={handleLocationUpdate}
             />
-            <motion.p
-              className="text-center mb-2 mt-1 max-w-2xl text-base md:text-lg text-muted-foreground leading-relaxed"
-              variants={descVariants}
-            >
-              {t(
-                "Discover and explore astrospots contributed by our SIQS community members. View their favorite stargazing locations on the interactive map and find inspiration for your next adventure.",
-                "由SIQS社区成员贡献的观星点，在这里一览无余。浏览大家推荐的拍摄位置，探索灵感，发现下次观星之旅的新去处。"
-              )}
-            </motion.p>
-          </motion.div>
-
-          <Suspense fallback={
-            <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 380, minHeight: 275 }}>
-              <div className="absolute inset-0 flex justify-center items-center bg-cosmic-900/20 backdrop-blur-sm">
-                <Loader2 className="h-8 w-8 animate-spin text-primary/80" />
-              </div>
-            </div>
-          }>
-            <div className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" style={{ height: 380, minHeight: 275 }}>
-              <CommunityMap
-                center={userLocation || DEFAULT_CENTER}
-                locations={astrospots ?? []}
-                hoveredLocationId={null}
-                isMobile={true}
-                zoom={userLocation ? 8 : 3}
-                onLocationUpdate={handleLocationUpdate}
-              />
-            </div>
-          </Suspense>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.6 }}
-          >
-            <motion.h2 
-              className="flex items-center gap-2 text-xl font-bold mb-6 bg-gradient-to-r from-blue-300 to-purple-400 bg-clip-text text-transparent"
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-            >
-              <Circle className="h-4 w-4 text-primary animate-pulse" />
-              <span>{t("All Community Astrospots", "全部社区地点")}</span>
-            </motion.h2>
-
-            <div className="glassmorphism-strong p-6 rounded-xl shadow-glow">
-              <CommunityLocationsList locations={astrospots} isLoading={isLoading} />
-            </div>
-          </motion.div>
+          )}
         </div>
-      </PhotoPointsLayout>
-    </TooltipProvider>
+
+        <h2 className="font-bold text-xl mt-12 mb-5 flex items-center gap-2 text-gradient-blue">
+          <Circle className="h-4 w-4 text-primary" />
+          <span>{t("All Community Astrospots", "全部社区地点")}</span>
+          <span className="text-sm font-normal text-muted-foreground ml-2">
+            ({t("Sorted by best SIQS score", "按照SIQS评分排序")})
+          </span>
+        </h2>
+
+        {isLoading ? (
+          <CommunityLocationsSkeleton />
+        ) : sortedAstroSpots && sortedAstroSpots.length > 0 ? (
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+            {sortedAstroSpots.map((spot: any) => (
+              <button
+                key={spot.id}
+                className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
+                tabIndex={0}
+                onClick={() => handleCardClick(spot.id)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleCardClick(spot.id);
+                  }
+                }}
+                aria-label={spot.name}
+                style={{ background: "none", padding: 0 }}
+              >
+                <div className="w-full h-full">
+                  <RealTimeSiqsProvider
+                    isVisible={true}
+                    latitude={spot.latitude}
+                    longitude={spot.longitude}
+                    bortleScale={spot.bortleScale}
+                    existingSiqs={spot.siqs}
+                    onSiqsCalculated={(siqs, loading) =>
+                      handleSiqsCalculated(spot.id, siqs, loading)
+                    }
+                  />
+                  <div className="transition-shadow group-hover:shadow-xl group-hover:ring-2 group-hover:ring-primary rounded-xl">
+                    <LocationCard
+                      id={spot.id}
+                      name={spot.name}
+                      latitude={spot.latitude}
+                      longitude={spot.longitude}
+                      siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
+                      timestamp={spot.timestamp}
+                      isCertified={false}
+                    />
+                  </div>
+                  <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="w-full text-muted-foreground/70 text-center py-16">
+            {t("No community astrospots yet. Be the first to share!", "还没有社区观星点，快来分享吧！")}
+          </div>
+        )}
+      </div>
+    </PhotoPointsLayout>
   );
 };
 

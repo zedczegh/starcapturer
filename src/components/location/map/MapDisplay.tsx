@@ -1,10 +1,8 @@
 
-import React, { useCallback, memo, Suspense, lazy, useMemo } from "react";
+import React, { useCallback, memo, useMemo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Loader } from "lucide-react";
-
-// Lazy load the Leaflet map component to improve initial page load
-const LazyMapComponent = lazy(() => import('./LazyMapComponent'));
+import LazyMapComponent from './LazyMapComponent';
 
 interface MapDisplayProps {
   position: [number, number];
@@ -15,6 +13,7 @@ interface MapDisplayProps {
   showInfoPanel?: boolean;
   isDarkSkyReserve?: boolean;
   certification?: string;
+  siqs?: number;
 }
 
 const MapDisplay: React.FC<MapDisplayProps> = ({
@@ -25,7 +24,8 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   onMapClick,
   showInfoPanel = false,
   isDarkSkyReserve = false,
-  certification = ''
+  certification = '',
+  siqs
 }) => {
   const { t } = useLanguage();
 
@@ -43,30 +43,23 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
 
   // Memoized callback for map ready
   const handleMapReady = useCallback(() => {
+    console.log("MapDisplay: Map is ready, calling onMapReady");
     onMapReady();
   }, [onMapReady]);
 
   return (
     <div className="z-0 h-full w-full">
-      <Suspense fallback={
-        <div className="h-full w-full flex items-center justify-center bg-cosmic-800/20">
-          <div className="flex flex-col items-center gap-3">
-            <Loader className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-primary-foreground/90">{t("Loading map...", "正在加载地图...")}</p>
-          </div>
-        </div>
-      }>
-        <LazyMapComponent
-          position={memoizedPosition}
-          locationName={displayName}
-          editable={editable}
-          onMapReady={handleMapReady}
-          onMapClick={onMapClick}
-          showInfoPanel={showInfoPanel}
-          isDarkSkyReserve={isDarkSkyReserve}
-          certification={certification}
-        />
-      </Suspense>
+      <LazyMapComponent
+        position={memoizedPosition}
+        locationName={displayName}
+        editable={editable}
+        onMapReady={handleMapReady}
+        onMapClick={onMapClick}
+        showInfoPanel={showInfoPanel}
+        isDarkSkyReserve={isDarkSkyReserve}
+        certification={certification}
+        siqs={siqs}
+      />
     </div>
   );
 };
