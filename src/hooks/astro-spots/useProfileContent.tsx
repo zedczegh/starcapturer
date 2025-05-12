@@ -21,9 +21,8 @@ export const useProfileContent = (
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [storageChecked, setStorageChecked] = useState(false);
   
-  // Use our smaller hooks with the refresh trigger
+  // Use our smaller hooks with the refresh trigger - fix the parameter order
   const { spot, isLoading, refetch } = useSpotData(spotId, refreshTrigger);
-  // Fix: Destructure only what's available from useCreatorProfile
   const { creatorProfile, loadingCreator } = useCreatorProfile(spot?.user_id);
   const { spotImages, loadingImages, refetchImages } = useSpotImages(spotId, refreshTrigger);
   const { handleViewDetails, handleMessageCreator } = useProfileActions(spot);
@@ -45,7 +44,7 @@ export const useProfileContent = (
     checkStorage();
   }, []);
   
-  // Use our comment hook with improved state management
+  // Use our comment hook - Fix: Pass only one argument (t)
   const {
     commentSending,
     comments,
@@ -71,9 +70,7 @@ export const useProfileContent = (
       refetchImages()
     ]);
     
-    // Fix: Don't try to access refetch on creatorProfile since it doesn't exist
     if (spot?.user_id) {
-      // Simply log that we would refresh creator data if possible
       console.log("Would refresh creator profile for user ID:", spot.user_id);
     }
   }, [spotId, refetch, fetchComments, refetchImages, spot?.user_id]);
@@ -87,7 +84,7 @@ export const useProfileContent = (
     }
   }, [authUser, spot]);
 
-  // Load initial comments and set up refresh interval
+  // Load initial comments and set up refresh interval with optimized checking
   useEffect(() => {
     let isMounted = true;
     
@@ -105,13 +102,13 @@ export const useProfileContent = (
     if (spotId) {
       loadInitialComments();
       
-      // Set up refresh interval for comments
+      // Set up refresh interval for comments - reduced frequency to prevent flashing
       const intervalId = setInterval(() => {
         if (isMounted) {
           console.log("Refreshing comments automatically");
           fetchComments();
         }
-      }, 30000); // Refresh every 30 seconds
+      }, 60000); // Increased from 30s to 60s to reduce visual updates
       
       return () => {
         isMounted = false;
@@ -120,6 +117,7 @@ export const useProfileContent = (
     }
   }, [spotId, fetchComments]);
 
+  // Optimize this to reduce render flashing
   useEffect(() => {
     if (!isLoading && !!spot) {
       setShowInstantLoader(false);

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
 import NavBar from "@/components/NavBar";
@@ -8,7 +8,7 @@ import ProfileFooter from './ProfileFooter';
 import BackButton from "@/components/navigation/BackButton";
 import { clearSpotCache } from '@/utils/cache/spotCacheCleaner';
 
-// Modified wrapper component to force complete remount when the ID changes
+// Optimized wrapper component with improved rendering controls
 const AstroSpotProfile = () => {
   const { id } = useParams();
   const location = useLocation();
@@ -18,9 +18,24 @@ const AstroSpotProfile = () => {
   const [profileKey, setProfileKey] = useState<string>(`${id}-${Date.now()}`);
   const previousIdRef = useRef<string | null>(null);
   const mountTimeRef = useRef<number>(Date.now());
+  const noRefreshRef = useRef<boolean>(false);
   
-  // Ensure proper component reset when ID or state changes
+  // Check if we should skip refreshing (e.g. coming from marker popup)
+  const noRefresh = useMemo(() => {
+    return location.state?.noRefresh === true;
+  }, [location.state?.noRefresh]);
+  
+  // Ensure proper component reset when ID changes, but not on every state change
   useEffect(() => {
+    // Update the noRefresh ref for use in cleanup
+    noRefreshRef.current = noRefresh;
+    
+    // For markers/popups, we want to avoid unnecessary refreshing
+    if (noRefresh) {
+      console.log("Using no-refresh mode for profile:", id);
+      return; // Skip the rest of the effect to avoid refreshing
+    }
+    
     // Generate a unique identifier for this specific profile view
     const timestamp = location.state?.timestamp || Date.now();
     const newProfileKey = `${id}-${timestamp}`;
@@ -33,13 +48,13 @@ const AstroSpotProfile = () => {
       setComingFromCommunity(true);
     }
     
-    // Always clear the specific spot cache on mount to ensure fresh data
-    if (id) {
+    // Only clear cache when ID actually changes or we're not in noRefresh mode
+    if (id !== previousIdRef.current && !noRefresh && id) {
       clearSpotCache(id);
     }
     
     // If the ID has changed but we didn't get a new timestamp, force a reload
-    if (id !== previousIdRef.current && !location.state?.forcedReset) {
+    if (id !== previousIdRef.current && !location.state?.forcedReset && !noRefresh) {
       console.log("ID changed without proper navigation state, forcing refresh");
       const newTimestamp = Date.now();
       mountTimeRef.current = newTimestamp;
@@ -49,20 +64,16 @@ const AstroSpotProfile = () => {
         state: { 
           ...(location.state || {}),
           timestamp: newTimestamp,
-          forcedReset: true 
+          forcedReset: true,
+          // Preserve the noRefresh flag if it was set
+          noRefresh: location.state?.noRefresh
         },
         replace: true
       });
     }
     
     previousIdRef.current = id || null;
-    
-    // Clear any stale caches when component mounts/remounts
-    return () => {
-      // This cleanup ensures a fresh start when the component unmounts
-      console.log("Profile component unmounting for ID:", id);
-    };
-  }, [id, location.state, navigate]);
+  }, [id, location.state, navigate, noRefresh]);
 
   // If no ID is provided, show an error
   if (!id) {
@@ -90,6 +101,11 @@ const AstroSpotProfile = () => {
           <BackButton
             destination={comingFromCommunity ? "/community" : "/manage-astro-spots"}
             className="text-gray-300 hover:bg-cosmic-800/50"
+            state={{ 
+              returnedFromSpot: true,
+              refreshTimestamp: Date.now(),
+              spotId: id
+            }}
           />
         </div>
 
@@ -97,7 +113,7 @@ const AstroSpotProfile = () => {
           spotId={id} 
           user={!!user} 
           comingFromCommunity={comingFromCommunity}
-          key={profileKey} // Key ensures re-render when profile changes
+          key={noRefresh ? id : profileKey} // Use stable key for noRefresh mode
         />
       </div>
       

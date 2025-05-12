@@ -111,7 +111,7 @@ export const useCommunityAstroSpots = () => {
     setLastClickedId(spotId);
     setLastClickTime(now);
     
-    // Always use a unique timestamp for each navigation to force remounting
+    // Always use a unique timestamp for each navigation
     const timestamp = now;
     console.log("Navigating to astro spot profile:", spotId, "timestamp:", timestamp);
     
@@ -121,13 +121,14 @@ export const useCommunityAstroSpots = () => {
     // Tell the system we're starting a profile transition for smoother animation
     prepareForProfileTransition();
     
-    // The key is to completely replace any existing navigation state and use
-    // a unique timestamp for each navigation
+    // Important: Set noRefresh flag to true for marker clicks
+    // This prevents unnecessary refreshing and flashing
     navigate(`/astro-spot/${spotId}`, { 
       state: { 
         from: 'community',
         spotId: spotId,
-        timestamp 
+        timestamp,
+        noRefresh: true // Critical: Add this flag to prevent flashing
       },
       replace: false // Create a new history entry
     });
