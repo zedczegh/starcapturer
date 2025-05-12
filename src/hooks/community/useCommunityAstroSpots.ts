@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
@@ -10,6 +10,7 @@ import { clearSpotCache, prepareForProfileTransition } from "@/utils/cache/spotC
 
 export const useCommunityAstroSpots = () => {
   const navigate = useNavigate();
+  const navigationInProgressRef = useRef(false);
 
   // States for SIQS handling
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
@@ -20,6 +21,14 @@ export const useCommunityAstroSpots = () => {
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
   const [lastClickTime, setLastClickTime] = useState<number>(0);
   const [isNavigatingToSpot, setIsNavigatingToSpot] = useState(false);
+
+  // Clear navigation flag when component mounts/unmounts
+  useEffect(() => {
+    navigationInProgressRef.current = false;
+    return () => {
+      navigationInProgressRef.current = false;
+    };
+  }, []);
 
   // Use React Query to fetch data with improved caching
   const { data: astrospots, isLoading, refetch } = useQuery({
@@ -94,8 +103,9 @@ export const useCommunityAstroSpots = () => {
       return;
     }
     
-    if (isNavigatingToSpot) {
-      console.log("Navigation already in progress, ignoring rapid click");
+    // Prevent navigation if already in progress
+    if (navigationInProgressRef.current) {
+      console.log("Navigation already in progress, ignoring request for spot:", spotId);
       return;
     }
     
@@ -107,7 +117,10 @@ export const useCommunityAstroSpots = () => {
       return;
     }
     
+    // Set navigation flags to prevent duplicate navigations
     setIsNavigatingToSpot(true);
+    navigationInProgressRef.current = true;
+    
     setLastClickedId(spotId);
     setLastClickTime(now);
     
@@ -135,8 +148,9 @@ export const useCommunityAstroSpots = () => {
     // Reset navigation state after a delay
     setTimeout(() => {
       setIsNavigatingToSpot(false);
+      navigationInProgressRef.current = false;
     }, 500);
-  }, [navigate, lastClickedId, lastClickTime, isNavigatingToSpot]);
+  }, [navigate, lastClickedId, lastClickTime]);
 
   // Handle card click by using the shared navigation function
   const handleCardClick = useCallback((id: string) => {

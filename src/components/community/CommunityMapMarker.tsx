@@ -58,6 +58,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   const [openPopup, setOpenPopup] = useState<boolean>(false);
   const [forceUpdate, setForceUpdate] = useState<boolean>(false);
   const markerRef = useRef<L.Marker>(null);
+  const navigatingRef = useRef<boolean>(false);
   
   // Stabilize SIQS score to prevent flicker
   const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
@@ -67,6 +68,14 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       setStabilizedScore(realTimeSiqs);
     }
   }, [realTimeSiqs]);
+
+  // Reset navigating state when component mounts or unmounts
+  useEffect(() => {
+    navigatingRef.current = false;
+    return () => {
+      navigatingRef.current = false;
+    };
+  }, []);
   
   // Handler for SIQS calculation results
   const handleSiqsCalculated = (siqs: number | null, loading: boolean, confidence?: number) => {
@@ -109,6 +118,14 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       return;
     }
     
+    // Prevent multiple rapid navigations
+    if (navigatingRef.current) {
+      console.log("Navigation already in progress, preventing duplicate");
+      return;
+    }
+    
+    navigatingRef.current = true;
+    
     // Always generate a unique timestamp for each navigation
     const timestamp = Date.now();
     
@@ -127,6 +144,11 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       replace: false // Important to create new history entry
     });
     console.log("Direct navigation to spot from marker:", spot.id, timestamp);
+    
+    // Allow navigation again after delay
+    setTimeout(() => {
+      navigatingRef.current = false;
+    }, 500);
   };
 
   // Handle popup close
