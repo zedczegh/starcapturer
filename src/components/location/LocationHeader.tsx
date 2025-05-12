@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Share2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
+import { shareAstroSpot } from "@/lib/api"; // Added this import to fix the error
 
 interface LocationHeaderProps {
   name: string;
