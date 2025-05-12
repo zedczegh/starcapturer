@@ -7,6 +7,7 @@ import ProfileContent from './ProfileContent';
 import ProfileFooter from './ProfileFooter';
 import BackButton from "@/components/navigation/BackButton";
 
+// Create this wrapper component to force complete remount when the ID changes
 const AstroSpotProfile = () => {
   const { id } = useParams();
   const location = useLocation();
@@ -26,8 +27,10 @@ const AstroSpotProfile = () => {
     // This helps ensure we're showing the correct profile
   }, [id, location.state]);
 
+  // Using the ID as a key on the div wrapper forces a complete component remount
+  // when navigating between different spot IDs
   return (
-    <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
+    <div key={`profile-${id}-${location.state?.timestamp}`} className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
       <div className="container max-w-4xl py-8 px-4 md:px-6 relative">
         <div className="flex justify-between items-start mb-6">
