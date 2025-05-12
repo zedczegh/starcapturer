@@ -26,6 +26,7 @@ export async function fetchForecastForLocation(lat: number, lng: number): Promis
     // Check in-memory cache first (fastest)
     const memCached = memoryCache.get(cacheKey);
     if (memCached && (Date.now() - memCached.timestamp) < CACHE_DURATION) {
+      console.log("Using in-memory cached forecast data");
       return memCached.data;
     }
     
@@ -36,62 +37,52 @@ export async function fetchForecastForLocation(lat: number, lng: number): Promis
       const cacheAge = Date.now() - timestamp;
       
       if (cacheAge < CACHE_DURATION) {
+        console.log("Using session-stored cached forecast data");
+        
         // Update memory cache
         memoryCache.set(cacheKey, { data, timestamp });
+        
         return data;
       }
     }
     
     // If there's already a pending fetch, reuse that promise
     if (pendingFetches.has(cacheKey)) {
+      console.log("Reusing in-progress forecast fetch");
       return pendingFetches.get(cacheKey);
     }
     
     // Fetch fresh data if cache is missing or stale
-    // Use AbortController to allow aborting slow requests
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), 8000); // Timeout after 8 seconds
+    console.log("Fetching fresh forecast data");
     
     const fetchPromise = fetchForecastData({
       latitude: lat,
       longitude: lng,
       days: 3
-    }, abortController.signal) // Pass the signal directly, not wrapped in an object
-      .then(forecastData => {
-        clearTimeout(timeoutId);
-        
-        if (forecastData && forecastData.hourly) {
-          // Cache the new data
-          try {
-            // Update both caches
-            const timestamp = Date.now();
-            memoryCache.set(cacheKey, { data: forecastData, timestamp });
-            
-            sessionStorage.setItem(cacheKey, JSON.stringify({
-              data: forecastData,
-              timestamp
-            }));
-            
-            // Store reference to last fetched location for faster lookup
-            sessionStorage.setItem('last_forecast_location', `${lat.toFixed(4)}-${lng.toFixed(4)}`);
-          } catch (e) {
-            console.error("Failed to cache forecast data:", e);
-          }
+    }).then(forecastData => {
+      if (forecastData && forecastData.hourly) {
+        // Cache the new data
+        try {
+          // Update both caches
+          const timestamp = Date.now();
+          memoryCache.set(cacheKey, { data: forecastData, timestamp });
+          
+          sessionStorage.setItem(cacheKey, JSON.stringify({
+            data: forecastData,
+            timestamp
+          }));
+          
+          // Store reference to last fetched location for faster lookup
+          sessionStorage.setItem('last_forecast_location', `${lat.toFixed(4)}-${lng.toFixed(4)}`);
+        } catch (e) {
+          console.error("Failed to cache forecast data:", e);
         }
-        return forecastData;
-      }).catch(error => {
-        clearTimeout(timeoutId);
-        
-        // Don't throw for abort errors
-        if (error.name === 'AbortError') {
-          console.warn("Forecast request aborted due to timeout");
-          return null;
-        }
-        throw error;
-      }).finally(() => {
-        // Remove from pending fetches when done
-        pendingFetches.delete(cacheKey);
-      });
+      }
+      return forecastData;
+    }).finally(() => {
+      // Remove from pending fetches when done
+      pendingFetches.delete(cacheKey);
+    });
     
     // Store the promise for deduplication
     pendingFetches.set(cacheKey, fetchPromise);
@@ -99,7 +90,6 @@ export async function fetchForecastForLocation(lat: number, lng: number): Promis
     return fetchPromise;
   } catch (error) {
     console.error("Error fetching forecast data for SIQS calculation:", error);
-    pendingFetches.delete(cacheKey);
     return null; // Continue with current weather if forecast fails
   }
 }
@@ -114,19 +104,20 @@ export function clearForecastCache(lat?: number, lng?: number): void {
       const cacheKey = `forecast-${lat.toFixed(4)}-${lng.toFixed(4)}`;
       sessionStorage.removeItem(cacheKey);
       memoryCache.delete(cacheKey);
+      console.log(`Cleared forecast cache for location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
     } else {
       // Clear all forecast cache entries
       let cacheCleared = 0;
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (key && key.startsWith('forecast-')) {
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('forecast-')) {
           sessionStorage.removeItem(key);
           cacheCleared++;
         }
-      }
+      });
       // Also clear memory cache and the last location reference
       memoryCache.clear();
       sessionStorage.removeItem('last_forecast_location');
+      console.log(`Cleared ${cacheCleared} forecast cache entries`);
     }
   } catch (error) {
     console.error("Error clearing forecast cache:", error);
@@ -164,23 +155,4 @@ export function getCachedForecast(lat: number, lng: number): any | null {
     console.error("Error retrieving cached forecast:", error);
     return null;
   }
-}
-
-/**
- * Prefetch forecast data for likely locations
- */
-export function prefetchForecastData(locations: Array<{lat: number, lng: number}>): void {
-  if (!locations.length) return;
-  
-  // Use requestIdleCallback if available
-  const scheduleFunc = window.requestIdleCallback || setTimeout;
-  
-  // Limit to first 3 locations to avoid excessive prefetching
-  const limitedLocations = locations.slice(0, 3);
-  
-  scheduleFunc(() => {
-    limitedLocations.forEach(({lat, lng}) => {
-      fetchForecastForLocation(lat, lng).catch(() => {});
-    });
-  });
 }

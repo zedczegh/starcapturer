@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
 import { useLocationDataCache } from "@/hooks/useLocationData";
@@ -11,15 +12,11 @@ import { prefetchLocationData } from "@/lib/queryPrefetcher";
 
 export function useLocationDetailsLogic({ id, location, navigate, t, setCachedData, getCachedData }) {
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
-  const [dataInitializing, setDataInitializing] = useState(true);
   const locationInitializedRef = useRef(false);
   const initialRenderRef = useRef(true);
   const siqsUpdateRequiredRef = useRef(true);
   const queriesInitializedRef = useRef(false);
-  const previousLocationDataRef = useRef(null);
   const queryClient = useQueryClient();
-  const loadingMessageTimeoutRef = useRef(null);
-  const dataLoadStartTime = useRef(Date.now());
   
   const {
     locationData, 
@@ -36,72 +33,35 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
     noRedirect: true
   });
 
-  // Store previous location data to prevent disappearing content
-  useEffect(() => {
-    if (locationData && !isLoading) {
-      previousLocationDataRef.current = locationData;
-      // Data is now initialized
-      setDataInitializing(false);
-      
-      // Clear loading message if it's about getting location - more aggressively
-      if (statusMessage?.includes("Getting your current location") || 
-          statusMessage?.includes("正在获取您的位置")) {
-        // Use a shorter delay and make sure it clears
-        if (loadingMessageTimeoutRef.current) {
-          clearTimeout(loadingMessageTimeoutRef.current);
-        }
-        
-        // Calculate how long the message has been shown already
-        const timeElapsed = Date.now() - dataLoadStartTime.current;
-        const clearDelay = timeElapsed > 800 ? 50 : 250; // Very short delay if it's been showing a while
-        
-        loadingMessageTimeoutRef.current = setTimeout(() => {
-          setStatusMessage(null);
-          setLoadingCurrentLocation(false);
-        }, clearDelay);
-      }
-    }
-  }, [locationData, isLoading, statusMessage, setStatusMessage]);
-
-  // Clean up timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (loadingMessageTimeoutRef.current) {
-        clearTimeout(loadingMessageTimeoutRef.current);
-      }
-    };
-  }, []);
-
   // Use the SIQS updater to keep scores in sync with forecast data
   const { resetUpdateState } = useLocationSIQSUpdater(
-    locationData || previousLocationDataRef.current,
-    locationData?.forecastData || (previousLocationDataRef.current?.forecastData),
+    locationData,
+    locationData?.forecastData,
     setLocationData,
     t
   );
 
-  // Pre-fetch data as soon as we have location coordinates - with parallel loading
+  // Pre-fetch data as soon as we have location coordinates
   useEffect(() => {
-    const locData = locationData || previousLocationDataRef.current;
     if (
-      locData?.latitude && 
-      locData?.longitude && 
+      locationData?.latitude && 
+      locationData?.longitude && 
       !queriesInitializedRef.current
     ) {
       queriesInitializedRef.current = true;
       
-      // Immediate prefetch for faster loading - don't wait for next tick
-      prefetchLocationData(queryClient, locData.latitude, locData.longitude);
+      // Use prefetcher to load data in parallel
+      prefetchLocationData(queryClient, locationData.latitude, locationData.longitude);
       
-      console.log("Prefetching data for location:", locData.name);
+      console.log("Prefetching data for location:", locationData.name);
     }
   }, [locationData?.latitude, locationData?.longitude, queryClient]);
 
-  // Handle using current location when no location data is available - with faster timeout
+  // Handle using current location when no location data is available
   useEffect(() => {
     // Only proceed if we're not loading, don't have location data, not already getting location,
     // and haven't already initialized location
-    if (!isLoading && !locationData && !loadingCurrentLocation && !locationInitializedRef.current && !previousLocationDataRef.current) {
+    if (!isLoading && !locationData && !loadingCurrentLocation && !locationInitializedRef.current) {
       locationInitializedRef.current = true; // Mark as initialized to prevent multiple calls
       handleUseCurrentLocation();
     }
@@ -110,9 +70,8 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
   const handleUseCurrentLocation = () => {
     if (loadingCurrentLocation) return; // Prevent multiple simultaneous calls
     
-    dataLoadStartTime.current = Date.now(); // Record when we started loading
     setLoadingCurrentLocation(true);
-    setStatusMessage(t("Getting your current location...", "正在获取您的位置..."));
+    t("Getting your current location...", "正在获取您的位置...");
     
     getCurrentPosition(
       (position) => {
@@ -137,27 +96,36 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
           replace: true 
         });
         
-        // Don't clear loading state here - we'll do it when location data is set
+        setLoadingCurrentLocation(false);
       },
       (error) => {
         console.error("Error getting location:", error);
-        setStatusMessage(t("Could not get your location. Please check browser permissions.", 
-                     "无法获取您的位置。请检查浏览器权限。"));
+        t("Could not get your location. Please check browser permissions.", 
+                     "无法获取您的位置。请检查浏览器权限。");
         setLoadingCurrentLocation(false);
       },
-      { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 } // Reduced timeout from 5000 to 4000
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
   };
 
-  // Run once on initial render to trigger page refresh - Optimized
+  // Run once on initial render to trigger page refresh
   useEffect(() => {
     if (initialRenderRef.current && locationData) {
       initialRenderRef.current = false;
       console.log("Initial render, triggering lazy data loading");
       
-      // Immediate action for faster response
-      resetUpdateState();
-      siqsUpdateRequiredRef.current = true;
+      // Small delay to ensure everything is loaded
+      const timer = setTimeout(() => {
+        try {
+          // Reset SIQS update state to force recalculation
+          resetUpdateState();
+          siqsUpdateRequiredRef.current = true;
+        } catch (error) {
+          console.error("Error triggering refresh:", error);
+        }
+      }, 100); // Reduced delay for better performance
+      
+      return () => clearTimeout(timer);
     }
   }, [locationData, resetUpdateState]);
 
@@ -184,30 +152,29 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
   const { updateBortleScale } = useBortleUpdater();
   useEffect(() => {
     const updateBortleScaleData = async () => {
-      const locData = locationData || previousLocationDataRef.current;
-      if (!locData || isLoading) return;
+      if (!locationData || isLoading) return;
       
       // Check if we're in any Chinese region to update Bortle data
-      const inChina = locData.latitude && locData.longitude ? 
-        isInChina(locData.latitude, locData.longitude) : false;
+      const inChina = locationData.latitude && locationData.longitude ? 
+        isInChina(locationData.latitude, locationData.longitude) : false;
       
       // For Chinese locations, or if Bortle scale is missing, update it
-      if (inChina || locData.bortleScale === null || locData.bortleScale === undefined) {
+      if (inChina || locationData.bortleScale === null || locationData.bortleScale === undefined) {
         try {
-          console.log("Location may be in China or needs Bortle update:", locData.name);
+          console.log("Location may be in China or needs Bortle update:", locationData.name);
           
           // Use our improved Bortle updater for more accurate data
           const newBortleScale = await updateBortleScale(
-            locData.latitude,
-            locData.longitude,
-            locData.name,
-            locData.bortleScale
+            locationData.latitude,
+            locationData.longitude,
+            locationData.name,
+            locationData.bortleScale
           );
           
-          if (newBortleScale !== null && newBortleScale !== locData.bortleScale) {
-            console.log(`Bortle scale updated: ${locData.bortleScale} -> ${newBortleScale}`);
+          if (newBortleScale !== null && newBortleScale !== locationData.bortleScale) {
+            console.log(`Bortle scale updated: ${locationData.bortleScale} -> ${newBortleScale}`);
             setLocationData({
-              ...locData,
+              ...locationData,
               bortleScale: newBortleScale
             });
             
@@ -234,18 +201,17 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
 
   // Whenever the page loads with only coordinates but no name, we replace with our best DB estimate:
   useEffect(() => {
-    const locData = locationData || previousLocationDataRef.current;
     if (
-      locData &&
-      (locData.name === t("Current Location", "当前位置") || !locData.name) &&
-      typeof locData.latitude === "number" &&
-      typeof locData.longitude === "number"
+      locationData &&
+      (locationData.name === t("Current Location", "当前位置") || !locationData.name) &&
+      typeof locationData.latitude === "number" &&
+      typeof locationData.longitude === "number"
     ) {
       // Get internal DB estimate for the coordinates, prefer user language
-      const locationInfo = getLocationInfo(locData.latitude, locData.longitude);
+      const locationInfo = getLocationInfo(locationData.latitude, locationData.longitude);
       if (locationInfo && locationInfo.name) {
         setLocationData({
-          ...locData,
+          ...locationData,
           name: locationInfo.formattedName,
           bortleScale: locationInfo.bortleScale
         });
@@ -254,13 +220,13 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
   }, [locationData, t, setLocationData]);
 
   return {
-    locationData: locationData || previousLocationDataRef.current,
+    locationData,
     setLocationData,
     statusMessage,
     messageType,
     setStatusMessage,
     handleUpdateLocation,
-    isLoading: isLoading || dataInitializing,
+    isLoading,
     loadingCurrentLocation,
     setLoadingCurrentLocation
   };
