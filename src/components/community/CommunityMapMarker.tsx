@@ -115,7 +115,8 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       state: { 
         from: "community", 
         spotId: spot.id,
-        timestamp // Essential for forcing component remount
+        timestamp, // Essential for forcing component remount
+        noRefresh: true // Add flag to prevent unnecessary refreshes
       },
       replace: false // Important to create new history entry
     });
@@ -168,7 +169,8 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
                 state: { 
                   from: "community", 
                   spotId: spot.id,
-                  timestamp // Essential for forcing component remount
+                  timestamp, // Essential for forcing component remount
+                  noRefresh: true // Skip refresh on direct navigation
                 },
                 replace: false 
               });

@@ -34,7 +34,7 @@ const BackButton: React.FC<BackButtonProps> = ({
       return;
     }
     
-    // Always clear any spot cache to ensure fresh data when navigating back
+    // Clear any spot cache to ensure fresh data when navigating back
     clearSpotCache();
     
     // Use state-based routing if there's "from" information available
@@ -65,8 +65,8 @@ const BackButton: React.FC<BackButtonProps> = ({
         }
       });
     } else {
-      // Default behavior
-      navigate(destination, { 
+      // Default behavior with hash to prevent caching issues
+      navigate(`${destination}${window.location.hash ? '' : '#refresh=' + Date.now()}`, { 
         replace,
         state: {
           refreshTimestamp: Date.now(),

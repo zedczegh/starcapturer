@@ -21,6 +21,14 @@ export const useProfileContent = (
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [storageChecked, setStorageChecked] = useState(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
+  const isInitialLoadRef = useRef<boolean>(true);
+  
+  // Special optimization for production - check if we're coming from a direct link
+  const [skipInitialRefresh] = useState(() => {
+    // Check URL params to see if we should skip initial refresh
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.has('direct') || window.location.href.includes('direct=true');
+  });
   
   // Use our smaller hooks with the refresh trigger
   const { spot, isLoading, refetch } = useSpotData(spotId, refreshTrigger);
@@ -113,7 +121,11 @@ export const useProfileContent = (
     };
     
     if (spotId) {
-      loadInitialComments();
+      // Skip aggressive refresh for direct navigation in production
+      if (!skipInitialRefresh && isInitialLoadRef.current) {
+        loadInitialComments();
+        isInitialLoadRef.current = false;
+      }
       
       // Set up refresh interval for comments
       const intervalId = setInterval(() => {
@@ -128,7 +140,7 @@ export const useProfileContent = (
         clearInterval(intervalId);
       };
     }
-  }, [spotId, fetchComments]);
+  }, [spotId, fetchComments, skipInitialRefresh]);
 
   useEffect(() => {
     if (!isLoading && !!spot) {

@@ -61,7 +61,6 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     >
       <ProfileEditButton 
         isCreator={isCreator} 
-        comingFromCommunity={comingFromCommunity} 
         onClick={() => setShowEditDialog(true)} 
       />
 

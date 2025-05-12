@@ -10,7 +10,6 @@ import { clearSpotCache } from '@/utils/cache/spotCacheCleaner';
 import { motion } from 'framer-motion';
 import LocationDetailsLoading from '@/components/location/LocationDetailsLoading';
 
-// Modified wrapper component to prevent unnecessary remounts
 const AstroSpotProfile = () => {
   const { id } = useParams();
   const location = useLocation();
@@ -22,6 +21,7 @@ const AstroSpotProfile = () => {
   const previousIdRef = useRef<string | null>(null);
   const mountTimeRef = useRef<number>(Date.now());
   const isInitialMount = useRef(true);
+  const navigationTimestampRef = useRef<number | null>(null);
   
   // Improved component initialization
   useEffect(() => {
@@ -35,13 +35,22 @@ const AstroSpotProfile = () => {
     const newProfileKey = `${id}-${timestamp}`;
     setProfileKey(newProfileKey);
     
+    // Store the navigation timestamp for reference
+    navigationTimestampRef.current = timestamp;
+    
     console.log(`Profile opened for spot ID: ${id}, timestamp: ${timestamp}`);
     
     // Only clear cache on first mount or when ID changes
     if (isInitialMount.current || id !== previousIdRef.current) {
       if (id) {
-        clearSpotCache(id);
+        // Skip clearing cache if noRefresh is set
+        if (!location.state?.noRefresh) {
+          clearSpotCache(id);
+        } else {
+          console.log("Skipping cache clear due to noRefresh flag");
+        }
       }
+      
       setIsLoading(true);
       
       // Add a short timeout before showing content to prevent flashing

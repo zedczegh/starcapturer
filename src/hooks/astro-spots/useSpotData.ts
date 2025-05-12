@@ -13,7 +13,11 @@ export const useSpotData = (spotId: string, refreshTrigger: number) => {
       const spotData = await fetchFromSupabase(
         "user_astro_spots",
         (query) => query.select('*').eq('id', spotId).single(),
-        { skipCache: refreshTrigger > 0 }
+        { 
+          skipCache: refreshTrigger > 0,
+          namespace: `spot-data-${spotId}`,
+          ttl: 5 * 60 * 1000 // 5 minutes cache
+        }
       );
       
       if (!spotData) throw new Error("Spot not found");
@@ -23,12 +27,20 @@ export const useSpotData = (spotId: string, refreshTrigger: number) => {
         fetchFromSupabase(
           "astro_spot_types",
           (query) => query.select('*').eq('spot_id', spotId),
-          { skipCache: refreshTrigger > 0 }
+          { 
+            skipCache: refreshTrigger > 0,
+            namespace: `spot-types-${spotId}`,
+            ttl: 5 * 60 * 1000 // 5 minutes cache
+          }
         ),
         fetchFromSupabase(
           "astro_spot_advantages",
           (query) => query.select('*').eq('spot_id', spotId),
-          { skipCache: refreshTrigger > 0 }
+          { 
+            skipCache: refreshTrigger > 0,
+            namespace: `spot-advantages-${spotId}`,
+            ttl: 5 * 60 * 1000 // 5 minutes cache
+          }
         )
       ]);
       
@@ -38,9 +50,11 @@ export const useSpotData = (spotId: string, refreshTrigger: number) => {
         astro_spot_advantages: advantageData || [],
       };
     },
-    retry: 1,
-    staleTime: 1000 * 60, // Increase stale time to 1 minute to prevent unnecessary refetches
-    refetchOnWindowFocus: false
+    retry: 2, // Increase retry count for network issues
+    staleTime: 5 * 60 * 1000, // 5 minutes stale time
+    gcTime: 10 * 60 * 1000, // 10 minutes cache retention
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false // Don't refetch on reconnect to prevent flashing
   });
 
   return { spot, isLoading, error, refetch };
