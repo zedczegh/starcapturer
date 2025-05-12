@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const useCreatorProfile = (userId: string | undefined) => {
   // Creator profile query
-  const { data: creatorProfile, isLoading: loadingCreator } = useQuery({
+  const { data: creatorProfile, isLoading: loadingCreator, refetch } = useQuery({
     queryKey: ['creatorProfile', userId],
     queryFn: async () => {
       if (!userId) return null;
@@ -22,7 +22,7 @@ export const useCreatorProfile = (userId: string | undefined) => {
     enabled: !!userId
   });
 
-  return { creatorProfile, loadingCreator };
+  return { creatorProfile, loadingCreator, refetch };
 };
 
 export default useCreatorProfile;

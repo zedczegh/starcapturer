@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
+import { clearSpotCache } from "@/utils/cache/spotCacheCleaner";
 
 interface BackButtonProps {
   destination?: string;
@@ -32,6 +33,9 @@ const BackButton: React.FC<BackButtonProps> = ({
       onClick();
       return;
     }
+    
+    // Always clear any spot cache to ensure fresh data when navigating back
+    clearSpotCache();
     
     // Use state-based routing if there's "from" information available
     const fromPage = location.state?.from;

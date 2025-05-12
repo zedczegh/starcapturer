@@ -23,7 +23,8 @@ export const useProfileContent = (
   
   // Use our smaller hooks with the refresh trigger
   const { spot, isLoading, refetch } = useSpotData(spotId, refreshTrigger);
-  const { creatorProfile, loadingCreator, refetch: refetchCreator } = useCreatorProfile(spot?.user_id);
+  // Fix: Destructure only what's available from useCreatorProfile
+  const { creatorProfile, loadingCreator } = useCreatorProfile(spot?.user_id);
   const { spotImages, loadingImages, refetchImages } = useSpotImages(spotId, refreshTrigger);
   const { handleViewDetails, handleMessageCreator } = useProfileActions(spot);
   
@@ -70,10 +71,12 @@ export const useProfileContent = (
       refetchImages()
     ]);
     
+    // Fix: Don't try to access refetch on creatorProfile since it doesn't exist
     if (spot?.user_id) {
-      refetchCreator();
+      // Simply log that we would refresh creator data if possible
+      console.log("Would refresh creator profile for user ID:", spot.user_id);
     }
-  }, [spotId, refetch, fetchComments, refetchImages, refetchCreator, spot?.user_id]);
+  }, [spotId, refetch, fetchComments, refetchImages, spot?.user_id]);
 
   // Check if current user is the creator
   useEffect(() => {

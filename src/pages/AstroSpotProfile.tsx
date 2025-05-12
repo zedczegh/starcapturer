@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import AstroSpotProfile from '@/components/astro-spots/profile/SpotProfile';
+import { clearSpotCache, makeSureProfileLoadsCorrectly } from '@/utils/cache/spotCacheCleaner';
 
 // This wrapper component ensures proper remounting of the profile
 const AstroSpotProfilePage = () => {
@@ -18,10 +19,16 @@ const AstroSpotProfilePage = () => {
       return;
     }
     
+    // Clear any cached data for the previous spot
+    clearSpotCache(id);
+    
     // Generate a unique mount key using ID and timestamp
     const newMountKey = `profile-${id}-${location.state?.timestamp || Date.now()}`;
     console.log("Setting new mount key:", newMountKey);
     setMountKey(newMountKey);
+    
+    // Make sure profile loads correctly by clearing spot-specific cache
+    makeSureProfileLoadsCorrectly(id);
     
     // If there's no timestamp in state, add one to force a proper mount
     if (!location.state?.timestamp) {

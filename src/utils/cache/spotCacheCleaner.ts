@@ -16,7 +16,8 @@ export function clearSpotCache(spotId?: string): void {
       `spot-${spotId}`,
       `profile-${spotId}`,
       `comments-${spotId}`,
-      `images-${spotId}`
+      `images-${spotId}`,
+      `creator-${spotId}`
     ];
     
     keysToTryClear.forEach(key => {
@@ -27,6 +28,22 @@ export function clearSpotCache(spotId?: string): void {
         // Ignore errors
       }
     });
+    
+    // Also try to clear any React Query cache entries for this spot
+    try {
+      // This is a crude approach but helps in emergency cache issues
+      const storage = window.localStorage;
+      const keys = Object.keys(storage);
+      
+      keys.forEach(key => {
+        if (key.includes('tanstack-query') && 
+            (key.includes(spotId) || key.includes('astroSpot'))) {
+          storage.removeItem(key);
+        }
+      });
+    } catch (e) {
+      console.error("Error clearing React Query cache:", e);
+    }
   } else {
     // Clear all spot-related caches
     clearAllCache();
