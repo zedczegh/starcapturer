@@ -9,7 +9,6 @@ import SiqsScoreBadge from "@/components/photoPoints/cards/SiqsScoreBadge";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
-import { prepareForProfileTransition } from "@/utils/cache/spotCacheCleaner";
 
 function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.DivIcon {
   const size = isMobile ? (isHovered ? 28 : 20) : (isHovered ? 32 : 26);
@@ -59,6 +58,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   const [forceUpdate, setForceUpdate] = useState<boolean>(false);
   const markerRef = useRef<L.Marker>(null);
   const navigatingRef = useRef<boolean>(false);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Stabilize SIQS score to prevent flicker
   const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
@@ -74,6 +74,9 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     navigatingRef.current = false;
     return () => {
       navigatingRef.current = false;
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+      }
     };
   }, []);
   
@@ -84,18 +87,20 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     if (confidence) {
       setSiqsConfidence(confidence);
     }
-    if (siqs === null && !loading) {
-      setTimeout(() => setForceUpdate(true), 2000);
-      setTimeout(() => setForceUpdate(false), 2100);
-    }
   };
 
-  const handleClick = () => {
+  const handleClick = (e: L.LeafletMouseEvent) => {
+    // Prevent default to ensure we handle the navigation properly
+    if (e && e.originalEvent) {
+      e.originalEvent.preventDefault();
+      e.originalEvent.stopPropagation();
+    }
+    
     // Log click for debugging
     console.log("Marker clicked for spot:", spot.id, spot.name);
     
     if (onMarkerClick) {
-      // Use the provided click handler for custom navigation
+      // Use the provided click handler for navigation
       onMarkerClick(spot);
     } else {
       // Open popup when clicked on mobile
@@ -106,19 +111,30 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
         }
       } else {
         // Navigate directly on desktop
-        navigateToSpotProfile();
+        navigateToSpotProfile(e);
       }
     }
   };
 
-  // Navigation function to ensure consistent navigation with anti-flashing measures
-  const navigateToSpotProfile = () => {
+  // Clean navigation function that guarantees proper routing
+  const navigateToSpotProfile = (e?: L.LeafletMouseEvent | React.MouseEvent) => {
+    // Prevent default and propagation if event is provided
+    if (e) {
+      if ('originalEvent' in e && e.originalEvent) {
+        e.originalEvent.preventDefault();
+        e.originalEvent.stopPropagation();
+      } else if ('preventDefault' in e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+    
     if (!spot || !spot.id) {
       console.error("Invalid spot data:", spot);
       return;
     }
     
-    // Prevent multiple rapid navigations
+    // Prevent multiple rapid navigations with a cleaner timeout approach
     if (navigatingRef.current) {
       console.log("Navigation already in progress, preventing duplicate");
       return;
@@ -126,29 +142,30 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     
     navigatingRef.current = true;
     
+    // Cancel any pending timers
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+    }
+    
     // Always generate a unique timestamp for each navigation
     const timestamp = Date.now();
+    console.log("Direct navigation to spot profile:", spot.id, timestamp);
     
-    // Prepare cache for smoother transition
-    prepareForProfileTransition();
-    
-    // Add noRefresh flag to indicate this is coming from a marker
-    // This helps prevent unnecessary data refreshes
+    // Use a more reliable navigation approach
     navigate(`/astro-spot/${spot.id}`, { 
       state: { 
         from: "community", 
         spotId: spot.id,
-        timestamp, // Essential for forcing component remount
-        noRefresh: true // Signal to prevent unnecessary data refreshes
+        timestamp,
+        noRefresh: true
       },
-      replace: false // Important to create new history entry
+      replace: false
     });
-    console.log("Direct navigation to spot from marker:", spot.id, timestamp);
     
-    // Allow navigation again after delay
-    setTimeout(() => {
+    // Reset navigation flag after a short delay
+    clickTimerRef.current = setTimeout(() => {
       navigatingRef.current = false;
-    }, 500);
+    }, 800); // Longer timeout to ensure navigation completes
   };
 
   // Handle popup close
@@ -163,7 +180,9 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     <Marker
       position={[spot.latitude, spot.longitude]}
       icon={icon}
-      onClick={handleClick}
+      eventHandlers={{
+        click: handleClick
+      }}
       ref={markerRef}
     >
       <Popup
@@ -190,9 +209,9 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             size="sm" 
             className={`w-full text-xs flex items-center justify-center gap-1 mt-1 ${isMobile ? 'py-3' : ''}`}
             onClick={(e) => {
+              // Prevent popup from closing and map events
               e.stopPropagation();
-              // Call the optimized navigation function
-              navigateToSpotProfile();
+              navigateToSpotProfile(e);
             }}
           >
             <ExternalLink size={14} />
