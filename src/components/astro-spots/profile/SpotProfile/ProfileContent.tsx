@@ -7,7 +7,7 @@ import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialo
 import ProfileHeaderSection from './ProfileHeaderSection';
 import ProfileSectionsManager from './ProfileSectionsManager';
 import ProfileEditButton from './ProfileEditButton';
-import useProfileContent from './useProfileContent';
+import useProfileContent from '@/hooks/astro-spots/useProfileContent';
 
 interface ProfileContentProps {
   spotId: string;
@@ -36,7 +36,8 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     handleCommentSubmit,
     handleImagesUpdate,
     handleMessageCreator,
-    refreshData
+    refreshData,
+    triggerRefresh
   } = useProfileContent(spotId, user, comingFromCommunity, t);
 
   // Force data refresh when spotId changes

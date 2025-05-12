@@ -6,6 +6,7 @@ import NavBar from "@/components/NavBar";
 import ProfileContent from './ProfileContent';
 import ProfileFooter from './ProfileFooter';
 import BackButton from "@/components/navigation/BackButton";
+import { clearSpotCache } from '@/utils/cache/spotCacheCleaner';
 
 // Modified wrapper component to force complete remount when the ID changes
 const AstroSpotProfile = () => {
@@ -30,6 +31,11 @@ const AstroSpotProfile = () => {
     // Track where we came from for proper back button behavior
     if (location.state?.from === "community") {
       setComingFromCommunity(true);
+    }
+    
+    // Always clear the specific spot cache on mount to ensure fresh data
+    if (id) {
+      clearSpotCache(id);
     }
     
     // If the ID has changed but we didn't get a new timestamp, force a reload

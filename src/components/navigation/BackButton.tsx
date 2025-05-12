@@ -66,7 +66,13 @@ const BackButton: React.FC<BackButtonProps> = ({
       });
     } else {
       // Default behavior
-      navigate(destination, { replace });
+      navigate(destination, { 
+        replace,
+        state: {
+          refreshTimestamp: Date.now(),
+          forceRefresh: true
+        }
+      });
     }
   };
   

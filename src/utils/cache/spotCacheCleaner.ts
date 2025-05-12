@@ -1,5 +1,6 @@
 
 import { clearAllCache } from '../enhancedCache';
+import { clearTableCache } from '../supabaseFetch';
 
 /**
  * Utility to help clean cache when navigating between spots
@@ -17,7 +18,12 @@ export function clearSpotCache(spotId?: string): void {
       `profile-${spotId}`,
       `comments-${spotId}`,
       `images-${spotId}`,
-      `creator-${spotId}`
+      `creator-${spotId}`,
+      // Add query keys that match React Query patterns
+      `["astroSpot","${spotId}"]`,
+      `["spotImages","${spotId}"]`,
+      `["comments","${spotId}"]`,
+      `["creatorProfile"]`
     ];
     
     keysToTryClear.forEach(key => {
@@ -28,6 +34,9 @@ export function clearSpotCache(spotId?: string): void {
         // Ignore errors
       }
     });
+    
+    // Clear Supabase table cache for this spot
+    clearTableCache('user_astro_spots');
     
     // Also try to clear any React Query cache entries for this spot
     try {
@@ -47,6 +56,7 @@ export function clearSpotCache(spotId?: string): void {
   } else {
     // Clear all spot-related caches
     clearAllCache();
+    clearTableCache('user_astro_spots');
   }
 }
 

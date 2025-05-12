@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import AstroSpotProfile from '@/components/astro-spots/profile/SpotProfile';
-import { clearSpotCache, makeSureProfileLoadsCorrectly } from '@/utils/cache/spotCacheCleaner';
+import { clearSpotCache, makeSureProfileLoadsCorrectly, detectProfileCacheLoop } from '@/utils/cache/spotCacheCleaner';
 
 // This wrapper component ensures proper remounting of the profile
 const AstroSpotProfilePage = () => {
@@ -30,8 +30,14 @@ const AstroSpotProfilePage = () => {
     // Make sure profile loads correctly by clearing spot-specific cache
     makeSureProfileLoadsCorrectly(id);
     
+    // Check for potential cache loop issues
+    const isCacheLoop = detectProfileCacheLoop(id);
+    if (isCacheLoop) {
+      console.warn("Cache loop detected, forcing a clean reload");
+    }
+    
     // If there's no timestamp in state, add one to force a proper mount
-    if (!location.state?.timestamp) {
+    if (!location.state?.timestamp || isCacheLoop) {
       const timestamp = Date.now();
       console.log("Adding timestamp to AstroSpot profile:", id, timestamp);
       
