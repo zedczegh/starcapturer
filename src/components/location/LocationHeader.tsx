@@ -151,7 +151,7 @@ const LocationHeader = ({
   };
 
   return (
-    <div className="mb-8 pt-20 mt-4"> {/* Increased pt-20 for more space from navbar */}
+    <div className="mb-8 pt-20 mt-4"> {/* Kept the existing top padding for navbar space */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <h1 className="text-3xl font-bold text-center md:text-left">{name || t("Unnamed Location", "未命名位置")}</h1>
         
@@ -159,7 +159,7 @@ const LocationHeader = ({
           <Button 
             onClick={handleCopyLink}
             variant="outline"
-            className="z-20 relative"
+            className="z-20 relative bg-background/70 hover:bg-cosmic-800/50 border-cosmic-700/50 text-foreground"
           >
             <Share2 className="mr-2 h-4 w-4" />
             {t("Copy Link", "复制链接")}
@@ -168,7 +168,7 @@ const LocationHeader = ({
           <Button 
             onClick={handleShareLocation}
             disabled={loading}
-            className="z-20 relative" /* Increased z-index and added relative positioning */
+            className="z-20 relative bg-cosmic-800/70 text-white hover:bg-cosmic-700" 
           >
             <Share2 className="mr-2 h-4 w-4" />
             {t("Share This Location", "分享此位置")}

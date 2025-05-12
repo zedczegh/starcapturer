@@ -1,11 +1,13 @@
+
 import React from 'react';
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Star, ExternalLink, MessageSquare, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import defaultAvatar from "@/assets/default-avatar.png";
 
 interface ProfileHeaderSectionProps {
   spot: any;
@@ -50,14 +52,16 @@ const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
   return (
     <div className="p-6 pb-3">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold mb-2 md:mb-0">{spot?.name}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">{spot?.name}</h1>
+        </div>
         
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mt-3 md:mt-0">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={handleShare}
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 bg-background/70 text-foreground hover:bg-cosmic-800/50"
           >
             <Share2 className="h-4 w-4" />
             {t("Share", "分享")}
@@ -67,7 +71,7 @@ const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
             variant="outline" 
             size="sm" 
             onClick={onViewDetails}
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 bg-background/70 text-foreground hover:bg-cosmic-800/50"
           >
             <ExternalLink className="h-4 w-4" />
             {t("View Details", "查看详情")}
@@ -87,30 +91,36 @@ const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
         </div>
       </div>
 
-      {/* Creator information section */}
-      <div className="text-sm text-muted-foreground mb-4 flex flex-wrap gap-1">
+      {/* Creator information section - improved with avatar */}
+      <div className="text-sm text-muted-foreground mb-4 flex items-center flex-wrap gap-2">
         {spot?.latitude && spot?.longitude && (
           <span>{spot.latitude.toFixed(6)}, {spot.longitude.toFixed(6)}</span>
         )}
         {spot && spot.created_at && (
           <>
-            <span>•</span>
+            <span className="opacity-60">•</span>
             <span>
               {t("Created", "创建于")} {new Date(spot.created_at).toLocaleDateString()}
             </span>
           </>
         )}
+        
+        {/* Restored creator profile section with avatar */}
         {creatorProfile && !loadingCreator && (
           <>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              <Avatar className="h-4 w-4 inline-block">
-                {creatorProfile.avatar_url && (
-                  <img src={creatorProfile.avatar_url} alt={creatorProfile.username || "Creator"} />
-                )}
+            <span className="opacity-60">•</span>
+            <div className="flex items-center gap-1.5 bg-cosmic-900/30 px-2 py-1 rounded-full">
+              <Avatar className="h-6 w-6 border border-cosmic-700/50">
+                <AvatarImage 
+                  src={creatorProfile.avatar_url || defaultAvatar} 
+                  alt={creatorProfile.username || t("Anonymous", "匿名用户")} 
+                />
+                <AvatarFallback className="bg-cosmic-800 text-xs">
+                  {(creatorProfile.username || t("?", "?"))[0].toUpperCase()}
+                </AvatarFallback>
               </Avatar>
-              {creatorProfile.username || t("Anonymous", "匿名用户")}
-            </span>
+              <span className="text-sm">{creatorProfile.username || t("Anonymous", "匿名用户")}</span>
+            </div>
           </>
         )}
       </div>
