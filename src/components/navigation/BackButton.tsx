@@ -37,13 +37,18 @@ const BackButton: React.FC<BackButtonProps> = ({
     const fromPage = location.state?.from;
     
     if (fromPage === 'community') {
+      // Always use a fresh timestamp to force community page update
+      const refreshTimestamp = Date.now();
+      console.log(`Navigating back to community with refresh timestamp: ${refreshTimestamp}`);
+      
       // When returning to the community page, add a refresh timestamp to ensure 
       // the community page loads fresh data and doesn't use stale state
       navigate('/community', { 
         replace,
         state: { 
-          refreshTimestamp: Date.now(),
-          returnedFromSpot: true
+          refreshTimestamp,
+          returnedFromSpot: true,
+          forceRefresh: true  // Add explicit flag for forcing refresh
         }
       });
     } else if (fromPage === 'photoPoints') {
@@ -51,7 +56,8 @@ const BackButton: React.FC<BackButtonProps> = ({
         replace,
         state: { 
           refreshTimestamp: Date.now(),
-          returnedFromSpot: true  
+          returnedFromSpot: true,
+          forceRefresh: true
         }
       });
     } else {

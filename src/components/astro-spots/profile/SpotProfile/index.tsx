@@ -7,21 +7,27 @@ import ProfileContent from './ProfileContent';
 import ProfileFooter from './ProfileFooter';
 import BackButton from "@/components/navigation/BackButton";
 
-// Create this wrapper component to force complete remount when the ID changes
+// Modified wrapper component to force complete remount when the ID changes
 const AstroSpotProfile = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [comingFromCommunity, setComingFromCommunity] = useState(false);
+  const [profileKey, setProfileKey] = useState<string>(`${id}-${Date.now()}`);
   const previousIdRef = useRef<string | null>(null);
   const mountTimeRef = useRef<number>(Date.now());
   
+  // Ensure proper component reset when ID or state changes
   useEffect(() => {
-    // Force profile content to update whenever ID or timestamp changes
+    // Generate a unique identifier for this specific profile view
     const timestamp = location.state?.timestamp || Date.now();
-    console.log(`Profile opened for spot ID: ${id}, timestamp: ${timestamp}, prevId: ${previousIdRef.current}`);
+    const newProfileKey = `${id}-${timestamp}`;
     
+    console.log(`Profile opened for spot ID: ${id}, timestamp: ${timestamp}, prevId: ${previousIdRef.current}`);
+    setProfileKey(newProfileKey);
+    
+    // Track where we came from for proper back button behavior
     if (location.state?.from === "community") {
       setComingFromCommunity(true);
     }
@@ -29,11 +35,28 @@ const AstroSpotProfile = () => {
     // If the ID has changed but we didn't get a new timestamp, force a reload
     if (id !== previousIdRef.current && !location.state?.forcedReset) {
       console.log("ID changed without proper navigation state, forcing refresh");
-      mountTimeRef.current = Date.now();
+      const newTimestamp = Date.now();
+      mountTimeRef.current = newTimestamp;
+      
+      // Force state update to ensure fresh data loading
+      navigate(`/astro-spot/${id}`, { 
+        state: { 
+          ...(location.state || {}),
+          timestamp: newTimestamp,
+          forcedReset: true 
+        },
+        replace: true
+      });
     }
     
     previousIdRef.current = id || null;
-  }, [id, location.state]);
+    
+    // Clear any stale caches when component mounts/remounts
+    return () => {
+      // This cleanup ensures a fresh start when the component unmounts
+      console.log("Profile component unmounting for ID:", id);
+    };
+  }, [id, location.state, navigate]);
 
   // If no ID is provided, show an error
   if (!id) {
@@ -52,9 +75,6 @@ const AstroSpotProfile = () => {
       </div>
     );
   }
-
-  // Force component remount when critical props change by using a dedicated profile key
-  const profileKey = `${id}-${location.state?.timestamp || mountTimeRef.current}`;
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">

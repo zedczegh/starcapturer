@@ -136,11 +136,6 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       icon={icon}
       onClick={handleClick}
       ref={markerRef}
-      eventHandlers={{
-        click: () => {
-          console.log("Leaflet marker clicked for:", spot.id);
-        }
-      }}
     >
       <Popup
         closeOnClick={false}

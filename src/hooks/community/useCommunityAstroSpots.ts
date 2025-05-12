@@ -5,6 +5,7 @@ import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useNavigate } from "react-router-dom";
+import { clearCache } from "@/utils/fetchWithCache";
 
 export const useCommunityAstroSpots = () => {
   const navigate = useNavigate();
@@ -16,13 +17,23 @@ export const useCommunityAstroSpots = () => {
   const [stabilizedSiqs, setStabilizedSiqs] = useState<Record<string, number | null>>({});
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
+  const [lastClickTime, setLastClickTime] = useState<number>(0);
 
   // Use React Query to fetch data with improved caching
-  const { data: astrospots, isLoading } = useQuery({
+  const { data: astrospots, isLoading, refetch } = useQuery({
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+  
+  // Function to force data refresh
+  const refreshData = useCallback(async () => {
+    console.log("Refreshing community data...");
+    // Clear any cached data
+    clearCache();
+    // Refetch data
+    await refetch();
+  }, [refetch]);
 
   // Handle SIQS calculation results with rate limiting for mobile
   const handleSiqsCalculated = useCallback((spotId: string, siqs: number | null, loading: boolean, confidence?: number) => {
@@ -81,27 +92,19 @@ export const useCommunityAstroSpots = () => {
       return;
     }
     
-    // Prevent rapid double-clicking issues by tracking last clicked ID
-    if (spotId === lastClickedId) {
-      const doubleClickTimestamp = Date.now();
-      console.log("Double click detected, adding unique timestamp:", doubleClickTimestamp);
-      setLastClickedId(null);
-      
-      navigate(`/astro-spot/${spotId}`, { 
-        state: { 
-          from: 'community',
-          spotId: spotId,
-          timestamp: doubleClickTimestamp,
-        },
-        replace: false
-      });
+    const now = Date.now();
+    
+    // Prevent rapid double-clicking issues by tracking last clicked ID and time
+    if (spotId === lastClickedId && now - lastClickTime < 800) {
+      console.log("Ignoring rapid double click on same spot:", spotId);
       return;
     }
     
-    // Add timestamp to force state refresh
-    const timestamp = Date.now();
     setLastClickedId(spotId);
+    setLastClickTime(now);
     
+    // Always use a unique timestamp for each navigation to force remounting
+    const timestamp = now;
     console.log("Navigating to astro spot profile:", spotId, "timestamp:", timestamp);
     
     // The key is to completely replace any existing navigation state and use
@@ -114,7 +117,7 @@ export const useCommunityAstroSpots = () => {
       },
       replace: false // Create a new history entry
     });
-  }, [navigate, lastClickedId]);
+  }, [navigate, lastClickedId, lastClickTime]);
 
   // Handle card click by using the shared navigation function
   const handleCardClick = useCallback((id: string) => {
@@ -171,6 +174,7 @@ export const useCommunityAstroSpots = () => {
     handleSiqsCalculated,
     handleLocationUpdate,
     handleCardClick,
-    handleMarkerClick
+    handleMarkerClick,
+    refreshData
   };
 };

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationDetailsLoading from "@/components/location/LocationDetailsLoading";
@@ -35,8 +35,15 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     handleCommentsUpdate,
     handleCommentSubmit,
     handleImagesUpdate,
-    handleMessageCreator
+    handleMessageCreator,
+    refreshData
   } = useProfileContent(spotId, user, comingFromCommunity, t);
+
+  // Force data refresh when spotId changes
+  useEffect(() => {
+    console.log("ProfileContent: Spot ID changed, refreshing data:", spotId);
+    refreshData();
+  }, [spotId, refreshData]);
 
   if (isLoading || !spot) {
     return <LocationDetailsLoading />;
