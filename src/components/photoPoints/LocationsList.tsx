@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoLocationCard from './PhotoLocationCard';
@@ -5,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { sortLocationsBySiqs } from '@/utils/siqsHelpers';
 
 interface LocationsListProps {
   locations: SharedAstroSpot[];
@@ -28,7 +30,9 @@ const LocationsList: React.FC<LocationsListProps> = ({
   
   useEffect(() => {
     if (locations.length > 0) {
-      setVisibleLocations([...locations.slice(0, page * locationsPerPage)]);
+      // Sort locations by SIQS score before pagination
+      const sortedLocations = sortLocationsBySiqs(locations);
+      setVisibleLocations([...sortedLocations.slice(0, page * locationsPerPage)]);
     } else {
       setVisibleLocations([]);
     }
@@ -60,14 +64,23 @@ const LocationsList: React.FC<LocationsListProps> = ({
             key={location.id || `${location.latitude}-${location.longitude}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
+            transition={{ 
+              duration: 0.4, 
+              delay: Math.min(index * 0.05, 0.5),
+              ease: "easeOut"
+            }}
             layout
+            whileHover={{ 
+              scale: 1.02,
+              boxShadow: "0 4px 20px rgba(139, 92, 246, 0.15)"
+            }}
+            className="transition-all duration-300"
           >
             <PhotoLocationCard
               location={location}
               index={index}
               onViewDetails={onViewDetails || (() => {})}
-              showRealTimeSiqs={true} // Always fetch real-time SIQS
+              showRealTimeSiqs={showRealTimeSiqs}
             />
           </motion.div>
         ))}

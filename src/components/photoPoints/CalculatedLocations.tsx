@@ -49,13 +49,10 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   // Filter out locations with SIQS score of 0
   const validLocations = locations.filter(loc => loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0));
   
-  // Sort locations by distance (closest first)
-  const sortedLocations = [...validLocations].sort((a, b) => 
-    (a.distance || Infinity) - (b.distance || Infinity)
-  );
+  // Using pre-sorted locations (sorting is now done in the parent component)
   
   // Determine if we should show loading state
-  if (loading && sortedLocations.length === 0) {
+  if (loading && validLocations.length === 0) {
     return (
       <div className="flex justify-center items-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
@@ -64,7 +61,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   }
   
   // Show empty state if no locations available
-  if (sortedLocations.length === 0) {
+  if (validLocations.length === 0) {
     return (
       <EmptyCalculatedState 
         searchRadius={searchRadius}
@@ -90,7 +87,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   return (
     <>
       <LocationsGrid 
-        locations={sortedLocations}
+        locations={validLocations}
         initialLoad={initialLoad}
         isMobile={isMobile}
         onViewDetails={handleViewLocation}

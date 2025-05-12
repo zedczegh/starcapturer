@@ -1,10 +1,10 @@
+
 import React, { useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
 import CalculatedLocations from './CalculatedLocations';
 import CertifiedLocations from './CertifiedLocations';
-
-// Note: Changed from lazy loading to regular import to fix "Failed to fetch" error
+import { sortLocationsBySiqs } from '@/utils/siqsHelpers';
 
 interface PhotoPointsViewProps {
   showMap: boolean;
@@ -51,18 +51,22 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     onLocationUpdate(lat, lng);
   }, [onLocationUpdate]);
 
+  // Sort locations by SIQS score before displaying
+  const sortedCertifiedLocations = sortLocationsBySiqs(certifiedLocations);
+  const sortedCalculatedLocations = sortLocationsBySiqs(calculatedLocations);
+
   return (
     <div className="mt-4">
       {showMap && (
         <div className="mb-6 relative max-w-xl mx-auto">
           <PhotoPointsMap
             userLocation={effectiveLocation}
-            locations={activeView === 'certified' ? certifiedLocations : calculatedLocations}
+            locations={activeView === 'certified' ? sortedCertifiedLocations : sortedCalculatedLocations}
             onLocationClick={onLocationClick}
             onLocationUpdate={handleMapLocationUpdate}
             searchRadius={activeView === 'calculated' ? calculatedSearchRadius : searchRadius}
-            certifiedLocations={certifiedLocations}
-            calculatedLocations={calculatedLocations}
+            certifiedLocations={sortedCertifiedLocations}
+            calculatedLocations={sortedCalculatedLocations}
             activeView={activeView}
           />
         </div>
@@ -70,7 +74,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
 
       {!showMap && activeView === 'certified' && (
         <CertifiedLocations
-          locations={certifiedLocations}
+          locations={sortedCertifiedLocations}
           loading={loading}
           hasMore={hasMore}
           onLoadMore={loadMore}
@@ -82,7 +86,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
 
       {!showMap && activeView === 'calculated' && (
         <CalculatedLocations
-          locations={calculatedLocations}
+          locations={sortedCalculatedLocations}
           loading={loading}
           hasMore={hasMore}
           onLoadMore={loadMore}

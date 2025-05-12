@@ -1,74 +1,61 @@
 
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
+import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import PhotoPointCard from '../PhotoPointCard';
-import { updateLocationsWithRealTimeSiqs } from '@/services/realTimeSiqsService/locationUpdateService';
+import PhotoLocationCard from '../PhotoLocationCard';
+import { motion } from 'framer-motion';
 
 interface LocationsGridProps {
   locations: SharedAstroSpot[];
-  initialLoad?: boolean;
-  isMobile?: boolean;
-  onViewDetails?: (location: SharedAstroSpot) => void;
+  isMobile: boolean;
+  initialLoad: boolean;
+  onViewDetails: (location: SharedAstroSpot) => void;
 }
 
-const LocationsGrid: React.FC<LocationsGridProps> = ({ 
+const LocationsGrid: React.FC<LocationsGridProps> = ({
   locations,
-  initialLoad = false,
-  isMobile = false,
+  isMobile,
+  initialLoad,
   onViewDetails
 }) => {
-  const [enhancedLocations, setEnhancedLocations] = useState<SharedAstroSpot[]>([]);
+  const { t } = useLanguage();
   
-  // Update locations with real-time SIQS
-  useEffect(() => {
-    if (locations.length > 0) {
-      const updateWithSiqs = async () => {
-        try {
-          // Update all locations regardless of type
-          const updated = await updateLocationsWithRealTimeSiqs(locations);
-          setEnhancedLocations(updated);
-        } catch (err) {
-          console.error("Error updating grid locations with real-time SIQS:", err);
-          // Fallback to original locations
-          setEnhancedLocations(locations);
-        }
-      };
-      
-      updateWithSiqs();
-    } else {
-      setEnhancedLocations([]);
-    }
-  }, [locations]);
-
-  const locationsToDisplay = enhancedLocations.length > 0 ? enhancedLocations : locations;
-  
-  // Create a handler function that wraps the onViewDetails callback
-  // to match the expected function signature
-  const handleViewDetails = (location: SharedAstroSpot) => (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent event bubbling
-    if (onViewDetails) {
-      onViewDetails(location);
-    }
-  };
+  const gridClassName = isMobile 
+    ? "grid grid-cols-1 gap-4" 
+    : "grid grid-cols-1 md:grid-cols-2 gap-4";
   
   return (
-    <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2'} gap-4 mb-6`}>
-      {locationsToDisplay.map((location, index) => (
+    <motion.div 
+      className={gridClassName}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      {locations.map((location, index) => (
         <motion.div
           key={location.id || `${location.latitude}-${location.longitude}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: index * 0.05 }}
+          transition={{ 
+            duration: 0.4, 
+            delay: Math.min(index * 0.05, 0.5),
+            ease: "easeOut" 
+          }}
+          whileHover={{ 
+            scale: 1.02, 
+            boxShadow: "0 4px 20px rgba(139, 92, 246, 0.15)"
+          }}
+          className="transition-all duration-300"
         >
-          <PhotoPointCard
-            point={location}
-            onViewDetails={handleViewDetails(location)}
-            userLocation={null} // This doesn't use current location for distance
+          <PhotoLocationCard
+            location={location}
+            index={index}
+            onViewDetails={() => onViewDetails(location)}
+            showRealTimeSiqs={true}
           />
         </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 };
 

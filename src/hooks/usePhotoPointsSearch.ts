@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
@@ -7,6 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { isWaterLocation } from '@/utils/validation';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isCertifiedLocation } from '@/utils/locationFiltering';
+import { sortLocationsBySiqs } from '@/utils/siqsHelpers';
 
 interface UsePhotoPointsSearchProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -19,7 +19,7 @@ export const usePhotoPointsSearch = ({
   userLocation,
   currentSiqs,
   searchRadius = 100,
-  maxInitialResults = 50 // Increased from 5 to 50 to show more locations initially
+  maxInitialResults = 50
 }: UsePhotoPointsSearchProps) => {
   const { t } = useLanguage();
   const [displayedLocations, setDisplayedLocations] = useState<SharedAstroSpot[]>([]);
@@ -115,19 +115,8 @@ export const usePhotoPointsSearch = ({
         }
       }
       
-      // Sort locations by certification and distance
-      const sortedLocations = [...selectedLocations].sort((a, b) => {
-        // First sort by certification status within each category
-        if ((a.isDarkSkyReserve || a.certification) && !(b.isDarkSkyReserve || b.certification)) {
-          return -1;
-        }
-        if (!(a.isDarkSkyReserve || a.certification) && (b.isDarkSkyReserve || b.certification)) {
-          return 1;
-        }
-        
-        // Then sort by distance
-        return (a.distance || Infinity) - (b.distance || Infinity);
-      });
+      // Sort locations by SIQS (highest first)
+      const sortedLocations = sortLocationsBySiqs(selectedLocations);
       
       // Don't apply limits to certified locations view
       const locationsToDisplay = activeView === 'certified' 

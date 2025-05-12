@@ -1,5 +1,6 @@
 
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 /**
  * Manages filtering of locations based on various criteria
@@ -57,14 +58,19 @@ export class LocationFilter {
       if (aIsCertified && !bIsCertified) return -1;
       if (!aIsCertified && bIsCertified) return 1;
       
-      // Then by SIQS score
-      const aSiqs = typeof a.siqs === 'number' ? a.siqs : 
-                   (a.siqs && typeof a.siqs === 'object' && 'score' in a.siqs) ? a.siqs.score : 0;
-                   
-      const bSiqs = typeof b.siqs === 'number' ? b.siqs : 
-                   (b.siqs && typeof b.siqs === 'object' && 'score' in b.siqs) ? b.siqs.score : 0;
-                   
-      return bSiqs - aSiqs;
+      // Then by SIQS score - use getSiqsScore helper to handle different SIQS formats
+      const aSiqs = getSiqsScore(a.siqs);
+      const bSiqs = getSiqsScore(b.siqs);
+      
+      // Consider real-time SIQS if available
+      const aRealTime = a.realTimeSiqs != null ? a.realTimeSiqs : 0;
+      const bRealTime = b.realTimeSiqs != null ? b.realTimeSiqs : 0;
+      
+      // Use real-time SIQS if available, otherwise use stored SIQS
+      const aEffectiveSiqs = aRealTime > 0 ? aRealTime : aSiqs;
+      const bEffectiveSiqs = bRealTime > 0 ? bRealTime : bSiqs;
+      
+      return bEffectiveSiqs - aEffectiveSiqs;
     });
     
     // Process in priority order
