@@ -1,6 +1,6 @@
 
-import React, { useEffect } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
 import NavBar from "@/components/NavBar";
 import ProfileContent from './ProfileContent';
@@ -11,26 +11,53 @@ import BackButton from "@/components/navigation/BackButton";
 const AstroSpotProfile = () => {
   const { id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const [comingFromCommunity, setComingFromCommunity] = React.useState(false);
-
+  const [comingFromCommunity, setComingFromCommunity] = useState(false);
+  const previousIdRef = useRef<string | null>(null);
+  const mountTimeRef = useRef<number>(Date.now());
+  
   useEffect(() => {
-    // Log timestamp from state to help with debugging
-    const timestamp = location.state?.timestamp;
-    console.log("Profile opened for spot ID:", id, "with timestamp:", timestamp);
+    // Force profile content to update whenever ID or timestamp changes
+    const timestamp = location.state?.timestamp || Date.now();
+    console.log(`Profile opened for spot ID: ${id}, timestamp: ${timestamp}, prevId: ${previousIdRef.current}`);
     
     if (location.state?.from === "community") {
       setComingFromCommunity(true);
     }
     
-    // Force a render refresh when the ID or timestamp changes
-    // This helps ensure we're showing the correct profile
+    // If the ID has changed but we didn't get a new timestamp, force a reload
+    if (id !== previousIdRef.current && !location.state?.forcedReset) {
+      console.log("ID changed without proper navigation state, forcing refresh");
+      mountTimeRef.current = Date.now();
+    }
+    
+    previousIdRef.current = id || null;
   }, [id, location.state]);
 
-  // Using the ID as a key on the div wrapper forces a complete component remount
-  // when navigating between different spot IDs
+  // If no ID is provided, show an error
+  if (!id) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
+        <NavBar />
+        <div className="container max-w-4xl py-8 px-4 md:px-6 relative">
+          <div className="text-center py-12">
+            <h1 className="text-2xl text-red-400 mb-4">Error: No AstroSpot ID provided</h1>
+            <BackButton 
+              destination="/community" 
+              className="mx-auto"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Force component remount when critical props change by using a dedicated profile key
+  const profileKey = `${id}-${location.state?.timestamp || mountTimeRef.current}`;
+  
   return (
-    <div key={`profile-${id}-${location.state?.timestamp}`} className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
+    <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
       <NavBar />
       <div className="container max-w-4xl py-8 px-4 md:px-6 relative">
         <div className="flex justify-between items-start mb-6">
@@ -41,10 +68,10 @@ const AstroSpotProfile = () => {
         </div>
 
         <ProfileContent 
-          spotId={id!} 
+          spotId={id} 
           user={!!user} 
           comingFromCommunity={comingFromCommunity}
-          key={`${id}-${location.state?.timestamp}`} // Force re-render when navigation occurs
+          key={profileKey} // Key ensures re-render when profile changes
         />
       </div>
       

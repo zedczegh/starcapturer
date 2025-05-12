@@ -108,15 +108,16 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       return;
     }
     
-    // Force a new navigation each time by including a timestamp
-    const timestamp = new Date().getTime();
+    // Always generate a unique timestamp for each navigation
+    const timestamp = Date.now();
     
     navigate(`/astro-spot/${spot.id}`, { 
       state: { 
         from: "community", 
         spotId: spot.id,
-        timestamp // Add timestamp to force state refresh
-      } 
+        timestamp // Essential for forcing component remount
+      },
+      replace: false // Important to create new history entry
     });
     console.log("Direct navigation to spot from marker:", spot.id, timestamp);
   };
@@ -135,6 +136,11 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       icon={icon}
       onClick={handleClick}
       ref={markerRef}
+      eventHandlers={{
+        click: () => {
+          console.log("Leaflet marker clicked for:", spot.id);
+        }
+      }}
     >
       <Popup
         closeOnClick={false}
@@ -161,14 +167,15 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             className={`w-full text-xs flex items-center justify-center gap-1 mt-1 ${isMobile ? 'py-3' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
-              // Use the same timestamp technique for popup button clicks
-              const timestamp = new Date().getTime();
+              // Use the timestamp technique for unique navigation state
+              const timestamp = Date.now();
               navigate(`/astro-spot/${spot.id}`, { 
                 state: { 
                   from: "community", 
                   spotId: spot.id,
-                  timestamp
-                } 
+                  timestamp // Essential for forcing component remount
+                },
+                replace: false 
               });
               console.log("Popup button navigation to spot:", spot.id, timestamp);
             }}

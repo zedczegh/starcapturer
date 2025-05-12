@@ -15,6 +15,7 @@ export const useCommunityAstroSpots = () => {
   const [siqsConfidence, setSiqsConfidence] = useState<Record<string, number>>({});
   const [stabilizedSiqs, setStabilizedSiqs] = useState<Record<string, number | null>>({});
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [lastClickedId, setLastClickedId] = useState<string | null>(null);
 
   // Use React Query to fetch data with improved caching
   const { data: astrospots, isLoading } = useQuery({
@@ -80,20 +81,40 @@ export const useCommunityAstroSpots = () => {
       return;
     }
     
+    // Prevent rapid double-clicking issues by tracking last clicked ID
+    if (spotId === lastClickedId) {
+      const doubleClickTimestamp = Date.now();
+      console.log("Double click detected, adding unique timestamp:", doubleClickTimestamp);
+      setLastClickedId(null);
+      
+      navigate(`/astro-spot/${spotId}`, { 
+        state: { 
+          from: 'community',
+          spotId: spotId,
+          timestamp: doubleClickTimestamp,
+        },
+        replace: false
+      });
+      return;
+    }
+    
     // Add timestamp to force state refresh
-    const timestamp = new Date().getTime();
+    const timestamp = Date.now();
+    setLastClickedId(spotId);
     
     console.log("Navigating to astro spot profile:", spotId, "timestamp:", timestamp);
     
+    // The key is to completely replace any existing navigation state and use
+    // a unique timestamp for each navigation
     navigate(`/astro-spot/${spotId}`, { 
       state: { 
         from: 'community',
         spotId: spotId,
-        timestamp // Add timestamp to force state refresh
+        timestamp 
       },
-      replace: false // Explicitly set replace to false to create a new history entry
+      replace: false // Create a new history entry
     });
-  }, [navigate]);
+  }, [navigate, lastClickedId]);
 
   // Handle card click by using the shared navigation function
   const handleCardClick = useCallback((id: string) => {
