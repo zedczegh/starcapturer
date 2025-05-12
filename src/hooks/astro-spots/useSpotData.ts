@@ -39,7 +39,7 @@ export const useSpotData = (spotId: string, refreshTrigger: number) => {
       };
     },
     retry: 1,
-    staleTime: 1000 * 15,
+    staleTime: 1000 * 60, // Increase stale time to 1 minute to prevent unnecessary refetches
     refetchOnWindowFocus: false
   });
 

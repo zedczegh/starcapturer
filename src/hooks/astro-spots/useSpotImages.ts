@@ -42,7 +42,8 @@ export const useSpotImages = (spotId: string, refreshTrigger: number) => {
       }
     },
     enabled: !!spotId,
-    staleTime: 1000 * 15
+    staleTime: 1000 * 60, // Increase stale time to 1 minute
+    gcTime: 1000 * 60 * 5 // Keep in cache longer
   });
 
   return { spotImages, loadingImages, refetchImages };

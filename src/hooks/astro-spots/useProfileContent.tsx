@@ -20,10 +20,10 @@ export const useProfileContent = (
   const [showInstantLoader, setShowInstantLoader] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [storageChecked, setStorageChecked] = useState(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
   
   // Use our smaller hooks with the refresh trigger
   const { spot, isLoading, refetch } = useSpotData(spotId, refreshTrigger);
-  // Fix: Destructure only what's available from useCreatorProfile
   const { creatorProfile, loadingCreator } = useCreatorProfile(spot?.user_id);
   const { spotImages, loadingImages, refetchImages } = useSpotImages(spotId, refreshTrigger);
   const { handleViewDetails, handleMessageCreator } = useProfileActions(spot);
@@ -53,30 +53,40 @@ export const useProfileContent = (
     fetchComments
   } = useAstroSpotComments(spotId, t);
 
-  // Function to trigger a refresh of all data
+  // Function to trigger a refresh of all data with rate limiting
   const triggerRefresh = useCallback(() => {
-    console.log("Triggering refresh for spot:", spotId);
-    setRefreshTrigger(prev => prev + 1);
-  }, [spotId]);
+    const now = Date.now();
+    // Limit refreshes to once every 3 seconds
+    if (now - lastRefreshTime > 3000) {
+      console.log("Triggering refresh for spot:", spotId);
+      setRefreshTrigger(prev => prev + 1);
+      setLastRefreshTime(now);
+    } else {
+      console.log("Refresh rate limited, ignoring request");
+    }
+  }, [spotId, lastRefreshTime]);
   
-  // Explicit refresh function to reload all data
+  // Explicit refresh function to reload all data with debouncing
   const refreshData = useCallback(async () => {
+    const now = Date.now();
+    // Don't allow refreshes more often than every 3 seconds
+    if (now - lastRefreshTime < 3000) {
+      console.log("Refresh skipped - too soon since last refresh");
+      return;
+    }
+    
     console.log("Refreshing all spot data for ID:", spotId);
     // Increment refresh counter to trigger data reload
     setRefreshTrigger(prev => prev + 1);
+    setLastRefreshTime(now);
+    
     // Explicitly refetch all data
     await Promise.all([
       refetch(),
       fetchComments(),
       refetchImages()
     ]);
-    
-    // Fix: Don't try to access refetch on creatorProfile since it doesn't exist
-    if (spot?.user_id) {
-      // Simply log that we would refresh creator data if possible
-      console.log("Would refresh creator profile for user ID:", spot.user_id);
-    }
-  }, [spotId, refetch, fetchComments, refetchImages, spot?.user_id]);
+  }, [spotId, refetch, fetchComments, refetchImages, lastRefreshTime]);
 
   // Check if current user is the creator
   useEffect(() => {
@@ -87,7 +97,7 @@ export const useProfileContent = (
     }
   }, [authUser, spot]);
 
-  // Load initial comments and set up refresh interval
+  // Load initial comments only once
   useEffect(() => {
     let isMounted = true;
     
@@ -111,7 +121,7 @@ export const useProfileContent = (
           console.log("Refreshing comments automatically");
           fetchComments();
         }
-      }, 30000); // Refresh every 30 seconds
+      }, 60000); // Reduce to once per minute to minimize flashing
       
       return () => {
         isMounted = false;

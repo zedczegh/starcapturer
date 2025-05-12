@@ -7,62 +7,61 @@ import ProfileContent from './ProfileContent';
 import ProfileFooter from './ProfileFooter';
 import BackButton from "@/components/navigation/BackButton";
 import { clearSpotCache } from '@/utils/cache/spotCacheCleaner';
+import { motion } from 'framer-motion';
+import LocationDetailsLoading from '@/components/location/LocationDetailsLoading';
 
-// Modified wrapper component to force complete remount when the ID changes
+// Modified wrapper component to prevent unnecessary remounts
 const AstroSpotProfile = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [comingFromCommunity, setComingFromCommunity] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [profileKey, setProfileKey] = useState<string>(`${id}-${Date.now()}`);
   const previousIdRef = useRef<string | null>(null);
   const mountTimeRef = useRef<number>(Date.now());
+  const isInitialMount = useRef(true);
   
-  // Ensure proper component reset when ID or state changes
+  // Improved component initialization
   useEffect(() => {
-    // Generate a unique identifier for this specific profile view
-    const timestamp = location.state?.timestamp || Date.now();
-    const newProfileKey = `${id}-${timestamp}`;
-    
-    console.log(`Profile opened for spot ID: ${id}, timestamp: ${timestamp}, prevId: ${previousIdRef.current}`);
-    setProfileKey(newProfileKey);
-    
     // Track where we came from for proper back button behavior
     if (location.state?.from === "community") {
       setComingFromCommunity(true);
     }
     
-    // Always clear the specific spot cache on mount to ensure fresh data
-    if (id) {
-      clearSpotCache(id);
-    }
+    // Generate a stable identifier for this profile view
+    const timestamp = location.state?.timestamp || Date.now();
+    const newProfileKey = `${id}-${timestamp}`;
+    setProfileKey(newProfileKey);
     
-    // If the ID has changed but we didn't get a new timestamp, force a reload
-    if (id !== previousIdRef.current && !location.state?.forcedReset) {
-      console.log("ID changed without proper navigation state, forcing refresh");
-      const newTimestamp = Date.now();
-      mountTimeRef.current = newTimestamp;
+    console.log(`Profile opened for spot ID: ${id}, timestamp: ${timestamp}`);
+    
+    // Only clear cache on first mount or when ID changes
+    if (isInitialMount.current || id !== previousIdRef.current) {
+      if (id) {
+        clearSpotCache(id);
+      }
+      setIsLoading(true);
       
-      // Force state update to ensure fresh data loading
-      navigate(`/astro-spot/${id}`, { 
-        state: { 
-          ...(location.state || {}),
-          timestamp: newTimestamp,
-          forcedReset: true 
-        },
-        replace: true
-      });
+      // Add a short timeout before showing content to prevent flashing
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 200);
+      
+      return () => clearTimeout(timer);
+    } else {
+      setIsLoading(false);
     }
     
     previousIdRef.current = id || null;
+    isInitialMount.current = false;
     
-    // Clear any stale caches when component mounts/remounts
+    // Clear any stale caches when component unmounts
     return () => {
-      // This cleanup ensures a fresh start when the component unmounts
       console.log("Profile component unmounting for ID:", id);
     };
-  }, [id, location.state, navigate]);
+  }, [id, location.state]);
 
   // If no ID is provided, show an error
   if (!id) {
@@ -93,12 +92,29 @@ const AstroSpotProfile = () => {
           />
         </div>
 
-        <ProfileContent 
-          spotId={id} 
-          user={!!user} 
-          comingFromCommunity={comingFromCommunity}
-          key={profileKey} // Key ensures re-render when profile changes
-        />
+        {isLoading ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+          >
+            <LocationDetailsLoading />
+          </motion.div>
+        ) : (
+          <motion.div 
+            key={profileKey}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ProfileContent 
+              spotId={id} 
+              user={!!user} 
+              comingFromCommunity={comingFromCommunity}
+              key={profileKey}
+            />
+          </motion.div>
+        )}
       </div>
       
       <ProfileFooter />
