@@ -55,6 +55,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   const [loadingSiqs, setLoadingSiqs] = useState<boolean>(false);
   const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
   const [openPopup, setOpenPopup] = useState<boolean>(false);
+  const [forceUpdate, setForceUpdate] = useState<boolean>(false);
   const markerRef = useRef<L.Marker>(null);
   
   // Stabilize SIQS score to prevent flicker
@@ -72,6 +73,10 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     setLoadingSiqs(loading);
     if (confidence) {
       setSiqsConfidence(confidence);
+    }
+    if (siqs === null && !loading) {
+      setTimeout(() => setForceUpdate(true), 2000);
+      setTimeout(() => setForceUpdate(false), 2100);
     }
   };
 
@@ -116,9 +121,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     <Marker
       position={[spot.latitude, spot.longitude]}
       icon={icon}
-      eventHandlers={{
-        click: handleClick
-      }}
+      onClick={handleClick}
       ref={markerRef}
     >
       <Popup
@@ -163,6 +166,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             onSiqsCalculated={handleSiqsCalculated}
             priorityLevel={openPopup ? 'high' : 'medium'}
             debugLabel={`community-${spot.id.substring(0, 6)}`}
+            forceUpdate={forceUpdate}
           />
         </div>
       </Popup>
