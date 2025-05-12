@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useLocationCollection } from '@/hooks/useLocationCollection';
 import { Button } from '@/components/ui/button';
-import { Star } from 'lucide-react';
+import { Star, Share2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthDialog from '../auth/AuthDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -117,19 +117,89 @@ const LocationDetailsHeader = ({
     }
   };
 
+  // Share location handler
+  const handleShareLocation = () => {
+    // Get the current URL
+    const shareUrl = window.location.href;
+    
+    // Try to use the clipboard API
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl)
+        .then(() => {
+          toast.success(
+            language === 'en' 
+              ? 'Location link copied to clipboard!' 
+              : '位置链接已复制到剪贴板！'
+          );
+        })
+        .catch(err => {
+          console.error('Failed to copy: ', err);
+          toast.error(
+            language === 'en' 
+              ? 'Failed to copy link' 
+              : '复制链接失败'
+          );
+        });
+    } else {
+      // Fallback for older browsers
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = shareUrl;
+        
+        // Make the textarea out of viewport
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          toast.success(
+            language === 'en' 
+              ? 'Location link copied to clipboard!' 
+              : '位置链接已复制到剪贴板！'
+          );
+        } else {
+          throw new Error('Copy command failed');
+        }
+      } catch (err) {
+        console.error('Fallback: Failed to copy: ', err);
+        toast.error(
+          language === 'en' 
+            ? 'Failed to copy link' 
+            : '复制链接失败'
+        );
+      }
+    }
+  };
+
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold mb-2">{displayName}</h1>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleToggleSave}
-          disabled={isLoading || !hasValidCoordinates}
-          className={isSaved ? "text-yellow-400 hover:text-yellow-500" : "text-muted-foreground hover:text-yellow-400"}
-        >
-          <Star className="h-5 w-5" fill={isSaved ? "currentColor" : "none"} />
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleShareLocation}
+            className="text-muted-foreground hover:bg-cosmic-800/50 hover:text-primary"
+          >
+            <Share2 className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleToggleSave}
+            disabled={isLoading || !hasValidCoordinates}
+            className={isSaved ? "text-yellow-400 hover:text-yellow-500" : "text-muted-foreground hover:text-yellow-400"}
+          >
+            <Star className="h-5 w-5" fill={isSaved ? "currentColor" : "none"} />
+          </Button>
+        </div>
       </div>
       {hasValidCoordinates && (
         <div className="text-sm text-muted-foreground">
