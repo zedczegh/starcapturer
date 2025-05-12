@@ -16,7 +16,8 @@ export const useSpotData = (spotId: string, refreshTrigger: number) => {
         { 
           skipCache: refreshTrigger > 0,
           namespace: `spot-data-${spotId}`,
-          ttl: 5 * 60 * 1000 // 5 minutes cache
+          ttl: 5 * 60 * 1000, // 5 minutes cache
+          persistToStorage: true  // Enable persisting to storage for production
         }
       );
       
@@ -30,7 +31,8 @@ export const useSpotData = (spotId: string, refreshTrigger: number) => {
           { 
             skipCache: refreshTrigger > 0,
             namespace: `spot-types-${spotId}`,
-            ttl: 5 * 60 * 1000 // 5 minutes cache
+            ttl: 5 * 60 * 1000, // 5 minutes cache
+            persistToStorage: true
           }
         ),
         fetchFromSupabase(
@@ -39,7 +41,8 @@ export const useSpotData = (spotId: string, refreshTrigger: number) => {
           { 
             skipCache: refreshTrigger > 0,
             namespace: `spot-advantages-${spotId}`,
-            ttl: 5 * 60 * 1000 // 5 minutes cache
+            ttl: 5 * 60 * 1000, // 5 minutes cache
+            persistToStorage: true
           }
         )
       ]);
@@ -54,7 +57,10 @@ export const useSpotData = (spotId: string, refreshTrigger: number) => {
     staleTime: 5 * 60 * 1000, // 5 minutes stale time
     gcTime: 10 * 60 * 1000, // 10 minutes cache retention
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false // Don't refetch on reconnect to prevent flashing
+    refetchOnReconnect: false, // Don't refetch on reconnect to prevent flashing
+    meta: {
+      errorMessage: "Failed to load AstroSpot data"
+    }
   });
 
   return { spot, isLoading, error, refetch };

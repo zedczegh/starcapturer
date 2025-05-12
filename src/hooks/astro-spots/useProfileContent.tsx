@@ -93,7 +93,11 @@ export const useProfileContent = (
       refetch(),
       fetchComments(),
       refetchImages()
-    ]);
+    ]).catch(err => {
+      console.error("Error refreshing data:", err);
+      // Still update refresh timestamp to prevent rapid retries
+      setLastRefreshTime(now);
+    });
   }, [spotId, refetch, fetchComments, refetchImages, lastRefreshTime]);
 
   // Check if current user is the creator
@@ -110,11 +114,11 @@ export const useProfileContent = (
     let isMounted = true;
     
     const loadInitialComments = async () => {
+      if (!isMounted) return;
+      
       try {
-        if (isMounted) {
-          console.log("Loading initial comments for spot:", spotId);
-          await fetchComments();
-        }
+        console.log("Loading initial comments for spot:", spotId);
+        await fetchComments();
       } catch (error) {
         console.error("Error loading initial comments:", error);
       }
@@ -127,9 +131,9 @@ export const useProfileContent = (
         isInitialLoadRef.current = false;
       }
       
-      // Set up refresh interval for comments
+      // Set up refresh interval for comments with reduced frequency in production
       const intervalId = setInterval(() => {
-        if (isMounted) {
+        if (isMounted && document.visibilityState === 'visible') {
           console.log("Refreshing comments automatically");
           fetchComments();
         }
@@ -148,10 +152,10 @@ export const useProfileContent = (
     }
   }, [isLoading, spot]);
 
-  const handleEditClose = () => {
+  const handleEditClose = useCallback(() => {
     setShowEditDialog(false);
-    refetch();
-  };
+    setTimeout(() => refetch(), 300); // Add slight delay for better UX
+  }, [refetch]);
 
   // Handler specifically for refreshing comments
   const handleCommentsUpdate = useCallback(async () => {
@@ -170,11 +174,11 @@ export const useProfileContent = (
   }, [submitComment]);
 
   // Handle images update (Gallery)
-  const handleImagesUpdate = async () => {
+  const handleImagesUpdate = useCallback(async () => {
     console.log("Images update triggered");
     await refetchImages();
     triggerRefresh();
-  };
+  }, [refetchImages, triggerRefresh]);
 
   return {
     spot,

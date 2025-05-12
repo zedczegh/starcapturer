@@ -43,11 +43,13 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
   // Force data refresh when spotId changes
   useEffect(() => {
     console.log("ProfileContent: Spot ID changed, refreshing data:", spotId);
-    if (refreshData) {
+    // Check if refreshData exists and only call if it does
+    if (refreshData && typeof refreshData === 'function') {
       refreshData();
     }
   }, [spotId, refreshData]);
 
+  // Show loading state if data is not yet available
   if (isLoading || !spot) {
     return <LocationDetailsLoading />;
   }
