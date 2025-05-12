@@ -51,7 +51,7 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
       setIsLoading(true);
       try {
         const spotDetails = await fetchFromSupabase(
-          'astro_spots',
+          'user_astro_spots', // Changed from 'astro_spots' to 'user_astro_spots'
           (query) => query
             .select('id, name, latitude, longitude, siqs, created_at')
             .eq('id', spotId)
@@ -196,3 +196,4 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
 };
 
 export default LocationShareCard;
+
