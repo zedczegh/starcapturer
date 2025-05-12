@@ -1,6 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from "@/integrations/supabase/client";
+import { fetchFromSupabase } from "@/utils/supabaseFetch";
 
 export const useSpotData = (spotId: string, refreshTrigger: number) => {
   // Main spot data query
@@ -9,19 +9,28 @@ export const useSpotData = (spotId: string, refreshTrigger: number) => {
     queryFn: async () => {
       if (!spotId) throw new Error("No spot ID provided");
       
-      const { data: spotData, error: spotError } = await supabase
-        .from('user_astro_spots')
-        .select('*')
-        .eq('id', spotId)
-        .single();
-        
-      if (spotError) throw spotError;
+      // Use optimized fetch for the main spot data
+      const spotData = await fetchFromSupabase(
+        "user_astro_spots",
+        (query) => query.select('*').eq('id', spotId).single(),
+        { skipCache: refreshTrigger > 0 }
+      );
+      
+      if (!spotData) throw new Error("Spot not found");
 
-      const { data: typeData } = await supabase
-        .from('astro_spot_types').select('*').eq('spot_id', spotId);
-        
-      const { data: advantageData } = await supabase
-        .from('astro_spot_advantages').select('*').eq('spot_id', spotId);
+      // Fetch related data in parallel for better performance
+      const [typeData, advantageData] = await Promise.all([
+        fetchFromSupabase(
+          "astro_spot_types",
+          (query) => query.select('*').eq('spot_id', spotId),
+          { skipCache: refreshTrigger > 0 }
+        ),
+        fetchFromSupabase(
+          "astro_spot_advantages",
+          (query) => query.select('*').eq('spot_id', spotId),
+          { skipCache: refreshTrigger > 0 }
+        )
+      ]);
       
       return {
         ...spotData,

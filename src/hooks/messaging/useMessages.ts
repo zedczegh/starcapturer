@@ -1,15 +1,17 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { fetchFromSupabase } from '@/utils/supabaseFetch';
 
 export const useMessages = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { t } = useLanguage();
+  const fetchInProgressRef = useRef<boolean>(false);
   
   const fetchMessages = useCallback(async (conversationPartnerId: string) => {
     if (!user || !conversationPartnerId) {
@@ -17,20 +19,25 @@ export const useMessages = () => {
       return;
     }
     
+    // Prevent duplicate requests
+    if (fetchInProgressRef.current) {
+      console.log("Fetch already in progress, skipping");
+      return;
+    }
+    
+    fetchInProgressRef.current = true;
     setLoading(true);
-    console.log("Fetching messages between", user.id, "and", conversationPartnerId);
     
     try {
-      // Fetch actual messages from the database
-      const { data: messagesData, error } = await supabase
-        .from('user_messages')
-        .select('*')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${conversationPartnerId}),and(sender_id.eq.${conversationPartnerId},receiver_id.eq.${user.id})`)
-        .order('created_at', { ascending: true });
-      
-      if (error) {
-        throw error;
-      }
+      // Use optimized fetch utility
+      const messagesData = await fetchFromSupabase(
+        'user_messages',
+        (query) => query
+          .select('*')
+          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${conversationPartnerId}),and(sender_id.eq.${conversationPartnerId},receiver_id.eq.${user.id})`)
+          .order('created_at', { ascending: true }),
+        { skipCache: true } // Always get fresh messages
+      );
       
       console.log("Fetched messages:", messagesData);
       
@@ -63,26 +70,33 @@ export const useMessages = () => {
       
       setMessages(formattedMessages);
       
-      // Mark messages as read
+      // Mark messages as read in a non-blocking way
       if (messagesData && messagesData.length > 0) {
         const messagesToUpdate = messagesData
           .filter(msg => msg.receiver_id === user.id && !msg.read)
           .map(msg => msg.id);
         
         if (messagesToUpdate.length > 0) {
-          await supabase
-            .from('user_messages')
-            .update({ read: true })
-            .in('id', messagesToUpdate);
+          // Fix: Using a proper pattern for background Promise handling
+          Promise.resolve().then(() => {
+            return supabase
+              .from('user_messages')
+              .update({ read: true })
+              .in('id', messagesToUpdate);
+          }).then(() => {
+            console.log("Updated read status for", messagesToUpdate.length, "messages");
+          }).catch(error => {
+            console.error("Error updating message read status:", error);
+          });
         }
       }
-      
     } catch (error) {
       console.error("Error fetching messages:", error);
       toast.error(t("Failed to load messages", "加载消息失败"));
       setMessages([]);
     } finally {
       setLoading(false);
+      fetchInProgressRef.current = false;
     }
   }, [user, t]);
   

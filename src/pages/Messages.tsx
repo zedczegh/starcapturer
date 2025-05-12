@@ -5,9 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import LoginPrompt from "@/components/messages/LoginPrompt";
 import MessageContainer from "@/components/messages/MessageContainer";
 import { useMessageConversation } from "@/hooks/messaging/useMessageConversation";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Messages = () => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
+  
   const {
     searchQuery,
     setSearchQuery,
@@ -30,7 +33,7 @@ const Messages = () => {
       {!user ? (
         <LoginPrompt />
       ) : (
-        <div className="container mx-auto px-4 py-6 pt-20 max-w-6xl">
+        <div className={`container mx-auto px-2 md:px-4 ${isMobile ? 'py-2 pt-16' : 'py-6 pt-20'} max-w-6xl`}>
           <MessageContainer
             activeConversation={activeConversation}
             conversations={conversations}

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { calculateDistance } from '@/utils/geoUtils';
@@ -6,7 +7,7 @@ import {
   separateLocationTypes, 
   mergeLocations 
 } from '@/utils/locationFiltering';
-import { isWaterLocation } from '@/utils/locationWaterCheck';
+import { isWaterLocation } from '@/utils/location/validators';
 import { validateLocationWithReverseGeocoding } from '@/utils/location/reverseGeocodingValidator';
 
 interface UseMapLocationsProps {
@@ -153,9 +154,8 @@ export const useMapLocations = ({
             if (loc.isDarkSkyReserve || loc.certification) return loc;
             
             // Check if it's a water location using geocoding validation
-            // We explicitly use 'en' here as language is just for display purposes in validation
             try {
-              const isValid = await validateLocationWithReverseGeocoding(loc, 'en');
+              const isValid = await validateLocationWithReverseGeocoding(loc);
               // Return null for water locations (will be filtered out)
               return isValid ? loc : null;
             } catch (error) {

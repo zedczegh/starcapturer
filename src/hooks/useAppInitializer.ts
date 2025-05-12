@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { prefetchCriticalResources } from '@/utils/resourcePrefetcher';
 import { initializeCache } from '@/utils/optimizedCache';
 import { initSiqsCache } from '@/services/realTimeSiqs/siqsCache';
+import { prefetchCommunityAstroSpots } from '@/lib/api/fetchCommunityAstroSpots';
 
 /**
  * Hook to initialize application performance optimizations
@@ -31,6 +32,9 @@ export function useAppInitializer() {
       // Prefetch critical resources after small delay
       setTimeout(() => {
         prefetchCriticalResources();
+        
+        // Prefetch community spots data
+        prefetchCommunityAstroSpots();
       }, 1000);
     });
     

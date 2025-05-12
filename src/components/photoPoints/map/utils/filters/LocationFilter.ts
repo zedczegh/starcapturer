@@ -2,106 +2,117 @@
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * Handles filtering of map locations based on distance and other criteria
+ * Manages filtering of locations based on various criteria
  */
 export class LocationFilter {
-  private filterDistanceMap: Map<string, boolean> = new Map();
-  private minimumDistance: number = 2; // Minimum distance in km between calculated spots
-  
+  private distanceThresholds: Map<string, number> = new Map();
+
+  constructor() {
+    // Initialize with default distance thresholds
+    this.resetDistanceFilters();
+  }
+
   /**
-   * Reset distance filtering state
+   * Reset distance thresholds to defaults
    */
   public resetDistanceFilters(): void {
-    this.filterDistanceMap.clear();
+    this.distanceThresholds.clear();
+    
+    // Default distance thresholds for each zoom level and view type
+    this.distanceThresholds.set('certified', 0); // No distance filtering for certified
+    this.distanceThresholds.set('calculated', 1.0); // 1km for calculated view
   }
-  
+
   /**
-   * Apply distance-based filtering to calculated locations
-   * Ensures spots aren't too close to each other for better map readability
+   * Filter locations based on distance between them
+   * Used to avoid too many markers in a small area
    */
   public filterByDistance(
-    locations: SharedAstroSpot[], 
+    locations: SharedAstroSpot[],
     activeView: 'certified' | 'calculated'
   ): SharedAstroSpot[] {
-    // Don't apply filtering to certified locations
+    // For certified view, don't apply distance filtering
     if (activeView === 'certified') {
       return locations;
     }
     
-    // Reset filter map when processing a new batch
-    this.filterDistanceMap.clear();
+    // Get threshold for current view
+    const threshold = this.distanceThresholds.get(activeView) || 0;
     
-    // First prioritize certified locations (they're never filtered)
-    const certified: SharedAstroSpot[] = [];
-    const calculated: SharedAstroSpot[] = [];
+    // If no threshold defined, return all
+    if (threshold <= 0) {
+      return locations;
+    }
     
-    // Split locations into certified and calculated
-    locations.forEach(loc => {
-      if (loc.isDarkSkyReserve || loc.certification) {
-        certified.push(loc);
-      } else {
-        calculated.push(loc);
+    // Apply distance filtering
+    const filtered: SharedAstroSpot[] = [];
+    const thresholdSquared = threshold * threshold;
+    
+    // Sort by certification first, then by SIQS score
+    const sorted = [...locations].sort((a, b) => {
+      // Certified always first
+      const aIsCertified = Boolean(a.isDarkSkyReserve || a.certification);
+      const bIsCertified = Boolean(b.isDarkSkyReserve || b.certification);
+      
+      if (aIsCertified && !bIsCertified) return -1;
+      if (!aIsCertified && bIsCertified) return 1;
+      
+      // Then by SIQS score
+      const aSiqs = typeof a.siqs === 'number' ? a.siqs : 
+                   (a.siqs && typeof a.siqs === 'object' && 'score' in a.siqs) ? a.siqs.score : 0;
+                   
+      const bSiqs = typeof b.siqs === 'number' ? b.siqs : 
+                   (b.siqs && typeof b.siqs === 'object' && 'score' in b.siqs) ? b.siqs.score : 0;
+                   
+      return bSiqs - aSiqs;
+    });
+    
+    // Process in priority order
+    for (const location of sorted) {
+      // Always include certified locations
+      if (location.isDarkSkyReserve || location.certification) {
+        filtered.push(location);
+        continue;
       }
-    });
-    
-    // Sort calculated by SIQS score (highest first)
-    calculated.sort((a, b) => {
-      const scoreA = typeof a.siqs === 'object' ? a.siqs.score : (a.siqs || 0);
-      const scoreB = typeof b.siqs === 'object' ? b.siqs.score : (b.siqs || 0);
-      return scoreB - scoreA;
-    });
-    
-    // Apply distance filter to calculated spots only
-    const filteredCalculated: SharedAstroSpot[] = [];
-    
-    for (const location of calculated) {
-      const key = `${location.latitude.toFixed(4)},${location.longitude.toFixed(4)}`;
       
-      // Check if this location is too close to any already-added location
-      let isTooClose = false;
+      // Check if this location is too close to any existing filtered location
+      let tooClose = false;
       
-      for (const addedLoc of [...certified, ...filteredCalculated]) {
-        const distance = this.calculateDistance(
-          location.latitude, location.longitude,
-          addedLoc.latitude, addedLoc.longitude
+      for (const existing of filtered) {
+        const distance = this.calculateDistanceSquared(
+          location.latitude,
+          location.longitude,
+          existing.latitude,
+          existing.longitude
         );
         
-        // Skip if too close to an existing location
-        if (distance < this.minimumDistance) {
-          isTooClose = true;
+        if (distance < thresholdSquared) {
+          tooClose = true;
           break;
         }
       }
       
-      if (!isTooClose) {
-        filteredCalculated.push(location);
-        this.filterDistanceMap.set(key, true);
+      if (!tooClose) {
+        filtered.push(location);
       }
     }
     
-    // Combine certified (all) with filtered calculated
-    return [...certified, ...filteredCalculated];
+    return filtered;
   }
   
   /**
-   * Helper to calculate distance between two points
+   * Calculate squared distance between two points
+   * More efficient than calculating actual distance for comparisons
    */
-  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Earth's radius in km
-    const dLat = this.deg2rad(lat2 - lat1);
-    const dLon = this.deg2rad(lon2 - lon1);
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2); 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-    return R * c;
-  }
-  
-  /**
-   * Convert degrees to radians
-   */
-  private deg2rad(deg: number): number {
-    return deg * (Math.PI/180);
+  private calculateDistanceSquared(
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number
+  ): number {
+    // Quick approximation for small distances
+    const latDiff = (lat1 - lat2) * 111.32; // km per degree latitude
+    const lngDiff = (lng1 - lng2) * 111.32 * Math.cos(lat1 * Math.PI / 180);
+    return (latDiff * latDiff) + (lngDiff * lngDiff);
   }
 }

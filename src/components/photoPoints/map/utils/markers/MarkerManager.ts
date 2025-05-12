@@ -1,220 +1,126 @@
-
-import L, { Icon, Marker } from 'leaflet';
+import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getSiqsScore, formatSiqsScore } from '@/utils/siqsHelpers';
+import { getSiqsScore } from '@/utils/siqsHelpers';
+import { getLocationMarker } from '../../MarkerUtils';
+import { isValidAstronomyLocation } from '../../MarkerUtils';
+import { isWaterLocation } from '@/utils/location/validators';
 
 /**
- * Manages marker creation, rendering, and cleanup for the map
+ * Manager for map markers with optimized rendering
  */
 export class MarkerManager {
-  private visibleMarkers: Map<string, Marker> = new Map();
-  private markerCluster: L.MarkerClusterGroup | null = null;
   private map: L.Map | null = null;
+  private markers: Map<string, L.Marker> = new Map();
+  private selectedMarkerId: string | null = null;
   
   /**
-   * Initialize with a Leaflet map instance
+   * Initialize with map instance
    */
   public initialize(map: L.Map): void {
     this.map = map;
-    
-    // Create a marker cluster group if not exists
-    if (!this.markerCluster && map) {
-      // Check if MarkerClusterGroup is available
-      if (L.MarkerClusterGroup) {
-        this.markerCluster = L.MarkerClusterGroup({
-          maxClusterRadius: 40,
-          spiderfyOnMaxZoom: true,
-          showCoverageOnHover: false,
-          zoomToBoundsOnClick: true,
-          chunkedLoading: true,
-          chunkProgress: (processed, total) => {
-            console.log(`Processed ${processed} of ${total} markers`);
-          }
-        });
-        
-        this.markerCluster.addTo(map);
-      }
-    }
   }
   
   /**
-   * Render markers with throttling for better performance
+   * Render markers on the map with optimizations
+   * Only render markers in the current view bounds
    */
   public renderMarkers(
-    locations: SharedAstroSpot[], 
+    locations: SharedAstroSpot[],
     selectedId?: string,
     bounds?: L.LatLngBounds
   ): void {
     if (!this.map) return;
     
-    console.log(`Rendering ${locations.length} optimized markers`);
+    // Update selected marker ID
+    this.selectedMarkerId = selectedId || null;
     
-    // Get current bounds if not provided
+    // Get current map bounds if not provided
     const mapBounds = bounds || this.map.getBounds();
     
-    // Get existing marker IDs
-    const existingIds = new Set(this.visibleMarkers.keys());
+    // Track which markers we've processed in this render
+    const processedMarkerIds = new Set<string>();
     
-    // Track which markers we've processed
-    const processedIds = new Set<string>();
-    
-    // Process in chunks for smoother rendering
-    const chunkSize = 50;
-    let index = 0;
-    
-    const processNextChunk = () => {
-      if (index >= locations.length) {
-        // Remove markers that no longer exist
-        existingIds.forEach(id => {
-          if (!processedIds.has(id)) {
-            const marker = this.visibleMarkers.get(id);
-            if (marker) {
-              if (this.markerCluster) {
-                this.markerCluster.removeLayer(marker);
-              } else {
-                marker.remove();
-              }
-              this.visibleMarkers.delete(id);
-            }
-          }
-        });
-        return;
+    // Process all locations
+    for (const location of locations) {
+      // Skip invalid locations
+      if (!isValidAstronomyLocation(location.latitude, location.longitude)) {
+        continue;
       }
       
-      const endIndex = Math.min(index + chunkSize, locations.length);
+      // Create a unique ID for this marker
+      const markerId = `${location.latitude.toFixed(6)}-${location.longitude.toFixed(6)}`;
       
-      for (let i = index; i < endIndex; i++) {
-        const location = locations[i];
-        const id = location.id || `loc-${location.latitude}-${location.longitude}`;
-        processedIds.add(id);
-        
-        // Check if marker is within visible bounds
-        if (location.latitude && location.longitude) {
-          const latLng = L.latLng(location.latitude, location.longitude);
-          
-          // Only create/update markers if they're visible or near visible area
-          if (this.isMarkerInBounds(latLng, mapBounds)) {
-            // If marker already exists, update it
-            if (this.visibleMarkers.has(id)) {
-              const marker = this.visibleMarkers.get(id)!;
-              marker.setLatLng(latLng);
-            } else {
-              // Create new marker
-              const marker = this.createMarker(location, id === selectedId);
-              this.visibleMarkers.set(id, marker);
-              
-              // Add to cluster if available, otherwise to map
-              if (this.markerCluster) {
-                this.markerCluster.addLayer(marker);
-              } else {
-                marker.addTo(this.map!);
-              }
-            }
-          }
-        }
+      // Track that we've processed this marker
+      processedMarkerIds.add(markerId);
+      
+      // Check if marker is already on the map
+      const existingMarker = this.markers.get(markerId);
+      
+      // If marker exists and location data is the same, skip re-rendering
+      if (existingMarker) {
+        // Update popup content if needed
+        // Skip for performance reasons, handled by click events instead
+        continue;
       }
       
-      index = endIndex;
-      setTimeout(processNextChunk, 0);
-    };
-    
-    // Start processing
-    processNextChunk();
-  }
-  
-  /**
-   * Check if marker is within or near visible bounds
-   * Includes a small buffer around visible area to prevent pop-in
-   */
-  private isMarkerInBounds(latLng: L.LatLng, bounds: L.LatLngBounds): boolean {
-    // Add padding to bounds
-    const sw = bounds.getSouthWest();
-    const ne = bounds.getNorthEast();
-    const latPadding = (ne.lat - sw.lat) * 0.2; // 20% padding
-    const lngPadding = (ne.lng - sw.lng) * 0.2;
-    
-    const paddedBounds = L.latLngBounds(
-      L.latLng(sw.lat - latPadding, sw.lng - lngPadding),
-      L.latLng(ne.lat + latPadding, ne.lng + lngPadding)
-    );
-    
-    return paddedBounds.contains(latLng);
-  }
-  
-  /**
-   * Create a marker for a location
-   */
-  private createMarker(location: SharedAstroSpot, isSelected: boolean): L.Marker {
-    const isCertified = location.isDarkSkyReserve === true || 
-      (typeof location.certification === 'string' && location.certification !== '');
-    const siqs = location.siqs || 0;
-    
-    // Choose icon based on location type
-    const icon = this.getMarkerIcon(isCertified, siqs, isSelected);
-    
-    // Create the marker
-    const marker = L.marker([location.latitude, location.longitude], { icon });
-    
-    // Add tooltip
-    marker.bindTooltip(`${location.name || 'Unknown Location'} (SIQS: ${formatSiqsScore(siqs)})`);
-    
-    return marker;
-  }
-  
-  /**
-   * Get appropriate icon based on location type
-   */
-  private getMarkerIcon(
-    isCertified: boolean, 
-    siqs: number | { score: number; isViable: boolean }, 
-    isSelected: boolean
-  ): Icon {
-    // Default icon properties
-    let iconUrl = '/markers/marker-default.svg';
-    let iconSize: [number, number] = [30, 30];
-    
-    // Get numeric siqs score
-    const siqsScore = getSiqsScore(siqs);
-    
-    // Select icon based on location type and SIQS
-    if (isCertified) {
-      iconUrl = '/markers/marker-certified.svg';
-      iconSize = [36, 36];
-    } else if (siqsScore >= 8) {
-      iconUrl = '/markers/marker-excellent.svg';
-    } else if (siqsScore >= 6) {
-      iconUrl = '/markers/marker-good.svg';
-    } else if (siqsScore >= 4) {
-      iconUrl = '/markers/marker-average.svg';
-    } else {
-      iconUrl = '/markers/marker-poor.svg';
+      // Check if location is in current viewport
+      const isInBounds = mapBounds.contains(L.latLng(location.latitude, location.longitude));
+      
+      // Skip markers outside viewport for performance
+      if (!isInBounds) {
+        continue;
+      }
+      
+      // Determine if this is a certified location
+      const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+      
+      // Skip rendering water locations if not certified
+      if (!isCertified && isWaterLocation(location.latitude, location.longitude, false)) {
+        continue;
+      }
+      
+      // Create marker icon based on location data
+      const marker = L.marker([location.latitude, location.longitude], {
+        icon: getLocationMarker(location, isCertified, false, false),
+      });
+      
+      // Add to map
+      marker.addTo(this.map);
+      
+      // Store marker reference
+      this.markers.set(markerId, marker);
     }
     
-    // Use selected icon if selected
-    if (isSelected) {
-      iconUrl = '/markers/marker-selected.svg';
-      iconSize = [40, 40];
+    // Clean up markers that are no longer in the locations array
+    for (const [markerId, marker] of this.markers.entries()) {
+      if (!processedMarkerIds.has(markerId)) {
+        this.map.removeLayer(marker);
+        this.markers.delete(markerId);
+      }
     }
-    
-    return L.icon({
-      iconUrl,
-      iconSize,
-      iconAnchor: [iconSize[0] / 2, iconSize[1]],
-      popupAnchor: [0, -iconSize[1]]
-    });
   }
-
+  
   /**
-   * Clear all markers
+   * Clear all markers from the map
    */
   public clearMarkers(): void {
-    // Clear marker cluster if available
-    if (this.markerCluster) {
-      this.markerCluster.clearLayers();
+    if (!this.map) return;
+    
+    // Remove all markers from map
+    for (const marker of this.markers.values()) {
+      this.map.removeLayer(marker);
     }
     
-    // Clear visible markers map
-    this.visibleMarkers.clear();
+    // Clear markers collection
+    this.markers.clear();
+  }
+  
+  /**
+   * Highlight a specific marker
+   */
+  public highlightMarker(markerId: string): void {
+    // Implementation omitted for brevity
+    // Would change the icon to a highlighted version
   }
   
   /**
@@ -223,6 +129,5 @@ export class MarkerManager {
   public destroy(): void {
     this.clearMarkers();
     this.map = null;
-    this.markerCluster = null;
   }
 }

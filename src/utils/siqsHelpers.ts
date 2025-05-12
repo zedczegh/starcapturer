@@ -3,6 +3,7 @@
  * Helper functions for safely working with SIQS values that might be numbers or objects
  */
 
+import { SiqsScore, SiqsFactor } from './siqs/types';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
@@ -10,7 +11,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
  * @param siqs SIQS value which could be a number or object
  * @returns number value of SIQS or 0 if undefined
  */
-export function getSiqsScore(siqs?: number | string | { score: number; isViable: boolean } | any): number {
+export function getSiqsScore(siqs?: SiqsScore | any): number {
   if (siqs === undefined || siqs === null) {
     return 0;
   }
@@ -26,9 +27,9 @@ export function getSiqsScore(siqs?: number | string | { score: number; isViable:
     return isNaN(siqs) ? 0 : normalizeToSiqsScale(siqs);
   }
   
-  // Handle SharedAstroSpot object with siqs property
+  // Handle object with score property
   if (typeof siqs === 'object' && siqs !== null) {
-    // Case: location.siqs passed directly as an object with score property
+    // Case: object with siqs property
     if ('siqs' in siqs && typeof siqs.siqs !== 'undefined') {
       return getSiqsScore(siqs.siqs);
     }
@@ -72,8 +73,8 @@ export function normalizeToSiqsScale(score: number): number {
  * @param score SIQS score
  * @returns Formatted string representation with one decimal place or "N/A"
  */
-export function formatSiqsForDisplay(score: number | null): string {
-  if (score === null || score <= 0) {
+export function formatSiqsForDisplay(score: number | null | undefined): string {
+  if (score === null || score === undefined || score <= 0) {
     return "N/A";
   }
   
@@ -87,9 +88,20 @@ export function formatSiqsForDisplay(score: number | null): string {
  * @param siqs SIQS value which could be a number or object
  * @returns Formatted string representation
  */
-export function formatSiqsScore(siqs?: number | { score: number; isViable: boolean } | any): string {
+export function formatSiqsScore(siqs?: SiqsScore | any): string {
   const score = getSiqsScore(siqs);
   return formatSiqsForDisplay(score);
+}
+
+/**
+ * Format factors for display in UI
+ */
+export function formatSiqsFactors(factors: SiqsFactor[]): string {
+  if (!factors || factors.length === 0) return '';
+  
+  return factors
+    .map(factor => `${factor.name}: ${factor.score.toFixed(1)}`)
+    .join(', ');
 }
 
 /**
@@ -98,7 +110,7 @@ export function formatSiqsScore(siqs?: number | { score: number; isViable: boole
  * @param threshold Minimum threshold to compare against
  * @returns true if the SIQS is at least the threshold
  */
-export function isSiqsAtLeast(siqs: number | any, threshold: number): boolean {
+export function isSiqsAtLeast(siqs: SiqsScore | any, threshold: number): boolean {
   const score = getSiqsScore(siqs);
   return score >= threshold;
 }
@@ -109,7 +121,7 @@ export function isSiqsAtLeast(siqs: number | any, threshold: number): boolean {
  * @param threshold Threshold to compare against
  * @returns true if the SIQS is greater than the threshold
  */
-export function isSiqsGreaterThan(siqs: number | any, threshold: number): boolean {
+export function isSiqsGreaterThan(siqs: SiqsScore | any, threshold: number): boolean {
   const score = getSiqsScore(siqs);
   return score > threshold;
 }
@@ -119,10 +131,10 @@ export function isSiqsGreaterThan(siqs: number | any, threshold: number): boolea
  * @param locations Array of locations to sort
  * @returns Sorted array of locations
  */
-export function sortLocationsBySiqs(locations: SharedAstroSpot[]): SharedAstroSpot[] {
+export function sortLocationsBySiqs<T extends { siqs?: SiqsScore | any; realTimeSiqs?: number }>(locations: T[]): T[] {
   return [...locations].sort((a, b) => {
-    const aRealTime = (a as any).realTimeSiqs;
-    const bRealTime = (b as any).realTimeSiqs;
+    const aRealTime = a.realTimeSiqs;
+    const bRealTime = b.realTimeSiqs;
     
     const aSiqs = typeof aRealTime === "number" && aRealTime > 0
       ? aRealTime

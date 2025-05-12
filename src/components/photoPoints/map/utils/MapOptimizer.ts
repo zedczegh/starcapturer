@@ -1,4 +1,3 @@
-
 import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { validateLocationWithReverseGeocoding } from '@/utils/location/reverseGeocodingValidator';

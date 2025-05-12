@@ -9,7 +9,6 @@ import { useDisplayName } from '../cards/DisplayNameResolver';
 import SiqsScoreBadge from '../cards/SiqsScoreBadge';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import RealTimeSiqsProvider from '../cards/RealTimeSiqsProvider';
-import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 
 interface MapMarkerPopupProps {
   location: SharedAstroSpot;
@@ -47,14 +46,9 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
     (location.isDarkSkyReserve ? t("Dark Sky Reserve", "暗夜天空保护区") : 
       (location.type === 'lodging' ? t("Dark Sky Lodging", "暗夜天空住宿") : ''));
   
-  // Use our unified display SIQS function - no default scores for certified locations
-  const staticSiqs = getSiqsScore(location);
-  const displaySiqs = getDisplaySiqs({
-    realTimeSiqs,
-    staticSiqs,
-    isCertified,
-    isDarkSkyReserve: Boolean(location.isDarkSkyReserve)
-  });
+  // Use a numeric SIQS value for the badge
+  const staticSiqs = getSiqsScore(location.siqs);
+  const displaySiqsValue = realTimeSiqs !== null ? realTimeSiqs : staticSiqs;
   
   const handleSiqsCalculated = (siqs: number | null, loading: boolean, confidence?: number) => {
     setRealTimeSiqs(siqs);
@@ -77,7 +71,7 @@ const MapMarkerPopup: React.FC<MapMarkerPopupProps> = ({
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center">
           <SiqsScoreBadge 
-            score={displaySiqs} 
+            score={displaySiqsValue} 
             compact={false} 
             loading={siqsLoading}
             isCertified={isCertified}
