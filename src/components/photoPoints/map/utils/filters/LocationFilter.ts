@@ -62,13 +62,9 @@ export class LocationFilter {
       const aSiqs = getSiqsScore(a.siqs);
       const bSiqs = getSiqsScore(b.siqs);
       
-      // Consider real-time SIQS if available
-      const aRealTime = a.realTimeSiqs != null ? a.realTimeSiqs : 0;
-      const bRealTime = b.realTimeSiqs != null ? b.realTimeSiqs : 0;
-      
-      // Use real-time SIQS if available, otherwise use stored SIQS
-      const aEffectiveSiqs = aRealTime > 0 ? aRealTime : aSiqs;
-      const bEffectiveSiqs = bRealTime > 0 ? bRealTime : bSiqs;
+      // We don't have access to realTimeSiqs directly, so just use the stored SIQS
+      const aEffectiveSiqs = aSiqs;
+      const bEffectiveSiqs = bSiqs;
       
       return bEffectiveSiqs - aEffectiveSiqs;
     });
