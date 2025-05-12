@@ -1,9 +1,10 @@
 
 import React from 'react';
 import SpotDetails from '@/components/astro-spots/profile/SpotDetails';
-import SpotComments from '@/components/astro-spots/profile/SpotComments';
+import TimeSlotManager from '@/components/bookings/TimeSlotManager';
 import SpotImageGallery from '@/components/astro-spots/profile/SpotImageGallery';
-import { Comment } from '@/components/astro-spots/profile/types/comments';
+import SpotComments from '@/components/astro-spots/profile/SpotComments';
+import { Comment } from '../types/comments';
 
 interface ProfileSectionsManagerProps {
   spotId: string;
@@ -17,8 +18,6 @@ interface ProfileSectionsManagerProps {
   onImagesUpdate: () => void;
   onCommentsUpdate: () => void;
   onCommentSubmit: (content: string, imageFile: File | null, parentId?: string | null) => Promise<void>;
-  isLoading?: boolean;
-  storageChecked?: boolean;
 }
 
 const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
@@ -32,47 +31,40 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
   commentSending,
   onImagesUpdate,
   onCommentsUpdate,
-  onCommentSubmit,
-  isLoading = false,
-  storageChecked = false
+  onCommentSubmit
 }) => {
-  // Don't render sections if we're still loading the spot data
-  if (isLoading || !spot) {
-    return (
-      <div className="px-6 py-4 space-y-6">
-        <div className="animate-pulse h-32 bg-cosmic-800/50 rounded-lg"></div>
-        <div className="animate-pulse h-24 bg-cosmic-800/50 rounded-lg"></div>
-      </div>
-    );
-  }
-
+  console.log(`ProfileSectionsManager received ${comments.length} comments`);
+  
   return (
-    <div className="px-6 py-4 space-y-6">
-      {/* Details Section */}
-      <SpotDetails spot={spot} />
-
-      {/* Image Gallery Section */}
+    <div className="p-6 space-y-6">
+      <SpotDetails
+        description={spot.description}
+        types={spot.astro_spot_types}
+        advantages={spot.astro_spot_advantages}
+      />
+      
+      <TimeSlotManager spotId={spotId} isCreator={isCreator} />
+      
       <SpotImageGallery
         spotId={spotId}
-        spotImages={spotImages || []}
+        spotName={spot.name}
+        spotImages={spotImages}
         loadingImages={loadingImages}
+        user={user}
         isCreator={isCreator}
-        onImagesUpdated={onImagesUpdate}
+        onImagesUpdate={onImagesUpdate}
       />
-
-      {/* Comments Section */}
+      
       <SpotComments
         spotId={spotId}
-        comments={comments || []}
-        isCreator={isCreator}
-        isLoggedIn={!!user}
-        onSubmitComment={onCommentSubmit}
-        onCommentsUpdated={onCommentsUpdate}
-        storageInitialized={storageChecked}
-        isSending={commentSending}
+        comments={comments}
+        user={user}
+        onCommentsUpdate={onCommentsUpdate}
+        onSubmit={onCommentSubmit}
+        sending={commentSending}
       />
     </div>
   );
 };
 
-export default React.memo(ProfileSectionsManager);
+export default ProfileSectionsManager;

@@ -11,8 +11,6 @@ interface ProfileHeaderSectionProps {
   onViewDetails: () => void;
   comingFromCommunity: boolean;
   onMessageCreator: () => void;
-  isLoading?: boolean;
-  isCreator?: boolean;
 }
 
 const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
@@ -21,14 +19,12 @@ const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
   loadingCreator,
   onViewDetails,
   comingFromCommunity,
-  onMessageCreator,
-  isLoading = false,
-  isCreator = false
+  onMessageCreator
 }) => {
   const navigate = useNavigate();
 
   // Ensure we have a valid creator profile before trying to render the header
-  if (!spot || isLoading) {
+  if (!spot) {
     return <div className="animate-pulse h-32 bg-cosmic-800/50 rounded-lg mb-6"></div>;
   }
 
@@ -62,9 +58,8 @@ const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
       onViewDetails={onViewDetails}
       comingFromCommunity={comingFromCommunity}
       onMessageCreator={handleMessageCreator}
-      isCreator={isCreator}
     />
   );
 };
 
-export default React.memo(ProfileHeaderSection);
+export default ProfileHeaderSection;

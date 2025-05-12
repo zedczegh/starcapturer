@@ -1,28 +1,16 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
-import { useLocation } from 'react-router-dom';
-import { useRef } from 'react';
 
-export const useSpotImages = (spotId: string, refreshTrigger: number = 0) => {
-  const location = useLocation();
-  const noRefresh = location.state?.noRefresh === true;
-  const imagesCache = useRef<string[]>([]);
-  
-  // Spot images query with optimization for marker popup navigation
+export const useSpotImages = (spotId: string, refreshTrigger: number) => {
+  // Spot images query
   const { data: spotImages = [], isLoading: loadingImages, refetch: refetchImages } = useQuery({
     queryKey: ['spotImages', spotId, refreshTrigger],
     queryFn: async () => {
       if (!spotId) return [];
       
       try {
-        console.log("Fetching images for spot:", spotId, "refreshTrigger:", refreshTrigger, "noRefresh:", noRefresh);
-        
-        // Use cached images if we're in noRefresh mode and have previously fetched them
-        if (noRefresh && imagesCache.current.length > 0) {
-          console.log("Using cached images for spot:", spotId);
-          return imagesCache.current;
-        }
+        console.log("Fetching images for spot:", spotId);
         
         const { data: files, error } = await supabase
           .storage
@@ -41,26 +29,20 @@ export const useSpotImages = (spotId: string, refreshTrigger: number = 0) => {
         
         console.log("Found", files.length, "images for spot:", spotId);
         
-        const imageUrls = files.map(file => {
+        return files.map(file => {
           const { data } = supabase
             .storage
             .from('astro_spot_images')
             .getPublicUrl(`${spotId}/${file.name}`);
           return data.publicUrl;
         });
-        
-        // Cache the images for potential marker popup navigation
-        imagesCache.current = imageUrls;
-        
-        return imageUrls;
       } catch (error) {
         console.error("Error fetching spot images:", error);
         return [];
       }
     },
     enabled: !!spotId,
-    staleTime: 1000 * 60, // Increased from 15 seconds to 1 minute
-    refetchOnWindowFocus: false
+    staleTime: 1000 * 15
   });
 
   return { spotImages, loadingImages, refetchImages };

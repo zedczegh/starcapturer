@@ -1,7 +1,6 @@
 
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationDetailsLoading from "@/components/location/LocationDetailsLoading";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
@@ -18,8 +17,6 @@ interface ProfileContentProps {
 
 const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFromCommunity }) => {
   const { t } = useLanguage();
-  const location = useLocation();
-  const noRefresh = location.state?.noRefresh === true;
   
   const {
     spot,
@@ -39,24 +36,17 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     handleCommentSubmit,
     handleImagesUpdate,
     handleMessageCreator,
-    storageChecked,
     refreshData,
     triggerRefresh
   } = useProfileContent(spotId, user, comingFromCommunity, t);
 
-  // Force data refresh when spotId changes, but respect noRefresh flag
+  // Force data refresh when spotId changes
   useEffect(() => {
-    // Skip refresh if coming from a marker popup or similar fast navigation path
-    if (noRefresh) {
-      console.log("ProfileContent: Skipping refresh due to noRefresh flag");
-      return;
-    }
-    
     console.log("ProfileContent: Spot ID changed, refreshing data:", spotId);
     if (refreshData) {
       refreshData();
     }
-  }, [spotId, refreshData, noRefresh]);
+  }, [spotId, refreshData]);
 
   if (isLoading || !spot) {
     return <LocationDetailsLoading />;
@@ -66,7 +56,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.5 }}
       className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden relative"
     >
       <ProfileEditButton 
@@ -82,8 +72,6 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
         onViewDetails={handleViewDetails}
         comingFromCommunity={comingFromCommunity}
         onMessageCreator={handleMessageCreator}
-        isLoading={isLoading}
-        isCreator={isCreator}
       />
       
       <ProfileSectionsManager
@@ -98,8 +86,6 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
         onImagesUpdate={handleImagesUpdate}
         onCommentsUpdate={handleCommentsUpdate}
         onCommentSubmit={handleCommentSubmit}
-        isLoading={isLoading}
-        storageChecked={storageChecked}
       />
 
       {showEditDialog && spot && isCreator && (
@@ -118,4 +104,4 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
   );
 };
 
-export default React.memo(ProfileContent);
+export default ProfileContent;

@@ -111,18 +111,15 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     // Always generate a unique timestamp for each navigation
     const timestamp = Date.now();
     
-    // Critical: Set noRefresh flag to true for marker clicks
-    // This prevents unnecessary refreshing and flashing
     navigate(`/astro-spot/${spot.id}`, { 
       state: { 
         from: "community", 
         spotId: spot.id,
-        timestamp, // Essential for forcing component remount
-        noRefresh: true // Critical flag to prevent flashing
+        timestamp // Essential for forcing component remount
       },
       replace: false // Important to create new history entry
     });
-    console.log("Direct navigation to spot from marker:", spot.id, timestamp, "with noRefresh flag");
+    console.log("Direct navigation to spot from marker:", spot.id, timestamp);
   };
 
   // Handle popup close
@@ -171,8 +168,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
                 state: { 
                   from: "community", 
                   spotId: spot.id,
-                  timestamp, // Essential for forcing component remount
-                  noRefresh: true // Critical flag to prevent flashing
+                  timestamp // Essential for forcing component remount
                 },
                 replace: false 
               });
