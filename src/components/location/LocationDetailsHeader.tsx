@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useLocationCollection } from '@/hooks/useLocationCollection';
 import { Button } from '@/components/ui/button';
-import { Star, Share2 } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthDialog from '../auth/AuthDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -117,67 +117,19 @@ const LocationDetailsHeader = ({
     }
   };
 
-  // Handle sharing the location
-  const handleShare = () => {
-    const locationUrl = window.location.href;
-    
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(locationUrl)
-        .then(() => {
-          toast.success(t("Link copied to clipboard!", "链接已复制到剪贴板！"));
-        })
-        .catch((err) => {
-          console.error("Failed to copy: ", err);
-          // Fallback for clipboard API failures
-          fallbackCopyToClipboard(locationUrl);
-        });
-    } else {
-      // Fallback for browsers that don't support clipboard API
-      fallbackCopyToClipboard(locationUrl);
-    }
-  };
-  
-  // Fallback copy method
-  const fallbackCopyToClipboard = (text: string) => {
-    try {
-      const tempInput = document.createElement("input");
-      tempInput.style.position = "absolute";
-      tempInput.style.left = "-9999px";
-      tempInput.value = text;
-      document.body.appendChild(tempInput);
-      tempInput.select();
-      document.execCommand("copy");
-      document.body.removeChild(tempInput);
-      toast.success(t("Link copied to clipboard!", "链接已复制到剪贴板！"));
-    } catch (err) {
-      console.error("Fallback copy failed:", err);
-      toast.error(t("Could not copy link, please copy it manually", "无法复制链接，请手动复制"));
-    }
-  };
-
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold mb-2">{displayName}</h1>
-        <div className="flex space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleShare}
-            className="text-muted-foreground hover:text-primary"
-          >
-            <Share2 className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleToggleSave}
-            disabled={isLoading || !hasValidCoordinates}
-            className={isSaved ? "text-yellow-400 hover:text-yellow-500" : "text-muted-foreground hover:text-yellow-400"}
-          >
-            <Star className="h-5 w-5" fill={isSaved ? "currentColor" : "none"} />
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleToggleSave}
+          disabled={isLoading || !hasValidCoordinates}
+          className={isSaved ? "text-yellow-400 hover:text-yellow-500" : "text-muted-foreground hover:text-yellow-400"}
+        >
+          <Star className="h-5 w-5" fill={isSaved ? "currentColor" : "none"} />
+        </Button>
       </div>
       {hasValidCoordinates && (
         <div className="text-sm text-muted-foreground">

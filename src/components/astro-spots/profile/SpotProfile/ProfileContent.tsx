@@ -2,7 +2,6 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { toast } from "sonner";
 import LocationDetailsLoading from "@/components/location/LocationDetailsLoading";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 import ProfileHeaderSection from './ProfileHeaderSection';
@@ -50,45 +49,6 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     }
   }, [spotId, refreshData]);
 
-  // Handle sharing the profile link
-  const handleShareProfile = () => {
-    const profileUrl = window.location.href;
-    
-    // Try to use the more modern navigator.clipboard API
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(profileUrl)
-        .then(() => {
-          toast.success(t("Link copied to clipboard!", "链接已复制到剪贴板！"));
-        })
-        .catch((err) => {
-          console.error("Failed to copy: ", err);
-          // Fallback for clipboard API failures (e.g., not secure context)
-          fallbackCopyToClipboard(profileUrl);
-        });
-    } else {
-      // Fallback for browsers that don't support clipboard API
-      fallbackCopyToClipboard(profileUrl);
-    }
-  };
-  
-  // Fallback copy method using a temporary input element
-  const fallbackCopyToClipboard = (text: string) => {
-    try {
-      const tempInput = document.createElement("input");
-      tempInput.style.position = "absolute";
-      tempInput.style.left = "-9999px";
-      tempInput.value = text;
-      document.body.appendChild(tempInput);
-      tempInput.select();
-      document.execCommand("copy");
-      document.body.removeChild(tempInput);
-      toast.success(t("Link copied to clipboard!", "链接已复制到剪贴板！"));
-    } catch (err) {
-      console.error("Fallback copy failed:", err);
-      toast.error(t("Could not copy link, please copy it manually", "无法复制链接，请手动复制"));
-    }
-  };
-
   // Show loading state if data is not yet available
   if (isLoading || !spot) {
     return <LocationDetailsLoading />;
@@ -114,7 +74,6 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
         onViewDetails={handleViewDetails}
         comingFromCommunity={comingFromCommunity}
         onMessageCreator={handleMessageCreator}
-        onShareProfile={handleShareProfile}
       />
       
       <ProfileSectionsManager
