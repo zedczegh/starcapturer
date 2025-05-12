@@ -108,13 +108,23 @@ export const useMessageActions = (fetchMessages: (partnerId: string) => Promise<
     try {
       // Delete all messages between the current user and the partner
       const { error } = await supabase
-        .from('user_messages')
-        .delete()
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`);
+        .rpc('delete_conversation', {
+          partner_id: partnerId,
+          current_user_id: user.id
+        })
+        .single();
         
-      if (error) throw error;
+      if (error) {
+        // Fall back to the old method if the RPC function doesn't exist
+        console.warn("RPC function not found, falling back to direct delete:", error);
+        const { error: fallbackError } = await supabase
+          .from('user_messages')
+          .delete()
+          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`);
+          
+        if (fallbackError) throw fallbackError;
+      }
       
-      toast.success(t("Conversation deleted", "对话已删除"));
       return true;
     } catch (error) {
       console.error("Error deleting conversation:", error);

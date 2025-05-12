@@ -25,6 +25,8 @@ export const useConversations = () => {
     setLoading(true);
 
     try {
+      console.log("Fetching conversations for user:", user.id);
+      
       const { data: messagesData, error: messagesError } = await supabase
         .from('user_messages')
         .select('*')
@@ -34,29 +36,44 @@ export const useConversations = () => {
       if (messagesError) throw messagesError;
 
       if (!messagesData || messagesData.length === 0) {
+        console.log("No messages found");
         setConversations([]);
         setLoading(false);
         return;
       }
 
+      // Extract unique user IDs from messages
       const uniqueUserIds = new Set<string>();
       messagesData.forEach(msg => {
         if (msg.sender_id !== user.id) uniqueUserIds.add(msg.sender_id);
         if (msg.receiver_id !== user.id) uniqueUserIds.add(msg.receiver_id);
       });
+      
+      // Convert the Set to an Array for the in() filter
+      const userIdsArray = Array.from(uniqueUserIds);
+      
+      if (userIdsArray.length === 0) {
+        console.log("No unique user IDs found");
+        setConversations([]);
+        setLoading(false);
+        return;
+      }
 
+      // Fetch profiles for all unique users
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .in('id', Array.from(uniqueUserIds));
+        .in('id', userIdsArray);
 
       if (profilesError) throw profilesError;
 
+      // Create a map of user IDs to profiles for quick lookup
       const profilesMap = new Map();
       profilesData?.forEach(profile => {
         profilesMap.set(profile.id, profile);
       });
 
+      // Group messages by conversation partner
       const conversationsMap = new Map<string, ConversationPartner>();
 
       messagesData.forEach(msg => {
@@ -87,8 +104,17 @@ export const useConversations = () => {
           }
         }
       });
-
-      setConversations(Array.from(conversationsMap.values()));
+      
+      // Convert the Map to an Array for the state update
+      const conversationsArray = Array.from(conversationsMap.values());
+      
+      // Sort conversations by last message time (newest first)
+      conversationsArray.sort((a, b) => {
+        return new Date(b.last_message_time).getTime() - new Date(a.last_message_time).getTime();
+      });
+      
+      console.log("Fetched conversations:", conversationsArray.length);
+      setConversations(conversationsArray);
     } catch (error) {
       console.error("Error fetching conversations:", error);
       toast.error(t("Failed to load conversations", "加载对话失败"));
@@ -113,6 +139,7 @@ export const useConversations = () => {
           filter: `receiver_id=eq.${user.id}`
         }, 
         () => {
+          console.log("Realtime update triggered, refreshing conversations");
           fetchConversations();
         }
       )

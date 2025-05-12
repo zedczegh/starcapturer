@@ -110,11 +110,21 @@ export const useMessageConversation = () => {
   const handleDeleteConversation = useCallback(async (partnerId: string): Promise<boolean> => {
     setIsProcessingAction(true);
     try {
+      // Call the delete function
       const result = await deleteConversation(partnerId);
-      if (result && activeConversation?.id === partnerId) {
-        handleBack();
+      
+      if (result) {
+        // Clear active conversation if it's the one being deleted
+        if (activeConversation?.id === partnerId) {
+          handleBack();
+        }
+        
+        // Always fetch conversations to refresh the list after deletion
+        await fetchConversations();
+        
+        toast.success(t("Conversation deleted", "对话已删除"));
       }
-      await fetchConversations();
+      
       return result;
     } catch (error) {
       console.error("Error deleting conversation:", error);
