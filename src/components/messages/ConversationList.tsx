@@ -58,7 +58,10 @@ const ConversationList: React.FC<ConversationListProps> = ({
 
   const confirmDelete = useCallback(async () => {
     if (conversationToDelete) {
-      await onDeleteConversation(conversationToDelete.id);
+      const success = await onDeleteConversation(conversationToDelete.id);
+      if (success) {
+        console.log("Conversation successfully deleted:", conversationToDelete.id);
+      }
       setDeleteDialogOpen(false);
       setConversationToDelete(null);
     }

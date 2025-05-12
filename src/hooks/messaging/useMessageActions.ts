@@ -108,25 +108,18 @@ export const useMessageActions = (fetchMessages: (partnerId: string) => Promise<
     try {
       console.log(`Attempting to delete conversation with partner ID: ${partnerId}`);
       
-      // First, delete one direction of messages (user to partner)
-      const { error: error1 } = await supabase
-        .from('user_messages')
-        .delete()
-        .eq('sender_id', user.id)
-        .eq('receiver_id', partnerId);
+      // Use the database function to delete all messages between users
+      const { error } = await supabase
+        .rpc('delete_conversation', { 
+          partner_id: partnerId,
+          current_user_id: user.id
+        });
         
-      if (error1) throw error1;
+      if (error) {
+        throw error;
+      }
       
-      // Then delete the other direction (partner to user)
-      const { error: error2 } = await supabase
-        .from('user_messages')
-        .delete()
-        .eq('sender_id', partnerId)
-        .eq('receiver_id', user.id);
-        
-      if (error2) throw error2;
-      
-      console.log("Conversation deletion completed successfully");
+      console.log("Conversation deletion completed successfully via RPC function");
       
       // Clear messages for this conversation
       setMessages([]);

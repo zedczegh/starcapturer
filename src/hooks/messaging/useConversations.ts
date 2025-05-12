@@ -123,14 +123,15 @@ export const useConversations = () => {
     }
   }, [user, t]);
   
-  // Set up real-time subscription for new messages
+  // Set up real-time subscription for message changes
   useEffect(() => {
     if (!user) return;
     
     fetchConversations();
 
+    // Create a combined channel for all message events (INSERT, UPDATE, DELETE)
     const channel = supabase
-      .channel('messages_channel')
+      .channel('messages_changes')
       .on('postgres_changes', 
         { 
           event: 'INSERT', 
@@ -139,7 +140,7 @@ export const useConversations = () => {
           filter: `receiver_id=eq.${user.id}`
         }, 
         (payload) => {
-          console.log("New message received, refreshing conversations", payload);
+          console.log("New message received:", payload);
           fetchConversations();
         }
       )
@@ -147,10 +148,11 @@ export const useConversations = () => {
         { 
           event: 'UPDATE', 
           schema: 'public', 
-          table: 'user_messages'
+          table: 'user_messages',
+          filter: `receiver_id=eq.${user.id}`
         }, 
         (payload) => {
-          console.log("Message updated, refreshing conversations", payload);
+          console.log("Message updated:", payload);
           fetchConversations();
         }
       )
@@ -161,7 +163,7 @@ export const useConversations = () => {
           table: 'user_messages'
         }, 
         (payload) => {
-          console.log("Message deleted, refreshing conversations", payload);
+          console.log("Message deleted:", payload);
           fetchConversations();
         }
       )

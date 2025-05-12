@@ -128,12 +128,7 @@ export const useMessageConversation = () => {
         }
         
         // Remove the conversation from the local state immediately
-        setLocalConversations(prev => {
-          const filtered = prev.filter(conv => conv.id !== partnerId);
-          console.log("Removing conversation from local state:", partnerId);
-          console.log("Conversations before:", prev.length, "after:", filtered.length);
-          return filtered;
-        });
+        setLocalConversations(prev => prev.filter(conv => conv.id !== partnerId));
         
         // Fetch conversations to refresh the list after deletion
         await fetchConversations();
