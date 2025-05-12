@@ -8,6 +8,7 @@ import EmptyConversationState from "@/components/messages/EmptyConversationState
 import { ConversationPartner } from "@/hooks/messaging/useConversations";
 import { useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import MessagesSkeleton from "@/components/messages/MessagesSkeleton";
 
 interface MessageContainerProps {
   activeConversation: ConversationPartner | null;
@@ -49,6 +50,9 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
   const conversationListVisible = !activeConversation || !isMobile;
   const messagesVisible = activeConversation || !isMobile;
 
+  // Determine if we should show a loading skeleton
+  const showMessageSkeleton = loading && activeConversation && messages.length === 0;
+
   return (
     <div className={`flex flex-col md:flex-row gap-4 ${isMobile ? 'h-[calc(100vh-5rem)]' : 'h-[80vh]'} scrollbar-hide`}>
       <Card 
@@ -83,13 +87,17 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
       >
         {activeConversation ? (
           <div className="flex flex-col h-full overflow-hidden">
-            <MessageList 
-              messages={messages}
-              currentUserId={currentUserId}
-              activeConversation={activeConversation}
-              onBack={onBack}
-              onUnsendMessage={onUnsendMessage}
-            />
+            {showMessageSkeleton ? (
+              <MessagesSkeleton />
+            ) : (
+              <MessageList 
+                messages={messages}
+                currentUserId={currentUserId}
+                activeConversation={activeConversation}
+                onBack={onBack}
+                onUnsendMessage={onUnsendMessage}
+              />
+            )}
             <MessageInput 
               onSend={onSendMessage}
               sending={sending || isProcessingAction}

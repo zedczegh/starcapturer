@@ -1,5 +1,5 @@
 
-import React, { memo, useEffect } from "react";
+import React, { memo, useEffect, useCallback } from "react";
 import NavBar from "@/components/NavBar";
 import { useAuth } from "@/contexts/AuthContext";
 import LoginPrompt from "@/components/messages/LoginPrompt";
@@ -49,7 +49,8 @@ const MessageContent = memo(({ user }: { user: any }) => {
   );
 });
 
-const Messages = () => {
+// Memoize the entire Messages component
+const Messages = memo(() => {
   const { user } = useAuth();
 
   return (
@@ -63,6 +64,6 @@ const Messages = () => {
       )}
     </div>
   );
-};
+});
 
 export default Messages;

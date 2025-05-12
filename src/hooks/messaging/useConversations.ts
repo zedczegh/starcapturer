@@ -1,9 +1,13 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { optimizedCache } from "@/utils/optimizedCache";
+
+const CONVERSATIONS_CACHE_KEY = 'user_conversations';
+const CONVERSATIONS_CACHE_TTL = 300000; // 5 minutes
 
 export interface ConversationPartner {
   id: string;
@@ -19,12 +23,40 @@ export const useConversations = () => {
   const { t } = useLanguage();
   const [conversations, setConversations] = useState<ConversationPartner[]>([]);
   const [loading, setLoading] = useState(true);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = useCallback(async (forceFresh = false) => {
     if (!user) return;
-    setLoading(true);
+    
+    // Only show loading indicator on initial load or forced refresh
+    if (conversations.length === 0 || forceFresh) {
+      setLoading(true);
+    }
 
     try {
+      // Check cache first unless forced fresh
+      if (!forceFresh) {
+        const cacheKey = `${CONVERSATIONS_CACHE_KEY}_${user.id}`;
+        const cachedConversations = optimizedCache.getCachedItem<ConversationPartner[]>(cacheKey);
+        
+        if (cachedConversations && cachedConversations.length > 0) {
+          console.log("Using cached conversations:", cachedConversations.length);
+          setConversations(cachedConversations);
+          setLoading(false);
+          
+          // Start a background refresh after a delay to ensure we have fresh data eventually
+          if (fetchTimeoutRef.current) {
+            clearTimeout(fetchTimeoutRef.current);
+          }
+          fetchTimeoutRef.current = setTimeout(() => {
+            fetchConversations(true);
+          }, 1000); // Refresh after 1 second in the background
+          
+          return;
+        }
+      }
+      
       console.log("Fetching conversations for user:", user.id);
       
       const { data: messagesData, error: messagesError } = await supabase
@@ -42,7 +74,7 @@ export const useConversations = () => {
         return;
       }
 
-      // Extract unique user IDs from messages
+      // Extract unique user IDs from messages - using a Set for better performance
       const uniqueUserIds = new Set<string>();
       messagesData.forEach(msg => {
         if (msg.sender_id !== user.id) uniqueUserIds.add(msg.sender_id);
@@ -62,7 +94,7 @@ export const useConversations = () => {
       // Fetch profiles for all unique users
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id,username,avatar_url')
         .in('id', userIdsArray);
 
       if (profilesError) throw profilesError;
@@ -73,9 +105,10 @@ export const useConversations = () => {
         profilesMap.set(profile.id, profile);
       });
 
-      // Group messages by conversation partner
+      // Group messages by conversation partner - using a Map for better performance
       const conversationsMap = new Map<string, ConversationPartner>();
 
+      // Process messages in reverse chronological order
       messagesData.forEach(msg => {
         const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
         
@@ -114,6 +147,13 @@ export const useConversations = () => {
       });
       
       console.log("Fetched conversations:", conversationsArray.length);
+      
+      // Cache the fetched conversations
+      if (conversationsArray.length > 0) {
+        const cacheKey = `${CONVERSATIONS_CACHE_KEY}_${user.id}`;
+        optimizedCache.setCachedItem(cacheKey, conversationsArray, CONVERSATIONS_CACHE_TTL);
+      }
+      
       setConversations(conversationsArray);
     } catch (error) {
       console.error("Error fetching conversations:", error);
@@ -121,13 +161,18 @@ export const useConversations = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, t]);
+  }, [user, t, conversations.length]);
   
   // Set up real-time subscription for message changes
   useEffect(() => {
     if (!user) return;
     
     fetchConversations();
+
+    // Clean up existing channel if it exists
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
 
     // Create a combined channel for all message events (INSERT, UPDATE, DELETE)
     const channel = supabase
@@ -141,7 +186,13 @@ export const useConversations = () => {
         }, 
         (payload) => {
           console.log("New message received:", payload);
-          fetchConversations();
+          // Use a debounced fetch to prevent multiple fetches for batch inserts
+          if (fetchTimeoutRef.current) {
+            clearTimeout(fetchTimeoutRef.current);
+          }
+          fetchTimeoutRef.current = setTimeout(() => {
+            fetchConversations(true);
+          }, 300);
         }
       )
       .on('postgres_changes', 
@@ -153,7 +204,13 @@ export const useConversations = () => {
         }, 
         (payload) => {
           console.log("Message updated:", payload);
-          fetchConversations();
+          // Use a debounced fetch to prevent multiple fetches for batch updates
+          if (fetchTimeoutRef.current) {
+            clearTimeout(fetchTimeoutRef.current);
+          }
+          fetchTimeoutRef.current = setTimeout(() => {
+            fetchConversations(true);
+          }, 300);
         }
       )
       .on('postgres_changes', 
@@ -164,16 +221,30 @@ export const useConversations = () => {
         }, 
         (payload) => {
           console.log("Message deleted:", payload);
-          fetchConversations();
+          // Use a debounced fetch to prevent multiple fetches for batch deletes
+          if (fetchTimeoutRef.current) {
+            clearTimeout(fetchTimeoutRef.current);
+          }
+          fetchTimeoutRef.current = setTimeout(() => {
+            fetchConversations(true);
+          }, 300);
         }
       )
       .subscribe((status) => {
         console.log("Realtime subscription status:", status);
       });
       
+    // Store channel reference for cleanup
+    channelRef.current = channel;
+      
     return () => {
       console.log("Cleaning up realtime subscription");
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
     };
   }, [user, fetchConversations]);
   

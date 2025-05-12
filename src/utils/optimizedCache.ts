@@ -4,194 +4,215 @@
  * Improves application performance by reducing API calls and calculations
  */
 
-import { 
-  getFromMemoryCache, 
-  setInMemoryCache, 
-  deleteFromMemoryCache, 
-  clearMemoryCache
-} from './cache/memoryCache';
+type CacheItem<T> = {
+  data: T;
+  expiry: number;
+};
 
-import {
-  getFromStorageCache,
-  setInStorageCache,
-  deleteFromStorageCache,
-  clearStorageCache,
-  clearOldestCacheItems
-} from './cache/storageCache';
-
-import {
-  DEFAULT_TTL,
-  LOW_PRIORITY_TTL,
-  HIGH_PRIORITY_TTL
-} from './cache/cacheTypes';
-
-import type { CacheOptions } from './cache/cacheTypes';
-
-/**
- * Get item from cache with fast access
- * @param key Cache key
- * @returns Cached item or null if not found/expired
- */
-export function getCachedItem<T>(key: string): T | null {
-  try {
-    // Check memory cache first for fastest performance
-    const memoryItem = getFromMemoryCache<T>(key);
-    if (memoryItem !== null) {
-      return memoryItem;
+class OptimizedCache {
+  private memoryCache: Map<string, CacheItem<any>> = new Map();
+  private readonly PREFIX = 'app_cache_';
+  
+  constructor() {
+    // Clean up expired items on init
+    this.cleanExpiredItems();
+  }
+  
+  /**
+   * Get item from cache with fast access
+   * @param key Cache key
+   * @returns Cached item or null if not found/expired
+   */
+  getCachedItem<T>(key: string): T | null {
+    const cacheKey = this.getFullKey(key);
+    
+    // Check memory cache first (fastest)
+    const memoryItem = this.memoryCache.get(cacheKey);
+    if (memoryItem && Date.now() < memoryItem.expiry) {
+      return memoryItem.data as T;
     }
     
     // If not in memory, try localStorage
-    const storageItem = getFromStorageCache<T>(key);
-    if (storageItem !== null) {
-      // Add to memory cache for faster subsequent access
-      setInMemoryCache(key, storageItem, DEFAULT_TTL);
-      return storageItem;
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Cache read error:', error);
-    return null;
-  }
-}
-
-/**
- * Store item in cache
- * @param key Cache key
- * @param data Data to store
- * @param ttlMs Time to live in milliseconds
- * @param options Cache options
- */
-export function setCachedItem<T>(
-  key: string, 
-  data: T, 
-  ttlMs: number = DEFAULT_TTL,
-  options?: CacheOptions
-): void {
-  try {
-    // Store in memory cache first
-    setInMemoryCache(key, data, ttlMs);
-    
-    // Then persist to localStorage if available
-    const storageSuccess = setInStorageCache(key, data, ttlMs);
-    if (!storageSuccess) {
-      // Handle storage quota exceeded
-      clearOldestCacheItems();
-      setInStorageCache(key, data, ttlMs);
-    }
-  } catch (error) {
-    console.error('Cache write error:', error);
-  }
-}
-
-/**
- * Clear specific cache item
- */
-export function clearCacheItem(key: string): void {
-  deleteFromMemoryCache(key);
-  deleteFromStorageCache(key);
-}
-
-/**
- * Clear all cache items with optional prefix
- */
-export function clearCache(prefix?: string): void {
-  // Clear from memory
-  clearMemoryCache(prefix);
-  
-  // Clear from localStorage
-  clearStorageCache(prefix);
-}
-
-/**
- * Preload frequently accessed data into memory cache
- * @param items List of cache keys to prioritize
- */
-export function prioritizeCacheItems(items: string[]): void {
-  try {
-    if (!items.length) return;
-    
-    items.forEach(key => {
-      // Try to load from storage to memory cache
-      const cacheKey = key.startsWith('cache:') ? key : `cache:${key}`;
-      try {
-        const item = localStorage.getItem(cacheKey);
-        if (item) {
-          const parsed = JSON.parse(item);
-          if (parsed.expires > Date.now()) {
-            const memoryKey = key.replace('cache:', '');
-            setInMemoryCache(
-              memoryKey, 
-              parsed.data, 
-              parsed.expires - Date.now()
-            );
-          }
+    try {
+      const storedItem = localStorage.getItem(cacheKey);
+      if (storedItem) {
+        const parsed = JSON.parse(storedItem) as CacheItem<T>;
+        
+        // Check if expired
+        if (Date.now() >= parsed.expiry) {
+          // Remove expired item
+          localStorage.removeItem(cacheKey);
+          return null;
         }
-      } catch (e) {
-        // Skip any invalid items
+        
+        // Add to memory cache for faster access next time
+        this.memoryCache.set(cacheKey, parsed);
+        return parsed.data;
       }
-    });
-  } catch (error) {
-    console.error('Error prioritizing cache items:', error);
-  }
-}
-
-/**
- * Initialize cache from localStorage on startup
- */
-export function initializeCache(): void {
-  try {
-    let restoredCount = 0;
-    const authKeys = [];
-    const profileKeys = [];
+    } catch (error) {
+      // If there's any error reading from storage, just return null
+      console.warn('Cache read error:', error);
+    }
     
-    // Only load unexpired items from localStorage to memory cache
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('cache:')) {
-        try {
-          const item = JSON.parse(localStorage.getItem(key) || '{}');
-          if (item.expires && item.expires > Date.now()) {
-            const memoryKey = key.replace('cache:', '');
-            
-            // Prioritize auth/user data
-            if (key.includes('auth') || key.includes('session')) {
-              authKeys.push(key);
-            } else if (key.includes('profile') || key.includes('user')) {
-              profileKeys.push(key);
-            } else {
-              // Load other items with standard priority
-              setInMemoryCache(memoryKey, item.data, item.expires - Date.now());
-              restoredCount++;
-            }
-          } else {
-            // Remove expired items
-            localStorage.removeItem(key);
-          }
-        } catch (e) {
-          // Skip invalid items
+    return null;
+  }
+  
+  /**
+   * Store item in cache
+   * @param key Cache key
+   * @param data Data to store
+   * @param ttl Time to live in milliseconds
+   */
+  setCachedItem<T>(key: string, data: T, ttlMs: number = 60000): void {
+    const cacheKey = this.getFullKey(key);
+    const expiry = Date.now() + ttlMs;
+    const cacheItem: CacheItem<T> = { data, expiry };
+    
+    // Store in memory first (fast access)
+    this.memoryCache.set(cacheKey, cacheItem);
+    
+    // Try to store in localStorage as well (persistence)
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(cacheItem));
+    } catch (error) {
+      // Handle storage quota exceeded
+      console.warn('Cache storage error:', error);
+      // Clear some space if needed
+      this.clearOldestItems(5);
+      
+      // Try again
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(cacheItem));
+      } catch {
+        // Give up if it fails again
+      }
+    }
+  }
+  
+  /**
+   * Remove item from cache
+   * @param key Cache key
+   */
+  removeCachedItem(key: string): void {
+    const cacheKey = this.getFullKey(key);
+    this.memoryCache.delete(cacheKey);
+    
+    try {
+      localStorage.removeItem(cacheKey);
+    } catch {
+      // Ignore errors
+    }
+  }
+  
+  /**
+   * Clear all cached items or items with specific prefix
+   * @param prefix Optional prefix to clear only matching items
+   */
+  clearCache(prefix?: string): void {
+    const fullPrefix = prefix ? this.getFullKey(prefix) : this.PREFIX;
+    
+    // Clear from memory
+    if (prefix) {
+      // Only clear items with matching prefix
+      for (const key of this.memoryCache.keys()) {
+        if (key.startsWith(fullPrefix)) {
+          this.memoryCache.delete(key);
+        }
+      }
+    } else {
+      // Clear all
+      this.memoryCache.clear();
+    }
+    
+    // Clear from localStorage
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(fullPrefix)) {
           localStorage.removeItem(key);
         }
       }
+    } catch {
+      // Ignore errors
+    }
+  }
+  
+  /**
+   * Clean up expired items to free up space
+   */
+  private cleanExpiredItems(): void {
+    const now = Date.now();
+    
+    // Clean memory cache
+    for (const [key, item] of this.memoryCache.entries()) {
+      if (now >= item.expiry) {
+        this.memoryCache.delete(key);
+      }
     }
     
-    // Prioritize critical data by loading it last (so it's most recent in memory)
-    prioritizeCacheItems([...profileKeys, ...authKeys]);
-    restoredCount += authKeys.length + profileKeys.length;
-    
-    console.log(`Initialized cache with ${restoredCount} valid items`);
-  } catch (error) {
-    console.error('Error initializing cache:', error);
+    // Clean localStorage (less frequently)
+    if (Math.random() < 0.1) { // Only do this 10% of the time to reduce overhead
+      try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(this.PREFIX)) {
+            try {
+              const item = JSON.parse(localStorage.getItem(key) || '{}');
+              if (item.expiry && now >= item.expiry) {
+                localStorage.removeItem(key);
+              }
+            } catch {
+              // Remove invalid items
+              localStorage.removeItem(key);
+            }
+          }
+        }
+      } catch {
+        // Ignore errors
+      }
+    }
+  }
+  
+  /**
+   * Clear the oldest cached items to free up space
+   * @param count Number of items to clear
+   */
+  private clearOldestItems(count: number): void {
+    try {
+      const items: Array<{ key: string; expiry: number }> = [];
+      
+      // Collect all cache items
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(this.PREFIX)) {
+          try {
+            const item = JSON.parse(localStorage.getItem(key) || '{}');
+            items.push({ key, expiry: item.expiry || 0 });
+          } catch {
+            // Skip invalid items
+          }
+        }
+      }
+      
+      // Sort by expiry (oldest first)
+      items.sort((a, b) => a.expiry - b.expiry);
+      
+      // Remove the oldest items
+      for (let i = 0; i < Math.min(count, items.length); i++) {
+        localStorage.removeItem(items[i].key);
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
+  
+  /**
+   * Get full cache key with prefix
+   */
+  private getFullKey(key: string): string {
+    return key.startsWith(this.PREFIX) ? key : `${this.PREFIX}${key}`;
   }
 }
 
-// Initialize cache on module load if in browser environment
-if (typeof window !== 'undefined') {
-  // Use requestIdleCallback if available for non-blocking initialization
-  if (typeof window.requestIdleCallback === 'function') {
-    window.requestIdleCallback(() => initializeCache());
-  } else {
-    // Fall back to setTimeout
-    setTimeout(initializeCache, 100);
-  }
-}
+// Export singleton instance
+export const optimizedCache = new OptimizedCache();
