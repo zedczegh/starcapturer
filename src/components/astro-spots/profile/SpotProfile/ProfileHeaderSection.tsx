@@ -9,6 +9,7 @@ interface ProfileHeaderSectionProps {
   isLoading: boolean;
   creatorProfile: any;
   loadingCreator: boolean;
+  isCreator?: boolean;
   onViewDetails: () => void;
   onMessageCreator: () => void;
   comingFromCommunity?: boolean;
@@ -19,6 +20,7 @@ const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
   isLoading,
   creatorProfile,
   loadingCreator,
+  isCreator = false,
   onViewDetails,
   comingFromCommunity = false,
   onMessageCreator
