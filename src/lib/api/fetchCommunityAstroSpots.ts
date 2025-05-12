@@ -7,7 +7,7 @@ import { fetchFromSupabase } from "@/utils/supabaseFetch";
  */
 export async function fetchCommunityAstroSpots() {
   try {
-    // Use our optimized fetch utility
+    // Use our optimized fetch utility with stronger caching
     const data = await fetchFromSupabase<any[]>(
       "user_astro_spots",
       (query) => query
@@ -25,7 +25,8 @@ export async function fetchCommunityAstroSpots() {
         .limit(50),
       {
         ttl: 5 * 60 * 1000, // 5 minutes cache
-        persistToStorage: true
+        persistToStorage: true,
+        cacheKey: 'community-spots-list'
       }
     );
 
@@ -50,7 +51,6 @@ export async function fetchCommunityAstroSpots() {
  */
 export function prefetchCommunityAstroSpots(): Promise<void> {
   // Make the request in the background and don't wait for it
-  // Fix: Proper promise handling pattern
   Promise.resolve().then(() => {
     return fetchCommunityAstroSpots();
   }).catch(error => {

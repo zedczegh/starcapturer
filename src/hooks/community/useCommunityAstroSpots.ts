@@ -6,6 +6,7 @@ import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useNavigate } from "react-router-dom";
 import { clearCache } from "@/utils/fetchWithCache";
+import { clearSpotCache, prepareForProfileTransition } from "@/utils/cache/spotCacheCleaner";
 
 export const useCommunityAstroSpots = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export const useCommunityAstroSpots = () => {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
   const [lastClickTime, setLastClickTime] = useState<number>(0);
+  const [isNavigatingToSpot, setIsNavigatingToSpot] = useState(false);
 
   // Use React Query to fetch data with improved caching
   const { data: astrospots, isLoading, refetch } = useQuery({
@@ -92,6 +94,11 @@ export const useCommunityAstroSpots = () => {
       return;
     }
     
+    if (isNavigatingToSpot) {
+      console.log("Navigation already in progress, ignoring rapid click");
+      return;
+    }
+    
     const now = Date.now();
     
     // Prevent rapid double-clicking issues by tracking last clicked ID and time
@@ -100,12 +107,19 @@ export const useCommunityAstroSpots = () => {
       return;
     }
     
+    setIsNavigatingToSpot(true);
     setLastClickedId(spotId);
     setLastClickTime(now);
     
     // Always use a unique timestamp for each navigation to force remounting
     const timestamp = now;
     console.log("Navigating to astro spot profile:", spotId, "timestamp:", timestamp);
+    
+    // Clear specific spot cache before navigation
+    clearSpotCache(spotId);
+    
+    // Tell the system we're starting a profile transition for smoother animation
+    prepareForProfileTransition();
     
     // The key is to completely replace any existing navigation state and use
     // a unique timestamp for each navigation
@@ -117,7 +131,12 @@ export const useCommunityAstroSpots = () => {
       },
       replace: false // Create a new history entry
     });
-  }, [navigate, lastClickedId, lastClickTime]);
+    
+    // Reset navigation state after a delay
+    setTimeout(() => {
+      setIsNavigatingToSpot(false);
+    }, 500);
+  }, [navigate, lastClickedId, lastClickTime, isNavigatingToSpot]);
 
   // Handle card click by using the shared navigation function
   const handleCardClick = useCallback((id: string) => {

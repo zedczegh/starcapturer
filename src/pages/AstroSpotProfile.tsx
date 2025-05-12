@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import AstroSpotProfile from '@/components/astro-spots/profile/SpotProfile';
 import { clearSpotCache, makeSureProfileLoadsCorrectly, detectProfileCacheLoop } from '@/utils/cache/spotCacheCleaner';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // This wrapper component ensures proper remounting of the profile
 const AstroSpotProfilePage = () => {
@@ -10,6 +11,7 @@ const AstroSpotProfilePage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mountKey, setMountKey] = useState<string>(`profile-${id}-${Date.now()}`);
+  const [isExiting, setIsExiting] = useState(false);
   
   // Force a complete remount when ID or state changes
   useEffect(() => {
@@ -55,7 +57,19 @@ const AstroSpotProfilePage = () => {
   
   console.log("Rendering AstroSpot profile with key:", mountKey, "for ID:", id);
   
-  return <AstroSpotProfile key={mountKey} />;
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div 
+        key={mountKey}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <AstroSpotProfile key={mountKey} />
+      </motion.div>
+    </AnimatePresence>
+  );
 };
 
 export default AstroSpotProfilePage;
