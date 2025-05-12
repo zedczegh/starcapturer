@@ -23,7 +23,11 @@ export function clearSpotCache(spotId?: string): void {
       `["astroSpot","${spotId}"]`,
       `["spotImages","${spotId}"]`,
       `["comments","${spotId}"]`,
-      `["creatorProfile"]`
+      `["creatorProfile"]`,
+      // Add additional keys that might be causing stale data
+      'community-spots-data',
+      'recent-spots',
+      'spot-list'
     ];
     
     keysToTryClear.forEach(key => {
@@ -40,13 +44,13 @@ export function clearSpotCache(spotId?: string): void {
     
     // Also try to clear any React Query cache entries for this spot
     try {
-      // This is a crude approach but helps in emergency cache issues
+      // This is a more aggressive approach to clear all related query caches
       const storage = window.localStorage;
       const keys = Object.keys(storage);
       
       keys.forEach(key => {
         if (key.includes('tanstack-query') && 
-            (key.includes(spotId) || key.includes('astroSpot'))) {
+            (key.includes(spotId) || key.includes('astroSpot') || key.includes('spot'))) {
           storage.removeItem(key);
         }
       });
@@ -68,6 +72,10 @@ export function makeSureProfileLoadsCorrectly(spotId: string): void {
   // Add a timestamp to sessionStorage to mark when this spot was last accessed
   try {
     sessionStorage.setItem(`last-access-${spotId}`, Date.now().toString());
+    
+    // Also store this as the most recently viewed spot ID
+    sessionStorage.setItem('most-recent-spot-id', spotId);
+    sessionStorage.setItem('most-recent-access-time', Date.now().toString());
   } catch (e) {
     // Ignore errors
   }
@@ -95,5 +103,20 @@ export function detectProfileCacheLoop(spotId: string): boolean {
     return false;
   } catch (e) {
     return false;
+  }
+}
+
+// New helper to support smoother transitions
+export function prepareForProfileTransition(): void {
+  // Called when navigating between profiles to ensure smooth transitions
+  try {
+    // Set a flag indicating we're in a transition
+    sessionStorage.setItem('profile-transition-active', 'true');
+    sessionStorage.setItem('profile-transition-timestamp', Date.now().toString());
+    
+    // This flag will be checked by components to handle special transition cases
+    // that help prevent flashing during navigation
+  } catch (e) {
+    // Ignore storage errors
   }
 }

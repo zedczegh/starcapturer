@@ -1,9 +1,10 @@
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useNavigate } from "react-router-dom";
+import TakahashiMarkerSVG from "./TakahashiMarkerSVG";
 import SiqsScoreBadge from "@/components/photoPoints/cards/SiqsScoreBadge";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { ExternalLink } from "lucide-react";
 function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.DivIcon {
   const size = isMobile ? (isHovered ? 28 : 20) : (isHovered ? 32 : 26);
   
-  // Create the HTML for the icon
+  // Create the HTML for the icon, but we'll render the actual telescope SVG in the DOM
   return L.divIcon({
     className: "community-marker",
     iconSize: [size, size],
@@ -56,7 +57,6 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   const [openPopup, setOpenPopup] = useState<boolean>(false);
   const [forceUpdate, setForceUpdate] = useState<boolean>(false);
   const markerRef = useRef<L.Marker>(null);
-  const navigatingRef = useRef<boolean>(false);
   
   // Stabilize SIQS score to prevent flicker
   const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
@@ -84,11 +84,6 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     // Log click for debugging
     console.log("Marker clicked for spot:", spot.id, spot.name);
     
-    if (navigatingRef.current) {
-      console.log("Navigation already in progress, preventing duplicate click");
-      return;
-    }
-    
     if (onMarkerClick) {
       // Use the provided click handler for custom navigation
       onMarkerClick(spot);
@@ -106,37 +101,26 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     }
   };
 
-  // Improved navigation function with debouncing
-  const navigateToSpotProfile = useCallback(() => {
-    if (!spot || !spot.id || navigatingRef.current) {
+  // Navigation function to ensure consistent navigation
+  const navigateToSpotProfile = () => {
+    if (!spot || !spot.id) {
+      console.error("Invalid spot data:", spot);
       return;
     }
-    
-    // Set navigating flag to prevent multiple navigations
-    navigatingRef.current = true;
     
     // Always generate a unique timestamp for each navigation
     const timestamp = Date.now();
     
-    // Add a small delay to avoid immediate re-rendering during transition
-    setTimeout(() => {
-      navigate(`/astro-spot/${spot.id}`, { 
-        state: { 
-          from: "community", 
-          spotId: spot.id,
-          timestamp, // Essential for forcing component remount
-          noRefresh: true, // Flag to indicate this is from a marker popup
-        },
-        replace: false // Important to create new history entry
-      });
-      console.log("Direct navigation to spot from marker:", spot.id, timestamp);
-      
-      // Reset navigating flag after a longer timeout
-      setTimeout(() => {
-        navigatingRef.current = false;
-      }, 1000);
-    }, 150);
-  }, [spot, navigate]);
+    navigate(`/astro-spot/${spot.id}`, { 
+      state: { 
+        from: "community", 
+        spotId: spot.id,
+        timestamp // Essential for forcing component remount
+      },
+      replace: false // Important to create new history entry
+    });
+    console.log("Direct navigation to spot from marker:", spot.id, timestamp);
+  };
 
   // Handle popup close
   const handlePopupClose = () => {
@@ -177,9 +161,18 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             size="sm" 
             className={`w-full text-xs flex items-center justify-center gap-1 mt-1 ${isMobile ? 'py-3' : ''}`}
             onClick={(e) => {
-              if (navigatingRef.current) return;
               e.stopPropagation();
-              navigateToSpotProfile();
+              // Use the timestamp technique for unique navigation state
+              const timestamp = Date.now();
+              navigate(`/astro-spot/${spot.id}`, { 
+                state: { 
+                  from: "community", 
+                  spotId: spot.id,
+                  timestamp // Essential for forcing component remount
+                },
+                replace: false 
+              });
+              console.log("Popup button navigation to spot:", spot.id, timestamp);
             }}
           >
             <ExternalLink size={14} />

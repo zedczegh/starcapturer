@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchFromSupabase } from "@/utils/supabaseFetch";
 
-export const useSpotData = (spotId: string, refreshTrigger: number, noRefresh: boolean = false) => {
+export const useSpotData = (spotId: string, refreshTrigger: number) => {
   // Main spot data query
   const { data: spot, isLoading, error, refetch } = useQuery({
     queryKey: ['astroSpot', spotId, refreshTrigger],
@@ -13,7 +13,7 @@ export const useSpotData = (spotId: string, refreshTrigger: number, noRefresh: b
       const spotData = await fetchFromSupabase(
         "user_astro_spots",
         (query) => query.select('*').eq('id', spotId).single(),
-        { skipCache: !noRefresh && refreshTrigger > 0 }
+        { skipCache: refreshTrigger > 0 }
       );
       
       if (!spotData) throw new Error("Spot not found");
@@ -23,12 +23,12 @@ export const useSpotData = (spotId: string, refreshTrigger: number, noRefresh: b
         fetchFromSupabase(
           "astro_spot_types",
           (query) => query.select('*').eq('spot_id', spotId),
-          { skipCache: !noRefresh && refreshTrigger > 0 }
+          { skipCache: refreshTrigger > 0 }
         ),
         fetchFromSupabase(
           "astro_spot_advantages",
           (query) => query.select('*').eq('spot_id', spotId),
-          { skipCache: !noRefresh && refreshTrigger > 0 }
+          { skipCache: refreshTrigger > 0 }
         )
       ]);
       
@@ -39,8 +39,8 @@ export const useSpotData = (spotId: string, refreshTrigger: number, noRefresh: b
       };
     },
     retry: 1,
-    staleTime: noRefresh ? Infinity : 1000 * 15,
-    refetchOnWindowFocus: !noRefresh
+    staleTime: 1000 * 15,
+    refetchOnWindowFocus: false
   });
 
   return { spot, isLoading, error, refetch };

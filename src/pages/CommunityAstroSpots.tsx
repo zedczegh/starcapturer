@@ -34,7 +34,7 @@ const CommunityAstroSpots: React.FC = () => {
     refreshData
   } = useCommunityAstroSpots();
   
-  // Handle refresh when returning from spot profile
+  // Handle refresh when returning from spot profile - without toast
   useEffect(() => {
     const refreshTimestamp = location.state?.refreshTimestamp;
     const forceRefresh = location.state?.forceRefresh;
@@ -43,9 +43,8 @@ const CommunityAstroSpots: React.FC = () => {
     if (refreshTimestamp && (forceRefresh || returnedFromSpot)) {
       console.log("Community page: Forcing data refresh from navigation state");
       refreshData();
-      // Toast notification removed as requested
     }
-  }, [location.state, refreshData, isMobile]);
+  }, [location.state, refreshData]);
 
   return (
     <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>

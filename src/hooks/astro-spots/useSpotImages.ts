@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 
-export const useSpotImages = (spotId: string, refreshTrigger: number, noRefresh: boolean = false) => {
+export const useSpotImages = (spotId: string, refreshTrigger: number) => {
   // Spot images query
   const { data: spotImages = [], isLoading: loadingImages, refetch: refetchImages } = useQuery({
     queryKey: ['spotImages', spotId, refreshTrigger],
@@ -42,8 +42,7 @@ export const useSpotImages = (spotId: string, refreshTrigger: number, noRefresh:
       }
     },
     enabled: !!spotId,
-    staleTime: noRefresh ? Infinity : 1000 * 15,
-    refetchOnWindowFocus: !noRefresh
+    staleTime: 1000 * 15
   });
 
   return { spotImages, loadingImages, refetchImages };

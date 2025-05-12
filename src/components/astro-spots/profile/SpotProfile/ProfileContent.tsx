@@ -1,30 +1,23 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
+import LocationDetailsLoading from "@/components/location/LocationDetailsLoading";
+import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 import ProfileHeaderSection from './ProfileHeaderSection';
 import ProfileSectionsManager from './ProfileSectionsManager';
-import { useProfileContent } from '@/hooks/astro-spots/useProfileContent';
-import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
-import { createPortal } from 'react-dom';
+import ProfileEditButton from './ProfileEditButton';
+import useProfileContent from '@/hooks/astro-spots/useProfileContent';
 
 interface ProfileContentProps {
   spotId: string;
   user: boolean;
-  comingFromCommunity?: boolean;
-  noRefresh?: boolean;
+  comingFromCommunity: boolean;
 }
 
-const ProfileContent: React.FC<ProfileContentProps> = ({ 
-  spotId, 
-  user,
-  comingFromCommunity = false,
-  noRefresh = false
-}) => {
+const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFromCommunity }) => {
   const { t } = useLanguage();
-  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-
-  // Initialize the profile content with our custom hook
+  
   const {
     spot,
     isLoading,
@@ -43,91 +36,71 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
     handleCommentSubmit,
     handleImagesUpdate,
     handleMessageCreator,
-    storageChecked,
-  } = useProfileContent(spotId, user, comingFromCommunity, t, noRefresh);
-  
-  // Find or create a portal container for floating UI elements
+    refreshData,
+    triggerRefresh
+  } = useProfileContent(spotId, user, comingFromCommunity, t);
+
+  // Force data refresh when spotId changes
   useEffect(() => {
-    const existingContainer = document.getElementById('profile-portal-container');
-    if (existingContainer) {
-      setPortalContainer(existingContainer);
-      return;
+    console.log("ProfileContent: Spot ID changed, refreshing data:", spotId);
+    if (refreshData) {
+      refreshData();
     }
-    
-    const newContainer = document.createElement('div');
-    newContainer.id = 'profile-portal-container';
-    document.body.appendChild(newContainer);
-    setPortalContainer(newContainer);
-    
-    return () => {
-      if (newContainer && document.body.contains(newContainer)) {
-        document.body.removeChild(newContainer);
-      }
-    };
-  }, []);
+  }, [spotId, refreshData]);
+
+  if (isLoading || !spot) {
+    return <LocationDetailsLoading />;
+  }
 
   return (
-    <div className="relative">
-      <ProfileHeaderSection 
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden relative"
+    >
+      <ProfileEditButton 
+        isCreator={isCreator} 
+        comingFromCommunity={comingFromCommunity} 
+        onClick={() => setShowEditDialog(true)} 
+      />
+
+      <ProfileHeaderSection
         spot={spot}
-        isLoading={isLoading}
         creatorProfile={creatorProfile}
         loadingCreator={loadingCreator}
-        isCreator={isCreator}
-        onMessageCreator={handleMessageCreator}
         onViewDetails={handleViewDetails}
         comingFromCommunity={comingFromCommunity}
+        onMessageCreator={handleMessageCreator}
       />
       
       <ProfileSectionsManager
-        spotId={spot?.id}
+        spotId={spotId}
         spot={spot}
-        isLoading={isLoading}
-        spotImages={spotImages || []}
+        spotImages={spotImages}
         loadingImages={loadingImages}
-        comments={comments}
-        commentSending={commentSending}
-        onCommentSubmit={handleCommentSubmit}
-        onCommentsUpdate={handleCommentsUpdate}
-        onImagesUpdate={handleImagesUpdate}
         user={user}
         isCreator={isCreator}
-        storageChecked={storageChecked}
+        comments={comments}
+        commentSending={commentSending}
+        onImagesUpdate={handleImagesUpdate}
+        onCommentsUpdate={handleCommentsUpdate}
+        onCommentSubmit={handleCommentSubmit}
       />
-      
-      {/* Edit Button - Only shown for creator */}
-      {isCreator && !isLoading && (
-        <div className="flex justify-end mt-4">
-          <Button 
-            onClick={() => setShowEditDialog(true)}
-            variant="outline"
-            className="flex items-center gap-1.5 bg-cosmic-800/70 hover:bg-cosmic-700/70 text-gray-200"
-          >
-            <Pencil className="h-4 w-4" />
-            {t("Edit Spot", "编辑地点")}
-          </Button>
-        </div>
+
+      {showEditDialog && spot && isCreator && (
+        <CreateAstroSpotDialog
+          latitude={spot.latitude}
+          longitude={spot.longitude}
+          defaultName={spot.name}
+          isEditing={true}
+          spotId={spot.id}
+          defaultDescription={spot.description}
+          trigger={<div />}
+          onClose={handleEditClose}
+        />
       )}
-      
-      {/* Edit Dialog Portal - Only render when needed */}
-      {showEditDialog && portalContainer && createPortal(
-        <div className="fixed inset-0 z-50 bg-cosmic-950/60 flex items-center justify-center">
-          <div className="bg-cosmic-800 rounded-lg p-4 w-full max-w-lg">
-            <h2 className="text-lg font-semibold mb-4">{t("Edit Astro Spot", "编辑观星地点")}</h2>
-            {/* Form components would go here */}
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="ghost" onClick={() => setShowEditDialog(false)}>
-                {t("Cancel", "取消")}
-              </Button>
-              <Button onClick={handleEditClose}>
-                {t("Save", "保存")}
-              </Button>
-            </div>
-          </div>
-        </div>,
-        portalContainer
-      )}
-    </div>
+    </motion.div>
   );
 };
 

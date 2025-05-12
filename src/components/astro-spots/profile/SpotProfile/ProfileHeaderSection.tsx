@@ -6,29 +6,25 @@ import SpotHeader from '@/components/astro-spots/profile/SpotHeader';
 
 interface ProfileHeaderSectionProps {
   spot: any;
-  isLoading: boolean;
   creatorProfile: any;
   loadingCreator: boolean;
-  isCreator?: boolean;
   onViewDetails: () => void;
+  comingFromCommunity: boolean;
   onMessageCreator: () => void;
-  comingFromCommunity?: boolean;
 }
 
 const ProfileHeaderSection: React.FC<ProfileHeaderSectionProps> = ({
   spot,
-  isLoading,
   creatorProfile,
   loadingCreator,
-  isCreator = false,
   onViewDetails,
-  comingFromCommunity = false,
+  comingFromCommunity,
   onMessageCreator
 }) => {
   const navigate = useNavigate();
 
   // Ensure we have a valid creator profile before trying to render the header
-  if (!spot || isLoading) {
+  if (!spot) {
     return <div className="animate-pulse h-32 bg-cosmic-800/50 rounded-lg mb-6"></div>;
   }
 

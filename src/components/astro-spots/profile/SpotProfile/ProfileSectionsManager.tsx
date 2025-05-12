@@ -7,44 +7,33 @@ import SpotComments from '@/components/astro-spots/profile/SpotComments';
 import { Comment } from '../types/comments';
 
 interface ProfileSectionsManagerProps {
-  spotId?: string;
+  spotId: string;
   spot: any;
-  isLoading: boolean;
   spotImages: string[];
   loadingImages: boolean;
-  user?: boolean;
-  isCreator?: boolean;
+  user: boolean;
+  isCreator: boolean;
   comments: Comment[];
   commentSending: boolean;
   onImagesUpdate: () => void;
   onCommentsUpdate: () => void;
   onCommentSubmit: (content: string, imageFile: File | null, parentId?: string | null) => Promise<void>;
-  storageChecked?: boolean;
 }
 
 const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
   spotId,
   spot,
-  isLoading,
   spotImages,
   loadingImages,
-  user = false,
-  isCreator = false,
+  user,
+  isCreator,
   comments,
   commentSending,
   onImagesUpdate,
   onCommentsUpdate,
-  onCommentSubmit,
-  storageChecked
+  onCommentSubmit
 }) => {
-  if (isLoading || !spot) {
-    return <div className="p-6 space-y-6 animate-pulse">
-      <div className="h-24 bg-cosmic-800/30 rounded-lg mb-4"></div>
-      <div className="h-32 bg-cosmic-800/20 rounded-lg"></div>
-    </div>;
-  }
-  
-  console.log(`ProfileSectionsManager received ${comments?.length || 0} comments`);
+  console.log(`ProfileSectionsManager received ${comments.length} comments`);
   
   return (
     <div className="p-6 space-y-6">
@@ -54,10 +43,10 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
         advantages={spot.astro_spot_advantages}
       />
       
-      {spotId && <TimeSlotManager spotId={spotId} isCreator={isCreator} />}
+      <TimeSlotManager spotId={spotId} isCreator={isCreator} />
       
       <SpotImageGallery
-        spotId={spot.id}
+        spotId={spotId}
         spotName={spot.name}
         spotImages={spotImages}
         loadingImages={loadingImages}
@@ -67,7 +56,7 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
       />
       
       <SpotComments
-        spotId={spot.id}
+        spotId={spotId}
         comments={comments}
         user={user}
         onCommentsUpdate={onCommentsUpdate}
