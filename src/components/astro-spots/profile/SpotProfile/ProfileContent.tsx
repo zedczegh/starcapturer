@@ -76,9 +76,11 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
         isCreator={isCreator}
         onMessageCreator={handleMessageCreator}
         onViewDetails={handleViewDetails}
+        comingFromCommunity={comingFromCommunity}
       />
       
       <ProfileSectionsManager
+        spotId={spot?.id}
         spot={spot}
         isLoading={isLoading}
         spotImages={spotImages || []}
@@ -88,6 +90,8 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
         onCommentSubmit={handleCommentSubmit}
         onCommentsUpdate={handleCommentsUpdate}
         onImagesUpdate={handleImagesUpdate}
+        user={user}
+        isCreator={isCreator}
         storageChecked={storageChecked}
       />
       

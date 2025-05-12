@@ -88,7 +88,7 @@ export const useAstroSpotComments = (
       // Handle image upload if provided
       if (imageFile) {
         try {
-          imageUrl = await uploadCommentImage(spotId, imageFile);
+          imageUrl = await uploadCommentImage(imageFile, t);
         } catch (error) {
           console.error("Error uploading image:", error);
         }
@@ -118,7 +118,7 @@ export const useAstroSpotComments = (
     } finally {
       setCommentSending(false);
     }
-  }, [spotId, commentSending, fetchComments]);
+  }, [spotId, commentSending, fetchComments, t]);
   
   return {
     comments,
