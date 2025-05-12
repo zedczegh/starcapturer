@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMessaging } from '@/hooks/useMessaging';
@@ -12,6 +11,7 @@ export const useMessageConversation = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeConversation, setActiveConversation] = useState<ConversationPartner | null>(null);
   const [isProcessingAction, setIsProcessingAction] = useState(false);
+  const [localConversations, setLocalConversations] = useState<ConversationPartner[]>([]);
   const navigationProcessedRef = useRef(false);
   
   const {
@@ -25,6 +25,11 @@ export const useMessageConversation = () => {
     fetchConversations,
     deleteConversation
   } = useMessaging();
+
+  // Keep local state in sync with conversations from useMessaging
+  useEffect(() => {
+    setLocalConversations(conversations);
+  }, [conversations]);
   
   // Handle incoming selectedUserId from navigation state with a stable reference
   useEffect(() => {
@@ -119,7 +124,10 @@ export const useMessageConversation = () => {
           handleBack();
         }
         
-        // Always fetch conversations to refresh the list after deletion
+        // Remove the conversation from the local state immediately
+        setLocalConversations(prev => prev.filter(conv => conv.id !== partnerId));
+        
+        // Fetch conversations to refresh the list after deletion
         await fetchConversations();
         
         toast.success(t("Conversation deleted", "对话已删除"));
@@ -143,7 +151,7 @@ export const useMessageConversation = () => {
     loading,
     sending,
     isProcessingAction,
-    conversations,
+    conversations: localConversations, // Use local conversations state
     handleSelectConversation,
     handleBack,
     handleSendMessage,

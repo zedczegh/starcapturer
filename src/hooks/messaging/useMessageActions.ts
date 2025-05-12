@@ -107,7 +107,6 @@ export const useMessageActions = (fetchMessages: (partnerId: string) => Promise<
     
     try {
       // Call the delete_conversation function using a direct query instead of rpc
-      // This works around the TypeScript limitation
       const { error } = await supabase
         .from('user_messages')
         .delete()
@@ -116,6 +115,9 @@ export const useMessageActions = (fetchMessages: (partnerId: string) => Promise<
       if (error) {
         throw error;
       }
+      
+      // Clear messages for this conversation
+      setMessages([]);
       
       return true;
     } catch (error) {

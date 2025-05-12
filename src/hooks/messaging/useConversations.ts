@@ -133,13 +133,24 @@ export const useConversations = () => {
       .channel('messages_channel')
       .on('postgres_changes', 
         { 
-          event: '*', 
+          event: '*', // Listen for all events: INSERT, UPDATE, DELETE
           schema: 'public', 
           table: 'user_messages',
           filter: `receiver_id=eq.${user.id}`
         }, 
         () => {
           console.log("Realtime update triggered, refreshing conversations");
+          fetchConversations();
+        }
+      )
+      .on('postgres_changes', 
+        { 
+          event: 'DELETE', // Also listen explicitly for DELETE events
+          schema: 'public', 
+          table: 'user_messages'
+        }, 
+        () => {
+          console.log("Message delete event triggered, refreshing conversations");
           fetchConversations();
         }
       )
