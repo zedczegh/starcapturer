@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { fetchFromSupabase } from '@/utils/supabaseFetch';
+import { extractLocationFromUrl } from '@/utils/locationLinkParser';
 
 export const useMessages = () => {
   const [messages, setMessages] = useState<any[]>([]);
@@ -53,6 +54,14 @@ export const useMessages = () => {
             }
           } catch (e) {
             console.error("Failed to parse location data:", e);
+          }
+        }
+        
+        // Check if text message contains a location link
+        if (!locationData && msg.message) {
+          const extractedLocation = extractLocationFromUrl(msg.message);
+          if (extractedLocation) {
+            locationData = extractedLocation;
           }
         }
         
