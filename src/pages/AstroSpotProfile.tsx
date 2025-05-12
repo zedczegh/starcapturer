@@ -21,23 +21,16 @@ const AstroSpotProfilePage = () => {
       return;
     }
     
-    // Check if we should preserve cache when coming from marker popup
-    const noRefresh = location.state?.noRefresh;
-    
-    if (!noRefresh) {
-      // Clear any cached data for the previous spot
-      clearSpotCache(id);
-    }
+    // Clear any cached data for the previous spot
+    clearSpotCache(id);
     
     // Generate a unique mount key using ID and timestamp
     const newMountKey = `profile-${id}-${location.state?.timestamp || Date.now()}`;
-    console.log("Setting new mount key:", newMountKey, "noRefresh:", noRefresh);
+    console.log("Setting new mount key:", newMountKey);
     setMountKey(newMountKey);
     
-    // Make sure profile loads correctly if not using no-refresh mode
-    if (!noRefresh) {
-      makeSureProfileLoadsCorrectly(id);
-    }
+    // Make sure profile loads correctly by clearing spot-specific cache
+    makeSureProfileLoadsCorrectly(id);
     
     // Check for potential cache loop issues
     const isCacheLoop = detectProfileCacheLoop(id);
@@ -51,20 +44,18 @@ const AstroSpotProfilePage = () => {
       console.log("Adding timestamp to AstroSpot profile:", id, timestamp);
       
       // Replace current navigation state with timestamp to ensure fresh rendering
-      // but preserve the noRefresh flag if present
       navigate(`/astro-spot/${id}`, {
         state: { 
           ...(location.state || {}),
           timestamp,
-          forcedReset: !noRefresh, // Don't force reset if noRefresh is true
-          noRefresh: noRefresh // Preserve noRefresh flag
+          forcedReset: true
         },
         replace: true
       });
     }
   }, [id, location.state, navigate]);
   
-  console.log("Rendering AstroSpot profile with key:", mountKey, "for ID:", id, "noRefresh:", location.state?.noRefresh);
+  console.log("Rendering AstroSpot profile with key:", mountKey, "for ID:", id);
   
   return (
     <AnimatePresence mode="wait">
@@ -73,7 +64,7 @@ const AstroSpotProfilePage = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }} // Shorter animation for less flash
+        transition={{ duration: 0.3 }}
       >
         <AstroSpotProfile key={mountKey} />
       </motion.div>
