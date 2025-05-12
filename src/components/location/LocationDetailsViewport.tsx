@@ -3,13 +3,15 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LocationDetailsContent from "./LocationDetailsContent";
 import LocationStatusMessage from "./LocationStatusMessage";
+import { formatDate, formatTime } from "@/components/forecast/ForecastUtils";
+import WeatherAlerts from "@/components/weather/WeatherAlerts";
+import { useIsMobile } from "@/hooks/use-mobile";
+import LocationDetailsHeader from "./LocationDetailsHeader";
+import { Search, RefreshCcw, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import LocationSearch from "./LocationSearch";
-import LocationDetailsHeader from "./LocationDetailsHeader";
-import NavigationSection from "./viewport/NavigationSection";
-import ErrorDisplay from "./viewport/ErrorDisplay";
-import WeatherAlertsSection from "./viewport/WeatherAlertsSection";
-import { useIsMobile } from "@/hooks/use-mobile";
+import NavigationButtons from "./navigation/NavigationButtons";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -102,6 +104,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const paddingTop = isMobile ? 'pt-16' : 'pt-14';
   const weatherAlerts = locationData?.weatherData?.alerts || [];
 
+  // --- Improved Refresh Button Functionality ---
   // Manual refresh that triggers actual data refresh
   const handleManualRefresh = useCallback(() => {
     if (refreshing) return;
@@ -162,13 +165,42 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       data-refresh-trigger="true"
       ref={detailsContainerRef}
     >
-      {/* Navigation Section */}
-      <NavigationSection
-        locationData={locationData}
-        onOpenSearch={() => setSearchDialogOpen(true)}
-        onRefresh={handleManualRefresh}
-        refreshing={refreshing}
-      />
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {/* Navigation app picker button */}
+          {locationData?.latitude && locationData?.longitude && (
+            <NavigationButtons 
+              latitude={locationData.latitude}
+              longitude={locationData.longitude}
+              locationName={locationData?.name || ""}
+            />
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-1 font-medium"
+            onClick={handleManualRefresh}
+            disabled={refreshing}
+            title={t("Refresh", "刷新")}
+          >
+            <RefreshCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            <span className={isMobile ? "sr-only" : ""}>
+              {t("Refresh", "刷新")}
+            </span>
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setSearchDialogOpen(true)}
+            className="flex items-center gap-1 font-medium"
+          >
+            <Search className="h-4 w-4" />
+            <span className={isMobile ? "sr-only" : ""}>
+              {t("Search", "搜索")}
+            </span>
+          </Button>
+        </div>
+      </div>
       
       {/* Search Dialog */}
       <Dialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen}>
@@ -177,7 +209,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         </DialogContent>
       </Dialog>
       
-      {/* Status Message */}
       {statusMessage && (
         <LocationStatusMessage 
           message={statusMessage}
@@ -185,10 +216,16 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         />
       )}
       
-      {/* Error Display */}
-      <ErrorDisplay errorMessage={errorState} />
+      {errorState && (
+        <div className="mb-4 rounded-md border border-red-800/40 bg-red-900/20 p-3 text-sm">
+          <div className="flex items-center">
+            <AlertTriangle className="mr-2 h-4 w-4 text-red-400" />
+            <span className="text-red-200">{errorState}</span>
+          </div>
+        </div>
+      )}
       
-      {/* Location Header */}
+      {/* Add the enhanced location details header */}
       <LocationDetailsHeader 
         name={locationData?.name}
         latitude={locationData?.latitude}
@@ -196,10 +233,17 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         timestamp={locationData?.timestamp}
       />
       
-      {/* Weather Alerts */}
-      <WeatherAlertsSection alerts={weatherAlerts} />
+      {weatherAlerts && weatherAlerts.length > 0 && (
+        <div className="mb-8">
+          <WeatherAlerts 
+            alerts={weatherAlerts}
+            formatTime={formatTime}
+            formatDate={formatDate}
+          />
+        </div>
+      )}
       
-      {/* Main Content */}
+      {/* Use the key to force remount when location changes */}
       <div key={contentKey} className="content-wrapper">
         <LocationDetailsContent 
           locationData={locationData}

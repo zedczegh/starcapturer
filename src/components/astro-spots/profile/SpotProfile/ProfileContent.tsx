@@ -1,29 +1,23 @@
 
-import React, { useState } from "react";
+import React, { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
-import ProfileHeaderSection from "./ProfileHeaderSection";
-import ProfileSectionsManager from "./ProfileSectionsManager";
-import ProfileEditButton from "./ProfileEditButton";
-import { Dialog } from "@/components/ui/dialog";
-import SpotDetails from "../SpotDetails";
-import useProfileContents from "@/hooks/astro-spots/useProfileContents";
+import LocationDetailsLoading from "@/components/location/LocationDetailsLoading";
+import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
+import ProfileHeaderSection from './ProfileHeaderSection';
+import ProfileSectionsManager from './ProfileSectionsManager';
+import ProfileEditButton from './ProfileEditButton';
+import useProfileContent from '@/hooks/astro-spots/useProfileContent';
 
 interface ProfileContentProps {
   spotId: string;
   user: boolean;
-  comingFromCommunity?: boolean;
-  noRefresh?: boolean;
+  comingFromCommunity: boolean;
 }
 
-const ProfileContent: React.FC<ProfileContentProps> = ({
-  spotId,
-  user,
-  comingFromCommunity = false,
-  noRefresh = false
-}) => {
+const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFromCommunity }) => {
   const { t } = useLanguage();
-  const [activeSection, setActiveSection] = useState<string>("overview");
-
+  
   const {
     spot,
     isLoading,
@@ -42,75 +36,71 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
     handleCommentSubmit,
     handleImagesUpdate,
     handleMessageCreator,
-    storageChecked,
     refreshData,
     triggerRefresh
-  } = useProfileContents(spotId, user, comingFromCommunity, t, { noRefresh });
+  } = useProfileContent(spotId, user, comingFromCommunity, t);
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col space-y-4 animate-pulse">
-        <div className="h-32 bg-cosmic-800/70 rounded-md"></div>
-        <div className="h-12 w-3/4 bg-cosmic-800/70 rounded-md"></div>
-        <div className="h-16 bg-cosmic-800/70 rounded-md"></div>
-        <div className="h-32 bg-cosmic-800/70 rounded-md"></div>
-      </div>
-    );
-  }
+  // Force data refresh when spotId changes
+  useEffect(() => {
+    console.log("ProfileContent: Spot ID changed, refreshing data:", spotId);
+    if (refreshData) {
+      refreshData();
+    }
+  }, [spotId, refreshData]);
 
-  if (!spot) {
-    return (
-      <div className="py-10 text-center">
-        <h2 className="text-2xl text-red-400">{t("Error: AstroSpot not found", "错误：未找到天文点")}</h2>
-        <p className="mt-2 text-gray-400">{t("This spot may have been removed or you don't have permission to view it.", "该天文点可能已被删除或您没有查看权限。")}</p>
-      </div>
-    );
+  if (isLoading || !spot) {
+    return <LocationDetailsLoading />;
   }
 
   return (
-    <div>
-      {isCreator && (
-        <ProfileEditButton 
-          onClick={() => setShowEditDialog(true)} 
-          className="absolute top-2 right-2"
-        />
-      )}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden relative"
+    >
+      <ProfileEditButton 
+        isCreator={isCreator} 
+        comingFromCommunity={comingFromCommunity} 
+        onClick={() => setShowEditDialog(true)} 
+      />
 
       <ProfileHeaderSection
         spot={spot}
-        isCreator={isCreator}
         creatorProfile={creatorProfile}
         loadingCreator={loadingCreator}
+        onViewDetails={handleViewDetails}
+        comingFromCommunity={comingFromCommunity}
+        onMessageCreator={handleMessageCreator}
+      />
+      
+      <ProfileSectionsManager
+        spotId={spotId}
+        spot={spot}
         spotImages={spotImages}
         loadingImages={loadingImages}
-        onImagesUpdate={handleImagesUpdate}
-        onMessageCreator={handleMessageCreator}
-        comingFromCommunity={comingFromCommunity}
-        onViewDetails={handleViewDetails}
-      />
-
-      <ProfileSectionsManager
-        spot={spot}
+        user={user}
+        isCreator={isCreator}
         comments={comments}
         commentSending={commentSending}
-        onCommentSubmit={handleCommentSubmit}
+        onImagesUpdate={handleImagesUpdate}
         onCommentsUpdate={handleCommentsUpdate}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        storageChecked={storageChecked}
-        triggerRefresh={triggerRefresh}
+        onCommentSubmit={handleCommentSubmit}
       />
 
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        {showEditDialog && (
-          <SpotDetails
-            originalSpot={spot}
-            onClose={handleEditClose}
-            editMode={true}
-          />
-        )}
-      </Dialog>
-    </div>
+      {showEditDialog && spot && isCreator && (
+        <CreateAstroSpotDialog
+          latitude={spot.latitude}
+          longitude={spot.longitude}
+          defaultName={spot.name}
+          isEditing={true}
+          spotId={spot.id}
+          defaultDescription={spot.description}
+          trigger={<div />}
+          onClose={handleEditClose}
+        />
+      )}
+    </motion.div>
   );
 };
 

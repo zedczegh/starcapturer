@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
-import { useLanguage } from "@/contexts/LanguageContext";
 import NavBar from "@/components/NavBar";
 import ProfileContent from './ProfileContent';
 import ProfileFooter from './ProfileFooter';
@@ -16,7 +15,6 @@ const AstroSpotProfile = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { t } = useLanguage();
   const { user } = useAuth();
   const [comingFromCommunity, setComingFromCommunity] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,19 +22,12 @@ const AstroSpotProfile = () => {
   const previousIdRef = useRef<string | null>(null);
   const mountTimeRef = useRef<number>(Date.now());
   const isInitialMount = useRef(true);
-  const [noRefresh, setNoRefresh] = useState(false);
   
   // Improved component initialization
   useEffect(() => {
     // Track where we came from for proper back button behavior
     if (location.state?.from === "community") {
       setComingFromCommunity(true);
-      
-      // If coming from a community marker popup, don't refresh data
-      if (location.state?.fromMarker) {
-        console.log("Coming from marker popup - disabling automatic refresh");
-        setNoRefresh(true);
-      }
     }
     
     // Generate a stable identifier for this profile view
@@ -79,7 +70,7 @@ const AstroSpotProfile = () => {
         <NavBar />
         <div className="container max-w-4xl py-8 px-4 md:px-6 relative">
           <div className="text-center py-12">
-            <h1 className="text-2xl text-red-400 mb-4">{t("Error: No AstroSpot ID provided", "错误：未提供天文点ID")}</h1>
+            <h1 className="text-2xl text-red-400 mb-4">Error: No AstroSpot ID provided</h1>
             <BackButton 
               destination="/community" 
               className="mx-auto"
@@ -120,7 +111,6 @@ const AstroSpotProfile = () => {
               spotId={id} 
               user={!!user} 
               comingFromCommunity={comingFromCommunity}
-              noRefresh={noRefresh}
               key={profileKey}
             />
           </motion.div>

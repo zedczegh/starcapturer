@@ -115,8 +115,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       state: { 
         from: "community", 
         spotId: spot.id,
-        timestamp, // Essential for forcing component remount
-        fromMarker: true // Flag to indicate navigation from marker popup
+        timestamp // Essential for forcing component remount
       },
       replace: false // Important to create new history entry
     });
@@ -135,9 +134,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     <Marker
       position={[spot.latitude, spot.longitude]}
       icon={icon}
-      eventHandlers={{
-        click: handleClick
-      }}
+      onClick={handleClick}
       ref={markerRef}
     >
       <Popup
@@ -171,8 +168,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
                 state: { 
                   from: "community", 
                   spotId: spot.id,
-                  timestamp, // Essential for forcing component remount
-                  fromMarker: true // Flag to indicate coming from a marker popup
+                  timestamp // Essential for forcing component remount
                 },
                 replace: false 
               });

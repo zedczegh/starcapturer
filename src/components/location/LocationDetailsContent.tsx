@@ -1,13 +1,15 @@
-import React, { memo, useEffect, useState, useRef } from "react";
+
+import React, { memo, Suspense, useEffect, useState, useRef } from "react";
+import StatusMessage from "@/components/location/StatusMessage";
 import LocationContentLoader from "./LocationContentLoader";
+import LocationFaultedMessage from "./LocationFaultedMessage";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Loader } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+// Import the component directly instead of lazy loading it
 import LocationContentGrid from "./LocationContentGrid";
 import { useLocationContentManager } from "./useLocationContentManager";
-import StatusMessageDisplay from "./content/StatusMessageDisplay";
-import ManualRefreshButton from "./content/ManualRefreshButton";
-import LocationFaultedView from "./content/LocationFaultedView";
-import ContentVisibilityWrapper from "./content/ContentVisibilityWrapper";
-import LoadingView from "./content/LoadingView";
 
 interface LocationDetailsContentProps {
   locationData: any;
@@ -97,7 +99,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     };
   }, [contentMounted, memoizedLocationData]);
 
-  // Fix for cases where SIQS is unavailable
+  // Fix for cases where SIQS is unavailable – show manual refresh button when loaded but no SIQS
   const shouldShowManualRefresh = 
     memoizedLocationData &&
     !loading &&
@@ -134,37 +136,67 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   }, [faulted]);
 
   if (!memoizedLocationData) {
-    return <LoadingView />;
+    return (
+      <div className="p-4 text-center">
+        <Loader className="mx-auto mb-2 h-6 w-6 animate-spin" />
+        <p className="text-sm">{t("Loading location data...", "正在加载位置数据...")}</p>
+      </div>
+    );
   }
 
   if (faulted && showFaultedMessage) {
     return (
-      <LocationFaultedView 
-        onManualRefresh={handleManualRefresh} 
-        isRetrying={isRetrying} 
-      />
+      <div className="p-4 text-center">
+        <LocationFaultedMessage show />
+        <Button 
+          variant="outline" 
+          className="mt-4"
+          onClick={handleManualRefresh}
+          disabled={isRetrying}
+        >
+          {isRetrying ? (
+            <>
+              <Loader className="mr-2 h-4 w-4 animate-spin" />
+              {t("Retrying...", "重试中...")}
+            </>
+          ) : (
+            t("Retry Loading Data", "重试加载数据")
+          )}
+        </Button>
+      </div>
     );
   }
 
   return (
-    <ContentVisibilityWrapper
-      visible={contentVisible}
-      containerRef={containerRef}
-      dataAttributes={{
-        'location-id': locationData?.id || '',
-        'content-mounted': contentMounted ? "true" : "false"
+    <div 
+      className={`transition-all duration-200 ${contentVisible ? 'opacity-100' : 'opacity-0'}`} 
+      ref={(node) => {
+        containerRef.current = node;
+        contentRef.current = node;
       }}
+      data-location-id={locationData?.id}
+      data-content-mounted={contentMounted ? "true" : "false"}
     >
-      <StatusMessageDisplay 
+      <StatusMessage 
         message={statusMessage} 
         onClear={() => setStatusMessage(null)} 
+        autoHideDuration={2000} // Reduced from 3000ms to 2000ms
       />
 
       {shouldShowManualRefresh && (
-        <ManualRefreshButton 
-          onRefresh={handleManualRefresh}
-          isRetrying={isRetrying}
-        />
+        <div className="mb-4 flex justify-center">
+          <Button 
+            variant="outline" 
+            onClick={handleManualRefresh}
+            disabled={isRetrying}
+            className="flex items-center gap-2"
+          >
+            {isRetrying ? (
+              <Loader className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            {t("Manually Refresh Data", "手动刷新数据")}
+          </Button>
+        </div>
       )}
 
       {loading || !contentLoaded ? (
@@ -194,7 +226,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
           />
         </div>
       )}
-    </ContentVisibilityWrapper>
+    </div>
   );
 });
 

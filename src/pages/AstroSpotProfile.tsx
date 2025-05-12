@@ -28,7 +28,7 @@ const AstroSpotProfilePage = () => {
       setIsInitialized(true);
     }
     
-    // Only generate a new mount key when the ID changes or timestamp provided
+    // Only generate a new mount key when the ID changes, not on every state update
     if (!location.state?.preserveMounting) {
       // Generate a unique mount key using ID and a stable timestamp
       // Use location.state?.timestamp if present, or current time if not
@@ -52,7 +52,7 @@ const AstroSpotProfilePage = () => {
         });
       }
     }
-  }, [id, navigate, location.state, isInitialized]);
+  }, [id, navigate]);
   
   console.log("Rendering AstroSpot profile with key:", mountKey, "for ID:", id);
   
@@ -63,7 +63,7 @@ const AstroSpotProfilePage = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }} // Reduced animation time for faster transitions
+        transition={{ duration: 0.2 }} // Reduce animation time to make transitions faster
       >
         <AstroSpotProfile key={mountKey} />
       </motion.div>
