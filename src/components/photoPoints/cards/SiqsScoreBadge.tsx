@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star } from "lucide-react";
 import { formatSiqsForDisplay, getSiqsScore } from '@/utils/siqsHelpers';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SiqsScoreBadgeProps {
   score: number | { score: number; isViable: boolean } | null;
@@ -22,11 +23,24 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   forceCertified = false,
   confidenceScore = 10
 }) => {
+  const isMobile = useIsMobile();
+  const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
+  
   // Extract numeric score from any score format
   const numericScore = score !== null ? getSiqsScore(score) : null;
   
+  // Update stabilized score when the numeric score changes
+  useEffect(() => {
+    if (numericScore !== null && numericScore > 0) {
+      setStabilizedScore(numericScore);
+    }
+  }, [numericScore]);
+  
+  // Use stabilized score if available, otherwise use the current score
+  const displayNumericScore = stabilizedScore !== null ? stabilizedScore : numericScore;
+  
   // Format score for display
-  const displayScore = formatSiqsForDisplay(numericScore);
+  const displayScore = formatSiqsForDisplay(displayNumericScore);
   
   // Get color class based on score value
   const getColorClass = (scoreValue: number | null) => {
@@ -38,13 +52,24 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     return 'text-red-500';
   };
   
-  const colorClass = getColorClass(numericScore);
+  const colorClass = getColorClass(displayNumericScore);
   const showCertificationStar = isCertified || forceCertified;
   
-  // Show loading skeleton if loading
-  if (loading) {
+  // Make badge sizing responsive
+  const getBadgeSize = () => {
+    if (isMobile && compact) {
+      return 'h-4';
+    } else if (compact) {
+      return 'h-5';
+    } else {
+      return 'h-6';
+    }
+  };
+  
+  // Show loading skeleton if loading and no stabilized score
+  if (loading && !stabilizedScore) {
     return (
-      <div className={`flex items-center ${compact ? 'h-5' : 'h-6'} ${className}`}>
+      <div className={`flex items-center ${getBadgeSize()} ${className}`}>
         <div className="animate-pulse bg-muted-foreground/20 rounded h-full w-12"></div>
       </div>
     );
@@ -58,14 +83,14 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     >
       {showCertificationStar && (
         <Star 
-          className={`h-3.5 w-3.5 ${isCertified ? 'text-yellow-400 fill-yellow-400' : 'text-muted'}`} 
+          className={`${isMobile && compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} ${isCertified ? 'text-yellow-400 fill-yellow-400' : 'text-muted'}`} 
         />
       )}
-      <span className={`${compact ? 'text-sm' : 'text-base'} font-medium ${colorClass}`}>
+      <span className={`${compact ? (isMobile ? 'text-xs' : 'text-sm') : 'text-base'} font-medium ${colorClass}`}>
         {displayScore}
       </span>
     </div>
   );
 };
 
-export default SiqsScoreBadge;
+export default React.memo(SiqsScoreBadge);

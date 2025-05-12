@@ -10,8 +10,14 @@ const LoginPrompt: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   
+  // Preload auth dialog on hover for faster rendering
+  const handleButtonHover = React.useCallback(() => {
+    // Preload the auth dialog component
+    import("@/components/auth/AuthDialog").catch(() => {});
+  }, []);
+  
   return (
-    <div className="container mx-auto px-4 py-20 flex flex-col items-center justify-center">
+    <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center">
       <Card className="p-8 max-w-md w-full glassmorphism text-center">
         <MessageCircle className="mx-auto h-16 w-16 mb-4 text-primary/40" />
         <h2 className="text-xl font-semibold text-white mb-4">
@@ -23,15 +29,25 @@ const LoginPrompt: React.FC = () => {
             "您需要登录才能访问您的消息和对话。"
           )}
         </p>
-        <Button 
-          onClick={() => navigate('/photo-points')} 
-          className="w-full"
-        >
-          {t("Back to Photo Points", "返回照片点位")}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button 
+            onClick={() => navigate('/photo-points')} 
+            variant="outline"
+            className="w-full"
+          >
+            {t("Back to Photo Points", "返回照片点位")}
+          </Button>
+          <Button 
+            onClick={() => navigate('/auth', { state: { returnTo: '/messages' } })}
+            className="w-full"
+            onMouseEnter={handleButtonHover}
+          >
+            {t("Sign In", "登录")}
+          </Button>
+        </div>
       </Card>
     </div>
   );
 };
 
-export default LoginPrompt;
+export default React.memo(LoginPrompt);

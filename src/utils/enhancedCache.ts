@@ -1,4 +1,3 @@
-
 /**
  * Enhanced caching utility with memory optimization and performance improvements
  */
@@ -14,12 +13,14 @@ interface CacheItem<T> {
 class EnhancedCache {
   private strongCache: Map<string, CacheItem<any>>;
   private expiryTimes: Map<string, number>;
+  private frequencyMap: Map<string, number>; // Track access frequency
   private lastCleanup: number;
   private cleanupInterval: number;
   
   constructor(cleanupIntervalMs: number = 5 * 60 * 1000) { // Default 5 minutes
     this.strongCache = new Map();
     this.expiryTimes = new Map();
+    this.frequencyMap = new Map();
     this.lastCleanup = Date.now();
     this.cleanupInterval = cleanupIntervalMs;
   }
@@ -28,8 +29,8 @@ class EnhancedCache {
    * Get cached item if it exists and isn't expired
    */
   get<T>(key: string): T | null {
-    // Run cleanup if needed
-    this.conditionalCleanup();
+    // Run cleanup if needed - but use light cleanup for faster response
+    this.conditionalLightCleanup();
     
     const item = this.strongCache.get(key);
     if (!item) return null;
@@ -38,8 +39,12 @@ class EnhancedCache {
     if (now > item.expiry) {
       this.strongCache.delete(key);
       this.expiryTimes.delete(key);
+      this.frequencyMap.delete(key);
       return null;
     }
+    
+    // Update access frequency
+    this.frequencyMap.set(key, (this.frequencyMap.get(key) || 0) + 1);
     
     return item.data;
   }
@@ -58,7 +63,8 @@ class EnhancedCache {
     });
     
     this.expiryTimes.set(key, expiry);
-    this.conditionalCleanup();
+    this.frequencyMap.set(key, this.frequencyMap.get(key) || 0);
+    this.conditionalLightCleanup();
   }
   
   /**
@@ -66,6 +72,7 @@ class EnhancedCache {
    */
   delete(key: string): boolean {
     this.expiryTimes.delete(key);
+    this.frequencyMap.delete(key);
     return this.strongCache.delete(key);
   }
   
@@ -75,38 +82,66 @@ class EnhancedCache {
   clear(): void {
     this.strongCache.clear();
     this.expiryTimes.clear();
+    this.frequencyMap.clear();
   }
   
   /**
-   * Run cleanup if enough time has passed since last cleanup
+   * Run only essential cleanup if enough time has passed
+   * This is faster than full cleanup
    */
-  private conditionalCleanup(): void {
+  private conditionalLightCleanup(): void {
     const now = Date.now();
     if (now - this.lastCleanup > this.cleanupInterval) {
-      this.cleanup();
+      // Only clean expired items to keep it fast
+      this.lightCleanup();
       this.lastCleanup = now;
     }
   }
   
   /**
-   * Remove expired items from cache
+   * Clean up only expired items for faster performance
    */
-  private cleanup(): void {
+  private lightCleanup(): void {
     const now = Date.now();
     let expiredCount = 0;
     
-    // Use the expiry index for faster expiration checks
+    // Fast expiration check
     for (const [key, expiry] of this.expiryTimes.entries()) {
       if (now > expiry) {
         this.strongCache.delete(key);
         this.expiryTimes.delete(key);
+        this.frequencyMap.delete(key);
         expiredCount++;
       }
     }
+  }
+  
+  /**
+   * Full cleanup including cache size management
+   * Called less frequently to manage cache size
+   */
+  runFullCleanup(maxItems: number = 100): void {
+    const now = Date.now();
     
-    if (expiredCount > 0) {
-      console.log(`Cache cleanup: removed ${expiredCount} expired items`);
+    // First remove expired items
+    this.lightCleanup();
+    
+    // If still too many items, remove least frequently accessed
+    if (this.strongCache.size > maxItems) {
+      // Convert to array for sorting
+      const entries = Array.from(this.frequencyMap.entries());
+      
+      // Sort by frequency ascending (least used first)
+      entries.sort((a, b) => a[1] - b[1]);
+      
+      // Remove least used items
+      const itemsToRemove = entries.slice(0, entries.length - maxItems);
+      for (const [key] of itemsToRemove) {
+        this.delete(key);
+      }
     }
+    
+    this.lastCleanup = now;
   }
   
   // Add entries method for iteration
@@ -117,6 +152,18 @@ class EnhancedCache {
 
 // Create singleton instance
 const globalCache = new EnhancedCache();
+
+// Run full cleanup periodically
+if (typeof window !== 'undefined') {
+  // Run full cleanup less frequently in the background
+  setInterval(() => {
+    try {
+      globalCache.runFullCleanup();
+    } catch (e) {
+      console.error("Cache cleanup error:", e);
+    }
+  }, 30 * 60 * 1000); // 30 minutes
+}
 
 /**
  * Fetch with enhanced caching
@@ -167,4 +214,22 @@ export function clearCacheForUrls(urlPatterns: string[]): void {
  */
 export function clearAllCache(): void {
   globalCache.clear();
+}
+
+/**
+ * Prefetch data and store in cache
+ * This can be used to preload resources for faster access
+ */
+export async function prefetchData<T>(
+  url: string,
+  options?: RequestInit,
+  cacheDuration = 30 * 60 * 1000
+): Promise<T | null> {
+  try {
+    const data = await fetchWithEnhancedCache<T>(url, options, cacheDuration);
+    return data;
+  } catch (error) {
+    console.error(`Error prefetching ${url}:`, error);
+    return null;
+  }
 }
