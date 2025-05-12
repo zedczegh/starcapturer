@@ -82,7 +82,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
 
   const handleClick = () => {
     if (onMarkerClick) {
-      // Use the provided click handler which will handle navigation
+      // Use the provided click handler for custom navigation
       onMarkerClick(spot);
     } else {
       // Open popup when clicked on mobile
@@ -100,6 +100,11 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
 
   // Navigation function to ensure consistent navigation
   const navigateToSpotProfile = () => {
+    if (!spot || !spot.id) {
+      console.error("Invalid spot data:", spot);
+      return;
+    }
+    
     navigate(`/astro-spot/${spot.id}`, { 
       state: { 
         from: "community", 

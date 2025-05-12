@@ -42,8 +42,9 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
     );
   }
 
+  // Handle card click with proper logging for debugging
   const handleCardClick = (id: string) => {
-    console.log("Card clicked:", id);
+    console.log("Location card clicked with ID:", id);
     onCardClick(id);
   };
 
@@ -58,7 +59,7 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
       </h2>
 
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-        {sortedAstroSpots.map((spot: any) => (
+        {sortedAstroSpots.map((spot) => (
           <button
             key={spot.id}
             className="relative text-left group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
