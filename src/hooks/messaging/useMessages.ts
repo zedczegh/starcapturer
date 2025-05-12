@@ -87,7 +87,7 @@ export const useMessages = () => {
     try {
       // Check cache first
       const cacheKey = `${MESSAGE_CACHE_KEY_PREFIX}${user.id}_${conversationPartnerId}`;
-      const cachedMessages = optimizedCache.getCachedItem(cacheKey);
+      const cachedMessages = optimizedCache.getCachedItem<any[]>(cacheKey);
       
       if (cachedMessages) {
         console.log("Using cached messages");
@@ -113,7 +113,8 @@ export const useMessages = () => {
       // Update cache
       optimizedCache.setCachedItem(cacheKey, formattedMessages, MESSAGE_CACHE_TTL);
       
-      setMessages(formattedMessages);
+      // Fix the type error by ensuring we're setting an array
+      setMessages(formattedMessages as any[]);
       
       // Mark messages as read in a non-blocking way
       if (messagesData && messagesData.length > 0) {

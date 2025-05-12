@@ -138,6 +138,15 @@ class OptimizedCache {
   }
   
   /**
+   * Initialize the cache system
+   * This ensures the cache is ready to use
+   */
+  initializeCache(): void {
+    this.cleanExpiredItems();
+    console.log('Cache system initialized');
+  }
+  
+  /**
    * Clean up expired items to free up space
    */
   private cleanExpiredItems(): void {
@@ -216,3 +225,24 @@ class OptimizedCache {
 
 // Export singleton instance
 export const optimizedCache = new OptimizedCache();
+
+// Export direct cache functions for easier access
+export const getCachedItem = <T>(key: string): T | null => {
+  return optimizedCache.getCachedItem<T>(key);
+};
+
+export const setCachedItem = <T>(key: string, data: T, ttlMs?: number): void => {
+  optimizedCache.setCachedItem<T>(key, data, ttlMs);
+};
+
+export const removeCachedItem = (key: string): void => {
+  optimizedCache.removeCachedItem(key);
+};
+
+export const clearCache = (prefix?: string): void => {
+  optimizedCache.clearCache(prefix);
+};
+
+export const initializeCache = (): void => {
+  optimizedCache.initializeCache();
+};
