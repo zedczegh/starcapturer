@@ -45,12 +45,19 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
   const messageListRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
+  // Using CSS visibility instead of conditional rendering to prevent layout shifts
+  const conversationListVisible = !activeConversation || !isMobile;
+  const messagesVisible = activeConversation || !isMobile;
+
   return (
     <div className={`flex flex-col md:flex-row gap-4 ${isMobile ? 'h-[calc(100vh-5rem)]' : 'h-[80vh]'} scrollbar-hide`}>
-      <Card className={`${activeConversation ? 'hidden md:flex' : 'flex'} 
-        w-full md:w-1/3 glassmorphism overflow-hidden flex-col
-        border border-cosmic-800/30 shadow-xl backdrop-blur-lg
-        ${isMobile && !activeConversation ? 'h-full max-h-[calc(100vh-5rem)]' : ''}`}
+      <Card 
+        className={`md:flex md:w-1/3 glassmorphism overflow-hidden flex-col
+          border border-cosmic-800/30 shadow-xl backdrop-blur-lg
+          ${isMobile ? 
+            (conversationListVisible ? 'flex h-full max-h-[calc(100vh-5rem)]' : 'hidden') : 
+            'flex'}
+        `}
       >
         <ConversationList 
           conversations={conversations}
@@ -65,10 +72,12 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
       </Card>
       
       <Card 
-        className={`${!activeConversation ? 'hidden md:flex' : 'flex'} 
-          w-full md:w-2/3 glassmorphism overflow-hidden flex flex-col
+        className={`md:flex md:w-2/3 glassmorphism overflow-hidden flex flex-col
           border border-cosmic-800/30 shadow-xl backdrop-blur-lg relative h-full
-          ${isMobile && activeConversation ? 'h-full max-h-[calc(100vh-5rem)]' : ''}`}
+          ${isMobile ? 
+            (messagesVisible ? 'flex h-full max-h-[calc(100vh-5rem)]' : 'hidden') : 
+            'flex'}
+        `}
         ref={messageListRef}
         data-active-conversation-id={activeConversation?.id || ''}
       >
