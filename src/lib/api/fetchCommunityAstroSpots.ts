@@ -26,7 +26,7 @@ export async function fetchCommunityAstroSpots() {
       {
         ttl: 5 * 60 * 1000, // 5 minutes cache
         persistToStorage: true,
-        cacheKey: 'community-spots-list'
+        namespace: 'community-spots-list' // Use namespace instead of cacheKey
       }
     );
 
