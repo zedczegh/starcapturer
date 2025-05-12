@@ -8,6 +8,7 @@ import ProfileHeaderSection from './ProfileHeaderSection';
 import ProfileSectionsManager from './ProfileSectionsManager';
 import ProfileEditButton from './ProfileEditButton';
 import useProfileContent from '@/hooks/astro-spots/useProfileContent';
+import { useLocation } from 'react-router-dom';
 
 interface ProfileContentProps {
   spotId: string;
@@ -17,6 +18,7 @@ interface ProfileContentProps {
 
 const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFromCommunity }) => {
   const { t } = useLanguage();
+  const location = useLocation();
   
   const {
     spot,
@@ -40,13 +42,16 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     triggerRefresh
   } = useProfileContent(spotId, user, comingFromCommunity, t);
 
-  // Force data refresh when spotId changes
+  // Only force data refresh when spotId changes and not coming from a marker popup (noRefresh flag)
   useEffect(() => {
-    console.log("ProfileContent: Spot ID changed, refreshing data:", spotId);
-    if (refreshData) {
+    const shouldRefresh = refreshData && !location.state?.noRefresh;
+    console.log("ProfileContent: Spot ID changed, refreshData?", shouldRefresh, "noRefresh flag:", location.state?.noRefresh);
+    
+    if (shouldRefresh) {
+      console.log("ProfileContent: Refreshing data for spot:", spotId);
       refreshData();
     }
-  }, [spotId, refreshData]);
+  }, [spotId, refreshData, location.state?.noRefresh]);
 
   if (isLoading || !spot) {
     return <LocationDetailsLoading />;
@@ -56,7 +61,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.3 }} // Shorter animation for smoother transitions
       className="glassmorphism rounded-xl border border-cosmic-700/50 shadow-glow overflow-hidden relative"
     >
       <ProfileEditButton 
