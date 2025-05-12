@@ -133,17 +133,22 @@ export function isSiqsGreaterThan(siqs: SiqsScore | any, threshold: number): boo
  */
 export function sortLocationsBySiqs<T extends { siqs?: SiqsScore | any; realTimeSiqs?: number }>(locations: T[]): T[] {
   return [...locations].sort((a, b) => {
-    const aRealTime = a.realTimeSiqs;
-    const bRealTime = b.realTimeSiqs;
+    // First sort by certification status
+    const aIsCertified = 'certification' in a || 'isDarkSkyReserve' in a;
+    const bIsCertified = 'certification' in b || 'isDarkSkyReserve' in b;
     
-    const aSiqs = typeof aRealTime === "number" && aRealTime > 0
-      ? aRealTime
+    if (aIsCertified && !bIsCertified) return -1;
+    if (!aIsCertified && bIsCertified) return 1;
+    
+    // Then sort by SIQS score (highest first)
+    const aSiqs = typeof a.realTimeSiqs === "number" && a.realTimeSiqs > 0
+      ? a.realTimeSiqs
       : getSiqsScore(a.siqs);
       
-    const bSiqs = typeof bRealTime === "number" && bRealTime > 0
-      ? bRealTime
+    const bSiqs = typeof b.realTimeSiqs === "number" && b.realTimeSiqs > 0
+      ? b.realTimeSiqs
       : getSiqsScore(b.siqs);
       
-    return (bSiqs || 0) - (aSiqs || 0);
+    return bSiqs - aSiqs; // Sort from highest to lowest
   });
 }

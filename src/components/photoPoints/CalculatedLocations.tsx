@@ -10,7 +10,7 @@ import { useExpandSearchRadius } from '@/hooks/photoPoints/useExpandSearchRadius
 import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
+import { isSiqsGreaterThan, sortLocationsBySiqs } from '@/utils/siqsHelpers';
 
 interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
@@ -49,10 +49,11 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   // Filter out locations with SIQS score of 0
   const validLocations = locations.filter(loc => loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0));
   
-  // Using pre-sorted locations (sorting is now done in the parent component)
+  // Ensure the locations are properly sorted by SIQS score
+  const sortedLocations = sortLocationsBySiqs(validLocations);
   
   // Determine if we should show loading state
-  if (loading && validLocations.length === 0) {
+  if (loading && sortedLocations.length === 0) {
     return (
       <div className="flex justify-center items-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
@@ -61,7 +62,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   }
   
   // Show empty state if no locations available
-  if (validLocations.length === 0) {
+  if (sortedLocations.length === 0) {
     return (
       <EmptyCalculatedState 
         searchRadius={searchRadius}
@@ -87,7 +88,7 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   return (
     <>
       <LocationsGrid 
-        locations={validLocations}
+        locations={sortedLocations}
         initialLoad={initialLoad}
         isMobile={isMobile}
         onViewDetails={handleViewLocation}
