@@ -81,6 +81,9 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   };
 
   const handleClick = () => {
+    // Log click for debugging
+    console.log("Marker clicked for spot:", spot.id, spot.name);
+    
     if (onMarkerClick) {
       // Use the provided click handler for custom navigation
       onMarkerClick(spot);
@@ -105,13 +108,17 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       return;
     }
     
+    // Force a new navigation each time by including a timestamp
+    const timestamp = new Date().getTime();
+    
     navigate(`/astro-spot/${spot.id}`, { 
       state: { 
         from: "community", 
-        spotId: spot.id 
+        spotId: spot.id,
+        timestamp // Add timestamp to force state refresh
       } 
     });
-    console.log("Navigating to spot from marker:", spot.id);
+    console.log("Direct navigation to spot from marker:", spot.id, timestamp);
   };
 
   // Handle popup close
@@ -154,7 +161,16 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             className={`w-full text-xs flex items-center justify-center gap-1 mt-1 ${isMobile ? 'py-3' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
-              navigateToSpotProfile();
+              // Use the same timestamp technique for popup button clicks
+              const timestamp = new Date().getTime();
+              navigate(`/astro-spot/${spot.id}`, { 
+                state: { 
+                  from: "community", 
+                  spotId: spot.id,
+                  timestamp
+                } 
+              });
+              console.log("Popup button navigation to spot:", spot.id, timestamp);
             }}
           >
             <ExternalLink size={14} />

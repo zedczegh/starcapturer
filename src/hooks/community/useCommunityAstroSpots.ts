@@ -80,13 +80,18 @@ export const useCommunityAstroSpots = () => {
       return;
     }
     
-    console.log("Navigating to astro spot profile:", spotId);
+    // Add timestamp to force state refresh
+    const timestamp = new Date().getTime();
+    
+    console.log("Navigating to astro spot profile:", spotId, "timestamp:", timestamp);
     
     navigate(`/astro-spot/${spotId}`, { 
       state: { 
         from: 'community',
-        spotId: spotId 
-      } 
+        spotId: spotId,
+        timestamp // Add timestamp to force state refresh
+      },
+      replace: false // Explicitly set replace to false to create a new history entry
     });
   }, [navigate]);
 

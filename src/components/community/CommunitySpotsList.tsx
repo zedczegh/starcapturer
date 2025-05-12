@@ -44,7 +44,7 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
 
   // Handle card click with proper logging for debugging
   const handleCardClick = (id: string) => {
-    console.log("Location card clicked with ID:", id);
+    console.log("Location card clicked with ID:", id, "timestamp:", new Date().getTime());
     onCardClick(id);
   };
 

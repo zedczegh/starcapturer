@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
 import NavBar from "@/components/NavBar";
@@ -13,11 +13,18 @@ const AstroSpotProfile = () => {
   const { user } = useAuth();
   const [comingFromCommunity, setComingFromCommunity] = React.useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    // Log timestamp from state to help with debugging
+    const timestamp = location.state?.timestamp;
+    console.log("Profile opened for spot ID:", id, "with timestamp:", timestamp);
+    
     if (location.state?.from === "community") {
       setComingFromCommunity(true);
     }
-  }, [location.state]);
+    
+    // Force a render refresh when the ID or timestamp changes
+    // This helps ensure we're showing the correct profile
+  }, [id, location.state]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
@@ -34,6 +41,7 @@ const AstroSpotProfile = () => {
           spotId={id!} 
           user={!!user} 
           comingFromCommunity={comingFromCommunity}
+          key={`${id}-${location.state?.timestamp}`} // Force re-render when navigation occurs
         />
       </div>
       
