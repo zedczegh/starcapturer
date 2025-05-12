@@ -1,41 +1,24 @@
 
-/**
- * Types for SIQS provider component
- */
+import React from 'react';
 
-export interface CacheEntry {
-  data: any;
-  timestamp: number;
-}
-
-export interface SiqsProviderProps {
+export interface RealTimeSiqsProviderProps {
+  isVisible: boolean;
   latitude?: number;
   longitude?: number;
   bortleScale?: number;
-  onSiqsCalculated: (siqs: number | null, loading: boolean, confidence?: number) => void;
-  isVisible?: boolean;
-  forceUpdate?: boolean;
   isCertified?: boolean;
   isDarkSkyReserve?: boolean;
-  existingSiqs?: number | null | any;
-  priorityLevel?: 'high' | 'medium' | 'low';
-}
-
-export interface SiqsFetchOptions {
-  latitude?: number;
-  longitude?: number;
-  bortleScale: number;
-  isCertified: boolean;
-  isDarkSkyReserve: boolean;
-  existingSiqs: number | any;
-  skipCache?: boolean;
-  cacheKey: string | null;
-  onSuccess: (result: any) => void;
-  onError: (error: any) => void;
-}
-
-export interface SiqsErrorHandlingOptions {
-  isCertified: boolean;
-  existingSiqsNumber: number;
+  existingSiqs?: number | any;
   onSiqsCalculated: (siqs: number | null, loading: boolean, confidence?: number) => void;
+  forceUpdate?: boolean;
 }
+
+export interface QueueProcessorProps {
+  processQueue: () => void;
+}
+
+// Memory-efficient result cache type
+export type CacheEntry = {
+  data: any;
+  timestamp: number;
+};

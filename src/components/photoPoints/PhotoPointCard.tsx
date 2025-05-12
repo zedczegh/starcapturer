@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Star, Navigation } from "lucide-react";
@@ -18,32 +18,18 @@ interface PhotoPointCardProps {
   onSelect?: (point: SharedAstroSpot) => void;
   onViewDetails: (e: React.MouseEvent) => void;
   userLocation: { latitude: number; longitude: number } | null;
-  realTimeSiqs?: number | null;
-  siqsLoading?: boolean;
 }
 
 const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   point,
   onSelect,
   onViewDetails,
-  userLocation,
-  realTimeSiqs = null,
-  siqsLoading = false
+  userLocation
 }) => {
   const { language, t } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const certInfo = React.useMemo(() => getCertificationInfo(point), [point]);
-  
-  // State for stabilizing SIQS score display
-  const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
-  
-  // Update stabilized score when real-time SIQS changes
-  useEffect(() => {
-    if (realTimeSiqs !== null && realTimeSiqs > 0) {
-      setStabilizedScore(realTimeSiqs);
-    }
-  }, [realTimeSiqs]);
   
   const { displayName } = useDisplayName({
     location: point,
@@ -72,13 +58,9 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     }
   };
   
-  // Use the best available SIQS score
-  const siqsScore = stabilizedScore ?? 
-    (realTimeSiqs !== null ? realTimeSiqs : getSiqsScore(point.siqs));
+  // Get proper SIQS score
+  const siqsScore = getSiqsScore(point.siqs);
   const formattedSiqs = formatSiqsForDisplay(siqsScore);
-  
-  // Show loading state only when no stable score is available
-  const showLoading = siqsLoading && !stabilizedScore;
 
   return (
     <div
@@ -92,14 +74,8 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
           showOriginalName={showSmallName}
         />
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
-          {showLoading ? (
-            <div className="h-3.5 w-10 animate-pulse bg-yellow-500/30 rounded" />
-          ) : (
-            <>
-              <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
-              <span className="text-xs font-medium">{formattedSiqs}</span>
-            </>
-          )}
+          <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
+          <span className="text-xs font-medium">{formattedSiqs}</span>
         </div>
       </div>
       

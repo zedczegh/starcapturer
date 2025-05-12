@@ -40,22 +40,10 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const isMobile = useIsMobile();
   const detailsContainerRef = useRef<HTMLDivElement>(null);
   const refreshAttempts = useRef(0);
-  const [contentKey, setContentKey] = useState<number>(1);
-  const locationIdRef = useRef<string | null>(null);
-  const statusMessageTimeoutRef = useRef<number | null>(null);
 
   // Check if we came from a redirect
   const isRedirect = locationData?.fromPhotoPoints || locationData?.fromCalculator;
 
-  // Track location ID changes to prevent content disappearing 
-  useEffect(() => {
-    if (locationData?.id && locationIdRef.current !== locationData.id) {
-      locationIdRef.current = locationData.id;
-      // Increment the key to force a fresh render when location changes
-      setContentKey(prev => prev + 1);
-    }
-  }, [locationData?.id]);
-  
   // Clear error state when location data changes
   useEffect(() => {
     if (locationData?.id) {
@@ -63,26 +51,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       refreshAttempts.current = 0;
     }
   }, [locationData?.id]);
-
-  // Clear loading status message after data is loaded
-  useEffect(() => {
-    if (statusMessage && locationData && 
-       (statusMessage.includes("Getting your current location") || 
-        statusMessage.includes("正在获取您的位置"))) {
-      if (statusMessageTimeoutRef.current) {
-        clearTimeout(statusMessageTimeoutRef.current);
-      }
-      statusMessageTimeoutRef.current = window.setTimeout(() => {
-        setStatusMessage(null);
-      }, 1000);
-    }
-    
-    return () => {
-      if (statusMessageTimeoutRef.current) {
-        clearTimeout(statusMessageTimeoutRef.current);
-      }
-    };
-  }, [statusMessage, locationData, setStatusMessage]);
 
   // Function to handle the location update
   const onLocationUpdate = useCallback(async (location: any) => {
@@ -150,15 +118,6 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
     }
   }, [refreshing, onRefresh, setStatusMessage, t]);
 
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (statusMessageTimeoutRef.current) {
-        clearTimeout(statusMessageTimeoutRef.current);
-      }
-    };
-  }, []);
-
   return (
     <div 
       className={`container relative z-10 mx-auto px-4 py-8 ${paddingTop}`}
@@ -185,9 +144,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
             title={t("Refresh", "刷新")}
           >
             <RefreshCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            <span className={isMobile ? "sr-only" : ""}>
-              {t("Refresh", "刷新")}
-            </span>
+            {t("Refresh", "刷新")}
           </Button>
           <Button 
             variant="outline" 
@@ -195,9 +152,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
             className="flex items-center gap-1 font-medium"
           >
             <Search className="h-4 w-4" />
-            <span className={isMobile ? "sr-only" : ""}>
-              {t("Search", "搜索")}
-            </span>
+            {t("Search", "搜索")}
           </Button>
         </div>
       </div>
@@ -209,12 +164,10 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         </DialogContent>
       </Dialog>
       
-      {statusMessage && (
-        <LocationStatusMessage 
-          message={statusMessage}
-          type={messageType}
-        />
-      )}
+      <LocationStatusMessage 
+        message={statusMessage}
+        type={messageType}
+      />
       
       {errorState && (
         <div className="mb-4 rounded-md border border-red-800/40 bg-red-900/20 p-3 text-sm">
@@ -243,15 +196,12 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         </div>
       )}
       
-      {/* Use the key to force remount when location changes */}
-      <div key={contentKey} className="content-wrapper">
-        <LocationDetailsContent 
-          locationData={locationData}
-          setLocationData={setLocationData}
-          onLocationUpdate={onLocationUpdate}
-          showFaultedMessage={true}
-        />
-      </div>
+      <LocationDetailsContent 
+        locationData={locationData}
+        setLocationData={setLocationData}
+        onLocationUpdate={onLocationUpdate}
+        showFaultedMessage={true}
+      />
     </div>
   );
 };

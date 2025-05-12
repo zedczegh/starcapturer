@@ -37,11 +37,7 @@ const BackButton: React.FC<BackButtonProps> = ({
     const fromPage = location.state?.from;
     
     if (fromPage === 'community') {
-      // Add timestamp when navigating back to ensure the community page refreshes properly
-      navigate('/community', { 
-        replace,
-        state: { refreshTimestamp: new Date().getTime() }
-      });
+      navigate('/community', { replace });
     } else {
       // Default behavior
       navigate(destination, { replace });
