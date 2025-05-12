@@ -28,6 +28,7 @@ export const useMessageConversation = () => {
 
   // Keep local state in sync with conversations from useMessaging
   useEffect(() => {
+    console.log("Updating local conversations state:", conversations.length);
     setLocalConversations(conversations);
   }, [conversations]);
   
@@ -43,12 +44,12 @@ export const useMessageConversation = () => {
       (!navigationProcessedRef.current || 
       (timestamp && timestamp > navigationProcessedRef.current));
     
-    if (shouldProcess && conversations.length > 0) {
+    if (shouldProcess && localConversations.length > 0) {
       console.log("Looking for conversation with user:", selectedUserId);
       navigationProcessedRef.current = timestamp || true;
       
       // Try to find existing conversation
-      const existingConversation = conversations.find(
+      const existingConversation = localConversations.find(
         conv => conv.id === selectedUserId
       );
       
@@ -73,7 +74,7 @@ export const useMessageConversation = () => {
         fetchConversations();
       }
     }
-  }, [location.state, conversations, fetchConversations]);
+  }, [location.state, localConversations, fetchConversations]);
   
   const handleSelectConversation = useCallback((conversation: ConversationPartner) => {
     setActiveConversation(conversation);
@@ -115,6 +116,8 @@ export const useMessageConversation = () => {
   const handleDeleteConversation = useCallback(async (partnerId: string): Promise<boolean> => {
     setIsProcessingAction(true);
     try {
+      console.log("Attempting to delete conversation with partner:", partnerId);
+      
       // Call the delete function
       const result = await deleteConversation(partnerId);
       
@@ -125,7 +128,12 @@ export const useMessageConversation = () => {
         }
         
         // Remove the conversation from the local state immediately
-        setLocalConversations(prev => prev.filter(conv => conv.id !== partnerId));
+        setLocalConversations(prev => {
+          const filtered = prev.filter(conv => conv.id !== partnerId);
+          console.log("Removing conversation from local state:", partnerId);
+          console.log("Conversations before:", prev.length, "after:", filtered.length);
+          return filtered;
+        });
         
         // Fetch conversations to refresh the list after deletion
         await fetchConversations();

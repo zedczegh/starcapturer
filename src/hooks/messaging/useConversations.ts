@@ -133,30 +133,44 @@ export const useConversations = () => {
       .channel('messages_channel')
       .on('postgres_changes', 
         { 
-          event: '*', // Listen for all events: INSERT, UPDATE, DELETE
+          event: 'INSERT', 
           schema: 'public', 
           table: 'user_messages',
           filter: `receiver_id=eq.${user.id}`
         }, 
-        () => {
-          console.log("Realtime update triggered, refreshing conversations");
+        (payload) => {
+          console.log("New message received, refreshing conversations", payload);
           fetchConversations();
         }
       )
       .on('postgres_changes', 
         { 
-          event: 'DELETE', // Also listen explicitly for DELETE events
+          event: 'UPDATE', 
           schema: 'public', 
           table: 'user_messages'
         }, 
-        () => {
-          console.log("Message delete event triggered, refreshing conversations");
+        (payload) => {
+          console.log("Message updated, refreshing conversations", payload);
           fetchConversations();
         }
       )
-      .subscribe();
+      .on('postgres_changes', 
+        { 
+          event: 'DELETE', 
+          schema: 'public', 
+          table: 'user_messages'
+        }, 
+        (payload) => {
+          console.log("Message deleted, refreshing conversations", payload);
+          fetchConversations();
+        }
+      )
+      .subscribe((status) => {
+        console.log("Realtime subscription status:", status);
+      });
       
     return () => {
+      console.log("Cleaning up realtime subscription");
       supabase.removeChannel(channel);
     };
   }, [user, fetchConversations]);
