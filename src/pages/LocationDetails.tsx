@@ -1,5 +1,3 @@
-
-// Refactored to use new hooks and smaller components with improved loading
 import React, { useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataCache } from "@/hooks/useLocationData";
@@ -14,6 +12,7 @@ import { useLocationDetailsLogic } from "@/hooks/location/useLocationDetailsLogi
 import { toast } from "sonner";
 import { getRandomAstronomyTip } from "@/utils/astronomyTips"; 
 import NavBar from "@/components/NavBar";
+import { useAstronomyTips } from '@/hooks/useAstronomyTips';
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -56,27 +55,16 @@ const LocationDetails = () => {
     getCachedData
   });
 
-  // Show a random astronomy fact as a toast when this page opens
-  // Use the ref to ensure it only shows once
+  const { showTip } = useAstronomyTips();
+  
+  // Show a tip when the page loads
   useEffect(() => {
-    if (toastShownRef.current) return;
-    
-    const tip = getRandomAstronomyTip();
-    if (!tip) return;
-    
-    const tipText = language === "zh" ? tip[1] : tip[0];
-    
-    // Delay toast to avoid blocking initial render
     const timer = setTimeout(() => {
-      toast.info(tipText, {
-        duration: 6000,
-        position: "bottom-right",
-      });
-      toastShownRef.current = true;
+      showTip();
     }, 1500);
     
     return () => clearTimeout(timer);
-  }, [language]);
+  }, [showTip]);
 
   // Reset the toast shown ref when the page is unmounted and remounted (navigation)
   useEffect(() => {

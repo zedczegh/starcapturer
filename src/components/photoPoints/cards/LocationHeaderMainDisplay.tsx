@@ -17,11 +17,11 @@ const LocationHeaderMainDisplay: React.FC<LocationHeaderMainDisplayProps> = ({
   showOriginalName,
 }) => (
   <div>
-    <h3 className="font-semibold text-lg line-clamp-1">{mainName}</h3>
+    <h3 className="font-semibold text-xl sm:text-lg line-clamp-1">{mainName}</h3>
     {showOriginalName && originalName && (
       <div className="mt-1.5 mb-2 flex items-center">
-        <MapPin className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
-        <span className="text-xs text-muted-foreground line-clamp-1">
+        <MapPin className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-muted-foreground mr-1.5" />
+        <span className="text-sm sm:text-xs text-muted-foreground line-clamp-1">
           {originalName}
         </span>
       </div>

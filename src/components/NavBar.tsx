@@ -6,6 +6,7 @@ import NavHeader from "./navbar/NavHeader";
 import DesktopNav from "./navbar/DesktopNav";
 import MobileNav from "./navbar/MobileNav";
 import ProfileButton from "./navbar/ProfileButton";
+import { motion } from "framer-motion";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -29,7 +30,11 @@ const NavBar = () => {
 
   // Use a higher z-index to ensure the navbar is visible on all pages
   return (
-    <>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       <NavHeader scrolled={scrolled}>
         <DesktopNav 
           location={location} 
@@ -44,7 +49,7 @@ const NavBar = () => {
         location={location} 
         locationId={locationId}
       />
-    </>
+    </motion.div>
   );
 };
 

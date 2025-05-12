@@ -15,11 +15,19 @@ export {
   fetchLongRangeForecastData 
 } from './api/forecast';
 
+// New export for forecast astronomical data
+export type { AstroForecastResponse } from './api/forecastAstro';
+export { fetchAstroForecastData } from './api/forecastAstro';
+
 export { getLocationNameFromCoordinates } from './api/location';
 export { fetchLightPollutionData } from './api/pollution';
 
 // Export clear sky rate functionality
-export { fetchClearSkyRate, clearClearSkyRateCache } from './api/clearSkyRate';
+export { 
+  fetchClearSkyRate, 
+  clearClearSkyRateCache,
+  type ClearSkyRateResponse 
+} from './api/clearSkyRate';
 
 // Export types and functions related to shared astronomy spots
 export type { SharedAstroSpot, SharingResponse } from './api/astroSpots';

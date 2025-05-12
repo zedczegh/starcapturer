@@ -1,4 +1,5 @@
-import { chineseLocationData as chineseLocationDatabase } from '@/services/geocoding/data/chineseLocationData';
+
+import { chineseLocationDatabase } from '@/services/geocoding/data/chineseLocationData';
 
 /**
  * Checks if coordinates are within Chinese boundaries

@@ -1,47 +1,40 @@
 
-import { Language } from '../types';
-
 /**
- * Format address components into a localized string
- * @param components Address components
- * @param language Target language
+ * Format address components based on language preferences
+ * @param components Address components dictionary
+ * @param language User's preferred language
  * @returns Formatted address string
  */
 export function formatAddressComponents(
-  components: Record<string, string | undefined>, 
-  language: Language = 'en'
+  components: Record<string, string>,
+  language: 'en' | 'zh'
 ): string {
-  // Filter out undefined values
-  const filtered: Record<string, string> = Object.entries(components)
-    .filter(([_, value]) => value !== undefined)
-    .reduce((obj, [key, value]) => ({ ...obj, [key]: value as string }), {});
-  
-  // Build parts array based on language
-  let parts: string[] = [];
+  const parts: string[] = [];
   
   if (language === 'en') {
-    // English format: street, town, city, county, state, country
-    if (filtered.streetName) parts.push(filtered.streetName);
-    if (filtered.townName) parts.push(filtered.townName);
-    if (filtered.cityName) parts.push(filtered.cityName);
-    if (filtered.countyName) parts.push(filtered.countyName);
-    if (filtered.stateName) parts.push(filtered.stateName);
-    if (filtered.countryName) parts.push(filtered.countryName);
+    // English format: street, town/village, city, county, state, country
+    if (components.street) parts.push(components.street);
+    if (components.town || components.village) parts.push(components.town || components.village);
+    if (components.city) parts.push(components.city);
+    if (components.county) parts.push(components.county);
+    if (components.state) parts.push(components.state);
+    if (components.country) parts.push(components.country);
   } else {
     // Chinese format: country, state, county, city, town, street
-    const reverseParts = [];
-    if (filtered.countryName) reverseParts.push(filtered.countryName);
-    if (filtered.stateName) reverseParts.push(filtered.stateName);
-    if (filtered.countyName) reverseParts.push(filtered.countyName);
-    if (filtered.cityName) reverseParts.push(filtered.cityName);
-    if (filtered.townName) reverseParts.push(filtered.townName);
-    if (filtered.streetName) reverseParts.push(filtered.streetName);
-    parts = reverseParts;
+    const order = ['country', 'state', 'county', 'city', 'town', 'village', 'street'];
+    for (const key of order) {
+      if (components[key]) parts.push(components[key]);
+    }
   }
   
-  // Remove duplicates while preserving order
-  const uniqueParts = Array.from(new Set(parts));
+  // Remove duplicates while preserving order - using Set for performance
+  const seenValues = new Set<string>();
+  const uniqueParts = parts.filter(part => {
+    if (seenValues.has(part)) return false;
+    seenValues.add(part);
+    return true;
+  });
   
   // Join with appropriate separator
-  return uniqueParts.join(language === 'en' ? ', ' : '，');
+  return uniqueParts.join(language === 'en' ? ', ' : '');
 }

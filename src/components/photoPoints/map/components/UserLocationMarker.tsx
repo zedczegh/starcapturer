@@ -53,11 +53,11 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
       setIsLoadingLocation(true);
       try {
         const details = await getEnhancedLocationDetails(position[0], position[1], language === 'zh' ? 'zh' : 'en');
-        setLocationName(details.formattedName || '');
+        setLocationName(details.formattedName || details.displayName || details.formattedAddress || '');
         
         if (details.isWater) {
           console.log("Location was detected as water but overriding for user marker");
-          if (details.townName || details.cityName) {
+          if ((details.townName || details.cityName)) {
             const nearestPlace = details.townName || details.cityName;
             setLocationName(language === 'en' 
               ? `Near ${nearestPlace}`

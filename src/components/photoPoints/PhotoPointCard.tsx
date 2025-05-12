@@ -1,6 +1,6 @@
 
 import React from "react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
+import { SharedAstroSpot } from "@/types/weather";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapPin, Star, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const certInfo = React.useMemo(() => getCertificationInfo(point), [point]);
-  
+
   const { displayName } = useDisplayName({
     location: point,
     language,
@@ -57,10 +57,8 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
       onSelect(point);
     }
   };
-  
-  // Get proper SIQS score
-  const siqsScore = getSiqsScore(point.siqs);
-  const formattedSiqs = formatSiqsForDisplay(siqsScore);
+
+  const siqsScore = getSiqsScore(point.siqs) || 0;
 
   return (
     <div
@@ -75,7 +73,7 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
         />
         <div className="flex items-center bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded-full border border-yellow-500/40">
           <Star className="h-3.5 w-3.5 text-yellow-400 mr-1" fill="#facc15" />
-          <span className="text-xs font-medium">{formattedSiqs}</span>
+          <span className="text-xs font-medium">{formatSiqsForDisplay(siqsScore)}</span>
         </div>
       </div>
       

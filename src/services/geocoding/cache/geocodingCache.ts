@@ -1,76 +1,79 @@
+import { EnhancedLocationDetails } from '../types/enhancedLocationTypes';
 
 /**
- * Simple cache implementation for geocoding results
+ * Cache interface for storing geocoding results
  */
-
-// Define the type for cached items
-interface CacheItem {
-  value: any;
-  timestamp: number;
-  ttl: number; // Time to live in milliseconds
+export interface GeocodeCache {
+  [key: string]: {
+    timestamp: number;
+    data: EnhancedLocationDetails;
+  }
 }
 
-// Cache storage
-const cache: Record<string, CacheItem> = {};
+// In-memory cache to prevent excessive API calls
+const geocodeCache: GeocodeCache = {};
+const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_CACHE_ENTRIES = 100; // Limit cache size for performance
 
 /**
- * Add data to the cache with a TTL (default 24 hours)
- * @param key Cache key
- * @param value Value to cache
- * @param ttl Time to live in milliseconds (default: 24 hours)
+ * Get a cached geocoding result if available and not expired
  */
-export function addToCache(key: string, value: any, ttl = 24 * 60 * 60 * 1000): void {
-  cache[key] = {
-    value,
+export function getFromCache(cacheKey: string): EnhancedLocationDetails | null {
+  const now = Date.now();
+  
+  if (geocodeCache[cacheKey] && (now - geocodeCache[cacheKey].timestamp < CACHE_EXPIRY)) {
+    return geocodeCache[cacheKey].data;
+  }
+  
+  return null;
+}
+
+/**
+ * Add result to the geocoding cache
+ */
+export function addToCache(cacheKey: string, data: EnhancedLocationDetails): void {
+  geocodeCache[cacheKey] = {
     timestamp: Date.now(),
-    ttl
+    data
   };
-}
-
-/**
- * Get data from cache if still valid
- * @param key Cache key
- * @returns Cached value or undefined if expired or not found
- */
-export function getFromCache(key: string): any | undefined {
-  const item = cache[key];
-  if (!item) return undefined;
   
-  // Check if item has expired
-  if (Date.now() - item.timestamp > item.ttl) {
-    // Remove expired item
-    delete cache[key];
-    return undefined;
+  // Periodically clean up cache
+  if (Object.keys(geocodeCache).length > MAX_CACHE_ENTRIES) {
+    cleanupCache();
   }
-  
-  return item.value;
 }
 
 /**
- * Clear all cached items or items matching a key prefix
- * @param keyPrefix Optional prefix to limit which items to clear
+ * Cleanup old entries from cache to prevent memory leaks
  */
-export function clearCache(keyPrefix?: string): void {
-  if (keyPrefix) {
-    Object.keys(cache).forEach(key => {
-      if (key.startsWith(keyPrefix)) {
-        delete cache[key];
+export function cleanupCache(): void {
+  const now = Date.now();
+  const cacheKeys = Object.keys(geocodeCache);
+  
+  // If cache is within limits, just check for expired entries
+  if (cacheKeys.length <= MAX_CACHE_ENTRIES) {
+    for (const key of cacheKeys) {
+      if (now - geocodeCache[key].timestamp > CACHE_EXPIRY) {
+        delete geocodeCache[key];
       }
-    });
-  } else {
-    Object.keys(cache).forEach(key => delete cache[key]);
+    }
+    return;
   }
+  
+  // If cache exceeds max size, sort by timestamp and keep only most recent
+  const keysByAge = cacheKeys
+    .map(key => ({ key, timestamp: geocodeCache[key].timestamp }))
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, MAX_CACHE_ENTRIES - 10) // Keep 10 fewer than max to avoid frequent cleanup
+    .map(item => item.key);
+  
+  // Create new cache with only the keys we want to keep
+  const newCache: GeocodeCache = {};
+  keysByAge.forEach(key => {
+    newCache[key] = geocodeCache[key];
+  });
+  
+  // Replace cache with cleaned version
+  Object.keys(geocodeCache).forEach(key => delete geocodeCache[key]);
+  Object.assign(geocodeCache, newCache);
 }
-
-/**
- * Get cache size (number of items)
- * @returns Number of cached items
- */
-export function getCacheSize(): number {
-  return Object.keys(cache).length;
-}
-
-/**
- * Export types for use in other files
- */
-export type GeocodeCache = typeof cache;

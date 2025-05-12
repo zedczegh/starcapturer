@@ -1,10 +1,12 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import { calculateRealTimeSiqs } from '../realTimeSiqs/siqsCalculator';
 import { isWaterLocation } from '@/utils/validation';
 import { getEnhancedLocationDetails } from '../geocoding/enhancedReverseGeocoding';
 import { getLocationTimeInfo } from '@/utils/timezone/timeZoneCalculator';
 import { SiqsCalculationOptions } from '../realTimeSiqs/siqsTypes';
+import { WeatherDataService } from '../weatherDataService';
+import { EnhancedLocationDetails } from '../geocoding/types/enhancedLocationTypes';
 
 export const createSpotFromPoint = async (
   point: { latitude: number; longitude: number; distance: number },
@@ -25,12 +27,30 @@ export const createSpotFromPoint = async (
     }
     
     const timeInfo = getLocationTimeInfo(point.latitude, point.longitude);
-    const defaultBortleScale = 4;
     
+    // Get additional weather metrics for more accurate calculation
+    const weatherMetrics = await WeatherDataService.getLocationWeatherMetrics(
+      point.latitude, 
+      point.longitude
+    );
+    
+    // Enhanced bortle scale detection based on locationDetails
+    let defaultBortleScale = 4; // Default
+    if (locationDetails.citySize) {
+      if (locationDetails.citySize === 'urban') {
+        defaultBortleScale = 6;
+      } else if (locationDetails.citySize === 'suburban') {
+        defaultBortleScale = 5;
+      }
+    }
+    
+    // Enhanced calculation options with improved accuracy
     const options: SiqsCalculationOptions = {
       useSingleHourSampling: true,
       targetHour: 1, // Use 1 AM for optimal viewing conditions
-      cacheDurationMins: 30
+      cacheDurationMins: 30,
+      useForecasting: true, // Use forecasting for more accurate results
+      forecastDay: 0 // Today's forecast
     };
 
     const siqsResult = await calculateRealTimeSiqs(
@@ -40,10 +60,11 @@ export const createSpotFromPoint = async (
       options
     );
     
+    // Enhanced quality threshold check
     if (siqsResult && siqsResult.siqs >= minQuality) {
-      return {
+      const result: SharedAstroSpot = {
         id: `calc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name: 'Calculated Location',
+        name: locationDetails.name || (locationDetails.displayName || 'Calculated Location'),
         latitude: point.latitude,
         longitude: point.longitude,
         bortleScale: defaultBortleScale,
@@ -57,11 +78,34 @@ export const createSpotFromPoint = async (
           timeUntilDaylight: timeInfo.timeUntilDaylight
         }
       };
+
+      // Only add weatherData if it exists
+      if (weatherMetrics?.weather || siqsResult.weatherData) {
+        result.weatherData = {
+          ...(weatherMetrics?.weather || {}),
+          ...(siqsResult.weatherData || {}),
+          cloudCover: (weatherMetrics?.weather?.cloudCover || siqsResult.weatherData?.cloudCover || 0)
+        };
+      }
+
+      // Add clearSkyRate if available
+      if (weatherMetrics?.clearSky?.annualRate) {
+        if (!result.weatherData) {
+          result.weatherData = { cloudCover: 0 };
+        }
+        if (!result.weatherData.clearSky) {
+          result.weatherData.clearSky = {};
+        }
+        result.weatherData.clearSky.annualRate = weatherMetrics.clearSky.annualRate;
+        result.clearSkyRate = weatherMetrics.clearSky.annualRate;
+      }
+
+      return result;
     }
     
     return null;
   } catch (err) {
-    console.warn("Error processing spot:", err);
+    console.error("Error processing spot:", err);
     return null;
   }
 };

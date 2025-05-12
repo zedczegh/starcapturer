@@ -100,8 +100,8 @@ export const getLocationColor = (location: SharedAstroSpot): string => {
   } else {
     const defaultColor = '#4ADE80'; // Bright green fallback
     // Use our centralized getSiqsScore helper
-    const siqsScore = getSiqsScore(location);
-    return siqsScore > 0 ? getProgressColor(siqsScore) : defaultColor;
+    const siqsScore = getSiqsScore(location.siqs);
+    return siqsScore ? getProgressColor(siqsScore) : defaultColor;
   }
 };
 

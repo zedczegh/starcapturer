@@ -1,71 +1,119 @@
 
-import React from 'react';
-import { Star } from "lucide-react";
-import { formatSiqsForDisplay, getSiqsScore } from '@/utils/siqsHelpers';
+import React, { useMemo } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { getSiqsColorClass, formatSiqs, getSiqsQuality } from '@/utils/forecast/forecastSiqsUtils';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { cn } from '@/lib/utils';
 
 interface SiqsScoreBadgeProps {
-  score: number | { score: number; isViable: boolean } | null;
-  loading?: boolean;
+  score: number | null;
   compact?: boolean;
-  className?: string;
   isCertified?: boolean;
   forceCertified?: boolean;
+  loading?: boolean;
   confidenceScore?: number;
 }
 
+// Cache badge content for identical scores to reduce re-rendering
+const contentCache = new Map<string, JSX.Element>();
+
 const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   score,
-  loading = false,
   compact = false,
-  className = '',
   isCertified = false,
   forceCertified = false,
+  loading = false,
   confidenceScore = 10
 }) => {
-  // Extract numeric score from any score format
-  const numericScore = score !== null ? getSiqsScore(score) : null;
+  const { t, language } = useLanguage();
   
-  // Format score for display
-  const displayScore = formatSiqsForDisplay(numericScore);
+  // Create unique key for caching that includes language
+  const cacheKey = `${score}-${compact}-${isCertified}-${loading}-${confidenceScore}-${language}`;
   
-  // Get color class based on score value
-  const getColorClass = (scoreValue: number | null) => {
-    if (scoreValue === null) return 'text-muted-foreground';
-    if (scoreValue >= 8) return 'text-green-500';
-    if (scoreValue >= 6) return 'text-yellow-400';
-    if (scoreValue >= 4) return 'text-amber-500';
-    if (scoreValue >= 2) return 'text-orange-500';
-    return 'text-red-500';
-  };
+  // Log for debugging
+  React.useEffect(() => {
+    console.log(`SiqsScoreBadge rendering with score: ${score}, loading: ${loading}, isCertified: ${isCertified}`);
+  }, [score, loading, isCertified]);
   
-  const colorClass = getColorClass(numericScore);
-  const showCertificationStar = isCertified || forceCertified;
+  // Use memoization to prevent unnecessary re-renders
+  const badgeContent = useMemo(() => {
+    // Check cache first
+    if (contentCache.has(cacheKey)) {
+      return contentCache.get(cacheKey);
+    }
+    
+    let content: JSX.Element;
+    
+    if (loading) {
+      content = (
+        <Badge variant="outline" className="animate-pulse bg-cosmic-900/30 text-xs font-medium whitespace-nowrap">
+          {t("Calculating...", "计算中...")}
+        </Badge>
+      );
+    } else if (score === null || score === undefined) {
+      content = (
+        <Badge variant="outline" className="bg-cosmic-900/30 text-xs font-medium">
+          {t("No data", "无数据")}
+        </Badge>
+      );
+    } else {
+      const formattedScore = formatSiqs(score);
+      const quality = getSiqsQuality(score);
+      const colorClass = getSiqsColorClass(score);
+      
+      const bgClass = `${colorClass} text-black`;
+      
+      // Adjust badge appearance based on confidence score
+      const confidenceOpacity = confidenceScore >= 7 ? 1 : (confidenceScore >= 5 ? 0.85 : 0.7);
+      
+      content = (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge 
+              className={cn(
+                "text-xs font-bold", 
+                bgClass,
+                "transition-all duration-300",
+                compact ? "py-0.5 px-1" : "py-1 px-2",
+                { "opacity-90": confidenceOpacity < 1 }
+              )}
+              style={{ opacity: confidenceOpacity }}
+            >
+              {compact ? formattedScore : `SIQS: ${formattedScore} - ${t(quality, '')}`}
+              {(isCertified || forceCertified) && (
+                <span className="ml-1">★</span>
+              )}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={5}>
+            <p>
+              {t("Sky quality score: ", "天空质量评分: ")}
+              <span className="font-bold">{formattedScore}</span> 
+              {" - "}
+              <span>{t(quality, "")}</span>
+            </p>
+            {(isCertified || forceCertified) && (
+              <p className="text-xs mt-1 text-amber-400">
+                {t("Certified location", "认证地点")}
+              </p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    
+    // Store in cache (limit cache size)
+    if (contentCache.size > 50) {
+      // Clear cache if it gets too large
+      contentCache.clear();
+    }
+    contentCache.set(cacheKey, content);
+    
+    return content;
+  }, [score, compact, isCertified, forceCertified, loading, confidenceScore, t, cacheKey, language]);
   
-  // Show loading skeleton if loading
-  if (loading) {
-    return (
-      <div className={`flex items-center ${compact ? 'h-5' : 'h-6'} ${className}`}>
-        <div className="animate-pulse bg-muted-foreground/20 rounded h-full w-12"></div>
-      </div>
-    );
-  }
-  
-  // Regular badge view
-  return (
-    <div 
-      className={`flex items-center ${showCertificationStar ? 'gap-1' : ''} ${className}`}
-      title={`SIQS: ${displayScore}${confidenceScore < 8 ? ' (Estimated)' : ''}`}
-    >
-      {showCertificationStar && (
-        <Star 
-          className={`h-3.5 w-3.5 ${isCertified ? 'text-yellow-400 fill-yellow-400' : 'text-muted'}`} 
-        />
-      )}
-      <span className={`${compact ? 'text-sm' : 'text-base'} font-medium ${colorClass}`}>
-        {displayScore}
-      </span>
-    </div>
-  );
+  return badgeContent;
 };
 
-export default SiqsScoreBadge;
+export default React.memo(SiqsScoreBadge);

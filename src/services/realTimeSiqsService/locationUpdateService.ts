@@ -6,7 +6,7 @@
 
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { calculateRealTimeSiqs } from "../realTimeSiqs/siqsCalculator";
-import { batchCalculateRealTimeSiqs, clearSiqsCache } from "../realTimeSiqs/realTimeSiqsService";
+import { clearSiqsCache } from "../realTimeSiqs/siqsCache";
 import { SiqsResult } from "../realTimeSiqs/siqsTypes";
 
 /**
@@ -75,7 +75,9 @@ async function processBatch(
   }));
   
   // Calculate SIQS for all locations in batch
-  const siqsResults = await batchCalculateRealTimeSiqs(locationData);
+  const siqsResults = await Promise.all(
+    locationData.map(loc => calculateRealTimeSiqs(loc.latitude, loc.longitude, loc.bortleScale))
+  );
   
   // Update locations with SIQS results
   return locations.map((location, index) => {

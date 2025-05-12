@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from "leaflet";
@@ -8,7 +8,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { createCustomMarker, getFastTileLayer, getTileLayerOptions } from './MapMarkerUtils';
 import { useMapEvents } from '@/hooks/map/useMapEvents';
 import MapLocationPopup from './MapLocationPopup';
-import { Loader } from 'lucide-react';
 
 // Fix Leaflet icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -27,7 +26,6 @@ interface LazyMapComponentProps {
   showInfoPanel?: boolean;
   isDarkSkyReserve?: boolean;
   certification?: string;
-  siqs?: number;
 }
 
 const MapEvents = ({ onMapReady }: { onMapReady: () => void }) => {
@@ -44,11 +42,9 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
   onMapReady,
   onMapClick,
   isDarkSkyReserve = false,
-  certification = '',
-  siqs
+  certification = ''
 }) => {
   const isMobile = useIsMobile();
-  const [isLoading, setIsLoading] = useState(true);
   
   // Get optimized tile layer
   const { url: tileUrl } = getFastTileLayer();
@@ -77,50 +73,33 @@ const LazyMapComponent: React.FC<LazyMapComponentProps> = ({
     zoomSnap: isMobile ? 0.5 : 1,
     worldCopyJump: true,
   };
-
-  // Handle map ready state
-  const handleMapReady = () => {
-    console.log("Map is ready");
-    setIsLoading(false);
-    if (onMapReady) onMapReady();
-  };
   
   return (
-    <div className="relative h-full w-full">
-      {isLoading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-cosmic-900/70">
-          <Loader className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2 text-sm">Loading map...</span>
-        </div>
-      )}
-      
-      <MapContainer
-        {...mapOptions}
-        style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
-        whenReady={handleMapReady}
-        attributionControl={false}
-      >
-        <TileLayer
-          attribution=""
-          url={tileOptions.url}
-          maxZoom={tileOptions.maxZoom}
+    <MapContainer
+      {...mapOptions}
+      style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
+      whenReady={() => onMapReady()}
+      attributionControl={false}
+    >
+      <TileLayer
+        attribution=""
+        url={tileOptions.url}
+        maxZoom={tileOptions.maxZoom}
+      />
+      <Marker position={position} icon={markerIcon}>
+        <MapLocationPopup
+          name={locationName}
+          position={position}
+          isDarkSkyReserve={isDarkSkyReserve}
+          certification={certification}
         />
-        <Marker position={position} icon={markerIcon}>
-          <MapLocationPopup
-            name={locationName}
-            position={position}
-            isDarkSkyReserve={isDarkSkyReserve}
-            certification={certification}
-            siqs={siqs}
-          />
-        </Marker>
-        
-        <MapEvents onMapReady={handleMapReady} />
-        {(isMobile || editable) && (
-          <MapEventHandler onMapClick={onMapClick} editable={editable} />
-        )}
-      </MapContainer>
-    </div>
+      </Marker>
+      
+      <MapEvents onMapReady={onMapReady} />
+      {(isMobile || editable) && (
+        <MapEventHandler onMapClick={onMapClick} editable={editable} />
+      )}
+    </MapContainer>
   );
 };
 

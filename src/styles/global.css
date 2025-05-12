@@ -92,40 +92,136 @@
     box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
   }
   
+  .glassmorphism-strong {
+    background: linear-gradient(to bottom right, rgba(43, 35, 70, 0.85), rgba(23, 19, 36, 0.9));
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+  }
+  
   .shadow-glow {
     box-shadow: 0 0 20px rgba(124, 58, 237, 0.15), 
                 0 0 60px rgba(139, 92, 246, 0.08);
   }
   
-  /* Enhanced Facts Tooltip Styling */
-  .facts-tooltip {
-    @apply bg-gradient-to-br from-cosmic-800/95 to-cosmic-900/95 border border-cosmic-700/50 backdrop-blur-lg shadow-lg;
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
-    animation: tooltip-appear 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Mobile navigation styling */
+  .mobile-nav-bar {
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
   }
   
-  @keyframes tooltip-appear {
-    from {
-      opacity: 0;
-      transform: translateY(5px) scale(0.98);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
+  .mobile-nav-item.active .icon-container {
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
   }
   
-  /* Cosmic glassmorphism dropdown */
-  .cosmic-dropdown {
-    @apply glassmorphism;
-    background: linear-gradient(135deg, rgba(33,21,50,0.97) 60%, rgba(29,30,51,0.97) 100%);
-    box-shadow: 0 8px 32px 0 rgba(104, 117, 255, 0.15), 0 2px 8px rgba(0,0,0,0.30) !important;
-    border: 1px solid rgba(104, 117, 255, 0.06);
-    backdrop-filter: blur(12px);
+  .pulse-glow {
+    animation: pulse-animation 2s infinite;
   }
-  .glass-dropdown-label {
-    background: linear-gradient(90deg, rgba(55,41,85,0.90) 50%, rgba(17,15,29,0.99) 100%);
-    border-radius: 0.5rem 0.5rem 0 0;
-    margin-bottom: 0.5rem;
+  
+  @keyframes pulse-animation {
+    0% {
+      box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.4);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(124, 58, 237, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
+    }
+  }
+
+  /* Enhanced mobile cards and data displays */
+  .location-card-mobile {
+    @apply bg-gradient-to-br from-cosmic-800/60 to-cosmic-900/80;
+    @apply border border-cosmic-700/30;
+    @apply rounded-xl backdrop-blur-md;
+    @apply transition-all duration-300;
+  }
+  
+  .data-chip {
+    @apply inline-flex items-center px-2 py-1;
+    @apply bg-cosmic-800/50 text-cosmic-100;
+    @apply border border-cosmic-700/40 rounded-full;
+    @apply text-xs font-medium;
+  }
+  
+  .time-chip {
+    @apply bg-gradient-to-r from-purple-800/40 to-indigo-800/30;
+    @apply border-l-2 border-primary/50;
+    @apply rounded-l-none rounded-r-lg;
+    @apply pl-2 pr-3 py-1;
+    @apply text-xs font-mono;
+  }
+  
+  /* Additional mobile typography utilities */
+  .mobile-heading-lg {
+    @apply text-2xl sm:text-xl font-bold;
+  }
+  
+  .mobile-heading-md {
+    @apply text-xl sm:text-lg font-semibold;
+  }
+  
+  .mobile-heading-sm {
+    @apply text-lg sm:text-base font-medium;
+  }
+  
+  .mobile-text-base {
+    @apply text-base sm:text-sm;
+  }
+  
+  .mobile-text-sm {
+    @apply text-sm sm:text-xs;
+  }
+  
+  /* Mobile-specific spacing utilities */
+  .mobile-section-spacing {
+    @apply space-y-4 sm:space-y-3;
+  }
+  
+  .mobile-card-padding {
+    @apply p-5 sm:p-4;
+  }
+  
+  /* Enhanced mobile touch targets */
+  .mobile-touch-target {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+  }
+  
+  /* Additional location panel enhancements */
+  .location-panel {
+    @apply rounded-xl overflow-hidden;
+    @apply backdrop-blur-md bg-cosmic-900/30;
+    @apply border border-cosmic-700/30;
+    @apply shadow-lg;
+  }
+
+  .panel-header {
+    @apply bg-gradient-to-r from-cosmic-800/90 to-cosmic-800/70;
+    @apply border-b border-cosmic-700/40;
+    @apply px-4 py-3;
+  }
+
+  .panel-content {
+    @apply p-4;
+  }
+
+  .data-badge {
+    @apply inline-flex items-center gap-1;
+    @apply bg-cosmic-800/70 text-cosmic-200;
+    @apply border border-cosmic-700/40 rounded-lg;
+    @apply px-2.5 py-1 text-sm;
+  }
+  
+  /* Location stat items with improved mobile spacing */
+  .location-stat-item {
+    @apply flex flex-col gap-1 p-3;
+    @apply bg-cosmic-800/40 rounded-lg border border-cosmic-700/30;
+  }
+  
+  .location-stat-label {
+    @apply text-xs text-cosmic-300 font-medium;
+  }
+  
+  .location-stat-value {
+    @apply font-mono text-lg sm:text-base text-cosmic-100;
   }
 }

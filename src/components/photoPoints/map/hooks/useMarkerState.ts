@@ -2,13 +2,13 @@
 import { useMemo } from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { getSiqsScore, formatSiqsForDisplay } from '@/utils/siqsHelpers';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 import { getLocationMarker } from '../MarkerUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface UseMarkerStateProps {
   location: SharedAstroSpot;
-  realTimeSiqs: number | { score: number; isViable: boolean } | null;
+  realTimeSiqs: number | null;
   isCertified: boolean;
   isHovered: boolean;
 }
@@ -33,13 +33,13 @@ export function useMarkerState({
   // Calculate SIQS score - always use real-time or location's SIQS
   const siqsScore = useMemo(() => {
     // Always prefer real-time SIQS if available
-    if (realTimeSiqs !== null) {
-      return getSiqsScore(realTimeSiqs);
+    if (realTimeSiqs !== null && realTimeSiqs > 0) {
+      return realTimeSiqs;
     }
     
     // Use location's SIQS regardless of certification status
     const locationSiqs = getSiqsScore(location.siqs);
-    if (locationSiqs > 0) {
+    if (locationSiqs !== null && locationSiqs > 0) {
       return locationSiqs;
     }
     

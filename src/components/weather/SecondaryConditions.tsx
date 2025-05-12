@@ -2,8 +2,6 @@
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Card } from "@/components/ui/card";
-import { Cloud, AlertTriangle } from "lucide-react";
 import CloudCoverItem from "./components/CloudCoverItem";
 import NighttimeCloudItem from "./components/NighttimeCloudItem";
 import MoonPhaseItem from "./components/MoonPhaseItem";
@@ -31,67 +29,27 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
   aqi,
   nighttimeCloudData
 }) => {
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   
   return (
-    <Card className="bg-cosmic-900/50 border-cosmic-800 hover:bg-cosmic-800/50 transition-all duration-300">
-      <div className="p-4 md:p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="bg-cosmic-800/50 p-2 rounded-full">
-              <Cloud className="w-5 h-5 text-blue-400" />
-            </div>
-            <h3 className="text-sm font-medium">
-              {t('Sky Conditions', '天空状况')}
-            </h3>
-          </div>
-        </div>
-
-        <TooltipProvider>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Cloud Cover */}
-            <div className="bg-cosmic-800/30 rounded-lg p-3">
-              <CloudCoverItem cloudCover={cloudCover} />
-            </div>
-            
-            {/* Nighttime Cloud Data */}
-            {nighttimeCloudData && (
-              <div className="bg-cosmic-800/30 rounded-lg p-3">
-                <NighttimeCloudItem nighttimeCloudData={nighttimeCloudData} />
-              </div>
-            )}
-            
-            {/* Moon Phase */}
-            <div className="bg-cosmic-800/30 rounded-lg p-3">
-              <MoonPhaseItem moonPhase={moonPhase} language={language as 'en' | 'zh'} />
-            </div>
-            
-            {/* Bortle Scale */}
-            <div className="bg-cosmic-800/30 rounded-lg p-3">
-              <BortleScaleItem bortleScale={bortleScale} />
-            </div>
-            
-            {/* Air Quality */}
-            {aqi !== undefined && (
-              <div className="bg-cosmic-800/30 rounded-lg p-3">
-                <AirQualityItem aqi={aqi} />
-              </div>
-            )}
-            
-            {/* If no data available */}
-            {!cloudCover && !bortleScale && !moonPhase && (
-              <div className="col-span-full flex flex-col items-center justify-center py-6">
-                <AlertTriangle className="w-10 h-10 text-yellow-500 mb-2" />
-                <p className="text-xs text-cosmic-400">
-                  {t('No sky condition data available', '无天空状况数据')}
-                </p>
-              </div>
-            )}
-          </div>
-        </TooltipProvider>
-      </div>
-    </Card>
+    <div className="grid grid-cols-1 gap-4 text-cosmic-100">
+      <TooltipProvider>
+        <CloudCoverItem cloudCover={cloudCover} />
+        
+        {nighttimeCloudData && (
+          <NighttimeCloudItem nighttimeCloudData={nighttimeCloudData} />
+        )}
+        
+        <MoonPhaseItem moonPhase={moonPhase} language={language as 'en' | 'zh'} />
+        
+        <BortleScaleItem bortleScale={bortleScale} />
+        
+        {aqi !== undefined && (
+          <AirQualityItem aqi={aqi} />
+        )}
+      </TooltipProvider>
+    </div>
   );
 };
 
-export default React.memo(SecondaryConditions);
+export default SecondaryConditions;

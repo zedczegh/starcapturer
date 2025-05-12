@@ -40,7 +40,6 @@ export type Database = {
           content: string
           created_at: string
           id: string
-          image_url: string | null
           parent_id: string | null
           spot_id: string
           updated_at: string
@@ -50,7 +49,6 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
-          image_url?: string | null
           parent_id?: string | null
           spot_id: string
           updated_at?: string
@@ -60,7 +58,6 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
-          image_url?: string | null
           parent_id?: string | null
           spot_id?: string
           updated_at?: string
@@ -76,91 +73,6 @@ export type Database = {
           },
           {
             foreignKeyName: "astro_spot_comments_spot_id_fkey"
-            columns: ["spot_id"]
-            isOneToOne: false
-            referencedRelation: "user_astro_spots"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      astro_spot_reservations: {
-        Row: {
-          created_at: string
-          id: string
-          status: string
-          timeslot_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          status?: string
-          timeslot_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          status?: string
-          timeslot_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "astro_spot_reservations_timeslot_id_fkey"
-            columns: ["timeslot_id"]
-            isOneToOne: false
-            referencedRelation: "astro_spot_timeslots"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      astro_spot_timeslots: {
-        Row: {
-          created_at: string
-          creator_id: string
-          currency: string | null
-          description: string | null
-          end_time: string
-          id: string
-          max_capacity: number
-          price: number | null
-          spot_id: string
-          start_time: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          creator_id: string
-          currency?: string | null
-          description?: string | null
-          end_time: string
-          id?: string
-          max_capacity?: number
-          price?: number | null
-          spot_id: string
-          start_time: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          creator_id?: string
-          currency?: string | null
-          description?: string | null
-          end_time?: string
-          id?: string
-          max_capacity?: number
-          price?: number | null
-          spot_id?: string
-          start_time?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "astro_spot_timeslots_spot_id_fkey"
             columns: ["spot_id"]
             isOneToOne: false
             referencedRelation: "user_astro_spots"
@@ -226,7 +138,6 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
-          bio: string | null
           created_at: string
           date_of_birth: string | null
           id: string
@@ -235,7 +146,6 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
-          bio?: string | null
           created_at?: string
           date_of_birth?: string | null
           id: string
@@ -244,7 +154,6 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
-          bio?: string | null
           created_at?: string
           date_of_birth?: string | null
           id?: string
@@ -335,7 +244,6 @@ export type Database = {
         Row: {
           bortlescale: number | null
           created_at: string
-          default_price: number | null
           description: string | null
           id: string
           latitude: number
@@ -348,7 +256,6 @@ export type Database = {
         Insert: {
           bortlescale?: number | null
           created_at?: string
-          default_price?: number | null
           description?: string | null
           id?: string
           latitude: number
@@ -361,7 +268,6 @@ export type Database = {
         Update: {
           bortlescale?: number | null
           created_at?: string
-          default_price?: number | null
           description?: string | null
           id?: string
           latitude?: number
@@ -377,7 +283,6 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          image_url: string | null
           message: string
           read: boolean
           receiver_id: string
@@ -387,7 +292,6 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          image_url?: string | null
           message: string
           read?: boolean
           receiver_id: string
@@ -397,7 +301,6 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          image_url?: string | null
           message?: string
           read?: boolean
           receiver_id?: string
@@ -438,41 +341,6 @@ export type Database = {
       }
       has_role: {
         Args: { required_role: string }
-        Returns: boolean
-      }
-      insert_astro_spot_reservation: {
-        Args: { p_timeslot_id: string; p_user_id: string; p_status?: string }
-        Returns: string
-      }
-      insert_astro_spot_timeslot: {
-        Args: {
-          p_spot_id: string
-          p_creator_id: string
-          p_start_time: string
-          p_end_time: string
-          p_max_capacity?: number
-          p_description?: string
-          p_price?: number
-          p_currency?: string
-        }
-        Returns: string
-      }
-      is_username_available: {
-        Args: { username_to_check: string }
-        Returns: boolean
-      }
-      update_astro_spot_timeslot: {
-        Args: {
-          p_id: string
-          p_spot_id: string
-          p_creator_id: string
-          p_start_time: string
-          p_end_time: string
-          p_max_capacity?: number
-          p_description?: string
-          p_price?: number
-          p_currency?: string
-        }
         Returns: boolean
       }
     }

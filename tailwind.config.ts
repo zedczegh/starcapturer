@@ -1,15 +1,14 @@
 
-import { Config } from "tailwindcss";
+import { type Config } from "tailwindcss";
 import { fontFamily } from "tailwindcss/defaultTheme";
-import plugin from "tailwindcss/plugin";
 
-const config: Config = {
+export default {
   darkMode: ["class"],
   content: [
-    "./pages/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./app/**/*.{ts,tsx}",
-    "./src/**/*.{ts,tsx}",
+    './pages/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './app/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
   ],
   prefix: "",
   theme: {
@@ -22,19 +21,6 @@ const config: Config = {
     },
     extend: {
       colors: {
-        cosmic: {
-          '50': '#f6f6ff',
-          '100': '#ececff',
-          '200': '#d9d9ff',
-          '300': '#b9b9ff',
-          '400': '#9494ff',
-          '500': '#6b6bff',
-          '600': '#4a4af1',
-          '700': '#3f39d7',
-          '800': '#2c2ca4',
-          '900': '#2c2c83',
-          '950': '#1a1a4a',
-        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -43,6 +29,7 @@ const config: Config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          focus: "hsl(var(--primary) / 80%)"
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -68,14 +55,32 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        cosmic: {
+          '100': 'rgb(226, 232, 240)',
+          '200': 'rgb(203, 213, 225)',
+          '300': 'rgb(148, 163, 184)',
+          '400': 'rgb(100, 116, 139)',
+          '500': 'rgb(71, 85, 105)',
+          '600': 'rgb(51, 65, 85)',
+          '700': 'rgb(30, 41, 59)',
+          '800': 'rgb(15, 23, 42)',
+          '900': 'rgb(10, 17, 34)',
+          '950': 'rgb(2, 6, 23)',
+        },
+        olive: {
+          '400': 'rgb(142, 142, 0)',
+          '500': 'rgb(128, 128, 0)',
+          '600': 'rgb(114, 114, 0)',
+        }
+      },
+      boxShadow: {
+        'glow': '0 0 20px rgba(104, 117, 255, 0.3)',
+        'glow-light': '0 0 10px rgba(104, 117, 255, 0.2)'
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
-      },
-      fontFamily: {
-        sans: ["var(--font-sans)", ...fontFamily.sans],
       },
       keyframes: {
         "accordion-down": {
@@ -86,30 +91,24 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "spin-slow": {
-          "0%": { transform: "rotate(0deg)" },
-          "100%": { transform: "rotate(360deg)" },
+        "fade-in": {
+          "0%": { opacity: "0", transform: "translateY(10px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "spin-slow": "spin-slow 8s linear infinite",
+        "fade-in": "fade-in 0.3s ease-out",
+      },
+      fontFamily: {
+        sans: ["var(--font-sans)", ...fontFamily.sans],
+      },
+      backgroundImage: {
+        'star-field': "url('/src/assets/star-field-bg.jpg')",
+        'deep-space': "url('/src/assets/deep-space-bg.jpg')",
       },
     },
   },
-  plugins: [
-    require("tailwindcss-animate"),
-    plugin(function({ addUtilities }) {
-      addUtilities({
-        '.glassmorphism': {
-          'background': 'rgba(15, 23, 42, 0.6)',
-          'backdrop-filter': 'blur(12px)',
-          '-webkit-backdrop-filter': 'blur(12px)',
-        },
-      });
-    }),
-  ],
-};
-
-export default config;
+  plugins: [require("tailwindcss-animate")],
+} satisfies Config;

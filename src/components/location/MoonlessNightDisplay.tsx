@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { CloudMoon, Sun, Moon, Calendar, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -12,6 +11,9 @@ import {
   TooltipTrigger 
 } from '@/components/ui/tooltip';
 import { getAstronomicalData, formatAstronomicalTime } from '@/services/astronomy/astronomyCalculationService';
+import TimeItem from './timeDisplay/TimeItem';
+import SunlightSection from './sections/SunlightSection';
+import NightSection from './sections/NightSection';
 
 interface MoonlessNightDisplayProps {
   latitude: number;
@@ -21,34 +23,20 @@ interface MoonlessNightDisplayProps {
 const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, longitude }) => {
   const { t, language } = useLanguage();
   
-  // Get comprehensive astronomical data using our optimized service
   const astronomyData = useMemo(() => {
     return getAstronomicalData(latitude, longitude);
   }, [latitude, longitude]);
   
-  // Use our advanced moon phase algorithm to get moon info
   const { isGoodForAstronomy, name: moonPhaseName } = getMoonInfo();
   
-  // Get moonless night information with detailed timing data
   const nightInfo = calculateMoonlessNightDuration(latitude, longitude);
 
-  // Get direct moonrise/moonset times as a fallback
   const directMoonTimes = useMemo(() => {
     return calculateMoonriseMoonsetTimes(latitude, longitude);
   }, [latitude, longitude]);
   
-  // Format time label and value with better alignment
-  const TimeItem = ({ label, value }: { label: string; value: string }) => (
-    <div className="flex justify-between items-center">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-xs font-medium ml-2">{value}</span>
-    </div>
-  );
-  
-  // Format moon time for display safely
   const formatMoonTime = (time: Date | string) => {
     if (typeof time === 'string') {
-      // If we got "Unknown" from the calculation but have direct times available, use those
       if (time === 'Unknown') {
         return '-';
       }
@@ -57,11 +45,9 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
     return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Get the most reliable moonrise/moonset times available
   const moonriseTime = nightInfo.moonrise === 'Unknown' ? directMoonTimes.moonrise : nightInfo.moonrise;
   const moonsetTime = nightInfo.moonset === 'Unknown' ? directMoonTimes.moonset : nightInfo.moonset;
 
-  // Format astronomical night times
   const astroNightStart = formatAstronomicalTime(astronomyData.astronomicalNight.start);
   const astroNightEnd = formatAstronomicalTime(astronomyData.astronomicalNight.end);
 
@@ -81,38 +67,19 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
           </div>
         </div>
 
-        {/* Sun/Day Information - Condensed format */}
-        <div className="space-y-1 border-b border-cosmic-700/30 pb-2">
-          <div className="flex items-center gap-2 mb-1">
-            <Sun className="w-4 h-4 text-yellow-400" />
-            <span className="text-xs font-medium">{t('Daylight', '日照时间')}</span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <TimeItem label={t('Rise', '日出')} value={astroNightEnd} />
-            <TimeItem label={t('Set', '日落')} value={astroNightStart} />
-          </div>
-        </div>
+        <SunlightSection 
+          astroNightEnd={astroNightEnd}
+          astroNightStart={astroNightStart}
+        />
         
-        {/* Night Information - Condensed format */}
-        <div className="space-y-1 border-b border-cosmic-700/30 pb-2">
-          <div className="flex items-center gap-2 mb-1">
-            <CloudMoon className="w-4 h-4 text-blue-400" />
-            <span className="text-xs font-medium">{t('Night', '夜晚')}</span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <TimeItem label={t('Begins', '开始')} value={astroNightStart} />
-            <TimeItem label={t('Ends', '结束')} value={astroNightEnd} />
-          </div>
-          
-          <TimeItem 
-            label={t('Duration', '持续时间')} 
-            value={`${astronomyData.astronomicalNight.duration} ${t('hrs', '小时')}`} 
-          />
-        </div>
+        <NightSection 
+          astroNightStart={astroNightStart}
+          astroNightEnd={astroNightEnd}
+          duration={astronomyData.astronomicalNight.duration}
+          latitude={latitude}
+          longitude={longitude}
+        />
         
-        {/* Moon Information - Condensed format */}
         <div className="space-y-1 border-b border-cosmic-700/30 pb-2">
           <div className="flex items-center gap-2 mb-1">
             <Moon className="w-4 h-4 text-gray-300" />
@@ -140,7 +107,6 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
           </div>
         </div>
         
-        {/* Milky Way Information - New Section */}
         <div className="space-y-1 border-b border-cosmic-700/30 pb-2">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
@@ -189,7 +155,6 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
           </div>
         </div>
         
-        {/* Moonless Night Information - This is the key section */}
         <div className="space-y-1">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">

@@ -1,27 +1,79 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+// Cache service for storing and retrieving spot data with optimized memory usage
 
 const SPOT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
-const spotCache = new Map<string, {
-  spots: SharedAstroSpot[],
-  timestamp: number
-}>();
+const MAX_CACHE_SIZE = 100; // Prevent memory leaks
 
+class SpotCacheService {
+  private cache: Map<string, { spots: any[]; timestamp: number }>;
+  
+  constructor() {
+    this.cache = new Map();
+  }
+
+  private cleanOldEntries() {
+    const now = Date.now();
+    for (const [key, value] of this.cache.entries()) {
+      if (now - value.timestamp > SPOT_CACHE_DURATION) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  getCachedSpots(
+    centerLat: number,
+    centerLng: number,
+    radius: number,
+    limit: number
+  ): any[] | null {
+    const cacheKey = `spots-${centerLat.toFixed(2)}-${centerLng.toFixed(2)}-${radius}-${limit}`;
+    const cachedSpots = this.cache.get(cacheKey);
+    
+    if (cachedSpots && Date.now() - cachedSpots.timestamp < SPOT_CACHE_DURATION) {
+      return cachedSpots.spots;
+    }
+    
+    return null;
+  }
+
+  cacheSpots(
+    centerLat: number,
+    centerLng: number,
+    radius: number,
+    limit: number,
+    spots: any[]
+  ): void {
+    // Clean old entries before adding new ones
+    if (this.cache.size >= MAX_CACHE_SIZE) {
+      this.cleanOldEntries();
+    }
+
+    const cacheKey = `spots-${centerLat.toFixed(2)}-${centerLng.toFixed(2)}-${radius}-${limit}`;
+    this.cache.set(cacheKey, {
+      spots,
+      timestamp: Date.now()
+    });
+  }
+
+  clearCache(): void {
+    this.cache.clear();
+  }
+}
+
+// Create singleton instance
+const spotCacheService = new SpotCacheService();
+
+// Export both the class and the singleton instance
+export { spotCacheService };
+
+// Export functions that match the expected interface in locationSpotService.ts
 export const getCachedSpots = (
   centerLat: number,
   centerLng: number,
   radius: number,
   limit: number
-): SharedAstroSpot[] | null => {
-  const cacheKey = `spots-${centerLat.toFixed(2)}-${centerLng.toFixed(2)}-${radius}-${limit}`;
-  const cachedSpots = spotCache.get(cacheKey);
-  
-  if (cachedSpots && Date.now() - cachedSpots.timestamp < SPOT_CACHE_DURATION) {
-    console.log(`Using cached spots for ${centerLat.toFixed(4)}, ${centerLng.toFixed(4)}`);
-    return cachedSpots.spots;
-  }
-  
-  return null;
+): any[] | null => {
+  return spotCacheService.getCachedSpots(centerLat, centerLng, radius, limit);
 };
 
 export const cacheSpots = (
@@ -29,15 +81,7 @@ export const cacheSpots = (
   centerLng: number,
   radius: number,
   limit: number,
-  spots: SharedAstroSpot[]
+  spots: any[]
 ): void => {
-  const cacheKey = `spots-${centerLat.toFixed(2)}-${centerLng.toFixed(2)}-${radius}-${limit}`;
-  spotCache.set(cacheKey, {
-    spots,
-    timestamp: Date.now()
-  });
-};
-
-export const clearSpotCache = (): void => {
-  spotCache.clear();
+  spotCacheService.cacheSpots(centerLat, centerLng, radius, limit, spots);
 };

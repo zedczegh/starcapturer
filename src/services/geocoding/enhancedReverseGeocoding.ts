@@ -1,6 +1,5 @@
-
 import { Language } from './types';
-import { EnhancedLocationDetails } from './types/enhancedLocationTypes';
+import { EnhancedLocationDetails, GeocodingResult } from './types/enhancedLocationTypes';
 import { fetchLocationDetails } from './providers/nominatimGeocodingProvider';
 import { GeocodeCache, addToCache, getFromCache } from './cache/geocodingCache';
 import { normalizeCoordinates } from './utils/coordinateUtils';
@@ -55,22 +54,29 @@ export async function getEnhancedLocationDetails(
       
       // Build our result with the API data and nearest town info
       const result: EnhancedLocationDetails = {
-        name: geocodingResult.name || nearestTownInfo.townName,
-        formattedName: geocodingResult.formattedName || nearestTownInfo.detailedName || nearestTownInfo.townName,
+        name: geocodingResult.name || nearestTownInfo.townName || "Unknown",
+        formattedName: geocodingResult.formattedName || nearestTownInfo.detailedName || nearestTownInfo.townName || "Unknown",
         chineseName: language === 'zh' ? (geocodingResult.chineseName || nearestTownInfo.townName) : undefined,
         townName: geocodingResult.townName || nearestTownInfo.townName,
         cityName: geocodingResult.cityName || nearestTownInfo.city,
         countyName: geocodingResult.countyName || nearestTownInfo.county,
         streetName: geocodingResult.streetName,
         stateName: geocodingResult.stateName,
-        countryName: geocodingResult.countryName,
+        countryName: geocodingResult.countryName || "Unknown",
         postalCode: geocodingResult.postalCode,
         distance: nearestTownInfo.distance,
         formattedDistance: formatDistance(nearestTownInfo.distance, language),
         detailedName: geocodingResult.formattedName || nearestTownInfo.detailedName,
         latitude: normalizedLat,
         longitude: normalizedLng,
-        isWater: isWater
+        isWater: isWater,
+        // Required by the new interface
+        address: geocodingResult.formattedName || nearestTownInfo.detailedName || "Unknown",
+        country: geocodingResult.countryName || "Unknown",
+        countryCode: "Unknown",
+        region: geocodingResult.stateName || "Unknown",
+        formattedAddress: geocodingResult.formattedName || nearestTownInfo.detailedName || "Unknown",
+        timezone: "Unknown"
       };
       
       // Cache the result
@@ -89,10 +95,10 @@ export async function getEnhancedLocationDetails(
     const result: EnhancedLocationDetails = {
       name: isWater ? 
         (language === 'en' ? 'Water Location' : '水域位置') : 
-        nearestTownInfo.townName,
+        nearestTownInfo.townName || "Unknown",
       formattedName: isWater ? 
         (language === 'en' ? `Water Location near ${nearestTownInfo.townName}` : `水域位置 靠近 ${nearestTownInfo.townName}`) : 
-        (nearestTownInfo.detailedName || nearestTownInfo.townName),
+        (nearestTownInfo.detailedName || nearestTownInfo.townName || "Unknown"),
       chineseName: isWater ? 
         `水域位置 靠近 ${language === 'zh' ? nearestTownInfo.townName : ''}` : 
         (language === 'zh' ? nearestTownInfo.townName : undefined),
@@ -104,7 +110,14 @@ export async function getEnhancedLocationDetails(
       detailedName: nearestTownInfo.detailedName,
       latitude: normalizedLat,
       longitude: normalizedLng,
-      isWater // Add water flag
+      isWater, // Add water flag
+      // Required by the new interface
+      address: nearestTownInfo.detailedName || "Unknown",
+      country: "Unknown",
+      countryCode: "Unknown",
+      region: "Unknown",
+      formattedAddress: nearestTownInfo.detailedName || "Unknown",
+      timezone: "Unknown"
     };
     
     // If we got geocoding results but didn't have strong evidence of land,
@@ -153,7 +166,14 @@ export async function getEnhancedLocationDetails(
       chineseName: `位置 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, // Include Chinese name for error case
       latitude,
       longitude,
-      isWater: false // Default to not water when error occurs
+      isWater: false, // Default to not water when error occurs
+      // Required by the new interface
+      address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+      country: "Unknown",
+      countryCode: "Unknown",
+      region: "Unknown",
+      formattedAddress: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+      timezone: "Unknown"
     };
   }
 }
@@ -177,7 +197,7 @@ export async function getStreetLevelLocation(
   // Return a structured response focusing on street-level details
   return {
     streetName: details.streetName,
-    fullAddress: details.formattedName,
+    fullAddress: details.formattedName || details.formattedAddress,
     isWater: details.isWater || false
   };
 }

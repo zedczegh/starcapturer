@@ -1,12 +1,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { SharedAstroSpot } from '@/types/weather';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { isWaterLocation } from '@/utils/validation';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isCertifiedLocation } from '@/utils/locationFiltering';
+import { getEffectiveCloudCover } from '@/lib/siqs/weatherDataUtils';
+import { getSiqsScore } from '@/utils/siqsHelpers';
 
 interface UsePhotoPointsSearchProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -19,7 +21,7 @@ export const usePhotoPointsSearch = ({
   userLocation,
   currentSiqs,
   searchRadius = 100,
-  maxInitialResults = 50 // Increased from 5 to 50 to show more locations initially
+  maxInitialResults = 50
 }: UsePhotoPointsSearchProps) => {
   const { t } = useLanguage();
   const [displayedLocations, setDisplayedLocations] = useState<SharedAstroSpot[]>([]);
@@ -64,10 +66,15 @@ export const usePhotoPointsSearch = ({
                 })
               : parsed;
             
+          // Apply quality filtering for meaningful locations
+          const meaningfulLocations = activeView === 'certified' 
+            ? filteredLocations 
+            : filterMeaningfulLocations(filteredLocations);
+            
           // Don't limit certified locations
           const locationsToDisplay = activeView === 'certified' 
-            ? filteredLocations 
-            : filteredLocations.slice(0, maxInitialResults);
+            ? meaningfulLocations 
+            : meaningfulLocations.slice(0, maxInitialResults);
             
           setDisplayedLocations(locationsToDisplay);
           console.log(`Using cached locations initially: ${filteredLocations.length} locations`);
@@ -112,6 +119,9 @@ export const usePhotoPointsSearch = ({
             
             return distance <= searchRadius;
           });
+          
+          // Apply enhanced quality filtering
+          selectedLocations = filterMeaningfulLocations(selectedLocations);
         }
       }
       
@@ -125,8 +135,14 @@ export const usePhotoPointsSearch = ({
           return 1;
         }
         
-        // Then sort by distance
-        return (a.distance || Infinity) - (b.distance || Infinity);
+        // Then sort by SIQS score and distance using weighted formula
+        const aScore = getSiqsScore(a.siqs) || 0;
+        const bScore = getSiqsScore(b.siqs) || 0;
+        
+        const aQuality = (aScore * 0.7) - ((a.distance || 0) * 0.3);
+        const bQuality = (bScore * 0.7) - ((b.distance || 0) * 0.3);
+        
+        return bQuality - aQuality;
       });
       
       // Don't apply limits to certified locations view
@@ -145,6 +161,58 @@ export const usePhotoPointsSearch = ({
       }
     }
   }, [locations, maxInitialResults, searchRadius, userLocation, activeView]);
+
+  /**
+   * Filter locations to only show meaningful ones
+   * based on weather data, SIQS scores, and other factors
+   */
+  const filterMeaningfulLocations = (locations: SharedAstroSpot[]): SharedAstroSpot[] => {
+    return locations.filter(loc => {
+      // Always include certified locations
+      if (loc.isDarkSkyReserve || loc.certification) {
+        return true;
+      }
+      
+      // Ensure SIQS score meets minimum quality threshold
+      const siqsScore = getSiqsScore(loc.siqs);
+      if (siqsScore === null || siqsScore < 50) {
+        return false;
+      }
+      
+      // Check weather data if available
+      if (loc.weatherData) {
+        // Get effective cloud cover considering precipitation and conditions
+        const effectiveCloudCover = getEffectiveCloudCover(
+          loc.weatherData.cloudCover,
+          loc.weatherData.precipitation,
+          loc.weatherData.weatherCondition
+        );
+        
+        // Filter out locations with poor viewing conditions
+        if (effectiveCloudCover > 70) {
+          return false;
+        }
+        
+        // Filter based on precipitation
+        if (loc.weatherData.precipitation && loc.weatherData.precipitation > 1) {
+          return false;
+        }
+      }
+      
+      // Always include viable spots
+      if (loc.isViable) {
+        return true;
+      }
+      
+      // Include spots with higher quality despite distance
+      const qualityDistanceRatio = (siqsScore || 0) / 10 - (loc.distance || 0) / 100;
+      if (qualityDistanceRatio > 0.5) {
+        return true;
+      }
+      
+      return false;
+    });
+  };
 
   // Handle errors and refresh data
   const handleRefresh = useCallback(() => {

@@ -52,10 +52,13 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   // Get normalized SIQS score using helper function
   const initialSiqsScore = getSiqsScore(siqs);
   
-  // Use for displaying SIQS in the badge - Parse the numeric value
-  const displaySiqsValue = realTimeSiqs !== null ? 
-    normalizeToSiqsScale(realTimeSiqs) : 
-    initialSiqsScore;
+  // Use unified SIQS display function - no default scores for certified locations
+  const displaySiqs = getDisplaySiqs({
+    realTimeSiqs: realTimeSiqs !== null ? normalizeToSiqsScale(realTimeSiqs) : null,
+    staticSiqs: initialSiqsScore,
+    isCertified,
+    isDarkSkyReserve
+  });
   
   const handleSiqsCalculated = (siqs: number | null, loading: boolean) => {
     setRealTimeSiqs(siqs !== null ? normalizeToSiqsScale(siqs) : null);
@@ -97,7 +100,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
         {/* Display SIQS score, but don't use default scores for certified locations */}
         <div className="mt-1.5 flex items-center">
           <SiqsScoreBadge 
-            score={displaySiqsValue} 
+            score={displaySiqs} 
             compact={true}
             loading={siqsLoading}
             isCertified={isCertified}

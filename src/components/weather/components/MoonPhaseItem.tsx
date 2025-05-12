@@ -1,8 +1,7 @@
 
 import React from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Moon, Info } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Moon } from "lucide-react";
 
 const MOON_PHASE_TRANSLATIONS = {
   'en': {
@@ -36,63 +35,17 @@ const MoonPhaseItem: React.FC<MoonPhaseItemProps> = ({ moonPhase, language }) =>
   const { t } = useLanguage();
   const translatedMoonPhase = MOON_PHASE_TRANSLATIONS[language][moonPhase] || moonPhase;
   
-  const getMoonPhaseQuality = (phase: string): string => {
-    // New moon or crescent moons are best for astronomy
-    if (phase.includes('New') || phase.includes('Crescent') || 
-        phase.includes('新月') || phase.includes('眉月') || phase.includes('残月')) {
-      return t("Good for astronomy", "适合天文观测");
-    }
-    // Full moon is worst for deep sky astronomy
-    if (phase.includes('Full') || phase.includes('满月')) {
-      return t("Bright - limits deep sky viewing", "明亮 - 限制深空观测");
-    }
-    // Quarter and Gibbous are moderate
-    return t("Moderate brightness", "适中亮度");
-  };
-  
-  const getMoonPhaseColorClass = (phase: string): string => {
-    if (phase.includes('New') || phase.includes('Crescent') || 
-        phase.includes('新月') || phase.includes('眉月') || phase.includes('残月')) {
-      return "text-green-400";
-    }
-    if (phase.includes('Full') || phase.includes('满月')) {
-      return "text-yellow-400";
-    }
-    return "text-blue-300";
-  };
-  
   return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2 mb-1">
-        <Moon className="w-4 h-4 text-gray-300" />
-        <div className="flex items-center">
-          <span className="text-xs font-medium">{t("Moon Phase", "月相")}</span>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-3.5 w-3.5 ml-1 text-cosmic-400 cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent className="bg-cosmic-800 border-cosmic-700">
-              <p className="text-xs">
-                {t("Current phase of the moon", "当前月相")}
-              </p>
-            </TooltipContent>
-          </Tooltip>
+    <div className="flex items-center justify-between p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/50 hover:bg-cosmic-800/60 transition-colors">
+      <div className="flex items-center">
+        <div className="p-2 rounded-full bg-cosmic-700/40 mr-3">
+          <Moon className="h-5 w-5 text-cosmic-200" />
         </div>
+        <span className="font-medium">{t("Moon Phase", "月相")}</span>
       </div>
-      
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-        <span className="text-xs text-muted-foreground">{t('Phase', '相位')}</span>
-        <span className="text-right text-sm font-medium text-cosmic-50">
-          {translatedMoonPhase}
-        </span>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
-        <span className="text-xs text-muted-foreground">{t('Impact', '影响')}</span>
-        <span className={`text-right text-xs ${getMoonPhaseColorClass(moonPhase)}`}>
-          {getMoonPhaseQuality(moonPhase)}
-        </span>
-      </div>
+      <span className="font-bold text-lg text-cosmic-50">
+        {translatedMoonPhase}
+      </span>
     </div>
   );
 };

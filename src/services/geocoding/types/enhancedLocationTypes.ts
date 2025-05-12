@@ -1,29 +1,42 @@
 
-/**
- * Enhanced response from reverse geocoding including detailed address components
- */
 export interface EnhancedLocationDetails {
   name: string;
-  formattedName: string;
-  chineseName?: string;  // Add Chinese name property
+  displayName?: string;
+  formattedName?: string; // Added back for backwards compatibility
+  chineseName?: string;
   streetName?: string;
   townName?: string;
   cityName?: string;
   countyName?: string;
   stateName?: string;
   countryName?: string;
+  address: string;
+  country: string;
+  countryCode: string;
+  region: string;
   postalCode?: string;
   distance?: number;
   formattedDistance?: string;
+  detailedName?: string;
+  citySize?: 'urban' | 'suburban' | 'rural' | 'remote' | string;
+  isWater: boolean;
+  formattedAddress: string;
   latitude: number;
   longitude: number;
-  detailedName?: string;
-  isWater?: boolean; // Flag to indicate if location is in water
+  timezone: string;
+  population?: number;
+  elevation?: number;
+  landUse?: string;
+  accuracyScore?: number;
 }
 
-/**
- * Raw geocoding result from providers
- */
+export interface ReverseGeocodingResponse {
+  status: 'success' | 'error';
+  message?: string;
+  data?: EnhancedLocationDetails;
+}
+
+// Added back for backwards compatibility
 export interface GeocodingResult {
   streetName?: string;
   townName?: string;
@@ -33,5 +46,6 @@ export interface GeocodingResult {
   countryName?: string;
   postalCode?: string;
   formattedName?: string;
-  chineseName?: string;  // Add Chinese name property for raw results too
+  chineseName?: string;
+  name?: string;
 }
