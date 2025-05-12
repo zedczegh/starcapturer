@@ -106,23 +106,15 @@ export const useMessageActions = (fetchMessages: (partnerId: string) => Promise<
     if (!user || !partnerId) return false;
     
     try {
-      // Delete all messages between the current user and the partner
+      // Call the delete_conversation function using a direct query instead of rpc
+      // This works around the TypeScript limitation
       const { error } = await supabase
-        .rpc('delete_conversation', {
-          partner_id: partnerId,
-          current_user_id: user.id
-        })
-        .single();
+        .from('user_messages')
+        .delete()
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`);
         
       if (error) {
-        // Fall back to the old method if the RPC function doesn't exist
-        console.warn("RPC function not found, falling back to direct delete:", error);
-        const { error: fallbackError } = await supabase
-          .from('user_messages')
-          .delete()
-          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`);
-          
-        if (fallbackError) throw fallbackError;
+        throw error;
       }
       
       return true;

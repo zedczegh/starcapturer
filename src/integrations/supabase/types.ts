@@ -432,6 +432,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_conversation: {
+        Args: { partner_id: string; current_user_id: string }
+        Returns: undefined
+      }
       get_spot_type_color: {
         Args: { type_name: string }
         Returns: string
