@@ -1,16 +1,15 @@
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery } from "@tanstack/react-query";
 import { fetchCommunityAstroSpots } from "@/lib/api/fetchCommunityAstroSpots";
 import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { useNavigate } from "react-router-dom";
 import { clearCache } from "@/utils/fetchWithCache";
+import { clearSpotCache, prepareForProfileTransition } from "@/utils/cache/spotCacheCleaner";
 
 export const useCommunityAstroSpots = () => {
   const navigate = useNavigate();
-  const navigationInProgressRef = useRef(false);
-  const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // States for SIQS handling
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
@@ -21,18 +20,6 @@ export const useCommunityAstroSpots = () => {
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
   const [lastClickTime, setLastClickTime] = useState<number>(0);
   const [isNavigatingToSpot, setIsNavigatingToSpot] = useState(false);
-
-  // Clean up all timers and flags when component unmounts
-  useEffect(() => {
-    navigationInProgressRef.current = false;
-    return () => {
-      navigationInProgressRef.current = false;
-      if (navigationTimerRef.current) {
-        clearTimeout(navigationTimerRef.current);
-        navigationTimerRef.current = null;
-      }
-    };
-  }, []);
 
   // Use React Query to fetch data with improved caching
   const { data: astrospots, isLoading, refetch } = useQuery({
@@ -87,74 +74,77 @@ export const useCommunityAstroSpots = () => {
   }, []);
 
   // Sort locations by SIQS scores (highest first)
-  const sortedAstroSpots = astrospots ? sortLocationsBySiqs(astrospots.map(spot => ({
-    ...spot,
-    realTimeSiqs: stabilizedSiqs[spot.id] ?? realTimeSiqs[spot.id] ?? spot.siqs
-  }))) : [];
+  const sortedAstroSpots = useMemo(() => {
+    if (!astrospots) return [];
+    
+    // Add real-time SIQS values to spots for sorting
+    const spotsWithRealtimeSiqs = astrospots.map(spot => ({
+      ...spot,
+      realTimeSiqs: stabilizedSiqs[spot.id] ?? realTimeSiqs[spot.id] ?? spot.siqs
+    }));
+    
+    // Sort using the utility function
+    return sortLocationsBySiqs(spotsWithRealtimeSiqs);
+  }, [astrospots, realTimeSiqs, stabilizedSiqs]);
 
-  // Completely redesigned navigation function with better error handling and race condition prevention
+  // Improved navigation function with better error handling and detailed logging
   const navigateToAstroSpot = useCallback((spotId: string) => {
     if (!spotId) {
       console.error("Cannot navigate: Invalid spot ID");
       return;
     }
     
-    // Clear any pending navigation timer
-    if (navigationTimerRef.current) {
-      clearTimeout(navigationTimerRef.current);
-      navigationTimerRef.current = null;
-    }
-    
-    // Prevent navigation if already in progress
-    if (navigationInProgressRef.current) {
-      console.log("Navigation already in progress, ignoring request for spot:", spotId);
+    if (isNavigatingToSpot) {
+      console.log("Navigation already in progress, ignoring rapid click");
       return;
     }
     
     const now = Date.now();
-    console.log(`Navigating to astrospot: ${spotId} at ${now}`);
     
-    // Set navigation flags to prevent duplicate navigations
+    // Prevent rapid double-clicking issues by tracking last clicked ID and time
+    if (spotId === lastClickedId && now - lastClickTime < 800) {
+      console.log("Ignoring rapid double click on same spot:", spotId);
+      return;
+    }
+    
     setIsNavigatingToSpot(true);
-    navigationInProgressRef.current = true;
-    
-    // Update click tracking
     setLastClickedId(spotId);
     setLastClickTime(now);
     
-    // Always use a unique timestamp for each navigation
-    try {
-      // Clean forced navigation approach
-      navigate(`/astro-spot/${spotId}`, { 
-        state: { 
-          from: 'community',
-          spotId: spotId,
-          timestamp: now 
-        },
-        replace: false // Create a new history entry
-      });
-      
-      console.log("Navigation dispatched successfully");
-    } catch (error) {
-      console.error("Navigation error:", error);
-      setIsNavigatingToSpot(false);
-      navigationInProgressRef.current = false;
-    }
+    // Always use a unique timestamp for each navigation to force remounting
+    const timestamp = now;
+    console.log("Navigating to astro spot profile:", spotId, "timestamp:", timestamp);
     
-    // Reset navigation state after a reasonable delay
-    navigationTimerRef.current = setTimeout(() => {
+    // Clear specific spot cache before navigation
+    clearSpotCache(spotId);
+    
+    // Tell the system we're starting a profile transition for smoother animation
+    prepareForProfileTransition();
+    
+    // The key is to completely replace any existing navigation state and use
+    // a unique timestamp for each navigation
+    navigate(`/astro-spot/${spotId}`, { 
+      state: { 
+        from: 'community',
+        spotId: spotId,
+        timestamp 
+      },
+      replace: false // Create a new history entry
+    });
+    
+    // Reset navigation state after a delay
+    setTimeout(() => {
       setIsNavigatingToSpot(false);
-      navigationInProgressRef.current = false;
-      navigationTimerRef.current = null;
-    }, 1000);
-  }, [navigate]);
+    }, 500);
+  }, [navigate, lastClickedId, lastClickTime, isNavigatingToSpot]);
 
-  // Simple event handlers that use the core navigation function
+  // Handle card click by using the shared navigation function
   const handleCardClick = useCallback((id: string) => {
     console.log("Card click handler received ID:", id);
     navigateToAstroSpot(id);
   }, [navigateToAstroSpot]);
   
+  // Handle map marker click by extracting the ID and using the shared navigation function
   const handleMarkerClick = useCallback((spot: SharedAstroSpot) => {
     if (!spot || !spot.id) {
       console.error("Invalid spot data received in marker click:", spot);

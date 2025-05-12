@@ -18,9 +18,6 @@ interface SpotCommentsProps {
   onCommentsUpdate: () => void;
   onSubmit?: (content: string, imageFile: File | null, parentId?: string | null) => Promise<void>;
   sending: boolean;
-  isCreator?: boolean; // Add isCreator prop
-  storageInitialized?: boolean; // Add storageInitialized prop
-  isLoggedIn?: boolean; // Add isLoggedIn prop
 }
 
 const SpotComments: React.FC<SpotCommentsProps> = ({

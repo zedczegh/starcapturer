@@ -57,8 +57,6 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   const [openPopup, setOpenPopup] = useState<boolean>(false);
   const [forceUpdate, setForceUpdate] = useState<boolean>(false);
   const markerRef = useRef<L.Marker>(null);
-  const navigatingRef = useRef<boolean>(false);
-  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Stabilize SIQS score to prevent flicker
   const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
@@ -68,17 +66,6 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       setStabilizedScore(realTimeSiqs);
     }
   }, [realTimeSiqs]);
-
-  // Reset navigating state when component mounts or unmounts
-  useEffect(() => {
-    navigatingRef.current = false;
-    return () => {
-      navigatingRef.current = false;
-      if (clickTimerRef.current) {
-        clearTimeout(clickTimerRef.current);
-      }
-    };
-  }, []);
   
   // Handler for SIQS calculation results
   const handleSiqsCalculated = (siqs: number | null, loading: boolean, confidence?: number) => {
@@ -87,20 +74,18 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     if (confidence) {
       setSiqsConfidence(confidence);
     }
+    if (siqs === null && !loading) {
+      setTimeout(() => setForceUpdate(true), 2000);
+      setTimeout(() => setForceUpdate(false), 2100);
+    }
   };
 
-  const handleClick = (e: L.LeafletMouseEvent) => {
-    // Prevent default to ensure we handle the navigation properly
-    if (e && e.originalEvent) {
-      e.originalEvent.preventDefault();
-      e.originalEvent.stopPropagation();
-    }
-    
+  const handleClick = () => {
     // Log click for debugging
     console.log("Marker clicked for spot:", spot.id, spot.name);
     
     if (onMarkerClick) {
-      // Use the provided click handler for navigation
+      // Use the provided click handler for custom navigation
       onMarkerClick(spot);
     } else {
       // Open popup when clicked on mobile
@@ -111,61 +96,30 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
         }
       } else {
         // Navigate directly on desktop
-        navigateToSpotProfile(e);
+        navigateToSpotProfile();
       }
     }
   };
 
-  // Clean navigation function that guarantees proper routing
-  const navigateToSpotProfile = (e?: L.LeafletMouseEvent | React.MouseEvent) => {
-    // Prevent default and propagation if event is provided
-    if (e) {
-      if ('originalEvent' in e && e.originalEvent) {
-        e.originalEvent.preventDefault();
-        e.originalEvent.stopPropagation();
-      } else if ('preventDefault' in e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    }
-    
+  // Navigation function to ensure consistent navigation
+  const navigateToSpotProfile = () => {
     if (!spot || !spot.id) {
       console.error("Invalid spot data:", spot);
       return;
     }
     
-    // Prevent multiple rapid navigations with a cleaner timeout approach
-    if (navigatingRef.current) {
-      console.log("Navigation already in progress, preventing duplicate");
-      return;
-    }
-    
-    navigatingRef.current = true;
-    
-    // Cancel any pending timers
-    if (clickTimerRef.current) {
-      clearTimeout(clickTimerRef.current);
-    }
-    
     // Always generate a unique timestamp for each navigation
     const timestamp = Date.now();
-    console.log("Direct navigation to spot profile:", spot.id, timestamp);
     
-    // Use a more reliable navigation approach
     navigate(`/astro-spot/${spot.id}`, { 
       state: { 
         from: "community", 
         spotId: spot.id,
-        timestamp,
-        noRefresh: true
+        timestamp // Essential for forcing component remount
       },
-      replace: false
+      replace: false // Important to create new history entry
     });
-    
-    // Reset navigation flag after a short delay
-    clickTimerRef.current = setTimeout(() => {
-      navigatingRef.current = false;
-    }, 800); // Longer timeout to ensure navigation completes
+    console.log("Direct navigation to spot from marker:", spot.id, timestamp);
   };
 
   // Handle popup close
@@ -180,9 +134,7 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     <Marker
       position={[spot.latitude, spot.longitude]}
       icon={icon}
-      eventHandlers={{
-        click: handleClick
-      }}
+      onClick={handleClick}
       ref={markerRef}
     >
       <Popup
@@ -209,24 +161,33 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             size="sm" 
             className={`w-full text-xs flex items-center justify-center gap-1 mt-1 ${isMobile ? 'py-3' : ''}`}
             onClick={(e) => {
-              // Prevent popup from closing and map events
               e.stopPropagation();
-              navigateToSpotProfile(e);
+              // Use the timestamp technique for unique navigation state
+              const timestamp = Date.now();
+              navigate(`/astro-spot/${spot.id}`, { 
+                state: { 
+                  from: "community", 
+                  spotId: spot.id,
+                  timestamp // Essential for forcing component remount
+                },
+                replace: false 
+              });
+              console.log("Popup button navigation to spot:", spot.id, timestamp);
             }}
           >
             <ExternalLink size={14} />
             View Profile
           </Button>
           
-          {/* Hidden SIQS Provider Component - only enabled when popup is open to save resources */}
+          {/* Hidden SIQS Provider Component */}
           <RealTimeSiqsProvider
-            isVisible={openPopup}
+            isVisible={openPopup || !isMobile}
             latitude={spot.latitude}
             longitude={spot.longitude}
             bortleScale={spot.bortleScale}
             existingSiqs={spot.siqs}
             onSiqsCalculated={handleSiqsCalculated}
-            priorityLevel={openPopup ? 'high' : 'low'}
+            priorityLevel={openPopup ? 'high' : 'medium'}
             debugLabel={`community-${spot.id.substring(0, 6)}`}
             forceUpdate={forceUpdate}
           />

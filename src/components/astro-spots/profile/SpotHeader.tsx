@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Star, MapPin, Calendar, ExternalLink, MessageCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -24,8 +23,7 @@ interface SpotHeaderProps {
   spotId: string;
   onViewDetails: () => void;
   comingFromCommunity: boolean;
-  onMessageCreator: () => void;
-  isCreator?: boolean; // Add isCreator prop
+  onMessageCreator: () => void; // Added this missing prop
 }
 
 const SpotHeader: React.FC<SpotHeaderProps> = ({

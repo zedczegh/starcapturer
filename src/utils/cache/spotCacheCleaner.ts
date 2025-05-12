@@ -10,80 +10,57 @@ import { clearTableCache } from '../supabaseFetch';
 export function clearSpotCache(spotId?: string): void {
   console.log("Clearing spot cache for ID:", spotId || "all spots");
   
-  // Flag to track if this is being called too frequently (potential cause of flashing)
-  const now = Date.now();
-  const lastClear = parseInt(sessionStorage.getItem('last-cache-clear-time') || '0');
-  
-  // If we're clearing cache too often, that might cause flashing
-  if (now - lastClear < 500) { // Less than 500ms since last clear
-    console.warn("Warning: Cache being cleared too frequently - this might cause UI flashing");
-    // Don't skip the clear, but log so we can investigate
-  }
-  
-  // Record this clear operation time
-  try {
-    sessionStorage.setItem('last-cache-clear-time', now.toString());
-  } catch (e) {
-    // Ignore storage errors
-  }
-  
   // Clear cache for this specific spot if provided
   if (spotId) {
-    // Only clear if we haven't recently cleared this specific spot
-    const spotClearKey = `spot-${spotId}-last-cleared`;
-    const lastSpotClear = parseInt(sessionStorage.getItem(spotClearKey) || '0');
+    // Clear specific cache entries related to this spot
+    const keysToTryClear = [
+      `spot-${spotId}`,
+      `profile-${spotId}`,
+      `comments-${spotId}`,
+      `images-${spotId}`,
+      `creator-${spotId}`,
+      // Add query keys that match React Query patterns
+      `["astroSpot","${spotId}"]`,
+      `["spotImages","${spotId}"]`,
+      `["comments","${spotId}"]`,
+      `["creatorProfile"]`,
+      // Add additional keys that might be causing stale data
+      'community-spots-data',
+      'recent-spots',
+      'spot-list'
+    ];
     
-    if (now - lastSpotClear > 2000) { // Only clear if it's been more than 2 seconds
-      // Clear specific cache entries related to this spot
-      const keysToTryClear = [
-        `spot-${spotId}`,
-        `profile-${spotId}`,
-        `comments-${spotId}`,
-        `images-${spotId}`,
-        `creator-${spotId}`,
-        // Add query keys that match React Query patterns
-        `["astroSpot","${spotId}"]`,
-        `["spotImages","${spotId}"]`,
-        `["comments","${spotId}"]`,
-        `["creatorProfile"]`,
-        // Add additional keys that might be causing stale data
-        'community-spots-data',
-        'recent-spots',
-        'spot-list'
-      ];
+    keysToTryClear.forEach(key => {
+      try {
+        sessionStorage.removeItem(key);
+        localStorage.removeItem(`cache:${key}`);
+      } catch (e) {
+        // Ignore errors
+      }
+    });
+    
+    // Clear Supabase table cache for this spot
+    clearTableCache('user_astro_spots');
+    
+    // Also try to clear any React Query cache entries for this spot
+    try {
+      // This is a more aggressive approach to clear all related query caches
+      const storage = window.localStorage;
+      const keys = Object.keys(storage);
       
-      keysToTryClear.forEach(key => {
-        try {
-          sessionStorage.removeItem(key);
-          localStorage.removeItem(`cache:${key}`);
-        } catch (e) {
-          // Ignore errors
+      keys.forEach(key => {
+        if (key.includes('tanstack-query') && 
+            (key.includes(spotId) || key.includes('astroSpot') || key.includes('spot'))) {
+          storage.removeItem(key);
         }
       });
-      
-      // Clear Supabase table cache for this spot
-      clearTableCache('user_astro_spots');
-      
-      // Track when we last cleared this spot's cache
-      try {
-        sessionStorage.setItem(spotClearKey, now.toString());
-      } catch (e) {
-        // Ignore storage errors
-      }
-    } else {
-      console.log("Skipping cache clear for spot as it was recently cleared:", spotId);
+    } catch (e) {
+      console.error("Error clearing React Query cache:", e);
     }
   } else {
-    // Only do full clears rarely to prevent flashing
-    const lastFullClear = parseInt(sessionStorage.getItem('last-full-cache-clear') || '0');
-    if (now - lastFullClear > 10000) { // Only do full clears every 10 seconds max
-      // Clear all spot-related caches
-      clearAllCache();
-      clearTableCache('user_astro_spots');
-      sessionStorage.setItem('last-full-cache-clear', now.toString());
-    } else {
-      console.log("Skipping full cache clear to prevent UI flashing");
-    }
+    // Clear all spot-related caches
+    clearAllCache();
+    clearTableCache('user_astro_spots');
   }
 }
 

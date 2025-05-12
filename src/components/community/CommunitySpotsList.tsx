@@ -48,18 +48,9 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
     );
   }
 
-  // Handle card click with proper event capture and prevention
-  const handleCardClick = (id: string, event: React.MouseEvent | React.KeyboardEvent) => {
-    // Stop propagation to prevent event bubbling
-    if ('stopPropagation' in event) {
-      event.stopPropagation();
-    }
-    if ('preventDefault' in event) {
-      event.preventDefault();
-    }
-    
-    // Log the click for debugging
-    console.log(`Card clicked for ID ${id}, passing to navigation handler`);
+  // Handle card click with proper logging for debugging
+  const handleCardClick = (id: string) => {
+    console.log("Location card clicked with ID:", id, "timestamp:", new Date().getTime());
     onCardClick(id);
   };
 
@@ -92,10 +83,10 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
             <button
               className="relative text-left w-full group focus:outline-none rounded-xl transition duration-150 ease-in-out hover:shadow-2xl hover:border-primary border-2 border-transparent"
               tabIndex={0}
-              onClick={(e) => handleCardClick(spot.id, e)}
+              onClick={() => handleCardClick(spot.id)}
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ' ') {
-                  handleCardClick(spot.id, e);
+                  handleCardClick(spot.id);
                 }
               }}
               aria-label={spot.name}

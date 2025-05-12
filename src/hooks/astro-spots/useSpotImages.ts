@@ -2,8 +2,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 
-export const useSpotImages = (spotId: string, refreshTrigger: number = 0) => {
-  // Spot images query with improved caching
+export const useSpotImages = (spotId: string, refreshTrigger: number) => {
+  // Spot images query
   const { data: spotImages = [], isLoading: loadingImages, refetch: refetchImages } = useQuery({
     queryKey: ['spotImages', spotId, refreshTrigger],
     queryFn: async () => {
@@ -29,47 +29,20 @@ export const useSpotImages = (spotId: string, refreshTrigger: number = 0) => {
         
         console.log("Found", files.length, "images for spot:", spotId);
         
-        // Use memory cache for images to prevent flickering
-        const cachedUrls = sessionStorage.getItem(`spot-images-${spotId}`);
-        if (cachedUrls && !refreshTrigger) {
-          try {
-            const parsed = JSON.parse(cachedUrls);
-            if (parsed.timestamp > Date.now() - 1000 * 60 * 15) { // 15 min cache
-              console.log("Using cached image URLs");
-              return parsed.urls;
-            }
-          } catch (e) {
-            // Ignore parse errors
-          }
-        }
-        
-        const urls = files.map(file => {
+        return files.map(file => {
           const { data } = supabase
             .storage
             .from('astro_spot_images')
             .getPublicUrl(`${spotId}/${file.name}`);
           return data.publicUrl;
         });
-        
-        // Cache the URLs in session storage to prevent flickering
-        try {
-          sessionStorage.setItem(`spot-images-${spotId}`, JSON.stringify({
-            timestamp: Date.now(),
-            urls
-          }));
-        } catch (e) {
-          // Ignore storage errors
-        }
-        
-        return urls;
       } catch (error) {
         console.error("Error fetching spot images:", error);
         return [];
       }
     },
     enabled: !!spotId,
-    staleTime: 1000 * 60 * 5, // 5 minutes to reduce flickering
-    refetchOnWindowFocus: false
+    staleTime: 1000 * 15
   });
 
   return { spotImages, loadingImages, refetchImages };
