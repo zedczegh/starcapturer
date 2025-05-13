@@ -141,7 +141,9 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
 
   // Force a minimum non-zero score for better display
   const displayScore = Math.max(0.1, siqsScore);
-  const showProgressBar = true; // Always show the progress bar
+  
+  // Always show the progress bar
+  const showProgressBar = true;
 
   return (
     <Card className="bg-cosmic-800/70 border border-cosmic-700/50 shadow-xl">
@@ -152,62 +154,49 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {displayScore <= 0.1 ? (
-          <div className="flex flex-col items-center justify-center p-6 text-center opacity-80">
-            <Info className="h-10 w-10 text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">
-              {t("SIQS data is currently loading or not available for this location.", 
-                "此位置的SIQS数据正在加载或不可用。")}
-            </p>
-          </div>
-        ) : (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            transition={{ duration: 0.5 }}
-          >
-            <div className="flex justify-between items-center mb-2">
-              <div className="flex items-center">
-                <Gauge className="h-5 w-5 mr-2 text-gray-400" />
-                <span className="text-sm text-gray-300">
-                  {t("Current Score", "当前评分")}
-                </span>
-              </div>
-              <motion.div 
-                initial={{ scale: 0.5 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className={`text-2xl font-bold px-2 rounded ${scoreTextColorClass}`}
-              >
-                {displayScore.toFixed(1)}
-              </motion.div>
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          transition={{ duration: 0.5 }}
+        >
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center">
+              <Gauge className="h-5 w-5 mr-2 text-gray-400" />
+              <span className="text-sm text-gray-300">
+                {t("Current Score", "当前评分")}
+              </span>
             </div>
-            
-            {showProgressBar && (
-              <>
-                <Progress 
-                  value={displayScore * 10} 
-                  max={100} 
-                  className="h-2.5 mb-2" 
-                  colorClass={scoreColorClass}
-                />
-                
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-muted-foreground">{t("Poor", "较差")}</span>
-                  <span className={`font-semibold ${scoreTextColorClass}`}>{qualityText}</span>
-                  <span className="text-muted-foreground">{t("Excellent", "优秀")}</span>
-                </div>
-              </>
-            )}
-            
-            {siqsCalculationTime && (
-              <div className="flex justify-end items-center mt-3 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3 mr-1" />
-                <span>{t("Calculated at", "计算于")} {siqsCalculationTime}</span>
-              </div>
-            )}
-          </motion.div>
-        )}
+            <motion.div 
+              initial={{ scale: 0.5 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className={`text-2xl font-bold px-2 rounded ${scoreTextColorClass}`}
+            >
+              {displayScore.toFixed(1)}
+            </motion.div>
+          </div>
+          
+          {/* Always show progress bar */}
+          <Progress 
+            value={displayScore * 10} 
+            max={100} 
+            className="h-2.5 mb-2" 
+            colorClass={scoreColorClass}
+          />
+          
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-muted-foreground">{t("Poor", "较差")}</span>
+            <span className={`font-semibold ${scoreTextColorClass}`}>{qualityText}</span>
+            <span className="text-muted-foreground">{t("Excellent", "优秀")}</span>
+          </div>
+          
+          {siqsCalculationTime && (
+            <div className="flex justify-end items-center mt-3 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3 mr-1" />
+              <span>{t("Calculated at", "计算于")} {siqsCalculationTime}</span>
+            </div>
+          )}
+        </motion.div>
       </CardContent>
     </Card>
   );

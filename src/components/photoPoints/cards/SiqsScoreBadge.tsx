@@ -39,12 +39,12 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
   // Use stabilized score if available, otherwise use the current score
   const displayNumericScore = stabilizedScore !== null ? stabilizedScore : numericScore;
   
-  // Format score for display
-  const displayScore = formatSiqsForDisplay(displayNumericScore);
+  // Format score for display - ensure we always have a value
+  const displayScore = formatSiqsForDisplay(displayNumericScore || 0);
   
   // Get color class based on score value
   const getColorClass = (scoreValue: number | null) => {
-    if (scoreValue === null) return 'text-muted-foreground';
+    if (scoreValue === null || scoreValue <= 0) return 'text-muted-foreground';
     if (scoreValue >= 8) return 'text-green-500';
     if (scoreValue >= 6) return 'text-yellow-400';
     if (scoreValue >= 4) return 'text-amber-500';
@@ -75,7 +75,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     );
   }
   
-  // Regular badge view
+  // Regular badge view - always show something even if score is 0
   return (
     <div 
       className={`flex items-center ${showCertificationStar ? 'gap-1' : ''} ${className}`}

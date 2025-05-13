@@ -97,6 +97,27 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
     }
   }, [locationData?.latitude, locationData?.longitude, queryClient]);
 
+  // Ensure we have a fallback SIQS score based on Bortle scale for current location
+  useEffect(() => {
+    if (locationData && 
+        (!locationData.siqsResult || typeof locationData.siqsResult?.score !== 'number') &&
+        typeof locationData.bortleScale === 'number') {
+      
+      // Use a more robust formula that works well with all Bortle scales
+      const estimatedScore = Math.max(0.1, 10 - locationData.bortleScale * 0.8);
+      
+      console.log(`Generated default SIQS score of ${estimatedScore.toFixed(1)} based on Bortle scale ${locationData.bortleScale}`);
+      
+      setLocationData({
+        ...locationData,
+        siqsResult: {
+          score: estimatedScore,
+          isViable: estimatedScore >= 5
+        }
+      });
+    }
+  }, [locationData, setLocationData]);
+
   // Handle using current location when no location data is available
   useEffect(() => {
     // Only proceed if we're not loading, don't have location data, not already getting location,
@@ -123,17 +144,22 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
 
         // Generate an accurate name and bortleScale directly from our DB
         const locationId = `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
+        
+        // Ensure we have a default SIQS score based on Bortle scale
+        const bortleScale = locationInfo.bortleScale || 5;
+        const defaultSiqsScore = 10 - bortleScale * 0.8;
+        
         const locationData = {
           id: locationId,
           name: locationInfo.formattedName || t("Current Location", "当前位置"),
           latitude,
           longitude,
-          bortleScale: locationInfo.bortleScale || 5, // Ensure we have a default Bortle scale
+          bortleScale,
           timestamp: new Date().toISOString(),
           // Add default SIQS score based on Bortle scale for immediate display
           siqsResult: {
-            score: 10 - (locationInfo.bortleScale || 5) * 0.8, 
-            isViable: true
+            score: defaultSiqsScore, 
+            isViable: defaultSiqsScore >= 5
           }
         };
 

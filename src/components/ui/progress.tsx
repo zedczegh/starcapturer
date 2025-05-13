@@ -13,27 +13,32 @@ interface ProgressProps extends React.ComponentPropsWithoutRef<typeof ProgressPr
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
   ProgressProps
->(({ className, value, style, colorClass, ...props }, ref) => (
-  <ProgressPrimitive.Root
-    ref={ref}
-    className={cn(
-      "relative h-4 w-full overflow-hidden rounded-full bg-secondary/40 backdrop-blur-sm",
-      className
-    )}
-    {...props}
-  >
-    <ProgressPrimitive.Indicator
+>(({ className, value, style, colorClass, ...props }, ref) => {
+  // Ensure value is always at least 1 for visibility
+  const safeValue = value !== undefined && value !== null ? Math.max(1, value) : 1;
+  
+  return (
+    <ProgressPrimitive.Root
+      ref={ref}
       className={cn(
-        "h-full w-full flex-1 transition-all duration-700 ease-in-out",
-        colorClass
+        "relative h-4 w-full overflow-hidden rounded-full bg-secondary/40 backdrop-blur-sm",
+        className
       )}
-      style={{ 
-        transform: `translateX(-${100 - (value || 0)}%)`,
-        backgroundColor: !colorClass && style?.backgroundColor ? style.backgroundColor : undefined
-      }}
-    />
-  </ProgressPrimitive.Root>
-))
+      {...props}
+    >
+      <ProgressPrimitive.Indicator
+        className={cn(
+          "h-full w-full flex-1 transition-all duration-700 ease-in-out",
+          colorClass
+        )}
+        style={{ 
+          transform: `translateX(-${100 - (safeValue || 0)}%)`,
+          backgroundColor: !colorClass && style?.backgroundColor ? style.backgroundColor : undefined
+        }}
+      />
+    </ProgressPrimitive.Root>
+  );
+})
 Progress.displayName = ProgressPrimitive.Root.displayName
 
 export { Progress }
