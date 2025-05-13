@@ -28,7 +28,7 @@ const MessageContent = memo(({ user }: { user: any }) => {
   } = useMessageConversation();
 
   return (
-    <div className={`container mx-auto px-2 md:px-4 ${isMobile ? activeConversation ? 'py-2' : 'py-2 pt-16' : 'py-6 pt-20'} max-w-6xl`}>
+    <div className={`container mx-auto px-2 md:px-4 ${isMobile ? 'py-2 pt-16' : 'py-6 pt-20'} max-w-6xl`}>
       <MessageContainer
         activeConversation={activeConversation}
         conversations={conversations}
@@ -52,7 +52,6 @@ const MessageContent = memo(({ user }: { user: any }) => {
 // Memoize the entire Messages component
 const Messages = memo(() => {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">

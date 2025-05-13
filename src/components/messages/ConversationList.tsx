@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { AnimatePresence } from "framer-motion";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ConversationPartner } from '@/hooks/messaging/types';
+import { ConversationPartner } from '@/hooks/messaging/useConversations';
 import ConversationItem from './conversation/ConversationItem';
 import DeleteConversationDialog from './conversation/DeleteConversationDialog';
 import ConversationHeader from './conversation/ConversationHeader';

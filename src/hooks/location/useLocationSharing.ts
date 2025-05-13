@@ -24,24 +24,31 @@ export const useLocationSharing = () => {
     return new Promise((resolve) => {
       setGettingLocation(true);
       
-      // Set a timeout to handle very slow geolocation requests
-      const timeoutId = setTimeout(() => {
-        toast.error(t("Location request is taking too long", "位置请求耗时过长"));
-        setGettingLocation(false);
-        resolve(null);
-      }, 15000);
-      
       getCurrentPosition(
-        (position) => {
-          clearTimeout(timeoutId);
+        async (position) => {
           const { latitude, longitude } = position.coords;
           
           // Create a simple estimate SIQS score based on latitude
+          // In a real app, this would come from an API or calculation
           const estimatedScore = parseFloat((Math.random() * 3 + 3).toFixed(1)); // Random score between 3.0-6.0
           const isViable = estimatedScore >= 5.0;
           
-          // Use a simpler location name approach to improve performance
-          const locationName = t("Shared Location", "共享位置");
+          // Try to get a better location name via reverse geocoding
+          let locationName = t("Shared Location", "共享位置");
+          
+          try {
+            // Import the service directly to avoid circular dependencies
+            const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
+            const locationDetails = await getEnhancedLocationDetails(latitude, longitude, language === 'zh' ? 'zh' : 'en');
+            
+            if (locationDetails && locationDetails.formattedName && !locationDetails.formattedName.includes("°")) {
+              locationName = locationDetails.formattedName;
+            }
+          } catch (error) {
+            console.warn("Could not get detailed location name, using fallback:", error);
+            // Use regional name as fallback
+            locationName = getRegionalName(latitude, longitude, language === 'zh' ? 'zh' : 'en');
+          }
           
           const locationData: LocationData = {
             latitude,
@@ -57,18 +64,8 @@ export const useLocationSharing = () => {
           console.log("Location data prepared for sharing:", locationData);
           setGettingLocation(false);
           resolve(locationData);
-          
-          // Get better name in the background after resolving
-          try {
-            import('@/services/geocoding/enhancedReverseGeocoding').then(({ getEnhancedLocationDetails }) => {
-              getEnhancedLocationDetails(latitude, longitude, language === 'zh' ? 'zh' : 'en');
-            });
-          } catch (error) {
-            console.warn("Background geocoding failed:", error);
-          }
         },
         (error) => {
-          clearTimeout(timeoutId);
           console.error("Error getting location:", error);
           let errorMessage = '';
           
@@ -102,7 +99,7 @@ export const useLocationSharing = () => {
           setGettingLocation(false);
           resolve(null);
         },
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     });
   }, [t, language]);

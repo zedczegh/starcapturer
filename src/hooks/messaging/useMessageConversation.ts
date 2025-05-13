@@ -1,8 +1,7 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMessaging } from '@/hooks/useMessaging';
-import { ConversationPartner } from './types';
+import { ConversationPartner } from './useConversations';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
