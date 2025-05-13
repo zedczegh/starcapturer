@@ -156,6 +156,7 @@ export function lazyLoadContainerRef(node: HTMLElement | null): void {
 // Dynamically import polyfills for older browsers if needed
 function loadPolyfills(): Promise<void> {
   if (!('IntersectionObserver' in window)) {
+    // Using dynamic import instead of static import to avoid type issues
     return import('intersection-observer').then(() => {
       console.log("IntersectionObserver polyfill loaded");
     });
