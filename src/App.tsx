@@ -63,6 +63,7 @@ function App() {
                   <Route path="/manage-astro-spots" element={<ManageAstroSpots />} />
                   <Route path="/astro-spot/:id" element={<AstroSpotProfile />} />
                   <Route path="/messages" element={<Messages />} />
+                  <Route path="/auth" element={<AuthDialog open={true} onOpenChange={() => {}} />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </AuthProvider>
