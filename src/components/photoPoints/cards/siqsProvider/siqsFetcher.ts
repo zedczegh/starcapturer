@@ -1,99 +1,98 @@
 
 /**
- * SIQS data fetching functions
+ * SIQS Fetcher - Handles requesting and processing SIQS data
  */
 
-import { getCompleteSiqsDisplay, SiqsDisplayOpts } from '@/utils/unifiedSiqsDisplay';
-import { executeQueuedFetch } from './queueManager';
-import { updateSiqsCache, getSiqsCacheKey } from './cacheManager';
+import { callSiqsService } from './cacheManager';
+import { getDisplaySiqs, formatSiqsForDisplay } from '@/utils/unifiedSiqsDisplay';
+
+// Define types for SIQS fetch options
+export interface SiqsDisplayOpts {
+  isCertified?: boolean;
+  isDarkSkyReserve?: boolean;
+  confidence?: number;
+  includeQuality?: boolean;
+}
 
 /**
- * Fetch SIQS data for a location with queueing and caching
+ * Function to fetch SIQS data for a location
  */
-export async function fetchSiqsData({
-  latitude,
-  longitude,
-  bortleScale,
-  isCertified,
-  isDarkSkyReserve,
-  existingSiqs,
-  skipCache,
-  cacheKey,
-  onSuccess,
-  onError
-}: {
-  latitude?: number;
-  longitude?: number;
-  bortleScale: number;
-  isCertified: boolean;
-  isDarkSkyReserve: boolean;
-  existingSiqs: number | any;
-  skipCache?: boolean;
-  cacheKey: string | null;
-  onSuccess: (result: any) => void;
-  onError: (error: any) => void;
-}): Promise<void> {
-  if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) {
-    onError(new Error("Invalid coordinates"));
-    return;
-  }
+export const fetchLocationSiqs = async (
+  latitude: number, 
+  longitude: number,
+  options: {
+    bortleScale?: number;
+    existingSiqs?: any;
+  } = {}
+): Promise<{
+  score: number | null;
+  loading: boolean;
+  confidence: number;
+}> => {
+  try {
+    // Validate inputs
+    if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) {
+      console.warn('Invalid coordinates for SIQS calculation:', latitude, longitude);
+      return { score: null, loading: false, confidence: 0 };
+    }
 
-  // Convert existingSiqs to number if possible
-  const existingSiqsNumber = typeof existingSiqs === 'number' ? existingSiqs : 
-    (typeof existingSiqs === 'object' && existingSiqs && 'score' in existingSiqs) ? existingSiqs.score : 0;
-  
-  // Queue or execute the fetch based on current load
-  return executeQueuedFetch(cacheKey, async () => {
-    try {
-      const options: SiqsDisplayOpts = {
-        skipCache,
-        useSingleHourSampling: true,
-        targetHour: 1,
-        latitude,
-        longitude,
-        bortleScale,
-        isCertified,
-        isDarkSkyReserve,
-        existingSiqs: existingSiqsNumber
-      };
-      
-      const result = await getCompleteSiqsDisplay(options);
-      
-      // Update the caches
-      if (cacheKey) {
-        updateSiqsCache(cacheKey, result);
+    // Get SIQS from service
+    const result = await callSiqsService(latitude, longitude, options.bortleScale);
+    
+    if (result && typeof result === 'object') {
+      if ('score' in result && typeof result.score === 'number') {
+        // Extract confidence if available
+        const confidence = 'confidence' in result && typeof result.confidence === 'number' 
+          ? result.confidence 
+          : 8;
+        
+        return {
+          score: result.score,
+          loading: false,
+          confidence
+        };
       }
-      
-      onSuccess(result);
-    } catch (error) {
-      console.error("Error in SIQS data fetching:", error);
-      onError(error);
     }
-  });
-}
+    
+    // Try to use existing SIQS if available
+    if (options.existingSiqs) {
+      const existingScore = getDisplaySiqs(options.existingSiqs);
+      if (existingScore !== null && existingScore > 0) {
+        return {
+          score: existingScore,
+          loading: false,
+          confidence: 7 // Lower confidence for existing/static scores
+        };
+      }
+    }
+    
+    return { score: null, loading: false, confidence: 0 };
+  } catch (error) {
+    console.error('Error fetching SIQS:', error);
+    return { score: null, loading: false, confidence: 0 };
+  }
+};
 
 /**
- * Handle simplified SIQS fallback when full calculation fails
+ * Helper function to get formatted SIQS for display
  */
-export function handleSiqsError({
-  isCertified, 
-  existingSiqsNumber, 
-  onSiqsCalculated
-}: {
-  isCertified: boolean;
-  existingSiqsNumber: number;
-  onSiqsCalculated: (siqs: number | null, loading: boolean, confidence?: number) => void;
-}): void {
-  if (isCertified) {
-    // For certified locations, use existing score if available
-    if (existingSiqsNumber > 0) {
-      onSiqsCalculated(existingSiqsNumber, false, 7);
-    } else {
-      onSiqsCalculated(null, false);
-    }
-  } else if (existingSiqsNumber > 0) {
-    onSiqsCalculated(existingSiqsNumber, false, 6);
-  } else {
-    onSiqsCalculated(null, false);
-  }
-}
+export const getFormattedSiqs = (siqs: any): string => {
+  return formatSiqsForDisplay(siqs);
+};
+
+/**
+ * Simple SIQS calculations based on available data
+ */
+export const calculateQuickSiqs = (cloudCover: number, bortleScale: number = 4): number => {
+  // Base score determined by cloud cover (0-100%)
+  const cloudScore = Math.max(0, 10 - (cloudCover / 10));
+  
+  // Adjust for Bortle scale
+  const bortleAdjustment = Math.max(0, 5 - (bortleScale / 2));
+  
+  // Weighted combination (70% clouds, 30% light pollution)
+  const rawScore = (cloudScore * 0.7) + (bortleAdjustment * 0.3);
+  
+  return Math.min(10, Math.max(0, Math.round(rawScore * 10) / 10));
+};
+

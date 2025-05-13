@@ -1,69 +1,71 @@
 
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
+/**
+ * SIQS Batch Processing Helpers
+ */
+
 import { 
-  getSiqsScore, 
   isSiqsAtLeast,
-  sortLocationsBySiqs 
+  sortLocationsBySiqs,
+  getSiqsScore 
 } from './siqsHelpers';
 
-// Threshold for including a spot in filtered results
-const DEFAULT_MINIMUM_SIQS = 5.0;
+/**
+ * Filter locations based on minimum SIQS score
+ */
+export const filterByMinimumSiqs = (locations: any[], minimumScore: number = 5.5): any[] => {
+  if (!Array.isArray(locations)) return [];
+  
+  return locations.filter(location => isSiqsAtLeast(location.siqs, minimumScore));
+};
 
 /**
- * Filter locations that meet minimum SIQS requirements
- * 
- * @param locations Array of locations to filter
- * @param minimumSiqs Optional minimum SIQS threshold
- * @returns Filtered array of locations
+ * Get the top N locations by SIQS score
  */
-export function filterBySiqs(
-  locations: SharedAstroSpot[], 
-  minimumSiqs = DEFAULT_MINIMUM_SIQS
-): SharedAstroSpot[] {
-  return locations.filter(location => {
-    // Check for real-time SIQS first
-    if ('realTimeSiqs' in location && typeof location.realTimeSiqs === 'number') {
-      return location.realTimeSiqs >= minimumSiqs;
+export const getTopLocationsBySiqs = (locations: any[], count: number = 5): any[] => {
+  if (!Array.isArray(locations)) return [];
+  
+  const sorted = sortLocationsBySiqs(locations);
+  return sorted.slice(0, count);
+};
+
+/**
+ * Group locations by SIQS quality level
+ */
+export const groupLocationsByQuality = (locations: any[]): Record<string, any[]> => {
+  if (!Array.isArray(locations)) return {};
+  
+  return locations.reduce((groups, location) => {
+    const score = getSiqsScore(location.siqs);
+    let quality = 'unknown';
+    
+    if (score >= 8) quality = 'excellent';
+    else if (score >= 6) quality = 'good';
+    else if (score >= 4) quality = 'average';
+    else if (score >= 2) quality = 'poor';
+    else quality = 'bad';
+    
+    if (!groups[quality]) {
+      groups[quality] = [];
     }
     
-    // Then check regular SIQS
-    return isSiqsAtLeast(location.siqs, minimumSiqs);
-  });
-}
+    groups[quality].push(location);
+    return groups;
+  }, {} as Record<string, any[]>);
+};
 
 /**
- * Get the best locations based on SIQS score
- * 
- * @param locations Array of all locations
- * @param count Optional maximum number of locations to return
- * @param minimumSiqs Optional minimum SIQS threshold
- * @returns Array of best locations
+ * Calculate average SIQS for a group of locations
  */
-export function getBestSiqsLocations(
-  locations: SharedAstroSpot[],
-  count = 5,
-  minimumSiqs = DEFAULT_MINIMUM_SIQS
-): SharedAstroSpot[] {
-  const filtered = filterBySiqs(locations, minimumSiqs);
-  const sorted = sortLocationsBySiqs(filtered);
-  return sorted.slice(0, count);
-}
+export const calculateAverageSiqs = (locations: any[]): number => {
+  if (!Array.isArray(locations) || locations.length === 0) return 0;
+  
+  const validLocations = locations.filter(loc => loc && loc.siqs);
+  if (validLocations.length === 0) return 0;
+  
+  const sum = validLocations.reduce((total, loc) => {
+    return total + getSiqsScore(loc.siqs);
+  }, 0);
+  
+  return sum / validLocations.length;
+};
 
-/**
- * Calculate average SIQS score across multiple locations
- * 
- * @param locations Array of locations to average
- * @returns Average SIQS score or null if no valid scores
- */
-export function calculateAverageSiqs(locations: SharedAstroSpot[]): number | null {
-  if (!locations.length) return null;
-  
-  const validScores = locations
-    .map(location => getSiqsScore(location.siqs))
-    .filter(score => score > 0);
-  
-  if (!validScores.length) return null;
-  
-  const sum = validScores.reduce((acc, score) => acc + score, 0);
-  return sum / validScores.length;
-}

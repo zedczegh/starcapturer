@@ -77,3 +77,88 @@ export function getSiqsQualityClass(siqs: any): string {
   if (score >= 2) return 'poor';
   return 'bad';
 }
+
+/**
+ * Format SIQS value for display
+ */
+export function formatSiqsForDisplay(siqs: any): string {
+  const displaySiqs = getDisplaySiqs(siqs);
+  
+  if (displaySiqs === null) {
+    return 'N/A';
+  }
+  
+  return displaySiqs.toFixed(1);
+}
+
+/**
+ * Get normalized and display-ready SIQS score
+ */
+export function getDisplaySiqs(siqs: any): number | null {
+  // Handle null/undefined
+  if (!siqs) return null;
+  
+  // Handle numeric value
+  if (typeof siqs === 'number') {
+    return normalizeToSiqsScale(siqs);
+  }
+  
+  // Handle object with score property
+  if (typeof siqs === 'object') {
+    if ('score' in siqs && typeof siqs.score === 'number') {
+      return normalizeToSiqsScale(siqs.score);
+    }
+    
+    if ('siqs' in siqs && typeof siqs.siqs === 'number') {
+      return normalizeToSiqsScale(siqs.siqs);
+    }
+  }
+  
+  // Couldn't find a valid SIQS value
+  return null;
+}
+
+/**
+ * Get SIQS quality level text
+ */
+export function getSiqsQualityText(siqs: any): string {
+  const normalizedSiqs = getDisplaySiqs(siqs);
+  
+  if (normalizedSiqs === null) return 'Unknown';
+  
+  if (normalizedSiqs >= 8) return 'Excellent';
+  if (normalizedSiqs >= 6) return 'Good';
+  if (normalizedSiqs >= 4) return 'Average';
+  if (normalizedSiqs >= 2) return 'Poor';
+  return 'Bad';
+}
+
+/**
+ * Check if SIQS is at least a certain value
+ */
+export function isSiqsAtLeast(siqs: any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score >= threshold;
+}
+
+/**
+ * Check if SIQS is greater than a certain value
+ */
+export function isSiqsGreaterThan(siqs: any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score > threshold;
+}
+
+/**
+ * Sort locations by their SIQS scores (highest first)
+ */
+export function sortLocationsBySiqs(locations: any[]): any[] {
+  if (!Array.isArray(locations)) return [];
+  
+  return [...locations].sort((a, b) => {
+    const scoreA = getSiqsScore(a.siqs);
+    const scoreB = getSiqsScore(b.siqs);
+    return scoreB - scoreA;
+  });
+}
+

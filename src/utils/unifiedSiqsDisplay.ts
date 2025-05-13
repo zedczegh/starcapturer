@@ -6,6 +6,14 @@
 
 import { normalizeToSiqsScale } from './siqsHelpers';
 
+// Define SiqsDisplayOpts type for consistency
+export interface SiqsDisplayOpts {
+  isCertified?: boolean;
+  isDarkSkyReserve?: boolean;
+  confidence?: number;
+  includeQuality?: boolean;
+}
+
 /**
  * Get normalized and display-ready SIQS score
  * Handles all possible SIQS formats and returns a consistent value
@@ -61,3 +69,22 @@ export const getSiqsQualityText = (siqs: any): string => {
   if (normalizedSiqs >= 2) return 'Poor';
   return 'Bad';
 };
+
+/**
+ * Get complete SIQS display information
+ * Returns an object with score, quality text, and other properties
+ */
+export const getCompleteSiqsDisplay = (siqs: any, options?: SiqsDisplayOpts) => {
+  const score = getDisplaySiqs(siqs);
+  const qualityText = options?.includeQuality ? getSiqsQualityText(siqs) : null;
+  
+  return {
+    score,
+    formattedScore: formatSiqsForDisplay(siqs),
+    qualityText,
+    isCertified: options?.isCertified || false,
+    isDarkSkyReserve: options?.isDarkSkyReserve || false,
+    confidence: options?.confidence || 10
+  };
+};
+

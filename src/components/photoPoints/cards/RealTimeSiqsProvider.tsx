@@ -15,6 +15,7 @@ interface RealTimeSiqsProviderProps {
   onSiqsCalculated: (siqs: number | null, loading: boolean, confidence?: number) => void;
   priorityLevel?: 'high' | 'medium' | 'low';
   forceUpdate?: boolean;
+  debugLabel?: string;  // Added debugLabel as optional prop
 }
 
 const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
@@ -27,7 +28,8 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   existingSiqs,
   onSiqsCalculated,
   priorityLevel = 'low',
-  forceUpdate = false
+  forceUpdate = false,
+  debugLabel  // Make it available in the component
 }) => {
   const [initialized, setInitialized] = useState(false);
   
@@ -52,12 +54,16 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
     if (!initialized && !forceUpdate && latitude && longitude) {
       const cachedSiqs = getCachedRealTimeSiqs(latitude, longitude);
       if (cachedSiqs !== null) {
-        console.log(`Using cached SIQS for ${latitude.toFixed(4)},${longitude.toFixed(4)}: ${cachedSiqs}`);
+        if (debugLabel) {
+          console.log(`[${debugLabel}] Using cached SIQS for ${latitude.toFixed(4)},${longitude.toFixed(4)}: ${cachedSiqs}`);
+        } else {
+          console.log(`Using cached SIQS for ${latitude.toFixed(4)},${longitude.toFixed(4)}: ${cachedSiqs}`);
+        }
         onSiqsCalculated(cachedSiqs, false);
         setInitialized(true);
       }
     }
-  }, [initialized, latitude, longitude, onSiqsCalculated, forceUpdate]);
+  }, [initialized, latitude, longitude, onSiqsCalculated, forceUpdate, debugLabel]);
   
   // Only calculate new scores if we need to
   const showRealTimeSiqs = (
@@ -78,3 +84,4 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
 };
 
 export default React.memo(RealTimeSiqsProvider);
+
