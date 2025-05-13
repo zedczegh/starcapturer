@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info, Star, Clock } from "lucide-react";
@@ -170,18 +169,6 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
               <span className="text-muted-foreground">{t("Poor", "较差")}</span>
               <span className={`font-semibold ${scoreTextColorClass}`}>{qualityText}</span>
               <span className="text-muted-foreground">{t("Excellent", "优秀")}</span>
-            </div>
-            
-            {/* SIQS Color Scale Guide - Small visual reference */}
-            <div className="mt-3 pt-3 border-t border-cosmic-700/30">
-              <div className="flex space-x-1 h-1.5">
-                <div className="bg-red-500 flex-1 rounded-l-full" title="0-1.9: Bad"></div>
-                <div className="bg-orange-500 flex-1" title="2-3.9: Poor"></div>
-                <div className="bg-yellow-500 flex-1" title="4-4.9: Average"></div>
-                <div className="bg-olive-500 flex-1" title="5-5.9: Above Average"></div>
-                <div className="bg-blue-500 flex-1" title="6-7.9: Good"></div>
-                <div className="bg-green-500 flex-1 rounded-r-full" title="8-10: Excellent"></div>
-              </div>
             </div>
             
             {siqsCalculationTime && (
