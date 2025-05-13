@@ -6,6 +6,7 @@ import NavHeader from "./navbar/NavHeader";
 import DesktopNav from "./navbar/DesktopNav";
 import MobileNav from "./navbar/MobileNav";
 import ProfileButton from "./navbar/ProfileButton";
+import { getSavedLocation } from "@/utils/locationStorage";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -27,6 +28,9 @@ const NavBar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [scrolled]);
 
+  // Ensure we have the saved location available for navbar links
+  const savedLocation = getSavedLocation();
+
   // Use a higher z-index to ensure the navbar is visible on all pages
   return (
     <>
@@ -34,6 +38,7 @@ const NavBar = () => {
         <DesktopNav 
           location={location} 
           locationId={locationId}
+          savedLocation={savedLocation}
         />
         <div className="flex md:hidden items-center">
           <ProfileButton />
@@ -43,6 +48,7 @@ const NavBar = () => {
       <MobileNav 
         location={location} 
         locationId={locationId}
+        savedLocation={savedLocation}
       />
     </>
   );

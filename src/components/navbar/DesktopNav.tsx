@@ -1,58 +1,113 @@
 
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
-import { NavLink } from "./NavButtons";
-import LanguageSwitcher from "../LanguageSwitcher";
+import { NavLink } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Map } from "lucide-react";
-import LocationPinButton from "./LocationPinButton";
-import ProfileButton from "./ProfileButton";
+import { cn } from "@/lib/utils";
+import { MapPin, Home, Info, Users, CameraIcon, Star } from "lucide-react";
 
 interface DesktopNavProps {
-  location: ReturnType<typeof useLocation>;
+  location: any;
   locationId: string | null;
+  savedLocation?: any;
 }
 
-const DesktopNav: React.FC<DesktopNavProps> = ({ 
-  location, 
-  locationId 
-}) => {
+const DesktopNav: React.FC<DesktopNavProps> = ({ location, locationId, savedLocation }) => {
   const { t } = useLanguage();
   
-  const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
-  
+  // Generate the location link with appropriate state data
+  const getLocationLink = () => {
+    // If we have saved location data, use it
+    if (savedLocation) {
+      return {
+        pathname: `/location/${savedLocation.id || 'latest'}`,
+        state: {
+          ...savedLocation,
+          fromNavBar: true
+        }
+      };
+    }
+    
+    // Fallback to default route
+    return "/location";
+  };
+
   return (
-    <>
-      <nav className="hidden md:flex items-center space-x-6">
-        <NavLink to="/photo-points" active={location.pathname === "/photo-points"}>
-          {t("Photo Points", "拍摄点")}
-        </NavLink>
-        <NavLink 
-          to={detailsPath}
-          active={location.pathname.startsWith('/location/')}
-        >
-          {t("Location Details", "位置详情")}
-        </NavLink>
-        <NavLink to="/community" active={location.pathname === "/community"}>
-          {t("Community", "社区")}
-        </NavLink>
-        <NavLink to="/share" active={location.pathname === "/share"}>
-          {t("Bortle Now", "实时光污染")}
-        </NavLink>
-        <NavLink to="/useful-links" active={location.pathname === "/useful-links"}>
-          {t("Resources", "资源")}
-        </NavLink>
-        <NavLink to="/about" active={location.pathname === "/about"}>
-          {t("About SIQS", "关于SIQS")}
-        </NavLink>
-      </nav>
-      
-      <div className="hidden md:flex items-center space-x-2">
-        <LocationPinButton />
-        <LanguageSwitcher />
-        <ProfileButton />
-      </div>
-    </>
+    <div className="hidden md:flex items-center space-x-1">
+      <NavLink
+        to="/"
+        className={({ isActive }) =>
+          cn(
+            "px-3 py-1.5 rounded-md text-sm font-medium flex items-center",
+            isActive
+              ? "bg-cosmic-800 text-white"
+              : "text-gray-300 hover:bg-cosmic-800/40 hover:text-white transition-colors"
+          )
+        }
+      >
+        <Home className="w-4 h-4 mr-1.5" />
+        {t("Home", "主页")}
+      </NavLink>
+
+      <NavLink
+        to={getLocationLink()}
+        className={({ isActive }) =>
+          cn(
+            "px-3 py-1.5 rounded-md text-sm font-medium flex items-center",
+            isActive || location.pathname.startsWith("/location/")
+              ? "bg-cosmic-800 text-white"
+              : "text-gray-300 hover:bg-cosmic-800/40 hover:text-white transition-colors"
+          )
+        }
+      >
+        <MapPin className="w-4 h-4 mr-1.5" />
+        {t("Location", "位置")}
+      </NavLink>
+
+      <NavLink
+        to="/community"
+        className={({ isActive }) =>
+          cn(
+            "px-3 py-1.5 rounded-md text-sm font-medium flex items-center",
+            isActive || location.pathname.startsWith("/astro-spot/")
+              ? "bg-cosmic-800 text-white"
+              : "text-gray-300 hover:bg-cosmic-800/40 hover:text-white transition-colors"
+          )
+        }
+      >
+        <Users className="w-4 h-4 mr-1.5" />
+        {t("Community", "社区")}
+      </NavLink>
+
+      <NavLink
+        to="/bortle-now"
+        className={({ isActive }) =>
+          cn(
+            "px-3 py-1.5 rounded-md text-sm font-medium flex items-center",
+            isActive
+              ? "bg-cosmic-800 text-white"
+              : "text-gray-300 hover:bg-cosmic-800/40 hover:text-white transition-colors"
+          )
+        }
+      >
+        <CameraIcon className="w-4 h-4 mr-1.5" />
+        {t("BortleNow", "光害测量")}
+      </NavLink>
+
+      <NavLink
+        to="/about"
+        className={({ isActive }) =>
+          cn(
+            "px-3 py-1.5 rounded-md text-sm font-medium flex items-center",
+            isActive
+              ? "bg-cosmic-800 text-white"
+              : "text-gray-300 hover:bg-cosmic-800/40 hover:text-white transition-colors"
+          )
+        }
+      >
+        <Info className="w-4 h-4 mr-1.5" />
+        {t("About", "关于")}
+      </NavLink>
+    </div>
   );
 };
 
