@@ -11,32 +11,6 @@ export function createCustomMarker(color = '#f43f5e'): L.DivIcon | null {
   if (typeof window === 'undefined') return null;
   
   try {
-    // For astrospot locations, use a telescope icon
-    if (color === '#3b82f6' || color === '#8b5cf6') {
-      return L.divIcon({
-        className: "custom-telescope-marker",
-        iconAnchor: [12, 12],
-        popupAnchor: [0, -12],
-        html: `
-          <div style="
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background-color: ${color};
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1.5px solid #FFFFFF;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-          ">
-            <div style="color: white; font-size: 14px;">🔭</div>
-          </div>
-        `,
-        iconSize: [24, 24]
-      });
-    }
-    
-    // For other locations, use the standard pin marker
     const markerHtmlStyles = `
       background-color: ${color};
       width: 2rem;
