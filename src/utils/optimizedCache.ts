@@ -1,133 +1,256 @@
-
 /**
- * Optimized cache utility to prevent storage quota issues
+ * Optimized cache utility for better performance
  */
 
-// Maximum number of items to store in localStorage
-const MAX_CACHE_ITEMS = 50;
+// In-memory cache for fastest access
+const memoryCache = new Map<string, any>();
+const expiryTimes = new Map<string, number>();
 
-// Cache item with timestamp for expiration management
-interface CacheItem<T> {
-  value: T;
-  timestamp: number;
-  priority: number; // Higher number = higher priority
-}
+// Constants for cache management
+const CACHE_PREFIX = 'app_cache:';
+const DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Store a value in localStorage with optimized management to prevent quota errors
+ * Get an item from the cache
  */
-export function setOptimizedStorageItem<T>(key: string, value: T, priority: number = 1, ttl: number = 3600000): boolean {
+export function getCachedItem<T>(key: string): T | null {
   try {
-    // First try to store the item directly
-    const item: CacheItem<T> = {
-      value,
-      timestamp: Date.now(),
-      priority
-    };
-    
-    try {
-      localStorage.setItem(key, JSON.stringify(item));
-      return true;
-    } catch (error) {
-      // If storage is full, clean up
-      if (error instanceof DOMException && (
-        error.name === 'QuotaExceededError' || 
-        error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
-      )) {
-        // Clean up strategy: remove oldest and lowest priority items
-        cleanupStorage();
-        
-        // Try again after cleanup
-        try {
-          localStorage.setItem(key, JSON.stringify(item));
-          return true;
-        } catch (secondError) {
-          console.error('Still could not save to localStorage after cleanup:', secondError);
-          return false;
-        }
+    // First check memory cache
+    if (memoryCache.has(key)) {
+      const expiry = expiryTimes.get(key) || 0;
+      if (expiry > Date.now()) {
+        return memoryCache.get(key) as T;
       } else {
-        throw error;
+        // Clean up expired item
+        memoryCache.delete(key);
+        expiryTimes.delete(key);
       }
     }
-  } catch (error) {
-    console.error('Error saving to optimized storage:', error);
-    return false;
-  }
-}
 
-/**
- * Get a value from localStorage with type safety
- */
-export function getOptimizedStorageItem<T>(key: string): T | null {
-  try {
-    const itemStr = localStorage.getItem(key);
-    if (!itemStr) return null;
+    // Then check localStorage
+    const cachedValue = localStorage.getItem(`${CACHE_PREFIX}${key}`);
+    if (cachedValue) {
+      try {
+        const parsed = JSON.parse(cachedValue);
+        if (parsed.expiry && parsed.expiry > Date.now()) {
+          // Keep in memory for faster access next time
+          memoryCache.set(key, parsed.value);
+          expiryTimes.set(key, parsed.expiry);
+          return parsed.value as T;
+        } else {
+          // Clean up expired item
+          localStorage.removeItem(`${CACHE_PREFIX}${key}`);
+        }
+      } catch (e) {
+        // Invalid JSON or other parsing error
+        localStorage.removeItem(`${CACHE_PREFIX}${key}`);
+      }
+    }
     
-    const item: CacheItem<T> = JSON.parse(itemStr);
-    return item.value;
-  } catch (error) {
-    console.error('Error retrieving from optimized storage:', error);
+    return null;
+  } catch (e) {
+    console.error('Error retrieving from cache:', e);
     return null;
   }
 }
 
 /**
- * Clean up localStorage by removing expired and low priority items
+ * Set an item in the cache
  */
-function cleanupStorage(): void {
+export function setCachedItem<T>(key: string, value: T, ttl: number = DEFAULT_TTL): void {
   try {
-    // Get all keys
-    const keys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key) keys.push(key);
-    }
+    const expiry = Date.now() + ttl;
     
-    // Skip cleaning if we have few items
-    if (keys.length < MAX_CACHE_ITEMS) return;
+    // Update memory cache
+    memoryCache.set(key, value);
+    expiryTimes.set(key, expiry);
     
-    // Build array of items with their metadata
-    const items: Array<{key: string; item: CacheItem<any>}> = [];
-    for (const key of keys) {
-      try {
-        const value = localStorage.getItem(key);
-        if (value) {
-          const parsed = JSON.parse(value);
-          if (parsed && parsed.timestamp && parsed.priority !== undefined) {
-            items.push({ key, item: parsed });
-          }
+    // Update localStorage
+    try {
+      localStorage.setItem(
+        `${CACHE_PREFIX}${key}`,
+        JSON.stringify({ value, expiry })
+      );
+    } catch (e) {
+      // Handle storage quota exceeded
+      if (e instanceof DOMException && (
+        e.name === 'QuotaExceededError' ||
+        e.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+      )) {
+        clearOldCache();
+        // Try again
+        try {
+          localStorage.setItem(
+            `${CACHE_PREFIX}${key}`,
+            JSON.stringify({ value, expiry })
+          );
+        } catch (retryError) {
+          console.error('Still could not write to cache after cleanup:', retryError);
         }
-      } catch (e) {
-        // Skip non-parseable items
+      } else {
+        console.error('Error writing to localStorage:', e);
       }
     }
-    
-    // Sort by priority (ascending) and then by age (oldest first)
-    items.sort((a, b) => {
-      if (a.item.priority !== b.item.priority) {
-        return a.item.priority - b.item.priority;
-      }
-      return a.item.timestamp - b.item.timestamp;
-    });
-    
-    // Remove 30% of items, starting with lowest priority and oldest
-    const removeCount = Math.ceil(items.length * 0.3);
-    for (let i = 0; i < removeCount && i < items.length; i++) {
-      localStorage.removeItem(items[i].key);
-    }
-    
-  } catch (error) {
-    console.error('Error cleaning storage:', error);
+  } catch (e) {
+    console.error('Error setting cache item:', e);
   }
 }
 
 /**
- * Clear all items managed by the optimized cache
+ * Remove an item from the cache
  */
-export function clearOptimizedStorage(): void {
+export function removeCachedItem(key: string): void {
+  memoryCache.delete(key);
+  expiryTimes.delete(key);
   try {
-    localStorage.clear();
-  } catch (error) {
-    console.error('Error clearing optimized storage:', error);
+    localStorage.removeItem(`${CACHE_PREFIX}${key}`);
+  } catch (e) {
+    console.error('Error removing from localStorage:', e);
   }
 }
+
+/**
+ * Clear all cache or by prefix
+ */
+export function clearCache(prefix?: string): void {
+  if (prefix) {
+    // Clear memory cache with prefix
+    for (const key of memoryCache.keys()) {
+      if (key.startsWith(prefix)) {
+        memoryCache.delete(key);
+        expiryTimes.delete(key);
+      }
+    }
+    
+    // Clear localStorage with prefix
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(`${CACHE_PREFIX}${prefix}`)) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (e) {
+      console.error('Error clearing cache with prefix:', e);
+    }
+  } else {
+    // Clear all cache
+    memoryCache.clear();
+    expiryTimes.clear();
+    
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(CACHE_PREFIX)) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (e) {
+      console.error('Error clearing all cache:', e);
+    }
+  }
+}
+
+/**
+ * Clean old cache entries when storage is full
+ */
+function clearOldCache(): void {
+  try {
+    const cacheItems: Array<{key: string; expiry: number}> = [];
+    
+    // Collect all cache items
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(CACHE_PREFIX)) {
+        try {
+          const value = localStorage.getItem(key);
+          if (value) {
+            const data = JSON.parse(value);
+            if (data.expiry) {
+              cacheItems.push({
+                key,
+                expiry: data.expiry
+              });
+            }
+          }
+        } catch (e) {
+          // Remove invalid entries
+          localStorage.removeItem(key);
+        }
+      }
+    }
+    
+    // Sort by expiry (oldest first)
+    cacheItems.sort((a, b) => a.expiry - b.expiry);
+    
+    // Remove oldest 20% of items
+    const removeCount = Math.ceil(cacheItems.length * 0.2);
+    for (let i = 0; i < removeCount && i < cacheItems.length; i++) {
+      localStorage.removeItem(cacheItems[i].key);
+    }
+  } catch (e) {
+    console.error('Error cleaning cache:', e);
+  }
+}
+
+/**
+ * Initialize cache system
+ */
+export function initializeCache(): void {
+  console.log('Initializing optimized cache system');
+  // Clean expired items on init
+  cleanExpiredItems();
+  
+  // Set up periodic cleanup
+  if (typeof window !== 'undefined') {
+    setInterval(() => {
+      cleanExpiredItems();
+    }, 10 * 60 * 1000); // Every 10 minutes
+  }
+}
+
+/**
+ * Clean up expired cache items
+ */
+function cleanExpiredItems(): void {
+  const now = Date.now();
+  
+  // Clean memory cache
+  for (const [key, expiry] of expiryTimes.entries()) {
+    if (expiry < now) {
+      memoryCache.delete(key);
+      expiryTimes.delete(key);
+    }
+  }
+  
+  // Clean localStorage
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(CACHE_PREFIX)) {
+        try {
+          const value = localStorage.getItem(key);
+          if (value) {
+            const data = JSON.parse(value);
+            if (data.expiry && data.expiry < now) {
+              localStorage.removeItem(key);
+            }
+          }
+        } catch (e) {
+          // Remove invalid entries
+          localStorage.removeItem(key);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error cleaning expired cache items:', e);
+  }
+}
+
+// Export a singleton instance for optimizedCache
+export const optimizedCache = {
+  getCachedItem,
+  setCachedItem,
+  removeCachedItem,
+  clearCache
+};
