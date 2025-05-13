@@ -1,11 +1,15 @@
+
 /**
  * Map marker utilities
  * IMPORTANT: This file contains critical marker creation and styling logic.
  */
+import L from 'leaflet';
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { isWaterLocation } from "@/utils/validation";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
 import { getSiqsScore } from "@/utils/siqsHelpers";
+import { createCustomMarker } from "@/components/location/map/MapMarkerUtils";
+import TakahashiMarkerSVG from "@/components/community/TakahashiMarkerSVG";
 
 /**
  * Get SIQS quality class for styling
@@ -148,4 +152,61 @@ export const createMarkerContent = (isAstroSpot: boolean, color: string, size: n
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
     "></div>
   `;
+};
+
+/**
+ * Check if a location is valid for astronomy viewing
+ * @param latitude Location latitude
+ * @param longitude Location longitude
+ * @returns boolean indicating if location is valid for astronomy
+ */
+export const isValidAstronomyLocation = (
+  latitude: number, 
+  longitude: number
+): boolean => {
+  // Must have valid coordinates
+  if (!isFinite(latitude) || !isFinite(longitude) ||
+      Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+    return false;
+  }
+  
+  // Additional validation can be added here
+  return true;
+};
+
+/**
+ * Create a custom marker icon for the map
+ * @param location Location data
+ * @param isCertified If this is a certified location
+ * @param isHovered If marker is currently hovered
+ * @param isMobile If we're on mobile
+ * @returns Leaflet DivIcon instance
+ */
+export const getLocationMarker = (
+  location: SharedAstroSpot,
+  isCertified: boolean,
+  isHovered: boolean,
+  isMobile: boolean
+): L.DivIcon => {
+  const baseSize = isMobile ? 24 : 26;
+  const size = isHovered ? baseSize * 1.15 : baseSize;
+  
+  // Use telescope icon for certified locations (more visible)
+  const useTelescopeIcon = isCertified || 
+    (location.certification && location.certification.length > 0) || 
+    location.isDarkSkyReserve;
+    
+  const color = getLocationColor(location);
+  
+  // Create the marker HTML content with telescope icon for astro locations
+  const markerHtml = createMarkerContent(useTelescopeIcon, color, size);
+  
+  // Create and return divIcon
+  return L.divIcon({
+    className: `custom-marker ${isHovered ? "hovered" : ""} ${isCertified ? "certified" : ""}`,
+    html: markerHtml,
+    iconSize: [size, size],
+    iconAnchor: useTelescopeIcon ? [size/2, size/2] : [size/2, size],
+    popupAnchor: useTelescopeIcon ? [0, -size/2] : [0, -size]
+  });
 };

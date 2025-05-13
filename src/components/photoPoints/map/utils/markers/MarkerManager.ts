@@ -1,9 +1,9 @@
+
 import L from 'leaflet';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { getSiqsScore } from '@/utils/siqsHelpers';
-import { getLocationMarker } from '../../MarkerUtils';
-import { isValidAstronomyLocation } from '../../MarkerUtils';
-import { isWaterLocation } from '@/utils/location/validators';
+import { getLocationMarker, isValidAstronomyLocation } from '../../MarkerUtils';
+import { isWaterLocation } from '@/utils/validation';
 
 /**
  * Manager for map markers with optimized rendering
