@@ -1,86 +1,164 @@
 
 /**
- * Utilities for handling SIQS (Sky Imaging Quality Score) related calculations and formatting
+ * Helper functions for SIQS score handling
  */
 
 /**
- * Normalize SIQS score to standard 0-10 scale
- * @param score Raw SIQS score
- * @returns Score normalized to 0-10 range
+ * Normalize any SIQS value to the 0-10 scale
  */
-export function normalizeToSiqsScale(score: number): number {
-  if (score <= 0) return 0;
-  if (score > 100) return 10;
-  if (score > 10) return score / 10;
-  return score;
-}
-
-/**
- * Format SIQS score for display with consistent decimal places
- * @param siqs SIQS score
- * @param decimalPlaces Number of decimal places to show
- * @returns Formatted SIQS string
- */
-export function formatSiqsForDisplay(siqs: number | null | undefined, decimalPlaces: number = 1): string {
-  if (siqs === null || siqs === undefined) return '—';
+export function normalizeToSiqsScale(value: number | null | undefined): number {
+  if (value === null || value === undefined) {
+    return 0;
+  }
   
-  const normalizedScore = normalizeToSiqsScale(siqs);
-  return normalizedScore.toFixed(decimalPlaces);
+  // If value is already in 0-10 range, return it
+  if (value >= 0 && value <= 10) {
+    return value;
+  }
+  
+  // Handle values on 0-100 scale
+  if (value > 10 && value <= 100) {
+    return value / 10;
+  }
+  
+  // Handle legacy values on 0-9 scale
+  if (value >= 1 && value <= 9) {
+    return (value / 9) * 10;
+  }
+  
+  // For extreme outliers, clamp to 0-10 range
+  return Math.max(0, Math.min(10, value));
 }
 
 /**
- * Check if SIQS score is at least a certain value
- * @param siqs SIQS score to check
- * @param threshold Minimum required value
- * @returns Boolean indicating if SIQS meets threshold
+ * Extract SIQS score from different data structures
  */
-export function isSiqsAtLeast(siqs: number | null | undefined, threshold: number): boolean {
-  if (siqs === null || siqs === undefined) return false;
-  return normalizeToSiqsScale(siqs) >= threshold;
-}
-
-/**
- * Check if SIQS score is greater than a certain value
- * @param siqs SIQS score to check
- * @param threshold Value to compare against
- * @returns Boolean indicating if SIQS exceeds threshold
- */
-export function isSiqsGreaterThan(siqs: number | null | undefined, threshold: number): boolean {
-  if (siqs === null || siqs === undefined) return false;
-  return normalizeToSiqsScale(siqs) > threshold;
-}
-
-/**
- * Sort an array of locations by their SIQS score
- * @param locations Array of location objects with siqs property
- * @param descending Sort in descending order (highest first) if true
- * @returns Sorted array of locations
- */
-export function sortLocationsBySiqs<T extends { siqs?: number | null }>(
-  locations: T[],
-  descending: boolean = true
-): T[] {
-  return [...locations].sort((a, b) => {
-    const siqsA = a.siqs !== undefined && a.siqs !== null ? normalizeToSiqsScale(a.siqs) : -1;
-    const siqsB = b.siqs !== undefined && b.siqs !== null ? normalizeToSiqsScale(b.siqs) : -1;
+export function getSiqsScore(siqs: any): number {
+  // Handle null/undefined
+  if (!siqs) return 0;
+  
+  // Handle numeric value
+  if (typeof siqs === 'number') {
+    return normalizeToSiqsScale(siqs);
+  }
+  
+  // Handle object with score property
+  if (typeof siqs === 'object') {
+    if ('score' in siqs && typeof siqs.score === 'number') {
+      return normalizeToSiqsScale(siqs.score);
+    }
     
-    return descending ? siqsB - siqsA : siqsA - siqsB;
+    if ('siqs' in siqs && typeof siqs.siqs === 'number') {
+      return normalizeToSiqsScale(siqs.siqs);
+    }
+  }
+  
+  console.warn('Could not extract SIQS score from:', siqs);
+  return 0;
+}
+
+/**
+ * Check if SIQS value indicates good viewing conditions
+ */
+export function isGoodViewingCondition(siqs: any): boolean {
+  const score = getSiqsScore(siqs);
+  return score >= 5.5;
+}
+
+/**
+ * Get quality class based on SIQS score
+ */
+export function getSiqsQualityClass(siqs: any): string {
+  const score = getSiqsScore(siqs);
+  
+  if (score >= 8) return 'excellent';
+  if (score >= 6) return 'good';
+  if (score >= 4) return 'average'; 
+  if (score >= 2) return 'poor';
+  return 'bad';
+}
+
+/**
+ * Format SIQS value for display
+ */
+export function formatSiqsForDisplay(siqs: any): string {
+  const displaySiqs = getDisplaySiqs(siqs);
+  
+  if (displaySiqs === null) {
+    return 'N/A';
+  }
+  
+  return displaySiqs.toFixed(1);
+}
+
+/**
+ * Get normalized and display-ready SIQS score
+ */
+export function getDisplaySiqs(siqs: any): number | null {
+  // Handle null/undefined
+  if (!siqs) return null;
+  
+  // Handle numeric value
+  if (typeof siqs === 'number') {
+    return normalizeToSiqsScale(siqs);
+  }
+  
+  // Handle object with score property
+  if (typeof siqs === 'object') {
+    if ('score' in siqs && typeof siqs.score === 'number') {
+      return normalizeToSiqsScale(siqs.score);
+    }
+    
+    if ('siqs' in siqs && typeof siqs.siqs === 'number') {
+      return normalizeToSiqsScale(siqs.siqs);
+    }
+  }
+  
+  // Couldn't find a valid SIQS value
+  return null;
+}
+
+/**
+ * Get SIQS quality level text
+ */
+export function getSiqsQualityText(siqs: any): string {
+  const normalizedSiqs = getDisplaySiqs(siqs);
+  
+  if (normalizedSiqs === null) return 'Unknown';
+  
+  if (normalizedSiqs >= 8) return 'Excellent';
+  if (normalizedSiqs >= 6) return 'Good';
+  if (normalizedSiqs >= 4) return 'Average';
+  if (normalizedSiqs >= 2) return 'Poor';
+  return 'Bad';
+}
+
+/**
+ * Check if SIQS is at least a certain value
+ */
+export function isSiqsAtLeast(siqs: any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score >= threshold;
+}
+
+/**
+ * Check if SIQS is greater than a certain value
+ */
+export function isSiqsGreaterThan(siqs: any, threshold: number): boolean {
+  const score = getSiqsScore(siqs);
+  return score > threshold;
+}
+
+/**
+ * Sort locations by their SIQS scores (highest first)
+ */
+export function sortLocationsBySiqs(locations: any[]): any[] {
+  if (!Array.isArray(locations)) return [];
+  
+  return [...locations].sort((a, b) => {
+    const scoreA = getSiqsScore(a.siqs);
+    const scoreB = getSiqsScore(b.siqs);
+    return scoreB - scoreA;
   });
 }
 
-/**
- * Get display color class based on SIQS score
- * @param siqs SIQS score
- * @returns CSS color class name
- */
-export function getSiqsColorClass(siqs: number | null | undefined): string {
-  if (siqs === null || siqs === undefined) return 'text-gray-400';
-  
-  const normalizedScore = normalizeToSiqsScale(siqs);
-  
-  if (normalizedScore >= 8) return 'text-green-500';
-  if (normalizedScore >= 6) return 'text-blue-500';
-  if (normalizedScore >= 5) return 'text-yellow-500';
-  if (normalizedScore >= 4) return 'text-orange-500';
-  return 'text-red-500';
-}

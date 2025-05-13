@@ -1,205 +1,267 @@
-
-import { useState, useEffect } from "react";
-import { useNavigate, Location, NavigateFunction } from "react-router-dom";
-import { getSavedLocation } from "@/utils/locationStorage";
-import { useUserGeolocation } from "@/hooks/community/useUserGeolocation";
+import { useEffect, useRef, useState } from "react";
+import { useLocationDataManager } from "@/hooks/location/useLocationDataManager";
+import { useLocationDataCache } from "@/hooks/useLocationData";
+import { useBortleUpdater } from "@/hooks/location/useBortleUpdater";
+import { useLocationSIQSUpdater } from "@/hooks/useLocationSIQSUpdater";
+import { useQueryClient } from "@tanstack/react-query";
 import { getCurrentPosition } from "@/utils/geolocationUtils";
+import { getLocationInfo } from "@/data/locationDatabase";
+import { isInChina } from "@/utils/chinaBortleData"; 
+import { prefetchLocationData } from "@/lib/queryPrefetcher"; 
 
-interface UseLocationDetailsLogicProps {
-  id: string | undefined;
-  location: Location;
-  navigate: NavigateFunction;
-  t: (key: string, fallback: string) => string;
-  setCachedData: (key: string, data: any) => void;
-  getCachedData: (key: string) => any;
-  alwaysUseCurrentLocation?: boolean;
-}
-
-export const useLocationDetailsLogic = ({ 
-  id, 
-  location, 
-  navigate, 
-  t, 
-  setCachedData, 
-  getCachedData,
-  alwaysUseCurrentLocation = false
-}: UseLocationDetailsLogicProps) => {
-  const [locationData, setLocationData] = useState<any>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [messageType, setMessageType] = useState<"info" | "error" | "success" | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export function useLocationDetailsLogic({ id, location, navigate, t, setCachedData, getCachedData }) {
   const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
+  const [dataInitializing, setDataInitializing] = useState(true);
+  const locationInitializedRef = useRef(false);
+  const initialRenderRef = useRef(true);
+  const siqsUpdateRequiredRef = useRef(true);
+  const queriesInitializedRef = useRef(false);
+  const previousLocationDataRef = useRef(null);
+  const queryClient = useQueryClient();
+  const loadingMessageTimeoutRef = useRef(null);
+  const dataLoadStartTime = useRef(Date.now());
   
-  // User's current geolocation
-  const currentUserPosition = useUserGeolocation();
+  const {
+    locationData, 
+    setLocationData, 
+    statusMessage, 
+    messageType, 
+    setStatusMessage,
+    handleUpdateLocation,
+    isLoading
+  } = useLocationDataManager({ 
+    id, 
+    initialState: location.state, 
+    navigate,
+    noRedirect: true
+  });
 
-  // Try to get current location when requested
+  // Store previous location data to prevent disappearing content
   useEffect(() => {
-    // If we have location data from state, don't override it
-    if (location.state || !alwaysUseCurrentLocation) {
-      return;
+    if (locationData && !isLoading) {
+      previousLocationDataRef.current = locationData;
+      // Data is now initialized
+      setDataInitializing(false);
+      
+      // Clear loading message if it's about getting location - more aggressively
+      if (statusMessage?.includes("Getting your current location") || 
+          statusMessage?.includes("正在获取您的位置")) {
+        // Use a shorter delay and make sure it clears
+        if (loadingMessageTimeoutRef.current) {
+          clearTimeout(loadingMessageTimeoutRef.current);
+        }
+        
+        // Calculate how long the message has been shown already
+        const timeElapsed = Date.now() - dataLoadStartTime.current;
+        const clearDelay = timeElapsed > 800 ? 50 : 250; // Very short delay if it's been showing a while
+        
+        loadingMessageTimeoutRef.current = setTimeout(() => {
+          setStatusMessage(null);
+          setLoadingCurrentLocation(false);
+        }, clearDelay);
+      }
     }
+  }, [locationData, isLoading, statusMessage, setStatusMessage]);
 
-    // Try to get current location
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (loadingMessageTimeoutRef.current) {
+        clearTimeout(loadingMessageTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Use the SIQS updater to keep scores in sync with forecast data
+  const { resetUpdateState } = useLocationSIQSUpdater(
+    locationData || previousLocationDataRef.current,
+    locationData?.forecastData || (previousLocationDataRef.current?.forecastData),
+    setLocationData,
+    t
+  );
+
+  // Pre-fetch data as soon as we have location coordinates - with parallel loading
+  useEffect(() => {
+    const locData = locationData || previousLocationDataRef.current;
+    if (
+      locData?.latitude && 
+      locData?.longitude && 
+      !queriesInitializedRef.current
+    ) {
+      queriesInitializedRef.current = true;
+      
+      // Immediate prefetch for faster loading - don't wait for next tick
+      prefetchLocationData(queryClient, locData.latitude, locData.longitude);
+      
+      console.log("Prefetching data for location:", locData.name);
+    }
+  }, [locationData?.latitude, locationData?.longitude, queryClient]);
+
+  // Handle using current location when no location data is available - with faster timeout
+  useEffect(() => {
+    // Only proceed if we're not loading, don't have location data, not already getting location,
+    // and haven't already initialized location
+    if (!isLoading && !locationData && !loadingCurrentLocation && !locationInitializedRef.current && !previousLocationDataRef.current) {
+      locationInitializedRef.current = true; // Mark as initialized to prevent multiple calls
+      handleUseCurrentLocation();
+    }
+  }, [isLoading, locationData]);
+
+  const handleUseCurrentLocation = () => {
+    if (loadingCurrentLocation) return; // Prevent multiple simultaneous calls
+    
+    dataLoadStartTime.current = Date.now(); // Record when we started loading
     setLoadingCurrentLocation(true);
+    setStatusMessage(t("Getting your current location...", "正在获取您的位置..."));
     
     getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        const newLocationData = {
-          id: `loc-${latitude}-${longitude}`,
-          name: t("Current Location", "当前位置"),
+
+        // Use our project location database to get the best estimate for this point
+        const locationInfo = getLocationInfo(latitude, longitude);
+
+        // Generate an accurate name and bortleScale directly from our DB
+        const locationId = `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
+        const locationData = {
+          id: locationId,
+          name: locationInfo.formattedName || t("Current Location", "当前位置"),
           latitude,
           longitude,
-          timestamp: new Date().toISOString(),
-          fromCurrentLocation: true
+          bortleScale: locationInfo.bortleScale,
+          timestamp: new Date().toISOString()
         };
-        
-        setLocationData(newLocationData);
-        setCachedData(`location_${newLocationData.id}`, newLocationData);
-        
-        // Update the URL to reflect the new location
-        navigate(`/location/${latitude},${longitude}`, { 
-          state: newLocationData,
+
+        navigate(`/location/${locationId}`, { 
+          state: locationData,
           replace: true 
         });
         
-        setLoadingCurrentLocation(false);
-        setIsLoading(false);
+        // Don't clear loading state here - we'll do it when location data is set
       },
       (error) => {
-        console.error("Error getting current location:", error);
+        console.error("Error getting location:", error);
+        setStatusMessage(t("Could not get your location. Please check browser permissions.", 
+                     "无法获取您的位置。请检查浏览器权限。"));
         setLoadingCurrentLocation(false);
-        // Continue with other location finding methods
       },
-      { 
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0
-      }
+      { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 } // Reduced timeout from 5000 to 4000
     );
-  }, [alwaysUseCurrentLocation, location.state, navigate, setCachedData, t]);
-
-  useEffect(() => {
-    let initialData = null;
-    
-    // First check if we have data in the route state
-    if (location.state) {
-      console.log("Route state data found:", location.state);
-      initialData = location.state;
-    } 
-    // Then check if the id can be parsed as coordinates
-    else if (id && id.includes(',')) {
-      console.log("Parsing coordinates from id:", id);
-      try {
-        const [lat, lng] = id.split(',').map(parseFloat);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          // Get saved location first
-          const savedLocation = getSavedLocation();
-          
-          // Create bare-minimum location data
-          initialData = {
-            id: `loc-${lat}-${lng}`,
-            name: savedLocation?.name || t("Current Location", "当前位置"),
-            latitude: lat,
-            longitude: lng,
-            timestamp: savedLocation?.timestamp || new Date().toISOString(),
-            // If this is likely the current location and we have saved SIQS, use it
-            siqsResult: savedLocation?.siqsResult || { score: 0 }
-          };
-        }
-      } catch (error) {
-        console.error("Error parsing location id:", error);
-      }
-    }
-    
-    // If we still don't have data, check for saved location
-    if (!initialData) {
-      console.log("No location data found, checking for saved location");
-      const savedLocation = getSavedLocation();
-      if (savedLocation) {
-        console.log("Using saved location:", savedLocation);
-        initialData = savedLocation;
-      }
-    }
-    
-    // Set the location data if we have it
-    if (initialData) {
-      setLocationData(initialData);
-      
-      // Also update the cached data
-      if (initialData.id) {
-        setCachedData(`location_${initialData.id}`, initialData);
-      }
-    } else if (currentUserPosition && !alwaysUseCurrentLocation) {
-      // If we have current user position but no location data, create it
-      const [latitude, longitude] = currentUserPosition;
-      const newLocationId = `loc-${latitude}-${longitude}`;
-      
-      initialData = {
-        id: newLocationId,
-        name: t("Current Location", "当前位置"),
-        latitude,
-        longitude,
-        timestamp: new Date().toISOString()
-      };
-      
-      setLocationData(initialData);
-      setCachedData(`location_${newLocationId}`, initialData);
-      
-      // Update the URL to reflect the new location
-      navigate(`/location/${latitude},${longitude}`, { 
-        state: initialData,
-        replace: true 
-      });
-    }
-    
-    setIsLoading(false);
-  }, [id, location.state, navigate, setCachedData, getCachedData, t, currentUserPosition, alwaysUseCurrentLocation]);
-
-  const handleUpdateLocation = async (updatedData: any) => {
-    try {
-      if (!updatedData) return;
-      
-      setMessageType("success");
-      setStatusMessage(t("Location updated successfully", "位置更新成功"));
-      
-      // Update local state
-      setLocationData((prev: any) => ({
-        ...prev,
-        ...updatedData,
-        timestamp: new Date().toISOString()
-      }));
-      
-      // Also update cache
-      if (locationData?.id) {
-        const newData = {
-          ...locationData,
-          ...updatedData,
-          timestamp: new Date().toISOString()
-        };
-        setCachedData(`location_${locationData.id}`, newData);
-      }
-      
-      setTimeout(() => {
-        setStatusMessage(null);
-      }, 3000);
-    } catch (error) {
-      console.error("Error updating location:", error);
-      setMessageType("error");
-      setStatusMessage(t("Failed to update location", "更新位置失败"));
-    }
   };
 
+  // Run once on initial render to trigger page refresh - Optimized
+  useEffect(() => {
+    if (initialRenderRef.current && locationData) {
+      initialRenderRef.current = false;
+      console.log("Initial render, triggering lazy data loading");
+      
+      // Immediate action for faster response
+      resetUpdateState();
+      siqsUpdateRequiredRef.current = true;
+    }
+  }, [locationData, resetUpdateState]);
+
+  // Prefetch data when location data is available to improve loading speed
+  useEffect(() => {
+    if (locationData && !isLoading && locationData.latitude && locationData.longitude) {
+      // Reset the SIQS update state when location changes to force recalculation
+      if (siqsUpdateRequiredRef.current) {
+        resetUpdateState();
+        siqsUpdateRequiredRef.current = false;
+        
+        // Set a timer to allow for SIQS updates after a certain period
+        // This handles cases where forecast data might be delayed
+        const timer = setTimeout(() => {
+          siqsUpdateRequiredRef.current = true;
+        }, 60000); // Allow updates every minute
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [locationData, isLoading, resetUpdateState]);
+
+  // Make sure we have Bortle scale data, with special handling for Chinese locations
+  const { updateBortleScale } = useBortleUpdater();
+  useEffect(() => {
+    const updateBortleScaleData = async () => {
+      const locData = locationData || previousLocationDataRef.current;
+      if (!locData || isLoading) return;
+      
+      // Check if we're in any Chinese region to update Bortle data
+      const inChina = locData.latitude && locData.longitude ? 
+        isInChina(locData.latitude, locData.longitude) : false;
+      
+      // For Chinese locations, or if Bortle scale is missing, update it
+      if (inChina || locData.bortleScale === null || locData.bortleScale === undefined) {
+        try {
+          console.log("Location may be in China or needs Bortle update:", locData.name);
+          
+          // Use our improved Bortle updater for more accurate data
+          const newBortleScale = await updateBortleScale(
+            locData.latitude,
+            locData.longitude,
+            locData.name,
+            locData.bortleScale
+          );
+          
+          if (newBortleScale !== null && newBortleScale !== locData.bortleScale) {
+            console.log(`Bortle scale updated: ${locData.bortleScale} -> ${newBortleScale}`);
+            setLocationData({
+              ...locData,
+              bortleScale: newBortleScale
+            });
+            
+            // Force SIQS update after Bortle scale changes
+            resetUpdateState();
+          }
+        } catch (error) {
+          console.error("Failed to update Bortle scale:", error);
+        }
+      }
+    };
+    
+    updateBortleScaleData();
+  }, [locationData, isLoading, setLocationData, updateBortleScale, resetUpdateState]);
+  
+  // Ensure SIQS is updated when coming from calculator
+  useEffect(() => {
+    if (locationData?.fromCalculator && siqsUpdateRequiredRef.current) {
+      console.log("Location from calculator, ensuring SIQS data is preserved");
+      resetUpdateState();
+      siqsUpdateRequiredRef.current = false;
+    }
+  }, [locationData, resetUpdateState]);
+
+  // Whenever the page loads with only coordinates but no name, we replace with our best DB estimate:
+  useEffect(() => {
+    const locData = locationData || previousLocationDataRef.current;
+    if (
+      locData &&
+      (locData.name === t("Current Location", "当前位置") || !locData.name) &&
+      typeof locData.latitude === "number" &&
+      typeof locData.longitude === "number"
+    ) {
+      // Get internal DB estimate for the coordinates, prefer user language
+      const locationInfo = getLocationInfo(locData.latitude, locData.longitude);
+      if (locationInfo && locationInfo.name) {
+        setLocationData({
+          ...locData,
+          name: locationInfo.formattedName,
+          bortleScale: locationInfo.bortleScale
+        });
+      }
+    }
+  }, [locationData, t, setLocationData]);
+
   return {
-    locationData,
+    locationData: locationData || previousLocationDataRef.current,
     setLocationData,
     statusMessage,
     messageType,
     setStatusMessage,
     handleUpdateLocation,
-    isLoading,
+    isLoading: isLoading || dataInitializing,
     loadingCurrentLocation,
     setLoadingCurrentLocation
   };
-};
+}
