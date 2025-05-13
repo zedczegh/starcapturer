@@ -6,16 +6,20 @@
 export const extractLocationFromUrl = (text: string): any | null => {
   if (!text) return null;
   
-  // Define regex patterns for both location types
+  // Define regex patterns for both location types - updated to handle various domain patterns
   const locationPatterns = [
-    // Pattern for /location/{latitude},{longitude} URLs
+    // Pattern for /location/{latitude},{longitude} URLs with any domain
     /https?:\/\/[^\/]+\/location\/(-?\d+\.\d+),(-?\d+\.\d+)/,
+    // Pattern for /location/loc-{latitude}-{longitude} URLs with any domain 
+    /https?:\/\/[^\/]+\/location\/loc-(-?\d+\.\d+)-(-?\d+\.\d+)/,
     // Pattern for relative /location/{latitude},{longitude} URLs
-    /\/location\/(-?\d+\.\d+),(-?\d+\.\d+)/
+    /\/location\/(-?\d+\.\d+),(-?\d+\.\d+)/,
+    // Pattern for relative /location/loc-{latitude}-{longitude} URLs
+    /\/location\/loc-(-?\d+\.\d+)-(-?\d+\.\d+)/
   ];
   
   const astroSpotPatterns = [
-    // Pattern for /astro-spot/{id} URLs
+    // Pattern for /astro-spot/{id} URLs with any domain
     /https?:\/\/[^\/]+\/astro-spot\/([a-zA-Z0-9-]+)/,
     // Pattern for relative /astro-spot/{id} URLs
     /\/astro-spot\/([a-zA-Z0-9-]+)/
