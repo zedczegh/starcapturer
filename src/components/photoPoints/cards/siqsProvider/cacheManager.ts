@@ -62,3 +62,9 @@ export function updateSiqsCache(cacheKey: string | null, result: any): void {
   // Update optimized cache
   setCachedItem(cacheKey, result, CACHE_DURATION);
 }
+
+/**
+ * Call the SIQS service
+ * This is re-exported here to maintain API compatibility
+ */
+export { callSiqsService } from '@/components/photoPoints/cards/siqsProvider/siqsFetcher';

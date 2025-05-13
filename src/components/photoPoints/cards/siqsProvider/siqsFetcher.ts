@@ -1,98 +1,71 @@
 
 /**
- * SIQS Fetcher - Handles requesting and processing SIQS data
+ * SIQS fetching service
  */
 
-import { callSiqsService } from './cacheManager';
-import { getDisplaySiqs, formatSiqsForDisplay } from '@/utils/unifiedSiqsDisplay';
+import { updateSiqsCache } from './cacheManager';
+import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
+import { BatchJob } from './types';
 
-// Define types for SIQS fetch options
-export interface SiqsDisplayOpts {
-  isCertified?: boolean;
-  isDarkSkyReserve?: boolean;
-  confidence?: number;
-  includeQuality?: boolean;
-}
-
-/**
- * Function to fetch SIQS data for a location
- */
-export const fetchLocationSiqs = async (
+// Function to call the SIQS service
+export const callSiqsService = async (
   latitude: number, 
   longitude: number,
-  options: {
-    bortleScale?: number;
-    existingSiqs?: any;
-  } = {}
-): Promise<{
-  score: number | null;
-  loading: boolean;
-  confidence: number;
-}> => {
+  bortleScale: number
+): Promise<any> => {
   try {
-    // Validate inputs
-    if (!latitude || !longitude || !isFinite(latitude) || !isFinite(longitude)) {
-      console.warn('Invalid coordinates for SIQS calculation:', latitude, longitude);
-      return { score: null, loading: false, confidence: 0 };
-    }
-
-    // Get SIQS from service
-    const result = await callSiqsService(latitude, longitude, options.bortleScale);
-    
-    if (result && typeof result === 'object') {
-      if ('score' in result && typeof result.score === 'number') {
-        // Extract confidence if available
-        const confidence = 'confidence' in result && typeof result.confidence === 'number' 
-          ? result.confidence 
-          : 8;
-        
-        return {
-          score: result.score,
-          loading: false,
-          confidence
-        };
+    const result = await calculateRealTimeSiqs(
+      latitude,
+      longitude,
+      bortleScale,
+      {
+        useSingleHourSampling: true,
+        targetHour: 1,
+        cacheDurationMins: 5
       }
-    }
+    );
     
-    // Try to use existing SIQS if available
-    if (options.existingSiqs) {
-      const existingScore = getDisplaySiqs(options.existingSiqs);
-      if (existingScore !== null && existingScore > 0) {
-        return {
-          score: existingScore,
-          loading: false,
-          confidence: 7 // Lower confidence for existing/static scores
-        };
-      }
-    }
-    
-    return { score: null, loading: false, confidence: 0 };
+    return result;
   } catch (error) {
-    console.error('Error fetching SIQS:', error);
-    return { score: null, loading: false, confidence: 0 };
+    console.error("Error fetching SIQS data:", error);
+    throw error;
   }
+}
+
+// Batch process SIQS requests
+export const processSiqsBatch = async (jobs: BatchJob[]): Promise<Map<string, any>> => {
+  const results = new Map<string, any>();
+  
+  // Process jobs sequentially to avoid overwhelming API
+  for (const job of jobs) {
+    try {
+      // Skip if we don't have enough data
+      if (!job.latitude || !job.longitude) continue;
+      
+      const result = await callSiqsService(
+        job.latitude,
+        job.longitude,
+        job.bortleScale || 5
+      );
+      
+      // Store result if valid
+      if (result) {
+        results.set(job.id, result);
+        
+        // Update cache if needed
+        if (job.cacheKey) {
+          updateSiqsCache(job.cacheKey, result);
+        }
+      }
+    } catch (error) {
+      console.error(`Error processing job ${job.id}:`, error);
+    }
+  }
+  
+  return results;
 };
 
-/**
- * Helper function to get formatted SIQS for display
- */
-export const getFormattedSiqs = (siqs: any): string => {
-  return formatSiqsForDisplay(siqs);
+export default {
+  callSiqsService,
+  processSiqsBatch
 };
-
-/**
- * Simple SIQS calculations based on available data
- */
-export const calculateQuickSiqs = (cloudCover: number, bortleScale: number = 4): number => {
-  // Base score determined by cloud cover (0-100%)
-  const cloudScore = Math.max(0, 10 - (cloudCover / 10));
-  
-  // Adjust for Bortle scale
-  const bortleAdjustment = Math.max(0, 5 - (bortleScale / 2));
-  
-  // Weighted combination (70% clouds, 30% light pollution)
-  const rawScore = (cloudScore * 0.7) + (bortleAdjustment * 0.3);
-  
-  return Math.min(10, Math.max(0, Math.round(rawScore * 10) / 10));
-};
-

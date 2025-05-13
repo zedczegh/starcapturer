@@ -16,7 +16,7 @@ const getSiqsCacheKey = (lat: number, lng: number): string => {
 // Get cached SIQS for a location
 export const getCachedRealTimeSiqs = (lat: number, lng: number): number | null => {
   const key = getSiqsCacheKey(lat, lng);
-  const cachedData = optimizedCache.get(key);
+  const cachedData = optimizedCache.getCachedItem(key);
   
   if (!cachedData) return null;
   
@@ -42,17 +42,22 @@ export const setCachedRealTimeSiqs = (lat: number, lng: number, siqs: number): v
     timestamp: Date.now()
   };
   
-  optimizedCache.set(key, cacheData, CACHE_EXPIRY_HOURS * 60 * 60);
+  optimizedCache.setCachedItem(key, cacheData, CACHE_EXPIRY_HOURS * 60 * 60);
 };
 
 // Clear all SIQS cache entries
 export const clearRealTimeSiqsCache = (): void => {
   // Get all keys in the cache
-  const allKeys = optimizedCache.keys();
+  const keys = Object.keys(localStorage)
+    .filter(key => key.startsWith(`${CACHE_PREFIX}${SIQS_CACHE_PREFIX}`));
   
   // Filter for SIQS cache keys and delete them
-  allKeys
-    .filter(key => key.startsWith(SIQS_CACHE_PREFIX))
-    .forEach(key => optimizedCache.delete(key));
+  keys.forEach(key => {
+    if (key.startsWith(`${CACHE_PREFIX}${SIQS_CACHE_PREFIX}`)) {
+      optimizedCache.removeCachedItem(key.replace(CACHE_PREFIX, ''));
+    }
+  });
 };
 
+// Cache prefix used in localStorage
+const CACHE_PREFIX = 'app_cache:';
