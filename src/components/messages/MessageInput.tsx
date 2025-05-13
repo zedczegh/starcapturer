@@ -5,7 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Send, Plus } from "lucide-react";
 import EmojiPicker from './EmojiPicker';
 import EmojiRenderer from './EmojiRenderer';
-import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useMessageInputState } from '@/hooks/messaging/useMessageInputState';
 import MessageOptions from './input/MessageOptions';
 import ImagePreview from './input/ImagePreview';
