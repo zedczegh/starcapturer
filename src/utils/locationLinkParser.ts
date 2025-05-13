@@ -1,17 +1,21 @@
 
 /**
  * Extracts location information from a URL string that contains location profile links
- * Supports both location profile formats: /location/lat,lng and /astro-spot/id
+ * Supports multiple location profile formats: /location/lat,lng, /astro-spot/id, and /location/loc-lat-lng
  */
 export const extractLocationFromUrl = (text: string): any | null => {
   if (!text) return null;
   
-  // Define regex patterns for both location types
+  // Define regex patterns for different location types
   const locationPatterns = [
     // Pattern for /location/{latitude},{longitude} URLs
     /https?:\/\/[^\/]+\/location\/(-?\d+\.\d+),(-?\d+\.\d+)/,
     // Pattern for relative /location/{latitude},{longitude} URLs
-    /\/location\/(-?\d+\.\d+),(-?\d+\.\d+)/
+    /\/location\/(-?\d+\.\d+),(-?\d+\.\d+)/,
+    // Pattern for /location/loc-{latitude}-{longitude} URLs (new format)
+    /https?:\/\/[^\/]+\/location\/loc-(-?\d+\.\d+)-(-?\d+\.\d+)/,
+    // Pattern for relative /location/loc-{latitude}-{longitude} URLs (new format)
+    /\/location\/loc-(-?\d+\.\d+)-(-?\d+\.\d+)/
   ];
   
   const astroSpotPatterns = [
@@ -29,6 +33,7 @@ export const extractLocationFromUrl = (text: string): any | null => {
       const longitude = parseFloat(match[2]);
       
       if (!isNaN(latitude) && !isNaN(longitude)) {
+        console.log(`Location link detected: lat=${latitude}, lng=${longitude}`);
         return {
           name: "Shared Location",
           latitude,
