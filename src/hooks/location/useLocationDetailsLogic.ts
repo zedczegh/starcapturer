@@ -97,7 +97,7 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
     }
   }, [locationData?.latitude, locationData?.longitude, queryClient]);
 
-  // Handle using current location when no location data is available - with faster timeout
+  // Handle using current location when no location data is available
   useEffect(() => {
     // Only proceed if we're not loading, don't have location data, not already getting location,
     // and haven't already initialized location
@@ -128,8 +128,13 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
           name: locationInfo.formattedName || t("Current Location", "当前位置"),
           latitude,
           longitude,
-          bortleScale: locationInfo.bortleScale,
-          timestamp: new Date().toISOString()
+          bortleScale: locationInfo.bortleScale || 5, // Ensure we have a default Bortle scale
+          timestamp: new Date().toISOString(),
+          // Add default SIQS score based on Bortle scale for immediate display
+          siqsResult: {
+            score: 10 - (locationInfo.bortleScale || 5) * 0.8, 
+            isViable: true
+          }
         };
 
         navigate(`/location/${locationId}`, { 
@@ -145,7 +150,7 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
                      "无法获取您的位置。请检查浏览器权限。"));
         setLoadingCurrentLocation(false);
       },
-      { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 } // Reduced timeout from 5000 to 4000
+      { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
     );
   };
 

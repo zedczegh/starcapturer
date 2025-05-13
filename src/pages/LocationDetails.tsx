@@ -25,6 +25,7 @@ const LocationDetails = () => {
   // Add a ref to track if the toast has been shown
   const toastShownRef = useRef(false);
   const initialLoadCompleteRef = useRef(false);
+  const isCurrentLocationRef = useRef(id?.startsWith('loc-'));
 
   // Prefetch popular locations data when page loads
   useEffect(() => {
@@ -84,6 +85,24 @@ const LocationDetails = () => {
       toastShownRef.current = false;
     };
   }, [id]);
+
+  // For current location, add a default SIQS score based on Bortle scale if missing
+  useEffect(() => {
+    if (locationData && 
+        (!locationData.siqsResult || typeof locationData.siqsResult?.score !== 'number') &&
+        typeof locationData.bortleScale === 'number') {
+      
+      const estimatedScore = 10 - locationData.bortleScale * 0.8;
+      
+      setLocationData({
+        ...locationData,
+        siqsResult: {
+          score: estimatedScore,
+          isViable: estimatedScore >= 5
+        }
+      });
+    }
+  }, [locationData, setLocationData]);
 
   // Preload data for the current location
   useEffect(() => {

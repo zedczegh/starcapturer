@@ -24,11 +24,16 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
   // Always define these values regardless of validatedSiqs state
   const siqsScore = useMemo(() => {
     if (!validatedSiqs || typeof validatedSiqs.score !== 'number') {
+      // If no SIQS score but we have Bortle scale, estimate one based on that
+      if (locationData && typeof locationData.bortleScale === 'number') {
+        // Simple inverse relationship with Bortle scale (higher Bortle = lower SIQS)
+        return normalizeToSiqsScale(10 - locationData.bortleScale * 0.8);
+      }
       return 0;
     }
     // Normalize to ensure the score is on the 1-10 scale
     return normalizeToSiqsScale(Math.round(validatedSiqs.score * 10) / 10);
-  }, [validatedSiqs]);
+  }, [validatedSiqs, locationData]);
   
   // Get the precise color class based on SIQS score as per the color scale guide
   const getScoreColorClass = (score: number) => {
@@ -105,16 +110,34 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
           isViable: siqsResult.score >= 5,
           factors: []
         });
+      } else if (locationData && typeof locationData.bortleScale === 'number') {
+        // No score but we have Bortle scale, generate an estimated score
+        const estimatedScore = 10 - locationData.bortleScale * 0.8;
+        setValidatedSiqs({
+          score: normalizeToSiqsScale(estimatedScore),
+          isViable: estimatedScore >= 5,
+          factors: []
+        });
       } else {
         // No usable data
         setValidatedSiqs(null);
         console.error("Could not validate or recover SIQS data:", siqsResult);
       }
     } else {
-      setValidatedSiqs(null);
-      console.error("Invalid SIQS data:", siqsResult);
+      // Try to use location data Bortle scale for a base estimate if available
+      if (locationData && typeof locationData.bortleScale === 'number') {
+        const estimatedScore = 10 - locationData.bortleScale * 0.8;
+        setValidatedSiqs({
+          score: normalizeToSiqsScale(estimatedScore),
+          isViable: estimatedScore >= 5,
+          factors: []
+        });
+      } else {
+        setValidatedSiqs(null);
+        console.error("Invalid SIQS data:", siqsResult);
+      }
     }
-  }, [siqsResult]);
+  }, [siqsResult, locationData]);
 
   // Check if we have actual SIQS data to display
   const hasSiqsData = siqsScore > 0;

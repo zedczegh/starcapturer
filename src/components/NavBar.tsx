@@ -6,6 +6,8 @@ import NavHeader from "./navbar/NavHeader";
 import DesktopNav from "./navbar/DesktopNav";
 import MobileNav from "./navbar/MobileNav";
 import ProfileButton from "./navbar/ProfileButton";
+import { getCurrentPosition } from "@/utils/geolocationUtils";
+import { toast } from "sonner";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
