@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -33,8 +34,9 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       // Use callback for guaranteed execution
       window.requestAnimationFrame(() => {
         onSuccess();
+        navigate('/photo-points', { replace: true });
       });
-      // Toast notification is handled in AuthContext for a consistent experience
+      // Toast notification is handled in AuthContext for a more consistent experience
     } catch (error: any) {
       // Error handling is done in AuthContext
     } finally {
