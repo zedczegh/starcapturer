@@ -1,3 +1,4 @@
+
 import React, { useMemo } from "react";
 import { Progress } from "@/components/ui/progress";
 import { getProgressColor, getProgressColorClass, getProgressTextColorClass } from "./utils/progressColor";
@@ -28,7 +29,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
   const memoizedValues = useMemo(() => {
     // Normalize the score to 0-10 scale if necessary and round to 1 decimal place
     const normalizedScore = normalizeToSiqsScale(siqsScore);
-    const displayValue = Math.round(normalizedScore * 10) / 10;
+    const displayValue = Math.max(0.1, Math.round(normalizedScore * 10) / 10);
 
     // Determine value interpretation
     let interpretation;
@@ -85,6 +86,9 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
     }
   }, [latitude, longitude]);
 
+  // Always ensure we show a progress bar by using a minimum value
+  const progressValue = Math.max(1, memoizedValues.displayValue * 10);
+
   return (
     <motion.div 
       className="mb-4 pb-4 border-b border-cosmic-700/30" 
@@ -101,7 +105,7 @@ const SIQSScore: React.FC<SIQSScoreProps> = ({
         </span>
       </div>
       
-      <Progress value={memoizedValues.displayValue * 10} className="h-3 my-2 bg-cosmic-800/40" style={progressStyle} />
+      <Progress value={progressValue} className="h-3 my-2 bg-cosmic-800/40" style={progressStyle} />
       
       <div className="flex justify-between items-center mt-2">
         <span className="text-sm text-muted-foreground">

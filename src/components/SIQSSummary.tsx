@@ -139,8 +139,9 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
     }
   }, [siqsResult, locationData]);
 
-  // Check if we have actual SIQS data to display
-  const hasSiqsData = siqsScore > 0;
+  // Force a minimum non-zero score for better display
+  const displayScore = Math.max(0.1, siqsScore);
+  const showProgressBar = true; // Always show the progress bar
 
   return (
     <Card className="bg-cosmic-800/70 border border-cosmic-700/50 shadow-xl">
@@ -151,7 +152,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {!hasSiqsData ? (
+        {displayScore <= 0.1 ? (
           <div className="flex flex-col items-center justify-center p-6 text-center opacity-80">
             <Info className="h-10 w-10 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
@@ -178,44 +179,31 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className={`text-2xl font-bold px-2 rounded ${scoreTextColorClass}`}
               >
-                {siqsScore.toFixed(1)}
+                {displayScore.toFixed(1)}
               </motion.div>
             </div>
             
-            <Progress 
-              value={siqsScore * 10} 
-              max={100} 
-              className="h-2.5 mb-2" 
-              colorClass={scoreColorClass}
-            />
-            
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-muted-foreground">{t("Poor", "较差")}</span>
-              <span className={`font-semibold ${scoreTextColorClass}`}>{qualityText}</span>
-              <span className="text-muted-foreground">{t("Excellent", "优秀")}</span>
-            </div>
+            {showProgressBar && (
+              <>
+                <Progress 
+                  value={displayScore * 10} 
+                  max={100} 
+                  className="h-2.5 mb-2" 
+                  colorClass={scoreColorClass}
+                />
+                
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">{t("Poor", "较差")}</span>
+                  <span className={`font-semibold ${scoreTextColorClass}`}>{qualityText}</span>
+                  <span className="text-muted-foreground">{t("Excellent", "优秀")}</span>
+                </div>
+              </>
+            )}
             
             {siqsCalculationTime && (
               <div className="flex justify-end items-center mt-3 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3 mr-1" />
                 <span>{t("Calculated at", "计算于")} {siqsCalculationTime}</span>
-              </div>
-            )}
-            
-            {validatedSiqs?.factors && validatedSiqs.factors.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-cosmic-700/50">
-                <details className="text-sm">
-                  <summary className="cursor-pointer hover:text-primary transition-colors">
-                    {t("View contributing factors", "查看影响因素")}
-                  </summary>
-                  <ul className="mt-2 space-y-1 pl-2">
-                    {validatedSiqs.factors.map((factor: any, i: number) => (
-                      <li key={`factor-${i}`} className="text-xs text-muted-foreground">
-                        {factor.name}: {(factor.score * 10).toFixed(1)}/10
-                      </li>
-                    ))}
-                  </ul>
-                </details>
               </div>
             )}
           </motion.div>
