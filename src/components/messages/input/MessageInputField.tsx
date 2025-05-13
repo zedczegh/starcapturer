@@ -38,7 +38,7 @@ const MessageInputField: React.FC<MessageInputFieldProps> = ({
         <textarea
           ref={textareaRef}
           className="w-full bg-transparent rounded-full py-2 px-4 pr-12 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none"
-          placeholder={message}
+          placeholder="Type a message..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={onKeyDown}

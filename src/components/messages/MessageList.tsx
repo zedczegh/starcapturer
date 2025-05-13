@@ -56,8 +56,8 @@ const MessageList: React.FC<MessageListProps> = memo(({
         onBack={onBack}
       />
       
-      <ScrollArea className="flex-1 p-4 pt-6">
-        <div className="space-y-2">
+      <ScrollArea className="flex-1 p-4 pt-6 pb-1">
+        <div className="space-y-2 min-h-[calc(100%-90px)]">
           {messages.length === 0 ? (
             <EmptyMessages />
           ) : (
@@ -70,7 +70,7 @@ const MessageList: React.FC<MessageListProps> = memo(({
                   onUnsend={onUnsendMessage}
                 />
               ))}
-              <div ref={messagesEndRef} />
+              <div ref={messagesEndRef} className="h-2" />
             </>
           )}
         </div>

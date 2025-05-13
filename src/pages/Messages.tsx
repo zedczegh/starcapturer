@@ -52,10 +52,15 @@ const MessageContent = memo(({ user }: { user: any }) => {
 // Memoize the entire Messages component
 const Messages = memo(() => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
+  const { activeConversation } = useMessageConversation();
+
+  // Hide navbar on mobile when a conversation is active
+  const showNavbar = !(isMobile && activeConversation);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
-      <NavBar />
+      {showNavbar && <NavBar />}
       
       {!user ? (
         <LoginPrompt />
