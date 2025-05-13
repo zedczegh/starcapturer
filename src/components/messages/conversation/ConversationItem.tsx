@@ -1,11 +1,10 @@
-
 import React, { memo } from 'react';
 import { motion } from "framer-motion";
 import { User, Trash2 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import EmojiRenderer from '../EmojiRenderer';
-import { ConversationPartner } from '@/hooks/messaging/useConversations';
+import { ConversationPartner } from '@/hooks/messaging/types';
 
 interface ConversationItemProps {
   conversation: ConversationPartner;

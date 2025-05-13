@@ -1,15 +1,7 @@
 
 import { useState } from 'react';
 import { useIsMobile } from './use-mobile';
-
-interface ConversationPartner {
-  id: string;
-  username: string | null;
-  avatar_url: string | null;
-  last_message: string;
-  last_message_time: string;
-  unread_count: number;
-}
+import { ConversationPartner } from './messaging/types';
 
 export function useMessageNavigation() {
   const [activeConversation, setActiveConversation] = useState<ConversationPartner | null>(null);
