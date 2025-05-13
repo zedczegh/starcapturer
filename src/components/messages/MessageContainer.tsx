@@ -53,14 +53,11 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
   // Determine if we should show a loading skeleton
   const showMessageSkeleton = loading && activeConversation && messages.length === 0;
 
-  // Adjust height for mobile view when conversation is active to ensure input is visible
-  // The navbar is hidden in this case, so we can use full height
-  const mobileHeight = isMobile && activeConversation 
-    ? 'h-[100vh]' 
-    : isMobile ? 'h-[calc(100vh-5rem)]' : 'h-[80vh]';
+  // Calculate appropriate height for mobile view to ensure input is visible
+  const mobileHeight = activeConversation ? 'h-[calc(100vh-80px)]' : 'h-[calc(100vh-5rem)]';
 
   return (
-    <div className={`flex flex-col md:flex-row gap-4 ${mobileHeight} scrollbar-hide`}>
+    <div className={`flex flex-col md:flex-row gap-4 ${isMobile ? mobileHeight : 'h-[80vh]'} scrollbar-hide`}>
       <Card 
         className={`md:flex md:w-1/3 glassmorphism overflow-hidden flex-col
           border border-cosmic-800/30 shadow-xl backdrop-blur-lg
@@ -85,7 +82,7 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
         className={`md:flex md:w-2/3 glassmorphism overflow-hidden flex flex-col
           border border-cosmic-800/30 shadow-xl backdrop-blur-lg relative h-full
           ${isMobile ? 
-            (messagesVisible ? 'flex h-full max-h-[100vh]' : 'hidden') : 
+            (messagesVisible ? 'flex h-full max-h-[calc(100vh-80px)]' : 'hidden') : 
             'flex'}
         `}
         ref={messageListRef}

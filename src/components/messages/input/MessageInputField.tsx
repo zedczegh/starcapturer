@@ -45,7 +45,7 @@ const MessageInputField: React.FC<MessageInputFieldProps> = ({
           rows={1}
           disabled={sending}
         />
-        <div className="absolute right-2 flex items-center space-x-1 py-2 z-20">
+        <div className="absolute right-2 flex items-center space-x-1 py-2 z-10">
           <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
             <Button 
               variant="ghost" 

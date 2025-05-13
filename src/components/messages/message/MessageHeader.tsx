@@ -13,7 +13,7 @@ interface MessageHeaderProps {
 
 const MessageHeader: React.FC<MessageHeaderProps> = ({ conversation, onBack }) => {
   return (
-    <div className="px-4 py-3 border-b border-cosmic-800/50 flex items-center gap-3 sticky top-0 bg-cosmic-900/95 backdrop-blur-md z-30">
+    <div className="px-4 py-3 border-b border-cosmic-800/50 flex items-center gap-3 sticky top-0 bg-cosmic-900/95 backdrop-blur-md z-10">
       <Button 
         variant="ghost" 
         size="icon" 

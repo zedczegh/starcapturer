@@ -1,101 +1,58 @@
 
 import React from "react";
-import { useLocation } from "react-router-dom";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { Link, useLocation } from "react-router-dom";
 import { NavLink } from "./NavButtons";
-import SiqsNavButton from "./SiqsNavButton";
 import LanguageSwitcher from "../LanguageSwitcher";
-import ProfileButton from "./ProfileButton";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Map } from "lucide-react";
 import LocationPinButton from "./LocationPinButton";
+import ProfileButton from "./ProfileButton";
 
 interface DesktopNavProps {
   location: ReturnType<typeof useLocation>;
   locationId: string | null;
-  isMobile?: boolean;
-  onNavClick?: () => void;
 }
 
-const DesktopNav: React.FC<DesktopNavProps> = ({
-  location,
-  locationId,
-  isMobile = false,
-  onNavClick
+const DesktopNav: React.FC<DesktopNavProps> = ({ 
+  location, 
+  locationId 
 }) => {
   const { t } = useLanguage();
-  const currentPath = location.pathname;
   
-  const handleClick = () => {
-    if (onNavClick) onNavClick();
-  };
+  const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
   
   return (
-    <div className={`flex ${isMobile ? 'flex-col space-y-6' : 'items-center space-x-5'}`}>
-      <div className={`flex ${isMobile ? 'flex-col space-y-6 items-start' : 'items-center space-x-5'}`}>
-        <NavLink 
-          to="/" 
-          active={currentPath === "/"} 
-          onClick={handleClick}
-        >
-          {t("Home", "首页")}
-        </NavLink>
-        
-        <NavLink 
-          to="/photo-points" 
-          active={currentPath === "/photo-points"} 
-          onClick={handleClick}
-        >
+    <>
+      <nav className="hidden md:flex items-center space-x-6">
+        <NavLink to="/photo-points" active={location.pathname === "/photo-points"}>
           {t("Photo Points", "拍摄点")}
         </NavLink>
-        
         <NavLink 
-          to="/community" 
-          active={currentPath === "/community"} 
-          onClick={handleClick}
+          to={detailsPath}
+          active={location.pathname.startsWith('/location/')}
         >
+          {t("Location Details", "位置详情")}
+        </NavLink>
+        <NavLink to="/community" active={location.pathname === "/community"}>
           {t("Community", "社区")}
         </NavLink>
-        
-        <SiqsNavButton 
-          currentPath={currentPath} 
-          locationId={locationId}
-          onClick={handleClick}
-        />
-        
-        <NavLink 
-          to="/messages" 
-          active={currentPath === "/messages"} 
-          onClick={handleClick}
-        >
-          {t("Messages", "消息")}
+        <NavLink to="/share" active={location.pathname === "/share"}>
+          {t("Bortle Now", "实时光污染")}
         </NavLink>
-        
-        <NavLink 
-          to="/useful-links" 
-          active={currentPath === "/useful-links"} 
-          onClick={handleClick}
-        >
+        <NavLink to="/useful-links" active={location.pathname === "/useful-links"}>
           {t("Resources", "资源")}
         </NavLink>
+        <NavLink to="/about" active={location.pathname === "/about"}>
+          {t("About SIQS", "关于SIQS")}
+        </NavLink>
+      </nav>
+      
+      <div className="hidden md:flex items-center space-x-2">
+        <LocationPinButton />
+        <LanguageSwitcher />
+        <ProfileButton />
       </div>
-      
-      {isMobile && (
-        <div className="flex flex-col space-y-6 pt-6 border-t border-cosmic-800/50 w-full">
-          <div className="flex items-center space-x-4">
-            <LocationPinButton />
-            <LanguageSwitcher />
-          </div>
-          <ProfileButton />
-        </div>
-      )}
-      
-      {!isMobile && (
-        <div className="hidden md:flex items-center space-x-4">
-          <LocationPinButton />
-          <LanguageSwitcher />
-          <ProfileButton />
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 
