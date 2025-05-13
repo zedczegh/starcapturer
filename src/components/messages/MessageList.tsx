@@ -72,7 +72,7 @@ const MessageList: React.FC<MessageListProps> = memo(({
                   onUnsend={onUnsendMessage}
                 />
               ))}
-              <div ref={messagesEndRef} className="h-2 mb-16" />
+              <div ref={messagesEndRef} className="h-2 mb-20" />
             </>
           )}
         </div>

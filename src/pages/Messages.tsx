@@ -28,7 +28,7 @@ const MessageContent = memo(({ user }: { user: any }) => {
   } = useMessageConversation();
 
   return (
-    <div className={`container mx-auto px-2 md:px-4 ${isMobile ? 'py-2 pt-16' : 'py-6 pt-20'} max-w-6xl`}>
+    <div className={`container mx-auto px-2 md:px-4 ${isMobile ? 'py-2 pt-16 pb-0' : 'py-6 pt-20'} max-w-6xl`}>
       <MessageContainer
         activeConversation={activeConversation}
         conversations={conversations}

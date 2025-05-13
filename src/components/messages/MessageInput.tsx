@@ -52,7 +52,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
 
   return (
     <div className={`border-t border-cosmic-800/50 p-3 md:p-4 bg-cosmic-900/70 space-y-2 md:space-y-3 
-      ${isMobile ? 'fixed bottom-0 left-0 right-0 z-30' : 'sticky bottom-0'} 
+      ${isMobile ? 'fixed bottom-[60px] left-0 right-0 z-50' : 'sticky bottom-0'} 
       backdrop-blur-md shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]`}>
       <ImagePreview imagePreview={imagePreview} onRemoveImage={handleRemoveImage} />
       

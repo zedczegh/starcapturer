@@ -55,7 +55,7 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
 
   // Adjust height for mobile to ensure input is visible above navbar
   // Make the message container shorter to leave exact space for the navbar
-  const mobileHeight = activeConversation ? 'h-[calc(100vh-60px)]' : 'h-[calc(100vh-5rem)]';
+  const mobileHeight = activeConversation ? 'h-[calc(100vh-120px)]' : 'h-[calc(100vh-5rem)]';
 
   return (
     <div className={`flex flex-col md:flex-row gap-4 ${isMobile ? mobileHeight : 'h-[80vh]'} scrollbar-hide`}>
@@ -83,7 +83,7 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
         className={`md:flex md:w-2/3 glassmorphism overflow-hidden flex flex-col
           border border-cosmic-800/30 shadow-xl backdrop-blur-lg relative h-full
           ${isMobile ? 
-            (messagesVisible ? 'flex h-full' : 'hidden') : 
+            (messagesVisible ? 'flex h-full pb-[60px]' : 'hidden') : 
             'flex'}
         `}
         ref={messageListRef}
