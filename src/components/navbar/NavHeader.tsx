@@ -1,43 +1,38 @@
 
-import React from "react";
-import { Link } from "react-router-dom";
-import { MoonStar } from "lucide-react";
-import LanguageSwitcher from "../LanguageSwitcher";
-import { cn } from "@/lib/utils";
-import LocationPinButton from "./LocationPinButton";
+import React from 'react';
+import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface NavHeaderProps {
   scrolled: boolean;
-  children?: React.ReactNode;
+  children: React.ReactNode;
 }
 
-const NavHeader: React.FC<NavHeaderProps> = ({
-  scrolled,
-  children
-}) => {
+const NavHeader = ({ scrolled, children }: NavHeaderProps) => {
+  const { t } = useLanguage();
+  
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out", 
-        scrolled ? "py-2 glassmorphism shadow-lg" : "py-4 bg-transparent"
+        "fixed top-0 left-0 z-50 w-full transition-all duration-300",
+        scrolled
+          ? "bg-cosmic-950/90 shadow-md backdrop-blur-md border-b border-cosmic-800/60"
+          : "bg-transparent"
       )}
     >
-      <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link 
-          to="/" 
-          className="flex items-center space-x-2 z-20 transition-all duration-300 hover:opacity-80 hover:scale-[1.02]"
-        >
-          <MoonStar className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold tracking-tight">
-            Astro<span className="text-primary">SIQS</span>
-          </span>
-        </Link>
-        
-        {children}
-        
-        <div className="flex md:hidden items-center space-x-3">
-          <LocationPinButton />
-          <LanguageSwitcher />
+      <div className="container flex h-16 items-center justify-between">
+        <div className="flex items-center">
+          <Link
+            to="/"
+            className="mr-6 flex items-center space-x-2"
+            aria-label={t("Home", "首页")}
+          >
+            <span className="font-bold text-lg hidden md:inline-block text-primary-foreground">
+              SkyVision
+            </span>
+          </Link>
+          {children}
         </div>
       </div>
     </header>

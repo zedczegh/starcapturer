@@ -11,6 +11,7 @@ const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   
+  // Extract location ID for active link highlighting
   const locationId = location.pathname.startsWith('/location/') 
     ? location.pathname.split('/location/')[1] 
     : null;

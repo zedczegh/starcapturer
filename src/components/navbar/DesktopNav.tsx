@@ -1,58 +1,69 @@
 
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
-import { NavLink } from "./NavButtons";
-import LanguageSwitcher from "../LanguageSwitcher";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { Map } from "lucide-react";
-import LocationPinButton from "./LocationPinButton";
-import ProfileButton from "./ProfileButton";
+import React from 'react';
+import { Link, NavLink } from 'react-router-dom';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { cn } from '@/lib/utils';
+import { MapPin, Info, Globe, MapPinned } from 'lucide-react';
 
 interface DesktopNavProps {
-  location: ReturnType<typeof useLocation>;
+  location: {
+    pathname: string;
+  };
   locationId: string | null;
 }
 
-const DesktopNav: React.FC<DesktopNavProps> = ({ 
-  location, 
-  locationId 
-}) => {
+const DesktopNav = ({ location, locationId }: DesktopNavProps) => {
   const { t } = useLanguage();
-  
-  const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
-  
+
+  // Navigation links data
+  const navLinks = [
+    {
+      name: t("My Location", "我的位置"),
+      path: "/location",
+      icon: <MapPin className="h-4 w-4 mr-1" />,
+      exact: true
+    },
+    {
+      name: t("Photo Points", "拍摄点"),
+      path: "/photo-points",
+      icon: <MapPinned className="h-4 w-4 mr-1" />
+    },
+    {
+      name: t("World Map", "世界地图"),
+      path: "/world-map",
+      icon: <Globe className="h-4 w-4 mr-1" />
+    },
+    {
+      name: t("About", "关于"),
+      path: "/about",
+      icon: <Info className="h-4 w-4 mr-1" />
+    }
+  ];
+
   return (
-    <>
-      <nav className="hidden md:flex items-center space-x-6">
-        <NavLink to="/photo-points" active={location.pathname === "/photo-points"}>
-          {t("Photo Points", "拍摄点")}
-        </NavLink>
-        <NavLink 
-          to={detailsPath}
-          active={location.pathname.startsWith('/location/')}
-        >
-          {t("Location Details", "位置详情")}
-        </NavLink>
-        <NavLink to="/community" active={location.pathname === "/community"}>
-          {t("Community", "社区")}
-        </NavLink>
-        <NavLink to="/share" active={location.pathname === "/share"}>
-          {t("Bortle Now", "实时光污染")}
-        </NavLink>
-        <NavLink to="/useful-links" active={location.pathname === "/useful-links"}>
-          {t("Resources", "资源")}
-        </NavLink>
-        <NavLink to="/about" active={location.pathname === "/about"}>
-          {t("About SIQS", "关于SIQS")}
-        </NavLink>
-      </nav>
-      
-      <div className="hidden md:flex items-center space-x-2">
-        <LocationPinButton />
-        <LanguageSwitcher />
-        <ProfileButton />
-      </div>
-    </>
+    <nav className="hidden md:flex md:items-center">
+      <ul className="flex space-x-1">
+        {navLinks.map((link) => (
+          <li key={link.path}>
+            <NavLink
+              to={link.path}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center px-3 py-2 text-sm font-medium transition-colors rounded-md",
+                  (isActive || 
+                   (link.path === "/location" && location.pathname.startsWith("/location/")))
+                    ? "text-primary-foreground bg-primary/10 hover:bg-primary/15"
+                    : "text-muted-foreground hover:text-foreground hover:bg-cosmic-800/50"
+                )
+              }
+            >
+              {link.icon}
+              {link.name}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 };
 
