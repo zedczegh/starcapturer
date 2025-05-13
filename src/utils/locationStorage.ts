@@ -4,7 +4,7 @@
  */
 
 // Types
-interface LocationData {
+export interface LocationData {
   id?: string;
   name: string;
   latitude: number;
@@ -12,6 +12,15 @@ interface LocationData {
   timestamp?: string;
   weatherData?: any;
   siqsResult?: any;
+  [key: string]: any;
+}
+
+// Define SIQSLocation type as it's referenced in several components
+export interface SIQSLocation {
+  name: string;
+  latitude: number;
+  longitude: number;
+  bortleScale?: number;
   [key: string]: any;
 }
 
@@ -54,9 +63,15 @@ export function getLocationDetails(id: string): any | null {
 }
 
 /**
+ * Get location details by ID - alias for getLocationDetails
+ * for backward compatibility
+ */
+export const getLocationDetailsById = getLocationDetails;
+
+/**
  * Save location as the latest used location
  */
-export function saveLocation(locationData: LocationData): void {
+export function saveLocation(locationData: LocationData | SIQSLocation): void {
   try {
     // Ensure we have required fields
     if (!locationData.latitude || !locationData.longitude) {
@@ -109,3 +124,63 @@ export function getSavedLocation(): LocationData | null {
 export function generateLocationId(latitude: number, longitude: number): string {
   return `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
 }
+
+/**
+ * Save location from PhotoPoints page
+ */
+export function saveLocationFromPhotoPoints(locationData: any): void {
+  if (!locationData || !locationData.latitude || !locationData.longitude) {
+    console.error("Invalid location data for PhotoPoints");
+    return;
+  }
+  
+  const id = locationData.id || generateLocationId(locationData.latitude, locationData.longitude);
+  
+  // Save to detail storage
+  saveLocationDetails(id, {
+    ...locationData,
+    fromPhotoPoints: true
+  });
+  
+  // Also save as latest location if requested
+  if (locationData.saveAsLatest) {
+    saveLocation(locationData);
+  }
+}
+
+/**
+ * Fix the localStorage.setItem function call in getLocationDetails
+ * This was a typo in the original file
+ */
+export function fixGetLocationDetails() {
+  try {
+    const originalFunction = getLocationDetails;
+    
+    if (originalFunction.toString().includes('localStorage.setItem')) {
+      (window as any).fixedGetLocationDetails = function(id: string): any | null {
+        try {
+          const data = localStorage.getItem(`location_${id}`);
+          return data ? JSON.parse(data) : null;
+        } catch (error) {
+          console.error("Error getting location details:", error);
+          return null;
+        }
+      };
+      
+      // Replace the function
+      const newFunction = (window as any).fixedGetLocationDetails;
+      
+      // Replace the original function
+      Object.defineProperty(window, 'getLocationDetails', {
+        value: newFunction,
+        writable: true,
+        configurable: true
+      });
+    }
+  } catch (error) {
+    console.error("Error fixing getLocationDetails function:", error);
+  }
+}
+
+// Fix the localStorage.setItem typo at module initialization
+fixGetLocationDetails();
