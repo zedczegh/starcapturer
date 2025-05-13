@@ -14,7 +14,6 @@ import { useLocationDetailsLogic } from "@/hooks/location/useLocationDetailsLogi
 import { toast } from "sonner";
 import { getRandomAstronomyTip } from "@/utils/astronomyTips"; 
 import NavBar from "@/components/NavBar";
-import { getSavedLocation } from "@/utils/locationStorage";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -26,24 +25,6 @@ const LocationDetails = () => {
   // Add a ref to track if the toast has been shown
   const toastShownRef = useRef(false);
   const initialLoadCompleteRef = useRef(false);
-
-  // Handle the case where we're accessing the page directly from navbar
-  useEffect(() => {
-    if ((!location.state || location.state.fromNavBar) && !id) {
-      // Try to get saved location if navigating directly
-      const savedLocation = getSavedLocation();
-      if (savedLocation) {
-        console.log("Using saved location from storage:", savedLocation.name);
-        navigate(`/location/${savedLocation.id || 'latest'}`, { 
-          state: {
-            ...savedLocation,
-            fromNavBar: true 
-          },
-          replace: true
-        });
-      }
-    }
-  }, [id, location.state, navigate]);
 
   // Prefetch popular locations data when page loads
   useEffect(() => {
@@ -112,12 +93,7 @@ const LocationDetails = () => {
   }, [locationData?.latitude, locationData?.longitude, queryClient]);
 
   if (isLoading) {
-    return (
-      <>
-        <NavBar />
-        <LocationDetailsLoading />
-      </>
-    );
+    return <LocationDetailsLoading />;
   }
 
   return (

@@ -1,38 +1,44 @@
 
-import React from 'react';
-import { cn } from "@/lib/utils";
+import React from "react";
 import { Link } from "react-router-dom";
-import { Star } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { MoonStar } from "lucide-react";
+import LanguageSwitcher from "../LanguageSwitcher";
+import { cn } from "@/lib/utils";
+import LocationPinButton from "./LocationPinButton";
 
 interface NavHeaderProps {
   scrolled: boolean;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
-const NavHeader: React.FC<NavHeaderProps> = ({ scrolled, children }) => {
-  const { t } = useLanguage();
-  
+const NavHeader: React.FC<NavHeaderProps> = ({
+  scrolled,
+  children
+}) => {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-        scrolled
-          ? "bg-cosmic-900/90 backdrop-blur-sm shadow-md shadow-cosmic-950/20 h-16"
-          : "bg-cosmic-900/50 h-20"
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out", 
+        scrolled ? "py-2 glassmorphism shadow-lg" : "py-4 bg-transparent"
       )}
     >
-      <div className="container mx-auto px-4 h-full flex items-center justify-between">
-        <div className="flex items-center">
-          <Link to="/" className="flex items-center">
-            <Star className="h-6 w-6 mr-2 text-primary" />
-            <span className="text-lg font-medium text-white">
-              {t("StarlightIQ", "星光IQ")}
-            </span>
-          </Link>
-        </div>
-
+      <div className="container mx-auto px-4 flex items-center justify-between">
+        <Link 
+          to="/" 
+          className="flex items-center space-x-2 z-20 transition-all duration-300 hover:opacity-80 hover:scale-[1.02]"
+        >
+          <MoonStar className="h-8 w-8 text-primary" />
+          <span className="text-xl font-bold tracking-tight">
+            Astro<span className="text-primary">SIQS</span>
+          </span>
+        </Link>
+        
         {children}
+        
+        <div className="flex md:hidden items-center space-x-3">
+          <LocationPinButton />
+          <LanguageSwitcher />
+        </div>
       </div>
     </header>
   );

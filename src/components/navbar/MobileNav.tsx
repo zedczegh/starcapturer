@@ -1,127 +1,69 @@
 
-import React, { useState } from "react";
-import { NavLink } from "react-router-dom";
+import React from "react";
+import { useLocation } from "react-router-dom";
+import { Telescope, Map, Smartphone, Link2, Info, Users } from "lucide-react";
+import { MobileNavButton } from "./NavButtons";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { cn } from "@/lib/utils";
-import { Menu, X, MapPin, Home, Info, Users, CameraIcon } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 interface MobileNavProps {
-  location: any;
+  location: ReturnType<typeof useLocation>;
   locationId: string | null;
-  savedLocation?: any;
 }
 
-const MobileNav: React.FC<MobileNavProps> = ({ location, locationId, savedLocation }) => {
+const MobileNav: React.FC<MobileNavProps> = ({
+  location,
+  locationId
+}) => {
   const { t } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
 
-  // Generate the location link with appropriate state data
-  const getLocationLink = () => {
-    // If we have saved location data, use it
-    if (savedLocation) {
-      return {
-        pathname: `/location/${savedLocation.id || 'latest'}`,
-        state: {
-          ...savedLocation,
-          fromNavBar: true
-        }
-      };
-    }
-    
-    // Fallback to default route
-    return "/location";
-  };
+  // Use a default location ID for when there isn't one
+  const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-cosmic-900/95 border-t border-cosmic-700/30 backdrop-blur-md">
-      <div className="flex justify-around items-center h-14">
-        <NavLink
-          to="/"
-          className={({ isActive }) =>
-            cn(
-              "flex flex-1 flex-col items-center justify-center h-full",
-              isActive ? "text-primary" : "text-gray-400 hover:text-primary"
-            )
-          }
-        >
-          <Home className="h-5 w-5" />
-          <span className="text-[10px] mt-0.5">{t("Home", "主页")}</span>
-        </NavLink>
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-nav-bar">
+      <div className="flex justify-around items-center py-3 px-2 bg-[#123341]/[0.84] backdrop-blur-xl border-t border-cosmic-100/10">
+        <MobileNavButton 
+          to="/photo-points" 
+          icon={<Telescope className="h-5 w-5" />} 
+          label={t("Photo", "拍摄")} 
+          active={location.pathname === "/photo-points"} 
+        />
+        
+        <MobileNavButton 
+          to={detailsPath}
+          icon={<Map className="h-5 w-5" />} 
+          label={t("Location", "位置")} 
+          active={location.pathname.startsWith('/location/')} 
+        />
 
-        <NavLink
-          to={getLocationLink()}
-          className={({ isActive }) =>
-            cn(
-              "flex flex-1 flex-col items-center justify-center h-full",
-              isActive || location.pathname.startsWith("/location/")
-                ? "text-primary"
-                : "text-gray-400 hover:text-primary"
-            )
-          }
-        >
-          <MapPin className="h-5 w-5" />
-          <span className="text-[10px] mt-0.5">{t("Location", "位置")}</span>
-        </NavLink>
-
-        <NavLink
+        <MobileNavButton
           to="/community"
-          className={({ isActive }) =>
-            cn(
-              "flex flex-1 flex-col items-center justify-center h-full",
-              isActive || location.pathname.startsWith("/astro-spot/")
-                ? "text-primary"
-                : "text-gray-400 hover:text-primary"
-            )
-          }
-        >
-          <Users className="h-5 w-5" />
-          <span className="text-[10px] mt-0.5">{t("Community", "社区")}</span>
-        </NavLink>
+          icon={<Users className="h-5 w-5" />}
+          label={t("Community", "社区")}
+          active={location.pathname === "/community"}
+        />
 
-        <NavLink
-          to="/bortle-now"
-          className={({ isActive }) =>
-            cn(
-              "flex flex-1 flex-col items-center justify-center h-full",
-              isActive ? "text-primary" : "text-gray-400 hover:text-primary"
-            )
-          }
-        >
-          <CameraIcon className="h-5 w-5" />
-          <span className="text-[10px] mt-0.5">{t("BortleNow", "光害")}</span>
-        </NavLink>
-
-        <button
-          onClick={() => setIsOpen(true)}
-          className="flex flex-1 flex-col items-center justify-center h-full text-gray-400 hover:text-primary"
-        >
-          <Menu className="h-5 w-5" />
-          <span className="text-[10px] mt-0.5">{t("More", "更多")}</span>
-        </button>
+        <MobileNavButton 
+          to="/share" 
+          icon={<Smartphone className="h-5 w-5" />} 
+          label={t("Bortle", "光污染")} 
+          active={location.pathname === "/share"} 
+        />
+        
+        <MobileNavButton 
+          to="/useful-links" 
+          icon={<Link2 className="h-5 w-5" />} 
+          label={t("Links", "资源")} 
+          active={location.pathname === "/useful-links"} 
+        />
+        
+        <MobileNavButton 
+          to="/about" 
+          icon={<Info className="h-5 w-5" />} 
+          label={t("About", "关于")} 
+          active={location.pathname === "/about"} 
+        />
       </div>
-
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetContent side="right" className="bg-cosmic-900 border-cosmic-700">
-          <div className="flex flex-col space-y-4 pt-8">
-            <NavLink
-              to="/about"
-              onClick={() => setIsOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center px-4 py-2 rounded-md",
-                  isActive ? "bg-cosmic-800 text-white" : "text-gray-300 hover:bg-cosmic-800/40"
-                )
-              }
-            >
-              <Info className="h-5 w-5 mr-3" />
-              {t("About", "关于")}
-            </NavLink>
-            
-            {/* Add any additional links for the mobile menu here */}
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 };
