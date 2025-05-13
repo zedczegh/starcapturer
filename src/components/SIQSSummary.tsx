@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info, Star, Clock } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Progress } from "@/components/ui/progress";
-import { getProgressColorClass } from "@/components/siqs/utils/progressColor";
 import { motion } from "framer-motion";
 import { formatSIQSScore, getSIQSLevel } from "@/lib/siqs/utils";
 import { validateSIQSData } from "@/utils/validation/dataValidation";
@@ -30,8 +29,29 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
     // Normalize to ensure the score is on the 1-10 scale
     return normalizeToSiqsScale(Math.round(validatedSiqs.score * 10) / 10);
   }, [validatedSiqs]);
+  
+  // Get the precise color class based on SIQS score as per the color scale guide
+  const getScoreColorClass = (score: number) => {
+    if (score >= 8) return "bg-green-500";
+    if (score >= 6) return "bg-blue-500";
+    if (score >= 5) return "bg-olive-500";
+    if (score >= 4) return "bg-yellow-500";
+    if (score >= 2) return "bg-orange-500";
+    return "bg-red-500";
+  };
+  
+  // Get text color class for the score display
+  const getScoreTextColorClass = (score: number) => {
+    if (score >= 8) return "text-green-500";
+    if (score >= 6) return "text-blue-500";
+    if (score >= 5) return "text-olive-500";
+    if (score >= 4) return "text-yellow-500";
+    if (score >= 2) return "text-orange-500";
+    return "text-red-500";
+  };
     
-  const scoreColorClass = getProgressColorClass(siqsScore);
+  const scoreColorClass = getScoreColorClass(siqsScore);
+  const scoreTextColorClass = getScoreTextColorClass(siqsScore);
   
   const qualityText = useMemo(() => {
     return t(getSIQSLevel(siqsScore), 
@@ -133,7 +153,7 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
                 initial={{ scale: 0.5 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className={`text-2xl font-bold px-2 rounded ${scoreColorClass}`}
+                className={`text-2xl font-bold px-2 rounded ${scoreTextColorClass}`}
               >
                 {siqsScore.toFixed(1)}
               </motion.div>
@@ -142,17 +162,26 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
             <Progress 
               value={siqsScore * 10} 
               max={100} 
-              className="h-2 mb-2 bg-cosmic-700" 
-              style={{ 
-                background: "linear-gradient(to right, #3f1528, #344055)",
-                border: "1px solid rgba(80, 80, 100, 0.2)"
-              }}
+              className="h-2.5 mb-2" 
+              colorClass={scoreColorClass}
             />
             
             <div className="flex justify-between items-center text-xs">
               <span className="text-muted-foreground">{t("Poor", "较差")}</span>
-              <span className={`font-semibold ${scoreColorClass}`}>{qualityText}</span>
+              <span className={`font-semibold ${scoreTextColorClass}`}>{qualityText}</span>
               <span className="text-muted-foreground">{t("Excellent", "优秀")}</span>
+            </div>
+            
+            {/* SIQS Color Scale Guide - Small visual reference */}
+            <div className="mt-3 pt-3 border-t border-cosmic-700/30">
+              <div className="flex space-x-1 h-1.5">
+                <div className="bg-red-500 flex-1 rounded-l-full" title="0-1.9: Bad"></div>
+                <div className="bg-orange-500 flex-1" title="2-3.9: Poor"></div>
+                <div className="bg-yellow-500 flex-1" title="4-4.9: Average"></div>
+                <div className="bg-olive-500 flex-1" title="5-5.9: Above Average"></div>
+                <div className="bg-blue-500 flex-1" title="6-7.9: Good"></div>
+                <div className="bg-green-500 flex-1 rounded-r-full" title="8-10: Excellent"></div>
+              </div>
             </div>
             
             {siqsCalculationTime && (
