@@ -1,136 +1,207 @@
 
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { optimizedCache } from '@/utils/optimizedCache';
+import { v4 as uuidv4 } from 'uuid';
 
-export const useMessageActions = (fetchMessages: (partnerId: string) => Promise<void>, setMessages: React.Dispatch<React.SetStateAction<any[]>>) => {
+// Helper function to clear related caches after message operations
+const clearMessageCaches = (partnerId: string, userId?: string) => {
+  if (userId) {
+    optimizedCache.removeCachedItem(`messages_${userId}_${partnerId}`);
+    optimizedCache.removeCachedItem(`messages_${partnerId}_${userId}`);
+    optimizedCache.removeCachedItem(`user_conversations_${userId}`);
+  }
+};
+
+export const useMessageActions = (
+  fetchMessages: (partnerId: string) => Promise<void>,
+  fetchConversations: (forceFresh?: boolean) => Promise<void>,
+  setMessages: React.Dispatch<React.SetStateAction<any[]>>
+) => {
   const [sending, setSending] = useState(false);
   const { user } = useAuth();
   const { t } = useLanguage();
-  
-  const sendMessage = async (text: string, imageFile?: File | null, locationData?: any) => {
-    if (!user) return;
-    
-    setSending(true);
-    try {
-      const receiver_id = window.location.pathname.includes('/messages')
-        ? document.querySelector('[data-active-conversation-id]')?.getAttribute('data-active-conversation-id') || ''
-        : '';
-      
-      if (!receiver_id) {
-        toast.error(t("Failed to send: No recipient selected", "发送失败：未选择收件人"));
+
+  const sendMessage = useCallback(
+    async (receiverId: string, messageText: string, imageFile?: File | null, locationData?: any) => {
+      if (!user || !receiverId) {
+        console.error('Missing user or receiver ID');
         return;
       }
-      
-      let image_url = null;
-      
-      // Upload image if provided
-      if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
-        const filePath = `${user.id}/${Date.now()}.${fileExt}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase
-          .storage
-          .from('message_images')
-          .upload(filePath, imageFile);
-          
-        if (uploadError) {
-          throw uploadError;
-        }
-        
-        // Get the public URL for the uploaded image
-        const { data: urlData } = await supabase
-          .storage
-          .from('message_images')
-          .getPublicUrl(filePath);
-          
-        image_url = urlData.publicUrl;
-      }
-      
-      // Prepare message content - either regular text or location data in JSON format
-      const messageContent = locationData 
-        ? JSON.stringify({
-            type: 'location',
-            data: locationData
-          })
-        : text;
-      
-      // Insert the message
-      const { error } = await supabase
-        .from('user_messages')
-        .insert({
-          sender_id: user.id,
-          receiver_id: receiver_id,
-          message: messageContent,
-          image_url: image_url
-        });
-        
-      if (error) throw error;
-      
-      // Fetch updated messages
-      await fetchMessages(receiver_id);
-      
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error(t("Failed to send message", "发送消息失败"));
-    } finally {
-      setSending(false);
-    }
-  };
-  
-  const unsendMessage = async (messageId: string): Promise<boolean> => {
-    if (!user) return false;
-    
-    try {
-      const { error } = await supabase
-        .from('user_messages')
-        .delete()
-        .eq('id', messageId)
-        .eq('sender_id', user.id);
-        
-      if (error) throw error;
-      
-      // Update the messages state by removing the unsent message
-      setMessages(prevMessages => prevMessages.filter(msg => msg.id !== messageId));
-      return true;
-    } catch (error) {
-      console.error("Error unsending message:", error);
-      toast.error(t("Failed to unsend message", "撤回消息失败"));
-      return false;
-    }
-  };
 
-  const deleteConversation = async (partnerId: string): Promise<boolean> => {
-    if (!user || !partnerId) return false;
-    
-    try {
-      console.log(`Attempting to delete conversation with partner ID: ${partnerId}`);
-      
-      // Use the database function to delete all messages between users
-      const { error } = await supabase
-        .rpc('delete_conversation', { 
-          partner_id: partnerId,
-          current_user_id: user.id
+      setSending(true);
+      try {
+        let finalMessage = messageText;
+        let imageUrl = null;
+
+        // Process location data if provided
+        if (locationData) {
+          // Format location data as JSON string
+          finalMessage = JSON.stringify({
+            type: 'location',
+            data: {
+              ...locationData,
+              timestamp: new Date().toISOString(),
+              userId: user.id,
+            },
+          });
+        }
+
+        // Upload image if provided
+        if (imageFile) {
+          const fileExt = imageFile.name.split('.').pop();
+          const filePath = `${user.id}/${uuidv4()}.${fileExt}`;
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('message_images')
+            .upload(filePath, imageFile);
+
+          if (uploadError) {
+            throw uploadError;
+          }
+
+          // Get public URL for the uploaded image
+          const { data: urlData } = supabase.storage.from('message_images').getPublicUrl(filePath);
+          imageUrl = urlData?.publicUrl;
+        }
+
+        // Insert the message
+        const { error } = await supabase.from('user_messages').insert({
+          sender_id: user.id,
+          receiver_id: receiverId,
+          message: finalMessage,
+          image_url: imageUrl,
         });
+
+        if (error) {
+          throw error;
+        }
+
+        // Clear related caches
+        clearMessageCaches(receiverId, user.id);
         
-      if (error) {
+        // Success!
+        console.log('Message sent successfully');
+      } catch (error: any) {
+        console.error('Error sending message:', error.message);
+        toast({
+          variant: "destructive",
+          title: t("Error sending message", "发送消息出错"),
+          description: error.message
+        });
         throw error;
+      } finally {
+        setSending(false);
       }
-      
-      console.log("Conversation deletion completed successfully via RPC function");
-      
-      // Clear messages for this conversation
-      setMessages([]);
-      
-      return true;
-    } catch (error) {
-      console.error("Error deleting conversation:", error);
-      toast.error(t("Failed to delete conversation", "删除对话失败"));
-      return false;
-    }
-  };
-  
+    },
+    [user, t]
+  );
+
+  const unsendMessage = useCallback(
+    async (messageId: string): Promise<boolean> => {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: t("Not authenticated", "未经身份验证"),
+          description: t("Please log in to manage messages", "请登录以管理消息")
+        });
+        return false;
+      }
+
+      try {
+        // First get the message to verify ownership and get the receiver ID
+        const { data: messageData, error: fetchError } = await supabase
+          .from('user_messages')
+          .select('sender_id, receiver_id')
+          .eq('id', messageId)
+          .single();
+
+        if (fetchError) throw fetchError;
+        
+        // Verify the user is the sender
+        if (messageData.sender_id !== user.id) {
+          toast({
+            variant: "destructive",
+            title: t("Unauthorized", "未授权"),
+            description: t("You can only unsend your own messages", "您只能撤回自己的消息")
+          });
+          return false;
+        }
+
+        // Delete the message
+        const { error: deleteError } = await supabase
+          .from('user_messages')
+          .delete()
+          .eq('id', messageId);
+
+        if (deleteError) throw deleteError;
+
+        // Clear caches
+        clearMessageCaches(messageData.receiver_id, user.id);
+        
+        // Update local message list (filter out removed message)
+        setMessages(prevMessages => prevMessages.filter(msg => msg.id !== messageId));
+
+        // Refresh conversations
+        fetchConversations(true);
+        
+        return true;
+      } catch (error: any) {
+        console.error('Error unsending message:', error.message);
+        toast({
+          variant: "destructive",
+          title: t("Error unsending message", "撤回消息出错"),
+          description: error.message
+        });
+        return false;
+      }
+    },
+    [user, setMessages, fetchConversations, t]
+  );
+
+  const deleteConversation = useCallback(
+    async (partnerId: string): Promise<boolean> => {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: t("Not authenticated", "未经身份验证"),
+          description: t("Please log in to manage messages", "请登录以管理消息")
+        });
+        return false;
+      }
+
+      try {
+        // Call the delete_conversation PostgreSQL function
+        const { error } = await supabase.rpc('delete_conversation', {
+          partner_id: partnerId,
+          current_user_id: user.id,
+        });
+
+        if (error) throw error;
+        
+        // Clear caches
+        clearMessageCaches(partnerId, user.id);
+        optimizedCache.removeCachedItem(`user_conversations_${user.id}`);
+        
+        // Refresh conversations list
+        fetchConversations(true);
+        
+        return true;
+      } catch (error: any) {
+        console.error('Error deleting conversation:', error.message);
+        toast({
+          variant: "destructive",
+          title: t("Error deleting conversation", "删除对话出错"),
+          description: error.message
+        });
+        return false;
+      }
+    },
+    [user, fetchConversations, t]
+  );
+
   return { sending, sendMessage, unsendMessage, deleteConversation };
 };

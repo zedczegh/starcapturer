@@ -1,7 +1,8 @@
+
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { fetchFromSupabase } from '@/utils/supabaseFetch';
 import { extractLocationFromUrl } from '@/utils/locationLinkParser';
@@ -15,8 +16,9 @@ export const useMessages = () => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { t } = useLanguage();
-  const fetchInProgressRef = useRef<boolean>(false);
+  const fetchInProgressRef = useRef<Record<string, boolean>>({});
   const lastFetchTimeRef = useRef<Record<string, number>>({});
+  const activePartnerRef = useRef<string | null>(null);
   
   // Cache the message parsing function
   const parseMessageData = useMemo(() => (msg: any) => {
@@ -27,7 +29,6 @@ export const useMessages = () => {
         const parsedData = JSON.parse(msg.message);
         if (parsedData.type === 'location' && parsedData.data) {
           locationData = parsedData.data;
-          console.log("Parsed location data from JSON:", locationData);
         }
       } catch (e) {
         console.error("Failed to parse location data:", e);
@@ -39,7 +40,6 @@ export const useMessages = () => {
       const extractedLocation = extractLocationFromUrl(msg.message);
       if (extractedLocation) {
         locationData = extractedLocation;
-        console.log("Location extracted from URL:", locationData);
         // When location is extracted from a URL, set text to empty to hide the raw URL
         return {
           id: msg.id,
@@ -72,25 +72,28 @@ export const useMessages = () => {
       return;
     }
     
+    // Update active partner reference
+    activePartnerRef.current = conversationPartnerId;
+    
     // Implement cache-based throttling to prevent excessive fetching
     const now = Date.now();
     const lastFetchTime = lastFetchTimeRef.current[conversationPartnerId] || 0;
     const timeSinceLastFetch = now - lastFetchTime;
     
-    // Only fetch if it's been more than 2 seconds since the last fetch for this conversation
+    // Only fetch if it's been more than 500ms since the last fetch for this conversation
     // Unless it's the first fetch (lastFetchTime === 0)
-    if (lastFetchTime !== 0 && timeSinceLastFetch < 2000) {
+    if (lastFetchTime !== 0 && timeSinceLastFetch < 500) {
       console.log(`Throttling message fetch for ${conversationPartnerId}, last fetch was ${timeSinceLastFetch}ms ago`);
       return;
     }
     
-    // Prevent duplicate requests
-    if (fetchInProgressRef.current) {
-      console.log("Fetch already in progress, skipping");
+    // Prevent duplicate requests for the same conversation
+    if (fetchInProgressRef.current[conversationPartnerId]) {
+      console.log("Fetch already in progress for this conversation, skipping");
       return;
     }
     
-    fetchInProgressRef.current = true;
+    fetchInProgressRef.current[conversationPartnerId] = true;
     setLoading(true);
     
     // Update last fetch time
@@ -102,22 +105,34 @@ export const useMessages = () => {
       const cachedMessages = optimizedCache.getCachedItem<any[]>(cacheKey);
       
       if (cachedMessages) {
-        console.log("Using cached messages");
+        console.log("Using cached messages:", cachedMessages.length);
         setMessages(cachedMessages);
         // Don't return early - still fetch fresh messages in the background
       }
       
-      // Use optimized fetch utility with skipCache to always get fresh data
+      // Build query parameters for better performance
+      const conditions = [
+        `and(sender_id.eq.${user.id},receiver_id.eq.${conversationPartnerId})`,
+        `and(sender_id.eq.${conversationPartnerId},receiver_id.eq.${user.id})`
+      ];
+      
+      // Use optimized fetch utility
       const messagesData = await fetchFromSupabase(
         'user_messages',
         (query) => query
           .select('*')
-          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${conversationPartnerId}),and(sender_id.eq.${conversationPartnerId},receiver_id.eq.${user.id})`)
+          .or(conditions.join(','))
           .order('created_at', { ascending: true }),
         { skipCache: true } // Always get fresh messages
       );
       
       console.log("Fetched messages:", messagesData.length);
+      
+      // Only proceed if this is still the active conversation
+      if (activePartnerRef.current !== conversationPartnerId) {
+        console.log("Partner ID changed during fetch, discarding results");
+        return;
+      }
       
       // Transform the messages to the expected format using the memoized parser
       const formattedMessages = messagesData.map(parseMessageData);
@@ -126,7 +141,7 @@ export const useMessages = () => {
       optimizedCache.setCachedItem(cacheKey, formattedMessages, MESSAGE_CACHE_TTL);
       
       // Fix the type error by ensuring we're setting an array
-      setMessages(formattedMessages as any[]);
+      setMessages(formattedMessages);
       
       // Mark messages as read in a non-blocking way
       if (messagesData && messagesData.length > 0) {
@@ -152,10 +167,14 @@ export const useMessages = () => {
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
-      toast.error(t("Failed to load messages", "加载消息失败"));
+      toast({
+        variant: "destructive",
+        title: t("Failed to load messages", "加载消息失败"),
+        description: t("Please try again", "请重试")
+      });
     } finally {
       setLoading(false);
-      fetchInProgressRef.current = false;
+      fetchInProgressRef.current[conversationPartnerId] = false;
     }
   }, [user, t, parseMessageData]);
   

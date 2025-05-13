@@ -1,5 +1,5 @@
 
-import React, { memo, useEffect, useCallback } from "react";
+import React, { memo, useEffect } from "react";
 import NavBar from "@/components/NavBar";
 import { useAuth } from "@/contexts/AuthContext";
 import LoginPrompt from "@/components/messages/LoginPrompt";
@@ -26,6 +26,13 @@ const MessageContent = memo(({ user }: { user: any }) => {
     handleUnsendMessage,
     handleDeleteConversation
   } = useMessageConversation();
+
+  // Log conversation state for debugging
+  useEffect(() => {
+    if (activeConversation) {
+      console.log("Active conversation in Messages:", activeConversation.id, activeConversation.username);
+    }
+  }, [activeConversation]);
 
   return (
     <div className={`container mx-auto px-2 md:px-4 ${isMobile ? 'py-2 pt-16' : 'py-6 pt-20'} max-w-6xl`}>

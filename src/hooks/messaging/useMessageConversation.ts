@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMessaging } from '@/hooks/useMessaging';
 import { ConversationPartner } from './useConversations';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export const useMessageConversation = () => {
@@ -12,7 +12,9 @@ export const useMessageConversation = () => {
   const [activeConversation, setActiveConversation] = useState<ConversationPartner | null>(null);
   const [isProcessingAction, setIsProcessingAction] = useState(false);
   const [localConversations, setLocalConversations] = useState<ConversationPartner[]>([]);
-  const navigationProcessedRef = useRef(false);
+  const navigationProcessedRef = useRef<boolean | number>(false);
+  const prevSelectedUserIdRef = useRef<string | null>(null);
+  const initializationDoneRef = useRef(false);
   
   const {
     conversations,
@@ -32,21 +34,38 @@ export const useMessageConversation = () => {
     setLocalConversations(conversations);
   }, [conversations]);
   
-  // Handle incoming selectedUserId from navigation state with a stable reference
+  // Initialize the component and handle navigation state
+  useEffect(() => {
+    if (initializationDoneRef.current) return;
+    
+    // Mark initialization as done to avoid unnecessary fetches
+    initializationDoneRef.current = true;
+    
+    // Immediately fetch conversations on mount
+    fetchConversations();
+  }, [fetchConversations]);
+  
+  // Handle incoming selectedUserId from navigation state
   useEffect(() => {
     const selectedUserId = location.state?.selectedUserId;
-    const timestamp = location.state?.timestamp;
+    const timestamp = location.state?.timestamp || Date.now();
+    
+    // Skip if no selected user or it's the same as the previous one
+    if (!selectedUserId || selectedUserId === prevSelectedUserIdRef.current) return;
+    
+    // Update the ref to prevent duplicate processing
+    prevSelectedUserIdRef.current = selectedUserId;
     
     // Only process if we have a user ID and either:
     // 1. We haven't processed this navigation yet, or
     // 2. The timestamp has changed (indicating a new navigation)
     const shouldProcess = selectedUserId && 
       (!navigationProcessedRef.current || 
-      (timestamp && timestamp > navigationProcessedRef.current));
+      (timestamp && timestamp > (navigationProcessedRef.current as number)));
     
-    if (shouldProcess && localConversations.length > 0) {
+    if (shouldProcess) {
       console.log("Looking for conversation with user:", selectedUserId);
-      navigationProcessedRef.current = timestamp || true;
+      navigationProcessedRef.current = timestamp;
       
       // Try to find existing conversation
       const existingConversation = localConversations.find(
@@ -69,9 +88,6 @@ export const useMessageConversation = () => {
         };
         
         handleSelectConversation(placeholderConversation);
-        
-        // Refresh conversations to ensure we have the latest data
-        fetchConversations();
       }
     }
   }, [location.state, localConversations, fetchConversations]);
@@ -87,17 +103,25 @@ export const useMessageConversation = () => {
   
   const handleSendMessage = useCallback(async (text: string, imageFile?: File | null, locationData?: any) => {
     if (!activeConversation) {
-      toast.error(t("No active conversation selected", "未选择活动对话"));
+      toast({
+        variant: "destructive",
+        title: t("No active conversation selected", "未选择活动对话"),
+        description: t("Please select a conversation first", "请先选择对话")
+      });
       return;
     }
     
     try {
-      await sendMessage(text, imageFile, locationData);
+      await sendMessage(activeConversation.id, text, imageFile, locationData);
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error(t("Failed to send message", "发送消息失败"));
+      toast({
+        variant: "destructive",
+        title: t("Failed to send message", "发送消息失败"),
+        description: t("Please try again later", "请稍后重试")
+      });
     }
-  }, [activeConversation, sendMessage, t]);
+  }, [activeConversation, sendMessage, t, toast]);
   
   const handleUnsendMessage = useCallback(async (messageId: string): Promise<boolean> => {
     setIsProcessingAction(true);
@@ -106,12 +130,16 @@ export const useMessageConversation = () => {
       return result;
     } catch (error) {
       console.error("Error unsending message:", error);
-      toast.error(t("Failed to unsend message", "撤回消息失败"));
+      toast({
+        variant: "destructive",
+        title: t("Failed to unsend message", "撤回消息失败"),
+        description: t("Please try again later", "请稍后重试")
+      });
       return false;
     } finally {
       setIsProcessingAction(false);
     }
-  }, [unsendMessage, t]);
+  }, [unsendMessage, t, toast]);
   
   const handleDeleteConversation = useCallback(async (partnerId: string): Promise<boolean> => {
     setIsProcessingAction(true);
@@ -130,21 +158,25 @@ export const useMessageConversation = () => {
         // Remove the conversation from the local state immediately
         setLocalConversations(prev => prev.filter(conv => conv.id !== partnerId));
         
-        // Fetch conversations to refresh the list after deletion
-        await fetchConversations();
-        
-        toast.success(t("Conversation deleted", "对话已删除"));
+        toast({
+          title: t("Conversation deleted", "对话已删除"),
+          description: t("The conversation has been removed", "对话已被删除")
+        });
       }
       
       return result;
     } catch (error) {
       console.error("Error deleting conversation:", error);
-      toast.error(t("Failed to delete conversation", "删除对话失败"));
+      toast({
+        variant: "destructive",
+        title: t("Failed to delete conversation", "删除对话失败"),
+        description: t("Please try again later", "请稍后重试")
+      });
       return false;
     } finally {
       setIsProcessingAction(false);
     }
-  }, [activeConversation, deleteConversation, fetchConversations, handleBack, t]);
+  }, [activeConversation, deleteConversation, handleBack, t, toast]);
   
   return {
     searchQuery,
