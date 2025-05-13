@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { siqsEmojis } from './SiqsEmojiData';
 import { extractLocationFromUrl } from '@/utils/locationLinkParser';
@@ -17,9 +18,9 @@ const EmojiRenderer: React.FC<EmojiRendererProps> = ({ text, inline = false }) =
   const extractedLocation = extractLocationFromUrl(text);
   if (extractedLocation) {
     if (inline) {
-      // For conversation list previews, just return a simple text
+      // For conversation list previews, use shorter text
       if (extractedLocation.isAstroSpot) {
-        return <span>🔭 {t("Shared an AstroSpot", "分享了观星点")}</span>;
+        return <span>🔭 {t("AstroSpot", "观星点")}</span>;
       } else {
         return <span>📍 {t("Shared a location", "分享了位置")}</span>;
       }

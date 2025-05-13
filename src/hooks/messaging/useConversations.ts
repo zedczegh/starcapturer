@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,7 +49,7 @@ export const useConversations = () => {
     const extractedLocation = extractLocationFromUrl(message);
     if (extractedLocation) {
       if (extractedLocation.isAstroSpot) {
-        return t("🔭 Shared an AstroSpot", "🔭 分享了观星点");
+        return t("🔭 AstroSpot", "🔭 观星点");
       } else {
         return t("📍 Shared a location", "📍 分享了位置");
       }
