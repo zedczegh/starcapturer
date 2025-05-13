@@ -249,7 +249,7 @@ export const saveLocationDetails = (id: string, locationData: any): boolean => {
   }
 };
 
-// Rename getLocationDetails to getLocationDetailsById for compatibility
+// Get saved location details by ID
 export const getLocationDetailsById = (id: string): any | null => {
   try {
     if (!id) return null;
@@ -274,6 +274,3 @@ export const getLocationDetailsById = (id: string): any | null => {
     return null;
   }
 };
-
-// Keep the old function name for backwards compatibility
-export const getLocationDetails = getLocationDetailsById;

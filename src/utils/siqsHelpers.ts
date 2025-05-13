@@ -161,3 +161,4 @@ export function sortLocationsBySiqs(locations: any[]): any[] {
     return scoreB - scoreA;
   });
 }
+

@@ -14,8 +14,6 @@ import { useLocationDetailsLogic } from "@/hooks/location/useLocationDetailsLogi
 import { toast } from "sonner";
 import { getRandomAstronomyTip } from "@/utils/astronomyTips"; 
 import NavBar from "@/components/NavBar";
-import { getCurrentPosition } from "@/utils/geolocationUtils";
-import { getLocationInfo } from "@/data/locationDatabase";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -57,47 +55,6 @@ const LocationDetails = () => {
     setCachedData,
     getCachedData
   });
-
-  // If we don't have locationData and we're not loading or already loading the current location,
-  // automatically get the user's current location
-  useEffect(() => {
-    if (!id && !locationData && !isLoading && !loadingCurrentLocation) {
-      // Use the current location if no specific location is requested
-      setLoadingCurrentLocation(true);
-      setStatusMessage(t("Getting your current location...", "正在获取您的位置..."));
-      
-      getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          // Use our project location database to get the best estimate for this point
-          const locationInfo = getLocationInfo(latitude, longitude);
-          const locationId = `loc-${latitude.toFixed(6)}-${longitude.toFixed(6)}`;
-          
-          const locationData = {
-            id: locationId,
-            name: locationInfo.formattedName || t("Current Location", "当前位置"),
-            latitude,
-            longitude,
-            bortleScale: locationInfo.bortleScale || 5,
-            timestamp: new Date().toISOString(),
-            siqsResult: { score: 5 } // Default SIQS score to ensure UI shows something
-          };
-          
-          navigate(`/location/${locationId}`, { 
-            state: locationData,
-            replace: true 
-          });
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          setStatusMessage(t("Could not get your location. Please check browser permissions.", 
-                      "无法获取您的位置。请检查浏览器权限。"));
-          setLoadingCurrentLocation(false);
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
-    }
-  }, [id, locationData, isLoading, loadingCurrentLocation, navigate, setLoadingCurrentLocation, setStatusMessage, t]);
 
   // Show a random astronomy fact as a toast when this page opens
   // Use the ref to ensure it only shows once

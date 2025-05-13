@@ -1,74 +1,70 @@
 
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { cn } from '@/lib/utils';
-import { Menu, X, MapPin, Info, Globe, MapPinned } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { useLocation } from "react-router-dom";
+import { Telescope, Map, Smartphone, Link2, Info, Users } from "lucide-react";
+import { MobileNavButton } from "./NavButtons";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MobileNavProps {
-  location: {
-    pathname: string;
-  };
+  location: ReturnType<typeof useLocation>;
   locationId: string | null;
 }
 
-const MobileNav = ({ location, locationId }: MobileNavProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+const MobileNav: React.FC<MobileNavProps> = ({
+  location,
+  locationId
+}) => {
   const { t } = useLanguage();
 
-  // Navigation links data
-  const navLinks = [
-    {
-      name: t("My Location", "我的位置"),
-      path: "/location",
-      icon: <MapPin className="h-5 w-5 mr-2" />
-    },
-    {
-      name: t("Photo Points", "拍摄点"),
-      path: "/photo-points",
-      icon: <MapPinned className="h-5 w-5 mr-2" />
-    },
-    {
-      name: t("World Map", "世界地图"),
-      path: "/world-map",
-      icon: <Globe className="h-5 w-5 mr-2" />
-    },
-    {
-      name: t("About", "关于"),
-      path: "/about",
-      icon: <Info className="h-5 w-5 mr-2" />
-    }
-  ];
+  // Use a default location ID for when there isn't one
+  const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
 
   return (
-    <>
-      <div className="fixed bottom-0 left-0 z-40 w-full md:hidden">
-        <div className="grid grid-cols-4 bg-cosmic-900/95 border-t border-cosmic-800/50">
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.path}
-              to={link.path}
-              className={({ isActive }) =>
-                cn(
-                  "flex flex-col items-center justify-center py-3 text-xs",
-                  (isActive || 
-                   (link.path === "/location" && location.pathname.startsWith("/location/")))
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                )
-              }
-              onClick={() => setIsOpen(false)}
-            >
-              {React.cloneElement(link.icon, { 
-                className: "h-5 w-5 mb-1" 
-              })}
-              <span className="text-[10px]">{link.name}</span>
-            </NavLink>
-          ))}
-        </div>
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-nav-bar">
+      <div className="flex justify-around items-center py-3 px-2 bg-[#123341]/[0.84] backdrop-blur-xl border-t border-cosmic-100/10">
+        <MobileNavButton 
+          to="/photo-points" 
+          icon={<Telescope className="h-5 w-5" />} 
+          label={t("Photo", "拍摄")} 
+          active={location.pathname === "/photo-points"} 
+        />
+        
+        <MobileNavButton 
+          to={detailsPath}
+          icon={<Map className="h-5 w-5" />} 
+          label={t("Location", "位置")} 
+          active={location.pathname.startsWith('/location/')} 
+        />
+
+        <MobileNavButton
+          to="/community"
+          icon={<Users className="h-5 w-5" />}
+          label={t("Community", "社区")}
+          active={location.pathname === "/community"}
+        />
+
+        <MobileNavButton 
+          to="/share" 
+          icon={<Smartphone className="h-5 w-5" />} 
+          label={t("Bortle", "光污染")} 
+          active={location.pathname === "/share"} 
+        />
+        
+        <MobileNavButton 
+          to="/useful-links" 
+          icon={<Link2 className="h-5 w-5" />} 
+          label={t("Links", "资源")} 
+          active={location.pathname === "/useful-links"} 
+        />
+        
+        <MobileNavButton 
+          to="/about" 
+          icon={<Info className="h-5 w-5" />} 
+          label={t("About", "关于")} 
+          active={location.pathname === "/about"} 
+        />
       </div>
-    </>
+    </div>
   );
 };
 

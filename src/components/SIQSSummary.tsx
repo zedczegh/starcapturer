@@ -5,9 +5,10 @@ import { Gauge, Info, Star, Clock } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
-import { normalizeToSiqsScale, getSiqsScore, getSiqsQualityText } from '@/utils/siqsHelpers';
+import { formatSIQSScore, getSIQSLevel } from "@/lib/siqs/utils";
 import { validateSIQSData } from "@/utils/validation/dataValidation";
 import { useToast } from "@/components/ui/use-toast";
+import { normalizeToSiqsScale } from '@/utils/siqsHelpers';
 
 interface SIQSSummaryProps {
   siqsResult: any;
@@ -23,16 +24,11 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
   // Always define these values regardless of validatedSiqs state
   const siqsScore = useMemo(() => {
     if (!validatedSiqs || typeof validatedSiqs.score !== 'number') {
-      // Default to a value of 5 if no score is available to ensure something displays
-      return locationData?.siqsResult?.score ? 
-             normalizeToSiqsScale(locationData.siqsResult.score) : 
-             locationData?.bortleScale ? 
-             Math.max(10 - locationData.bortleScale, 1) : 
-             5;
+      return 0;
     }
     // Normalize to ensure the score is on the 1-10 scale
     return normalizeToSiqsScale(Math.round(validatedSiqs.score * 10) / 10);
-  }, [validatedSiqs, locationData]);
+  }, [validatedSiqs]);
   
   // Get the precise color class based on SIQS score as per the color scale guide
   const getScoreColorClass = (score: number) => {
@@ -58,11 +54,11 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
   const scoreTextColorClass = getScoreTextColorClass(siqsScore);
   
   const qualityText = useMemo(() => {
-    return t(getSiqsQualityText(siqsScore), 
-      getSiqsQualityText(siqsScore) === 'Excellent' ? "优秀" : 
-      getSiqsQualityText(siqsScore) === 'Good' ? "良好" : 
-      getSiqsQualityText(siqsScore) === 'Average' ? "一般" : 
-      getSiqsQualityText(siqsScore) === 'Poor' ? "较差" : "很差"
+    return t(getSIQSLevel(siqsScore), 
+      getSIQSLevel(siqsScore) === 'Excellent' ? "优秀" : 
+      getSIQSLevel(siqsScore) === 'Good' ? "良好" : 
+      getSIQSLevel(siqsScore) === 'Average' ? "一般" : 
+      getSIQSLevel(siqsScore) === 'Poor' ? "较差" : "很差"
     );
   }, [siqsScore, t]);
   
@@ -86,23 +82,39 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
   }, [locationData, language]);
   
   useEffect(() => {
-    // Check if we have direct siqsResult data
-    if (siqsResult && typeof siqsResult === 'object' && 'score' in siqsResult) {
-      setValidatedSiqs(siqsResult);
-    } 
-    // Check if data is in locationData
-    else if (locationData?.siqsResult && typeof locationData.siqsResult === 'object' && 'score' in locationData.siqsResult) {
-      setValidatedSiqs(locationData.siqsResult);
+    const isValid = validateSIQSData(siqsResult);
+    
+    if (isValid) {
+      // Normalize score if needed
+      if (siqsResult && typeof siqsResult.score === 'number' && siqsResult.score > 10) {
+        const normalizedSiqs = {
+          ...siqsResult,
+          score: normalizeToSiqsScale(siqsResult.score)
+        };
+        setValidatedSiqs(normalizedSiqs);
+      } else {
+        setValidatedSiqs(siqsResult);
+      }
+    } else if (siqsResult && typeof siqsResult === 'object') {
+      // Handle partial or malformed SIQS data
+      console.log("Warning: Invalid SIQS data detected, attempting to recover");
+      if ('score' in siqsResult && typeof siqsResult.score === 'number') {
+        // We have at least a score, use it
+        setValidatedSiqs({
+          score: normalizeToSiqsScale(siqsResult.score),
+          isViable: siqsResult.score >= 5,
+          factors: []
+        });
+      } else {
+        // No usable data
+        setValidatedSiqs(null);
+        console.error("Could not validate or recover SIQS data:", siqsResult);
+      }
+    } else {
+      setValidatedSiqs(null);
+      console.error("Invalid SIQS data:", siqsResult);
     }
-    // Create a default SIQS score based on Bortle scale if available
-    else if (locationData?.bortleScale) {
-      setValidatedSiqs({
-        score: Math.max(10 - locationData.bortleScale, 1),
-        isViable: locationData.bortleScale <= 7,
-        factors: []
-      });
-    }
-  }, [siqsResult, locationData]);
+  }, [siqsResult]);
 
   // Check if we have actual SIQS data to display
   const hasSiqsData = siqsScore > 0;
