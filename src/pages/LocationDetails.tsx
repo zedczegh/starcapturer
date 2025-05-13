@@ -1,6 +1,6 @@
 
 // Refactored to use new hooks and smaller components with improved loading
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataCache } from "@/hooks/useLocationData";
 import { useLocationNameTranslation } from "@/hooks/location/useLocationNameTranslation";
@@ -14,6 +14,7 @@ import { useLocationDetailsLogic } from "@/hooks/location/useLocationDetailsLogi
 import { toast } from "sonner";
 import { getRandomAstronomyTip } from "@/utils/astronomyTips"; 
 import NavBar from "@/components/NavBar";
+import { getSavedLocation } from "@/utils/locationStorage";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -25,6 +26,26 @@ const LocationDetails = () => {
   // Add a ref to track if the toast has been shown
   const toastShownRef = useRef(false);
   const initialLoadCompleteRef = useRef(false);
+  const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
+
+  // Check if we need to load saved location data
+  useEffect(() => {
+    // If there's no state in the location object, try to get saved location
+    if (!location.state && id) {
+      const savedLocation = getSavedLocation();
+      if (savedLocation) {
+        console.log("Using saved location data:", savedLocation);
+        // Navigate to the same URL but with state
+        navigate(`/location/${id}`, { 
+          state: {
+            ...savedLocation,
+            fromNavBar: true
+          },
+          replace: true // Replace to avoid extra history entries
+        });
+      }
+    }
+  }, [id, location.state, navigate]);
 
   // Prefetch popular locations data when page loads
   useEffect(() => {
@@ -44,9 +65,13 @@ const LocationDetails = () => {
     setStatusMessage,
     handleUpdateLocation,
     isLoading,
-    loadingCurrentLocation,
-    setLoadingCurrentLocation
+    setLoadingCurrentLocation: setLocationLoading
   } = useLocationDetailsLogic({ id, location, navigate, t, setCachedData, getCachedData });
+
+  // Set the loading state properly
+  useEffect(() => {
+    setLocationLoading(loadingCurrentLocation);
+  }, [loadingCurrentLocation, setLocationLoading]);
 
   // Use the extracted hook for location name translation
   useLocationNameTranslation({
@@ -101,7 +126,7 @@ const LocationDetails = () => {
       <NavBar />
       {!locationData ? (
         <LocationErrorSection 
-          onUseCurrentLocation={() => {}}
+          onUseCurrentLocation={() => setLoadingCurrentLocation(true)}
           isLoading={loadingCurrentLocation}
         />
       ) : (
