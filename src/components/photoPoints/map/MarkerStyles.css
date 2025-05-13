@@ -1,7 +1,7 @@
 
 /* Enhanced marker styles with better mobile visibility */
 .leaflet-marker-icon {
-  transition: filter 0.15s ease-out;
+  transition: filter 0.15s ease-out, transform 0.2s ease-out;
   will-change: transform;
   transform-origin: center center !important;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
@@ -13,6 +13,26 @@
 .leaflet-marker-icon.hovered {
   filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.4));
   z-index: 1000 !important;
+  transform: scale(1.08);
+}
+
+/* Telescope icon styling */
+.telescope-icon-container {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Add subtle animation for telescope icons */
+@keyframes gentle-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.community-marker .telescope-icon-container {
+  animation: gentle-pulse 4s infinite ease-in-out;
 }
 
 /* Better popup styles for mobile */

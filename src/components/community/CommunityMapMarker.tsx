@@ -13,7 +13,7 @@ import { ExternalLink } from "lucide-react";
 function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.DivIcon {
   const size = isMobile ? (isHovered ? 28 : 20) : (isHovered ? 32 : 26);
   
-  // Create the HTML for the icon, but we'll render the actual telescope SVG in the DOM
+  // Create the HTML for the icon with upgraded telescope icon styling
   return L.divIcon({
     className: "community-marker",
     iconSize: [size, size],
@@ -29,8 +29,18 @@ function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.Div
             justify-content:center;
             border:2px solid #fff;
             box-shadow:0 2px 6px rgba(0,0,0,0.20);
+            transform-origin: center;
+            ${isHovered ? 'transform:scale(1.15);' : ''}
+            transition: transform 0.2s ease-out;
         ">
-        <div id="telescope-icon-container"></div>
+        <div class="telescope-icon-container" style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            color: white;
+        ">🔭</div>
       </div>
     `,
   });
