@@ -35,11 +35,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const hasContent = message.text || message.image_url || message.location;
   
   if (!hasContent) return null;
-
-  // Add debugging for location data
-  if (message.location) {
-    console.log("Rendering message with location:", message.location);
-  }
   
   return (
     <div className={`flex ${isSender ? 'justify-end' : 'justify-start'} mb-4`}>
