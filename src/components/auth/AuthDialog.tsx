@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LoginForm from './LoginForm';
@@ -7,18 +7,45 @@ import SignUpForm from './SignUpForm';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { MoonStar } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  returnTo?: string;
 }
 
-const AuthDialog = ({ open, onOpenChange, returnTo = '/photo-points' }: AuthDialogProps) => {
+const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  
+  // Extract returnTo from location state or default to photo-points
+  const returnPath = location.state?.returnTo || '/photo-points';
+  
+  // If user is already logged in, redirect them
+  useEffect(() => {
+    if (user) {
+      navigate(returnPath, { replace: true });
+    }
+  }, [user, navigate, returnPath]);
+  
+  // Handle dialog close by navigating back
+  const handleDialogChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      navigate('/photo-points', { replace: true });
+    }
+    onOpenChange(isOpen);
+  };
+  
+  // Success handler that respects the return path
+  const handleSuccess = () => {
+    navigate(returnPath, { replace: true });
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent className="animate-in fade-in-0 slide-in-from-bottom-5 sm:zoom-in-90 sm:slide-in-from-bottom-0 fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-gradient-to-b from-cosmic-900/95 to-cosmic-950/95 p-8 shadow-2xl duration-200 sm:rounded-2xl">
         <DialogHeader className="text-center space-y-6">
           <motion.div 
@@ -60,10 +87,10 @@ const AuthDialog = ({ open, onOpenChange, returnTo = '/photo-points' }: AuthDial
             transition={{ duration: 0.3 }}
           >
             <TabsContent value="login" className="mt-0">
-              <LoginForm onSuccess={() => onOpenChange(false)} returnTo={returnTo} />
+              <LoginForm onSuccess={handleSuccess} />
             </TabsContent>
             <TabsContent value="signup" className="mt-0">
-              <SignUpForm onSuccess={() => onOpenChange(false)} />
+              <SignUpForm onSuccess={handleSuccess} />
             </TabsContent>
           </motion.div>
         </Tabs>

@@ -7,7 +7,6 @@ import MessageItem from './message/MessageItem';
 import MessageHeader from './message/MessageHeader';
 import EmptyMessages from './message/EmptyMessages';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MessageListProps {
   messages: any[];
@@ -28,7 +27,6 @@ const MessageList: React.FC<MessageListProps> = memo(({
   onUnsendMessage
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
   
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -58,8 +56,8 @@ const MessageList: React.FC<MessageListProps> = memo(({
         onBack={onBack}
       />
       
-      <ScrollArea className="flex-1 p-4 pt-6 pb-1">
-        <div className="space-y-2 min-h-[calc(100%-90px)]">
+      <ScrollArea className="flex-1 p-4 pt-6">
+        <div className="space-y-2">
           {messages.length === 0 ? (
             <EmptyMessages />
           ) : (
@@ -72,7 +70,7 @@ const MessageList: React.FC<MessageListProps> = memo(({
                   onUnsend={onUnsendMessage}
                 />
               ))}
-              <div ref={messagesEndRef} className="h-2 mb-20" />
+              <div ref={messagesEndRef} />
             </>
           )}
         </div>

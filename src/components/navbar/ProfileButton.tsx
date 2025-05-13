@@ -4,18 +4,20 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import AuthDialog from '../auth/AuthDialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UserRound } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import ProfileDropdownMenu from './ProfileDropdownMenu';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchUserProfile, ensureUserProfile } from '@/utils/profileUtils';
+import { toast } from 'sonner';
 
 const ProfileButton = () => {
   const { user, signOut } = useAuth();
   const { t } = useLanguage();
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [profile, setProfile] = useState<{ username: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -85,9 +87,8 @@ const ProfileButton = () => {
     }
   };
 
-  const handleSignIn = () => {
-    // Save current path for redirect back after login
-    navigate('/auth', { state: { returnTo: location.pathname } });
+  const handleSignInClick = () => {
+    navigate('/auth');
   };
 
   return (
@@ -100,7 +101,7 @@ const ProfileButton = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleSignIn}
+            onClick={handleSignInClick}
             className="text-primary hover:text-primary hover:bg-primary/10 rounded-full flex items-center justify-center gap-2 px-4"
             aria-label="Login"
           >
@@ -145,6 +146,10 @@ const ProfileButton = () => {
           />
         </DropdownMenu>
       )}
+      <AuthDialog
+        open={showAuthDialog}
+        onOpenChange={setShowAuthDialog}
+      />
     </AnimatePresence>
   );
 };

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMessaging } from '@/hooks/useMessaging';
@@ -95,7 +96,7 @@ export const useMessageConversation = () => {
       await sendMessage(text, imageFile, locationData);
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error(t("Failed to send message", "发送消息���败"));
+      toast.error(t("Failed to send message", "发送消息失败"));
     }
   }, [activeConversation, sendMessage, t]);
   

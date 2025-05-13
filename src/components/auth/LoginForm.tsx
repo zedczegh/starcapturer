@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -11,10 +10,9 @@ import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
 
 interface LoginFormProps {
   onSuccess: () => void;
-  returnTo?: string;
 }
 
-const LoginForm = ({ onSuccess, returnTo = '/photo-points' }: LoginFormProps) => {
+const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const { signIn, isLoading } = useAuth();
   const { t } = useLanguage();
   const form = useForm({
@@ -35,9 +33,8 @@ const LoginForm = ({ onSuccess, returnTo = '/photo-points' }: LoginFormProps) =>
       // Use callback for guaranteed execution
       window.requestAnimationFrame(() => {
         onSuccess();
-        navigate(returnTo, { replace: true });
       });
-      // Toast notification is handled in AuthContext for a more consistent experience
+      // Toast notification is handled in AuthContext for a consistent experience
     } catch (error: any) {
       // Error handling is done in AuthContext
     } finally {
