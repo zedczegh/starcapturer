@@ -8,8 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
-import { toast } from 'sonner';
-import { Loader2 } from '@/components/ui/loader';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 
 interface SignUpFormProps {
   onSuccess: () => void;
@@ -45,14 +45,22 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
         
         const response = await fetch('https://fmnivvwpyriufxaebbzi.supabase.co/auth/v1/health', { 
           method: 'GET',
-          signal: controller.signal
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y'
+          }
         });
         
         clearTimeout(timeoutId);
         
         if (!response.ok) {
           console.warn('Supabase health check failed:', response.status);
-          // Continue anyway, the signup might still work
+          setNetworkError(t(
+            "Our authentication service is currently experiencing issues. Please try again later.",
+            "我们的认证服务目前遇到问题。请稍后再试。"
+          ));
+          return;
         }
       } catch (error) {
         console.warn('Error checking Supabase reachability:', error);
@@ -73,6 +81,16 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
         setNetworkError(t(
           "Network connection issue. Please check your internet connection and try again.",
           "网络连接问题。请检查您的互联网连接，然后重试。"
+        ));
+      } else if (error.message?.includes("User already registered")) {
+        setNetworkError(t(
+          "This email is already registered. Please try signing in instead.",
+          "此邮箱已注册。请尝试登录。"
+        ));
+      } else {
+        setNetworkError(error.message || t(
+          "Error creating account. Please try again.",
+          "创建账号时出错。请重试。"
         ));
       }
     } finally {
@@ -183,6 +201,13 @@ const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
             t("Create Account", "创建帐户")
           )}
         </Button>
+
+        <div className="text-xs text-cosmic-400 text-center">
+          {t(
+            "By signing up, you agree to our Terms and Privacy Policy",
+            "注册即表示您同意我们的条款和隐私政策"
+          )}
+        </div>
       </form>
     </Form>
   );

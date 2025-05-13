@@ -4,6 +4,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { useLanguage } from '@/contexts/LanguageContext';
+import { clearOptimizedStorage } from '@/utils/optimizedCache';
 
 interface AuthContextType {
   user: User | null;
@@ -26,14 +27,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // First set up the auth change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
+        if (newSession?.user) {
+          setSession(newSession);
+          setUser(newSession.user);
+          console.log('Auth state change:', event, 'user:', newSession.user.email);
+        } else {
+          setSession(null);
+          setUser(null);
+          console.log('Auth state change:', event, 'No user session');
+        }
 
         if (event === 'SIGNED_IN' && newSession?.user) {
           setTimeout(() => {
             const username = newSession.user.email?.split('@')[0] || 'stargazer';
             toast.success(`Welcome, ${username}! 🌟`, {
-              description: "Ready for some stargazing? Your sky awaits!",
+              description: t(
+                "Ready for some stargazing? Your sky awaits!",
+                "准备好观星了吗？您的星空等待着您！"
+              ),
               duration: 4000,
               position: "top-center"
             });
@@ -50,6 +61,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (error) {
           console.error('Session check error:', error);
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
           return;
         }
         
@@ -64,10 +78,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const { error: refreshError } = await supabase.auth.refreshSession();
           if (refreshError) {
             console.warn('Session refresh error:', refreshError);
+            // Handle refresh error by clearing state
+            setSession(null);
+            setUser(null);
           }
         }
       } catch (error) {
         console.error('Error checking session:', error);
+        // Reset auth state on error
+        setSession(null);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -76,7 +96,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [t]);
 
   const signUp = async (email: string, password: string) => {
     try {
@@ -171,11 +191,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
-    let signedIn = false;
     try {
-      // Removed the "Signing in..." toast here
-
       console.log('Attempting sign in for:', email);
+      
+      // Clear any cached data that might cause issues
+      clearOptimizedStorage();
+      
       const { data, error } = await supabase.auth.signInWithPassword({ 
         email, 
         password
@@ -184,27 +205,44 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) {
         console.error('Sign in error:', error);
         
-        let errorMessage = "Please double-check your email and password";
+        let errorMessage = t(
+          "Please double-check your email and password",
+          "请检查您的邮箱和密码"
+        );
+        
         if (error.message.includes("Email not confirmed")) {
           // Attempt to resend confirmation email
           await supabase.auth.resend({
             type: 'signup',
             email: email,
           });
-          errorMessage = "Check your inbox for the verification email we just sent!";
+          errorMessage = t(
+            "Check your inbox for the verification email we just sent!",
+            "请查收您的邮箱中的验证邮件！"
+          );
         } else if (error.message.includes("Invalid login")) {
-          errorMessage = "Please double-check your email and password";
+          errorMessage = t(
+            "Please double-check your email and password",
+            "请检查您的邮箱和密码"
+          );
         } else if (error.message.includes("Too many requests")) {
-          errorMessage = "Too many login attempts. Please try again in a few minutes";
+          errorMessage = t(
+            "Too many login attempts. Please try again in a few minutes",
+            "登录尝试次数过多，请稍后再试"
+          );
         } else if (error.message === 'Failed to fetch' || !navigator.onLine) {
-          errorMessage = "Network connection issue. Please check your internet connection and try again.";
+          errorMessage = t(
+            "Network connection issue. Please check your internet connection and try again.",
+            "网络连接问题。请检查您的互联网连接，然后重试。"
+          );
         }
         
-        toast.error("Sign in paused", {
+        toast.error(t("Sign in paused", "登录暂停"), {
           description: errorMessage,
           position: "top-center"
         });
-        return;
+        
+        throw error;
       }
 
       console.log('Sign in successful, user data:', data);
@@ -224,19 +262,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         }, 500);
       }
-      
-      signedIn = true;
     } catch (error: any) {
       console.error('Exception in signIn:', error);
       
       if (error.message === 'Failed to fetch' || !navigator.onLine) {
-        toast.error("Network Connection Issue", {
-          description: "Unable to reach our servers. Please check your internet connection and try again.",
+        toast.error(t("Network Connection Issue", "网络连接问题"), {
+          description: t(
+            "Unable to reach our servers. Please check your internet connection and try again.",
+            "无法连接到我们的服务器。请检查您的互联网连接，然后重试。"
+          ),
           position: "top-center"
         });
-      } else {
-        toast.error("Sign in error", {
-          description: "An unknown error occurred. Please try again.",
+      } else if (!error.message.includes("Email not confirmed") && 
+                !error.message.includes("Invalid login")) {
+        toast.error(t("Sign in error", "登录错误"), {
+          description: t(
+            "An unknown error occurred. Please try again.",
+            "发生未知错误，请重试。"
+          ),
           position: "top-center"
         });
       }
@@ -247,14 +290,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     setIsLoading(true);
-    let toastId: string | number | undefined = undefined;
     try {
-      // Removed the "Signing out..." toast here
-      
       console.log('Signing out user');
       // First set user to null to prevent any authenticated API calls after sign out
       setUser(null);
       setSession(null);
+      
+      // Clear any cached data 
+      clearOptimizedStorage();
       
       const { error } = await supabase.auth.signOut({
         scope: 'local'  // Only sign out from this device
@@ -263,19 +306,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) {
         console.error('Sign out error:', error);
         // Don't throw error here - we already set user to null
-        // Just log it and continue with success flow
       }
 
       console.log('Sign out successful');
-      toast.success("See you soon! ✨", {
-        description: "The stars will be waiting for your return",
+      toast.success(t("See you soon! ✨", "期待您的归来！ ✨"), {
+        description: t(
+          "The stars will be waiting for your return",
+          "繁星将等待您的归来"
+        ),
         position: "top-center"
       });
     } catch (error: any) {
       console.error('Exception in signOut:', error);
-      
       // Don't show error toast on signout
-      console.log('Sign out issue, but continuing with UI sign out');
     } finally {
       setIsLoading(false);
     }

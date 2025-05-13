@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -26,19 +27,51 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = React.useState(false);
   const [formSubmitted, setFormSubmitted] = React.useState(false);
+  const [authError, setAuthError] = React.useState<string | null>(null);
 
   const onSubmit = async (data: any) => {
     try {
       setFormSubmitted(true);
+      setAuthError(null);
+      
+      // Check if we're online
+      if (!navigator.onLine) {
+        setAuthError(t(
+          "You appear to be offline. Please check your internet connection.",
+          "您似乎处于离线状态。请检查您的互联网连接。"
+        ));
+        return;
+      }
+
       await signIn(data.email, data.password);
-      // Use callback for guaranteed execution
-      window.requestAnimationFrame(() => {
-        onSuccess();
-        navigate('/photo-points', { replace: true });
-      });
-      // Toast notification is handled in AuthContext for a more consistent experience
+      
+      // Check if we have a user after sign-in attempt (handled in AuthContext)
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Use callback for guaranteed execution
+        window.requestAnimationFrame(() => {
+          onSuccess();
+          navigate('/photo-points', { replace: true });
+        });
+      } else {
+        throw new Error("Login failed. User not found after sign in.");
+      }
     } catch (error: any) {
-      // Error handling is done in AuthContext
+      console.error("Login error:", error);
+      // Most error handling is in AuthContext, but provide fallback here
+      if (!navigator.onLine) {
+        setAuthError(t(
+          "Network connection issue. Please check your internet connection.",
+          "网络连接问题。请检查您的互联网连接。"
+        ));
+      } else if (!error.message?.includes("Email not confirmed") && 
+                 !error.message?.includes("Invalid login")) {
+        setAuthError(t(
+          "Something went wrong. Please try again.",
+          "出现错误，请重试。"
+        ));
+      }
     } finally {
       setFormSubmitted(false);
     }
@@ -121,6 +154,12 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
             </FormItem>
           )}
         />
+
+        {authError && (
+          <div className="p-3 text-sm rounded-md bg-red-500/10 border border-red-500/20 text-red-500">
+            {authError}
+          </div>
+        )}
 
         <Button 
           type="submit" 
