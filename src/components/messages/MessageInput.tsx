@@ -49,7 +49,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   }, [message, setDisplayMessage]);
 
   return (
-    <div className="border-t border-cosmic-800/50 p-4 bg-cosmic-900/70 space-y-3 sticky bottom-0 backdrop-blur-md z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+    <div className="border-t border-cosmic-800/50 p-4 bg-cosmic-900/90 space-y-3 sticky bottom-0 backdrop-blur-md z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
       <ImagePreview imagePreview={imagePreview} onRemoveImage={handleRemoveImage} />
       
       <div className="flex items-end gap-2">
@@ -105,10 +105,13 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
       </div>
       
       <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-        <PopoverContent align="end" alignOffset={-40} className="p-2 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-lg w-72">
-          <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
-            <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-          </div>
+        <PopoverContent 
+          align="end" 
+          alignOffset={-40} 
+          className="p-2 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-lg w-72 z-50"
+          side="top"
+        >
+          <EmojiPicker onEmojiSelect={handleEmojiSelect} />
         </PopoverContent>
       </Popover>
     </div>

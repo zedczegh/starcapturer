@@ -41,7 +41,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
                 <div className="p-1 transform hover:scale-110 transition-transform">
                   {emoji.icon}
                 </div>
-                <span className="text-xs text-cosmic-300 mt-1 text-center">
+                <span className="text-xs text-cosmic-300 mt-1 text-center line-clamp-1">
                   {emoji.name}
                 </span>
               </Button>
@@ -61,7 +61,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
                 <div className="p-1 transform hover:scale-110 transition-transform">
                   {emoji.icon}
                 </div>
-                <span className="text-xs text-cosmic-300 mt-1 text-center">
+                <span className="text-xs text-cosmic-300 mt-1 text-center line-clamp-1">
                   {emoji.name}
                 </span>
               </Button>

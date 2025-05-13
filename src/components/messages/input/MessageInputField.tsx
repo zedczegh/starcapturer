@@ -38,7 +38,7 @@ const MessageInputField: React.FC<MessageInputFieldProps> = ({
         <textarea
           ref={textareaRef}
           className="w-full bg-transparent rounded-full py-2 px-4 pr-12 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none"
-          placeholder={message}
+          placeholder="Type a message..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={onKeyDown}
@@ -46,17 +46,15 @@ const MessageInputField: React.FC<MessageInputFieldProps> = ({
           disabled={sending}
         />
         <div className="absolute right-2 flex items-center space-x-1 py-2 z-10">
-          <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="p-0 h-8 w-8 rounded-full text-cosmic-400 hover:text-primary hover:bg-cosmic-800/30"
-              aria-label="Insert emoji"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            >
-              <Smile className="h-5 w-5" />
-            </Button>
-          </Popover>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="p-0 h-8 w-8 rounded-full text-cosmic-400 hover:text-primary hover:bg-cosmic-800/30"
+            aria-label="Insert emoji"
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          >
+            <Smile className="h-5 w-5" />
+          </Button>
         </div>
       </div>
     </div>
