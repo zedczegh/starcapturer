@@ -1,8 +1,9 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMessaging } from '@/hooks/useMessaging';
 import { ConversationPartner } from './useConversations';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export const useMessageConversation = () => {
@@ -13,6 +14,7 @@ export const useMessageConversation = () => {
   const [isProcessingAction, setIsProcessingAction] = useState(false);
   const [localConversations, setLocalConversations] = useState<ConversationPartner[]>([]);
   const navigationProcessedRef = useRef(false);
+  const navigationTimestampRef = useRef<number | null>(null);
   
   const {
     conversations,
@@ -32,32 +34,33 @@ export const useMessageConversation = () => {
     setLocalConversations(conversations);
   }, [conversations]);
   
-  // Handle incoming selectedUserId from navigation state with a stable reference
+  // Handle incoming selectedUserId from navigation state with better timestamp tracking
   useEffect(() => {
     const selectedUserId = location.state?.selectedUserId;
-    const timestamp = location.state?.timestamp;
+    const timestamp = location.state?.timestamp || Date.now();
     
     // Only process if we have a user ID and either:
     // 1. We haven't processed this navigation yet, or
-    // 2. The timestamp has changed (indicating a new navigation)
+    // 2. The timestamp is newer than our last processed navigation
     const shouldProcess = selectedUserId && 
       (!navigationProcessedRef.current || 
-      (timestamp && timestamp > navigationProcessedRef.current));
+      (timestamp && (!navigationTimestampRef.current || timestamp > navigationTimestampRef.current)));
     
     if (shouldProcess && localConversations.length > 0) {
       console.log("Looking for conversation with user:", selectedUserId);
-      navigationProcessedRef.current = timestamp || true;
+      navigationProcessedRef.current = true;
+      navigationTimestampRef.current = timestamp;
       
-      // Try to find existing conversation
+      // Try to find existing conversation with better null handling
       const existingConversation = localConversations.find(
-        conv => conv.id === selectedUserId
+        conv => conv && conv.id === selectedUserId
       );
       
       if (existingConversation) {
         console.log("Found existing conversation, selecting:", existingConversation);
         handleSelectConversation(existingConversation);
       } else {
-        // Create a placeholder conversation if none exists
+        // Create a placeholder conversation if none exists with improved data validation
         console.log("No existing conversation found, creating placeholder for:", selectedUserId);
         const placeholderConversation: ConversationPartner = {
           id: selectedUserId,
@@ -71,12 +74,14 @@ export const useMessageConversation = () => {
         handleSelectConversation(placeholderConversation);
         
         // Refresh conversations to ensure we have the latest data
-        fetchConversations();
+        setTimeout(() => fetchConversations(), 0);
       }
     }
   }, [location.state, localConversations, fetchConversations]);
   
   const handleSelectConversation = useCallback((conversation: ConversationPartner) => {
+    if (!conversation) return;
+    
     setActiveConversation(conversation);
     fetchMessages(conversation.id);
   }, [fetchMessages]);
