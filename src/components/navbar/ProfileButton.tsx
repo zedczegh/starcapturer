@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -86,6 +87,10 @@ const ProfileButton = () => {
     }
   };
 
+  const handleSignInClick = () => {
+    navigate('/auth');
+  };
+
   return (
     <AnimatePresence>
       {!user ? (
@@ -96,7 +101,7 @@ const ProfileButton = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setShowAuthDialog(true)}
+            onClick={handleSignInClick}
             className="text-primary hover:text-primary hover:bg-primary/10 rounded-full flex items-center justify-center gap-2 px-4"
             aria-label="Login"
           >
