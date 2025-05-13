@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -21,6 +22,7 @@ import AstroSpotProfile from './pages/AstroSpotProfile';
 import CommunityAstroSpots from './pages/CommunityAstroSpots';
 import ProfileMini from "./pages/ProfileMini";
 import Messages from './pages/Messages';
+import AuthDialog from './components/auth/AuthDialog'; // Import AuthDialog component
 import './App.css';
 
 const queryClient = new QueryClient({
