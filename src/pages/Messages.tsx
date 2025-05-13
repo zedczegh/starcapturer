@@ -27,8 +27,13 @@ const MessageContent = memo(({ user }: { user: any }) => {
     handleDeleteConversation
   } = useMessageConversation();
 
+  // Add extra padding when navbar is hidden to ensure content positioning
+  const containerPadding = isMobile && activeConversation 
+    ? 'py-0' 
+    : isMobile ? 'py-2 pt-16' : 'py-6 pt-20';
+
   return (
-    <div className={`container mx-auto px-2 md:px-4 ${isMobile ? 'py-2 pt-16' : 'py-6 pt-20'} max-w-6xl`}>
+    <div className={`container mx-auto px-2 md:px-4 ${containerPadding} max-w-6xl`}>
       <MessageContainer
         activeConversation={activeConversation}
         conversations={conversations}
@@ -55,7 +60,7 @@ const Messages = memo(() => {
   const isMobile = useIsMobile();
   const { activeConversation } = useMessageConversation();
 
-  // Hide navbar on mobile when a conversation is active
+  // Hide navbar completely on mobile when a conversation is active
   const showNavbar = !(isMobile && activeConversation);
 
   return (

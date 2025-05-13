@@ -1,12 +1,10 @@
 
 import React, { useEffect, useRef, memo, useCallback } from 'react';
-import { ChevronLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ConversationPartner } from '@/hooks/messaging/useConversations';
 import MessageItem from './message/MessageItem';
 import MessageHeader from './message/MessageHeader';
 import EmptyMessages from './message/EmptyMessages';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ConversationPartner } from '@/hooks/messaging/useConversations';
 
 interface MessageListProps {
   messages: any[];
@@ -56,7 +54,7 @@ const MessageList: React.FC<MessageListProps> = memo(({
         onBack={onBack}
       />
       
-      <ScrollArea className="flex-1 p-4 pt-6 pb-1">
+      <ScrollArea className="flex-1 p-4 pt-6 pb-1 overflow-y-auto">
         <div className="space-y-2 min-h-[calc(100%-90px)]">
           {messages.length === 0 ? (
             <EmptyMessages />
