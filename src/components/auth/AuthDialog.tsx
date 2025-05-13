@@ -11,9 +11,10 @@ import { motion } from 'framer-motion';
 interface AuthDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  returnTo?: string;
 }
 
-const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
+const AuthDialog = ({ open, onOpenChange, returnTo = '/photo-points' }: AuthDialogProps) => {
   const { t } = useLanguage();
 
   return (
@@ -59,7 +60,7 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             transition={{ duration: 0.3 }}
           >
             <TabsContent value="login" className="mt-0">
-              <LoginForm onSuccess={() => onOpenChange(false)} />
+              <LoginForm onSuccess={() => onOpenChange(false)} returnTo={returnTo} />
             </TabsContent>
             <TabsContent value="signup" className="mt-0">
               <SignUpForm onSuccess={() => onOpenChange(false)} />
