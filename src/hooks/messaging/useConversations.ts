@@ -3,13 +3,14 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client"; // Adding missing import
+import { supabase } from "@/integrations/supabase/client"; 
 import { ConversationPartner } from "./types";
 import { useMessageFormatter } from "@/utils/messages/messageFormatter";
 import { fetchUserConversations } from "@/services/messages/conversationsFetcher";
 import { setupMessageSubscription } from "@/services/messages/realtimeSubscription";
 
-export { ConversationPartner } from "./types";
+// Use 'export type' instead of 'export' for re-exporting types when isolatedModules is enabled
+export type { ConversationPartner } from "./types";
 
 export const useConversations = () => {
   const { user } = useAuth();
