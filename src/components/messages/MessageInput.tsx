@@ -1,20 +1,18 @@
+
 import React, { useState, useCallback } from 'react';
-import { Send, Location } from 'lucide-react';
+import { Send, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from "@/components/ui/use-toast"
 import { useDropzone } from 'react-dropzone';
-import Resizer from 'react-image-file-resizer';
 import { v4 as uuidv4 } from 'uuid';
-import { storage } from '@/integrations/firebase/config';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useTheme } from 'next-themes';
 import { extractLocationFromUrl } from '@/utils/locationLinkParser';
 
 interface MessageInputProps {
-  onSend: (message: string, imageFile?: File | null, locationData?: any) => Promise<void>;
+  onSend: (message: string, imageUrl?: string | null, locationData?: any) => Promise<void>;
   sending: boolean;
 }
 
@@ -28,32 +26,17 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   const { toast } = useToast();
   const { theme } = useTheme();
   
+  // Simplified onDrop without using the file resizer library
   const onDrop = useCallback(acceptedFiles => {
     const file = acceptedFiles[0];
     if (file) {
-      Resizer.imageFileResizer(
-        file,
-        500, // max width
-        500, // max height
-        'JPEG',
-        80, // quality
-        0, // rotation
-        (uri) => {
-          fetch(uri)
-            .then(res => res.blob())
-            .then(blob => {
-              const imageFile = new File([blob], "image.jpeg", { type: "image/jpeg" });
-              setImageFile(imageFile);
-            });
-        },
-        'base64'
-      );
+      setImageFile(file);
     }
   }, []);
   
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
-    accept: 'image/*',
+    accept: {'image/*': []},
     maxFiles: 1,
     disabled: sending,
   });
@@ -67,9 +50,10 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
             setLocationData({
               latitude: position.coords.latitude,
               longitude: position.coords.longitude,
+              name: t("My Current Location", "我的当前位置"),
               timestamp: new Date(position.timestamp).toISOString()
             });
-            setInputValue(`${t("Location", "位置")}: ${position.coords.latitude}, ${position.coords.longitude}`);
+            setInputValue(`${t("Location", "位置")}: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`);
             setLocationEnabled(true);
           },
           (error) => {
@@ -121,39 +105,21 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
       return;
     }
 
-    const testLocationExtraction = (messageText: string) => {
-      const extractedLocation = extractLocationFromUrl(messageText);
-      if (extractedLocation) {
-        console.log("Message contains location link, extracted data:", extractedLocation);
-      }
+    // Check if the message contains a location URL
+    const extractedLocation = extractLocationFromUrl(inputValue);
+    if (extractedLocation) {
+      console.log("Message contains location link, extracted data:", extractedLocation);
     }
-    
-    testLocationExtraction(inputValue);
     
     try {
       if (imageFile) {
-        // Upload image to Firebase Storage
-        const storageRef = ref(storage, `chat_images/${user.id}/${uuidv4()}_${imageFile.name}`);
-        
-        // Convert the File to a Blob
-        const blob = await new Promise<Blob>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            if (reader.result instanceof ArrayBuffer) {
-              resolve(new Blob([reader.result], { type: imageFile.type }));
-            } else {
-              reject(new Error("Failed to convert File to Blob"));
-            }
-          };
-          reader.onerror = reject;
-          reader.readAsArrayBuffer(imageFile);
-        });
-        
-        await uploadBytes(storageRef, blob);
-        const imageUrl = await getDownloadURL(storageRef);
-        
-        // Send message with image URL
+        // In a real implementation, we would upload the file to a storage service
+        // For now, let's create a local object URL as a placeholder
+        const imageUrl = URL.createObjectURL(imageFile);
         await onSend('', imageUrl);
+      } else if (extractedLocation) {
+        // Send just the extracted location data, with blank text to hide the URL
+        await onSend('', null, extractedLocation);
       } else {
         // Send text message or location data
         await onSend(inputValue, null, locationData);
@@ -186,7 +152,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
             disabled={sending}
             className="h-9 w-9"
           >
-            <Location className="h-4 w-4" fill={locationEnabled ? "currentColor" : "none"} />
+            <MapPin className="h-4 w-4" fill={locationEnabled ? "currentColor" : "none"} />
             <span className="sr-only">Toggle location</span>
           </Button>
           
@@ -208,7 +174,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
                   clipRule="evenodd"
                 />
               </svg>
-              <span className="sr-only">Attach image</span>
+              <span className="sr-only">{t("Attach image", "附加图片")}</span>
             </Button>
           </div>
           

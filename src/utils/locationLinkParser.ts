@@ -2,9 +2,12 @@
 /**
  * Extracts location information from a URL string that contains location profile links
  * Supports both location profile formats: /location/lat,lng and /astro-spot/id
+ * Also supports various domain patterns and URL formats
  */
 export const extractLocationFromUrl = (text: string): any | null => {
   if (!text) return null;
+  
+  console.log("Checking text for location URL:", text);
   
   // Define regex patterns for both location types - updated to handle various domain patterns
   const locationPatterns = [
@@ -29,6 +32,7 @@ export const extractLocationFromUrl = (text: string): any | null => {
   for (const pattern of locationPatterns) {
     const match = text.match(pattern);
     if (match) {
+      console.log("Location URL match found:", match);
       const latitude = parseFloat(match[1]);
       const longitude = parseFloat(match[2]);
       
@@ -48,6 +52,7 @@ export const extractLocationFromUrl = (text: string): any | null => {
   for (const pattern of astroSpotPatterns) {
     const match = text.match(pattern);
     if (match) {
+      console.log("AstroSpot URL match found:", match);
       const spotId = match[1];
       
       // Return just the spotId for now, the actual component will fetch details
