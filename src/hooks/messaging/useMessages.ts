@@ -27,6 +27,7 @@ export const useMessages = () => {
         const parsedData = JSON.parse(msg.message);
         if (parsedData.type === 'location' && parsedData.data) {
           locationData = parsedData.data;
+          console.log("Parsed location data from JSON:", locationData);
         }
       } catch (e) {
         console.error("Failed to parse location data:", e);
@@ -38,6 +39,7 @@ export const useMessages = () => {
       const extractedLocation = extractLocationFromUrl(msg.message);
       if (extractedLocation) {
         locationData = extractedLocation;
+        console.log("Location extracted from URL:", locationData);
         // When location is extracted from a URL, set text to empty to hide the raw URL
         return {
           id: msg.id,

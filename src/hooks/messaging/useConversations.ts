@@ -1,10 +1,10 @@
-
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { optimizedCache } from "@/utils/optimizedCache";
+import { extractLocationFromUrl } from '@/utils/locationLinkParser';
 
 const CONVERSATIONS_CACHE_KEY = 'user_conversations';
 const CONVERSATIONS_CACHE_TTL = 300000; // 5 minutes
@@ -26,6 +26,42 @@ export const useConversations = () => {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
+  /**
+   * Format message text for conversation preview
+   */
+  const formatMessagePreview = useCallback((message: string): string => {
+    if (!message) return "";
+    
+    // Check if the message is a JSON string containing location data
+    if (message.startsWith('{"type":"location"')) {
+      try {
+        const parsedData = JSON.parse(message);
+        if (parsedData.type === 'location' && parsedData.data) {
+          return t("📍 Shared a location", "📍 分享了位置");
+        }
+      } catch (e) {
+        // Not valid JSON, continue with other checks
+      }
+    }
+    
+    // Check if message contains a location link
+    const extractedLocation = extractLocationFromUrl(message);
+    if (extractedLocation) {
+      if (extractedLocation.isAstroSpot) {
+        return t("🔭 Shared an AstroSpot", "🔭 分享了观星点");
+      } else {
+        return t("📍 Shared a location", "📍 分享了位置");
+      }
+    }
+    
+    // If it's a regular message, return it (truncated if needed)
+    if (message.length > 30) {
+      return message.substring(0, 30) + "...";
+    }
+    
+    return message;
+  }, [t]);
+
   const fetchConversations = useCallback(async (forceFresh = false) => {
     if (!user) return;
     
@@ -118,7 +154,7 @@ export const useConversations = () => {
             id: partnerId,
             username: profile?.username || "User",
             avatar_url: profile?.avatar_url || null,
-            last_message: msg.message,
+            last_message: formatMessagePreview(msg.message), // Format the message preview
             last_message_time: msg.created_at,
             unread_count: msg.sender_id !== user.id && !msg.read ? 1 : 0
           });
@@ -128,7 +164,7 @@ export const useConversations = () => {
           const existingTime = new Date(existingConv.last_message_time).getTime();
           
           if (msgTime > existingTime) {
-            existingConv.last_message = msg.message;
+            existingConv.last_message = formatMessagePreview(msg.message); // Format the message preview
             existingConv.last_message_time = msg.created_at;
           }
           
@@ -161,7 +197,7 @@ export const useConversations = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, t, conversations.length]);
+  }, [user, t, conversations.length, formatMessagePreview]);
   
   // Set up real-time subscription for message changes
   useEffect(() => {
