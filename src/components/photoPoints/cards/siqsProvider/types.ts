@@ -39,3 +39,14 @@ export interface SiqsErrorHandlingOptions {
   existingSiqsNumber: number;
   onSiqsCalculated: (siqs: number | null, loading: boolean, confidence?: number) => void;
 }
+
+/**
+ * Represents a batch job for processing multiple SIQS requests
+ */
+export interface BatchJob {
+  id: string;
+  latitude: number;
+  longitude: number;
+  bortleScale?: number;
+  cacheKey?: string;
+}
