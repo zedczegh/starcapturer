@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,6 +38,17 @@ export const useMessages = () => {
       const extractedLocation = extractLocationFromUrl(msg.message);
       if (extractedLocation) {
         locationData = extractedLocation;
+        // When location is extracted from a URL, set text to empty to hide the raw URL
+        return {
+          id: msg.id,
+          sender_id: msg.sender_id,
+          receiver_id: msg.receiver_id,
+          text: '', // Clear the raw URL from display
+          created_at: msg.created_at,
+          image_url: msg.image_url,
+          location: extractedLocation, // Use extracted location data
+          read: msg.read // Include read status for checkmark functionality
+        };
       }
     }
     

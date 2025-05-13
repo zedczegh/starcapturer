@@ -91,6 +91,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 spotId={message.location.spotId}
                 isAstroSpot={message.location.isAstroSpot}
                 fromLink={message.location.fromLink}
+                userId={message.location.userId}
               />
             </div>
           )}
