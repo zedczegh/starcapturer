@@ -29,7 +29,7 @@ const MobileNav: React.FC<MobileNavProps> = ({
   const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-nav-bar">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 mobile-nav-bar">
       <div className="flex justify-around items-center py-3 px-2 bg-[#123341]/[0.84] backdrop-blur-xl border-t border-cosmic-100/10">
         <MobileNavButton 
           to="/photo-points" 
