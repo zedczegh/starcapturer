@@ -1,8 +1,7 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { isWaterLocation } from '@/utils/validation';
 import { calculateDistance } from '@/utils/geoUtils';
@@ -23,7 +22,6 @@ export const usePhotoPointsSearch = ({
   maxInitialResults = 50
 }: UsePhotoPointsSearchProps) => {
   const { t } = useLanguage();
-  const { toast } = useToast();
   const [displayedLocations, setDisplayedLocations] = useState<SharedAstroSpot[]>([]);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [activeView, setActiveView] = useState<'certified' | 'calculated'>('certified');
@@ -140,19 +138,13 @@ export const usePhotoPointsSearch = ({
   // Handle errors and refresh data
   const handleRefresh = useCallback(() => {
     if (!userLocation) {
-      toast({
-        variant: "destructive",
-        title: t("No location selected", "未选择位置")
-      });
+      toast.error(t("No location selected", "未选择位置"));
       return;
     }
     
-    toast({
-      title: t("Refreshing locations...", "正在刷新位置..."),
-      variant: "default"
-    });
+    toast.info(t("Refreshing locations...", "正在刷新位置..."));
     refreshSiqsData();
-  }, [refreshSiqsData, t, userLocation, toast]);
+  }, [refreshSiqsData, t, userLocation]);
 
   // Function to switch view type
   const switchView = useCallback((view: 'certified' | 'calculated') => {

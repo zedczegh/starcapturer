@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -27,75 +26,19 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = React.useState(false);
   const [formSubmitted, setFormSubmitted] = React.useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
-
-  // Optimize login by caching form values for quick reentry
-  useEffect(() => {
-    // Retrieve cached email if available
-    const cachedEmail = localStorage.getItem('lastLoginEmail');
-    if (cachedEmail) {
-      form.setValue('email', cachedEmail);
-    }
-    
-    // Focus on password field if email is already filled
-    if (cachedEmail) {
-      setTimeout(() => {
-        const passwordField = document.getElementById('login_password');
-        if (passwordField) passwordField.focus();
-      }, 100);
-    }
-    
-    return () => {
-      // Clean up any login-related state
-      setFormSubmitted(false);
-    };
-  }, [form]);
 
   const onSubmit = async (data: any) => {
     try {
       setFormSubmitted(true);
-      
-      // Cache email for future logins
-      localStorage.setItem('lastLoginEmail', data.email);
-      
-      // Clear any existing errors
-      toast.dismiss();
-      
-      // Add a minimal timeout to ensure UI feedback is visible
-      const loginStart = Date.now();
-      
-      // Optimize login sequence
-      const result = await signIn(data.email, data.password);
-      
-      const loginDuration = Date.now() - loginStart;
-      
-      // Show success toast only if login takes longer than 500ms
-      if (loginDuration > 500) {
-        toast.success(t("Login successful", "登录成功"));
-      }
-      
-      // Use requestAnimationFrame for smoother transition
-      requestAnimationFrame(() => {
-        // Use a small delay to ensure the auth state is fully updated
-        setTimeout(() => {
-          onSuccess();
-          navigate('/photo-points', { replace: true });
-        }, 100);
+      await signIn(data.email, data.password);
+      // Use callback for guaranteed execution
+      window.requestAnimationFrame(() => {
+        onSuccess();
+        navigate('/photo-points', { replace: true });
       });
+      // Toast notification is handled in AuthContext for a more consistent experience
     } catch (error: any) {
-      // Improved error handling
-      console.error("Login error:", error);
-      
-      let errorMessage = t("Login failed", "登录失败");
-      if (error?.message) {
-        if (error.message.includes("Invalid login credentials")) {
-          errorMessage = t("Invalid email or password", "邮箱或密码错误");
-        } else if (error.message.includes("rate limit")) {
-          errorMessage = t("Too many login attempts, please try again later", "登录尝试次数过多，请稍后再试");
-        }
-      }
-      
-      toast.error(errorMessage);
+      // Error handling is done in AuthContext
     } finally {
       setFormSubmitted(false);
     }
@@ -106,7 +49,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" ref={formRef}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="email"

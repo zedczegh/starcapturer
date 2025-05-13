@@ -1,17 +1,14 @@
-
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { fetchFromSupabase } from '@/utils/supabaseFetch';
 import { extractLocationFromUrl } from '@/utils/locationLinkParser';
 import { optimizedCache } from '@/utils/optimizedCache';
 
-// Optimize cache settings for better performance
 const MESSAGE_CACHE_KEY_PREFIX = 'messages_';
-const MESSAGE_CACHE_TTL = 5 * 60 * 1000; // 5 minute cache for messages (extended from 1 min)
-const MESSAGE_FETCH_THROTTLE = 1000; // 1 second throttle (reduced from 2 seconds)
+const MESSAGE_CACHE_TTL = 60000; // 1 minute cache for messages
 
 export const useMessages = () => {
   const [messages, setMessages] = useState<any[]>([]);
@@ -23,12 +20,9 @@ export const useMessages = () => {
   
   // Cache the message parsing function
   const parseMessageData = useMemo(() => (msg: any) => {
-    // Skip processing null or undefined messages
-    if (!msg) return null;
-    
     // Parse location from message JSON if it exists
     let locationData = null;
-    if (msg.message && typeof msg.message === 'string' && msg.message.startsWith('{"type":"location"')) {
+    if (msg.message && msg.message.startsWith('{"type":"location"')) {
       try {
         const parsedData = JSON.parse(msg.message);
         if (parsedData.type === 'location' && parsedData.data) {
@@ -78,26 +72,19 @@ export const useMessages = () => {
       return;
     }
     
-    // Cache check and throttling with improved logic
+    // Implement cache-based throttling to prevent excessive fetching
     const now = Date.now();
     const lastFetchTime = lastFetchTimeRef.current[conversationPartnerId] || 0;
     const timeSinceLastFetch = now - lastFetchTime;
-    const cacheKey = `${MESSAGE_CACHE_KEY_PREFIX}${user.id}_${conversationPartnerId}`;
     
-    // Use cache for very frequent requests but still allow occasional refresh
-    if (lastFetchTime !== 0 && timeSinceLastFetch < MESSAGE_FETCH_THROTTLE) {
+    // Only fetch if it's been more than 2 seconds since the last fetch for this conversation
+    // Unless it's the first fetch (lastFetchTime === 0)
+    if (lastFetchTime !== 0 && timeSinceLastFetch < 2000) {
       console.log(`Throttling message fetch for ${conversationPartnerId}, last fetch was ${timeSinceLastFetch}ms ago`);
-      
-      // Show cached data immediately if available
-      const cachedMessages = optimizedCache.getCachedItem<any[]>(cacheKey);
-      if (cachedMessages && cachedMessages.length > 0) {
-        console.log("Using cached messages due to throttling");
-        setMessages(cachedMessages);
-      }
       return;
     }
     
-    // Prevent duplicate requests and set loading state
+    // Prevent duplicate requests
     if (fetchInProgressRef.current) {
       console.log("Fetch already in progress, skipping");
       return;
@@ -106,25 +93,22 @@ export const useMessages = () => {
     fetchInProgressRef.current = true;
     setLoading(true);
     
-    // Update last fetch time early to prevent race conditions
+    // Update last fetch time
     lastFetchTimeRef.current[conversationPartnerId] = now;
     
     try {
-      // Always check cache first for immediate display
+      // Check cache first
+      const cacheKey = `${MESSAGE_CACHE_KEY_PREFIX}${user.id}_${conversationPartnerId}`;
       const cachedMessages = optimizedCache.getCachedItem<any[]>(cacheKey);
       
-      if (cachedMessages && cachedMessages.length > 0) {
-        console.log("Using cached messages while fetching fresh data");
+      if (cachedMessages) {
+        console.log("Using cached messages");
         setMessages(cachedMessages);
+        // Don't return early - still fetch fresh messages in the background
       }
       
-      // Set a fetch timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Fetch timeout")), 8000)
-      );
-      
-      // Fetch latest messages with timeout
-      const fetchPromise = fetchFromSupabase(
+      // Use optimized fetch utility with skipCache to always get fresh data
+      const messagesData = await fetchFromSupabase(
         'user_messages',
         (query) => query
           .select('*')
@@ -133,30 +117,21 @@ export const useMessages = () => {
         { skipCache: true } // Always get fresh messages
       );
       
-      // Use Promise.race to implement timeout
-      const messagesData = await Promise.race([fetchPromise, timeoutPromise]);
+      console.log("Fetched messages:", messagesData.length);
       
-      console.log("Fetched messages:", messagesData?.length || 0);
-      
-      // Filter out null/undefined messages and transform valid ones
-      const formattedMessages = Array.isArray(messagesData) ? 
-        messagesData
-          .filter(msg => msg) // Filter out null/undefined messages
-          .map(parseMessageData)
-          .filter(msg => msg) // Filter out any messages that became null during parsing
-        : [];
+      // Transform the messages to the expected format using the memoized parser
+      const formattedMessages = messagesData.map(parseMessageData);
       
       // Update cache
       optimizedCache.setCachedItem(cacheKey, formattedMessages, MESSAGE_CACHE_TTL);
       
       // Fix the type error by ensuring we're setting an array
       setMessages(formattedMessages as any[]);
-      setLoading(false);
       
       // Mark messages as read in a non-blocking way
       if (messagesData && messagesData.length > 0) {
         const messagesToUpdate = messagesData
-          .filter(msg => msg && msg.receiver_id === user.id && !msg.read)
+          .filter(msg => msg.receiver_id === user.id && !msg.read)
           .map(msg => msg.id);
         
         if (messagesToUpdate.length > 0) {
@@ -177,15 +152,12 @@ export const useMessages = () => {
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
-      // Only show error toast if we have no cached data to display
-      if (messages.length === 0) {
-        toast.error(t("Failed to load messages", "加载消息失败"));
-      }
+      toast.error(t("Failed to load messages", "加载消息失败"));
     } finally {
       setLoading(false);
       fetchInProgressRef.current = false;
     }
-  }, [user, t, parseMessageData, messages.length]);
+  }, [user, t, parseMessageData]);
   
   return { messages, setMessages, fetchMessages, loading };
 };

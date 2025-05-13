@@ -6,7 +6,7 @@ import MessageList from "@/components/messages/MessageList";
 import MessageInput from "@/components/messages/MessageInput";
 import EmptyConversationState from "@/components/messages/EmptyConversationState";
 import { ConversationPartner } from "@/hooks/messaging/useConversations";
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import MessagesSkeleton from "@/components/messages/MessagesSkeleton";
 
@@ -45,7 +45,6 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const initialLoadDoneRef = useRef(false);
 
   // Using CSS visibility instead of conditional rendering to prevent layout shifts
   const conversationListVisible = !activeConversation || !isMobile;
@@ -53,30 +52,14 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
 
   // Determine if we should show a loading skeleton
   const showMessageSkeleton = loading && activeConversation && messages.length === 0;
-  
-  // Improve initial load appearance
-  useEffect(() => {
-    // Set a delay to show immediate skeleton instead of waiting for loading state
-    if (!initialLoadDoneRef.current) {
-      const timer = setTimeout(() => {
-        initialLoadDoneRef.current = true;
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
-  // Optimizes container height calculation to fix mobile layout
-  const containerHeight = isMobile 
-    ? 'h-[calc(100vh-4rem)]' // Adjusted for better mobile fit
-    : 'h-[80vh]';
 
   return (
-    <div className={`flex flex-col md:flex-row gap-4 ${containerHeight} scrollbar-hide`}>
+    <div className={`flex flex-col md:flex-row gap-4 ${isMobile ? 'h-[calc(100vh-5rem)]' : 'h-[80vh]'} scrollbar-hide`}>
       <Card 
         className={`md:flex md:w-1/3 glassmorphism overflow-hidden flex-col
           border border-cosmic-800/30 shadow-xl backdrop-blur-lg
           ${isMobile ? 
-            (conversationListVisible ? 'flex h-full max-h-[calc(100vh-4rem)]' : 'hidden') : 
+            (conversationListVisible ? 'flex h-full max-h-[calc(100vh-5rem)]' : 'hidden') : 
             'flex'}
         `}
       >
@@ -96,7 +79,7 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
         className={`md:flex md:w-2/3 glassmorphism overflow-hidden flex flex-col
           border border-cosmic-800/30 shadow-xl backdrop-blur-lg relative h-full
           ${isMobile ? 
-            (messagesVisible ? 'flex h-full max-h-[calc(100vh-4rem)]' : 'hidden') : 
+            (messagesVisible ? 'flex h-full max-h-[calc(100vh-5rem)]' : 'hidden') : 
             'flex'}
         `}
         ref={messageListRef}
@@ -104,7 +87,7 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
       >
         {activeConversation ? (
           <div className="flex flex-col h-full overflow-hidden">
-            {(showMessageSkeleton && !initialLoadDoneRef.current) ? (
+            {showMessageSkeleton ? (
               <MessagesSkeleton />
             ) : (
               <MessageList 
@@ -128,4 +111,4 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
   );
 };
 
-export default React.memo(MessageContainer);
+export default MessageContainer;
