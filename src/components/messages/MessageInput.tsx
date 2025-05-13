@@ -10,6 +10,7 @@ import { useMessageInputState } from '@/hooks/messaging/useMessageInputState';
 import MessageOptions from './input/MessageOptions';
 import ImagePreview from './input/ImagePreview';
 import MessageInputField from './input/MessageInputField';
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MessageInputProps {
   onSend: (text: string, imageFile?: File | null, locationData?: any) => void;
@@ -18,6 +19,7 @@ interface MessageInputProps {
 
 const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
   
   const {
     message,
@@ -49,7 +51,9 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   }, [message, setDisplayMessage]);
 
   return (
-    <div className="border-t border-cosmic-800/50 p-3 md:p-4 bg-cosmic-900/70 space-y-2 md:space-y-3 sticky bottom-0 backdrop-blur-md z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] pb-4 md:pb-4">
+    <div className={`border-t border-cosmic-800/50 p-3 md:p-4 bg-cosmic-900/70 space-y-2 md:space-y-3 
+      ${isMobile ? 'fixed bottom-[60px] left-0 right-0 z-30' : 'sticky bottom-0'} 
+      backdrop-blur-md shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] pb-4 md:pb-4`}>
       <ImagePreview imagePreview={imagePreview} onRemoveImage={handleRemoveImage} />
       
       <div className="flex items-end gap-2">

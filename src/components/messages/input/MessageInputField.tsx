@@ -3,6 +3,7 @@ import React, { useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Smile } from "lucide-react";
 import { Popover } from "@/components/ui/popover";
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MessageInputFieldProps {
   message: string;
@@ -23,6 +24,7 @@ const MessageInputField: React.FC<MessageInputFieldProps> = ({
   setShowEmojiPicker,
   textareaRef,
 }) => {
+  const isMobile = useIsMobile();
   
   // Auto-resize textarea as user types
   useEffect(() => {
@@ -45,7 +47,7 @@ const MessageInputField: React.FC<MessageInputFieldProps> = ({
           rows={1}
           disabled={sending}
         />
-        <div className="absolute right-2 flex items-center space-x-1 py-2 z-10">
+        <div className={`absolute right-2 flex items-center space-x-1 py-2 ${isMobile ? 'z-40' : 'z-10'}`}>
           <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
             <Button 
               variant="ghost" 

@@ -53,8 +53,9 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
   // Determine if we should show a loading skeleton
   const showMessageSkeleton = loading && activeConversation && messages.length === 0;
 
-  // Calculate appropriate height for mobile view to ensure input is visible
-  const mobileHeight = activeConversation ? 'h-[calc(100vh-80px)]' : 'h-[calc(100vh-5rem)]';
+  // Adjust height for mobile to ensure input is visible above navbar
+  // Make the message container shorter to leave space for the input
+  const mobileHeight = activeConversation ? 'h-[calc(100vh-150px)]' : 'h-[calc(100vh-5rem)]';
 
   return (
     <div className={`flex flex-col md:flex-row gap-4 ${isMobile ? mobileHeight : 'h-[80vh]'} scrollbar-hide`}>
@@ -82,7 +83,7 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
         className={`md:flex md:w-2/3 glassmorphism overflow-hidden flex flex-col
           border border-cosmic-800/30 shadow-xl backdrop-blur-lg relative h-full
           ${isMobile ? 
-            (messagesVisible ? 'flex h-full max-h-[calc(100vh-80px)]' : 'hidden') : 
+            (messagesVisible ? 'flex h-full pb-[70px]' : 'hidden') : 
             'flex'}
         `}
         ref={messageListRef}

@@ -4,6 +4,8 @@ import { useLocation } from "react-router-dom";
 import { Telescope, Map, Smartphone, Link2, Info, Users } from "lucide-react";
 import { MobileNavButton } from "./NavButtons";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMessageConversation } from "@/hooks/messaging/useMessageConversation";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MobileNavProps {
   location: ReturnType<typeof useLocation>;
@@ -15,6 +17,13 @@ const MobileNav: React.FC<MobileNavProps> = ({
   locationId
 }) => {
   const { t } = useLanguage();
+  const isMobile = useIsMobile();
+  const { activeConversation } = useMessageConversation();
+
+  // Hide the mobile nav when in message conversation on mobile
+  if (isMobile && activeConversation && location.pathname === "/messages") {
+    return null;
+  }
 
   // Use a default location ID for when there isn't one
   const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
