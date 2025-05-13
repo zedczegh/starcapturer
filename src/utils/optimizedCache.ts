@@ -1,3 +1,4 @@
+
 /**
  * Optimized cache utility for better performance
  */
@@ -245,6 +246,15 @@ function cleanExpiredItems(): void {
   } catch (e) {
     console.error('Error cleaning expired cache items:', e);
   }
+}
+
+/**
+ * Clear all optimized storage
+ * This function is used during sign out to clean all user data
+ */
+export function clearOptimizedStorage(): void {
+  console.log('Clearing all optimized storage');
+  clearCache(); // This will clear all cache
 }
 
 // Export a singleton instance for optimizedCache
