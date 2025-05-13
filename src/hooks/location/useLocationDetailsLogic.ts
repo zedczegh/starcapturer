@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Location, NavigateFunction } from "react-router-dom";
 import { getSavedLocation } from "@/utils/locationStorage";
 import { useUserGeolocation } from "@/hooks/community/useUserGeolocation";
+import { getCurrentPosition } from "@/utils/geolocationUtils";
 
 interface UseLocationDetailsLogicProps {
   id: string | undefined;
@@ -11,6 +12,7 @@ interface UseLocationDetailsLogicProps {
   t: (key: string, fallback: string) => string;
   setCachedData: (key: string, data: any) => void;
   getCachedData: (key: string) => any;
+  alwaysUseCurrentLocation?: boolean;
 }
 
 export const useLocationDetailsLogic = ({ 
@@ -19,7 +21,8 @@ export const useLocationDetailsLogic = ({
   navigate, 
   t, 
   setCachedData, 
-  getCachedData 
+  getCachedData,
+  alwaysUseCurrentLocation = false
 }: UseLocationDetailsLogicProps) => {
   const [locationData, setLocationData] = useState<any>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -29,6 +32,53 @@ export const useLocationDetailsLogic = ({
   
   // User's current geolocation
   const currentUserPosition = useUserGeolocation();
+
+  // Try to get current location when requested
+  useEffect(() => {
+    // If we have location data from state, don't override it
+    if (location.state || !alwaysUseCurrentLocation) {
+      return;
+    }
+
+    // Try to get current location
+    setLoadingCurrentLocation(true);
+    
+    getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const newLocationData = {
+          id: `loc-${latitude}-${longitude}`,
+          name: t("Current Location", "当前位置"),
+          latitude,
+          longitude,
+          timestamp: new Date().toISOString(),
+          fromCurrentLocation: true
+        };
+        
+        setLocationData(newLocationData);
+        setCachedData(`location_${newLocationData.id}`, newLocationData);
+        
+        // Update the URL to reflect the new location
+        navigate(`/location/${latitude},${longitude}`, { 
+          state: newLocationData,
+          replace: true 
+        });
+        
+        setLoadingCurrentLocation(false);
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error("Error getting current location:", error);
+        setLoadingCurrentLocation(false);
+        // Continue with other location finding methods
+      },
+      { 
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+      }
+    );
+  }, [alwaysUseCurrentLocation, location.state, navigate, setCachedData, t]);
 
   useEffect(() => {
     let initialData = null;
@@ -81,7 +131,7 @@ export const useLocationDetailsLogic = ({
       if (initialData.id) {
         setCachedData(`location_${initialData.id}`, initialData);
       }
-    } else if (currentUserPosition) {
+    } else if (currentUserPosition && !alwaysUseCurrentLocation) {
       // If we have current user position but no location data, create it
       const [latitude, longitude] = currentUserPosition;
       const newLocationId = `loc-${latitude}-${longitude}`;
@@ -105,7 +155,7 @@ export const useLocationDetailsLogic = ({
     }
     
     setIsLoading(false);
-  }, [id, location.state, navigate, setCachedData, getCachedData, t, currentUserPosition]);
+  }, [id, location.state, navigate, setCachedData, getCachedData, t, currentUserPosition, alwaysUseCurrentLocation]);
 
   const handleUpdateLocation = async (updatedData: any) => {
     try {

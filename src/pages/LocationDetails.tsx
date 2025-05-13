@@ -1,5 +1,5 @@
 
-// Refactored to use new hooks and smaller components with improved loading
+// Refactored to always prioritize current location
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useLocationDataCache } from "@/hooks/useLocationData";
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { getRandomAstronomyTip } from "@/utils/astronomyTips"; 
 import NavBar from "@/components/NavBar";
 import { getSavedLocation } from "@/utils/locationStorage";
+import { getCurrentPosition } from "@/utils/geolocationUtils";
 
 const LocationDetails = () => {
   const { id } = useParams();
@@ -26,12 +27,71 @@ const LocationDetails = () => {
   // Add a ref to track if the toast has been shown
   const toastShownRef = useRef(false);
   const initialLoadCompleteRef = useRef(false);
-  const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
+  const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(true);
+  const locationAttemptedRef = useRef(false);
+
+  // New: Always try to get current location on initial load if not navigating from elsewhere
+  useEffect(() => {
+    // Don't attempt if we have location state or already tried
+    if (location.state || locationAttemptedRef.current) return;
+    
+    locationAttemptedRef.current = true;
+    setLoadingCurrentLocation(true);
+    
+    console.log("Attempting to get user's current location on page load");
+    
+    getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const newLocationData = {
+          id: `loc-${latitude}-${longitude}`,
+          name: t("Current Location", "当前位置"),
+          latitude,
+          longitude,
+          timestamp: new Date().toISOString(),
+          fromCurrentLocation: true
+        };
+        
+        console.log("Successfully got current location:", latitude, longitude);
+        
+        // Navigate to the same URL but with state
+        navigate(`/location/${latitude},${longitude}`, { 
+          state: newLocationData,
+          replace: true
+        });
+        
+        setLoadingCurrentLocation(false);
+      },
+      (error) => {
+        console.error("Error getting current location:", error);
+        setLoadingCurrentLocation(false);
+        
+        // Try to use saved location as fallback
+        const savedLocation = getSavedLocation();
+        if (savedLocation) {
+          console.log("Using saved location as fallback");
+          navigate(`/location/${savedLocation.latitude},${savedLocation.longitude}`, { 
+            state: {
+              ...savedLocation,
+              fromSavedLocation: true
+            },
+            replace: true
+          });
+        }
+      },
+      { 
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0,
+        language
+      }
+    );
+  }, [navigate, t, language, location.state]);
 
   // Check if we need to load saved location data
   useEffect(() => {
     // If there's no state in the location object, try to get saved location
-    if (!location.state && id) {
+    if (!location.state && id && !locationAttemptedRef.current) {
       const savedLocation = getSavedLocation();
       if (savedLocation) {
         console.log("Using saved location data:", savedLocation);
@@ -56,7 +116,7 @@ const LocationDetails = () => {
     }
   }, [queryClient]);
 
-  // New logic hook
+  // New logic hook with updated options
   const {
     locationData,
     setLocationData,
@@ -66,7 +126,15 @@ const LocationDetails = () => {
     handleUpdateLocation,
     isLoading,
     setLoadingCurrentLocation: setLocationLoading
-  } = useLocationDetailsLogic({ id, location, navigate, t, setCachedData, getCachedData });
+  } = useLocationDetailsLogic({ 
+    id, 
+    location, 
+    navigate, 
+    t, 
+    setCachedData, 
+    getCachedData,
+    alwaysUseCurrentLocation: true
+  });
 
   // Set the loading state properly
   useEffect(() => {

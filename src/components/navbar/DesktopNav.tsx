@@ -1,58 +1,67 @@
 
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
-import { NavLink } from "./NavButtons";
-import LanguageSwitcher from "../LanguageSwitcher";
+import { Link, useLocation, Location } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Map } from "lucide-react";
-import LocationPinButton from "./LocationPinButton";
+import { useAuth } from "@/contexts/AuthContext";
 import ProfileButton from "./ProfileButton";
 
 interface DesktopNavProps {
-  location: ReturnType<typeof useLocation>;
+  location: Location;
   locationId: string | null;
+  isCurrentLocationView?: boolean;
 }
 
-const DesktopNav: React.FC<DesktopNavProps> = ({ 
-  location, 
-  locationId 
-}) => {
-  const { t } = useLanguage();
+const DesktopNav: React.FC<DesktopNavProps> = ({ location, locationId, isCurrentLocationView }) => {
+  const { language, t } = useLanguage();
+  const { user } = useAuth();
   
-  const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
-  
+  // Current route pathname
+  const currentPath = location.pathname;
+
+  // List of available navigation links
+  const navLinks = [
+    { path: '/', label: t('Home', '首页') },
+    { path: '/explore', label: t('Explore', '探索') },
+    // Use /location/default to always show current location
+    { path: '/location/default', label: t('My Location', '我的位置') },
+    { path: '/community', label: t('Community', '社区') },
+    { path: `/profile/${user?.id}`, label: t('Profile', '个人资料'), requireAuth: true }
+  ];
+
+  // Only show links that don't require auth or user is authenticated
+  const filteredLinks = navLinks.filter(link => !link.requireAuth || user);
+
   return (
-    <>
-      <nav className="hidden md:flex items-center space-x-6">
-        <NavLink to="/photo-points" active={location.pathname === "/photo-points"}>
-          {t("Photo Points", "拍摄点")}
-        </NavLink>
-        <NavLink 
-          to={detailsPath}
-          active={location.pathname.startsWith('/location/')}
-        >
-          {t("Location Details", "位置详情")}
-        </NavLink>
-        <NavLink to="/community" active={location.pathname === "/community"}>
-          {t("Community", "社区")}
-        </NavLink>
-        <NavLink to="/share" active={location.pathname === "/share"}>
-          {t("Bortle Now", "实时光污染")}
-        </NavLink>
-        <NavLink to="/useful-links" active={location.pathname === "/useful-links"}>
-          {t("Resources", "资源")}
-        </NavLink>
-        <NavLink to="/about" active={location.pathname === "/about"}>
-          {t("About SIQS", "关于SIQS")}
-        </NavLink>
-      </nav>
-      
-      <div className="hidden md:flex items-center space-x-2">
-        <LocationPinButton />
-        <LanguageSwitcher />
-        <ProfileButton />
+    <div className="hidden md:flex items-center justify-between w-full">
+      <div className="flex items-center space-x-6">
+        {filteredLinks.map((link) => (
+          <Link
+            key={link.path}
+            to={link.path}
+            className={`text-sm font-medium transition-colors hover:text-primary relative
+              ${(currentPath === link.path || 
+                (link.path === '/location/default' && currentPath.startsWith('/location/'))) 
+                ? 'text-primary' 
+                : 'text-cosmic-100'}`}
+          >
+            {link.label}
+            
+            {/* Highlight indicator for active link */}
+            {(currentPath === link.path || 
+              (link.path === '/location/default' && currentPath.startsWith('/location/'))) && (
+              <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-primary rounded-full" />
+            )}
+          </Link>
+        ))}
       </div>
-    </>
+      
+      {/* Profile button for logged in users */}
+      {user && (
+        <div className="flex items-center">
+          <ProfileButton />
+        </div>
+      )}
+    </div>
   );
 };
 
