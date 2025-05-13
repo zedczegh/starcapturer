@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Gauge, Info, Star, Clock } from "lucide-react";
@@ -74,154 +75,114 @@ const SIQSSummary: React.FC<SIQSSummaryProps> = ({ siqsResult, weatherData, loca
       } else {
         setValidatedSiqs(siqsResult);
       }
-    } else if (siqsResult && typeof siqsResult.score === 'number') {
-      console.warn("SIQS data structure is invalid, creating basic object");
-      const normalizedScore = normalizeToSiqsScale(siqsResult.score);
-      setValidatedSiqs({
-        score: normalizedScore,
-        isViable: normalizedScore >= 2,
-        factors: siqsResult.factors || []
-      });
+    } else if (siqsResult && typeof siqsResult === 'object') {
+      // Handle partial or malformed SIQS data
+      console.log("Warning: Invalid SIQS data detected, attempting to recover");
+      if ('score' in siqsResult && typeof siqsResult.score === 'number') {
+        // We have at least a score, use it
+        setValidatedSiqs({
+          score: normalizeToSiqsScale(siqsResult.score),
+          isViable: siqsResult.score >= 5,
+          factors: []
+        });
+      } else {
+        // No usable data
+        setValidatedSiqs(null);
+        console.error("Could not validate or recover SIQS data:", siqsResult);
+      }
     } else {
-      console.error("Invalid SIQS data provided:", siqsResult);
       setValidatedSiqs(null);
-      
-      toast({
-        title: t("SIQS Data Issue", "SIQS数据问题"),
-        description: t(
-          "There was an issue with the SIQS data. Some information may not be accurate.",
-          "SIQS数据出现问题，部分信息可能不准确。"
-        ),
-        variant: "destructive",
-        duration: 3000,
-      });
+      console.error("Invalid SIQS data:", siqsResult);
     }
-  }, [siqsResult, t, toast]);
-  
-  if (!validatedSiqs) {
-    return (
-      <Card className="glassmorphism-strong">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Info className="w-4 h-4" />
-            {t("No SIQS Data Available", "无天文观测质量评分数据")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {t("Please wait while we calculate SIQS score for this location.", "请等待我们计算此位置的天文观测质量评分。")}
-        </CardContent>
-      </Card>
-    );
-  }
-  
+  }, [siqsResult]);
+
+  // Check if we have actual SIQS data to display
+  const hasSiqsData = siqsScore > 0;
+
   return (
-    <Card className="glassmorphism-strong overflow-hidden">
-      <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-        <CardTitle className="flex items-center gap-2">
-          <Gauge className="w-5 h-5 text-primary" />
-          {t("Sky Imaging Quality Score", "天文观测质量评分")}
+    <Card className="bg-cosmic-800/70 border border-cosmic-700/50 shadow-xl">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Star className="h-5 w-5 text-yellow-400" />
+          <span>{t("Sky Imaging Quality Score", "天空成像质量评分")}</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6 p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
-        <div className="space-y-3">
-          {/* Main SIQS Score */}
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">{t("Overall Score", "总分")}</h3>
-            <div className="flex items-center gap-1">
-              <Star className="h-5 w-5 text-yellow-400" fill="#facc15" />
-              <span className={`text-2xl font-bold px-2 py-1 rounded ${scoreColorClass.replace('bg-', 'text-')}`}>
-                {formatSIQSScore(siqsScore)}
-              </span>
-            </div>
+      <CardContent>
+        {!hasSiqsData ? (
+          <div className="flex flex-col items-center justify-center p-6 text-center opacity-80">
+            <Info className="h-10 w-10 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              {t("SIQS data is currently loading or not available for this location.", 
+                "此位置的SIQS数据正在加载或不可用。")}
+            </p>
           </div>
-          
-          {/* Progress Bar */}
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: "100%" }}
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
             transition={{ duration: 0.5 }}
           >
+            <div className="flex justify-between items-center mb-2">
+              <div className="flex items-center">
+                <Gauge className="h-5 w-5 mr-2 text-gray-400" />
+                <span className="text-sm text-gray-300">
+                  {t("Current Score", "当前评分")}
+                </span>
+              </div>
+              <motion.div 
+                initial={{ scale: 0.5 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className={`text-2xl font-bold px-2 rounded ${scoreColorClass}`}
+              >
+                {siqsScore.toFixed(1)}
+              </motion.div>
+            </div>
+            
             <Progress 
               value={siqsScore * 10} 
-              className="h-3"
-              colorClass={scoreColorClass}
+              max={100} 
+              className="h-2 mb-2 bg-cosmic-700" 
+              style={{ 
+                background: "linear-gradient(to right, #3f1528, #344055)",
+                border: "1px solid rgba(80, 80, 100, 0.2)"
+              }}
             />
+            
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-muted-foreground">{t("Poor", "较差")}</span>
+              <span className={`font-semibold ${scoreColorClass}`}>{qualityText}</span>
+              <span className="text-muted-foreground">{t("Excellent", "优秀")}</span>
+            </div>
+            
+            {siqsCalculationTime && (
+              <div className="flex justify-end items-center mt-3 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3 mr-1" />
+                <span>{t("Calculated at", "计算于")} {siqsCalculationTime}</span>
+              </div>
+            )}
+            
+            {validatedSiqs?.factors && validatedSiqs.factors.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-cosmic-700/50">
+                <details className="text-sm">
+                  <summary className="cursor-pointer hover:text-primary transition-colors">
+                    {t("View contributing factors", "查看影响因素")}
+                  </summary>
+                  <ul className="mt-2 space-y-1 pl-2">
+                    {validatedSiqs.factors.map((factor: any, i: number) => (
+                      <li key={`factor-${i}`} className="text-xs text-muted-foreground">
+                        {factor.name}: {(factor.score * 10).toFixed(1)}/10
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              </div>
+            )}
           </motion.div>
-          
-          {/* Scale and interpretation */}
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">{t("Poor", "较差")}</span>
-            <span className={`font-medium ${scoreColorClass.replace('bg-', 'text-')}`}>
-              {qualityText}
-            </span>
-            <span className="text-muted-foreground">{t("Excellent", "优秀")}</span>
-          </div>
-          
-          {/* Description */}
-          <div className="mt-2">
-            <p className="text-sm text-muted-foreground">
-              {getSIQSDescription(siqsScore, t)}
-            </p>
-          </div>
-        </div>
-        
-        {/* Clear Sky Rate (if available) */}
-        {weatherData?.clearSkyRate && (
-          <div className="pt-4 border-t border-border/30">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-medium flex items-center gap-1.5">
-                <Clock className="h-4 w-4 text-blue-400" />
-                {t("Clear Sky Rate", "晴空率")}
-              </h4>
-              <span className="font-semibold text-blue-400">{weatherData.clearSkyRate}%</span>
-            </div>
-            <Progress 
-              value={weatherData.clearSkyRate} 
-              className="h-2"
-              colorClass="bg-blue-500/80"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {language === 'en' 
-                ? `Historical clear sky average for this location`
-                : `此位置的历史晴空平均值`}
-            </p>
-          </div>
         )}
-
-        {/* Disclaimer and timestamp */}
-        <div className="mt-6 space-y-2">
-          {siqsCalculationTime && (
-            <div className="flex items-center justify-center text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5 mr-1.5" />
-              {t("Calculated at", "计算于")}: {siqsCalculationTime}
-            </div>
-          )}
-          
-          <div className="p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30">
-            <p className="text-xs text-center text-cosmic-300">
-              {t("This SIQS score is calculated based on all conditions displayed above including nighttime forecasts.", 
-                 "此SIQS评分是根据上方显示的所有条件（包括夜间预报）计算得出的。")}
-            </p>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );
 };
 
-// Helper function for SIQS descriptions
-const getSIQSDescription = (score: number, t: any) => {
-  if (score >= 9) {
-    return t("Exceptional conditions for astrophotography.", "天文摄影的绝佳条件。");
-  } else if (score >= 7) {
-    return t("Excellent conditions, highly recommended.", "极好的条件，强烈推荐。");
-  } else if (score >= 5) {
-    return t("Good conditions, suitable for imaging.", "良好的条件，适合成像。");
-  } else if (score >= 3) {
-    return t("Moderate conditions, some limitations may apply.", "中等条件，可能有一些限制。");
-  } else {
-    return t("Poor conditions, not recommended for imaging.", "条件较差，不推荐成像。");
-  }
-};
-
-export default SIQSSummary;
+export default React.memo(SIQSSummary);

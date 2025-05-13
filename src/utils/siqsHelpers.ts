@@ -1,154 +1,79 @@
 
 /**
- * Helper functions for safely working with SIQS values that might be numbers or objects
+ * Helper functions for SIQS score handling
  */
-
-import { SiqsScore, SiqsFactor } from './siqs/types';
-import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 /**
- * Get numeric SIQS score from any SIQS format (number or object)
- * @param siqs SIQS value which could be a number or object
- * @returns number value of SIQS or 0 if undefined
+ * Normalize any SIQS value to the 0-10 scale
  */
-export function getSiqsScore(siqs?: SiqsScore | any): number {
-  if (siqs === undefined || siqs === null) {
+export function normalizeToSiqsScale(value: number | null | undefined): number {
+  if (value === null || value === undefined) {
     return 0;
   }
   
-  // Handle string values (parsing to number)
-  if (typeof siqs === 'string') {
-    const parsed = parseFloat(siqs);
-    return isNaN(parsed) ? 0 : normalizeToSiqsScale(parsed);
+  // If value is already in 0-10 range, return it
+  if (value >= 0 && value <= 10) {
+    return value;
   }
   
-  // Handle numeric values directly
+  // Handle values on 0-100 scale
+  if (value > 10 && value <= 100) {
+    return value / 10;
+  }
+  
+  // Handle legacy values on 0-9 scale
+  if (value >= 1 && value <= 9) {
+    return (value / 9) * 10;
+  }
+  
+  // For extreme outliers, clamp to 0-10 range
+  return Math.max(0, Math.min(10, value));
+}
+
+/**
+ * Extract SIQS score from different data structures
+ */
+export function getSiqsScore(siqs: any): number {
+  // Handle null/undefined
+  if (!siqs) return 0;
+  
+  // Handle numeric value
   if (typeof siqs === 'number') {
-    return isNaN(siqs) ? 0 : normalizeToSiqsScale(siqs);
+    return normalizeToSiqsScale(siqs);
   }
   
   // Handle object with score property
-  if (typeof siqs === 'object' && siqs !== null) {
-    // Case: object with siqs property
-    if ('siqs' in siqs && typeof siqs.siqs !== 'undefined') {
-      return getSiqsScore(siqs.siqs);
+  if (typeof siqs === 'object') {
+    if ('score' in siqs && typeof siqs.score === 'number') {
+      return normalizeToSiqsScale(siqs.score);
     }
     
-    // Case: { score: number } object
-    if ('score' in siqs && typeof siqs.score === 'number') {
-      return isNaN(siqs.score) ? 0 : normalizeToSiqsScale(siqs.score);
+    if ('siqs' in siqs && typeof siqs.siqs === 'number') {
+      return normalizeToSiqsScale(siqs.siqs);
     }
   }
   
-  // Default to 0 if no valid score found
+  console.warn('Could not extract SIQS score from:', siqs);
   return 0;
 }
 
 /**
- * Normalize a score to ensure it's in the 0-10 range
+ * Check if SIQS value indicates good viewing conditions
  */
-export function normalizeToSiqsScale(score: number): number {
-  // Handle NaN
-  if (isNaN(score)) return 0;
-  
-  // If score is already in 0-10 range, return as is
-  if (score >= 0 && score <= 10) {
-    return score;
-  }
-  
-  // If score is on 0-100 scale, normalize to 0-10
-  if (score > 10 && score <= 100) {
-    return score / 10;
-  }
-  
-  // Cap values outside of accepted ranges
-  if (score > 100) return 10;
-  if (score < 0) return 0;
-  
-  return score;
-}
-
-/**
- * Format SIQS score for display
- * @param score SIQS score
- * @returns Formatted string representation with one decimal place or "N/A"
- */
-export function formatSiqsForDisplay(score: number | null | undefined): string {
-  if (score === null || score === undefined || score <= 0) {
-    return "N/A";
-  }
-  
-  // Ensure score is normalized to 0-10 scale and format with one decimal place
-  const normalizedScore = normalizeToSiqsScale(score);
-  return normalizedScore.toFixed(1);
-}
-
-/**
- * Get formatted SIQS score from any SIQS format
- * @param siqs SIQS value which could be a number or object
- * @returns Formatted string representation
- */
-export function formatSiqsScore(siqs?: SiqsScore | any): string {
+export function isGoodViewingCondition(siqs: any): boolean {
   const score = getSiqsScore(siqs);
-  return formatSiqsForDisplay(score);
+  return score >= 5.5;
 }
 
 /**
- * Format factors for display in UI
+ * Get quality class based on SIQS score
  */
-export function formatSiqsFactors(factors: SiqsFactor[]): string {
-  if (!factors || factors.length === 0) return '';
+export function getSiqsQualityClass(siqs: any): string {
+  const score = getSiqsScore(siqs);
   
-  return factors
-    .map(factor => `${factor.name}: ${factor.score.toFixed(1)}`)
-    .join(', ');
-}
-
-/**
- * Compare if a SIQS value is at least a certain threshold
- * @param siqs SIQS value which could be a number or object
- * @param threshold Minimum threshold to compare against
- * @returns true if the SIQS is at least the threshold
- */
-export function isSiqsAtLeast(siqs: SiqsScore | any, threshold: number): boolean {
-  const score = getSiqsScore(siqs);
-  return score >= threshold;
-}
-
-/**
- * Compare if a SIQS value is greater than a certain threshold
- * @param siqs SIQS value which could be a number or object
- * @param threshold Threshold to compare against
- * @returns true if the SIQS is greater than the threshold
- */
-export function isSiqsGreaterThan(siqs: SiqsScore | any, threshold: number): boolean {
-  const score = getSiqsScore(siqs);
-  return score > threshold;
-}
-
-/**
- * Sort locations by SIQS score (highest first)
- * @param locations Array of locations to sort
- * @returns Sorted array of locations
- */
-export function sortLocationsBySiqs<T extends { siqs?: SiqsScore | any; realTimeSiqs?: number }>(locations: T[]): T[] {
-  return [...locations].sort((a, b) => {
-    // First sort by certification status
-    const aIsCertified = 'certification' in a || 'isDarkSkyReserve' in a;
-    const bIsCertified = 'certification' in b || 'isDarkSkyReserve' in b;
-    
-    if (aIsCertified && !bIsCertified) return -1;
-    if (!aIsCertified && bIsCertified) return 1;
-    
-    // Then sort by SIQS score (highest first)
-    const aSiqs = typeof a.realTimeSiqs === "number" && a.realTimeSiqs > 0
-      ? a.realTimeSiqs
-      : getSiqsScore(a.siqs);
-      
-    const bSiqs = typeof b.realTimeSiqs === "number" && b.realTimeSiqs > 0
-      ? b.realTimeSiqs
-      : getSiqsScore(b.siqs);
-      
-    return bSiqs - aSiqs; // Sort from highest to lowest
-  });
+  if (score >= 8) return 'excellent';
+  if (score >= 6) return 'good';
+  if (score >= 4) return 'average'; 
+  if (score >= 2) return 'poor';
+  return 'bad';
 }

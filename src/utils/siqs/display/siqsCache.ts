@@ -1,24 +1,60 @@
 
 /**
- * SIQS caching utilities
+ * Optimized cache for SIQS display values
  */
 
-import { hasCachedSiqs, getCachedSiqs } from '@/services/realTimeSiqs/siqsCache';
-import { normalizeToSiqsScale } from '@/utils/siqsHelpers';
+import { optimizedCache } from '@/utils/optimizedCache';
+
+// Cache key prefix for SIQS data
+const SIQS_CACHE_PREFIX = 'siqs-realtime';
+const SIQS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 /**
- * Get cached SIQS with optimized performance
+ * Get cached real-time SIQS for a location
  */
-export function getCachedRealTimeSiqs(
-  latitude: number, 
-  longitude: number, 
-  skipCache: boolean = false
-): number | null {
-  if (!skipCache && hasCachedSiqs(latitude, longitude)) {
-    const cached = getCachedSiqs(latitude, longitude);
-    if (cached && cached.siqs > 0) {
-      return normalizeToSiqsScale(cached.siqs);
+export function getCachedRealTimeSiqs(latitude: number, longitude: number): number | null {
+  if (!latitude || !longitude) return null;
+  
+  const cacheKey = `${SIQS_CACHE_PREFIX}-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  
+  try {
+    const cachedData = optimizedCache.getCachedItem(cacheKey);
+    if (!cachedData) return null;
+    
+    // Check if cache is still valid
+    const timestamp = cachedData.timestamp || 0;
+    if (Date.now() - timestamp > SIQS_CACHE_TTL) {
+      return null;
     }
+    
+    return typeof cachedData.value === 'number' ? cachedData.value : null;
+  } catch (error) {
+    console.error('Error getting cached SIQS:', error);
+    return null;
   }
-  return null;
+}
+
+/**
+ * Cache real-time SIQS for a location
+ */
+export function setCachedRealTimeSiqs(latitude: number, longitude: number, siqsValue: number): void {
+  if (!latitude || !longitude || typeof siqsValue !== 'number') return;
+  
+  const cacheKey = `${SIQS_CACHE_PREFIX}-${latitude.toFixed(4)}-${longitude.toFixed(4)}`;
+  
+  try {
+    optimizedCache.setCachedItem(cacheKey, {
+      value: siqsValue,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('Error caching SIQS:', error);
+  }
+}
+
+/**
+ * Check if we have cached SIQS for a location
+ */
+export function hasCachedRealTimeSiqs(latitude: number, longitude: number): boolean {
+  return getCachedRealTimeSiqs(latitude, longitude) !== null;
 }
