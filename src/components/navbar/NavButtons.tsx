@@ -49,17 +49,21 @@ export const MobileNavButton: React.FC<MobileNavButtonProps> = ({
       to={to}
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center px-3 py-1.5 rounded-lg transition-all duration-300 mobile-nav-item cosmic-glow",
-        active ? "active text-primary" : "text-foreground/70 hover:text-foreground/90"
+        "flex flex-col items-center px-3 py-1.5 rounded-lg transition-all duration-300 mobile-nav-item",
+        active ? "text-primary" : "text-foreground/60 hover:text-foreground/80"
       )}
     >
       <div className={cn(
-        "icon-container p-1.5 rounded-full transition-all duration-300",
-        active ? "bg-cosmic-100/20 gentle-pulse-glow" : "bg-transparent hover:bg-cosmic-100/10"
+        "icon-container p-2 mb-1 rounded-full transition-all duration-300",
+        active 
+          ? "bg-cosmic-700/60 shadow-[0_0_8px_rgba(139,92,246,0.25)] gentle-pulse-glow" 
+          : "bg-cosmic-800/40 hover:bg-cosmic-700/30"
       )}>
         {icon}
       </div>
-      <span className={`text-xs mt-1 ${language === 'zh' ? 'font-medium' : ''}`}>{label}</span>
+      <span className={`text-[10px] font-medium mt-0.5 ${language === 'zh' ? 'tracking-tight' : 'tracking-wide'}`}>
+        {label}
+      </span>
     </Link>
   );
 };
