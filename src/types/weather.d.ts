@@ -25,6 +25,14 @@ declare module "@/types/weather" {
     timestamp: string;
   }
 
+  export interface NighttimeCloudData {
+    average: number;
+    timeRange?: string;
+    description?: string;
+    evening?: number | null;
+    morning?: number | null;
+  }
+
   export interface SIQSData {
     score: number;
     isViable: boolean;
@@ -34,11 +42,7 @@ declare module "@/types/weather" {
       description: string;
       nighttimeData?: any;
     }>;
-    nighttimeCloudData?: {
-      average: number | null;
-      evening: number | null;
-      morning: number | null;
-    } | null;
+    nighttimeCloudData?: NighttimeCloudData | null;
   }
 
   export interface SharedAstroSpot {
@@ -77,6 +81,6 @@ declare module "@/types/weather" {
       timeUntilDaylight?: number;
     };
     date?: string | Date;
-    user_id?: string; // Added this property that was being referenced
+    user_id?: string;
   }
 }
