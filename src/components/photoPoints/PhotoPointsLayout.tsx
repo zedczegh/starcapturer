@@ -49,7 +49,7 @@ const PhotoPointsLayout: React.FC<PhotoPointsLayoutProps> = ({
       </Helmet>
       <NavBar />
       <div className="relative pt-20 md:pt-28 pb-20 will-change-transform z-10">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-2 sm:px-4">
           {children}
           
           <motion.div 

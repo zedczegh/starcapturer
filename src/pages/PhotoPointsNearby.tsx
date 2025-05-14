@@ -109,7 +109,7 @@ const PhotoPointsNearby: React.FC = () => {
       />
       
       {activeView === 'calculated' && (
-        <div className="max-w-xl mx-auto mb-6">
+        <div className="max-w-xl mx-auto mb-6 px-1 sm:px-0">
           <DistanceRangeSlider
             currentValue={calculatedSearchRadius}
             onValueChange={handleRadiusChange}
