@@ -1,34 +1,61 @@
 
 import React from 'react';
+import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoLocationCard from '../PhotoLocationCard';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { motion } from 'framer-motion';
 
 interface LocationsGridProps {
   locations: SharedAstroSpot[];
-  onLocationClick?: (location: SharedAstroSpot) => void;
+  isMobile: boolean;
+  initialLoad: boolean;
+  onViewDetails: (location: SharedAstroSpot) => void;
 }
 
-const LocationsGrid: React.FC<LocationsGridProps> = ({ 
-  locations, 
-  onLocationClick 
+const LocationsGrid: React.FC<LocationsGridProps> = ({
+  locations,
+  isMobile,
+  initialLoad,
+  onViewDetails
 }) => {
-  const isMobile = useIsMobile();
+  const { t } = useLanguage();
   
-  if (!locations || locations.length === 0) {
-    return null;
-  }
-
+  const gridClassName = isMobile 
+    ? "grid grid-cols-1 gap-4" 
+    : "grid grid-cols-1 md:grid-cols-2 gap-4";
+  
   return (
-    <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
-      {locations.map((location) => (
-        <PhotoLocationCard
+    <motion.div 
+      className={gridClassName}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      {locations.map((location, index) => (
+        <motion.div
           key={location.id || `${location.latitude}-${location.longitude}`}
-          location={location}
-          onClick={() => onLocationClick?.(location)}
-        />
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ 
+            duration: 0.4, 
+            delay: Math.min(index * 0.05, 0.5),
+            ease: "easeOut" 
+          }}
+          whileHover={{ 
+            scale: 1.02, 
+            boxShadow: "0 4px 20px rgba(139, 92, 246, 0.15)"
+          }}
+          className="transition-all duration-300"
+        >
+          <PhotoLocationCard
+            location={location}
+            index={index}
+            onViewDetails={() => onViewDetails(location)}
+            showRealTimeSiqs={true}
+          />
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 };
 

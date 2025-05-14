@@ -79,20 +79,10 @@
     width: 100%;
   }
   
-  /* Map legend styling - reduced width for mobile */
+  /* Map legend styling - already adjusted to 75% width */
   .map-legend-container {
     width: 75%;
     max-width: 300px;
-  }
-  
-  /* Mobile-optimized container padding */
-  .container {
-    @apply px-2 sm:px-4 md:px-6;
-  }
-  
-  /* Responsive card padding */
-  .mobile-card {
-    @apply p-3 sm:p-4 md:p-6;
   }
   
   /* Glassmorphism effect */
