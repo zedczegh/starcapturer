@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,20 +34,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession(null);
           setUser(null);
           console.log('Auth state change:', event, 'No user session');
-        }
-
-        if (event === 'SIGNED_IN' && newSession?.user) {
-          setTimeout(() => {
-            const username = newSession.user.email?.split('@')[0] || 'stargazer';
-            toast.success(`Welcome, ${username}! 🌟`, {
-              description: t(
-                "Ready for some stargazing? Your sky awaits!",
-                "准备好观星了吗？您的星空等待着您！"
-              ),
-              duration: 4000,
-              position: "top-center"
-            });
-          }, 0);
         }
       }
     );
