@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useMemo, useEffect } from "react";
-import { Button } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { SearchIcon, Loader2 } from "lucide-react";
 import { searchLocations } from "@/services/geocoding";
 import { useLanguage } from "@/contexts/LanguageContext";
