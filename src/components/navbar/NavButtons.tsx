@@ -55,7 +55,7 @@ export const MobileNavButton: React.FC<MobileNavButtonProps> = ({
     >
       <div className={cn(
         "icon-container p-1.5 rounded-full transition-all duration-300",
-        active ? "bg-cosmic-100/20 pulse-glow" : "bg-transparent hover:bg-cosmic-100/10"
+        active ? "bg-cosmic-100/20 gentle-pulse-glow" : "bg-transparent hover:bg-cosmic-100/10"
       )}>
         {icon}
       </div>
