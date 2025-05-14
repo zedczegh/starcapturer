@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,6 +20,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [welcomeToastShown, setWelcomeToastShown] = useState<boolean>(false);
   const { t } = useLanguage ? useLanguage() : { t: (en: string, zh: string) => en };
 
   useEffect(() => {
@@ -31,24 +31,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession(newSession);
           setUser(newSession.user);
           console.log('Auth state change:', event, 'user:', newSession.user.email);
+          
+          // Only show welcome toast on SIGNED_IN event and if not shown already
+          if (event === 'SIGNED_IN' && !welcomeToastShown) {
+            setTimeout(() => {
+              const username = newSession.user.email?.split('@')[0] || 'stargazer';
+              toast.success(`Welcome, ${username}! 🌟`, {
+                description: t(
+                  "Ready for some stargazing? Your sky awaits!",
+                  "准备好观星了吗？您的星空等待着您！"
+                ),
+                duration: 4000,
+                position: "top-center"
+              });
+              setWelcomeToastShown(true);
+            }, 0);
+          }
         } else {
           setSession(null);
           setUser(null);
           console.log('Auth state change:', event, 'No user session');
-        }
-
-        if (event === 'SIGNED_IN' && newSession?.user) {
-          setTimeout(() => {
-            const username = newSession.user.email?.split('@')[0] || 'stargazer';
-            toast.success(`Welcome, ${username}! 🌟`, {
-              description: t(
-                "Ready for some stargazing? Your sky awaits!",
-                "准备好观星了吗？您的星空等待着您！"
-              ),
-              duration: 4000,
-              position: "top-center"
-            });
-          }, 0);
         }
       }
     );
@@ -96,7 +98,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [t]);
+  }, [t, welcomeToastShown]);
 
   const signUp = async (email: string, password: string) => {
     try {
@@ -228,7 +230,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } else if (error.message.includes("Too many requests")) {
           errorMessage = t(
             "Too many login attempts. Please try again in a few minutes",
-            "登录尝试次数过多，请稍后再试"
+            "登���尝试次数过多，请稍后再试"
           );
         } else if (error.message === 'Failed to fetch' || !navigator.onLine) {
           errorMessage = t(
