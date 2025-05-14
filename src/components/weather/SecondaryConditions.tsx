@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card";
 import { Cloud, AlertTriangle } from "lucide-react";
 import CloudCoverItem from "./components/CloudCoverItem";
 import NighttimeCloudItem from "./components/NighttimeCloudItem";
-import MoonPhaseItem from "./components/MoonPhaseItem";
 import BortleScaleItem from "./components/BortleScaleItem";
 import AirQualityItem from "./components/AirQualityItem";
 
@@ -61,11 +60,6 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
               </div>
             )}
             
-            {/* Moon Phase */}
-            <div className="bg-cosmic-800/30 rounded-lg p-3">
-              <MoonPhaseItem moonPhase={moonPhase} language={language as 'en' | 'zh'} />
-            </div>
-            
             {/* Bortle Scale */}
             <div className="bg-cosmic-800/30 rounded-lg p-3">
               <BortleScaleItem bortleScale={bortleScale} />
@@ -79,7 +73,7 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
             )}
             
             {/* If no data available */}
-            {!cloudCover && !bortleScale && !moonPhase && (
+            {!cloudCover && !bortleScale && (
               <div className="col-span-full flex flex-col items-center justify-center py-6">
                 <AlertTriangle className="w-10 h-10 text-yellow-500 mb-2" />
                 <p className="text-xs text-cosmic-400">
