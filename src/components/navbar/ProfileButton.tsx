@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import AuthDialog from '../auth/AuthDialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -9,7 +10,7 @@ import { UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProfileDropdownMenu from './ProfileDropdownMenu';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchUserProfile, ensureUserProfile } from '@/utils/profileUtils';
+import { fetchUserProfile, ensureUserProfile } from '@/utils/profile/profileUtils';
 import { toast } from 'sonner';
 
 const ProfileButton = () => {
