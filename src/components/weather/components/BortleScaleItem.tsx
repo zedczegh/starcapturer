@@ -39,11 +39,11 @@ const BortleScaleItem: React.FC<BortleScaleItemProps> = ({ bortleScale }) => {
   
   if (bortleScale === null) {
     return (
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 mb-1">
+      <div>
+        <div className="flex items-center gap-2 mb-2">
           <Star className="w-4 h-4 text-yellow-400" />
           <div className="flex items-center">
-            <span className="text-xs font-medium">{t("Bortle Scale", "波特尔指数")}</span>
+            <span className="text-sm font-medium">{t("Bortle Scale", "波特尔指数")}</span>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Info className="h-3.5 w-3.5 ml-1 text-cosmic-400 cursor-help" />
@@ -57,20 +57,22 @@ const BortleScaleItem: React.FC<BortleScaleItemProps> = ({ bortleScale }) => {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          <span className="text-xs text-muted-foreground">{t('Class', '等级')}</span>
-          <span className="text-right text-sm font-medium text-cosmic-400">{t("N/A", "暂无")}</span>
+        <div className="bg-cosmic-800/50 rounded-md p-2 mt-1">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">{t('Class', '等级')}</span>
+            <span className="text-right text-base font-medium text-cosmic-400">{t("N/A", "暂无")}</span>
+          </div>
         </div>
       </div>
     );
   }
   
   return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2 mb-1">
+    <div>
+      <div className="flex items-center gap-2 mb-2">
         <Star className="w-4 h-4 text-yellow-400" />
         <div className="flex items-center">
-          <span className="text-xs font-medium">{t("Bortle Scale", "波特尔指数")}</span>
+          <span className="text-sm font-medium">{t("Bortle Scale", "波特尔指数")}</span>
           <Tooltip>
             <TooltipTrigger asChild>
               <Info className="h-3.5 w-3.5 ml-1 text-cosmic-400 cursor-help" />
@@ -84,18 +86,20 @@ const BortleScaleItem: React.FC<BortleScaleItemProps> = ({ bortleScale }) => {
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-        <span className="text-xs text-muted-foreground">{t('Class', '等级')}</span>
-        <span className={`text-right text-sm font-medium ${getBortleColorClass(bortleScale)}`}>
-          {bortleScale}
-        </span>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
-        <span className="text-xs text-muted-foreground">{t('Description', '描述')}</span>
-        <span className="text-right text-xs text-cosmic-300">
-          {getBortleDescription(bortleScale)}
-        </span>
+      <div className="bg-cosmic-800/50 rounded-md p-2 mt-1">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-muted-foreground">{t('Class', '等级')}</span>
+          <span className={`text-right text-base font-medium ${getBortleColorClass(bortleScale)}`}>
+            {bortleScale}
+          </span>
+        </div>
+        
+        <div className="flex justify-between items-center mt-1">
+          <span className="text-sm text-muted-foreground">{t('Description', '描述')}</span>
+          <span className="text-right text-xs text-cosmic-300">
+            {getBortleDescription(bortleScale)}
+          </span>
+        </div>
       </div>
     </div>
   );

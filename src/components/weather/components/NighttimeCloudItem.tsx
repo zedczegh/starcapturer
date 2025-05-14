@@ -25,11 +25,11 @@ const NighttimeCloudItem: React.FC<NighttimeCloudItemProps> = ({ nighttimeCloudD
   // Handle display when no data is available
   if (cloudCoverValue === null) {
     return (
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 mb-1">
+      <div>
+        <div className="flex items-center gap-2 mb-2">
           <CloudMoon className="w-4 h-4 text-blue-400" />
           <div className="flex items-center">
-            <span className="text-xs font-medium">{t("Astro Night Cloud Cover", "天文夜云量")}</span>
+            <span className="text-sm font-medium">{t("Astro Night Cloud Cover", "天文夜云量")}</span>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Info className="h-3.5 w-3.5 ml-1 text-cosmic-400 cursor-help" />
@@ -46,11 +46,13 @@ const NighttimeCloudItem: React.FC<NighttimeCloudItemProps> = ({ nighttimeCloudD
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          <span className="text-xs text-muted-foreground">{t('Coverage', '覆盖率')}</span>
-          <span className="text-right text-sm font-medium text-cosmic-400">
-            {t("N/A", "暂无")}
-          </span>
+        <div className="bg-cosmic-800/50 rounded-md p-2 mt-1">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">{t('Coverage', '覆盖率')}</span>
+            <span className="text-right text-base font-medium text-cosmic-400">
+              {t("N/A", "暂无")}
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -59,15 +61,15 @@ const NighttimeCloudItem: React.FC<NighttimeCloudItemProps> = ({ nighttimeCloudD
   // Ensure the value is a percentage (0-100)
   const normalizedCloudCover = Math.max(0, Math.min(100, cloudCoverValue));
   
-  // Evening and morning data for tooltip
+  // Evening and morning data for detailed display
   const hasDetailedData = nighttimeCloudData.evening !== null || nighttimeCloudData.morning !== null;
   
   return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2 mb-1">
+    <div>
+      <div className="flex items-center gap-2 mb-2">
         <CloudMoon className="w-4 h-4 text-blue-400" />
         <div className="flex items-center">
-          <span className="text-xs font-medium">{t("Astro Night Cloud Cover", "天文夜云量")}</span>
+          <span className="text-sm font-medium">{t("Astro Night Cloud Cover", "天文夜云量")}</span>
           <Tooltip>
             <TooltipTrigger asChild>
               <Info className="h-3.5 w-3.5 ml-1 text-cosmic-400 cursor-help" />
@@ -91,34 +93,36 @@ const NighttimeCloudItem: React.FC<NighttimeCloudItemProps> = ({ nighttimeCloudD
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-        <span className="text-xs text-muted-foreground">{t('Coverage', '覆盖率')}</span>
-        <span className={`text-right text-sm font-medium ${getCloudCoverColorClass(normalizedCloudCover)}`}>
-          {normalizedCloudCover.toFixed(1)}%
-        </span>
-      </div>
-      
-      {hasDetailedData && (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
-          {typeof nighttimeCloudData.evening === 'number' && (
-            <>
-              <span className="text-xs text-muted-foreground">{t('Evening', '晚上')}</span>
-              <span className="text-right text-xs text-cosmic-300">
-                {nighttimeCloudData.evening.toFixed(1)}%
-              </span>
-            </>
-          )}
-          
-          {typeof nighttimeCloudData.morning === 'number' && (
-            <>
-              <span className="text-xs text-muted-foreground">{t('Morning', '早上')}</span>
-              <span className="text-right text-xs text-cosmic-300">
-                {nighttimeCloudData.morning.toFixed(1)}%
-              </span>
-            </>
-          )}
+      <div className="bg-cosmic-800/50 rounded-md p-2 mt-1">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-muted-foreground">{t('Coverage', '覆盖率')}</span>
+          <span className={`text-right text-base font-medium ${getCloudCoverColorClass(normalizedCloudCover)}`}>
+            {normalizedCloudCover.toFixed(1)}%
+          </span>
         </div>
-      )}
+        
+        {hasDetailedData && (
+          <div className="mt-1">
+            {typeof nighttimeCloudData.evening === 'number' && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">{t('Evening', '晚上')}</span>
+                <span className="text-right text-xs text-cosmic-300">
+                  {nighttimeCloudData.evening.toFixed(1)}%
+                </span>
+              </div>
+            )}
+            
+            {typeof nighttimeCloudData.morning === 'number' && (
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-sm text-muted-foreground">{t('Morning', '早上')}</span>
+                <span className="text-right text-xs text-cosmic-300">
+                  {nighttimeCloudData.morning.toFixed(1)}%
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
