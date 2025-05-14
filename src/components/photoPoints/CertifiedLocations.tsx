@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoLocationCard from './PhotoLocationCard';
 import { Button } from '../ui/button';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import CertificationFilter, { CertificationType } from './filters/CertificationFilter';
 import SearchBar from './filters/SearchBar';
@@ -12,20 +11,20 @@ import { useCertifiedLocationsLoader } from '@/hooks/photoPoints/useCertifiedLoc
 interface CertifiedLocationsProps {
   locations: SharedAstroSpot[];
   loading: boolean;
-  hasMore: boolean;
-  onLoadMore: () => void;
-  onViewDetails: (location: SharedAstroSpot) => void;
+  onLocationClick?: (location: SharedAstroSpot) => void; // Make optional and match name used in PhotoPointsView
+  hasMore?: boolean;
+  onLoadMore?: () => void;
   onRefresh?: () => void;
-  initialLoad: boolean;
+  initialLoad?: boolean;
 }
 
 const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
   locations,
   loading,
-  hasMore,
+  onLocationClick,
+  hasMore = false,
   onLoadMore,
-  onViewDetails,
-  initialLoad
+  initialLoad = false
 }) => {
   const { t } = useLanguage();
   const [selectedType, setSelectedType] = useState<CertificationType>('all');
@@ -189,7 +188,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
             key={location.id || `${location.latitude}-${location.longitude}-${index}`}
             location={location}
             index={index}
-            onViewDetails={() => onViewDetails(location)}
+            onViewDetails={onLocationClick ? () => onLocationClick(location) : undefined}
             showRealTimeSiqs={true}
           />
         ))}
@@ -206,7 +205,7 @@ const CertifiedLocations: React.FC<CertifiedLocationsProps> = ({
             {isLoadingLocations ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t("Loading...", "加载中...")}
+                {t("Loading...", "��载中...")}
               </>
             ) : (
               t("Load More", "加载更多")

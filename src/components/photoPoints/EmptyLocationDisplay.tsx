@@ -4,21 +4,27 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { RefreshCcw } from "lucide-react";
 
-// Update the props interface to include activeView
+// Update the props interface to include title and description props
 interface EmptyLocationDisplayProps {
   userLocation?: { latitude: number; longitude: number };
   onRefresh: () => void;
   activeView?: "certified" | "calculated";
+  title?: string; // Add title prop
+  description?: string; // Add description prop
 }
 
 const EmptyLocationDisplay: React.FC<EmptyLocationDisplayProps> = ({
   userLocation,
   onRefresh,
-  activeView = "certified"
+  activeView = "certified",
+  title, // Use custom title if provided
+  description // Use custom description if provided
 }) => {
   const { t } = useLanguage();
 
   const getTitle = () => {
+    if (title) return title;
+    
     if (activeView === "certified") {
       return t(
         "No Certified Dark Sky Locations Found",
@@ -32,6 +38,8 @@ const EmptyLocationDisplay: React.FC<EmptyLocationDisplayProps> = ({
   };
 
   const getDescription = () => {
+    if (description) return description;
+    
     if (activeView === "certified") {
       return t(
         "There are no certified dark sky locations in your current view.",

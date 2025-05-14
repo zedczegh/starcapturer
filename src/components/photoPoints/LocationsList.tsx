@@ -79,7 +79,7 @@ const LocationsList: React.FC<LocationsListProps> = ({
             <PhotoLocationCard
               location={location}
               index={index}
-              onViewDetails={onViewDetails || (() => {})}
+              onViewDetails={onViewDetails}
               showRealTimeSiqs={showRealTimeSiqs}
             />
           </motion.div>

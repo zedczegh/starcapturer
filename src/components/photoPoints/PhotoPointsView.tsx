@@ -27,13 +27,7 @@ interface PhotoPointsViewProps {
   loadMoreCalculated?: () => void;
   loadMoreClickCount?: number;
   maxLoadMoreClicks?: number;
-}
-
-// Update EmptyLocationDisplayProps to include all required properties
-interface EmptyLocationDisplayProps {
-  userLocation?: { latitude: number; longitude: number };
-  onRefresh: () => void;
-  activeView?: "certified" | "calculated";
+  currentSiqs?: number | null; // Add currentSiqs prop
 }
 
 const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
@@ -55,13 +49,17 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   loadMoreCalculated,
   loadMoreClickCount = 0,
   maxLoadMoreClicks = 3,
+  currentSiqs = null, // Provide default value
 }) => {
   const { t } = useLanguage();
 
   // If no location is selected or available
   if (!effectiveLocation) {
     return (
-      <CurrentLocationReminder />
+      <CurrentLocationReminder 
+        currentSiqs={currentSiqs} 
+        isVisible={!!currentSiqs && currentSiqs > 0} 
+      />
     );
   }
 
@@ -71,6 +69,9 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
       <PhotoPointsMap
         userLocation={effectiveLocation}
         locations={activeView === "certified" ? certifiedLocations : calculatedLocations}
+        certifiedLocations={certifiedLocations} // Pass required prop
+        calculatedLocations={calculatedLocations} // Pass required prop
+        activeView={activeView} // Pass required prop
         onLocationClick={onLocationClick}
         onLocationUpdate={onLocationUpdate}
         searchRadius={activeView === "certified" ? searchRadius : calculatedSearchRadius}
@@ -113,7 +114,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     <CertifiedLocations
       locations={certifiedLocations}
       loading={loading}
-      onLocationClick={onLocationClick}
+      onLocationClick={onLocationClick} // Pass using the correct prop name
     />
   );
 };

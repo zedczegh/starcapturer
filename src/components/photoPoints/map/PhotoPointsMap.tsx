@@ -1,16 +1,14 @@
-
 import React, { useEffect } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { usePhotoPointsMapContainer } from '@/hooks/photoPoints/usePhotoPointsMapContainer';
 import MapContainer from './MapContainer';
-import PageLoader from '@/components/loaders/PageLoader';
 
 interface PhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
-  certifiedLocations: SharedAstroSpot[];
-  calculatedLocations: SharedAstroSpot[];
-  activeView: 'certified' | 'calculated';
+  certifiedLocations?: SharedAstroSpot[]; // Make optional
+  calculatedLocations?: SharedAstroSpot[]; // Make optional
+  activeView?: 'certified' | 'calculated'; // Make optional
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;
@@ -20,9 +18,9 @@ const PhotoPointsMap: React.FC<PhotoPointsMapProps> = (props) => {
   const { 
     userLocation,
     locations,
-    certifiedLocations,
-    calculatedLocations,
-    activeView,
+    certifiedLocations = [], // Provide default value
+    calculatedLocations = [], // Provide default value
+    activeView = 'calculated', // Provide default value
     searchRadius,
     onLocationClick,
     onLocationUpdate

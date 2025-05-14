@@ -56,11 +56,12 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
       
       {hasMore && !loading && (
         <LoadMoreButtons
-          loadMore={loadMore}
+          onLoadMore={loadMore} // Changed from loadMore to onLoadMore
           loadMoreClickCount={loadMoreClickCount}
           maxLoadMoreClicks={maxLoadMoreClicks}
           canLoadMoreCalculated={canLoadMoreCalculated}
-          loadMoreCalculated={loadMoreCalculated}
+          onLoadMoreCalculated={loadMoreCalculated}
+          hasMore={hasMore}
         />
       )}
     </div>
