@@ -76,3 +76,52 @@ export function getBortleBasedSiqs(bortleScale: number): number {
   // Simple inverse relationship - higher Bortle means lower SIQS
   return 10 - bortleScale * 0.8;
 }
+
+/**
+ * Check if one SIQS score is greater than another
+ * Handles various input formats and normalizes before comparing
+ */
+export function isSiqsGreaterThan(a: number | any, b: number | any): boolean {
+  const scoreA = getSiqsScore(a);
+  const scoreB = getSiqsScore(b);
+  return normalizeToSiqsScale(scoreA) > normalizeToSiqsScale(scoreB);
+}
+
+/**
+ * Check if a SIQS score is at least a certain value
+ * Handles various input formats and normalizes before comparing
+ */
+export function isSiqsAtLeast(a: number | any, b: number | any): boolean {
+  const scoreA = getSiqsScore(a);
+  const scoreB = getSiqsScore(b);
+  return normalizeToSiqsScale(scoreA) >= normalizeToSiqsScale(scoreB);
+}
+
+/**
+ * Sort locations by their SIQS scores (highest first)
+ * Handles locations with various SIQS score formats
+ */
+export function sortLocationsBySiqs(locations: any[]): any[] {
+  if (!Array.isArray(locations)) return [];
+  
+  return [...locations].sort((a, b) => {
+    let scoreA = 0;
+    let scoreB = 0;
+    
+    // Try to get SIQS from various possible properties
+    if (a) {
+      if (a.realTimeSiqs !== undefined) scoreA = getSiqsScore(a.realTimeSiqs);
+      else if (a.siqs !== undefined) scoreA = getSiqsScore(a.siqs);
+      else if (a.siqsResult) scoreA = getSiqsScore(a.siqsResult);
+    }
+    
+    if (b) {
+      if (b.realTimeSiqs !== undefined) scoreB = getSiqsScore(b.realTimeSiqs);
+      else if (b.siqs !== undefined) scoreB = getSiqsScore(b.siqs);
+      else if (b.siqsResult) scoreB = getSiqsScore(b.siqsResult);
+    }
+    
+    // Sort descending (highest SIQS first)
+    return scoreB - scoreA;
+  });
+}
