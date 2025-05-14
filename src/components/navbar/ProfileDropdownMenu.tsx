@@ -6,7 +6,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle } from 'lucide-react';
+import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -64,6 +64,8 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
           { icon: User, label: t('Profile', '个人资料'), path: '/profile' },
           { icon: BookmarkPlus, label: t('My Collections', '我的收藏'), path: '/collections' },
           { icon: MapPin, label: t('My AstroSpots', '我的观星点'), path: '/manage-astro-spots' },
+          { icon: Link2, label: t('Useful Links', '资源'), path: '/useful-links' },
+          { icon: Info, label: t('About SIQS', '关于SIQS'), path: '/about' },
           { icon: Settings, label: t('Settings', '设置'), path: '/settings' },
         ].map(({ icon: Icon, label, path }, i) => (
           <motion.div
@@ -85,7 +87,7 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
         
         <DropdownMenuSeparator />
         <motion.div
-          custom={6}
+          custom={8}
           initial="hidden"
           animate="visible"
           variants={menuItemVariants}

@@ -39,12 +39,6 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
         <NavLink to="/share" active={location.pathname === "/share"}>
           {t("Bortle Now", "实时光污染")}
         </NavLink>
-        <NavLink to="/useful-links" active={location.pathname === "/useful-links"}>
-          {t("Resources", "资源")}
-        </NavLink>
-        <NavLink to="/about" active={location.pathname === "/about"}>
-          {t("About SIQS", "关于SIQS")}
-        </NavLink>
       </nav>
       
       <div className="hidden md:flex items-center space-x-2">
