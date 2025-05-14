@@ -83,8 +83,9 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${getTemperatureColor(temperature)}`}>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <span className="text-xs text-muted-foreground">{t('Value', '数值')}</span>
+                  <span className={`text-right text-sm font-medium ${getTemperatureColor(temperature)}`}>
                     {temperature.toFixed(1)}°C
                   </span>
                 </div>
@@ -106,8 +107,9 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${getHumidityColor(humidity)}`}>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <span className="text-xs text-muted-foreground">{t('Value', '数值')}</span>
+                  <span className={`text-right text-sm font-medium ${getHumidityColor(humidity)}`}>
                     {humidity}%
                   </span>
                 </div>
@@ -129,8 +131,9 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${getWindColor(windSpeed)}`}>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <span className="text-xs text-muted-foreground">{t('Value', '数值')}</span>
+                  <span className={`text-right text-sm font-medium ${getWindColor(windSpeed)}`}>
                     {windSpeed} {t("km/h", "公里/小时")}
                   </span>
                 </div>
@@ -152,8 +155,9 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${getSeeingColor(seeingConditions)}`}>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <span className="text-xs text-muted-foreground">{t('Quality', '质量')}</span>
+                  <span className={`text-right text-sm font-medium ${getSeeingColor(seeingConditions)}`}>
                     {seeingConditions}
                   </span>
                 </div>
@@ -174,4 +178,3 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
 PrimaryConditions.displayName = 'PrimaryConditions';
 
 export default PrimaryConditions;
-
