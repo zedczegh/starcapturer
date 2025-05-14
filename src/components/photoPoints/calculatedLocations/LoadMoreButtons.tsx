@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 interface LoadMoreButtonsProps {
   hasMore: boolean;
-  onLoadMore: () => void; // Changed from loadMore to onLoadMore
+  onLoadMore: () => void;
   canLoadMoreCalculated?: boolean;
   onLoadMoreCalculated?: () => void;
   loadMoreClickCount?: number;
@@ -16,7 +16,7 @@ interface LoadMoreButtonsProps {
 
 const LoadMoreButtons: React.FC<LoadMoreButtonsProps> = ({
   hasMore,
-  onLoadMore, // Updated prop name
+  onLoadMore,
   canLoadMoreCalculated = false,
   onLoadMoreCalculated,
   loadMoreClickCount = 0,
@@ -94,7 +94,7 @@ const LoadMoreButtons: React.FC<LoadMoreButtonsProps> = ({
         <div className="flex justify-center">
           <Button 
             variant="outline" 
-            onClick={onLoadMore} // Updated prop usage
+            onClick={onLoadMore}
             className="group sci-fi-btn border-primary/40 hover:bg-cosmic-800/50 hover:opacity-90 transition-all duration-300"
           >
             {t("Load More Locations", "加载更多位置")}

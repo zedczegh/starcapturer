@@ -1,70 +1,108 @@
 
-import React from "react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import LocationsGrid from "./calculatedLocations/LocationsGrid";
-import LoadMoreButtons from "./calculatedLocations/LoadMoreButtons";
-import EmptyCalculatedState from "./calculatedLocations/EmptyCalculatedState";
+import React from 'react';
+import { useLanguage } from "@/contexts/LanguageContext";
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { useIsMobile } from '@/hooks/use-mobile';
+import LocationsGrid from './calculatedLocations/LocationsGrid';
+import EmptyCalculatedState from './calculatedLocations/EmptyCalculatedState';
+import LoadMoreButtons from './calculatedLocations/LoadMoreButtons';
+import { useExpandSearchRadius } from '@/hooks/photoPoints/useExpandSearchRadius';
+import { Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { isSiqsGreaterThan, sortLocationsBySiqs } from '@/utils/siqsHelpers';
 
-// Update the props interface to include all required properties
-export interface CalculatedLocationsProps {
+interface CalculatedLocationsProps {
   locations: SharedAstroSpot[];
-  searchRadius: number;
   loading: boolean;
   hasMore: boolean;
-  loadMore: () => void;
+  onLoadMore: () => void;
+  onRefresh?: () => void;
+  searchRadius?: number;
+  initialLoad?: boolean;
+  onLoadMoreCalculated?: () => void;
+  canLoadMoreCalculated?: boolean;
   loadMoreClickCount?: number;
   maxLoadMoreClicks?: number;
-  onLocationClick: (location: SharedAstroSpot) => void;
-  userLocation?: { latitude: number; longitude: number };
-  initialLoad?: boolean;
-  canLoadMoreCalculated?: boolean;
-  loadMoreCalculated?: () => void;
 }
 
-const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
-  locations,
-  searchRadius,
-  loading,
-  hasMore,
-  loadMore,
-  loadMoreClickCount = 0,
-  maxLoadMoreClicks = 3,
-  onLocationClick,
-  userLocation,
+const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({ 
+  locations, 
+  loading, 
+  hasMore, 
+  onLoadMore,
+  onRefresh,
+  searchRadius = 0,
   initialLoad = false,
+  onLoadMoreCalculated,
   canLoadMoreCalculated = false,
-  loadMoreCalculated,
+  loadMoreClickCount = 0,
+  maxLoadMoreClicks = 2
 }) => {
-  const isMobile = window.innerWidth < 768;
+  const { t } = useLanguage();
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
-  if (!loading && locations.length === 0) {
+  // Set up the event listener for expanding search radius
+  useExpandSearchRadius({ onRefresh });
+  
+  // Filter out locations with SIQS score of 0
+  const validLocations = locations.filter(loc => loc.siqs !== undefined && isSiqsGreaterThan(loc.siqs, 0));
+  
+  // Ensure the locations are properly sorted by SIQS score
+  const sortedLocations = sortLocationsBySiqs(validLocations);
+  
+  // Determine if we should show loading state
+  if (loading && sortedLocations.length === 0) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+      </div>
+    );
+  }
+  
+  // Show empty state if no locations available
+  if (sortedLocations.length === 0) {
     return (
       <EmptyCalculatedState 
-        searchRadius={searchRadius} 
+        searchRadius={searchRadius}
+        onRefresh={onRefresh}
       />
     );
   }
   
+  const handleViewLocation = (point: SharedAstroSpot) => {
+    const locationId = `loc-${point.latitude.toFixed(6)}-${point.longitude.toFixed(6)}`;
+    
+    // Navigate to location details page
+    navigate(`/location/${locationId}`, {
+      state: {
+        ...point,
+        id: locationId,
+        timestamp: new Date().toISOString()
+      }
+    });
+    toast.info(t("Opening location details", "正在打开位置详情"));
+  };
+  
   return (
-    <div className="w-full">
+    <>
       <LocationsGrid 
-        locations={locations} 
+        locations={sortedLocations}
         initialLoad={initialLoad}
         isMobile={isMobile}
-        onViewDetails={onLocationClick} 
+        onViewDetails={handleViewLocation}
       />
       
-      {hasMore && !loading && (
-        <LoadMoreButtons
-          onLoadMore={loadMore} // Changed from loadMore to onLoadMore
-          loadMoreClickCount={loadMoreClickCount}
-          maxLoadMoreClicks={maxLoadMoreClicks}
-          canLoadMoreCalculated={canLoadMoreCalculated}
-          onLoadMoreCalculated={loadMoreCalculated}
-          hasMore={hasMore}
-        />
-      )}
-    </div>
+      <LoadMoreButtons 
+        hasMore={hasMore}
+        onLoadMore={onLoadMore}
+        canLoadMoreCalculated={canLoadMoreCalculated}
+        onLoadMoreCalculated={onLoadMoreCalculated}
+        loadMoreClickCount={loadMoreClickCount}
+        maxLoadMoreClicks={maxLoadMoreClicks}
+      />
+    </>
   );
 };
 

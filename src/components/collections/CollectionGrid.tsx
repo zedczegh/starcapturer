@@ -79,8 +79,10 @@ const CollectionGrid: React.FC<CollectionGridProps> = ({
                 ...location,
                 name: customName
               }}
-              // Remove the index prop as it's not in PhotoLocationCardProps
-              onViewDetails={() => onViewDetails(location)}
+              index={index}
+              onViewDetails={onViewDetails}
+              showRealTimeSiqs={true}
+              showBortleScale={false}
             />
           </div>
         );

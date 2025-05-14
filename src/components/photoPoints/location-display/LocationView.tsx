@@ -45,9 +45,6 @@ const LocationView: React.FC<LocationViewProps> = ({
   }
   
   if (locations.length === 0) {
-    // Use the onRefresh function that's required by EmptyLocationDisplay
-    const dummyRefresh = () => console.log("Refresh requested but not implemented");
-    
     return (
       <EmptyLocationDisplay 
         title={emptyTitle || t("No locations found", "未找到地点")}
@@ -55,7 +52,6 @@ const LocationView: React.FC<LocationViewProps> = ({
           "Try adjusting your search criteria.",
           "尝试调整搜索条件。"
         )}
-        onRefresh={dummyRefresh} // Add required onRefresh prop with dummy function
       />
     );
   }

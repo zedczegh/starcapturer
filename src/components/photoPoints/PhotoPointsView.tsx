@@ -1,16 +1,14 @@
 
-import React from "react";
-import { SharedAstroSpot } from "@/lib/api/astroSpots";
-import { useLanguage } from "@/contexts/LanguageContext";
-import CertifiedLocations from "./CertifiedLocations";
-import CalculatedLocations from "./CalculatedLocations";
-import PhotoPointsMap from "./map/PhotoPointsMap";
-import EmptyLocationDisplay from "./EmptyLocationDisplay";
-import CurrentLocationReminder from "./CurrentLocationReminder";
+import React, { useCallback } from 'react';
+import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import PhotoPointsMap from './map/PhotoPointsMap';
+import CalculatedLocations from './CalculatedLocations';
+import CertifiedLocations from './CertifiedLocations';
+import { sortLocationsBySiqs } from '@/utils/siqsHelpers';
 
 interface PhotoPointsViewProps {
   showMap: boolean;
-  activeView: "certified" | "calculated";
+  activeView: 'certified' | 'calculated';
   initialLoad: boolean;
   effectiveLocation: { latitude: number; longitude: number } | null;
   certifiedLocations: SharedAstroSpot[];
@@ -20,14 +18,13 @@ interface PhotoPointsViewProps {
   loading: boolean;
   hasMore: boolean;
   loadMore: () => void;
-  refreshSiqs: () => void;
+  refreshSiqs?: () => void;
   onLocationClick: (location: SharedAstroSpot) => void;
   onLocationUpdate: (lat: number, lng: number) => void;
   canLoadMoreCalculated?: boolean;
   loadMoreCalculated?: () => void;
   loadMoreClickCount?: number;
   maxLoadMoreClicks?: number;
-  currentSiqs?: number | null; // Add currentSiqs prop
 }
 
 const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
@@ -45,78 +42,65 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   refreshSiqs,
   onLocationClick,
   onLocationUpdate,
-  canLoadMoreCalculated,
+  canLoadMoreCalculated = false,
   loadMoreCalculated,
   loadMoreClickCount = 0,
-  maxLoadMoreClicks = 3,
-  currentSiqs = null, // Provide default value
+  maxLoadMoreClicks = 2
 }) => {
-  const { t } = useLanguage();
+  const handleMapLocationUpdate = useCallback((lat: number, lng: number) => {
+    onLocationUpdate(lat, lng);
+  }, [onLocationUpdate]);
 
-  // If no location is selected or available
-  if (!effectiveLocation) {
-    return (
-      <CurrentLocationReminder 
-        currentSiqs={currentSiqs} 
-        isVisible={!!currentSiqs && currentSiqs > 0} 
-      />
-    );
-  }
-
-  // If map view is enabled
-  if (showMap) {
-    return (
-      <PhotoPointsMap
-        userLocation={effectiveLocation}
-        locations={activeView === "certified" ? certifiedLocations : calculatedLocations}
-        certifiedLocations={certifiedLocations} // Pass required prop
-        calculatedLocations={calculatedLocations} // Pass required prop
-        activeView={activeView} // Pass required prop
-        onLocationClick={onLocationClick}
-        onLocationUpdate={onLocationUpdate}
-        searchRadius={activeView === "certified" ? searchRadius : calculatedSearchRadius}
-      />
-    );
-  }
-
-  // If calculated view is enabled
-  if (activeView === "calculated") {
-    return (
-      <CalculatedLocations
-        userLocation={effectiveLocation}
-        locations={calculatedLocations}
-        searchRadius={calculatedSearchRadius}
-        loading={loading}
-        hasMore={hasMore}
-        loadMore={loadMore}
-        loadMoreClickCount={loadMoreClickCount}
-        maxLoadMoreClicks={maxLoadMoreClicks}
-        onLocationClick={onLocationClick}
-        initialLoad={initialLoad}
-        canLoadMoreCalculated={canLoadMoreCalculated}
-        loadMoreCalculated={loadMoreCalculated}
-      />
-    );
-  }
-
-  // If certified view is enabled
-  if (certifiedLocations.length === 0 && !loading) {
-    return (
-      <EmptyLocationDisplay
-        activeView={activeView}
-        userLocation={effectiveLocation}
-        onRefresh={refreshSiqs}
-      />
-    );
-  }
+  // Sort locations by SIQS score before displaying
+  const sortedCertifiedLocations = sortLocationsBySiqs(certifiedLocations);
+  const sortedCalculatedLocations = sortLocationsBySiqs(calculatedLocations);
 
   return (
-    <CertifiedLocations
-      locations={certifiedLocations}
-      loading={loading}
-      onLocationClick={onLocationClick} // Pass using the correct prop name
-    />
+    <div className="mt-4">
+      {showMap && (
+        <div className="mb-6 relative max-w-xl mx-auto">
+          <PhotoPointsMap
+            userLocation={effectiveLocation}
+            locations={activeView === 'certified' ? sortedCertifiedLocations : sortedCalculatedLocations}
+            onLocationClick={onLocationClick}
+            onLocationUpdate={handleMapLocationUpdate}
+            searchRadius={activeView === 'calculated' ? calculatedSearchRadius : searchRadius}
+            certifiedLocations={sortedCertifiedLocations}
+            calculatedLocations={sortedCalculatedLocations}
+            activeView={activeView}
+          />
+        </div>
+      )}
+
+      {!showMap && activeView === 'certified' && (
+        <CertifiedLocations
+          locations={sortedCertifiedLocations}
+          loading={loading}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          onViewDetails={onLocationClick}
+          onRefresh={refreshSiqs}
+          initialLoad={initialLoad}
+        />
+      )}
+
+      {!showMap && activeView === 'calculated' && (
+        <CalculatedLocations
+          locations={sortedCalculatedLocations}
+          loading={loading}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          onRefresh={refreshSiqs}
+          searchRadius={calculatedSearchRadius}
+          initialLoad={initialLoad}
+          canLoadMoreCalculated={canLoadMoreCalculated}
+          onLoadMoreCalculated={loadMoreCalculated}
+          loadMoreClickCount={loadMoreClickCount}
+          maxLoadMoreClicks={maxLoadMoreClicks}
+        />
+      )}
+    </div>
   );
 };
 
-export default PhotoPointsView;
+export default React.memo(PhotoPointsView);
