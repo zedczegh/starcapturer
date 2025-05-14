@@ -25,7 +25,8 @@ const LocationControls: React.FC<LocationControlsProps> = ({
     handleGetCurrentLocation
   } = useLocationControls({
     onLocationUpdate,
-    currentLocation
+    currentLocation,
+    setGettingUserLocation
   });
 
   return (

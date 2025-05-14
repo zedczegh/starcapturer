@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, FormEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search, X } from "lucide-react";
@@ -13,6 +13,7 @@ interface SearchInputProps {
   className?: string;
   autoFocus?: boolean;
   onFocus?: () => void;
+  onSubmit?: (e: FormEvent) => void;
 }
 
 const SearchInput: React.FC<SearchInputProps> = ({
@@ -22,13 +23,21 @@ const SearchInput: React.FC<SearchInputProps> = ({
   clearSearch,
   className = "",
   autoFocus = false,
-  onFocus
+  onFocus,
+  onSubmit
 }) => {
   const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (onSubmit) {
+      onSubmit(e);
+    }
   };
 
   // Auto-focus the input when requested
@@ -39,11 +48,11 @@ const SearchInput: React.FC<SearchInputProps> = ({
   }, [autoFocus]);
   
   return (
-    <div className={`relative ${className}`}>
+    <form onSubmit={handleSubmit} className={`relative ${className}`}>
       <Input 
         ref={inputRef}
         type="text" 
-        placeholder={t("Search for a location...", "搜索位置...")} 
+        placeholder={t("Search for a location or enter coordinates...", "搜索位置或输入坐标...")} 
         value={searchTerm} 
         onChange={handleSearchInputChange} 
         onFocus={onFocus}
@@ -70,7 +79,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         </div>
       )}
-    </div>
+    </form>
   );
 };
 

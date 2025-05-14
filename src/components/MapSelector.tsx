@@ -1,12 +1,13 @@
 
 import React, { useState, useRef, useMemo, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/input";
 import { SearchIcon, Loader2 } from "lucide-react";
 import { searchLocations } from "@/services/geocoding";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Location as LocationType } from "@/services/geocoding/types";
 import { saveLocation } from "@/utils/locationStorage";
 import { SIQSLocation } from "@/utils/locationStorage";
+import { parseCoordinateInput } from "@/utils/validation/coordinateValidator";
 
 interface MapSelectorProps {
   onLocationSelect?: (location: SIQSLocation) => void;
@@ -88,6 +89,22 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
         return;
       }
       
+      // Check if the input looks like coordinates
+      const coordinates = parseCoordinateInput(query);
+      if (coordinates) {
+        // No need to search API, we have valid coordinates
+        const coordLocation: LocationType = {
+          name: `${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}`,
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
+          placeDetails: t("Entered coordinates", "输入的坐标")
+        };
+        
+        setSearchResults([coordLocation]);
+        setIsSearching(false);
+        return;
+      }
+      
       setIsSearching(true);
       
       timeoutId = setTimeout(async () => {
@@ -103,13 +120,37 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
         }
       }, 300);
     };
-  }, [language]);
+  }, [language, t]);
   
   // Handle search input changes
   const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;
     setSearchQuery(query);
     debouncedSearch(query);
+  };
+  
+  // Handle form submission for direct coordinate entry
+  const handleFormSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    
+    // Check if current query is valid coordinates
+    const coordinates = parseCoordinateInput(searchQuery);
+    if (coordinates) {
+      const coordLocation: SIQSLocation = {
+        name: `${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}`,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude
+      };
+      
+      // Save to recent searches
+      saveToRecentSearches(coordLocation);
+      
+      // Use the location
+      handleLocationSelection(coordLocation);
+    } else if (searchResults.length > 0) {
+      // If not coordinates but we have search results, use the first one
+      handleSearchResultSelect(searchResults[0]);
+    }
   };
   
   // Handle location selection from search results
@@ -129,11 +170,11 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
   return (
     <div className="relative">
       {/* Search Input */}
-      <div className="relative">
+      <form onSubmit={handleFormSubmit} className="relative">
         <input
           type="text"
           ref={searchInputRef}
-          placeholder={t("Search for a location...", "搜索地点...")}
+          placeholder={t("Search for a location or enter coordinates...", "搜索地点或输入坐标...")}
           className="w-full px-4 py-2 rounded-md bg-cosmic-800 border border-cosmic-700 text-white focus:outline-none focus:border-primary transition-colors duration-200"
           onChange={handleSearchInputChange}
         />
@@ -144,7 +185,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
             <SearchIcon className="h-5 w-5 text-gray-400" />
           )}
         </div>
-      </div>
+      </form>
       
       {/* Search Results */}
       {searchResults.length > 0 && (
@@ -156,6 +197,9 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, onSelectLoc
               onClick={() => handleSearchResultSelect(result)}
             >
               {result.name}
+              {result.placeDetails && (
+                <p className="text-xs text-muted-foreground">{result.placeDetails}</p>
+              )}
             </li>
           ))}
         </ul>

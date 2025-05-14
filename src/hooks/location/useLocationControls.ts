@@ -9,18 +9,29 @@ import { useLocationNameTranslator } from "./useLocationNameTranslator";
 interface UseLocationControlsProps {
   onLocationUpdate: (location: { name: string; latitude: number; longitude: number }) => Promise<void>;
   currentLocation?: { latitude: number; longitude: number; name: string } | null;
+  setGettingUserLocation?: (state: boolean) => void;
 }
 
 export const useLocationControls = ({
   onLocationUpdate,
-  currentLocation
+  currentLocation,
+  setGettingUserLocation
 }: UseLocationControlsProps) => {
   const { t, language } = useLanguage();
   const { toast } = useToast();
   const { setCachedData, getCachedData } = useLocationDataCache();
-  const [gettingUserLocation, setGettingUserLocation] = useState(false);
+  const [gettingUserLocation, setGettingUserLocationInternal] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Use the setter function from props if provided, otherwise use the internal state
+  const setGettingLocationState = useCallback((state: boolean) => {
+    if (setGettingUserLocation) {
+      setGettingUserLocation(state);
+    } else {
+      setGettingUserLocationInternal(state);
+    }
+  }, [setGettingUserLocation]);
 
   // Get language translation utils
   const {
@@ -52,8 +63,13 @@ export const useLocationControls = ({
     placeDetails?: string;
   }) => {
     try {
-      const locationName = selectedLocation.name || 
-        `${t("Location at", "位置在")} ${selectedLocation.latitude.toFixed(4)}°, ${selectedLocation.longitude.toFixed(4)}°`;
+      // Check if this looks like raw coordinates
+      const isCoordinates = selectedLocation.name.includes(',') && 
+                           /^\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*$/.test(selectedLocation.name);
+      
+      const locationName = isCoordinates ? 
+        `${t("Location at", "位置在")} ${selectedLocation.latitude.toFixed(4)}°, ${selectedLocation.longitude.toFixed(4)}°` :
+        selectedLocation.name || `${t("Location at", "位置在")} ${selectedLocation.latitude.toFixed(4)}°, ${selectedLocation.longitude.toFixed(4)}°`;
       
       onLocationUpdate({
         name: locationName,
@@ -80,12 +96,12 @@ export const useLocationControls = ({
       return;
     }
 
-    setGettingUserLocation(true);
+    setGettingLocationState(true);
     setStatusMessage(t("Retrieving location data...", "正在获取位置数据..."));
 
     const locationTimeout = setTimeout(() => {
       if (gettingUserLocation) {
-        setGettingUserLocation(false);
+        setGettingLocationState(false);
         setStatusMessage(t("Could not get your location in time. Please try again.", "无法及时获取您的位置。请重试。"));
       }
     }, 10000);
@@ -119,7 +135,7 @@ export const useLocationControls = ({
           console.error("Error getting current location:", error);
           setStatusMessage(t("Failed to get your current location.", "无法获取您的当前位置。"));
         } finally {
-          setGettingUserLocation(false);
+          setGettingLocationState(false);
         }
       },
       (error) => {
@@ -140,11 +156,11 @@ export const useLocationControls = ({
         }
         
         setStatusMessage(errorMessage);
-        setGettingUserLocation(false);
+        setGettingLocationState(false);
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
-  }, [t, setStatusMessage, gettingUserLocation, onLocationUpdate, language, setCachedData, getCachedData, createTranslationRequestKey]);
+  }, [t, setStatusMessage, gettingUserLocation, onLocationUpdate, language, setCachedData, getCachedData, createTranslationRequestKey, setGettingLocationState]);
 
   return {
     gettingUserLocation,

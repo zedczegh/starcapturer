@@ -9,6 +9,7 @@ import SearchInput from "@/components/map/SearchInput";
 import SearchResults from "@/components/map/SearchResults";
 import { getCurrentPosition } from "@/utils/geolocationUtils";
 import { Button } from "@/components/ui/button";
+import { parseCoordinateInput } from "@/utils/validation/coordinateValidator";
 import { 
   enhanceLocationWithBortleScale, 
   enhanceSelectedLocation, 
@@ -30,6 +31,20 @@ const LocationSearch: React.FC<LocationSearchProps> = ({ onSelectLocation }) => 
   useEffect(() => {
     if (!searchTerm || searchTerm.length < 2) {
       setResults([]);
+      return;
+    }
+
+    // Check if the search term is coordinates
+    const coordinates = parseCoordinateInput(searchTerm);
+    if (coordinates) {
+      const coordLocation: Location = {
+        name: `${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}`,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        placeDetails: t("Entered coordinates", "输入的坐标")
+      };
+      
+      setResults([coordLocation]);
       return;
     }
 
@@ -80,6 +95,26 @@ const LocationSearch: React.FC<LocationSearchProps> = ({ onSelectLocation }) => 
       }
     );
   };
+  
+  // Handle direct coordinate form submission
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const coordinates = parseCoordinateInput(searchTerm);
+    if (coordinates) {
+      const location = {
+        name: `${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}`,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        placeDetails: t("Entered coordinates", "输入的坐标")
+      };
+      
+      handleSelectLocation(location);
+    } else if (results.length > 0) {
+      // If not coordinates but we have search results, use the first one
+      handleSelectLocation(results[0]);
+    }
+  };
 
   return (
     <div className="space-y-4 py-4">
@@ -87,13 +122,15 @@ const LocationSearch: React.FC<LocationSearchProps> = ({ onSelectLocation }) => 
         {t("Search for a Location", "搜索位置")}
       </h2>
       
-      <SearchInput
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        isLoading={isLoading}
-        clearSearch={clearSearch}
-        autoFocus={true}
-      />
+      <form onSubmit={handleFormSubmit}>
+        <SearchInput
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          isLoading={isLoading}
+          clearSearch={clearSearch}
+          autoFocus={true}
+        />
+      </form>
       
       <div className="min-h-[200px] mt-2 border rounded-md bg-background/50">
         <SearchResults
