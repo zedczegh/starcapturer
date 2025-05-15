@@ -1,12 +1,12 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocations';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { isWaterLocation } from '@/utils/validation';
 import { calculateDistance } from '@/utils/geoUtils';
 import { isCertifiedLocation } from '@/utils/locationFiltering';
+import { sortLocationsBySiqs } from '@/utils/siqsHelpers';
 
 interface UsePhotoPointsSearchProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -19,15 +19,16 @@ export const usePhotoPointsSearch = ({
   userLocation,
   currentSiqs,
   searchRadius = 100,
-  maxInitialResults = 50 // Increased from 5 to 50 to show more locations initially
+  maxInitialResults = 50
 }: UsePhotoPointsSearchProps) => {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [displayedLocations, setDisplayedLocations] = useState<SharedAstroSpot[]>([]);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [activeView, setActiveView] = useState<'certified' | 'calculated'>('certified');
 
-  // Always use a large radius for certified locations to get ALL of them globally
-  const effectiveRadius = activeView === 'certified' ? 500000 : searchRadius;
+  // Always use a large radius for certified locations to get all of them globally
+  const effectiveRadius = activeView === 'certified' ? 100000 : searchRadius;
   
   const {
     locations,
@@ -154,7 +155,7 @@ export const usePhotoPointsSearch = ({
     
     toast.info(t("Refreshing locations...", "正在刷新位置..."));
     refreshSiqsData();
-  }, [refreshSiqsData, t, userLocation]);
+  }, [refreshSiqsData, t, userLocation, toast]);
 
   // Function to switch view type
   const switchView = useCallback((view: 'certified' | 'calculated') => {

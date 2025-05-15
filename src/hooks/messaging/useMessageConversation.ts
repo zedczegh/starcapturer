@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMessaging } from '@/hooks/useMessaging';
 import { ConversationPartner } from './useConversations';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export const useMessageConversation = () => {
   const location = useLocation();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeConversation, setActiveConversation] = useState<ConversationPartner | null>(null);
   const [isProcessingAction, setIsProcessingAction] = useState(false);
@@ -103,11 +104,10 @@ export const useMessageConversation = () => {
   
   const handleSendMessage = useCallback(async (text: string, imageFile?: File | null, locationData?: any) => {
     if (!activeConversation) {
-      toast({
-        variant: "destructive",
-        title: t("No active conversation selected", "未选择活动对话"),
-        description: t("Please select a conversation first", "请先选择对话")
-      });
+      toast.error(
+        t("No active conversation selected", "未选择活动对话"),
+        t("Please select a conversation first", "请先选择对话")
+      );
       return;
     }
     
@@ -115,11 +115,10 @@ export const useMessageConversation = () => {
       await sendMessage(activeConversation.id, text, imageFile, locationData);
     } catch (error) {
       console.error("Error sending message:", error);
-      toast({
-        variant: "destructive",
-        title: t("Failed to send message", "发送消息失败"),
-        description: t("Please try again later", "请稍后重试")
-      });
+      toast.error(
+        t("Failed to send message", "发送消息失败"),
+        t("Please try again later", "请稍后重试")
+      );
     }
   }, [activeConversation, sendMessage, t, toast]);
   
@@ -130,11 +129,10 @@ export const useMessageConversation = () => {
       return result;
     } catch (error) {
       console.error("Error unsending message:", error);
-      toast({
-        variant: "destructive",
-        title: t("Failed to unsend message", "撤回消息失败"),
-        description: t("Please try again later", "请稍后重试")
-      });
+      toast.error(
+        t("Failed to unsend message", "撤回消息失败"),
+        t("Please try again later", "请稍后重试")
+      );
       return false;
     } finally {
       setIsProcessingAction(false);
@@ -158,20 +156,19 @@ export const useMessageConversation = () => {
         // Remove the conversation from the local state immediately
         setLocalConversations(prev => prev.filter(conv => conv.id !== partnerId));
         
-        toast({
-          title: t("Conversation deleted", "对话已删除"),
-          description: t("The conversation has been removed", "对话已被删除")
-        });
+        toast.success(
+          t("Conversation deleted", "对话已删除"),
+          t("The conversation has been removed", "对话已被删除")
+        );
       }
       
       return result;
     } catch (error) {
       console.error("Error deleting conversation:", error);
-      toast({
-        variant: "destructive",
-        title: t("Failed to delete conversation", "删除对话失败"),
-        description: t("Please try again later", "请稍后重试")
-      });
+      toast.error(
+        t("Failed to delete conversation", "删除对话失败"),
+        t("Please try again later", "请稍后重试")
+      );
       return false;
     } finally {
       setIsProcessingAction(false);

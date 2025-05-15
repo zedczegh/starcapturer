@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { fetchFromSupabase } from '@/utils/supabaseFetch';
 import { extractLocationFromUrl } from '@/utils/locationLinkParser';
@@ -16,6 +16,7 @@ export const useMessages = () => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const fetchInProgressRef = useRef<Record<string, boolean>>({});
   const lastFetchTimeRef = useRef<Record<string, number>>({});
   const activePartnerRef = useRef<string | null>(null);
@@ -167,16 +168,15 @@ export const useMessages = () => {
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
-      toast({
-        variant: "destructive",
-        title: t("Failed to load messages", "加载消息失败"),
-        description: t("Please try again", "请重试")
-      });
+      toast.error(
+        t("Failed to load messages", "加载消息失败"),
+        t("Please try again", "请重试")
+      );
     } finally {
       setLoading(false);
       fetchInProgressRef.current[conversationPartnerId] = false;
     }
-  }, [user, t, parseMessageData]);
+  }, [user, t, parseMessageData, toast]);
   
   return { messages, setMessages, fetchMessages, loading };
 };

@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getLocationNameForCoordinates } from "@/components/location/map/LocationNameService";
@@ -81,11 +80,7 @@ export const useLocationControls = ({
     } catch (error) {
       console.error("Error updating location:", error);
       setStatusMessage(t("Failed to update location", "无法更新位置"));
-      toast({
-        title: t("Error", "错误"),
-        description: t("Failed to update location", "无法更新位置"),
-        variant: "destructive"
-      });
+      toast.error(t("Error", "错误"), t("Failed to update location", "无法更新位置"));
     }
   }, [onLocationUpdate, t, setStatusMessage, toast]);
 

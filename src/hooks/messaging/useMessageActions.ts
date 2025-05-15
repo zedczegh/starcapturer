@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { optimizedCache } from '@/utils/optimizedCache';
 import { v4 as uuidv4 } from 'uuid';
@@ -24,6 +24,7 @@ export const useMessageActions = (
   const [sending, setSending] = useState(false);
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { toast } = useToast();
 
   const sendMessage = useCallback(
     async (receiverId: string, messageText: string, imageFile?: File | null, locationData?: any) => {
@@ -87,27 +88,22 @@ export const useMessageActions = (
         console.log('Message sent successfully');
       } catch (error: any) {
         console.error('Error sending message:', error.message);
-        toast({
-          variant: "destructive",
-          title: t("Error sending message", "发送消息出错"),
-          description: error.message
-        });
+        toast.error(t("Error sending message", "发送消息出错"), error.message);
         throw error;
       } finally {
         setSending(false);
       }
     },
-    [user, t]
+    [user, t, toast]
   );
 
   const unsendMessage = useCallback(
     async (messageId: string): Promise<boolean> => {
       if (!user) {
-        toast({
-          variant: "destructive",
-          title: t("Not authenticated", "未经身份验证"),
-          description: t("Please log in to manage messages", "请登录以管理消息")
-        });
+        toast.error(
+          t("Not authenticated", "未经身份验证"),
+          t("Please log in to manage messages", "请登录以管理消息")
+        );
         return false;
       }
 
@@ -123,11 +119,10 @@ export const useMessageActions = (
         
         // Verify the user is the sender
         if (messageData.sender_id !== user.id) {
-          toast({
-            variant: "destructive",
-            title: t("Unauthorized", "未授权"),
-            description: t("You can only unsend your own messages", "您只能撤回自己的消息")
-          });
+          toast.error(
+            t("Unauthorized", "未授权"),
+            t("You can only unsend your own messages", "您只能撤回自己的消息")
+          );
           return false;
         }
 
@@ -151,25 +146,23 @@ export const useMessageActions = (
         return true;
       } catch (error: any) {
         console.error('Error unsending message:', error.message);
-        toast({
-          variant: "destructive",
-          title: t("Error unsending message", "撤回消息出错"),
-          description: error.message
-        });
+        toast.error(
+          t("Error unsending message", "撤回消息出错"),
+          error.message
+        );
         return false;
       }
     },
-    [user, setMessages, fetchConversations, t]
+    [user, setMessages, fetchConversations, t, toast]
   );
 
   const deleteConversation = useCallback(
     async (partnerId: string): Promise<boolean> => {
       if (!user) {
-        toast({
-          variant: "destructive",
-          title: t("Not authenticated", "未经身份验证"),
-          description: t("Please log in to manage messages", "请登录以管理消息")
-        });
+        toast.error(
+          t("Not authenticated", "未经身份验证"),
+          t("Please log in to manage messages", "请登录以管理消息")
+        );
         return false;
       }
 
@@ -192,15 +185,14 @@ export const useMessageActions = (
         return true;
       } catch (error: any) {
         console.error('Error deleting conversation:', error.message);
-        toast({
-          variant: "destructive",
-          title: t("Error deleting conversation", "删除对话出错"),
-          description: error.message
-        });
+        toast.error(
+          t("Error deleting conversation", "删除对话出错"),
+          error.message
+        );
         return false;
       }
     },
-    [user, fetchConversations, t]
+    [user, fetchConversations, t, toast]
   );
 
   return { sending, sendMessage, unsendMessage, deleteConversation };
