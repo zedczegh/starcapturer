@@ -139,14 +139,11 @@ export function useWeatherDataValidator({
         setStableWeatherData(correctedData);
         
         if (discrepancies.length > 2) {
-          toast({
-            title: t("Weather Data Updated", "天气数据已更新"),
-            description: t(
-              "Weather data has been updated to match current forecast.",
-              "天气数据已更新以匹配当前预报。"
-            ),
-            duration: 3000,
-          });
+          // Fixed: Use object properties of toast correctly instead of calling toast directly
+          toast.warning(
+            t("Weather Data Updated", "天气数据已更新"), 
+            t("Weather data has been updated to match current forecast.", "天气数据已更新以匹配当前预报。")
+          );
         }
       } else {
         setStableWeatherData(weatherData);
