@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getCurrentPosition, ExtendedGeolocationOptions } from "@/utils/geolocationUtils";
 import NavBar from "@/components/NavBar";
@@ -200,12 +200,12 @@ const BortleNow: React.FC = () => {
     
     setCountdown(5);
     
-    toast({
-      title: mode === "dark" 
+    toast.info(
+      mode === "dark" 
         ? t("Preparing to capture dark frame", "准备捕获暗帧") 
         : t("Preparing to capture sky frame", "准备捕获天空帧"),
-      description: t("Get ready in 5 seconds...", "5秒后准备好..."),
-    });
+      t("Get ready in 5 seconds...", "5秒后准备好...")
+    );
   };
 
   const performDarkFrameCapture = async () => {
@@ -218,28 +218,27 @@ const BortleNow: React.FC = () => {
         throw new Error(t("Please get your location first", "请先获取您的位置"));
       }
       
-      toast({
-        title: t("Capturing Dark Frame", "捕获暗帧"),
-        description: t("Please cover your camera lens completely...", "请完全遮盖相机镜头..."),
-      });
+      toast.info(
+        t("Capturing Dark Frame", "捕获暗帧"),
+        t("Please cover your camera lens completely...", "请完全遮盖相机镜头...")
+      );
       
       await new Promise(resolve => setTimeout(() => {
         resolve(true);
       }, 2000));
       
-      toast({
-        title: t("Dark Frame Captured", "暗帧已捕获"),
-        description: t("Dark frame baseline established.", "暗帧基准已建立。"),
-      });
+      toast.success(
+        t("Dark Frame Captured", "暗帧已捕获"),
+        t("Dark frame baseline established.", "暗帧基准已建立。")
+      );
       
       setCameraReadings(prev => ({ ...prev, darkFrame: true }));
     } catch (error) {
       setError((error as Error).message);
-      toast({
-        variant: "destructive",
-        title: t("Error", "错误"),
-        description: (error as Error).message,
-      });
+      toast.error(
+        t("Error", "错误"),
+        (error as Error).message
+      );
     } finally {
       setIsProcessingImage(false);
     }
@@ -274,10 +273,10 @@ const BortleNow: React.FC = () => {
         throw new Error(t("Please capture a dark frame first", "请先捕获暗帧"));
       }
       
-      toast({
-        title: t("Capturing Sky Frame", "捕获天空帧"),
-        description: t("Point your camera at the zenith (straight up)...", "将相机指向天顶（正上方）..."),
-      });
+      toast.info(
+        t("Capturing Sky Frame", "捕获天空帧"),
+        t("Point your camera at the zenith (straight up)...", "将相机指向天顶（正上方）...")
+      );
       
       await new Promise(resolve => setTimeout(() => {
         resolve(true);
@@ -304,20 +303,19 @@ const BortleNow: React.FC = () => {
         );
       }
       
-      toast({
-        title: t("Measurement Complete", "测量完成"),
-        description: t(
+      toast.success(
+        t("Measurement Complete", "测量完成"),
+        t(
           `Sky brightness measured. Stars detected: ${simulatedStarCount}. Bortle scale: ${measuredBortle.toFixed(1)}`,
           `天空亮度已测量。检测到的星星: ${simulatedStarCount}。波尔特尔等级：${measuredBortle.toFixed(1)}`
-        ),
-      });
+        )
+      );
     } catch (error) {
       setError((error as Error).message);
-      toast({
-        variant: "destructive",
-        title: t("Error", "错误"),
-        description: (error as Error).message,
-      });
+      toast.error(
+        t("Error", "错误"),
+        (error as Error).message
+      );
     } finally {
       setIsProcessingImage(false);
     }

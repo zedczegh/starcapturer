@@ -74,8 +74,11 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       // Try to ping supabase before attempting login
       try {
         const pingStart = Date.now();
-        // Use RPC call instead of direct table query since health_check isn't in the table schema
-        const { error: pingError } = await supabase.rpc('ping_db');
+        // Use a simple query instead of RPC since ping_db isn't in the TypeScript types yet
+        const { data: pingData, error: pingError } = await supabase
+          .from('profiles')
+          .select('count(*)', { count: 'exact', head: true });
+        
         const pingTime = Date.now() - pingStart;
         
         if (pingError && pingTime < 500) {

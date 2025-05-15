@@ -54,7 +54,7 @@ const useToast = () => {
   };
 };
 
-// Default export for use in non-hook contexts with simplified signature
+// Create a default callable toast object for non-hook contexts
 const toast = {
   error: (title: string, description?: string | Record<string, any>) => {
     if (typeof description === 'string') {
