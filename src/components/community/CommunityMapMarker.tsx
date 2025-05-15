@@ -62,15 +62,6 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   // Stabilize SIQS score to prevent flicker
   const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
   
-  // Initialize with existing score immediately to prevent N/A
-  useEffect(() => {
-    // Set initial stabilized score from spot data if available
-    const initialScore = getDisplaySiqs(spot.siqs);
-    if (initialScore && initialScore > 0) {
-      setStabilizedScore(initialScore);
-    }
-  }, [spot.siqs]);
-  
   useEffect(() => {
     if (realTimeSiqs !== null && realTimeSiqs > 0) {
       setStabilizedScore(realTimeSiqs);
@@ -138,8 +129,8 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     setOpenPopup(false);
   };
 
-  // Always ensure we have a score to display
-  // Initialize with spot.siqs first, then prefer stabilized score when available
+  // Always ensure we have a score to display, prioritize stabilized score
+  // This fixes the N/A issue on mobile
   const displayScore = stabilizedScore ?? realTimeSiqs ?? getDisplaySiqs(spot.siqs);
 
   return (
