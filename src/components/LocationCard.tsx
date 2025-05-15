@@ -5,6 +5,7 @@ import { MapPin } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import SiqsScoreBadge from "@/components/photoPoints/cards/SiqsScoreBadge";
 import { motion } from "framer-motion";
+import UserAvatarDisplay from "@/components/photoPoints/cards/UserAvatarDisplay";
 
 interface LocationCardProps {
   id: string;
@@ -15,6 +16,7 @@ interface LocationCardProps {
   timestamp?: string;
   isCertified?: boolean;
   siqsLoading?: boolean;
+  userId?: string;
 }
 
 const LocationCard = ({
@@ -25,7 +27,8 @@ const LocationCard = ({
   siqs,
   timestamp,
   isCertified = false,
-  siqsLoading = false
+  siqsLoading = false,
+  userId
 }: LocationCardProps) => {
   const { language, t } = useLanguage();
 
@@ -66,11 +69,15 @@ const LocationCard = ({
         </span>
       </div>
       
-      {timestamp && (
-        <div className="mt-2 text-xs text-cosmic-500">
-          {formatTime(timestamp)}
+      <div className="mt-2 flex justify-between items-end">
+        <div className="text-xs text-cosmic-500">
+          {timestamp && formatTime(timestamp)}
         </div>
-      )}
+        
+        {userId && (
+          <UserAvatarDisplay userId={userId} className="ml-auto" />
+        )}
+      </div>
     </div>
   );
 };

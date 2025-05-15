@@ -19,7 +19,8 @@ export async function fetchCommunityAstroSpots() {
           bortlescale,
           siqs,
           description,
-          created_at
+          created_at,
+          user_id
         `)
         .order("created_at", { ascending: false })
         .limit(50),
@@ -39,6 +40,7 @@ export async function fetchCommunityAstroSpots() {
       siqs: spot.siqs,
       description: spot.description,
       timestamp: spot.created_at,
+      user_id: spot.user_id,
     }));
   } catch (error) {
     console.error("Failed to fetch community astro spots:", error);

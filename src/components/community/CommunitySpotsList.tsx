@@ -115,6 +115,7 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
                     timestamp={spot.timestamp}
                     isCertified={false}
                     siqsLoading={loadingSiqs[spot.id] && !stabilizedSiqs[spot.id]}
+                    userId={spot.user_id}
                   />
                 </div>
                 <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />

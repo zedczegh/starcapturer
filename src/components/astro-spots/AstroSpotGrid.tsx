@@ -68,6 +68,7 @@ const AstroSpotGrid: React.FC<AstroSpotGridProps> = ({
               siqs={realTimeSiqs[spot.id] !== undefined ? realTimeSiqs[spot.id] : spot.siqs}
               timestamp={spot.timestamp}
               isCertified={false}
+              userId={spot.user_id}
             />
           </div>
         </motion.div>
