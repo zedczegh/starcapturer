@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -6,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Loader2, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -28,6 +30,31 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [showPassword, setShowPassword] = React.useState(false);
   const [formSubmitted, setFormSubmitted] = React.useState(false);
   const [authError, setAuthError] = React.useState<string | null>(null);
+  const isMobile = useIsMobile();
+  const [networkStatus, setNetworkStatus] = React.useState<'online' | 'offline'>('online');
+  
+  React.useEffect(() => {
+    const updateNetworkStatus = () => {
+      setNetworkStatus(navigator.onLine ? 'online' : 'offline');
+      if (!navigator.onLine) {
+        setAuthError(t(
+          "You appear to be offline. Please check your internet connection.",
+          "您似乎处于离线状态。请检查您的互联网连接。"
+        ));
+      } else if (authError?.includes("offline")) {
+        setAuthError(null);
+      }
+    };
+
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+    updateNetworkStatus(); // Initial check
+    
+    return () => {
+      window.removeEventListener('online', updateNetworkStatus);
+      window.removeEventListener('offline', updateNetworkStatus);
+    };
+  }, [authError, t]);
 
   const onSubmit = async (data: any) => {
     try {
@@ -40,9 +67,24 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
           "You appear to be offline. Please check your internet connection.",
           "您似乎处于离线状态。请检查您的互联网连接。"
         ));
+        setFormSubmitted(false);
         return;
       }
 
+      // Try to ping supabase before attempting login
+      try {
+        const pingStart = Date.now();
+        const { error: pingError } = await supabase.from('health_check').select('*').limit(1).maybeSingle();
+        const pingTime = Date.now() - pingStart;
+        
+        if (pingError && pingTime < 500) {
+          console.warn("Supabase connection issue detected, but continuing with login attempt");
+        }
+      } catch (pingError) {
+        console.warn("Supabase ping failed, but will attempt login anyway:", pingError);
+      }
+      
+      // Proceed with login
       await signIn(data.email, data.password);
       
       // Check if we have a user after sign-in attempt (handled in AuthContext)
@@ -59,14 +101,29 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       }
     } catch (error: any) {
       console.error("Login error:", error);
-      // Most error handling is in AuthContext, but provide fallback here
-      if (!navigator.onLine) {
+      // Handle network and connection errors more gracefully on mobile
+      if (!navigator.onLine || error.message === 'Failed to fetch' || error.message?.includes('fetch')) {
         setAuthError(t(
-          "Network connection issue. Please check your internet connection.",
-          "网络连接问题。请检查您的互联网连接。"
+          "Network connection issue. Please check your internet connection and try again.",
+          "网络连接问题。请检查您的互联网连接，然后重试。"
+        ));
+      } else if (error.message?.includes("Invalid login")) {
+        setAuthError(t(
+          "Incorrect email or password. Please try again.",
+          "邮箱或密码不正确，请重试。"
+        ));
+      } else if (error.message?.includes("Email not confirmed")) {
+        setAuthError(t(
+          "Please verify your email address before signing in.",
+          "请在登录前验证您的电子邮件地址。"
+        ));
+      } else if (error.message?.includes("Too many requests")) {
+        setAuthError(t(
+          "Too many login attempts. Please try again in a few minutes.",
+          "登录尝试次数过多，请稍后再试。"
         ));
       } else if (!error.message?.includes("Email not confirmed") && 
-                 !error.message?.includes("Invalid login")) {
+                !error.message?.includes("Invalid login")) {
         setAuthError(t(
           "Something went wrong. Please try again.",
           "出现错误，请重试。"
@@ -156,15 +213,16 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
         />
 
         {authError && (
-          <div className="p-3 text-sm rounded-md bg-red-500/10 border border-red-500/20 text-red-500">
-            {authError}
+          <div className="p-3 text-sm rounded-md bg-red-500/10 border border-red-500/20 text-red-500 flex items-start">
+            {networkStatus === 'offline' && <WifiOff className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />}
+            <span>{authError}</span>
           </div>
         )}
 
         <Button 
           type="submit" 
           className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90"
-          disabled={processing}
+          disabled={processing || networkStatus === 'offline'}
         >
           {processing ? (
             <>

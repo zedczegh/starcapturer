@@ -32,7 +32,7 @@ const Toaster = ({ theme = "system", ...props }: ToasterProps & { theme?: string
           info: "group-[.toaster]:bg-yellow-500/20 group-[.toaster]:text-yellow-300 group-[.toaster]:border group-[.toaster]:border-yellow-500/40",
           warning: "group-[.toaster]:bg-orange-500/20 group-[.toaster]:text-orange-300 group-[.toaster]:border group-[.toaster]:border-orange-500/40",
         },
-        duration: 5000, // Longer default duration for better readability
+        duration: isMobile ? 6000 : 5000, // Longer duration for mobile
         // Custom styling
         style: {
           fontSize: "14px",
