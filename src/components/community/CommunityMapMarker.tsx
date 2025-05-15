@@ -9,6 +9,7 @@ import SiqsScoreBadge from "@/components/photoPoints/cards/SiqsScoreBadge";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
+import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 
 function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.DivIcon {
   const size = isMobile ? (isHovered ? 28 : 20) : (isHovered ? 32 : 26);
@@ -128,8 +129,9 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
     setOpenPopup(false);
   };
 
-  // Display the best available score
-  const displayScore = stabilizedScore ?? realTimeSiqs ?? spot.siqs;
+  // Always ensure we have a score to display, prioritize stabilized score
+  // This fixes the N/A issue on mobile
+  const displayScore = stabilizedScore ?? realTimeSiqs ?? getDisplaySiqs(spot.siqs);
 
   return (
     <Marker

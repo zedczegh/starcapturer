@@ -38,9 +38,11 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
     }
   }, [siqsScore]);
 
-  const siqsClass = getSiqsClass(stabilizedScore || siqsScore);
-  const hasValidScore = stabilizedScore !== null || (siqsScore !== null && siqsScore > 0);
-
+  // Always ensure we have a score to display, prioritize stabilized score
+  // This fixes the N/A issue on mobile
+  const displayScore = stabilizedScore ?? siqsScore ?? getDisplaySiqs(location.siqs);
+  const siqsClass = getSiqsClass(displayScore);
+  
   return (
     <Popup 
       closeOnClick={false}
@@ -71,7 +73,7 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
         <div className="mt-2 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <SiqsScoreBadge 
-              score={hasValidScore ? (stabilizedScore || siqsScore) : null} 
+              score={displayScore} 
               compact={true} 
               loading={siqsLoading}
               isCertified={isCertified}
