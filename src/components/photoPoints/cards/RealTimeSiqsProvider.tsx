@@ -15,7 +15,7 @@ interface RealTimeSiqsProviderProps {
   onSiqsCalculated: (siqs: number | null, loading: boolean, confidence?: number) => void;
   priorityLevel?: 'high' | 'medium' | 'low';
   forceUpdate?: boolean;
-  debugLabel?: string;  // Added debugLabel as optional prop
+  debugLabel?: string;
 }
 
 const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
@@ -29,23 +29,27 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   onSiqsCalculated,
   priorityLevel = 'low',
   forceUpdate = false,
-  debugLabel  // Make it available in the component
+  debugLabel
 }) => {
   const [initialized, setInitialized] = useState(false);
   
-  // Initialize with existing scores when available
+  // Immediately pass existing scores (including zero) to prevent N/A display
   useEffect(() => {
-    if (!initialized && existingSiqs && !forceUpdate) {
+    if (!initialized) {
+      // Extract numeric value from existingSiqs (can be number or object)
       const existingScore = getDisplaySiqs(existingSiqs);
-      if (existingScore !== null) {
-        onSiqsCalculated(existingScore, false);
-        
-        // If certified location, cache this value to avoid unnecessary recalculation
-        if (isCertified && latitude && longitude) {
-          setCachedRealTimeSiqs(latitude, longitude, existingScore);
-        }
+      
+      // Always report a score, even if it's zero - prevents N/A display
+      onSiqsCalculated(existingScore || 0, false, 5);
+      
+      // If certified location, cache this value to avoid unnecessary recalculation
+      if (isCertified && latitude && longitude && existingScore !== null && existingScore > 0) {
+        setCachedRealTimeSiqs(latitude, longitude, existingScore);
       }
-      setInitialized(true);
+      
+      if (existingScore !== null || forceUpdate) {
+        setInitialized(true);
+      }
     }
   }, [initialized, existingSiqs, isCertified, latitude, longitude, onSiqsCalculated, forceUpdate]);
   
@@ -59,11 +63,17 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
         } else {
           console.log(`Using cached SIQS for ${latitude.toFixed(4)},${longitude.toFixed(4)}: ${cachedSiqs}`);
         }
-        onSiqsCalculated(cachedSiqs, false);
+        onSiqsCalculated(cachedSiqs, false, 8);
         setInitialized(true);
+      } else if (existingSiqs) {
+        // If no cache but we have existing siqs, use that
+        const score = getDisplaySiqs(existingSiqs);
+        if (score !== null) {
+          onSiqsCalculated(score, false, 5);
+        }
       }
     }
-  }, [initialized, latitude, longitude, onSiqsCalculated, forceUpdate, debugLabel]);
+  }, [initialized, latitude, longitude, onSiqsCalculated, forceUpdate, debugLabel, existingSiqs]);
   
   // Only calculate new scores if we need to
   const showRealTimeSiqs = (

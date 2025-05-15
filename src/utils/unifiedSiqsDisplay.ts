@@ -48,7 +48,7 @@ export const getDisplaySiqs = (siqs: any): number | null => {
 export const formatSiqsForDisplay = (siqs: any): string => {
   const displaySiqs = getDisplaySiqs(siqs);
   
-  if (displaySiqs === null) {
+  if (displaySiqs === null || displaySiqs <= 0) {
     return 'N/A';
   }
   
@@ -87,4 +87,3 @@ export const getCompleteSiqsDisplay = (siqs: any, options?: SiqsDisplayOpts) => 
     confidence: options?.confidence || 10
   };
 };
-

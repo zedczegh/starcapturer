@@ -75,6 +75,9 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
     );
   }
   
+  // Don't display N/A for mobile community popups, show a placeholder instead
+  const finalDisplayScore = displayScore === 'N/A' ? '0.0' : displayScore;
+  
   // Regular badge view - always show something even if score is 0
   return (
     <div 
@@ -87,7 +90,7 @@ const SiqsScoreBadge: React.FC<SiqsScoreBadgeProps> = ({
         />
       )}
       <span className={`${compact ? (isMobile ? 'text-xs' : 'text-sm') : 'text-base'} font-medium ${colorClass}`}>
-        {displayScore}
+        {finalDisplayScore}
       </span>
     </div>
   );
