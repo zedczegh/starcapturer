@@ -40,7 +40,7 @@ export async function fetchCommunityAstroSpots() {
       siqs: spot.siqs,
       description: spot.description,
       timestamp: spot.created_at,
-      user_id: spot.user_id,
+      user_id: spot.user_id, // Make sure we include the user_id
     }));
   } catch (error) {
     console.error("Failed to fetch community astro spots:", error);

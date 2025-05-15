@@ -10,6 +10,7 @@ import { getSiqsScore } from '@/utils/siqsHelpers';
 import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 import { formatDistance } from '@/utils/geoUtils';
 import { getSiqsClass } from './MarkerUtils';
+import UserAvatarDisplay from '../cards/UserAvatarDisplay';
 
 interface LocationPopupContentProps {
   location: SharedAstroSpot;
@@ -79,6 +80,14 @@ const LocationPopupContent: React.FC<LocationPopupContentProps> = ({
               isCertified={isCertified}
               forceCertified={false}
             />
+            
+            {location.user_id && (
+              <UserAvatarDisplay 
+                userId={location.user_id} 
+                size="sm" 
+                className="ml-1.5"
+              />
+            )}
           </div>
           
           {typeof location.distance === 'number' && isFinite(location.distance) && (

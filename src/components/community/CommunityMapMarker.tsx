@@ -10,6 +10,7 @@ import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsPro
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
+import UserAvatarDisplay from "@/components/photoPoints/cards/UserAvatarDisplay";
 
 function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.DivIcon {
   const size = isMobile ? (isHovered ? 28 : 20) : (isHovered ? 32 : 26);
@@ -150,13 +151,24 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             {spot.latitude.toFixed(4)}, {spot.longitude.toFixed(4)}
           </div>
           
-          {/* SIQS Score Display */}
-          <div className="flex items-center mb-2">
-            <SiqsScoreBadge 
-              score={displayScore} 
-              loading={loadingSiqs && !stabilizedScore}
-              confidenceScore={siqsConfidence}
-            />
+          {/* SIQS Score Display with User Avatar */}
+          <div className="flex items-center mb-2 justify-between">
+            <div className="flex items-center">
+              <SiqsScoreBadge 
+                score={displayScore} 
+                loading={loadingSiqs && !stabilizedScore}
+                confidenceScore={siqsConfidence}
+              />
+              
+              {/* User Avatar */}
+              {spot.user_id && (
+                <UserAvatarDisplay 
+                  userId={spot.user_id} 
+                  size="sm"
+                  className="ml-2" 
+                />
+              )}
+            </div>
           </div>
           
           {/* View Profile Button */}
