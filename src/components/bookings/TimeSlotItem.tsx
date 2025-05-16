@@ -86,8 +86,8 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
       const { data, error } = await supabase.rpc('insert_astro_spot_reservation', {
         p_timeslot_id: timeSlot.id,
         p_user_id: user.id,
-        // Store guest information as a JSON string in the metadata field (if needed)
-        // p_metadata: JSON.stringify(guests)
+        // Store guest information as a JSON string in the metadata field
+        p_metadata: JSON.stringify(guests)
       });
       
       if (error) throw error;
@@ -105,6 +105,14 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
 
   const handleGuestChange = (guestCounts: Record<string, number>) => {
     setGuests(guestCounts);
+  };
+
+  // Format price display
+  const priceDisplay = () => {
+    if (!timeSlot.price || timeSlot.price <= 0) {
+      return t('Free', '免费');
+    }
+    return `${timeSlot.currency || '$'}${timeSlot.price}`;
   };
 
   return (
@@ -149,9 +157,7 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
       
       <div className="flex flex-wrap gap-2 text-sm text-gray-400">
         <div>
-          {t('Price', '价格')}: {timeSlot.price > 0 
-            ? `${timeSlot.currency}${timeSlot.price}` 
-            : t('Free', '免费')}
+          {t('Price', '价格')}: {priceDisplay()}
         </div>
         <div className="mx-2">•</div>
         <div>
@@ -160,7 +166,12 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
         {timeSlot.pets_policy && (
           <>
             <div className="mx-2">•</div>
-            <div>{t('Pets', '宠物')}: {timeSlot.pets_policy}</div>
+            <div>{t('Pets', '宠物')}: {
+              timeSlot.pets_policy === 'not_allowed' ? t('Not Allowed', '不允许') :
+              timeSlot.pets_policy === 'allowed' ? t('Allowed', '允许') :
+              timeSlot.pets_policy === 'only_small' ? t('Only Small Pets', '仅小型宠物') :
+              t('Host Approval Required', '需要主人批准')
+            }</div>
           </>
         )}
       </div>
