@@ -11,7 +11,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { formatDateRange } from '@/utils/dateFormatting';
+import { formatDateForLanguage } from '@/utils/dateFormatting';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface DateRangePickerProps {
   startDate: Date | null;
@@ -27,92 +28,122 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
   onEndDateChange
 }) => {
   const { t, language } = useLanguage();
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [dateSelectionStep, setDateSelectionStep] = useState<'start' | 'end'>(
-    !startDate ? 'start' : 'end'
-  );
+  const [isStartCalendarOpen, setIsStartCalendarOpen] = useState(false);
+  const [isEndCalendarOpen, setIsEndCalendarOpen] = useState(false);
 
-  // Handle date selection
-  const handleSelect = (date: Date | undefined) => {
+  // Handle date selection for check-in
+  const handleStartSelect = (date: Date | undefined) => {
     if (date) {
-      if (dateSelectionStep === 'start') {
-        onStartDateChange(date);
-        setDateSelectionStep('end');
-      } else {
-        // Ensure end date is not before start date
-        if (startDate && date < startDate) {
-          onEndDateChange(null);
-          onStartDateChange(date);
-          setDateSelectionStep('end');
-        } else {
-          onEndDateChange(date);
-          setIsCalendarOpen(false);
-        }
+      onStartDateChange(date);
+      setIsStartCalendarOpen(false);
+      
+      // If end date is before start date, clear it
+      if (endDate && date > endDate) {
+        onEndDateChange(null);
       }
     }
   };
 
-  // Reset selection
-  const handleReset = () => {
-    onStartDateChange(null);
-    onEndDateChange(null);
-    setDateSelectionStep('start');
+  // Handle date selection for check-out
+  const handleEndSelect = (date: Date | undefined) => {
+    if (date) {
+      // Ensure end date is not before start date
+      if (startDate && date < startDate) {
+        return;
+      }
+      onEndDateChange(date);
+      setIsEndCalendarOpen(false);
+    }
   };
 
   return (
-    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          id="date-range-picker"
-          variant={"outline"}
-          className={cn(
-            "w-full justify-start text-left font-normal border border-cosmic-700/40 bg-cosmic-800/20 hover:bg-cosmic-800/40",
-            !startDate && !endDate && "text-gray-500"
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {startDate || endDate ? (
-            formatDateRange(startDate, endDate, language)
-          ) : (
-            <span>{t("Select dates", "选择日期")}</span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent 
-        className="w-auto p-0 bg-cosmic-800 border border-cosmic-700/40" 
-        align="start"
-      >
-        <div className="p-3 border-b border-cosmic-700/30 flex items-center justify-between">
-          <span className="text-sm font-medium">
-            {dateSelectionStep === 'start' 
-              ? t("Select check-in date", "选择入住日期")
-              : t("Select check-out date", "选择退房日期")}
-          </span>
-          {(startDate || endDate) && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleReset} 
-              className="text-xs text-primary"
+    <div className="flex flex-col sm:flex-row gap-2">
+      {/* Check-in date picker */}
+      <div className="flex-1">
+        <Popover open={isStartCalendarOpen} onOpenChange={setIsStartCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              id="check-in-picker"
+              variant={"outline"}
+              className={cn(
+                "w-full justify-start text-left font-normal border border-cosmic-700/40 bg-cosmic-800/20 hover:bg-cosmic-800/40",
+                !startDate && "text-gray-500"
+              )}
             >
-              {t("Reset", "重置")}
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {startDate ? (
+                formatDateForLanguage(startDate, language)
+              ) : (
+                <span>{t("Check-in", "入住")}</span>
+              )}
             </Button>
-          )}
-        </div>
-        <Calendar
-          mode="single"
-          selected={dateSelectionStep === 'start' ? startDate || undefined : endDate || undefined}
-          onSelect={handleSelect}
-          initialFocus
-          disabled={(date) => {
-            // Disable dates in the past
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            return date < yesterday;
-          }}
-        />
-      </PopoverContent>
-    </Popover>
+          </PopoverTrigger>
+          <PopoverContent 
+            className="w-auto p-0 bg-cosmic-800 border border-cosmic-700/40" 
+            align="start"
+          >
+            <div className="p-3 border-b border-cosmic-700/30">
+              <span className="text-sm font-medium">{t("Select check-in date", "选择入住日期")}</span>
+            </div>
+            <Calendar
+              mode="single"
+              selected={startDate || undefined}
+              onSelect={handleStartSelect}
+              initialFocus
+              disabled={(date) => {
+                // Disable dates in the past
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                return date < yesterday;
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Check-out date picker */}
+      <div className="flex-1">
+        <Popover open={isEndCalendarOpen} onOpenChange={setIsEndCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              id="check-out-picker"
+              variant={"outline"}
+              className={cn(
+                "w-full justify-start text-left font-normal border border-cosmic-700/40 bg-cosmic-800/20 hover:bg-cosmic-800/40",
+                !endDate && "text-gray-500"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {endDate ? (
+                formatDateForLanguage(endDate, language)
+              ) : (
+                <span>{t("Check-out", "退房")}</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent 
+            className="w-auto p-0 bg-cosmic-800 border border-cosmic-700/40" 
+            align="start"
+          >
+            <div className="p-3 border-b border-cosmic-700/30">
+              <span className="text-sm font-medium">{t("Select check-out date", "选择退房日期")}</span>
+            </div>
+            <Calendar
+              mode="single"
+              selected={endDate || undefined}
+              onSelect={handleEndSelect}
+              initialFocus
+              disabled={(date) => {
+                // Disable dates in the past and dates before start date
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                return date < yesterday || (startDate && date < startDate);
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
   );
 };
 

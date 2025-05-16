@@ -5,12 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import TimeSlotForm from './TimeSlotForm';
 import TimeSlotItem from './TimeSlotItem';
 import { format, parseISO, isAfter, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { toast } from 'sonner';
-import { Loader2, CalendarDays } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import DateRangePicker from './DateRangePicker';
 
 interface TimeSlotManagerProps {
@@ -24,7 +23,6 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showDateFilter, setShowDateFilter] = useState(false);
 
   // Fetch time slots for this spot
   const { data: timeSlots, isLoading, refetch } = useQuery({
@@ -146,12 +144,6 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
     toast.success(t("Time slot added successfully", "时间段添加成功"));
   };
 
-  // Clear date filters
-  const handleClearFilter = () => {
-    setStartDate(null);
-    setEndDate(null);
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -187,61 +179,33 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
       )}
 
       <div className="mb-6">
-        <Label className="block mb-2 text-gray-300 flex items-center">
-          <CalendarDays className="h-4 w-4 mr-1.5" />
-          {t("Filter by Date Range", "按日期范围筛选")}
-        </Label>
-        
-        <div className="mt-2">
-          <DateRangePicker 
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-          />
-          
-          {(startDate || endDate) && (
-            <div className="mt-2 flex justify-end">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={handleClearFilter}
-              >
-                {t("Clear Filter", "清除筛选")}
-              </Button>
-            </div>
-          )}
-        </div>
+        <DateRangePicker 
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+        />
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-medium text-gray-300">
-          {startDate && endDate 
-            ? t(`Available from ${format(startDate, 'PPP')} to ${format(endDate, 'PPP')}`, 
-                `${format(startDate, 'PPP')} 至 ${format(endDate, 'PPP')} 的可用时间`) 
-            : startDate
-              ? t(`Available on ${format(startDate, 'PPP')}`, `${format(startDate, 'PPP')} 可用时间`) 
-              : t("All Available Time Slots", "所有可用时间段")}
-        </h3>
-        
-        {upcomingTimeSlots && upcomingTimeSlots.length > 0 ? (
-          <div className="space-y-3">
-            {upcomingTimeSlots.map(slot => (
+        <div className="space-y-3">
+          {upcomingTimeSlots && upcomingTimeSlots.length > 0 ? (
+            upcomingTimeSlots.map(slot => (
               <TimeSlotItem 
                 key={slot.id}
                 timeSlot={slot}
                 isCreator={isCreator}
                 onUpdate={refetch}
               />
-            ))}
-          </div>
-        ) : (
-          <div className="py-8 text-center bg-cosmic-800/20 rounded-lg border border-cosmic-700/20">
-            <p className="text-gray-400">
-              {t("No available time slots found", "未找到可用时间段")}
-            </p>
-          </div>
-        )}
+            ))
+          ) : (
+            <div className="py-8 text-center bg-cosmic-800/20 rounded-lg border border-cosmic-700/20">
+              <p className="text-gray-400">
+                {t("No available time slots found for the selected dates", "所选日期没有可用时间段")}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
