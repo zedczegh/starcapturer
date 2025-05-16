@@ -157,6 +157,12 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
         <div>
           {t('Available', '可用')}: {availableSlots} / {timeSlot.max_capacity}
         </div>
+        {timeSlot.pets_policy && (
+          <>
+            <div className="mx-2">•</div>
+            <div>{t('Pets', '宠物')}: {timeSlot.pets_policy}</div>
+          </>
+        )}
       </div>
       
       {showBookingForm && !hasUserBooked && (

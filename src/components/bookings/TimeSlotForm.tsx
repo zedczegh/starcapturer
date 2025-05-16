@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -10,6 +11,7 @@ import { toast } from 'sonner';
 import { Calendar } from '@/components/ui/calendar';
 import { format, addHours, setHours, setMinutes } from 'date-fns';
 import { Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface TimeSlotFormProps {
   spotId: string;
@@ -31,7 +33,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
   const isEditing = !!existingTimeSlot;
   const initialDate = isEditing ? new Date(existingTimeSlot.start_time) : new Date();
   
-  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
+  const [selectedDates, setSelectedDates] = useState<Date[]>([initialDate]);
   const [startTime, setStartTime] = useState(isEditing ? 
     format(new Date(existingTimeSlot.start_time), 'HH:mm') : '20:00');
   const [endTime, setEndTime] = useState(isEditing ? 
@@ -40,6 +42,8 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     existingTimeSlot.description || '' : '');
   const [maxCapacity, setMaxCapacity] = useState(isEditing ? 
     existingTimeSlot.max_capacity : 1);
+  const [petsPolicy, setPetsPolicy] = useState(isEditing ?
+    existingTimeSlot.pets_policy || 'not_allowed' : 'not_allowed');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,68 +53,81 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
       return;
     }
     
+    if (selectedDates.length === 0) {
+      toast.error(t("Please select at least one date", "请至少选择一个日期"));
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      // Parse the date and times
-      const [startHour, startMinute] = startTime.split(':').map(Number);
-      const [endHour, endMinute] = endTime.split(':').map(Number);
-      
-      const startDateTime = new Date(selectedDate);
-      startDateTime.setHours(startHour, startMinute, 0, 0);
-      
-      const endDateTime = new Date(selectedDate);
-      endDateTime.setHours(endHour, endMinute, 0, 0);
-      
-      // Check that end time is after start time
-      if (endDateTime <= startDateTime) {
-        if (endHour < startHour) {
-          // Assume end time is next day if hours indicate so
-          endDateTime.setDate(endDateTime.getDate() + 1);
+      // Process each selected date
+      for (const selectedDate of selectedDates) {
+        // Parse the date and times
+        const [startHour, startMinute] = startTime.split(':').map(Number);
+        const [endHour, endMinute] = endTime.split(':').map(Number);
+        
+        const startDateTime = new Date(selectedDate);
+        startDateTime.setHours(startHour, startMinute, 0, 0);
+        
+        const endDateTime = new Date(selectedDate);
+        endDateTime.setHours(endHour, endMinute, 0, 0);
+        
+        // Check that end time is after start time
+        if (endDateTime <= startDateTime) {
+          if (endHour < startHour) {
+            // Assume end time is next day if hours indicate so
+            endDateTime.setDate(endDateTime.getDate() + 1);
+          } else {
+            toast.error(t("End time must be after start time", "结束时间必须晚于开始时间"));
+            setIsSubmitting(false);
+            return;
+          }
+        }
+        
+        if (isEditing) {
+          // Call the edge function to update the time slot
+          const { data, error } = await supabase.functions.invoke('call-rpc', {
+            body: {
+              function: 'update_astro_spot_timeslot',
+              params: {
+                p_id: existingTimeSlot.id,
+                p_spot_id: spotId,
+                p_creator_id: user.id,
+                p_start_time: startDateTime.toISOString(),
+                p_end_time: endDateTime.toISOString(),
+                p_max_capacity: maxCapacity,
+                p_description: description.trim(),
+                p_pets_policy: petsPolicy
+              }
+            }
+          });
+
+          if (error) throw error;
         } else {
-          toast.error(t("End time must be after start time", "结束时间必须晚于开始时间"));
-          setIsSubmitting(false);
-          return;
+          // Call the edge function to create a new time slot
+          const { data, error } = await supabase.functions.invoke('call-rpc', {
+            body: {
+              function: 'insert_astro_spot_timeslot',
+              params: {
+                p_spot_id: spotId,
+                p_creator_id: user.id,
+                p_start_time: startDateTime.toISOString(),
+                p_end_time: endDateTime.toISOString(),
+                p_max_capacity: maxCapacity,
+                p_description: description.trim(),
+                p_pets_policy: petsPolicy
+              }
+            }
+          });
+
+          if (error) throw error;
         }
       }
       
-      if (isEditing) {
-        // Call the edge function to update the time slot
-        const { data, error } = await supabase.functions.invoke('call-rpc', {
-          body: {
-            function: 'update_astro_spot_timeslot',
-            params: {
-              p_id: existingTimeSlot.id,
-              p_spot_id: spotId,
-              p_creator_id: user.id,
-              p_start_time: startDateTime.toISOString(),
-              p_end_time: endDateTime.toISOString(),
-              p_max_capacity: maxCapacity,
-              p_description: description.trim()
-            }
-          }
-        });
-
-        if (error) throw error;
-      } else {
-        // Call the edge function to create a new time slot
-        const { data, error } = await supabase.functions.invoke('call-rpc', {
-          body: {
-            function: 'insert_astro_spot_timeslot',
-            params: {
-              p_spot_id: spotId,
-              p_creator_id: user.id,
-              p_start_time: startDateTime.toISOString(),
-              p_end_time: endDateTime.toISOString(),
-              p_max_capacity: maxCapacity,
-              p_description: description.trim()
-            }
-          }
-        });
-
-        if (error) throw error;
-      }
-      
+      toast.success(isEditing 
+        ? t("Time slot updated", "时间段已更新") 
+        : t("Time slots created", "时间段已创建"));
       onSuccess();
     } catch (error) {
       console.error("Error saving time slot:", error);
@@ -133,16 +150,20 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="date" className="block text-sm text-gray-300 mb-1">
-              {t("Date", "日期")}
+              {t("Select Dates", "选择日期")} 
+              <span className="text-xs text-gray-400 ml-1">{t("(Choose multiple dates)", "(可选择多个日期)")}</span>
             </Label>
             <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
               <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
+                mode="multiple"
+                selected={selectedDates}
+                onSelect={setSelectedDates}
                 disabled={(date) => date < new Date()}
                 className="bg-cosmic-800/30 rounded-lg"
               />
+            </div>
+            <div className="text-xs text-gray-400 mt-1">
+              {t("Selected dates", "已选择日期")}: {selectedDates.length}
             </div>
           </div>
           
@@ -192,6 +213,26 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                 className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
                 required
               />
+            </div>
+
+            <div>
+              <Label htmlFor="pets-policy" className="block text-sm text-gray-300 mb-1">
+                {t("Pets Policy", "宠物政策")}
+              </Label>
+              <Select 
+                value={petsPolicy} 
+                onValueChange={setPetsPolicy}
+              >
+                <SelectTrigger className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200">
+                  <SelectValue placeholder={t("Select pets policy", "选择宠物政策")} />
+                </SelectTrigger>
+                <SelectContent className="bg-cosmic-800 border-cosmic-700">
+                  <SelectItem value="not_allowed">{t("Not Allowed", "不允许")}</SelectItem>
+                  <SelectItem value="allowed">{t("Allowed", "允许")}</SelectItem>
+                  <SelectItem value="only_small">{t("Only Small Pets", "仅小型宠物")}</SelectItem>
+                  <SelectItem value="approval_required">{t("Host Approval Required", "需要主人批准")}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

@@ -178,14 +178,17 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
         </div>
       )}
 
-      <div className="mb-6">
-        <DateRangePicker 
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={setStartDate}
-          onEndDateChange={setEndDate}
-        />
-      </div>
+      {/* Only show date range picker for guests (non-creators) */}
+      {!isCreator && (
+        <div className="mb-6">
+          <DateRangePicker 
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+          />
+        </div>
+      )}
 
       <div className="space-y-4">
         <div className="space-y-3">
@@ -201,7 +204,7 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
           ) : (
             <div className="py-8 text-center bg-cosmic-800/20 rounded-lg border border-cosmic-700/20">
               <p className="text-gray-400">
-                {t("No available time slots found for the selected dates", "所选日期没有可用时间段")}
+                {t("No available time slots found", "没有找到可用时间段")}
               </p>
             </div>
           )}

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Plus, Minus, Users } from 'lucide-react';
+import { Plus, Minus, Users, Dog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -96,11 +96,25 @@ const GuestSelector: React.FC<GuestSelectorProps> = ({ onChange, maxGuests = 10 
           variant="outline"
           className="w-full justify-start border border-cosmic-700/40 bg-cosmic-800/20 hover:bg-cosmic-800/40 py-4 h-auto"
         >
-          <Users className="mr-2 h-4 w-4" />
-          <span>
-            {totalGuests} {t('guest(s)', '位客人')}
-            {hasPets > 0 && `, ${hasPets} ${t('pet(s)', '只宠物')}`}
-          </span>
+          {totalGuests > 0 ? (
+            <div className="flex items-center">
+              <Users className="mr-2 h-4 w-4" />
+              <span>
+                {totalGuests} {t('guest(s)', '位客人')}
+                {hasPets > 0 && (
+                  <span className="flex items-center ml-2">
+                    <Dog className="mr-1 h-3.5 w-3.5" />
+                    {hasPets} {t('pet(s)', '只宠物')}
+                  </span>
+                )}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center">
+              <Users className="mr-2 h-4 w-4" />
+              <span>{t('Select guests', '选择客人')}</span>
+            </div>
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-4 bg-cosmic-800 border border-cosmic-700/40">
