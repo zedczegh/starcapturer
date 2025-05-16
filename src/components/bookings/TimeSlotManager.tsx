@@ -1,18 +1,17 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import TimeSlotForm from './TimeSlotForm';
 import TimeSlotItem from './TimeSlotItem';
-import { format, parseISO, isAfter } from 'date-fns';
+import { format, parseISO, isAfter, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CalendarDays } from 'lucide-react';
+import DateRangePicker from './DateRangePicker';
 
 interface TimeSlotManagerProps {
   spotId: string;
@@ -22,8 +21,10 @@ interface TimeSlotManagerProps {
 const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showDateFilter, setShowDateFilter] = useState(false);
 
   // Fetch time slots for this spot
   const { data: timeSlots, isLoading, refetch } = useQuery({
@@ -102,16 +103,36 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
     }
   });
 
-  // Filter time slots for the selected date if any
+  // Filter time slots based on the selected date range
   const filteredTimeSlots = timeSlots?.filter((slot) => {
-    if (!selectedDate) return true;
-    
     const slotDate = new Date(slot.start_time);
-    return (
-      slotDate.getDate() === selectedDate.getDate() &&
-      slotDate.getMonth() === selectedDate.getMonth() &&
-      slotDate.getFullYear() === selectedDate.getFullYear()
-    );
+    
+    // If no date filter is active, show all
+    if (!startDate && !endDate) {
+      return true;
+    }
+    
+    // If only start date is selected
+    if (startDate && !endDate) {
+      const startOfSelectedDate = startOfDay(startDate);
+      const endOfSelectedDate = endOfDay(startDate);
+      return isWithinInterval(slotDate, { 
+        start: startOfSelectedDate, 
+        end: endOfSelectedDate 
+      });
+    }
+    
+    // If both dates are selected, filter by range
+    if (startDate && endDate) {
+      const startOfRange = startOfDay(startDate);
+      const endOfRange = endOfDay(endDate);
+      return isWithinInterval(slotDate, { 
+        start: startOfRange, 
+        end: endOfRange
+      });
+    }
+    
+    return true;
   });
 
   // Filter upcoming time slots (not in the past)
@@ -123,6 +144,12 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
     setShowAddForm(false);
     refetch();
     toast.success(t("Time slot added successfully", "时间段添加成功"));
+  };
+
+  // Clear date filters
+  const handleClearFilter = () => {
+    setStartDate(null);
+    setEndDate(null);
   };
 
   if (isLoading) {
@@ -160,35 +187,41 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
       )}
 
       <div className="mb-6">
-        <Label className="block mb-2 text-gray-300">
-          {t("Filter by Date", "按日期筛选")}
+        <Label className="block mb-2 text-gray-300 flex items-center">
+          <CalendarDays className="h-4 w-4 mr-1.5" />
+          {t("Filter by Date Range", "按日期范围筛选")}
         </Label>
-        <div className="bg-cosmic-900/50 rounded-lg border border-cosmic-700/40 p-2">
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-            className="bg-cosmic-800/40 rounded-lg"
+        
+        <div className="mt-2">
+          <DateRangePicker 
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
           />
+          
+          {(startDate || endDate) && (
+            <div className="mt-2 flex justify-end">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleClearFilter}
+              >
+                {t("Clear Filter", "清除筛选")}
+              </Button>
+            </div>
+          )}
         </div>
-        {selectedDate && (
-          <div className="mt-2 flex justify-end">
-            <Button 
-              variant="ghost" 
-              onClick={() => setSelectedDate(undefined)}
-              size="sm"
-            >
-              {t("Clear Filter", "清除筛选")}
-            </Button>
-          </div>
-        )}
       </div>
 
       <div className="space-y-4">
         <h3 className="text-lg font-medium text-gray-300">
-          {selectedDate 
-            ? t(`Available on ${format(selectedDate, 'PPP')}`, `${format(selectedDate, 'PPP')} 可用时间`) 
-            : t("All Available Time Slots", "所有可用时间段")}
+          {startDate && endDate 
+            ? t(`Available from ${format(startDate, 'PPP')} to ${format(endDate, 'PPP')}`, 
+                `${format(startDate, 'PPP')} 至 ${format(endDate, 'PPP')} 的可用时间`) 
+            : startDate
+              ? t(`Available on ${format(startDate, 'PPP')}`, `${format(startDate, 'PPP')} 可用时间`) 
+              : t("All Available Time Slots", "所有可用时间段")}
         </h3>
         
         {upcomingTimeSlots && upcomingTimeSlots.length > 0 ? (
