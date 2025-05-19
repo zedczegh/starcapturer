@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -8,12 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { format, compareAsc, eachDayOfInterval, isSameDay } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { format, addHours, setHours, setMinutes } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import TimeSlotCalendar from './TimeSlotCalendar';
-import TimeSlotDatesDisplay from './TimeSlotDatesDisplay';
-import TimeSlotDetailsForm from './TimeSlotDetailsForm';
 
 interface TimeSlotFormProps {
   spotId: string;
@@ -21,6 +18,16 @@ interface TimeSlotFormProps {
   onCancel: () => void;
   existingTimeSlot?: any;
 }
+
+const CURRENCY_OPTIONS = [
+  { value: '$', label: 'USD ($)' },
+  { value: '€', label: 'EUR (€)' },
+  { value: '¥', label: 'CNY (¥)' },
+  { value: '£', label: 'GBP (£)' },
+  { value: '₹', label: 'INR (₹)' },
+  { value: '₩', label: 'KRW (₩)' },
+  { value: '¥', label: 'JPY (¥)' },
+];
 
 const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ 
   spotId, 
@@ -50,39 +57,40 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     existingTimeSlot.price || 0 : 0);
   const [currency, setCurrency] = useState(isEditing ? 
     existingTimeSlot.currency || '$' : '$');
-  
-  // Track selection state for range selection
-  const [selectionMode, setSelectionMode] = useState<'start' | 'end'>('start');
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
 
-  // Handle date selection with improved range functionality
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
-    
-    // Clear existing selection if we're starting a new range
-    if (selectionMode === 'start') {
-      setStartDate(date);
-      setEndDate(null);
-      setSelectionMode('end');
-      setSelectedDates([date]); // Start with just this date selected
+  // Handle date selection with range highlighting
+  const handleDateSelect = (dates: Date[] | undefined) => {
+    if (!dates || dates.length === 0) {
+      setSelectedDates([]);
       return;
     }
     
-    // Complete the range selection
-    if (selectionMode === 'end' && startDate) {
-      setEndDate(date);
-      
-      // Ensure start date is before end date
-      const [rangeStart, rangeEnd] = compareAsc(startDate, date) <= 0 
-        ? [startDate, date] 
-        : [date, startDate];
-      
-      // Generate all dates in the selected range
-      const dateRange = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
-      setSelectedDates(dateRange);
-      setSelectionMode('start'); // Reset for next selection
+    // If only one date is selected, use it
+    if (dates.length === 1) {
+      setSelectedDates(dates);
+      return;
     }
+    
+    // If multiple dates are selected, check if it's a range
+    const sortedDates = [...dates].sort((a, b) => a.getTime() - b.getTime());
+    
+    // If only two dates are selected, fill in the range between them
+    if (sortedDates.length === 2) {
+      const [start, end] = sortedDates;
+      const dateRange: Date[] = [];
+      const currentDate = new Date(start);
+      
+      while (currentDate <= end) {
+        dateRange.push(new Date(currentDate));
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      setSelectedDates(dateRange);
+      return;
+    }
+    
+    // Otherwise use the selected dates as they are
+    setSelectedDates(dates);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -181,24 +189,6 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     }
   };
 
-  // Helper to determine if a date is the start or end of the current range
-  const isRangeStartOrEnd = (date: Date) => {
-    return (startDate && isSameDay(date, startDate)) || 
-           (endDate && isSameDay(date, endDate));
-  };
-
-  // Helper to determine if a date is within the current selection range
-  const isInSelectionRange = (date: Date) => {
-    if (!startDate) return false;
-    if (endDate) {
-      const [rangeStart, rangeEnd] = compareAsc(startDate, endDate) <= 0 
-        ? [startDate, endDate] 
-        : [endDate, startDate];
-      return compareAsc(date, rangeStart) >= 0 && compareAsc(date, rangeEnd) <= 0;
-    }
-    return false;
-  };
-
   return (
     <div className="bg-cosmic-800/50 border border-cosmic-700/30 rounded-lg p-4 mb-4">
       <h3 className="text-lg font-medium text-gray-200 mb-3">
@@ -213,40 +203,129 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
           <div>
             <Label htmlFor="date" className="block text-sm text-gray-300 mb-1">
               {t("Select Dates", "选择日期")} 
-              <span className="text-xs text-gray-400 ml-1">
-                {selectionMode === 'start' 
-                  ? t("(Select start date)", "(选择开始日期)") 
-                  : t("(Select end date)", "(选择结束日期)")}
-              </span>
+              <span className="text-xs text-gray-400 ml-1">{t("(Select a range by clicking start and end dates)", "(点击起始和结束日期选择范围)")}</span>
             </Label>
-            
-            <TimeSlotCalendar 
-              selectedDates={selectedDates}
-              onDateSelect={handleDateSelect}
-              startDate={startDate}
-              endDate={endDate}
-              selectionMode={selectionMode}
-              isRangeStartOrEnd={isRangeStartOrEnd}
-              isInSelectionRange={isInSelectionRange}
-            />
-            
-            <TimeSlotDatesDisplay selectedDates={selectedDates} />
+            <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
+              <Calendar
+                mode="multiple"
+                selected={selectedDates}
+                onSelect={handleDateSelect}
+                disabled={(date) => date < new Date()}
+                className="bg-cosmic-800/30 rounded-lg"
+              />
+            </div>
+            <div className="text-xs text-gray-400 mt-1">
+              {t("Selected dates", "已选择日期")}: {selectedDates.length}
+            </div>
           </div>
           
-          <TimeSlotDetailsForm
-            startTime={startTime}
-            endTime={endTime}
-            maxCapacity={maxCapacity}
-            petsPolicy={petsPolicy}
-            price={price}
-            currency={currency}
-            onStartTimeChange={setStartTime}
-            onEndTimeChange={setEndTime}
-            onMaxCapacityChange={setMaxCapacity}
-            onPetsPolicyChange={setPetsPolicy}
-            onPriceChange={setPrice}
-            onCurrencyChange={setCurrency}
-          />
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="start-time" className="block text-sm text-gray-300 mb-1">
+                {t("Start Time", "开始时间")}
+              </Label>
+              <Input
+                id="start-time"
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="end-time" className="block text-sm text-gray-300 mb-1">
+                {t("End Time", "结束时间")}
+              </Label>
+              <Input
+                id="end-time"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
+                required
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                {t("For overnight sessions, set end time earlier than start time", "对于通宵会话，请将结束时间设置为早于开始时间")}
+              </p>
+            </div>
+            
+            <div>
+              <Label htmlFor="capacity" className="block text-sm text-gray-300 mb-1">
+                {t("Maximum Capacity", "最大容量")}
+              </Label>
+              <Input
+                id="capacity"
+                type="number"
+                min="1"
+                max="100"
+                value={maxCapacity}
+                onChange={(e) => setMaxCapacity(parseInt(e.target.value))}
+                className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="pets-policy" className="block text-sm text-gray-300 mb-1">
+                {t("Pets Policy", "宠物政策")}
+              </Label>
+              <Select 
+                value={petsPolicy} 
+                onValueChange={setPetsPolicy}
+              >
+                <SelectTrigger className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200">
+                  <SelectValue placeholder={t("Select pets policy", "选择宠物政策")} />
+                </SelectTrigger>
+                <SelectContent className="bg-cosmic-800 border-cosmic-700">
+                  <SelectItem value="not_allowed">{t("Not Allowed", "不允许")}</SelectItem>
+                  <SelectItem value="allowed">{t("Allowed", "允许")}</SelectItem>
+                  <SelectItem value="only_small">{t("Only Small Pets", "仅小型宠物")}</SelectItem>
+                  <SelectItem value="approval_required">{t("Host Approval Required", "需要主人批准")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Label htmlFor="price" className="block text-sm text-gray-300 mb-1">
+                  {t("Price", "价格")}
+                </Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(parseFloat(e.target.value))}
+                  className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div className="w-1/3">
+                <Label htmlFor="currency" className="block text-sm text-gray-300 mb-1">
+                  {t("Currency", "货币")}
+                </Label>
+                <Select 
+                  value={currency} 
+                  onValueChange={setCurrency}
+                >
+                  <SelectTrigger className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200">
+                    <SelectValue placeholder="$" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-cosmic-800 border-cosmic-700">
+                    {CURRENCY_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
         </div>
         
         <div>
