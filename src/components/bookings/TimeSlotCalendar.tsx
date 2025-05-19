@@ -30,7 +30,7 @@ const TimeSlotCalendar: React.FC<TimeSlotCalendarProps> = ({
         selected={selectedDates}
         onSelect={onDateSelect}
         disabled={disablePastDates ? (date) => date < new Date() : undefined}
-        className="bg-cosmic-800/30 rounded-lg"
+        className="bg-cosmic-800/30 rounded-lg border border-cosmic-600/30"
         components={{
           Day: ({ date, ...props }: DayContentProps) => {
             // Check if the current day is between the first and last selected dates
@@ -45,7 +45,7 @@ const TimeSlotCalendar: React.FC<TimeSlotCalendarProps> = ({
                 
               if (isInRange) {
                 return (
-                  <div className={`${props.className} day-range-middle`}>
+                  <div className={props.className + " bg-cosmic-500/20 text-gray-200 hover:bg-cosmic-500/30"}>
                     {props.children}
                   </div>
                 );
