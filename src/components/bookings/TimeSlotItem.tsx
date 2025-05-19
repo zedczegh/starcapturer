@@ -83,12 +83,18 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
       setIsBooking(true);
       
       // Call the RPC function to insert a reservation
-      const { data, error } = await supabase.rpc('insert_astro_spot_reservation', {
-        p_timeslot_id: timeSlot.id,
-        p_user_id: user.id,
-        // Store guest information as a JSON string in the metadata field
-        p_metadata: JSON.stringify(guests)
-      });
+      // Using direct database update as a workaround for the type issue
+      // Later we can update types to match the updated function
+      const { data: reservation, error } = await supabase
+        .from('astro_spot_reservations')
+        .insert({
+          timeslot_id: timeSlot.id,
+          user_id: user.id,
+          status: 'confirmed',
+          metadata: guests
+        })
+        .select()
+        .single();
       
       if (error) throw error;
       
