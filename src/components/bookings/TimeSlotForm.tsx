@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Calendar } from '@/components/ui/calendar';
-import { format, addHours, setHours, setMinutes } from 'date-fns';
+import { format, addHours, setHours, setMinutes, compareAsc, eachDayOfInterval, isSameDay } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -57,40 +58,39 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     existingTimeSlot.price || 0 : 0);
   const [currency, setCurrency] = useState(isEditing ? 
     existingTimeSlot.currency || '$' : '$');
+  
+  // Track selection state for range selection
+  const [selectionMode, setSelectionMode] = useState<'start' | 'end'>('start');
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
 
-  // Handle date selection with range highlighting
-  const handleDateSelect = (dates: Date[] | undefined) => {
-    if (!dates || dates.length === 0) {
-      setSelectedDates([]);
+  // Handle date selection with improved range functionality
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    
+    // Clear existing selection if we're starting a new range
+    if (selectionMode === 'start') {
+      setStartDate(date);
+      setEndDate(null);
+      setSelectionMode('end');
+      setSelectedDates([date]); // Start with just this date selected
       return;
     }
     
-    // If only one date is selected, use it
-    if (dates.length === 1) {
-      setSelectedDates(dates);
-      return;
-    }
-    
-    // If multiple dates are selected, check if it's a range
-    const sortedDates = [...dates].sort((a, b) => a.getTime() - b.getTime());
-    
-    // If only two dates are selected, fill in the range between them
-    if (sortedDates.length === 2) {
-      const [start, end] = sortedDates;
-      const dateRange: Date[] = [];
-      const currentDate = new Date(start);
+    // Complete the range selection
+    if (selectionMode === 'end' && startDate) {
+      setEndDate(date);
       
-      while (currentDate <= end) {
-        dateRange.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
+      // Ensure start date is before end date
+      const [rangeStart, rangeEnd] = compareAsc(startDate, date) <= 0 
+        ? [startDate, date] 
+        : [date, startDate];
       
+      // Generate all dates in the selected range
+      const dateRange = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
       setSelectedDates(dateRange);
-      return;
+      setSelectionMode('start'); // Reset for next selection
     }
-    
-    // Otherwise use the selected dates as they are
-    setSelectedDates(dates);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -189,6 +189,24 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     }
   };
 
+  // Helper to determine if a date is the start or end of the current range
+  const isRangeStartOrEnd = (date: Date) => {
+    return (startDate && isSameDay(date, startDate)) || 
+           (endDate && isSameDay(date, endDate));
+  };
+
+  // Helper to determine if a date is within the current selection range
+  const isInSelectionRange = (date: Date) => {
+    if (!startDate) return false;
+    if (endDate) {
+      const [rangeStart, rangeEnd] = compareAsc(startDate, endDate) <= 0 
+        ? [startDate, endDate] 
+        : [endDate, startDate];
+      return compareAsc(date, rangeStart) >= 0 && compareAsc(date, rangeEnd) <= 0;
+    }
+    return false;
+  };
+
   return (
     <div className="bg-cosmic-800/50 border border-cosmic-700/30 rounded-lg p-4 mb-4">
       <h3 className="text-lg font-medium text-gray-200 mb-3">
@@ -203,20 +221,60 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
           <div>
             <Label htmlFor="date" className="block text-sm text-gray-300 mb-1">
               {t("Select Dates", "选择日期")} 
-              <span className="text-xs text-gray-400 ml-1">{t("(Select a range by clicking start and end dates)", "(点击起始和结束日期选择范围)")}</span>
+              <span className="text-xs text-gray-400 ml-1">
+                {selectionMode === 'start' 
+                  ? t("(Select start date)", "(选择开始日期)") 
+                  : t("(Select end date)", "(选择结束日期)")}
+              </span>
             </Label>
             <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
               <Calendar
-                mode="multiple"
-                selected={selectedDates}
+                mode="single"
+                selected={startDate}
                 onSelect={handleDateSelect}
                 disabled={(date) => date < new Date()}
                 className="bg-cosmic-800/30 rounded-lg"
+                modifiersClassNames={{
+                  selected: "bg-primary text-primary-foreground",
+                  today: "bg-accent text-accent-foreground",
+                }}
+                modifiersStyles={{
+                  selected: { backgroundColor: selectionMode === 'end' ? "#3b82f6" : undefined },
+                  range_middle: { backgroundColor: "rgba(59, 130, 246, 0.3)", color: "white" },
+                }}
+                components={{
+                  Day: ({ date, ...props }) => {
+                    const isSelected = selectedDates.some(selectedDate => 
+                      isSameDay(selectedDate, date)
+                    );
+                    const isRangeEnd = isRangeStartOrEnd(date);
+                    const isInRange = isInSelectionRange(date);
+                    
+                    return (
+                      <div
+                        {...props}
+                        className={`
+                          ${props.className} 
+                          ${isSelected ? 'bg-blue-600 text-white' : ''}
+                          ${isRangeEnd ? 'rounded-full' : ''}
+                          ${isInRange && !isRangeEnd ? 'bg-blue-500/30 text-white' : ''}
+                        `}
+                      />
+                    );
+                  }
+                }}
               />
             </div>
             <div className="text-xs text-gray-400 mt-1">
               {t("Selected dates", "已选择日期")}: {selectedDates.length}
             </div>
+            {selectedDates.length > 0 && (
+              <div className="text-xs text-gray-300 mt-1">
+                {selectedDates.length > 3 
+                  ? `${format(selectedDates[0], 'yyyy-MM-dd')} - ${format(selectedDates[selectedDates.length-1], 'yyyy-MM-dd')}`
+                  : selectedDates.map(date => format(date, 'yyyy-MM-dd')).join(', ')}
+              </div>
+            )}
           </div>
           
           <div className="space-y-4">
