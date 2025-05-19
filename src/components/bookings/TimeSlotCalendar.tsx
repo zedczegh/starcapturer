@@ -4,6 +4,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { DayContentProps } from 'react-day-picker';
 
 interface TimeSlotCalendarProps {
   selectedDates: Date[];
@@ -31,32 +32,27 @@ const TimeSlotCalendar: React.FC<TimeSlotCalendarProps> = ({
         disabled={disablePastDates ? (date) => date < new Date() : undefined}
         className="bg-cosmic-800/30 rounded-lg"
         components={{
-          Day: (props) => {
-            const { day, ...rest } = props;
-            
+          Day: ({ date, ...props }: DayContentProps) => {
             // Check if the current day is between the first and last selected dates
             if (selectedDates.length >= 2) {
               const sortedDates = [...selectedDates].sort((a, b) => a.getTime() - b.getTime());
               const firstDate = sortedDates[0];
               const lastDate = sortedDates[sortedDates.length - 1];
               
-              const isInRange = day && 
-                day.getTime() > firstDate.getTime() &&
-                day.getTime() < lastDate.getTime();
+              const isInRange = date && 
+                date.getTime() > firstDate.getTime() &&
+                date.getTime() < lastDate.getTime();
                 
               if (isInRange) {
                 return (
-                  <div
-                    {...rest}
-                    className={`${rest.className} day-range-middle`}
-                  >
+                  <div className={`${props.className} day-range-middle`}>
                     {props.children}
                   </div>
                 );
               }
             }
             
-            return <div {...rest}>{props.children}</div>;
+            return <div className={props.className}>{props.children}</div>;
           }
         }}
       />
