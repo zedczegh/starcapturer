@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -243,7 +242,8 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                   range_middle: { backgroundColor: "rgba(59, 130, 246, 0.3)", color: "white" },
                 }}
                 components={{
-                  Day: ({ date, ...props }) => {
+                  Day: (props) => {
+                    const date = props.date;
                     const isSelected = selectedDates.some(selectedDate => 
                       isSameDay(selectedDate, date)
                     );
