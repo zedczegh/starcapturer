@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -8,10 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { Calendar } from '@/components/ui/calendar';
+import { format, addHours, setHours, setMinutes } from 'date-fns';
 import { Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import TimeSlotCalendar from './TimeSlotCalendar';
 
 interface TimeSlotFormProps {
   spotId: string;
@@ -23,11 +22,11 @@ interface TimeSlotFormProps {
 const CURRENCY_OPTIONS = [
   { value: '$', label: 'USD ($)' },
   { value: '€', label: 'EUR (€)' },
-  { value: '¥', label: 'CNY (¥)', key: 'cny' },
+  { value: '¥', label: 'CNY (¥)' },
   { value: '£', label: 'GBP (£)' },
   { value: '₹', label: 'INR (₹)' },
   { value: '₩', label: 'KRW (₩)' },
-  { value: '¥', label: 'JPY (¥)', key: 'jpy' }
+  { value: '¥', label: 'JPY (¥)' },
 ];
 
 const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ 
@@ -207,10 +206,12 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
               <span className="text-xs text-gray-400 ml-1">{t("(Select a range by clicking start and end dates)", "(点击起始和结束日期选择范围)")}</span>
             </Label>
             <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
-              <TimeSlotCalendar
-                selectedDates={selectedDates}
-                onDateSelect={handleDateSelect}
-                disablePastDates={true}
+              <Calendar
+                mode="multiple"
+                selected={selectedDates}
+                onSelect={handleDateSelect}
+                disabled={(date) => date < new Date()}
+                className="bg-cosmic-800/30 rounded-lg"
               />
             </div>
             <div className="text-xs text-gray-400 mt-1">
@@ -316,7 +317,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                   </SelectTrigger>
                   <SelectContent className="bg-cosmic-800 border-cosmic-700">
                     {CURRENCY_OPTIONS.map((option) => (
-                      <SelectItem key={option.key || option.value} value={option.value}>
+                      <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
                     ))}
