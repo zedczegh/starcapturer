@@ -10,7 +10,6 @@ import TimeSlotItem from './TimeSlotItem';
 import { format, parseISO, isAfter, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import DateRangePicker from './DateRangePicker';
 import { groupTimeSlotsByConsecutiveDates, formatDateRanges } from '@/utils/dateRangeUtils';
 
 interface TimeSlotManagerProps {
@@ -21,8 +20,6 @@ interface TimeSlotManagerProps {
 const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
 
   // Fetch time slots for this spot
@@ -102,40 +99,8 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
     }
   });
 
-  // Filter time slots based on the selected date range
-  const filteredTimeSlots = timeSlots?.filter((slot) => {
-    const slotDate = new Date(slot.start_time);
-    
-    // If no date filter is active, show all
-    if (!startDate && !endDate) {
-      return true;
-    }
-    
-    // If only start date is selected
-    if (startDate && !endDate) {
-      const startOfSelectedDate = startOfDay(startDate);
-      const endOfSelectedDate = endOfDay(startDate);
-      return isWithinInterval(slotDate, { 
-        start: startOfSelectedDate, 
-        end: endOfSelectedDate 
-      });
-    }
-    
-    // If both dates are selected, filter by range
-    if (startDate && endDate) {
-      const startOfRange = startOfDay(startDate);
-      const endOfRange = endOfDay(endDate);
-      return isWithinInterval(slotDate, { 
-        start: startOfRange, 
-        end: endOfRange
-      });
-    }
-    
-    return true;
-  });
-
   // Filter upcoming time slots (not in the past)
-  const upcomingTimeSlots = filteredTimeSlots?.filter(slot => 
+  const upcomingTimeSlots = timeSlots?.filter(slot => 
     isAfter(new Date(slot.start_time), new Date())
   );
 
@@ -179,18 +144,6 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
               {t("Add Available Time Slot", "添加可用时间段")}
             </Button>
           )}
-        </div>
-      )}
-
-      {/* Only show date range picker for guests (non-creators) */}
-      {!isCreator && (
-        <div className="mb-6">
-          <DateRangePicker 
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-          />
         </div>
       )}
 
