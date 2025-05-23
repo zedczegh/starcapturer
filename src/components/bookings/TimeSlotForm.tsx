@@ -98,6 +98,8 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                 p_end_time: endDateTime.toISOString(),
                 p_max_capacity: maxCapacity,
                 p_description: description.trim(),
+                p_price: 0,
+                p_currency: '$',
                 p_pets_policy: petsPolicy
               }
             }
@@ -116,6 +118,8 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                 p_end_time: endDateTime.toISOString(),
                 p_max_capacity: maxCapacity,
                 p_description: description.trim(),
+                p_price: 0,
+                p_currency: '$',
                 p_pets_policy: petsPolicy
               }
             }
@@ -129,9 +133,10 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
         ? t("Time slot updated", "时间段已更新") 
         : t("Time slots created", "时间段已创建"));
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving time slot:", error);
-      toast.error(t("Failed to save time slot", "保存时间段失败"));
+      const errorMessage = error.message || t("Failed to save time slot", "保存时间段失败");
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

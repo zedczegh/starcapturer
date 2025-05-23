@@ -127,6 +127,7 @@ export type Database = {
           end_time: string
           id: string
           max_capacity: number
+          pets_policy: string | null
           price: number | null
           spot_id: string
           start_time: string
@@ -140,6 +141,7 @@ export type Database = {
           end_time: string
           id?: string
           max_capacity?: number
+          pets_policy?: string | null
           price?: number | null
           spot_id: string
           start_time: string
@@ -153,6 +155,7 @@ export type Database = {
           end_time?: string
           id?: string
           max_capacity?: number
+          pets_policy?: string | null
           price?: number | null
           spot_id?: string
           start_time?: string
@@ -449,16 +452,28 @@ export type Database = {
         Returns: string
       }
       insert_astro_spot_timeslot: {
-        Args: {
-          p_spot_id: string
-          p_creator_id: string
-          p_start_time: string
-          p_end_time: string
-          p_max_capacity?: number
-          p_description?: string
-          p_price?: number
-          p_currency?: string
-        }
+        Args:
+          | {
+              p_spot_id: string
+              p_creator_id: string
+              p_start_time: string
+              p_end_time: string
+              p_max_capacity?: number
+              p_description?: string
+              p_price?: number
+              p_currency?: string
+            }
+          | {
+              p_spot_id: string
+              p_creator_id: string
+              p_start_time: string
+              p_end_time: string
+              p_max_capacity?: number
+              p_description?: string
+              p_price?: number
+              p_currency?: string
+              p_pets_policy?: string
+            }
         Returns: string
       }
       is_username_available: {
@@ -466,17 +481,30 @@ export type Database = {
         Returns: boolean
       }
       update_astro_spot_timeslot: {
-        Args: {
-          p_id: string
-          p_spot_id: string
-          p_creator_id: string
-          p_start_time: string
-          p_end_time: string
-          p_max_capacity?: number
-          p_description?: string
-          p_price?: number
-          p_currency?: string
-        }
+        Args:
+          | {
+              p_id: string
+              p_spot_id: string
+              p_creator_id: string
+              p_start_time: string
+              p_end_time: string
+              p_max_capacity?: number
+              p_description?: string
+              p_price?: number
+              p_currency?: string
+            }
+          | {
+              p_id: string
+              p_spot_id: string
+              p_creator_id: string
+              p_start_time: string
+              p_end_time: string
+              p_max_capacity?: number
+              p_description?: string
+              p_price?: number
+              p_currency?: string
+              p_pets_policy?: string
+            }
         Returns: boolean
       }
     }

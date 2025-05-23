@@ -18,6 +18,8 @@ serve(async (req: Request) => {
     // Get the request body
     const { function: functionName, params } = await req.json();
     
+    console.log(`Calling function ${functionName} with params:`, params);
+    
     // Create a Supabase client with the service role key
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -30,11 +32,22 @@ serve(async (req: Request) => {
     
     if (error) {
       console.error(`Error calling function ${functionName}:`, error);
-      return new Response(JSON.stringify({ error: error.message }), {
+      
+      // Create a more user-friendly error message
+      let errorMessage = error.message;
+      if (error.message.includes("pets_policy")) {
+        errorMessage = "The pets policy parameter is missing. Please ensure you're using the latest version of the form.";
+      } else if (error.message.includes("Could not find the function")) {
+        errorMessage = "Function not found. Please check if the database functions are properly set up.";
+      }
+      
+      return new Response(JSON.stringify({ error: errorMessage }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    
+    console.log(`Function ${functionName} executed successfully:`, data);
     
     // Return successful response
     return new Response(JSON.stringify({ data }), {
