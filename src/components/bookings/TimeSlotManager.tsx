@@ -197,24 +197,13 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
       <div className="space-y-4">
         {groupedTimeSlots.length > 0 ? (
           groupedTimeSlots.map((group, groupIndex) => (
-            <div key={groupIndex} className="space-y-3">
-              {/* Display date range for this group */}
-              {group.length > 1 && (
-                <div className="text-sm font-medium text-blue-400 bg-blue-500/10 px-3 py-1 rounded-md inline-block">
-                  {/* Format the date range */}
-                  {format(new Date(group[0].start_time), 'MMM d')} - {format(new Date(group[group.length-1].start_time), 'MMM d')}&nbsp;
-                  ({group.length} {t('days', '天')})
-                </div>
-              )}
-              
-              {/* Show the first time slot in each group */}
-              <TimeSlotItem 
-                key={group[0].id}
-                timeSlot={group[0]}
-                isCreator={isCreator}
-                onUpdate={refetch}
-              />
-            </div>
+            <TimeSlotItem 
+              key={group[0].id}
+              timeSlot={group[0]}
+              isCreator={isCreator}
+              onUpdate={refetch}
+              group={group}
+            />
           ))
         ) : (
           <div className="py-8 text-center bg-cosmic-800/20 rounded-lg border border-cosmic-700/20">

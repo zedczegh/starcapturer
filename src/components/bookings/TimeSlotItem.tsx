@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isAfter, addDays } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,15 +8,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { formatDateForLanguage } from '@/utils/dateFormatting';
+import { formatDateRangeWithNights } from '@/utils/dateRangeUtils';
 import GuestSelector from './GuestSelector';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface TimeSlotItemProps {
   timeSlot: any;
   isCreator: boolean;
   onUpdate: () => void;
+  group?: any[]; // Group of consecutive time slots
 }
 
-const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpdate }) => {
+const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpdate, group = [] }) => {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -29,13 +33,27 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
     pets: 0
   });
   
+  // Check-in/check-out date state
+  const [checkInDate, setCheckInDate] = useState<Date | undefined>(undefined);
+  const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(undefined);
+  
+  // Get full time slot group (if provided) or default to single time slot
+  const fullGroup = group.length > 0 ? group : [timeSlot];
+  
+  // Get the first and last dates from the group
+  const firstDate = new Date(fullGroup[0].start_time);
+  const lastDate = new Date(fullGroup[fullGroup.length - 1].start_time);
+  
+  // Calculate the available date range for this time slot
+  const availableDates = fullGroup.map(slot => new Date(slot.start_time));
+  
   // Check if user has already booked this slot
   const hasUserBooked = timeSlot.astro_spot_reservations?.some(
     (res: any) => res.user_id === user?.id
   );
 
-  // Format dates for display
-  const formattedStartDate = formatDateForLanguage(timeSlot.start_time, language);
+  // Format date range for display
+  const formattedDateRange = formatDateRangeWithNights(firstDate, lastDate);
   
   // Format times without dates
   const startTime = format(parseISO(timeSlot.start_time), 'HH:mm');
@@ -50,12 +68,16 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
     
     try {
       setIsDeleting(true);
-      const { error } = await supabase
-        .from('astro_spot_timeslots')
-        .delete()
-        .eq('id', timeSlot.id);
       
-      if (error) throw error;
+      // Delete each time slot in the group
+      for (const slot of fullGroup) {
+        const { error } = await supabase
+          .from('astro_spot_timeslots')
+          .delete()
+          .eq('id', slot.id);
+        
+        if (error) throw error;
+      }
       
       toast.success(t('Time slot deleted', '时间段已删除'));
       onUpdate();
@@ -78,27 +100,48 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
       return;
     }
     
+    // Validate check-in/check-out dates
+    if (!checkInDate || !checkOutDate) {
+      toast.error(t('Please select check-in and check-out dates', '请选择入住和退房日期'));
+      return;
+    }
+    
     try {
       setIsBooking(true);
       
-      // Call the RPC function to insert a reservation
-      const { data, error } = await supabase.functions.invoke('call-rpc', {
-        body: {
-          function: 'insert_astro_spot_reservation',
-          params: {
-            p_timeslot_id: timeSlot.id,
-            p_user_id: user.id,
-            // Store guest information as a JSON string in the metadata field (if needed)
-            // p_metadata: JSON.stringify(guests)
-          }
-        }
+      // Find the time slots that match the selected date range
+      const selectedTimeSlots = fullGroup.filter(slot => {
+        const slotDate = new Date(slot.start_time);
+        return slotDate >= checkInDate && slotDate <= checkOutDate;
       });
       
-      if (error) throw error;
+      if (selectedTimeSlots.length === 0) {
+        throw new Error(t('No available time slots in the selected date range', '所选日期范围内没有可用的时间段'));
+      }
+      
+      // Book each time slot in the selected range
+      for (const slot of selectedTimeSlots) {
+        // Call the RPC function to insert a reservation
+        const { data, error } = await supabase.functions.invoke('call-rpc', {
+          body: {
+            function: 'insert_astro_spot_reservation',
+            params: {
+              p_timeslot_id: slot.id,
+              p_user_id: user.id,
+              // Store guest information as a JSON string in the metadata field (if needed)
+              // p_metadata: JSON.stringify(guests)
+            }
+          }
+        });
+        
+        if (error) throw error;
+      }
       
       toast.success(t('Booking confirmed', '预订已确认'));
       onUpdate();
       setShowBookingForm(false);
+      setCheckInDate(undefined);
+      setCheckOutDate(undefined);
     } catch (error: any) {
       console.error('Error booking time slot:', error);
       toast.error(error.message || t('Failed to book time slot', '预订时间段失败'));
@@ -111,11 +154,20 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
     setGuests(guestCounts);
   };
 
+  const isDateAvailable = (date: Date) => {
+    // Check if the date is in the available dates
+    return availableDates.some(availableDate => 
+      availableDate.getFullYear() === date.getFullYear() &&
+      availableDate.getMonth() === date.getMonth() &&
+      availableDate.getDate() === date.getDate()
+    );
+  };
+
   return (
     <div className="bg-cosmic-800/40 border border-cosmic-700/30 rounded-lg p-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
         <div className="text-gray-200 font-medium mb-2 sm:mb-0">
-          {formattedStartDate} {startTime} - {endTime}
+          {formattedDateRange}, {startTime}-{endTime}
         </div>
         <div className="flex space-x-2">
           {!isCreator && !hasUserBooked && !showBookingForm && (
@@ -173,17 +225,61 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
             }</div>
           </>
         )}
+        <div className="mx-2">•</div>
+        <div>
+          {t('Total nights', '总晚数')}: {fullGroup.length}
+        </div>
       </div>
       
       {showBookingForm && !hasUserBooked && (
         <div className="mt-4 p-3 bg-cosmic-900/40 border border-cosmic-700/30 rounded-md">
           <h4 className="text-gray-200 font-medium mb-3">{t('Booking Details', '预订详情')}</h4>
-          <div className="mb-3">
-            <GuestSelector 
-              onChange={handleGuestChange} 
-              maxGuests={timeSlot.max_capacity}
-            />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+            <div>
+              <label className="block text-sm text-gray-300 mb-1">
+                {t('Select check-in and check-out dates', '选择入住和退房日期')}
+              </label>
+              
+              <div className="bg-cosmic-800/70 rounded-lg p-2">
+                <Calendar
+                  mode="range"
+                  selected={{ 
+                    from: checkInDate, 
+                    to: checkOutDate 
+                  }}
+                  onSelect={(range) => {
+                    if (range?.from) setCheckInDate(range.from);
+                    if (range?.to) setCheckOutDate(range.to);
+                  }}
+                  disabled={(date) => {
+                    // Disable dates that are not in the available dates list
+                    return !isDateAvailable(date);
+                  }}
+                  className="bg-cosmic-800/30 border-cosmic-700/30 rounded-lg"
+                />
+              </div>
+              
+              <div className="text-sm text-gray-400 mt-2">
+                {checkInDate && checkOutDate ? (
+                  <span>
+                    {format(checkInDate, 'MMM d')} - {format(checkOutDate, 'MMM d')} 
+                    ({Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24))} {t('nights', '晚')})
+                  </span>
+                ) : (
+                  <span>{t('Please select your dates', '请选择您的日期')}</span>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <GuestSelector 
+                onChange={handleGuestChange} 
+                maxGuests={timeSlot.max_capacity}
+              />
+            </div>
           </div>
+          
           <div className="flex justify-end space-x-2">
             <Button 
               variant="outline"

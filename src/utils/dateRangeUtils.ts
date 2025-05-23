@@ -1,5 +1,5 @@
 
-import { eachDayOfInterval, format } from 'date-fns';
+import { eachDayOfInterval, format, formatDistance } from 'date-fns';
 
 /**
  * Generates an array of dates from a start and end date (inclusive)
@@ -107,4 +107,31 @@ export function groupTimeSlotsByConsecutiveDates(timeSlots: any[]): any[][] {
   }
   
   return groups;
+}
+
+/**
+ * Formats a date range into a readable string with night count
+ */
+export function formatDateRangeWithNights(startDate: Date, endDate: Date): string {
+  if (!startDate || !endDate) return '';
+  
+  const start = format(startDate, 'MMM d');
+  const end = format(endDate, 'MMM d');
+  const year = format(startDate, 'yyyy');
+  
+  // Calculate the number of nights
+  const nightsCount = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (nightsCount === 0) {
+    return `${start}, ${year}`;
+  }
+  
+  return `${start}-${end} (${nightsCount} ${nightsCount === 1 ? 'night' : 'nights'}), ${year}`;
+}
+
+/**
+ * Format a time range for display
+ */
+export function formatTimeRange(startTime: string, endTime: string): string {
+  return `${startTime}-${endTime}`;
 }
