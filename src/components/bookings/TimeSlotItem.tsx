@@ -36,7 +36,6 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
 
   // Format dates for display
   const formattedStartDate = formatDateForLanguage(timeSlot.start_time, language);
-  const formattedEndDate = formatDateForLanguage(timeSlot.end_time, language);
   
   // Format times without dates
   const startTime = format(parseISO(timeSlot.start_time), 'HH:mm');
@@ -83,11 +82,16 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
       setIsBooking(true);
       
       // Call the RPC function to insert a reservation
-      const { data, error } = await supabase.rpc('insert_astro_spot_reservation', {
-        p_timeslot_id: timeSlot.id,
-        p_user_id: user.id,
-        // Store guest information as a JSON string in the metadata field (if needed)
-        // p_metadata: JSON.stringify(guests)
+      const { data, error } = await supabase.functions.invoke('call-rpc', {
+        body: {
+          function: 'insert_astro_spot_reservation',
+          params: {
+            p_timeslot_id: timeSlot.id,
+            p_user_id: user.id,
+            // Store guest information as a JSON string in the metadata field (if needed)
+            // p_metadata: JSON.stringify(guests)
+          }
+        }
       });
       
       if (error) throw error;
@@ -160,7 +164,13 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
         {timeSlot.pets_policy && (
           <>
             <div className="mx-2">•</div>
-            <div>{t('Pets', '宠物')}: {timeSlot.pets_policy}</div>
+            <div>{t('Pets', '宠物')}: {
+              timeSlot.pets_policy === 'not_allowed' ? t('Not Allowed', '不允许') :
+              timeSlot.pets_policy === 'allowed' ? t('Allowed', '允许') :
+              timeSlot.pets_policy === 'only_small' ? t('Only Small Pets', '仅小型宠物') :
+              timeSlot.pets_policy === 'approval_required' ? t('Host Approval Required', '需要主人批准') :
+              timeSlot.pets_policy
+            }</div>
           </>
         )}
       </div>

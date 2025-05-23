@@ -8,10 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Calendar } from '@/components/ui/calendar';
-import { format, addHours, setHours, setMinutes } from 'date-fns';
+import { format, addHours, setHours, setMinutes, eachDayOfInterval, isBefore } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import TimeSlotCalendar from './TimeSlotCalendar';
+import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 
 interface TimeSlotFormProps {
   spotId: string;
@@ -33,7 +35,16 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
   const isEditing = !!existingTimeSlot;
   const initialDate = isEditing ? new Date(existingTimeSlot.start_time) : new Date();
   
+  // State for multiple date selection mode
   const [selectedDates, setSelectedDates] = useState<Date[]>([initialDate]);
+  
+  // State for range selection mode
+  const [rangeStart, setRangeStart] = useState<Date | undefined>(undefined);
+  const [rangeEnd, setRangeEnd] = useState<Date | undefined>(undefined);
+  
+  // Toggle between date selection modes
+  const [useRangeMode, setUseRangeMode] = useState(false);
+  
   const [startTime, setStartTime] = useState(isEditing ? 
     format(new Date(existingTimeSlot.start_time), 'HH:mm') : '20:00');
   const [endTime, setEndTime] = useState(isEditing ? 
@@ -45,6 +56,25 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
   const [petsPolicy, setPetsPolicy] = useState(isEditing ?
     existingTimeSlot.pets_policy || 'not_allowed' : 'not_allowed');
 
+  // Handle date range selection
+  const handleRangeSelect = (range: { from: Date | undefined; to: Date | undefined }) => {
+    setRangeStart(range.from);
+    setRangeEnd(range.to);
+  };
+
+  // Convert range to array of dates for processing
+  const getSelectedDatesFromRange = (): Date[] => {
+    if (!rangeStart) return [];
+    
+    const end = rangeEnd || rangeStart;
+    
+    // Get all days in the range
+    return eachDayOfInterval({
+      start: rangeStart,
+      end
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -53,7 +83,10 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
       return;
     }
     
-    if (selectedDates.length === 0) {
+    // Get dates based on the selection mode
+    const datesToProcess = useRangeMode ? getSelectedDatesFromRange() : selectedDates;
+    
+    if (datesToProcess.length === 0) {
       toast.error(t("Please select at least one date", "请至少选择一个日期"));
       return;
     }
@@ -62,7 +95,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     
     try {
       // Process each selected date
-      for (const selectedDate of selectedDates) {
+      for (const selectedDate of datesToProcess) {
         // Parse the date and times
         const [startHour, startMinute] = startTime.split(':').map(Number);
         const [endHour, endMinute] = endTime.split(':').map(Number);
@@ -152,23 +185,49 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
       </h3>
       
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex items-center space-x-2 mb-2">
+          <Switch
+            id="range-mode"
+            checked={useRangeMode}
+            onCheckedChange={setUseRangeMode}
+          />
+          <Label htmlFor="range-mode" className="text-sm text-gray-300">
+            {t("Use date range selection", "使用日期范围选择")}
+          </Label>
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="date" className="block text-sm text-gray-300 mb-1">
-              {t("Select Dates", "选择日期")} 
-              <span className="text-xs text-gray-400 ml-1">{t("(Choose multiple dates)", "(可选择多个日期)")}</span>
+              {useRangeMode 
+                ? t("Select Date Range", "选择日期范围")
+                : t("Select Dates", "选择日期") + " " +
+                  t("(Choose multiple dates)", "(可选择多个日期)")
+              }
             </Label>
             <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
-              <Calendar
-                mode="multiple"
-                selected={selectedDates}
+              <TimeSlotCalendar
+                mode={useRangeMode ? 'range' : 'multiple'}
+                selectedDates={selectedDates}
                 onSelect={setSelectedDates}
-                disabled={(date) => date < new Date()}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                onRangeChange={handleRangeSelect}
                 className="bg-cosmic-800/30 rounded-lg"
               />
             </div>
             <div className="text-xs text-gray-400 mt-1">
-              {t("Selected dates", "已选择日期")}: {selectedDates.length}
+              {useRangeMode ? (
+                rangeStart ? (
+                  <>
+                    {t("Selected range", "已选择范围")}: {format(rangeStart, 'yyyy-MM-dd')}
+                    {rangeEnd && rangeEnd !== rangeStart ? ` ${t("to", "至")} ${format(rangeEnd, 'yyyy-MM-dd')}` : ""}
+                    {rangeStart && rangeEnd ? ` (${getSelectedDatesFromRange().length} ${t("days", "天")})` : ""}
+                  </>
+                ) : t("No date range selected", "未选择日期范围")
+              ) : (
+                `${t("Selected dates", "已选择日期")}: ${selectedDates.length}`
+              )}
             </div>
           </div>
           

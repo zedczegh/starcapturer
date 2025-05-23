@@ -11,6 +11,7 @@ import { format, parseISO, isAfter, startOfDay, endOfDay, isWithinInterval } fro
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import DateRangePicker from './DateRangePicker';
+import { groupTimeSlotsByConsecutiveDates, formatDateRanges } from '@/utils/dateRangeUtils';
 
 interface TimeSlotManagerProps {
   spotId: string;
@@ -138,6 +139,9 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
     isAfter(new Date(slot.start_time), new Date())
   );
 
+  // Group time slots by consecutive dates
+  const groupedTimeSlots = upcomingTimeSlots ? groupTimeSlotsByConsecutiveDates(upcomingTimeSlots) : [];
+
   const handleAddSuccess = () => {
     setShowAddForm(false);
     refetch();
@@ -191,24 +195,34 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
       )}
 
       <div className="space-y-4">
-        <div className="space-y-3">
-          {upcomingTimeSlots && upcomingTimeSlots.length > 0 ? (
-            upcomingTimeSlots.map(slot => (
+        {groupedTimeSlots.length > 0 ? (
+          groupedTimeSlots.map((group, groupIndex) => (
+            <div key={groupIndex} className="space-y-3">
+              {/* Display date range for this group */}
+              {group.length > 1 && (
+                <div className="text-sm font-medium text-blue-400 bg-blue-500/10 px-3 py-1 rounded-md inline-block">
+                  {/* Format the date range */}
+                  {format(new Date(group[0].start_time), 'MMM d')} - {format(new Date(group[group.length-1].start_time), 'MMM d')}&nbsp;
+                  ({group.length} {t('days', '天')})
+                </div>
+              )}
+              
+              {/* Show the first time slot in each group */}
               <TimeSlotItem 
-                key={slot.id}
-                timeSlot={slot}
+                key={group[0].id}
+                timeSlot={group[0]}
                 isCreator={isCreator}
                 onUpdate={refetch}
               />
-            ))
-          ) : (
-            <div className="py-8 text-center bg-cosmic-800/20 rounded-lg border border-cosmic-700/20">
-              <p className="text-gray-400">
-                {t("No available time slots found", "没有找到可用时间段")}
-              </p>
             </div>
-          )}
-        </div>
+          ))
+        ) : (
+          <div className="py-8 text-center bg-cosmic-800/20 rounded-lg border border-cosmic-700/20">
+            <p className="text-gray-400">
+              {t("No available time slots found", "没有找到可用时间段")}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
