@@ -9,10 +9,7 @@ CREATE OR REPLACE FUNCTION public.insert_astro_spot_timeslot(
   p_start_time TIMESTAMP WITH TIME ZONE,
   p_end_time TIMESTAMP WITH TIME ZONE,
   p_max_capacity INTEGER DEFAULT 1,
-  p_description TEXT DEFAULT NULL,
-  p_price NUMERIC DEFAULT 0,
-  p_currency TEXT DEFAULT '$',
-  p_pets_policy TEXT DEFAULT 'not_allowed'
+  p_description TEXT DEFAULT NULL
 ) RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -26,20 +23,14 @@ BEGIN
     start_time,
     end_time,
     max_capacity,
-    description,
-    price,
-    currency,
-    pets_policy
+    description
   ) VALUES (
     p_spot_id,
     p_creator_id,
     p_start_time,
     p_end_time,
     p_max_capacity,
-    p_description,
-    p_price,
-    p_currency,
-    p_pets_policy
+    p_description
   )
   RETURNING id INTO v_id;
   
@@ -55,10 +46,7 @@ CREATE OR REPLACE FUNCTION public.update_astro_spot_timeslot(
   p_start_time TIMESTAMP WITH TIME ZONE,
   p_end_time TIMESTAMP WITH TIME ZONE,
   p_max_capacity INTEGER DEFAULT 1,
-  p_description TEXT DEFAULT NULL,
-  p_price NUMERIC DEFAULT 0,
-  p_currency TEXT DEFAULT '$',
-  p_pets_policy TEXT DEFAULT 'not_allowed'
+  p_description TEXT DEFAULT NULL
 ) RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -70,9 +58,6 @@ BEGIN
     end_time = p_end_time,
     max_capacity = p_max_capacity,
     description = p_description,
-    price = p_price,
-    currency = p_currency,
-    pets_policy = p_pets_policy,
     updated_at = NOW()
   WHERE 
     id = p_id
@@ -87,8 +72,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.insert_astro_spot_reservation(
   p_timeslot_id UUID,
   p_user_id UUID,
-  p_status TEXT DEFAULT 'confirmed',
-  p_metadata JSONB DEFAULT NULL
+  p_status TEXT DEFAULT 'confirmed'
 ) RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -114,13 +98,11 @@ BEGIN
   INSERT INTO public.astro_spot_reservations (
     timeslot_id,
     user_id,
-    status,
-    metadata
+    status
   ) VALUES (
     p_timeslot_id,
     p_user_id,
-    p_status,
-    p_metadata
+    p_status
   )
   RETURNING id INTO v_id;
   

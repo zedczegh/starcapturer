@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -18,16 +19,6 @@ interface TimeSlotFormProps {
   onCancel: () => void;
   existingTimeSlot?: any;
 }
-
-const CURRENCY_OPTIONS = [
-  { value: '$', label: 'USD ($)' },
-  { value: '€', label: 'EUR (€)' },
-  { value: '¥', label: 'CNY (¥)' },
-  { value: '£', label: 'GBP (£)' },
-  { value: '₹', label: 'INR (₹)' },
-  { value: '₩', label: 'KRW (₩)' },
-  { value: '¥', label: 'JPY (¥)' },
-];
 
 const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ 
   spotId, 
@@ -53,45 +44,6 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     existingTimeSlot.max_capacity : 1);
   const [petsPolicy, setPetsPolicy] = useState(isEditing ?
     existingTimeSlot.pets_policy || 'not_allowed' : 'not_allowed');
-  const [price, setPrice] = useState(isEditing ? 
-    existingTimeSlot.price || 0 : 0);
-  const [currency, setCurrency] = useState(isEditing ? 
-    existingTimeSlot.currency || '$' : '$');
-
-  // Handle date selection with range highlighting
-  const handleDateSelect = (dates: Date[] | undefined) => {
-    if (!dates || dates.length === 0) {
-      setSelectedDates([]);
-      return;
-    }
-    
-    // If only one date is selected, use it
-    if (dates.length === 1) {
-      setSelectedDates(dates);
-      return;
-    }
-    
-    // If multiple dates are selected, check if it's a range
-    const sortedDates = [...dates].sort((a, b) => a.getTime() - b.getTime());
-    
-    // If only two dates are selected, fill in the range between them
-    if (sortedDates.length === 2) {
-      const [start, end] = sortedDates;
-      const dateRange: Date[] = [];
-      const currentDate = new Date(start);
-      
-      while (currentDate <= end) {
-        dateRange.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-      
-      setSelectedDates(dateRange);
-      return;
-    }
-    
-    // Otherwise use the selected dates as they are
-    setSelectedDates(dates);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,9 +98,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                 p_end_time: endDateTime.toISOString(),
                 p_max_capacity: maxCapacity,
                 p_description: description.trim(),
-                p_pets_policy: petsPolicy,
-                p_price: price,
-                p_currency: currency
+                p_pets_policy: petsPolicy
               }
             }
           });
@@ -166,9 +116,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                 p_end_time: endDateTime.toISOString(),
                 p_max_capacity: maxCapacity,
                 p_description: description.trim(),
-                p_pets_policy: petsPolicy,
-                p_price: price,
-                p_currency: currency
+                p_pets_policy: petsPolicy
               }
             }
           });
@@ -203,13 +151,13 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
           <div>
             <Label htmlFor="date" className="block text-sm text-gray-300 mb-1">
               {t("Select Dates", "选择日期")} 
-              <span className="text-xs text-gray-400 ml-1">{t("(Select a range by clicking start and end dates)", "(点击起始和结束日期选择范围)")}</span>
+              <span className="text-xs text-gray-400 ml-1">{t("(Choose multiple dates)", "(可选择多个日期)")}</span>
             </Label>
             <div className="bg-cosmic-900/40 rounded-lg border border-cosmic-700/40 p-2">
               <Calendar
                 mode="multiple"
                 selected={selectedDates}
-                onSelect={handleDateSelect}
+                onSelect={setSelectedDates}
                 disabled={(date) => date < new Date()}
                 className="bg-cosmic-800/30 rounded-lg"
               />
@@ -285,45 +233,6 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                   <SelectItem value="approval_required">{t("Host Approval Required", "需要主人批准")}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Label htmlFor="price" className="block text-sm text-gray-300 mb-1">
-                  {t("Price", "价格")}
-                </Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={price}
-                  onChange={(e) => setPrice(parseFloat(e.target.value))}
-                  className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200"
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div className="w-1/3">
-                <Label htmlFor="currency" className="block text-sm text-gray-300 mb-1">
-                  {t("Currency", "货币")}
-                </Label>
-                <Select 
-                  value={currency} 
-                  onValueChange={setCurrency}
-                >
-                  <SelectTrigger className="bg-cosmic-900/40 border-cosmic-700/40 text-gray-200">
-                    <SelectValue placeholder="$" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-cosmic-800 border-cosmic-700">
-                    {CURRENCY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </div>
         </div>
