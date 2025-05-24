@@ -63,6 +63,27 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
   const totalBookings = timeSlot.astro_spot_reservations?.length || 0;
   const availableSlots = timeSlot.max_capacity - totalBookings;
 
+  // Function to send automatic message to host
+  const sendAutoMessageToHost = async (spotName: string, hostUserId: string, checkInFormatted: string, checkOutFormatted: string) => {
+    try {
+      const message = `Hello! I've made a reservation at your astrospot: ${spotName} from ${checkInFormatted} to ${checkOutFormatted}, please contact me further! Thank you!`;
+      
+      const { error } = await supabase.from('user_messages').insert({
+        sender_id: user!.id,
+        receiver_id: hostUserId,
+        message: message,
+      });
+
+      if (error) {
+        console.error('Error sending auto-message to host:', error);
+      } else {
+        console.log('Auto-message sent to host successfully');
+      }
+    } catch (error) {
+      console.error('Error in sendAutoMessageToHost:', error);
+    }
+  };
+
   const handleDelete = async () => {
     if (!isCreator) return;
     
@@ -128,13 +149,31 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpda
             params: {
               p_timeslot_id: slot.id,
               p_user_id: user.id,
-              // Store guest information as a JSON string in the metadata field (if needed)
-              // p_metadata: JSON.stringify(guests)
             }
           }
         });
         
         if (error) throw error;
+      }
+
+      // Get spot details for the auto-message
+      const { data: spotData, error: spotError } = await supabase
+        .from('user_astro_spots')
+        .select('name, user_id')
+        .eq('id', timeSlot.spot_id)
+        .single();
+
+      if (!spotError && spotData) {
+        const checkInFormatted = format(checkInDate, 'MMM d, yyyy');
+        const checkOutFormatted = format(checkOutDate, 'MMM d, yyyy');
+        
+        // Send auto-message to host
+        await sendAutoMessageToHost(
+          spotData.name,
+          spotData.user_id,
+          checkInFormatted,
+          checkOutFormatted
+        );
       }
       
       toast.success(t('Booking confirmed', '预订已确认'));

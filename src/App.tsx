@@ -6,6 +6,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { useBookingNotifications } from './hooks/useBookingNotifications';
 import IndexPage from './pages/Index';
 import PhotoPointsNearby from './pages/PhotoPointsNearby';
 import NotFound from './pages/NotFound';
@@ -36,6 +37,35 @@ const queryClient = new QueryClient({
 
 import useAppInitializer from './hooks/useAppInitializer';
 
+function AppContent() {
+  // Add the booking notifications hook
+  useBookingNotifications();
+  
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/photo-points" replace />} />
+      <Route path="/photo-points" element={<PhotoPointsNearby />} />
+      <Route path="/community" element={<CommunityAstroSpots />} />
+      <Route path="/about-siqs" element={<AboutSIQS />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/location/:id" element={<LocationDetails />} />
+      <Route path="/location/siqs-calculator" element={<LocationDetails />} />
+      <Route path="/links" element={<UsefulLinks />} />
+      <Route path="/useful-links" element={<UsefulLinks />} />
+      <Route path="/share" element={<ShareLocation />} />
+      <Route path="/collections" element={<Collections />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/profile/:id" element={<ProfileMini />} />
+      <Route path="/settings" element={<PreferencesPage />} />
+      <Route path="/manage-astro-spots" element={<ManageAstroSpots />} />
+      <Route path="/astro-spot/:id" element={<AstroSpotProfile />} />
+      <Route path="/messages" element={<Messages />} />
+      <Route path="/my-reservations" element={<MyReservations />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
 function App() {
   // Add the initializer hook to setup performance optimizations
   useAppInitializer();
@@ -47,27 +77,7 @@ function App() {
           <LanguageProvider>
             <Router>
               <AuthProvider>
-                <Routes>
-                  <Route path="/" element={<Navigate to="/photo-points" replace />} />
-                  <Route path="/photo-points" element={<PhotoPointsNearby />} />
-                  <Route path="/community" element={<CommunityAstroSpots />} />
-                  <Route path="/about-siqs" element={<AboutSIQS />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/location/:id" element={<LocationDetails />} />
-                  <Route path="/location/siqs-calculator" element={<LocationDetails />} />
-                  <Route path="/links" element={<UsefulLinks />} />
-                  <Route path="/useful-links" element={<UsefulLinks />} />
-                  <Route path="/share" element={<ShareLocation />} />
-                  <Route path="/collections" element={<Collections />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/profile/:id" element={<ProfileMini />} />
-                  <Route path="/settings" element={<PreferencesPage />} />
-                  <Route path="/manage-astro-spots" element={<ManageAstroSpots />} />
-                  <Route path="/astro-spot/:id" element={<AstroSpotProfile />} />
-                  <Route path="/messages" element={<Messages />} />
-                  <Route path="/my-reservations" element={<MyReservations />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <AppContent />
               </AuthProvider>
             </Router>
           </LanguageProvider>
