@@ -6,7 +6,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info } from 'lucide-react';
+import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, Calendar } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -42,7 +42,6 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
     <DropdownMenuContent 
       align="end" 
       className="z-[200] min-w-[240px] rounded-xl cosmic-dropdown shadow-2xl py-2 px-0 overflow-hidden"
-      // Add slide and fade animation
       asChild
     >
       <motion.div
@@ -64,6 +63,7 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
           { icon: User, label: t('Profile', '个人资料'), path: '/profile' },
           { icon: BookmarkPlus, label: t('My Collections', '我的收藏'), path: '/collections' },
           { icon: MapPin, label: t('My AstroSpots', '我的观星点'), path: '/manage-astro-spots' },
+          { icon: Calendar, label: t('My Reservations', '我的预订'), path: '/my-reservations' },
           { icon: Link2, label: t('Useful Links', '资源'), path: '/useful-links' },
           { icon: Info, label: t('About SIQS', '关于SIQS'), path: '/about' },
           { icon: Settings, label: t('Settings', '设置'), path: '/settings' },
