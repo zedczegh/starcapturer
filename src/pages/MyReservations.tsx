@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, parseISO, isSameDay, addDays } from 'date-fns';
 import { toast } from 'sonner';
-import { Calendar, MapPin, User, Trash2, MessageCircle, Edit } from 'lucide-react';
+import { Calendar, MapPin, User, Trash2, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import BackButton from '@/components/navigation/BackButton';
@@ -57,6 +58,7 @@ type GroupedReservation = {
   startDate: Date;
   endDate: Date;
   totalNights: number;
+  hasConfirmedReservations: boolean;
 };
 
 const MyReservations = () => {
@@ -165,6 +167,7 @@ const MyReservations = () => {
             const startDate = new Date(currentGroup[0].astro_spot_timeslots.start_time);
             const endDate = new Date(currentGroup[currentGroup.length - 1].astro_spot_timeslots.end_time);
             const totalNights = currentGroup.length;
+            const hasConfirmedReservations = currentGroup.some(r => r.status === 'confirmed');
 
             groups.push({
               spot: currentGroup[0].astro_spot_timeslots.user_astro_spots,
@@ -172,7 +175,8 @@ const MyReservations = () => {
               reservations: currentGroup,
               startDate,
               endDate,
-              totalNights
+              totalNights,
+              hasConfirmedReservations
             });
           }
           
@@ -186,6 +190,7 @@ const MyReservations = () => {
         const startDate = new Date(currentGroup[0].astro_spot_timeslots.start_time);
         const endDate = new Date(currentGroup[currentGroup.length - 1].astro_spot_timeslots.end_time);
         const totalNights = currentGroup.length;
+        const hasConfirmedReservations = currentGroup.some(r => r.status === 'confirmed');
 
         groups.push({
           spot: currentGroup[0].astro_spot_timeslots.user_astro_spots,
@@ -193,7 +198,8 @@ const MyReservations = () => {
           reservations: currentGroup,
           startDate,
           endDate,
-          totalNights
+          totalNights,
+          hasConfirmedReservations
         });
       }
     });
@@ -223,12 +229,15 @@ const MyReservations = () => {
     }
   });
 
-  const handleContactHost = (hostUserId: string) => {
-    navigate(`/messages?user=${hostUserId}`);
-  };
-
-  const handleEditDates = (spotId: string) => {
-    navigate(`/astro-spot/${spotId}`);
+  const handleContactHost = (hostUserId: string, hostUsername: string) => {
+    console.log('Navigating to messages with user:', hostUserId, hostUsername);
+    navigate('/messages', { 
+      state: { 
+        selectedUserId: hostUserId,
+        selectedUsername: hostUsername,
+        timestamp: Date.now()
+      }
+    });
   };
 
   if (!user) {
@@ -317,23 +326,14 @@ const MyReservations = () => {
                           </div>
                         </div>
 
-                        <div className="flex gap-2">
-                          {group.reservations.map(reservation => (
-                            <Badge 
-                              key={reservation.id}
-                              variant={reservation.status === 'confirmed' ? 'default' : 'secondary'}
-                              className={
-                                reservation.status === 'confirmed' 
-                                  ? 'bg-green-600/20 text-green-400 border-green-600/30' 
-                                  : 'bg-gray-600/20 text-gray-400 border-gray-600/30'
-                              }
-                            >
-                              {reservation.status === 'confirmed' 
-                                ? t('Confirmed', '已确认') 
-                                : t('Pending', '待定')}
-                            </Badge>
-                          ))}
-                        </div>
+                        {group.hasConfirmedReservations && (
+                          <Badge 
+                            variant="default"
+                            className="bg-green-600/20 text-green-400 border-green-600/30"
+                          >
+                            {t('Confirmed', '已确认')}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -342,21 +342,11 @@ const MyReservations = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleContactHost(group.spot?.user_id)}
+                      onClick={() => handleContactHost(group.spot?.user_id, group.hostProfile?.username || 'Host')}
                       className="bg-cosmic-700/50 border-cosmic-600/50 hover:bg-cosmic-600/50"
                     >
                       <MessageCircle className="h-4 w-4 mr-2" />
                       {t('Contact Host', '联系主人')}
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditDates(group.spot?.id)}
-                      className="bg-cosmic-700/50 border-cosmic-600/50 hover:bg-cosmic-600/50"
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      {t('Edit Dates', '编辑日期')}
                     </Button>
 
                     <AlertDialog>
