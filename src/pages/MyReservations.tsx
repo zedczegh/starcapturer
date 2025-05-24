@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,11 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isSameDay, addDays } from 'date-fns';
 import { toast } from 'sonner';
 import { Calendar, MapPin, User, Trash2, MessageCircle, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import BackButton from '@/components/navigation/BackButton';
+import { formatDateRangeWithNights, groupTimeSlotsByConsecutiveDates } from '@/utils/dateRangeUtils';
 
 // Define the extended reservation type
 type ReservationWithProfile = {
@@ -47,6 +48,15 @@ type ReservationWithProfile = {
     id: string;
     username: string;
   };
+};
+
+type GroupedReservation = {
+  spot: ReservationWithProfile['astro_spot_timeslots']['user_astro_spots'];
+  hostProfile: ReservationWithProfile['host_profile'];
+  reservations: ReservationWithProfile[];
+  startDate: Date;
+  endDate: Date;
+  totalNights: number;
 };
 
 const MyReservations = () => {
@@ -107,14 +117,101 @@ const MyReservations = () => {
     enabled: !!user
   });
 
-  const cancelReservationMutation = useMutation({
-    mutationFn: async (reservationId: string) => {
-      const { error } = await supabase
-        .from('astro_spot_reservations')
-        .delete()
-        .eq('id', reservationId);
+  // Group reservations by spot and consecutive dates
+  const groupedReservations = React.useMemo(() => {
+    if (!reservations) return [];
+
+    const groups: GroupedReservation[] = [];
+    const spotGroups = new Map<string, ReservationWithProfile[]>();
+
+    // Group by spot first
+    reservations.forEach(reservation => {
+      const spotId = reservation.astro_spot_timeslots?.user_astro_spots?.id;
+      if (spotId) {
+        if (!spotGroups.has(spotId)) {
+          spotGroups.set(spotId, []);
+        }
+        spotGroups.get(spotId)!.push(reservation);
+      }
+    });
+
+    // For each spot, group consecutive dates
+    spotGroups.forEach(spotReservations => {
+      if (spotReservations.length === 0) return;
+
+      // Sort by date
+      const sorted = spotReservations.sort((a, b) => 
+        new Date(a.astro_spot_timeslots.start_time).getTime() - 
+        new Date(b.astro_spot_timeslots.start_time).getTime()
+      );
+
+      let currentGroup: ReservationWithProfile[] = [sorted[0]];
       
-      if (error) throw error;
+      for (let i = 1; i < sorted.length; i++) {
+        const current = sorted[i];
+        const previous = sorted[i - 1];
+        
+        const currentDate = new Date(current.astro_spot_timeslots.start_time);
+        const previousDate = new Date(previous.astro_spot_timeslots.start_time);
+        
+        // Check if dates are consecutive
+        const isConsecutive = isSameDay(currentDate, addDays(previousDate, 1));
+        
+        if (isConsecutive) {
+          currentGroup.push(current);
+        } else {
+          // Create group from current group
+          if (currentGroup.length > 0) {
+            const startDate = new Date(currentGroup[0].astro_spot_timeslots.start_time);
+            const endDate = new Date(currentGroup[currentGroup.length - 1].astro_spot_timeslots.end_time);
+            const totalNights = currentGroup.length;
+
+            groups.push({
+              spot: currentGroup[0].astro_spot_timeslots.user_astro_spots,
+              hostProfile: currentGroup[0].host_profile,
+              reservations: currentGroup,
+              startDate,
+              endDate,
+              totalNights
+            });
+          }
+          
+          // Start new group
+          currentGroup = [current];
+        }
+      }
+      
+      // Add the last group
+      if (currentGroup.length > 0) {
+        const startDate = new Date(currentGroup[0].astro_spot_timeslots.start_time);
+        const endDate = new Date(currentGroup[currentGroup.length - 1].astro_spot_timeslots.end_time);
+        const totalNights = currentGroup.length;
+
+        groups.push({
+          spot: currentGroup[0].astro_spot_timeslots.user_astro_spots,
+          hostProfile: currentGroup[0].host_profile,
+          reservations: currentGroup,
+          startDate,
+          endDate,
+          totalNights
+        });
+      }
+    });
+
+    return groups;
+  }, [reservations]);
+
+  const cancelReservationMutation = useMutation({
+    mutationFn: async (reservationIds: string[]) => {
+      // Cancel all reservations in the group
+      for (const id of reservationIds) {
+        const { error } = await supabase
+          .from('astro_spot_reservations')
+          .delete()
+          .eq('id', id);
+        
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userReservations', user?.id] });
@@ -159,15 +256,18 @@ const MyReservations = () => {
     <div className="min-h-screen bg-cosmic-900 text-gray-100">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-100 mb-2">
-            {t('My Reservations', '我的预订')}
-          </h1>
+          <div className="flex items-center gap-4 mb-4">
+            <BackButton />
+            <h1 className="text-3xl font-bold text-gray-100">
+              {t('My Reservations', '我的预订')}
+            </h1>
+          </div>
           <p className="text-gray-400">
             {t('Manage your astro spot reservations', '管理您的观星点预订')}
           </p>
         </div>
 
-        {!reservations || reservations.length === 0 ? (
+        {!groupedReservations || groupedReservations.length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="h-16 w-16 text-gray-500 mx-auto mb-4" />
             <h3 className="text-xl font-medium text-gray-300 mb-2">
@@ -185,43 +285,42 @@ const MyReservations = () => {
           </div>
         ) : (
           <div className="grid gap-6">
-            {reservations.map((reservation) => {
-              const timeslot = reservation.astro_spot_timeslots;
-              const spot = timeslot?.user_astro_spots;
-              const hostProfile = reservation.host_profile;
-
-              return (
-                <Card key={reservation.id} className="bg-cosmic-800/60 border-cosmic-700/40 p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-start gap-4">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-semibold text-gray-100 mb-2">
-                            {spot?.name || t('Unknown Spot', '未知地点')}
-                          </h3>
-                          
-                          <div className="flex flex-wrap gap-4 text-sm text-gray-400 mb-3">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              <span>
-                                {timeslot?.start_time && format(parseISO(timeslot.start_time), 'MMM d, yyyy HH:mm')} - 
-                                {timeslot?.end_time && format(parseISO(timeslot.end_time), 'HH:mm')}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-4 w-4" />
-                              <span>
-                                {spot?.latitude?.toFixed(4)}, {spot?.longitude?.toFixed(4)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <User className="h-4 w-4" />
-                              <span>{hostProfile?.username || t('Unknown Host', '未知主人')}</span>
-                            </div>
+            {groupedReservations.map((group, index) => (
+              <Card key={`${group.spot?.id}-${index}`} className="bg-cosmic-800/60 border-cosmic-700/40 p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold text-gray-100 mb-2">
+                          {group.spot?.name || t('Unknown Spot', '未知地点')}
+                        </h3>
+                        
+                        <div className="flex flex-wrap gap-4 text-sm text-gray-400 mb-3">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            <span>
+                              {group.totalNights === 1 
+                                ? format(group.startDate, 'MMM d, yyyy')
+                                : `${format(group.startDate, 'MMM d')}-${format(group.endDate, 'MMM d, yyyy')} (${group.totalNights} ${group.totalNights === 1 ? 'night' : 'nights'})`
+                              }
+                            </span>
                           </div>
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4" />
+                            <span>
+                              {group.spot?.latitude?.toFixed(4)}, {group.spot?.longitude?.toFixed(4)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <User className="h-4 w-4" />
+                            <span>{group.hostProfile?.username || t('Unknown Host', '未知主人')}</span>
+                          </div>
+                        </div>
 
-                          <div className="flex gap-2">
+                        <div className="flex gap-2">
+                          {group.reservations.map(reservation => (
                             <Badge 
+                              key={reservation.id}
                               variant={reservation.status === 'confirmed' ? 'default' : 'secondary'}
                               className={
                                 reservation.status === 'confirmed' 
@@ -233,74 +332,78 @@ const MyReservations = () => {
                                 ? t('Confirmed', '已确认') 
                                 : t('Pending', '待定')}
                             </Badge>
-                          </div>
+                          ))}
                         </div>
                       </div>
                     </div>
-
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleContactHost(spot?.user_id)}
-                        className="bg-cosmic-700/50 border-cosmic-600/50 hover:bg-cosmic-600/50"
-                      >
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        {t('Contact Host', '联系主人')}
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditDates(spot?.id)}
-                        className="bg-cosmic-700/50 border-cosmic-600/50 hover:bg-cosmic-600/50"
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        {t('Edit Dates', '编辑日期')}
-                      </Button>
-
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="bg-red-600/20 border-red-600/30 text-red-400 hover:bg-red-600/30"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            {t('Cancel', '取消')}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="bg-cosmic-800 border-cosmic-700">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="text-gray-100">
-                              {t('Cancel Reservation', '取消预订')}
-                            </AlertDialogTitle>
-                            <AlertDialogDescription className="text-gray-400">
-                              {t('Are you sure you want to cancel this reservation? This action cannot be undone.', 
-                                 '您确定要取消此预订吗？此操作无法撤销。')}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel className="bg-cosmic-700 border-cosmic-600 text-gray-300 hover:bg-cosmic-600">
-                              {t('Keep Reservation', '保留预订')}
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => cancelReservationMutation.mutate(reservation.id)}
-                              className="bg-red-600 hover:bg-red-700 text-white"
-                              disabled={cancelReservationMutation.isPending}
-                            >
-                              {cancelReservationMutation.isPending 
-                                ? t('Cancelling...', '取消中...') 
-                                : t('Cancel Reservation', '取消预订')}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
                   </div>
-                </Card>
-              );
-            })}
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleContactHost(group.spot?.user_id)}
+                      className="bg-cosmic-700/50 border-cosmic-600/50 hover:bg-cosmic-600/50"
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      {t('Contact Host', '联系主人')}
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditDates(group.spot?.id)}
+                      className="bg-cosmic-700/50 border-cosmic-600/50 hover:bg-cosmic-600/50"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      {t('Edit Dates', '编辑日期')}
+                    </Button>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-red-600/20 border-red-600/30 text-red-400 hover:bg-red-600/30"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          {t('Cancel', '取消')}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-cosmic-800 border-cosmic-700">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-gray-100">
+                            {t('Cancel Reservation', '取消预订')}
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="text-gray-400">
+                            {group.totalNights > 1 
+                              ? t('Are you sure you want to cancel these reservations? This will cancel all nights in this booking and cannot be undone.', 
+                                 '您确定要取消这些预订吗？这将取消此预订中的所有夜晚，且无法撤销。')
+                              : t('Are you sure you want to cancel this reservation? This action cannot be undone.', 
+                                 '您确定要取消此预订吗？此操作无法撤销。')
+                            }
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="bg-cosmic-700 border-cosmic-600 text-gray-300 hover:bg-cosmic-600">
+                            {t('Keep Reservation', '保留预订')}
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => cancelReservationMutation.mutate(group.reservations.map(r => r.id))}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            disabled={cancelReservationMutation.isPending}
+                          >
+                            {cancelReservationMutation.isPending 
+                              ? t('Cancelling...', '取消中...') 
+                              : t('Cancel Reservation', '取消预订')}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
         )}
       </div>
