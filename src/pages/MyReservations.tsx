@@ -36,11 +36,7 @@ const MyReservations = () => {
               name,
               latitude,
               longitude,
-              user_id,
-              profiles:user_id (
-                username,
-                avatar_url
-              )
+              user_id
             )
           )
         `)
@@ -48,7 +44,30 @@ const MyReservations = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+
+      // Fetch profiles for each reservation separately
+      if (data && data.length > 0) {
+        const userIds = data
+          .map(reservation => reservation.astro_spot_timeslots?.user_astro_spots?.user_id)
+          .filter(Boolean);
+        
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, username')
+            .in('id', userIds);
+
+          // Add profile data to reservations
+          return data.map(reservation => ({
+            ...reservation,
+            host_profile: profiles?.find(profile => 
+              profile.id === reservation.astro_spot_timeslots?.user_astro_spots?.user_id
+            )
+          }));
+        }
+      }
+
+      return data || [];
     },
     enabled: !!user
   });
@@ -134,7 +153,7 @@ const MyReservations = () => {
             {reservations.map((reservation) => {
               const timeslot = reservation.astro_spot_timeslots;
               const spot = timeslot?.user_astro_spots;
-              const host = spot?.profiles;
+              const hostProfile = reservation.host_profile;
 
               return (
                 <Card key={reservation.id} className="bg-cosmic-800/60 border-cosmic-700/40 p-6">
@@ -150,8 +169,8 @@ const MyReservations = () => {
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
                               <span>
-                                {format(parseISO(timeslot?.start_time), 'MMM d, yyyy HH:mm')} - 
-                                {format(parseISO(timeslot?.end_time), 'HH:mm')}
+                                {timeslot?.start_time && format(parseISO(timeslot.start_time), 'MMM d, yyyy HH:mm')} - 
+                                {timeslot?.end_time && format(parseISO(timeslot.end_time), 'HH:mm')}
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
@@ -162,7 +181,7 @@ const MyReservations = () => {
                             </div>
                             <div className="flex items-center gap-1">
                               <User className="h-4 w-4" />
-                              <span>{host?.username || t('Unknown Host', '未知主人')}</span>
+                              <span>{hostProfile?.username || t('Unknown Host', '未知主人')}</span>
                             </div>
                           </div>
 
