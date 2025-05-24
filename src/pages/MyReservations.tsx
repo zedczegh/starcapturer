@@ -14,6 +14,41 @@ import { Calendar, MapPin, User, Trash2, MessageCircle, Edit } from 'lucide-reac
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
+// Define the extended reservation type
+type ReservationWithProfile = {
+  id: string;
+  user_id: string;
+  timeslot_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  astro_spot_timeslots: {
+    id: string;
+    spot_id: string;
+    creator_id: string;
+    start_time: string;
+    end_time: string;
+    max_capacity: number;
+    description: string;
+    price: number;
+    currency: string;
+    pets_policy: string;
+    created_at: string;
+    updated_at: string;
+    user_astro_spots: {
+      id: string;
+      name: string;
+      latitude: number;
+      longitude: number;
+      user_id: string;
+    };
+  };
+  host_profile?: {
+    id: string;
+    username: string;
+  };
+};
+
 const MyReservations = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -22,7 +57,7 @@ const MyReservations = () => {
 
   const { data: reservations, isLoading } = useQuery({
     queryKey: ['userReservations', user?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<ReservationWithProfile[]> => {
       if (!user) return [];
 
       const { data, error } = await supabase
@@ -63,11 +98,11 @@ const MyReservations = () => {
             host_profile: profiles?.find(profile => 
               profile.id === reservation.astro_spot_timeslots?.user_astro_spots?.user_id
             )
-          }));
+          })) as ReservationWithProfile[];
         }
       }
 
-      return data || [];
+      return (data || []) as ReservationWithProfile[];
     },
     enabled: !!user
   });
