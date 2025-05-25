@@ -10,6 +10,8 @@ import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Inf
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useNotifications } from '@/hooks/useNotifications';
+import NotificationBadge from './NotificationBadge';
 
 interface ProfileDropdownMenuProps {
   user: any;
@@ -37,6 +39,38 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
 }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const { unreadMessagesCount, newReservationsCount, markMessagesAsViewed, markAstroSpotsAsViewed } = useNotifications();
+
+  const handleMessagesClick = () => {
+    markMessagesAsViewed();
+    navigate('/messages');
+  };
+
+  const handleAstroSpotsClick = () => {
+    markAstroSpotsAsViewed();
+    navigate('/manage-astro-spots');
+  };
+
+  const menuItems = [
+    { 
+      icon: MessageCircle, 
+      label: t('Messages', '消息'), 
+      onClick: handleMessagesClick,
+      badge: unreadMessagesCount
+    },
+    { icon: User, label: t('Profile', '个人资料'), path: '/profile' },
+    { icon: BookmarkPlus, label: t('My Collections', '我的收藏'), path: '/collections' },
+    { 
+      icon: MapPin, 
+      label: t('My AstroSpots', '我的观星点'), 
+      onClick: handleAstroSpotsClick,
+      badge: newReservationsCount
+    },
+    { icon: Calendar, label: t('My Reservations', '我的预订'), path: '/my-reservations' },
+    { icon: Link2, label: t('Useful Links', '资源'), path: '/useful-links' },
+    { icon: Info, label: t('About SIQS', '关于SIQS'), path: '/about' },
+    { icon: Settings, label: t('Settings', '设置'), path: '/settings' },
+  ];
 
   return (
     <DropdownMenuContent 
@@ -58,29 +92,27 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
-        {[
-          { icon: MessageCircle, label: t('Messages', '消息'), path: '/messages' },
-          { icon: User, label: t('Profile', '个人资料'), path: '/profile' },
-          { icon: BookmarkPlus, label: t('My Collections', '我的收藏'), path: '/collections' },
-          { icon: MapPin, label: t('My AstroSpots', '我的观星点'), path: '/manage-astro-spots' },
-          { icon: Calendar, label: t('My Reservations', '我的预订'), path: '/my-reservations' },
-          { icon: Link2, label: t('Useful Links', '资源'), path: '/useful-links' },
-          { icon: Info, label: t('About SIQS', '关于SIQS'), path: '/about' },
-          { icon: Settings, label: t('Settings', '设置'), path: '/settings' },
-        ].map(({ icon: Icon, label, path }, i) => (
+        {menuItems.map(({ icon: Icon, label, path, onClick, badge }, i) => (
           <motion.div
-            key={path}
+            key={path || label}
             custom={i}
             initial="hidden"
             animate="visible"
             variants={menuItemVariants}
           >
             <DropdownMenuItem
-              onClick={() => navigate(path)}
+              onClick={() => {
+                if (onClick) {
+                  onClick();
+                } else if (path) {
+                  navigate(path);
+                }
+              }}
               className="interactive-button px-4 py-2 flex gap-2 items-center hover:!bg-primary/10 hover:text-primary rounded-md transition-all duration-300"
             >
               <Icon className="h-4 w-4 text-primary" />
-              <span>{label}</span>
+              <span className="flex-1">{label}</span>
+              {badge !== undefined && <NotificationBadge count={badge} />}
             </DropdownMenuItem>
           </motion.div>
         ))}
