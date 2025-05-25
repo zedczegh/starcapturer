@@ -6,12 +6,10 @@ import LoginPrompt from "@/components/messages/LoginPrompt";
 import MessageContainer from "@/components/messages/MessageContainer";
 import { useMessageConversation } from "@/hooks/messaging/useMessageConversation";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useNotifications } from "@/hooks/useNotifications";
 
 // Memoize the MessageContent component to prevent unnecessary re-renders
 const MessageContent = memo(({ user }: { user: any }) => {
   const isMobile = useIsMobile();
-  const { markMessagesAsRead } = useNotifications();
   
   const {
     searchQuery,
@@ -28,11 +26,6 @@ const MessageContent = memo(({ user }: { user: any }) => {
     handleUnsendMessage,
     handleDeleteConversation
   } = useMessageConversation();
-
-  // Mark messages as read when user visits the page
-  useEffect(() => {
-    markMessagesAsRead();
-  }, [markMessagesAsRead]);
 
   // Log conversation state for debugging
   useEffect(() => {

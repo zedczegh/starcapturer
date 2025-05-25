@@ -1,94 +1,56 @@
 
 import React from "react";
-import { Link, Location } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { useLocation } from "react-router-dom";
+import { Telescope, Map, Smartphone, Users } from "lucide-react";
+import { MobileNavButton } from "./NavButtons";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { MapPin, Users, MessageSquare, Map, Star } from "lucide-react";
-import SiqsNavButton from "./SiqsNavButton";
-import { NotificationBadge } from "@/components/ui/notification-badge";
 
 interface MobileNavProps {
-  location: Location;
+  location: ReturnType<typeof useLocation>;
   locationId: string | null;
-  notificationCounts?: {
-    unreadMessages: number;
-    newReservations: number;
-  };
 }
 
-const MobileNav: React.FC<MobileNavProps> = ({ 
-  location, 
-  locationId, 
-  notificationCounts = { unreadMessages: 0, newReservations: 0 }
+const MobileNav: React.FC<MobileNavProps> = ({
+  location,
+  locationId
 }) => {
   const { t } = useLanguage();
-  const { user } = useAuth();
+
+  // Use a default location ID for when there isn't one
+  const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-cosmic-900/95 backdrop-blur-lg border-t border-cosmic-700/40">
-      <div className="flex items-center justify-around px-2 py-2 max-w-md mx-auto">
-        <Button
-          variant={location.pathname === "/photo-points" ? "default" : "ghost"}
-          asChild
-          size="sm"
-          className="flex-col h-auto py-1.5 px-2 text-xs gap-1"
-        >
-          <Link to="/photo-points">
-            <Map className="h-4 w-4" />
-            <span className="text-xs">{t("Points", "观星点")}</span>
-          </Link>
-        </Button>
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-nav-bar">
+      <div className="flex justify-around items-center py-2 px-2 bg-[#0f172a]/[0.90] backdrop-blur-xl border-t border-cosmic-600/15 shadow-[0_-2px_10px_rgba(0,0,0,0.2)]">
+        <MobileNavButton 
+          to="/photo-points" 
+          icon={<Telescope className="h-5 w-5 stroke-[1.5]" />} 
+          label={t("Photo", "拍摄")} 
+          active={location.pathname === "/photo-points"} 
+        />
+        
+        <MobileNavButton 
+          to={detailsPath}
+          icon={<Map className="h-5 w-5 stroke-[1.5]" />} 
+          label={t("Location", "位置")} 
+          active={location.pathname.startsWith('/location/')} 
+        />
 
-        <Button
-          variant={location.pathname === "/community" ? "default" : "ghost"}
-          asChild
-          size="sm"
-          className="flex-col h-auto py-1.5 px-2 text-xs gap-1"
-        >
-          <Link to="/community">
-            <Users className="h-4 w-4" />
-            <span className="text-xs">{t("Community", "社区")}</span>
-          </Link>
-        </Button>
+        <MobileNavButton
+          to="/community"
+          icon={<Users className="h-5 w-5 stroke-[1.5]" />}
+          label={t("Community", "社区")}
+          active={location.pathname === "/community"}
+        />
 
-        {user && (
-          <>
-            <div className="relative">
-              <Button
-                variant={location.pathname === "/messages" ? "default" : "ghost"}
-                asChild
-                size="sm"
-                className="flex-col h-auto py-1.5 px-2 text-xs gap-1"
-              >
-                <Link to="/messages">
-                  <MessageSquare className="h-4 w-4" />
-                  <span className="text-xs">{t("Messages", "消息")}</span>
-                </Link>
-              </Button>
-              <NotificationBadge count={notificationCounts.unreadMessages} />
-            </div>
-
-            <div className="relative">
-              <Button
-                variant={location.pathname === "/manage-astro-spots" ? "default" : "ghost"}
-                asChild
-                size="sm"
-                className="flex-col h-auto py-1.5 px-2 text-xs gap-1"
-              >
-                <Link to="/manage-astro-spots">
-                  <Star className="h-4 w-4" />
-                  <span className="text-xs">{t("My Spots", "我的点")}</span>
-                </Link>
-              </Button>
-              <NotificationBadge count={notificationCounts.newReservations} />
-            </div>
-          </>
-        )}
-
-        <SiqsNavButton locationId={locationId} />
+        <MobileNavButton 
+          to="/share" 
+          icon={<Smartphone className="h-5 w-5 stroke-[1.5]" />} 
+          label={t("Bortle", "光污染")} 
+          active={location.pathname === "/share"} 
+        />
       </div>
-    </nav>
+    </div>
   );
 };
 

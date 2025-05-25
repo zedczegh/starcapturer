@@ -8,12 +8,10 @@ import MobileNav from "./navbar/MobileNav";
 import ProfileButton from "./navbar/ProfileButton";
 import { getCurrentPosition } from "@/utils/geolocationUtils";
 import { toast } from "sonner";
-import { useNotifications } from "@/hooks/useNotifications";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-  const { counts } = useNotifications();
   
   const locationId = location.pathname.startsWith('/location/') 
     ? location.pathname.split('/location/')[1] 
@@ -38,7 +36,6 @@ const NavBar = () => {
         <DesktopNav 
           location={location} 
           locationId={locationId}
-          notificationCounts={counts}
         />
         <div className="flex md:hidden items-center">
           <ProfileButton />
@@ -48,7 +45,6 @@ const NavBar = () => {
       <MobileNav 
         location={location} 
         locationId={locationId}
-        notificationCounts={counts}
       />
     </>
   );

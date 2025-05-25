@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -9,13 +10,11 @@ import AstroSpotsHeader from '@/components/astro-spots/AstroSpotsHeader';
 import EmptyAstroSpotsState from '@/components/astro-spots/EmptyAstroSpotsState';
 import AstroSpotGrid from '@/components/astro-spots/AstroSpotGrid';
 import { useAstroSpots } from '@/hooks/astro-spots/useAstroSpots';
-import { useNotifications } from '@/hooks/useNotifications';
 
 const ManageAstroSpots = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { markReservationsAsViewed } = useNotifications();
   
   const {
     spots,
@@ -26,13 +25,6 @@ const ManageAstroSpots = () => {
     realTimeSiqs,
     handleSiqsCalculated
   } = useAstroSpots();
-
-  // Mark reservations as viewed when user visits the page
-  useEffect(() => {
-    if (user) {
-      markReservationsAsViewed();
-    }
-  }, [user, markReservationsAsViewed]);
 
   if (!user) {
     return (
