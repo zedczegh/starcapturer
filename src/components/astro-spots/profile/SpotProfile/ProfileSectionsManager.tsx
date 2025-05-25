@@ -2,6 +2,7 @@
 import React from 'react';
 import SpotDetails from '@/components/astro-spots/profile/SpotDetails';
 import TimeSlotManager from '@/components/bookings/TimeSlotManager';
+import HostBookingsManager from '@/components/bookings/HostBookingsManager';
 import SpotImageGallery from '@/components/astro-spots/profile/SpotImageGallery';
 import SpotComments from '@/components/astro-spots/profile/SpotComments';
 import { Comment } from '../types/comments';
@@ -43,7 +44,15 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
         advantages={spot.astro_spot_advantages}
       />
       
-      <TimeSlotManager spotId={spotId} isCreator={isCreator} />
+      <div className="space-y-4">
+        <TimeSlotManager spotId={spotId} isCreator={isCreator} />
+        
+        {isCreator && (
+          <div className="border-t border-cosmic-700/30 pt-4">
+            <HostBookingsManager spotId={spotId} spotName={spot.name} />
+          </div>
+        )}
+      </div>
       
       <SpotImageGallery
         spotId={spotId}
