@@ -1,52 +1,91 @@
-
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
-import { NavLink } from "./NavButtons";
-import LanguageSwitcher from "../LanguageSwitcher";
+import { Link, useNavigate, Location } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Map } from "lucide-react";
-import LocationPinButton from "./LocationPinButton";
+import { useAuth } from "@/contexts/AuthContext";
+import SiqsNavButton from "./SiqsNavButton";
 import ProfileButton from "./ProfileButton";
+import { NotificationBadge } from "@/components/ui/notification-badge";
+import { MessageSquare, MapPin } from "lucide-react";
 
 interface DesktopNavProps {
-  location: ReturnType<typeof useLocation>;
+  location: Location;
   locationId: string | null;
+  notificationCounts?: {
+    unreadMessages: number;
+    newReservations: number;
+  };
 }
 
 const DesktopNav: React.FC<DesktopNavProps> = ({ 
   location, 
-  locationId 
+  locationId, 
+  notificationCounts = { unreadMessages: 0, newReservations: 0 }
 }) => {
   const { t } = useLanguage();
-  
-  const detailsPath = locationId ? `/location/${locationId}` : '/location/default';
-  
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   return (
-    <>
-      <nav className="hidden md:flex items-center space-x-6">
-        <NavLink to="/photo-points" active={location.pathname === "/photo-points"}>
-          {t("Photo Points", "拍摄点")}
-        </NavLink>
-        <NavLink 
-          to={detailsPath}
-          active={location.pathname.startsWith('/location/')}
+    <div className="hidden md:flex items-center space-x-2">
+      <div className="flex items-center space-x-1">
+        <Button
+          variant={location.pathname === "/photo-points" ? "default" : "ghost"}
+          asChild
+          size="sm"
+          className="h-8 px-3 text-sm font-medium"
         >
-          {t("Location Details", "位置详情")}
-        </NavLink>
-        <NavLink to="/community" active={location.pathname === "/community"}>
-          {t("Community", "社区")}
-        </NavLink>
-        <NavLink to="/share" active={location.pathname === "/share"}>
-          {t("Bortle Now", "实时光污染")}
-        </NavLink>
-      </nav>
-      
-      <div className="hidden md:flex items-center space-x-2">
-        <LocationPinButton />
-        <LanguageSwitcher />
-        <ProfileButton />
+          <Link to="/photo-points">{t("Photo Points", "观星点")}</Link>
+        </Button>
+
+        <Button
+          variant={location.pathname === "/community" ? "default" : "ghost"}
+          asChild
+          size="sm"
+          className="h-8 px-3 text-sm font-medium"
+        >
+          <Link to="/community">{t("Community", "社区")}</Link>
+        </Button>
+
+        {user && (
+          <>
+            <div className="relative">
+              <Button
+                variant={location.pathname === "/messages" ? "default" : "ghost"}
+                asChild
+                size="sm"
+                className="h-8 px-3 text-sm font-medium"
+              >
+                <Link to="/messages">
+                  <MessageSquare className="h-4 w-4 mr-1" />
+                  {t("Messages", "消息")}
+                </Link>
+              </Button>
+              <NotificationBadge count={notificationCounts.unreadMessages} />
+            </div>
+
+            <div className="relative">
+              <Button
+                variant={location.pathname === "/manage-astro-spots" ? "default" : "ghost"}
+                asChild
+                size="sm"
+                className="h-8 px-3 text-sm font-medium"
+              >
+                <Link to="/manage-astro-spots">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  {t("My AstroSpots", "我的观星点")}
+                </Link>
+              </Button>
+              <NotificationBadge count={notificationCounts.newReservations} />
+            </div>
+          </>
+        )}
+
+        <SiqsNavButton locationId={locationId} />
       </div>
-    </>
+
+      <ProfileButton />
+    </div>
   );
 };
 
