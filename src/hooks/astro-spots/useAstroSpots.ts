@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
@@ -10,14 +10,17 @@ import { useAuth } from "@/contexts/AuthContext";
 export const useAstroSpots = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
   const [editMode, setEditMode] = useState(false);
 
   const { data: spots, isLoading, refetch } = useQuery({
-    queryKey: ['userAstroSpots'],
+    queryKey: ['userAstroSpots', user?.id], // Include user ID in query key
     queryFn: async () => {
       if (!user) throw new Error("User not authenticated");
+      
+      console.log('Fetching AstroSpots for user:', user.id);
       
       const { data, error } = await supabase
         .from('user_astro_spots')
@@ -41,7 +44,7 @@ export const useAstroSpots = () => {
     },
     enabled: !!user,
     refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 0, // Always fetch fresh data to prevent cached data issues
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
@@ -56,6 +59,9 @@ export const useAstroSpots = () => {
       if (error) throw error;
       
       toast.success(t("AstroSpot deleted successfully", "观星点删除成功"));
+      
+      // Invalidate and refetch to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['userAstroSpots', user?.id] });
       refetch();
     } catch (error) {
       console.error('Error deleting astro spot:', error);
@@ -82,6 +88,7 @@ export const useAstroSpots = () => {
     handleDelete,
     realTimeSiqs,
     loadingSiqs,
-    handleSiqsCalculated
+    handleSiqsCalculated,
+    refetch
   };
 };

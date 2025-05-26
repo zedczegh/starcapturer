@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,7 +24,8 @@ const ManageAstroSpots = () => {
     setEditMode,
     handleDelete,
     realTimeSiqs,
-    handleSiqsCalculated
+    handleSiqsCalculated,
+    refetch
   } = useAstroSpots();
 
   // Mark AstroSpots as viewed when the component mounts
@@ -34,6 +34,14 @@ const ManageAstroSpots = () => {
       markAstroSpotsAsViewed();
     }
   }, [user, markAstroSpotsAsViewed]);
+
+  // Auto-refresh when user changes to prevent cached data from previous user
+  useEffect(() => {
+    if (user) {
+      console.log('User changed, refreshing AstroSpots data for user:', user.id);
+      refetch();
+    }
+  }, [user?.id, refetch]);
 
   if (!user) {
     return (
