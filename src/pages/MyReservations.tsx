@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,7 +43,7 @@ type ReservationWithProfile = {
       longitude: number;
       user_id: string;
     };
-  };
+  } | null;
   host_profile?: {
     id: string;
     username: string;
@@ -92,9 +91,14 @@ const MyReservations = () => {
 
       if (error) throw error;
 
+      // Filter out reservations with null timeslots to prevent errors
+      const validReservations = (data || []).filter(reservation => 
+        reservation.astro_spot_timeslots !== null
+      );
+
       // Fetch profiles for each reservation separately
-      if (data && data.length > 0) {
-        const userIds = data
+      if (validReservations.length > 0) {
+        const userIds = validReservations
           .map(reservation => reservation.astro_spot_timeslots?.user_astro_spots?.user_id)
           .filter(Boolean);
         
@@ -105,7 +109,7 @@ const MyReservations = () => {
             .in('id', userIds);
 
           // Add profile data to reservations
-          return data.map(reservation => ({
+          return validReservations.map(reservation => ({
             ...reservation,
             host_profile: profiles?.find(profile => 
               profile.id === reservation.astro_spot_timeslots?.user_astro_spots?.user_id
@@ -114,7 +118,7 @@ const MyReservations = () => {
         }
       }
 
-      return (data || []) as ReservationWithProfile[];
+      return validReservations as ReservationWithProfile[];
     },
     enabled: !!user
   });
@@ -126,32 +130,40 @@ const MyReservations = () => {
     const groups: GroupedReservation[] = [];
     const spotGroups = new Map<string, ReservationWithProfile[]>();
 
-    // Group by spot first
+    // Group by spot first, filtering out reservations with null timeslots
     reservations.forEach(reservation => {
-      const spotId = reservation.astro_spot_timeslots?.user_astro_spots?.id;
-      if (spotId) {
-        if (!spotGroups.has(spotId)) {
-          spotGroups.set(spotId, []);
-        }
-        spotGroups.get(spotId)!.push(reservation);
+      if (!reservation.astro_spot_timeslots?.user_astro_spots?.id) return;
+      
+      const spotId = reservation.astro_spot_timeslots.user_astro_spots.id;
+      if (!spotGroups.has(spotId)) {
+        spotGroups.set(spotId, []);
       }
+      spotGroups.get(spotId)!.push(reservation);
     });
 
     // For each spot, group consecutive dates
     spotGroups.forEach(spotReservations => {
       if (spotReservations.length === 0) return;
 
-      // Sort by date
-      const sorted = spotReservations.sort((a, b) => 
-        new Date(a.astro_spot_timeslots.start_time).getTime() - 
-        new Date(b.astro_spot_timeslots.start_time).getTime()
-      );
+      // Sort by date, ensuring timeslots exist
+      const sorted = spotReservations
+        .filter(reservation => reservation.astro_spot_timeslots?.start_time)
+        .sort((a, b) => 
+          new Date(a.astro_spot_timeslots!.start_time).getTime() - 
+          new Date(b.astro_spot_timeslots!.start_time).getTime()
+        );
+
+      if (sorted.length === 0) return;
 
       let currentGroup: ReservationWithProfile[] = [sorted[0]];
       
       for (let i = 1; i < sorted.length; i++) {
         const current = sorted[i];
         const previous = sorted[i - 1];
+        
+        if (!current.astro_spot_timeslots?.start_time || !previous.astro_spot_timeslots?.start_time) {
+          continue;
+        }
         
         const currentDate = new Date(current.astro_spot_timeslots.start_time);
         const previousDate = new Date(previous.astro_spot_timeslots.start_time);
@@ -163,9 +175,9 @@ const MyReservations = () => {
           currentGroup.push(current);
         } else {
           // Create group from current group
-          if (currentGroup.length > 0) {
+          if (currentGroup.length > 0 && currentGroup[0].astro_spot_timeslots) {
             const startDate = new Date(currentGroup[0].astro_spot_timeslots.start_time);
-            const endDate = new Date(currentGroup[currentGroup.length - 1].astro_spot_timeslots.end_time);
+            const endDate = new Date(currentGroup[currentGroup.length - 1].astro_spot_timeslots!.end_time);
             const totalNights = currentGroup.length;
             const hasConfirmedReservations = currentGroup.some(r => r.status === 'confirmed');
 
@@ -186,9 +198,9 @@ const MyReservations = () => {
       }
       
       // Add the last group
-      if (currentGroup.length > 0) {
+      if (currentGroup.length > 0 && currentGroup[0].astro_spot_timeslots) {
         const startDate = new Date(currentGroup[0].astro_spot_timeslots.start_time);
-        const endDate = new Date(currentGroup[currentGroup.length - 1].astro_spot_timeslots.end_time);
+        const endDate = new Date(currentGroup[currentGroup.length - 1].astro_spot_timeslots!.end_time);
         const totalNights = currentGroup.length;
         const hasConfirmedReservations = currentGroup.some(r => r.status === 'confirmed');
 

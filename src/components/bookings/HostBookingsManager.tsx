@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,7 +33,7 @@ type ReservationWithGuest = {
     pets_policy: string;
     created_at: string;
     updated_at: string;
-  };
+  } | null;
   guest_profile?: {
     id: string;
     username: string;
@@ -77,9 +76,14 @@ const HostBookingsManager: React.FC<HostBookingsManagerProps> = ({ spotId, spotN
 
       if (error) throw error;
 
+      // Filter out reservations with null timeslots to prevent errors
+      const validReservations = (data || []).filter(reservation => 
+        reservation.astro_spot_timeslots !== null
+      );
+
       // Fetch profiles for each reservation
-      if (data && data.length > 0) {
-        const userIds = data
+      if (validReservations.length > 0) {
+        const userIds = validReservations
           .map(reservation => reservation.user_id)
           .filter(Boolean);
         
@@ -90,7 +94,7 @@ const HostBookingsManager: React.FC<HostBookingsManagerProps> = ({ spotId, spotN
             .in('id', userIds);
 
           // Add profile data to reservations
-          return data.map(reservation => ({
+          return validReservations.map(reservation => ({
             ...reservation,
             guest_profile: profiles?.find(profile => 
               profile.id === reservation.user_id
@@ -99,7 +103,7 @@ const HostBookingsManager: React.FC<HostBookingsManagerProps> = ({ spotId, spotN
         }
       }
 
-      return (data || []) as ReservationWithGuest[];
+      return validReservations as ReservationWithGuest[];
     },
     enabled: !!user && !!spotId
   });
@@ -111,8 +115,10 @@ const HostBookingsManager: React.FC<HostBookingsManagerProps> = ({ spotId, spotN
     const groups: GroupedReservation[] = [];
     const guestGroups = new Map<string, ReservationWithGuest[]>();
 
-    // Group by guest first
+    // Group by guest first, filtering out reservations with null timeslots
     reservations.forEach(reservation => {
+      if (!reservation.astro_spot_timeslots?.start_time) return;
+      
       const guestId = reservation.user_id;
       if (guestId) {
         if (!guestGroups.has(guestId)) {
@@ -126,17 +132,25 @@ const HostBookingsManager: React.FC<HostBookingsManagerProps> = ({ spotId, spotN
     guestGroups.forEach(guestReservations => {
       if (guestReservations.length === 0) return;
 
-      // Sort by date
-      const sorted = guestReservations.sort((a, b) => 
-        new Date(a.astro_spot_timeslots.start_time).getTime() - 
-        new Date(b.astro_spot_timeslots.start_time).getTime()
-      );
+      // Sort by date, ensuring timeslots exist
+      const sorted = guestReservations
+        .filter(reservation => reservation.astro_spot_timeslots?.start_time)
+        .sort((a, b) => 
+          new Date(a.astro_spot_timeslots!.start_time).getTime() - 
+          new Date(b.astro_spot_timeslots!.start_time).getTime()
+        );
+
+      if (sorted.length === 0) return;
 
       let currentGroup: ReservationWithGuest[] = [sorted[0]];
       
       for (let i = 1; i < sorted.length; i++) {
         const current = sorted[i];
         const previous = sorted[i - 1];
+        
+        if (!current.astro_spot_timeslots?.start_time || !previous.astro_spot_timeslots?.start_time) {
+          continue;
+        }
         
         const currentDate = new Date(current.astro_spot_timeslots.start_time);
         const previousDate = new Date(previous.astro_spot_timeslots.start_time);
@@ -148,9 +162,9 @@ const HostBookingsManager: React.FC<HostBookingsManagerProps> = ({ spotId, spotN
           currentGroup.push(current);
         } else {
           // Create group from current group
-          if (currentGroup.length > 0) {
+          if (currentGroup.length > 0 && currentGroup[0].astro_spot_timeslots) {
             const startDate = new Date(currentGroup[0].astro_spot_timeslots.start_time);
-            const endDate = new Date(currentGroup[currentGroup.length - 1].astro_spot_timeslots.end_time);
+            const endDate = new Date(currentGroup[currentGroup.length - 1].astro_spot_timeslots!.end_time);
             const totalNights = currentGroup.length;
             const hasConfirmedReservations = currentGroup.some(r => r.status === 'confirmed');
 
@@ -170,9 +184,9 @@ const HostBookingsManager: React.FC<HostBookingsManagerProps> = ({ spotId, spotN
       }
       
       // Add the last group
-      if (currentGroup.length > 0) {
+      if (currentGroup.length > 0 && currentGroup[0].astro_spot_timeslots) {
         const startDate = new Date(currentGroup[0].astro_spot_timeslots.start_time);
-        const endDate = new Date(currentGroup[currentGroup.length - 1].astro_spot_timeslots.end_time);
+        const endDate = new Date(currentGroup[currentGroup.length - 1].astro_spot_timeslots!.end_time);
         const totalNights = currentGroup.length;
         const hasConfirmedReservations = currentGroup.some(r => r.status === 'confirmed');
 
