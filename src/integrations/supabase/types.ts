@@ -85,7 +85,10 @@ export type Database = {
       }
       astro_spot_reservations: {
         Row: {
+          checked_in_at: string | null
+          checked_out_at: string | null
           created_at: string
+          host_notes: string | null
           id: string
           status: string
           timeslot_id: string
@@ -93,7 +96,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          checked_in_at?: string | null
+          checked_out_at?: string | null
           created_at?: string
+          host_notes?: string | null
           id?: string
           status?: string
           timeslot_id: string
@@ -101,7 +107,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          checked_in_at?: string | null
+          checked_out_at?: string | null
           created_at?: string
+          host_notes?: string | null
           id?: string
           status?: string
           timeslot_id?: string

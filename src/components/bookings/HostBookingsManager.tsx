@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,8 +12,9 @@ import { format, parseISO, isSameDay, addDays } from 'date-fns';
 import { toast } from 'sonner';
 import { Calendar, User, Trash2, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import CheckInOutManager from './CheckInOutManager';
 
-// Define the reservation type with guest profile
+// Define the reservation type with guest profile and new check-in/out fields
 type ReservationWithGuest = {
   id: string;
   user_id: string;
@@ -20,6 +22,9 @@ type ReservationWithGuest = {
   status: string;
   created_at: string;
   updated_at: string;
+  checked_in_at?: string | null;
+  checked_out_at?: string | null;
+  host_notes?: string | null;
   astro_spot_timeslots: {
     id: string;
     spot_id: string;
@@ -295,7 +300,7 @@ const HostBookingsManager: React.FC<HostBookingsManagerProps> = ({ spotId, spotN
       
       {groupedReservations.map((group, index) => (
         <Card key={`${group.guestProfile?.id}-${index}`} className="bg-cosmic-800/60 border-cosmic-700/40 p-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-start gap-4">
                 <div className="flex-1">
@@ -319,14 +324,23 @@ const HostBookingsManager: React.FC<HostBookingsManagerProps> = ({ spotId, spotN
                     </div>
                   </div>
 
-                  {group.hasConfirmedReservations && (
-                    <Badge 
-                      variant="default"
-                      className="bg-green-600/20 text-green-400 border-green-600/30"
-                    >
-                      {t('Confirmed', '已确认')}
-                    </Badge>
-                  )}
+                  {/* Check-in/Check-out Status for each reservation in the group */}
+                  <div className="space-y-2 mb-4">
+                    {group.reservations.map((reservation) => (
+                      <div key={reservation.id} className="border border-cosmic-600/30 rounded-lg p-3 bg-cosmic-700/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-400">
+                            {format(new Date(reservation.astro_spot_timeslots!.start_time), 'MMM d, yyyy')}
+                          </span>
+                        </div>
+                        <CheckInOutManager
+                          reservation={reservation}
+                          guestUsername={group.guestProfile?.username || 'Guest'}
+                          spotId={spotId}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
