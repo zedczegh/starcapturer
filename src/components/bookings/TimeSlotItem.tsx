@@ -1,344 +1,351 @@
-
 import React, { useState } from 'react';
-import { format, parseISO, isAfter, addDays } from 'date-fns';
-import { useQuery } from '@tanstack/react-query';
-import { useLanguage } from '@/contexts/LanguageContext';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { format, isAfter, parseISO } from 'date-fns';
 import { toast } from 'sonner';
-import { formatDateForLanguage } from '@/utils/dateFormatting';
-import { formatDateRangeWithNights } from '@/utils/dateRangeUtils';
+import { Calendar, Users, Clock, Edit, Trash2, MapPin, MessageCircle, Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import TimeSlotForm from './TimeSlotForm';
+import { formatDateRanges } from '@/utils/dateRangeUtils';
+import DateRangePicker from './DateRangePicker';
 import GuestSelector from './GuestSelector';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import PriceCalculator from './PriceCalculator';
+import { formatCurrency } from '@/utils/currencyUtils';
 
 interface TimeSlotItemProps {
   timeSlot: any;
   isCreator: boolean;
   onUpdate: () => void;
-  group?: any[]; // Group of consecutive time slots
+  group?: any[];
 }
 
-const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ timeSlot, isCreator, onUpdate, group = [] }) => {
-  const { t, language } = useLanguage();
+const TimeSlotItem: React.FC<TimeSlotItemProps> = ({ 
+  timeSlot, 
+  isCreator, 
+  onUpdate,
+  group = [timeSlot]
+}) => {
   const { user } = useAuth();
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isBooking, setIsBooking] = useState(false);
-  const [showBookingForm, setShowBookingForm] = useState(false);
-  const [guests, setGuests] = useState<Record<string, number>>({
-    adults: 1,
-    children: 0,
-    infants: 0,
-    pets: 0
-  });
+  const { t } = useLanguage();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [numberOfGuests, setNumberOfGuests] = useState(1);
+
+  // Check if the time slot is in the past
+  const isPastDue = isAfter(new Date(), parseISO(timeSlot.end_time));
   
-  // Check-in/check-out date state
-  const [checkInDate, setCheckInDate] = useState<Date | undefined>(undefined);
-  const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(undefined);
-  
-  // Get full time slot group (if provided) or default to single time slot
-  const fullGroup = group.length > 0 ? group : [timeSlot];
-  
-  // Get the first and last dates from the group
-  const firstDate = new Date(fullGroup[0].start_time);
-  const lastDate = new Date(fullGroup[fullGroup.length - 1].start_time);
-  
-  // Calculate the available date range for this time slot
-  const availableDates = fullGroup.map(slot => new Date(slot.start_time));
-  
-  // Check if user has already booked this slot
-  const hasUserBooked = timeSlot.astro_spot_reservations?.some(
-    (res: any) => res.user_id === user?.id
+  // Get available dates for booking (exclude past dates)
+  const availableDates = group.filter(slot => 
+    !isAfter(new Date(), parseISO(slot.start_time))
   );
 
-  // Format date range for display
-  const formattedDateRange = formatDateRangeWithNights(firstDate, lastDate);
-  
-  // Format times without dates
-  const startTime = format(parseISO(timeSlot.start_time), 'HH:mm');
-  const endTime = format(parseISO(timeSlot.end_time), 'HH:mm');
-  
-  // Calculate available slots
-  const totalBookings = timeSlot.astro_spot_reservations?.length || 0;
-  const availableSlots = timeSlot.max_capacity - totalBookings;
-
-  // Function to send automatic message to host
-  const sendAutoMessageToHost = async (spotName: string, hostUserId: string, checkInFormatted: string, checkOutFormatted: string) => {
-    try {
-      const message = `Hello! I've made a reservation at your astrospot: ${spotName} from ${checkInFormatted} to ${checkOutFormatted}, please contact me further! Thank you!`;
+  const deleteTimeSlotMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('astro_spot_timeslots')
+        .delete()
+        .eq('id', id);
       
-      const { error } = await supabase.from('user_messages').insert({
-        sender_id: user!.id,
-        receiver_id: hostUserId,
-        message: message,
-      });
-
-      if (error) {
-        console.error('Error sending auto-message to host:', error);
-      } else {
-        console.log('Auto-message sent to host successfully');
-      }
-    } catch (error) {
-      console.error('Error in sendAutoMessageToHost:', error);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!isCreator) return;
-    
-    try {
-      setIsDeleting(true);
-      
-      // Delete each time slot in the group
-      for (const slot of fullGroup) {
-        const { error } = await supabase
-          .from('astro_spot_timeslots')
-          .delete()
-          .eq('id', slot.id);
-        
-        if (error) throw error;
-      }
-      
-      toast.success(t('Time slot deleted', '时间段已删除'));
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timeSlots'] });
+      toast.success(t("Time slot deleted successfully", "时间段删除成功"));
       onUpdate();
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('Error deleting time slot:', error);
-      toast.error(t('Failed to delete time slot', '删除时间段失败'));
-    } finally {
-      setIsDeleting(false);
+      toast.error(t("Failed to delete time slot", "删除时间段失败"));
     }
-  };
+  });
 
-  const handleBooking = async () => {
-    if (!user) {
-      toast.error(t('Please sign in to book', '请登录后预订'));
-      return;
-    }
-    
-    if (hasUserBooked) {
-      toast.error(t('You have already booked this time slot', '您已经预订了此时间段'));
-      return;
-    }
-    
-    // Validate check-in/check-out dates
-    if (!checkInDate || !checkOutDate) {
-      toast.error(t('Please select check-in and check-out dates', '请选择入住和退房日期'));
-      return;
-    }
-    
-    try {
-      setIsBooking(true);
+  const bookTimeSlotMutation = useMutation({
+    mutationFn: async (dates: Date[]) => {
+      if (!user?.id) throw new Error('User not authenticated');
       
-      // Find the time slots that match the selected date range
-      const selectedTimeSlots = fullGroup.filter(slot => {
-        const slotDate = new Date(slot.start_time);
-        return slotDate >= checkInDate && slotDate <= checkOutDate;
-      });
-      
-      if (selectedTimeSlots.length === 0) {
-        throw new Error(t('No available time slots in the selected date range', '所选日期范围内没有可用的时间段'));
-      }
-      
-      // Book each time slot in the selected range
-      for (const slot of selectedTimeSlots) {
-        // Call the RPC function to insert a reservation
+      const reservations = [];
+      for (const date of dates) {
+        const slot = group.find(s => 
+          format(new Date(s.start_time), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+        );
+        
+        if (!slot) continue;
+        
         const { data, error } = await supabase.functions.invoke('call-rpc', {
           body: {
             function: 'insert_astro_spot_reservation',
             params: {
               p_timeslot_id: slot.id,
               p_user_id: user.id,
+              p_status: 'confirmed'
             }
           }
         });
-        
+
         if (error) throw error;
-      }
-
-      // Get spot details for the auto-message
-      const { data: spotData, error: spotError } = await supabase
-        .from('user_astro_spots')
-        .select('name, user_id')
-        .eq('id', timeSlot.spot_id)
-        .single();
-
-      if (!spotError && spotData) {
-        const checkInFormatted = format(checkInDate, 'MMM d, yyyy');
-        const checkOutFormatted = format(checkOutDate, 'MMM d, yyyy');
-        
-        // Send auto-message to host
-        await sendAutoMessageToHost(
-          spotData.name,
-          spotData.user_id,
-          checkInFormatted,
-          checkOutFormatted
-        );
+        reservations.push(data);
       }
       
-      toast.success(t('Booking confirmed', '预订已确认'));
-      onUpdate();
-      setShowBookingForm(false);
-      setCheckInDate(undefined);
-      setCheckOutDate(undefined);
-    } catch (error: any) {
+      return reservations;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timeSlots'] });
+      toast.success(t("Booking confirmed!", "预订确认！"));
+      setShowBookingDialog(false);
+      setSelectedDates([]);
+    },
+    onError: (error: any) => {
       console.error('Error booking time slot:', error);
-      toast.error(error.message || t('Failed to book time slot', '预订时间段失败'));
-    } finally {
-      setIsBooking(false);
+      toast.error(error.message || t("Booking failed", "预订失败"));
+    }
+  });
+
+  const handleContactHost = () => {
+    if (timeSlot.astro_spot_reservations?.[0]?.profiles?.username) {
+      navigate('/messages', { 
+        state: { 
+          selectedUserId: timeSlot.creator_id,
+          selectedUsername: timeSlot.astro_spot_reservations[0].profiles.username
+        }
+      });
     }
   };
 
-  const handleGuestChange = (guestCounts: Record<string, number>) => {
-    setGuests(guestCounts);
+  const handleBooking = () => {
+    if (selectedDates.length === 0) {
+      toast.error(t("Please select at least one date", "请至少选择一个日期"));
+      return;
+    }
+    
+    if (timeSlot.is_free) {
+      // For free bookings, book directly
+      bookTimeSlotMutation.mutate(selectedDates);
+    } else {
+      // For paid bookings, this would integrate with payment system
+      toast.info(t("Payment integration coming soon", "支付集成即将推出"));
+    }
   };
 
-  const isDateAvailable = (date: Date) => {
-    // Check if the date is in the available dates
-    return availableDates.some(availableDate => 
-      availableDate.getFullYear() === date.getFullYear() &&
-      availableDate.getMonth() === date.getMonth() &&
-      availableDate.getDate() === date.getDate()
+  if (isEditing) {
+    return (
+      <TimeSlotForm
+        spotId={timeSlot.spot_id}
+        existingTimeSlot={timeSlot}
+        onSuccess={() => {
+          setIsEditing(false);
+          onUpdate();
+        }}
+        onCancel={() => setIsEditing(false)}
+      />
     );
-  };
+  }
+
+  const reservations = timeSlot.astro_spot_reservations || [];
+  const dateRanges = formatDateRanges(group);
 
   return (
-    <div className="bg-cosmic-800/40 border border-cosmic-700/30 rounded-lg p-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
-        <div className="text-gray-200 font-medium mb-2 sm:mb-0">
-          {formattedDateRange}, {startTime}-{endTime}
+    <div className="bg-cosmic-800/40 border border-cosmic-700/30 rounded-lg p-4 space-y-3">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <Calendar className="h-4 w-4 text-blue-400" />
+            <span className="text-gray-200 font-medium">
+              {dateRanges}
+            </span>
+            {isPastDue && (
+              <Badge variant="destructive" className="text-xs">
+                {t('Expired', '已过期')}
+              </Badge>
+            )}
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 mb-2">
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              <span>
+                {format(new Date(timeSlot.start_time), 'HH:mm')} - 
+                {format(new Date(timeSlot.end_time), 'HH:mm')}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              <span>
+                {t('Max', '最大')} {timeSlot.max_capacity} {t('guests', '客人')}
+              </span>
+            </div>
+          </div>
+
+          {/* Pricing Display */}
+          <div className="mb-2">
+            {timeSlot.is_free ? (
+              <Badge className="bg-green-600/20 text-green-400 border-green-600/30">
+                {t('Free', '免费')}
+              </Badge>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold text-gray-200">
+                  {formatCurrency(parseFloat(timeSlot.price) || 0, timeSlot.currency)} 
+                  <span className="text-sm text-gray-400 ml-1">
+                    / {t('night', '晚')}
+                  </span>
+                </span>
+              </div>
+            )}
+          </div>
+
+          {timeSlot.description && (
+            <p className="text-gray-300 text-sm mb-2">{timeSlot.description}</p>
+          )}
+
+          {reservations.length > 0 && (
+            <div className="text-xs text-gray-400">
+              <span className="font-medium">{t('Booked by:', '预订者:')}</span>
+              {reservations.map((reservation: any, index: number) => (
+                <span key={reservation.id} className="ml-1">
+                  {reservation.profiles?.username || t('Unknown', '未知')}
+                  {index < reservations.length - 1 && ', '}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="flex space-x-2">
-          {!isCreator && !hasUserBooked && !showBookingForm && (
-            <Button
-              variant="outline"
-              onClick={() => setShowBookingForm(true)}
+
+        <div className="flex flex-col gap-2">
+          {isCreator ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+                className="bg-cosmic-700/50 border-cosmic-600/50 hover:bg-cosmic-600/50"
+                disabled={isPastDue}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                {t('Edit', '编辑')}
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-red-600/20 border-red-600/30 text-red-400 hover:bg-red-600/30"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {t('Delete', '删除')}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-cosmic-800 border-cosmic-700">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-gray-100">
+                      {t('Delete Time Slot', '删除时间段')}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-gray-400">
+                      {t('Are you sure you want to delete this time slot? This action cannot be undone.', 
+                         '您确定要删除此时间段吗？此操作无法撤销。')}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="bg-cosmic-700 border-cosmic-600 text-gray-300 hover:bg-cosmic-600">
+                      {t('Cancel', '取消')}
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => deleteTimeSlotMutation.mutate(timeSlot.id)}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {t('Delete', '删除')}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          ) : (
+            !isPastDue && availableDates.length > 0 && (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => setShowBookingDialog(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Star className="h-4 w-4 mr-2" />
+                  {timeSlot.is_free ? t('Book Free', '免费预订') : t('Book Now', '立即预订')}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleContactHost}
+                  className="bg-cosmic-700/50 border-cosmic-600/50 hover:bg-cosmic-600/50"
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  {t('Contact Host', '联系主人')}
+                </Button>
+              </>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* Booking Dialog */}
+      <AlertDialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
+        <AlertDialogContent className="bg-cosmic-800 border-cosmic-700 max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-gray-100">
+              {timeSlot.is_free ? t('Book Free Time Slot', '预订免费时段') : t('Book Time Slot', '预订时段')}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              {t('Select your preferred dates and number of guests.', '选择您的首选日期和客人数量。')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-4">
+            <DateRangePicker
+              availableDates={availableDates.map(slot => new Date(slot.start_time))}
+              selectedDates={selectedDates}
+              onDatesChange={setSelectedDates}
+              maxCapacity={timeSlot.max_capacity}
+            />
+            
+            <GuestSelector
+              numberOfGuests={numberOfGuests}
+              maxGuests={timeSlot.max_capacity}
+              onGuestsChange={setNumberOfGuests}
+            />
+
+            {selectedDates.length > 0 && (
+              <PriceCalculator
+                pricePerNight={parseFloat(timeSlot.price) || 0}
+                currency={timeSlot.currency || 'USD'}
+                numberOfNights={selectedDates.length}
+                isFree={timeSlot.is_free}
+              />
+            )}
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-cosmic-700 border-cosmic-600 text-gray-300 hover:bg-cosmic-600">
+              {t('Cancel', '取消')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBooking}
+              disabled={selectedDates.length === 0 || bookTimeSlotMutation.isPending}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {t('Book', '预订')}
-            </Button>
-          )}
-          
-          {isCreator && (
-            <Button
-              variant="outline"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-red-600/40 hover:bg-red-700/60"
-            >
-              {isDeleting ? t('Deleting...', '删除中...') : t('Delete', '删除')}
-            </Button>
-          )}
-          
-          {hasUserBooked && (
-            <div className="text-green-500 font-medium px-3 py-1.5 bg-green-500/20 rounded-md">
-              {t('Booked', '已预订')}
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {timeSlot.description && (
-        <p className="text-gray-300 text-sm mb-2">{timeSlot.description}</p>
-      )}
-      
-      <div className="flex flex-wrap gap-2 text-sm text-gray-400">
-        <div>
-          {t('Price', '价格')}: {timeSlot.price > 0 
-            ? `${timeSlot.currency}${timeSlot.price}` 
-            : t('Free', '免费')}
-        </div>
-        <div className="mx-2">•</div>
-        <div>
-          {t('Available', '可用')}: {availableSlots} / {timeSlot.max_capacity}
-        </div>
-        {timeSlot.pets_policy && (
-          <>
-            <div className="mx-2">•</div>
-            <div>{t('Pets', '宠物')}: {
-              timeSlot.pets_policy === 'not_allowed' ? t('Not Allowed', '不允许') :
-              timeSlot.pets_policy === 'allowed' ? t('Allowed', '允许') :
-              timeSlot.pets_policy === 'only_small' ? t('Only Small Pets', '仅小型宠物') :
-              timeSlot.pets_policy === 'approval_required' ? t('Host Approval Required', '需要主人批准') :
-              timeSlot.pets_policy
-            }</div>
-          </>
-        )}
-        <div className="mx-2">•</div>
-        <div>
-          {t('Total nights', '总晚数')}: {fullGroup.length}
-        </div>
-      </div>
-      
-      {showBookingForm && !hasUserBooked && (
-        <div className="mt-4 p-3 bg-cosmic-900/40 border border-cosmic-700/30 rounded-md">
-          <h4 className="text-gray-200 font-medium mb-3">{t('Booking Details', '预订详情')}</h4>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-            <div>
-              <label className="block text-sm text-gray-300 mb-1">
-                {t('Select check-in and check-out dates', '选择入住和退房日期')}
-              </label>
-              
-              <div className="bg-cosmic-800/70 rounded-lg p-2">
-                <Calendar
-                  mode="range"
-                  selected={{ 
-                    from: checkInDate, 
-                    to: checkOutDate 
-                  }}
-                  onSelect={(range) => {
-                    if (range?.from) setCheckInDate(range.from);
-                    if (range?.to) setCheckOutDate(range.to);
-                  }}
-                  disabled={(date) => {
-                    // Disable dates that are not in the available dates list
-                    return !isDateAvailable(date);
-                  }}
-                  className="bg-cosmic-800/30 border-cosmic-700/30 rounded-lg"
-                />
-              </div>
-              
-              <div className="text-sm text-gray-400 mt-2">
-                {checkInDate && checkOutDate ? (
-                  <span>
-                    {format(checkInDate, 'MMM d')} - {format(checkOutDate, 'MMM d')} 
-                    ({Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24))} {t('nights', '晚')})
-                  </span>
-                ) : (
-                  <span>{t('Please select your dates', '请选择您的日期')}</span>
-                )}
-              </div>
-            </div>
-            
-            <div>
-              <GuestSelector 
-                onChange={handleGuestChange} 
-                maxGuests={timeSlot.max_capacity}
-              />
-            </div>
-          </div>
-          
-          <div className="flex justify-end space-x-2">
-            <Button 
-              variant="outline"
-              onClick={() => setShowBookingForm(false)}
-              className="bg-cosmic-700/50"
-            >
-              {t('Cancel', '取消')}
-            </Button>
-            <Button
-              onClick={handleBooking}
-              disabled={isBooking}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isBooking 
-                ? t('Confirming...', '确认中...') 
-                : t('Confirm Booking', '确认预订')}
-            </Button>
-          </div>
-        </div>
-      )}
+              {bookTimeSlotMutation.isPending 
+                ? t('Booking...', '预订中...') 
+                : timeSlot.is_free 
+                  ? t('Book Free', '免费预订')
+                  : t('Book & Pay', '预订并支付')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

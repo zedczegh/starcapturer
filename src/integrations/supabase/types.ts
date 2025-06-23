@@ -135,6 +135,7 @@ export type Database = {
           description: string | null
           end_time: string
           id: string
+          is_free: boolean
           max_capacity: number
           pets_policy: string | null
           price: number | null
@@ -149,6 +150,7 @@ export type Database = {
           description?: string | null
           end_time: string
           id?: string
+          is_free?: boolean
           max_capacity?: number
           pets_policy?: string | null
           price?: number | null
@@ -163,6 +165,7 @@ export type Database = {
           description?: string | null
           end_time?: string
           id?: string
+          is_free?: boolean
           max_capacity?: number
           pets_policy?: string | null
           price?: number | null
@@ -242,6 +245,7 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           id: string
+          preferred_currency: string | null
           updated_at: string
           username: string | null
         }
@@ -251,6 +255,7 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           id: string
+          preferred_currency?: string | null
           updated_at?: string
           username?: string | null
         }
@@ -260,6 +265,7 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           id?: string
+          preferred_currency?: string | null
           updated_at?: string
           username?: string | null
         }

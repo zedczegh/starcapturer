@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -14,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import TimeSlotCalendar from './TimeSlotCalendar';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import PricingInput from './PricingInput';
 
 interface TimeSlotFormProps {
   spotId: string;
@@ -55,6 +55,14 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
     existingTimeSlot.max_capacity : 1);
   const [petsPolicy, setPetsPolicy] = useState(isEditing ?
     existingTimeSlot.pets_policy || 'not_allowed' : 'not_allowed');
+
+  // Pricing state
+  const [price, setPrice] = useState(isEditing ? 
+    parseFloat(existingTimeSlot.price) || 0 : 0);
+  const [currency, setCurrency] = useState(isEditing ? 
+    existingTimeSlot.currency || 'USD' : 'USD');
+  const [isFree, setIsFree] = useState(isEditing ? 
+    existingTimeSlot.is_free || false : true);
 
   // Handle date range selection
   const handleRangeSelect = (range: { from: Date | undefined; to: Date | undefined }) => {
@@ -131,14 +139,22 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                 p_end_time: endDateTime.toISOString(),
                 p_max_capacity: maxCapacity,
                 p_description: description.trim(),
-                p_price: 0,
-                p_currency: '$',
+                p_price: isFree ? 0 : price,
+                p_currency: currency,
                 p_pets_policy: petsPolicy
               }
             }
           });
 
           if (error) throw error;
+
+          // Update the is_free field separately
+          const { error: updateError } = await supabase
+            .from('astro_spot_timeslots')
+            .update({ is_free: isFree })
+            .eq('id', existingTimeSlot.id);
+
+          if (updateError) throw updateError;
         } else {
           // Call the edge function to create a new time slot
           const { data, error } = await supabase.functions.invoke('call-rpc', {
@@ -151,14 +167,24 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
                 p_end_time: endDateTime.toISOString(),
                 p_max_capacity: maxCapacity,
                 p_description: description.trim(),
-                p_price: 0,
-                p_currency: '$',
+                p_price: isFree ? 0 : price,
+                p_currency: currency,
                 p_pets_policy: petsPolicy
               }
             }
           });
 
           if (error) throw error;
+
+          // Update the is_free field for the new record
+          if (data && data.length > 0) {
+            const { error: updateError } = await supabase
+              .from('astro_spot_timeslots')
+              .update({ is_free: isFree })
+              .eq('id', data[0]);
+
+            if (updateError) throw updateError;
+          }
         }
       }
       
@@ -299,6 +325,21 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({
               </Select>
             </div>
           </div>
+        </div>
+
+        {/* Pricing Section */}
+        <div className="border-t border-cosmic-600/30 pt-4">
+          <Label className="block text-sm text-gray-300 mb-3">
+            {t("Pricing", "定价")}
+          </Label>
+          <PricingInput
+            price={price}
+            currency={currency}
+            isFree={isFree}
+            onPriceChange={setPrice}
+            onCurrencyChange={setCurrency}
+            onFreeToggle={setIsFree}
+          />
         </div>
         
         <div>
