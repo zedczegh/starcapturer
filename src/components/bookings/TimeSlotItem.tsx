@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,8 +37,9 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
-  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [numberOfGuests, setNumberOfGuests] = useState(1);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [guestCounts, setGuestCounts] = useState<Record<string, number>>({ adults: 1 });
 
   // Check if the time slot is in the past
   const isPastDue = isAfter(new Date(), parseISO(timeSlot.end_time));
@@ -68,39 +70,46 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
   });
 
   const bookTimeSlotMutation = useMutation({
-    mutationFn: async (dates: Date[]) => {
-      if (!user?.id) throw new Error('User not authenticated');
+    mutationFn: async () => {
+      if (!user?.id || !startDate) throw new Error('User not authenticated or no start date selected');
       
-      const reservations = [];
-      for (const date of dates) {
+      // Calculate the dates to book
+      const datesToBook = [];
+      let currentDate = new Date(startDate);
+      const bookingEndDate = endDate || startDate;
+      
+      while (currentDate <= bookingEndDate) {
         const slot = group.find(s => 
-          format(new Date(s.start_time), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+          format(new Date(s.start_time), 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd')
         );
         
-        if (!slot) continue;
-        
-        const { data, error } = await supabase.functions.invoke('call-rpc', {
-          body: {
-            function: 'insert_astro_spot_reservation',
-            params: {
-              p_timeslot_id: slot.id,
-              p_user_id: user.id,
-              p_status: 'confirmed'
+        if (slot) {
+          const { data, error } = await supabase.functions.invoke('call-rpc', {
+            body: {
+              function: 'insert_astro_spot_reservation',
+              params: {
+                p_timeslot_id: slot.id,
+                p_user_id: user.id,
+                p_status: 'confirmed'
+              }
             }
-          }
-        });
+          });
 
-        if (error) throw error;
-        reservations.push(data);
+          if (error) throw error;
+          datesToBook.push(data);
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1);
       }
       
-      return reservations;
+      return datesToBook;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['timeSlots'] });
       toast.success(t("Booking confirmed!", "预订确认！"));
       setShowBookingDialog(false);
-      setSelectedDates([]);
+      setStartDate(null);
+      setEndDate(null);
     },
     onError: (error: any) => {
       console.error('Error booking time slot:', error);
@@ -120,18 +129,25 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
   };
 
   const handleBooking = () => {
-    if (selectedDates.length === 0) {
-      toast.error(t("Please select at least one date", "请至少选择一个日期"));
+    if (!startDate) {
+      toast.error(t("Please select at least a start date", "请至少选择一个开始日期"));
       return;
     }
     
     if (timeSlot.is_free) {
       // For free bookings, book directly
-      bookTimeSlotMutation.mutate(selectedDates);
+      bookTimeSlotMutation.mutate();
     } else {
       // For paid bookings, this would integrate with payment system
       toast.info(t("Payment integration coming soon", "支付集成即将推出"));
     }
+  };
+
+  const calculateNumberOfNights = () => {
+    if (!startDate || !endDate) return 1;
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(1, diffDays);
   };
 
   if (isEditing) {
@@ -306,23 +322,22 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
           
           <div className="space-y-4">
             <DateRangePicker
-              availableDates={availableDates.map(slot => new Date(slot.start_time))}
-              selectedDates={selectedDates}
-              onDatesChange={setSelectedDates}
-              maxCapacity={timeSlot.max_capacity}
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
             />
             
             <GuestSelector
-              numberOfGuests={numberOfGuests}
+              onChange={setGuestCounts}
               maxGuests={timeSlot.max_capacity}
-              onGuestsChange={setNumberOfGuests}
             />
 
-            {selectedDates.length > 0 && (
+            {startDate && (
               <PriceCalculator
                 pricePerNight={parseFloat(timeSlot.price) || 0}
                 currency={timeSlot.currency || 'USD'}
-                numberOfNights={selectedDates.length}
+                numberOfNights={calculateNumberOfNights()}
                 isFree={timeSlot.is_free}
               />
             )}
@@ -334,7 +349,7 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBooking}
-              disabled={selectedDates.length === 0 || bookTimeSlotMutation.isPending}
+              disabled={!startDate || bookTimeSlotMutation.isPending}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {bookTimeSlotMutation.isPending 
