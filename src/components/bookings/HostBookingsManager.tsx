@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +5,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, parseISO, isSameDay, addDays } from 'date-fns';
 import { toast } from 'sonner';
@@ -334,9 +332,13 @@ const HostBookingsManager: React.FC<HostBookingsManagerProps> = ({ spotId, spotN
                           </span>
                         </div>
                         <CheckInOutManager
-                          reservation={reservation}
+                          reservation={{
+                            ...reservation,
+                            astro_spot_timeslots: reservation.astro_spot_timeslots
+                          }}
                           guestUsername={group.guestProfile?.username || 'Guest'}
                           spotId={spotId}
+                          isHost={true}
                         />
                       </div>
                     ))}

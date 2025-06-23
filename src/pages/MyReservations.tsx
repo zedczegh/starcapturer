@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,15 +5,14 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, parseISO, isSameDay, addDays } from 'date-fns';
 import { toast } from 'sonner';
-import { Calendar, MapPin, User, Trash2, MessageCircle, CheckCircle, LogIn, LogOut, Clock } from 'lucide-react';
+import { Calendar, MapPin, User, Trash2, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import BackButton from '@/components/navigation/BackButton';
-import { formatDateRangeWithNights, groupTimeSlotsByConsecutiveDates } from '@/utils/dateRangeUtils';
+import CheckInOutManager from '@/components/bookings/CheckInOutManager';
 
 // Define the extended reservation type with check-in/out fields
 type ReservationWithProfile = {
@@ -256,38 +254,6 @@ const MyReservations = () => {
     });
   };
 
-  const getReservationStatusBadge = (reservation: ReservationWithProfile) => {
-    switch (reservation.status) {
-      case 'confirmed':
-        return (
-          <Badge variant="default" className="bg-blue-600/20 text-blue-400 border-blue-600/30">
-            <Clock className="h-3 w-3 mr-1" />
-            {t('Confirmed', '已确认')}
-          </Badge>
-        );
-      case 'checked_in':
-        return (
-          <Badge variant="default" className="bg-green-600/20 text-green-400 border-green-600/30">
-            <LogIn className="h-3 w-3 mr-1" />
-            {t('Checked In', '已签到')}
-          </Badge>
-        );
-      case 'checked_out':
-        return (
-          <Badge variant="default" className="bg-gray-600/20 text-gray-400 border-gray-600/30">
-            <LogOut className="h-3 w-3 mr-1" />
-            {t('Checked Out', '已退房')}
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="border-cosmic-600/30 text-gray-400">
-            {reservation.status}
-          </Badge>
-        );
-    }
-  };
-
   if (!user) {
     return (
       <div className="min-h-screen bg-cosmic-900 flex items-center justify-center">
@@ -382,32 +348,16 @@ const MyReservations = () => {
                                 <span className="text-sm text-gray-400">
                                   {format(new Date(reservation.astro_spot_timeslots!.start_time), 'MMM d, yyyy')}
                                 </span>
-                                {getReservationStatusBadge(reservation)}
                               </div>
-                              {/* Show check-in/out timestamps */}
-                              <div className="text-xs text-gray-500 space-y-1">
-                                {reservation.checked_in_at && (
-                                  <div className="flex items-center gap-1">
-                                    <CheckCircle className="h-3 w-3 text-green-400" />
-                                    <span>
-                                      {t('Checked in:', '签到时间:')} {format(new Date(reservation.checked_in_at), 'MMM d, yyyy HH:mm')}
-                                    </span>
-                                  </div>
-                                )}
-                                {reservation.checked_out_at && (
-                                  <div className="flex items-center gap-1">
-                                    <LogOut className="h-3 w-3 text-orange-400" />
-                                    <span>
-                                      {t('Checked out:', '退房时间:')} {format(new Date(reservation.checked_out_at), 'MMM d, yyyy HH:mm')}
-                                    </span>
-                                  </div>
-                                )}
-                                {reservation.host_notes && (
-                                  <div className="text-gray-400 text-xs">
-                                    <span className="font-medium">{t('Host Notes:', '主人备注:')}</span> {reservation.host_notes}
-                                  </div>
-                                )}
-                              </div>
+                              <CheckInOutManager
+                                reservation={{
+                                  ...reservation,
+                                  astro_spot_timeslots: reservation.astro_spot_timeslots
+                                }}
+                                guestUsername={user?.email || 'Guest'}
+                                spotId={group.spot?.id || ''}
+                                isHost={false}
+                              />
                             </div>
                           ))}
                         </div>

@@ -3,14 +3,15 @@ import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
-import { CheckCircle, Clock, LogIn, LogOut } from 'lucide-react';
-import { format } from 'date-fns';
+import { LogIn, LogOut } from 'lucide-react';
+import { isAfter, parseISO } from 'date-fns';
+import ReservationStatusBadge from './ReservationStatusBadge';
+import ReservationTimestamps from './ReservationTimestamps';
 
 interface CheckInOutManagerProps {
   reservation: {
@@ -19,19 +20,29 @@ interface CheckInOutManagerProps {
     checked_in_at?: string | null;
     checked_out_at?: string | null;
     host_notes?: string | null;
+    astro_spot_timeslots?: {
+      end_time: string;
+    } | null;
   };
   guestUsername: string;
   spotId: string;
+  isHost?: boolean;
 }
 
 const CheckInOutManager: React.FC<CheckInOutManagerProps> = ({ 
   reservation, 
   guestUsername, 
-  spotId 
+  spotId,
+  isHost = true
 }) => {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [hostNotes, setHostNotes] = React.useState(reservation.host_notes || '');
+
+  // Check if reservation is past due
+  const isPastDue = reservation.astro_spot_timeslots?.end_time 
+    ? isAfter(new Date(), parseISO(reservation.astro_spot_timeslots.end_time))
+    : false;
 
   const checkInMutation = useMutation({
     mutationFn: async ({ reservationId, notes }: { reservationId: string; notes: string }) => {
@@ -48,6 +59,7 @@ const CheckInOutManager: React.FC<CheckInOutManagerProps> = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spotReservations', spotId] });
+      queryClient.invalidateQueries({ queryKey: ['userReservations'] });
       toast.success(t('Guest checked in successfully', '客人签到成功'));
       setHostNotes('');
     },
@@ -72,6 +84,7 @@ const CheckInOutManager: React.FC<CheckInOutManagerProps> = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['spotReservations', spotId] });
+      queryClient.invalidateQueries({ queryKey: ['userReservations'] });
       toast.success(t('Guest checked out successfully', '客人退房成功'));
       setHostNotes('');
     },
@@ -81,39 +94,10 @@ const CheckInOutManager: React.FC<CheckInOutManagerProps> = ({
     }
   });
 
-  const getStatusBadge = () => {
-    switch (reservation.status) {
-      case 'confirmed':
-        return (
-          <Badge variant="default" className="bg-blue-600/20 text-blue-400 border-blue-600/30">
-            <Clock className="h-3 w-3 mr-1" />
-            {t('Confirmed', '已确认')}
-          </Badge>
-        );
-      case 'checked_in':
-        return (
-          <Badge variant="default" className="bg-green-600/20 text-green-400 border-green-600/30">
-            <LogIn className="h-3 w-3 mr-1" />
-            {t('Checked In', '已签到')}
-          </Badge>
-        );
-      case 'checked_out':
-        return (
-          <Badge variant="default" className="bg-gray-600/20 text-gray-400 border-gray-600/30">
-            <LogOut className="h-3 w-3 mr-1" />
-            {t('Checked Out', '已退房')}
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="border-cosmic-600/30 text-gray-400">
-            {reservation.status}
-          </Badge>
-        );
-    }
-  };
-
   const getActionButtons = () => {
+    // If not host or reservation is past due, don't show action buttons
+    if (!isHost || isPastDue) return null;
+
     if (reservation.status === 'confirmed') {
       return (
         <AlertDialog>
@@ -232,34 +216,22 @@ const CheckInOutManager: React.FC<CheckInOutManagerProps> = ({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        {getStatusBadge()}
+        <ReservationStatusBadge
+          status={reservation.status}
+          endTime={reservation.astro_spot_timeslots?.end_time || new Date().toISOString()}
+          checkedInAt={reservation.checked_in_at}
+          checkedOutAt={reservation.checked_out_at}
+        />
         {getActionButtons()}
       </div>
       
-      {/* Show timestamps when available */}
-      <div className="text-xs text-gray-500 space-y-1">
-        {reservation.checked_in_at && (
-          <div className="flex items-center gap-1">
-            <CheckCircle className="h-3 w-3 text-green-400" />
-            <span>
-              {t('Checked in:', '签到时间:')} {format(new Date(reservation.checked_in_at), 'MMM d, yyyy HH:mm')}
-            </span>
-          </div>
-        )}
-        {reservation.checked_out_at && (
-          <div className="flex items-center gap-1">
-            <LogOut className="h-3 w-3 text-orange-400" />
-            <span>
-              {t('Checked out:', '退房时间:')} {format(new Date(reservation.checked_out_at), 'MMM d, yyyy HH:mm')}
-            </span>
-          </div>
-        )}
-        {reservation.host_notes && (
-          <div className="text-gray-400 text-xs">
-            <span className="font-medium">{t('Host Notes:', '主人备注:')}</span> {reservation.host_notes}
-          </div>
-        )}
-      </div>
+      <ReservationTimestamps
+        checkedInAt={reservation.checked_in_at}
+        checkedOutAt={reservation.checked_out_at}
+        hostNotes={reservation.host_notes}
+        endTime={reservation.astro_spot_timeslots?.end_time || new Date().toISOString()}
+        status={reservation.status}
+      />
     </div>
   );
 };
