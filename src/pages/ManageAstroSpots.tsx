@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,7 +48,7 @@ const ManageAstroSpots = () => {
     return (
       <div className="min-h-screen bg-background">
         <NavBar />
-        <div className="container py-8">
+        <div className="container py-8 pt-24">
           <p className="text-muted-foreground">
             {t("Please sign in to manage your AstroSpots", "请登录以管理您的观星点")}
           </p>
@@ -74,7 +75,7 @@ const ManageAstroSpots = () => {
         }}
       />
       <NavBar />
-      <div className="relative z-10 container py-10 px-2 md:px-6">
+      <div className="relative z-10 container py-10 px-2 md:px-6 pt-24">
         <AstroSpotsHeader
           spotsCount={spots?.length || 0}
           editMode={editMode}

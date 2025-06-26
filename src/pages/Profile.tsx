@@ -273,7 +273,7 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex flex-col">
       <NavBar />
-      <main className="flex-grow">
+      <main className="flex-grow pt-20">
         <ProfileMain
           displayUsername={displayUsername}
           avatarUrl={avatarUrl}

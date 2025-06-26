@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import BackButton from '@/components/navigation/BackButton';
 import CheckInOutManager from '@/components/bookings/CheckInOutManager';
+import NavBar from '@/components/NavBar';
 
 // Define the extended reservation type with check-in/out fields
 type ReservationWithProfile = {
@@ -257,7 +258,8 @@ const MyReservations = () => {
   if (!user) {
     return (
       <div className="min-h-screen bg-cosmic-900 flex items-center justify-center">
-        <div className="text-center">
+        <NavBar />
+        <div className="text-center pt-24">
           <p className="text-gray-300 mb-4">{t('Please sign in to view your reservations', '请登录查看您的预订')}</p>
           <Button onClick={() => navigate('/photo-points')} className="bg-blue-600 hover:bg-blue-700">
             {t('Go to Login', '去登录')}
@@ -270,6 +272,7 @@ const MyReservations = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-cosmic-900 flex items-center justify-center">
+        <NavBar />
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -277,7 +280,8 @@ const MyReservations = () => {
 
   return (
     <div className="min-h-screen bg-cosmic-900 text-gray-100">
-      <div className="container mx-auto px-4 py-8">
+      <NavBar />
+      <div className="container mx-auto px-4 py-8 pt-24">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <BackButton />
