@@ -86,3 +86,40 @@ export function formatDateRanges(timeSlots: any[]): string {
 
   return ranges.join(', ');
 }
+
+export function groupTimeSlotsByConsecutiveDates(timeSlots: any[]): any[][] {
+  if (!timeSlots || timeSlots.length === 0) {
+    return [];
+  }
+
+  // Sort time slots by start date
+  const sortedSlots = [...timeSlots].sort((a, b) => {
+    const dateA = new Date(a.start_time);
+    const dateB = new Date(b.start_time);
+    return dateA.getTime() - dateB.getTime();
+  });
+
+  const groups: any[][] = [];
+  let currentGroup: any[] = [sortedSlots[0]];
+
+  for (let i = 1; i < sortedSlots.length; i++) {
+    const currentSlot = sortedSlots[i];
+    const prevSlot = sortedSlots[i - 1];
+    
+    const currentDate = new Date(currentSlot.start_time);
+    const prevDate = new Date(prevSlot.start_time);
+    
+    // Check if dates are consecutive (within 1 day)
+    const daysDiff = Math.abs(currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+    
+    if (daysDiff <= 1) {
+      currentGroup.push(currentSlot);
+    } else {
+      groups.push(currentGroup);
+      currentGroup = [currentSlot];
+    }
+  }
+
+  groups.push(currentGroup);
+  return groups;
+}
