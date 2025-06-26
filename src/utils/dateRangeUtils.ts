@@ -1,137 +1,88 @@
 
-import { eachDayOfInterval, format, formatDistance } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 
-/**
- * Generates an array of dates from a start and end date (inclusive)
- */
-export function getDatesInRange(startDate: Date, endDate: Date): Date[] {
-  if (!startDate || !endDate) return [];
-  
-  return eachDayOfInterval({
-    start: startDate,
-    end: endDate
-  });
-}
+export function formatDateRanges(timeSlots: any[]): string {
+  if (!timeSlots || timeSlots.length === 0) {
+    return '';
+  }
 
-/**
- * Groups consecutive dates to display as ranges
- * Returns an array of strings in format "May 1" or "May 1-5"
- */
-export function formatDateRanges(dates: Date[]): string[] {
-  if (!dates.length) return [];
-  
-  // Sort dates chronologically
-  const sortedDates = [...dates].sort((a, b) => a.getTime() - b.getTime());
-  
-  const ranges: string[] = [];
-  let rangeStart = sortedDates[0];
-  let rangeEnd = sortedDates[0];
-  
-  for (let i = 1; i < sortedDates.length; i++) {
-    const current = sortedDates[i];
-    const prev = sortedDates[i - 1];
-    
-    // Check if dates are consecutive
-    const isConsecutive = current.getTime() - prev.getTime() === 86400000; // 24 hours in milliseconds
-    
-    if (isConsecutive) {
-      rangeEnd = current;
-    } else {
-      // Add the previous range
-      if (rangeStart === rangeEnd) {
-        ranges.push(format(rangeStart, 'MMM d'));
+  // Convert and validate dates, then sort
+  const validSlots = timeSlots
+    .map(slot => {
+      let startDate: Date;
+      let endDate: Date;
+
+      // Handle different date formats
+      if (typeof slot.start_time === 'string') {
+        startDate = parseISO(slot.start_time);
+      } else if (slot.start_time instanceof Date) {
+        startDate = slot.start_time;
       } else {
-        ranges.push(`${format(rangeStart, 'MMM d')}-${format(rangeEnd, 'MMM d')}`);
+        return null; // Invalid date
       }
-      
-      // Start a new range
-      rangeStart = current;
-      rangeEnd = current;
-    }
-  }
-  
-  // Add the last range
-  if (rangeStart === rangeEnd) {
-    ranges.push(format(rangeStart, 'MMM d'));
-  } else {
-    ranges.push(`${format(rangeStart, 'MMM d')}-${format(rangeEnd, 'MMM d')}`);
-  }
-  
-  return ranges;
-}
 
-/**
- * Groups time slots by consecutive dates
- */
-export function groupTimeSlotsByConsecutiveDates(timeSlots: any[]): any[][] {
-  if (!timeSlots || !timeSlots.length) return [];
-  
-  // Sort by start time
-  const sorted = [...timeSlots].sort((a, b) => 
-    new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-  );
-  
-  const groups: any[][] = [];
-  let currentGroup: any[] = [sorted[0]];
-  
-  for (let i = 1; i < sorted.length; i++) {
-    const current = sorted[i];
-    const prev = sorted[i - 1];
+      if (typeof slot.end_time === 'string') {
+        endDate = parseISO(slot.end_time);
+      } else if (slot.end_time instanceof Date) {
+        endDate = slot.end_time;
+      } else {
+        return null; // Invalid date
+      }
+
+      // Validate dates
+      if (!isValid(startDate) || !isValid(endDate)) {
+        return null;
+      }
+
+      return {
+        ...slot,
+        parsedStartDate: startDate,
+        parsedEndDate: endDate
+      };
+    })
+    .filter(slot => slot !== null) // Remove invalid slots
+    .sort((a, b) => a.parsedStartDate.getTime() - b.parsedStartDate.getTime());
+
+  if (validSlots.length === 0) {
+    return 'No valid dates';
+  }
+
+  if (validSlots.length === 1) {
+    return format(validSlots[0].parsedStartDate, 'MMM dd, yyyy');
+  }
+
+  // Group consecutive dates
+  const ranges: string[] = [];
+  let rangeStart = validSlots[0].parsedStartDate;
+  let rangeEnd = validSlots[0].parsedStartDate;
+
+  for (let i = 1; i < validSlots.length; i++) {
+    const currentDate = validSlots[i].parsedStartDate;
+    const prevDate = validSlots[i - 1].parsedStartDate;
     
-    const currentDate = new Date(current.start_time);
-    const prevDate = new Date(prev.start_time);
+    // Check if dates are consecutive (within 1 day)
+    const daysDiff = Math.abs(currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
     
-    // Check if current date is the day after previous date
-    const isNextDay = 
-      currentDate.getDate() === (prevDate.getDate() + 1) &&
-      currentDate.getMonth() === prevDate.getMonth() &&
-      currentDate.getFullYear() === prevDate.getFullYear();
-    
-    // Check if time and capacity are the same
-    const isSameTime = 
-      format(new Date(current.start_time), 'HH:mm') === format(new Date(prev.start_time), 'HH:mm') &&
-      format(new Date(current.end_time), 'HH:mm') === format(new Date(prev.end_time), 'HH:mm') &&
-      current.max_capacity === prev.max_capacity;
-    
-    if (isNextDay && isSameTime) {
-      currentGroup.push(current);
+    if (daysDiff <= 1) {
+      rangeEnd = currentDate;
     } else {
-      groups.push(currentGroup);
-      currentGroup = [current];
+      // End current range and start new one
+      if (rangeStart.getTime() === rangeEnd.getTime()) {
+        ranges.push(format(rangeStart, 'MMM dd, yyyy'));
+      } else {
+        ranges.push(`${format(rangeStart, 'MMM dd')} - ${format(rangeEnd, 'MMM dd, yyyy')}`);
+      }
+      rangeStart = currentDate;
+      rangeEnd = currentDate;
     }
   }
-  
-  // Add the last group
-  if (currentGroup.length) {
-    groups.push(currentGroup);
-  }
-  
-  return groups;
-}
 
-/**
- * Formats a date range into a readable string with night count
- */
-export function formatDateRangeWithNights(startDate: Date, endDate: Date): string {
-  if (!startDate || !endDate) return '';
-  
-  const start = format(startDate, 'MMM d');
-  const end = format(endDate, 'MMM d');
-  const year = format(startDate, 'yyyy');
-  
-  // Calculate the number of nights
-  const nightsCount = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  
-  if (nightsCount === 0) {
-    return `${start}, ${year}`;
+  // Add final range
+  if (rangeStart.getTime() === rangeEnd.getTime()) {
+    ranges.push(format(rangeStart, 'MMM dd, yyyy'));
+  } else {
+    ranges.push(`${format(rangeStart, 'MMM dd')} - ${format(rangeEnd, 'MMM dd, yyyy')}`);
   }
-  
-  return `${start}-${end} (${nightsCount} ${nightsCount === 1 ? 'night' : 'nights'}), ${year}`;
-}
 
-/**
- * Format a time range for display
- */
-export function formatTimeRange(startTime: string, endTime: string): string {
-  return `${startTime}-${endTime}`;
+  return ranges.join(', ');
 }

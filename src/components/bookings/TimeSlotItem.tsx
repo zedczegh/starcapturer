@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,9 +6,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { format, isAfter, parseISO } from 'date-fns';
+import { format, isAfter, parseISO, isValid } from 'date-fns';
 import { toast } from 'sonner';
-import { Calendar, Users, Clock, Edit, Trash2, MapPin, MessageCircle, Star } from 'lucide-react';
+import { Calendar, Users, Clock, Edit, Trash2, MessageCircle, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TimeSlotForm from './TimeSlotForm';
 import { formatDateRanges } from '@/utils/dateRangeUtils';
@@ -41,13 +40,33 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [guestCounts, setGuestCounts] = useState<Record<string, number>>({ adults: 1 });
 
-  // Check if the time slot is in the past
-  const isPastDue = isAfter(new Date(), parseISO(timeSlot.end_time));
+  // Safely parse and validate dates
+  const getValidDate = (dateValue: any): Date | null => {
+    if (!dateValue) return null;
+    
+    let parsedDate: Date;
+    if (typeof dateValue === 'string') {
+      parsedDate = parseISO(dateValue);
+    } else if (dateValue instanceof Date) {
+      parsedDate = dateValue;
+    } else {
+      return null;
+    }
+    
+    return isValid(parsedDate) ? parsedDate : null;
+  };
+
+  const startTime = getValidDate(timeSlot.start_time);
+  const endTime = getValidDate(timeSlot.end_time);
+
+  // Check if the time slot is in the past (only if we have valid dates)
+  const isPastDue = startTime && endTime ? isAfter(new Date(), endTime) : false;
   
-  // Get available dates for booking (exclude past dates)
-  const availableDates = group.filter(slot => 
-    !isAfter(new Date(), parseISO(slot.start_time))
-  );
+  // Get available dates for booking (exclude past dates and invalid dates)
+  const availableDates = group.filter(slot => {
+    const slotStartTime = getValidDate(slot.start_time);
+    return slotStartTime && !isAfter(new Date(), slotStartTime);
+  });
 
   const deleteTimeSlotMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -79,9 +98,10 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
       const bookingEndDate = endDate || startDate;
       
       while (currentDate <= bookingEndDate) {
-        const slot = group.find(s => 
-          format(new Date(s.start_time), 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd')
-        );
+        const slot = group.find(s => {
+          const slotStartTime = getValidDate(s.start_time);
+          return slotStartTime && format(slotStartTime, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
+        });
         
         if (slot) {
           const { data, error } = await supabase.functions.invoke('call-rpc', {
@@ -165,7 +185,18 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
   }
 
   const reservations = timeSlot.astro_spot_reservations || [];
-  const dateRanges = formatDateRanges(group);
+  
+  // Safely format date ranges with error handling
+  let dateRanges = 'Invalid dates';
+  try {
+    dateRanges = formatDateRanges(group);
+  } catch (error) {
+    console.error('Error formatting date ranges:', error);
+    // Fallback to individual date display
+    if (startTime && isValid(startTime)) {
+      dateRanges = format(startTime, 'MMM dd, yyyy');
+    }
+  }
 
   return (
     <div className="bg-cosmic-800/40 border border-cosmic-700/30 rounded-lg p-4 space-y-3">
@@ -184,13 +215,14 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
           </div>
           
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400 mb-2">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span>
-                {format(new Date(timeSlot.start_time), 'HH:mm')} - 
-                {format(new Date(timeSlot.end_time), 'HH:mm')}
-              </span>
-            </div>
+            {startTime && endTime && (
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                <span>
+                  {format(startTime, 'HH:mm')} - {format(endTime, 'HH:mm')}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-1">
               <Users className="h-3 w-3" />
               <span>
@@ -265,7 +297,7 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
                     </AlertDialogTitle>
                     <AlertDialogDescription className="text-gray-400">
                       {t('Are you sure you want to delete this time slot? This action cannot be undone.', 
-                         '您确定要删除此时间段吗？此操作无法撤销。')}
+         '您确定要删除此时间段吗？此操作无法撤销。')}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
