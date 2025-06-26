@@ -1,15 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import AuthDialog from '../auth/AuthDialog';
+import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProfileDropdownMenu from './ProfileDropdownMenu';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchUserProfile, ensureUserProfile } from '@/utils/profileUtils';
+import { toast } from 'sonner';
 
 const ProfileButton = () => {
   const { user, signOut } = useAuth();
@@ -106,7 +107,39 @@ const ProfileButton = () => {
           </Button>
         </motion.div>
       ) : (
-        <ProfileDropdownMenu />
+        <DropdownMenu modal>
+          <DropdownMenuTrigger asChild>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="relative rounded-full p-0 hover:bg-transparent focus:ring-2 focus:ring-primary" 
+                aria-label="Profile"
+              >
+                <Avatar className="h-8 w-8 transition-transform duration-300 group-hover:scale-105">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <AvatarFallback className="bg-cosmic-800/60 text-cosmic-400">
+                      {user.email?.[0]?.toUpperCase() || "?"}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              </Button>
+            </motion.div>
+          </DropdownMenuTrigger>
+          <ProfileDropdownMenu
+            user={user}
+            profile={profile}
+            onSignOut={handleSignOut}
+            email={user.email}
+          />
+        </DropdownMenu>
       )}
       <AuthDialog
         open={showAuthDialog}

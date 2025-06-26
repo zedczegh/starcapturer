@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
 import { format, isAfter, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { Calendar, Users, Clock, Edit, Trash2, MapPin, MessageCircle, Star } from 'lucide-react';
@@ -16,7 +16,6 @@ import { formatDateRanges } from '@/utils/dateRangeUtils';
 import DateRangePicker from './DateRangePicker';
 import GuestSelector from './GuestSelector';
 import PriceCalculator from './PriceCalculator';
-import PaymentMethodSelector from '@/components/wallet/PaymentMethodSelector';
 import { formatCurrency } from '@/utils/currencyUtils';
 
 interface TimeSlotItemProps {
@@ -41,8 +40,6 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [guestCounts, setGuestCounts] = useState<Record<string, number>>({ adults: 1 });
-  const [paymentMethod, setPaymentMethod] = useState('card');
-  const [useWallet, setUseWallet] = useState(false);
 
   // Check if the time slot is in the past
   const isPastDue = isAfter(new Date(), parseISO(timeSlot.end_time));
@@ -76,70 +73,43 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
     mutationFn: async () => {
       if (!user?.id || !startDate) throw new Error('User not authenticated or no start date selected');
       
-      const totalAmount = parseFloat(timeSlot.price) * calculateNumberOfNights();
+      // Calculate the dates to book
+      const datesToBook = [];
+      let currentDate = new Date(startDate);
+      const bookingEndDate = endDate || startDate;
       
-      if (timeSlot.is_free) {
-        // For free bookings, book directly
-        const datesToBook = [];
-        let currentDate = new Date(startDate);
-        const bookingEndDate = endDate || startDate;
+      while (currentDate <= bookingEndDate) {
+        const slot = group.find(s => 
+          format(new Date(s.start_time), 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd')
+        );
         
-        while (currentDate <= bookingEndDate) {
-          const slot = group.find(s => 
-            format(new Date(s.start_time), 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd')
-          );
-          
-          if (slot) {
-            const { data, error } = await supabase.functions.invoke('call-rpc', {
-              body: {
-                function: 'insert_astro_spot_reservation',
-                params: {
-                  p_timeslot_id: slot.id,
-                  p_user_id: user.id,
-                  p_status: 'confirmed'
-                }
+        if (slot) {
+          const { data, error } = await supabase.functions.invoke('call-rpc', {
+            body: {
+              function: 'insert_astro_spot_reservation',
+              params: {
+                p_timeslot_id: slot.id,
+                p_user_id: user.id,
+                p_status: 'confirmed'
               }
-            });
+            }
+          });
 
-            if (error) throw error;
-            datesToBook.push(data);
-          }
-          
-          currentDate.setDate(currentDate.getDate() + 1);
+          if (error) throw error;
+          datesToBook.push(data);
         }
         
-        return datesToBook;
-      } else {
-        // For paid bookings, create payment session
-        const { data, error } = await supabase.functions.invoke('create-payment-session', {
-          body: {
-            amount: totalAmount,
-            currency: timeSlot.currency || 'USD',
-            paymentType: paymentMethod,
-            bookingId: timeSlot.id,
-            description: `Booking at ${timeSlot.astro_spot_reservations?.[0]?.profiles?.username || 'Unknown'} for ${calculateNumberOfNights()} night(s)`
-          }
-        });
-
-        if (error) throw error;
-        
-        if (data.url) {
-          window.open(data.url, '_blank');
-        }
-        
-        return data;
+        currentDate.setDate(currentDate.getDate() + 1);
       }
+      
+      return datesToBook;
     },
     onSuccess: () => {
-      if (timeSlot.is_free) {
-        queryClient.invalidateQueries({ queryKey: ['timeSlots'] });
-        toast.success(t("Booking confirmed!", "预订确认！"));
-        setShowBookingDialog(false);
-        setStartDate(null);
-        setEndDate(null);
-      } else {
-        toast.success(t("Redirecting to payment...", "正在跳转到支付页面..."));
-      }
+      queryClient.invalidateQueries({ queryKey: ['timeSlots'] });
+      toast.success(t("Booking confirmed!", "预订确认！"));
+      setShowBookingDialog(false);
+      setStartDate(null);
+      setEndDate(null);
     },
     onError: (error: any) => {
       console.error('Error booking time slot:', error);
@@ -346,7 +316,7 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
               {timeSlot.is_free ? t('Book Free Time Slot', '预订免费时段') : t('Book Time Slot', '预订时段')}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              {t('Select your preferred dates and payment method.', '选择您的首选日期和支付方式。')}
+              {t('Select your preferred dates and number of guests.', '选择您的首选日期和客人数量。')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           
@@ -362,18 +332,6 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
               onChange={setGuestCounts}
               maxGuests={timeSlot.max_capacity}
             />
-
-            {!timeSlot.is_free && (
-              <div>
-                <Label className="text-sm text-gray-300 mb-2 block">
-                  {t('Payment Method', '支付方式')}
-                </Label>
-                <PaymentMethodSelector
-                  value={paymentMethod}
-                  onChange={setPaymentMethod}
-                />
-              </div>
-            )}
 
             {startDate && (
               <PriceCalculator
@@ -395,10 +353,10 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {bookTimeSlotMutation.isPending 
-                ? t('Processing...', '处理中...') 
+                ? t('Booking...', '预订中...') 
                 : timeSlot.is_free 
                   ? t('Book Free', '免费预订')
-                  : t('Pay & Book', '支付并预订')}
+                  : t('Book & Pay', '预订并支付')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
