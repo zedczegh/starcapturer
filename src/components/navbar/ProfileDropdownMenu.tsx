@@ -1,139 +1,110 @@
 
 import React from 'react';
-import {
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, Calendar } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { useNotifications } from '@/hooks/useNotifications';
-import NotificationBadge from './NotificationBadge';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { 
+  User, 
+  Settings, 
+  LogOut, 
+  Calendar, 
+  MessageCircle, 
+  Star,
+  Wallet // Add wallet icon
+} from 'lucide-react';
 
-interface ProfileDropdownMenuProps {
-  user: any;
-  profile: { username: string | null } | null;
-  onSignOut: () => void;
-  email: string | null;
-}
-
-const menuItemVariants = {
-  hidden: { opacity: 0, x: -20 },
-  visible: (i: number) => ({
-    opacity: 1,
-    x: 0,
-    transition: {
-      delay: i * 0.1,
-    },
-  }),
-};
-
-const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
-  user,
-  profile,
-  onSignOut,
-  email
-}) => {
+const ProfileDropdownMenu = () => {
+  const { user, signOut } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { unreadMessagesCount, newReservationsCount, markMessagesAsViewed, markAstroSpotsAsViewed } = useNotifications();
 
-  const handleMessagesClick = () => {
-    markMessagesAsViewed();
-    navigate('/messages');
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
   };
 
-  const handleAstroSpotsClick = () => {
-    markAstroSpotsAsViewed();
-    navigate('/manage-astro-spots');
-  };
-
-  const menuItems = [
-    { 
-      icon: MessageCircle, 
-      label: t('Messages', '消息'), 
-      onClick: handleMessagesClick,
-      badge: unreadMessagesCount
-    },
-    { icon: User, label: t('Profile', '个人资料'), path: '/profile' },
-    { icon: BookmarkPlus, label: t('My Collections', '我的收藏'), path: '/collections' },
-    { 
-      icon: MapPin, 
-      label: t('My AstroSpots', '我的观星点'), 
-      onClick: handleAstroSpotsClick,
-      badge: newReservationsCount
-    },
-    { icon: Calendar, label: t('My Reservations', '我的预订'), path: '/my-reservations' },
-    { icon: Link2, label: t('Useful Links', '资源'), path: '/useful-links' },
-    { icon: Info, label: t('About SIQS', '关于SIQS'), path: '/about' },
-    { icon: Settings, label: t('Settings', '设置'), path: '/settings' },
-  ];
+  if (!user) return null;
 
   return (
-    <DropdownMenuContent 
-      align="end" 
-      className="z-[200] min-w-[240px] rounded-xl cosmic-dropdown shadow-2xl py-2 px-0 overflow-hidden"
-      asChild
-    >
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.2 }}
-      >
-        <DropdownMenuLabel className="glass-dropdown-label px-4 pt-3 pb-2 flex flex-col border-none rounded-t-xl">
-          <span className="font-bold text-lg text-primary/90">
-            {profile && profile.username ? profile.username : t('Account', '账户')}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center space-x-2 hover:bg-cosmic-700/50 rounded-lg p-2 transition-colors">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={user.user_metadata?.avatar_url} />
+            <AvatarFallback className="bg-cosmic-700 text-cosmic-200">
+              {user.email?.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm font-medium text-cosmic-200 hidden sm:block">
+            {user.user_metadata?.username || user.email?.split('@')[0]}
           </span>
-          <span className="text-xs text-cosmic-400 truncate">{email}</span>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        </button>
+      </DropdownMenuTrigger>
+      
+      <DropdownMenuContent 
+        className="w-56 bg-cosmic-800 border-cosmic-700" 
+        align="end"
+      >
+        <DropdownMenuItem asChild>
+          <Link to="/profile" className="flex items-center cursor-pointer">
+            <User className="mr-2 h-4 w-4" />
+            <span>{t('Profile', '个人资料')}</span>
+          </Link>
+        </DropdownMenuItem>
         
-        {menuItems.map(({ icon: Icon, label, path, onClick, badge }, i) => (
-          <motion.div
-            key={path || label}
-            custom={i}
-            initial="hidden"
-            animate="visible"
-            variants={menuItemVariants}
-          >
-            <DropdownMenuItem
-              onClick={() => {
-                if (onClick) {
-                  onClick();
-                } else if (path) {
-                  navigate(path);
-                }
-              }}
-              className="interactive-button px-4 py-2 flex gap-2 items-center hover:!bg-primary/10 hover:text-primary rounded-md transition-all duration-300"
-            >
-              <Icon className="h-4 w-4 text-primary" />
-              <span className="flex-1">{label}</span>
-              {badge !== undefined && <NotificationBadge count={badge} />}
-            </DropdownMenuItem>
-          </motion.div>
-        ))}
+        <DropdownMenuItem asChild>
+          <Link to="/wallet" className="flex items-center cursor-pointer">
+            <Wallet className="mr-2 h-4 w-4" />
+            <span>{t('Wallet', '钱包')}</span>
+          </Link>
+        </DropdownMenuItem>
         
-        <DropdownMenuSeparator />
-        <motion.div
-          custom={8}
-          initial="hidden"
-          animate="visible"
-          variants={menuItemVariants}
-        >
-          <DropdownMenuItem
-            onClick={onSignOut}
-            className="interactive-button mt-2 mx-2 px-4 py-2 flex gap-2 items-center !text-white !bg-red-500 hover:!bg-red-400 hover:!text-white font-semibold rounded-xl transition-all duration-300 shadow-lg"
-          >
-            <LogOut className="mr-2 h-5 w-5" />
-            <span>{t('Sign Out', '登出')}</span>
-          </DropdownMenuItem>
-        </motion.div>
-      </motion.div>
-    </DropdownMenuContent>
+        <DropdownMenuItem asChild>
+          <Link to="/my-reservations" className="flex items-center cursor-pointer">
+            <Calendar className="mr-2 h-4 w-4" />
+            <span>{t('My Reservations', '我的预订')}</span>
+          </Link>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem asChild>
+          <Link to="/manage-astro-spots" className="flex items-center cursor-pointer">
+            <Star className="mr-2 h-4 w-4" />
+            <span>{t('Manage Spots', '管理观星点')}</span>
+          </Link>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem asChild>
+          <Link to="/messages" className="flex items-center cursor-pointer">
+            <MessageCircle className="mr-2 h-4 w-4" />
+            <span>{t('Messages', '消息')}</span>
+          </Link>
+        </DropdownMenuItem>
+        
+        <DropdownMenuSeparator className="bg-cosmic-700" />
+        
+        <DropdownMenuItem asChild>
+          <Link to="/preferences" className="flex items-center cursor-pointer">
+            <Settings className="mr-2 h-4 w-4" />
+            <span>{t('Preferences', '偏好设置')}</span>
+          </Link>
+        </DropdownMenuItem>
+        
+        <DropdownMenuSeparator className="bg-cosmic-700" />
+        
+        <DropdownMenuItem onClick={handleSignOut} className="flex items-center cursor-pointer">
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>{t('Sign Out', '退出登录')}</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
