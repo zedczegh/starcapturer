@@ -18,7 +18,7 @@ import {
   Calendar, 
   MessageCircle, 
   Star,
-  Wallet // Add wallet icon
+  Wallet
 } from 'lucide-react';
 
 const ProfileDropdownMenu = () => {

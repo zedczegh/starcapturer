@@ -1,3 +1,4 @@
+
 import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,14 +8,14 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { HelmetProvider } from 'react-helmet-async';
-import NavBar from "./components/navbar/NavBar";
+import NavBar from "./components/NavBar";
 import PageLoader from "./components/loaders/PageLoader";
 
-const Home = lazy(() => import("./pages/Home"));
-const Community = lazy(() => import("./pages/Community"));
-const PhotoPoints = lazy(() => import("./pages/PhotoPoints"));
+const Home = lazy(() => import("./pages/Index"));
+const Community = lazy(() => import("./pages/CommunityAstroSpots"));
+const PhotoPoints = lazy(() => import("./pages/PhotoPointsNearby"));
 const ManageAstroSpots = lazy(() => import("./pages/ManageAstroSpots"));
-const AstroSpotDetails = lazy(() => import("./pages/AstroSpotDetails"));
+const AstroSpotDetails = lazy(() => import("./pages/AstroSpotProfile"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Preferences = lazy(() => import("./pages/Preferences"));
 const Messages = lazy(() => import("./pages/Messages"));
@@ -35,7 +36,7 @@ function App() {
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <ThemeProvider>
           <AuthProvider>
             <LanguageProvider>
               <TooltipProvider>
