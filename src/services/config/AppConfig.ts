@@ -1,4 +1,3 @@
-
 export interface DatabaseConfig {
   provider: 'supabase' | 'firebase' | 'custom';
   url: string;
@@ -12,7 +11,7 @@ export interface WeatherConfig {
 }
 
 export interface MapConfig {
-  provider: 'leaflet' | 'mapbox' | 'google';
+  provider: 'leaflet' | 'mapbox' | 'google' | 'gaode';
   apiKey?: string;
   baseUrl?: string;
 }
@@ -35,7 +34,7 @@ export const defaultConfig: AppConfig = {
     baseUrl: 'https://api.open-meteo.com'
   },
   map: {
-    provider: 'leaflet'
+    provider: 'gaode' // Changed to test Gaode Maps
   }
 };
 

@@ -8,6 +8,7 @@ import { ConfigManager } from './config/AppConfig';
 import { SupabaseUserService, SupabaseAstroSpotService, SupabaseReservationService, SupabaseMessagingService } from './implementations/SupabaseDatabaseService';
 import { OpenMeteoWeatherService } from './implementations/OpenMeteoWeatherService';
 import { DefaultMapService } from './implementations/DefaultMapService';
+import { GaodeMapService } from './implementations/GaodeMapService';
 
 export class ServiceContainer {
   private static instance: ServiceContainer;
@@ -51,6 +52,9 @@ export class ServiceContainer {
     switch (config.map.provider) {
       case 'leaflet':
         this.services.set('mapService', new DefaultMapService());
+        break;
+      case 'gaode':
+        this.services.set('mapService', new GaodeMapService());
         break;
       // Future: Add Mapbox, Google Maps implementations
     }
