@@ -33,8 +33,8 @@ export class OpenMeteoWeatherService implements IWeatherService {
   async getForecast(latitude: number, longitude: number): Promise<ForecastData> {
     try {
       // Use existing forecast fetching logic
-      const { fetchForecastData } = await import('@/lib/api');
-      const forecastData = await fetchForecastData(latitude, longitude);
+      const { fetchForecastData } = await import('@/lib/api/forecast');
+      const forecastData = await fetchForecastData({ latitude, longitude });
       
       if (!forecastData) {
         throw new Error('Failed to fetch forecast data');

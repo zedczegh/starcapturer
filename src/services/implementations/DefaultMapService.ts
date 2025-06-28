@@ -28,7 +28,7 @@ export class DefaultMapService implements IMapService {
       
       return {
         siqs: result.siqs || 0,
-        confidence: result.confidence || 7
+        confidence: 7 // Default confidence score
       };
     } catch (error) {
       console.error('Default map service SIQS calculation error:', error);
@@ -53,9 +53,10 @@ export class DefaultMapService implements IMapService {
 
   async getLocationName(latitude: number, longitude: number): Promise<string> {
     try {
-      // Use existing location name service
-      const { getLocationName } = await import('@/components/location/map/LocationNameService');
-      return await getLocationName(latitude, longitude);
+      // Use existing reverse geocoding service
+      const { enhancedReverseGeocoding } = await import('@/services/geocoding/enhancedReverseGeocoding');
+      const result = await enhancedReverseGeocoding(latitude, longitude);
+      return result.displayName || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
     } catch (error) {
       console.error('Default map service location name error:', error);
       return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
