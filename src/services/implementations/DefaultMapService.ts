@@ -54,9 +54,9 @@ export class DefaultMapService implements IMapService {
   async getLocationName(latitude: number, longitude: number): Promise<string> {
     try {
       // Use existing reverse geocoding service
-      const { enhancedReverseGeocoding } = await import('@/services/geocoding/enhancedReverseGeocoding');
-      const result = await enhancedReverseGeocoding(latitude, longitude);
-      return result.displayName || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+      const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
+      const result = await getEnhancedLocationDetails(latitude, longitude);
+      return result.formattedName || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
     } catch (error) {
       console.error('Default map service location name error:', error);
       return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
