@@ -1,3 +1,4 @@
+
 import { IMapService, LocationData, SIQSCalculationOptions } from '../interfaces/IMapService';
 import { ConfigManager } from '../config/AppConfig';
 
@@ -12,19 +13,11 @@ export class GaodeMapService implements IMapService {
     options?: SIQSCalculationOptions
   ): Promise<{ siqs: number; confidence?: number }> {
     try {
-      // Use existing SIQS calculation logic - this remains the same regardless of map provider
-      const { calculateRealTimeSiqs } = await import('@/services/realTimeSiqs/siqsCalculator');
+      // Use the SIQS service through the container to maintain abstraction
+      const { ServiceContainer } = await import('../ServiceContainer');
+      const siqsService = ServiceContainer.getInstance().getSiqsService();
       
-      const result = await calculateRealTimeSiqs(
-        latitude,
-        longitude,
-        bortleScale,
-        options || {
-          useSingleHourSampling: true,
-          targetHour: 1,
-          cacheDurationMins: 5
-        }
-      );
+      const result = await siqsService.calculateSiqs(latitude, longitude, bortleScale, options);
       
       return {
         siqs: result.siqs || 0,
@@ -75,11 +68,12 @@ export class GaodeMapService implements IMapService {
       return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
     } catch (error) {
       console.error('Gaode map service location name error:', error);
-      // Fallback to enhanced reverse geocoding as backup
+      // Fallback to geocoding service as backup
       try {
-        const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
-        const result = await getEnhancedLocationDetails(latitude, longitude);
-        return result.formattedName || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        const { ServiceContainer } = await import('../ServiceContainer');
+        const geocodingService = ServiceContainer.getInstance().getGeocodingService();
+        const result = await geocodingService.getLocationDetails(latitude, longitude);
+        return result.formattedName;
       } catch (fallbackError) {
         console.error('Fallback geocoding also failed:', fallbackError);
         return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;

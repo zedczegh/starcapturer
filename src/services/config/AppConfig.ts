@@ -1,3 +1,4 @@
+
 export interface DatabaseConfig {
   provider: 'supabase' | 'firebase' | 'custom';
   url: string;
@@ -16,10 +17,31 @@ export interface MapConfig {
   baseUrl?: string;
 }
 
+export interface SiqsConfig {
+  provider: 'default' | 'custom';
+  apiKey?: string;
+  baseUrl?: string;
+}
+
+export interface GeocodingConfig {
+  provider: 'default' | 'mapbox' | 'google' | 'custom';
+  apiKey?: string;
+  baseUrl?: string;
+}
+
+export interface CacheConfig {
+  provider: 'default' | 'redis' | 'custom';
+  url?: string;
+  ttl?: number;
+}
+
 export interface AppConfig {
   database: DatabaseConfig;
   weather: WeatherConfig;
   map: MapConfig;
+  siqs: SiqsConfig;
+  geocoding: GeocodingConfig;
+  cache: CacheConfig;
 }
 
 // Default configuration - easily changeable for different environments
@@ -34,7 +56,17 @@ export const defaultConfig: AppConfig = {
     baseUrl: 'https://api.open-meteo.com'
   },
   map: {
-    provider: 'gaode' // Changed to test Gaode Maps
+    provider: 'gaode' // Using Gaode Maps for testing
+  },
+  siqs: {
+    provider: 'default'
+  },
+  geocoding: {
+    provider: 'default'
+  },
+  cache: {
+    provider: 'default',
+    ttl: 300000 // 5 minutes default TTL
   }
 };
 
@@ -71,5 +103,17 @@ export class ConfigManager {
 
   getMapConfig(): MapConfig {
     return this.config.map;
+  }
+
+  getSiqsConfig(): SiqsConfig {
+    return this.config.siqs;
+  }
+
+  getGeocodingConfig(): GeocodingConfig {
+    return this.config.geocoding;
+  }
+
+  getCacheConfig(): CacheConfig {
+    return this.config.cache;
   }
 }

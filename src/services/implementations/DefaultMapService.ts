@@ -12,23 +12,15 @@ export class DefaultMapService implements IMapService {
     options?: SIQSCalculationOptions
   ): Promise<{ siqs: number; confidence?: number }> {
     try {
-      // Use existing SIQS calculation logic
-      const { calculateRealTimeSiqs } = await import('@/services/realTimeSiqs/siqsCalculator');
+      // Use the SIQS service through the container to maintain abstraction
+      const { ServiceContainer } = await import('../ServiceContainer');
+      const siqsService = ServiceContainer.getInstance().getSiqsService();
       
-      const result = await calculateRealTimeSiqs(
-        latitude,
-        longitude,
-        bortleScale,
-        options || {
-          useSingleHourSampling: true,
-          targetHour: 1,
-          cacheDurationMins: 5
-        }
-      );
+      const result = await siqsService.calculateSiqs(latitude, longitude, bortleScale, options);
       
       return {
         siqs: result.siqs || 0,
-        confidence: 7 // Default confidence score
+        confidence: result.confidence || 7
       };
     } catch (error) {
       console.error('Default map service SIQS calculation error:', error);
@@ -53,10 +45,12 @@ export class DefaultMapService implements IMapService {
 
   async getLocationName(latitude: number, longitude: number): Promise<string> {
     try {
-      // Use existing reverse geocoding service
-      const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
-      const result = await getEnhancedLocationDetails(latitude, longitude);
-      return result.formattedName || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+      // Use the geocoding service through the container
+      const { ServiceContainer } = await import('../ServiceContainer');
+      const geocodingService = ServiceContainer.getInstance().getGeocodingService();
+      
+      const result = await geocodingService.getLocationDetails(latitude, longitude);
+      return result.formattedName;
     } catch (error) {
       console.error('Default map service location name error:', error);
       return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
