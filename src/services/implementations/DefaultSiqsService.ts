@@ -73,7 +73,7 @@ export class DefaultSiqsService implements ISiqsService {
         results.set(key, {
           siqs: siqsValue,
           confidence: 7,
-          weatherData: result.weatherData, // Direct access to weatherData from batch result
+          weatherData: result.siqsResult?.weatherData, // Access through siqsResult structure
           metadata: {
             calculatedAt: new Date().toISOString(),
             provider: 'default'
