@@ -61,10 +61,19 @@ export class DefaultSiqsService implements ISiqsService {
       
       batchResults.forEach((result, index) => {
         const key = `${index}`;
+        
+        // Extract siqs value - handle both number and object formats
+        let siqsValue = 0;
+        if (typeof result.siqs === 'number') {
+          siqsValue = result.siqs;
+        } else if (result.siqs && typeof result.siqs === 'object' && 'score' in result.siqs) {
+          siqsValue = result.siqs.score;
+        }
+        
         results.set(key, {
-          siqs: result.siqs || 0,
+          siqs: siqsValue,
           confidence: 7,
-          weatherData: result.siqsResult?.weatherData,
+          weatherData: result.weatherData, // Direct access to weatherData from batch result
           metadata: {
             calculatedAt: new Date().toISOString(),
             provider: 'default'
