@@ -25,9 +25,11 @@ export class ServiceContainer {
   private static instance: ServiceContainer;
   private services = new Map<string, any>();
   private configManager = ConfigManager.getInstance();
+  private currentLanguage: string = 'en';
 
   private constructor() {
     this.initializeServices();
+    this.setupLanguageListener();
   }
 
   static getInstance(): ServiceContainer {
@@ -35,6 +37,35 @@ export class ServiceContainer {
       ServiceContainer.instance = new ServiceContainer();
     }
     return ServiceContainer.instance;
+  }
+
+  private setupLanguageListener(): void {
+    // Listen for language changes to automatically switch map service
+    if (typeof window !== 'undefined') {
+      window.addEventListener('language-changed', (event: Event) => {
+        const customEvent = event as CustomEvent;
+        const newLanguage = customEvent.detail?.language;
+        if (newLanguage && newLanguage !== this.currentLanguage) {
+          console.log(`Language changed from ${this.currentLanguage} to ${newLanguage}, updating map service`);
+          this.currentLanguage = newLanguage;
+          this.updateMapServiceForLanguage(newLanguage);
+        }
+      });
+
+      // Also check current language from localStorage
+      const storedLanguage = localStorage.getItem('app-language-preference');
+      if (storedLanguage && (storedLanguage === 'en' || storedLanguage === 'zh')) {
+        this.currentLanguage = storedLanguage;
+      }
+    }
+  }
+
+  private updateMapServiceForLanguage(language: string): void {
+    // Switch to Gaode maps for Chinese users, default for others
+    const newMapService = language === 'zh' ? new GaodeMapService() : new DefaultMapService();
+    this.services.set('mapService', newMapService);
+    
+    console.log(`Map service switched to: ${newMapService.getProvider()} for language: ${language}`);
   }
 
   private initializeServices(): void {
@@ -47,7 +78,7 @@ export class ServiceContainer {
       // Initialize weather services
       this.initializeWeatherServices(config.weather.provider);
       
-      // Initialize map services
+      // Initialize map services with language-aware logic
       this.initializeMapServices(config.map.provider);
       
       // Initialize SIQS services (always default for now)
@@ -95,16 +126,23 @@ export class ServiceContainer {
   }
 
   private initializeMapServices(provider: string): void {
-    switch (provider) {
-      case 'leaflet':
-        this.services.set('mapService', new DefaultMapService());
-        break;
-      case 'gaode':
-        this.services.set('mapService', new GaodeMapService());
-        break;
-      default:
-        console.warn(`Unknown map provider: ${provider}. Using default as fallback.`);
-        this.services.set('mapService', new DefaultMapService());
+    // Auto-detect based on current language if provider is 'gaode' or language-based switching is needed
+    if (this.currentLanguage === 'zh') {
+      console.log('Initializing Gaode maps for Chinese language');
+      this.services.set('mapService', new GaodeMapService());
+    } else {
+      switch (provider) {
+        case 'leaflet':
+          this.services.set('mapService', new DefaultMapService());
+          break;
+        case 'gaode':
+          // Only use Gaode if explicitly configured or if Chinese language
+          this.services.set('mapService', new GaodeMapService());
+          break;
+        default:
+          console.log('Using default map service for English language');
+          this.services.set('mapService', new DefaultMapService());
+      }
     }
   }
 
@@ -117,9 +155,9 @@ export class ServiceContainer {
     this.services.set('reservationService', new SupabaseReservationService());
     this.services.set('messagingService', new SupabaseMessagingService());
     
-    // Fallback other services
+    // Fallback other services with language awareness
     this.services.set('weatherService', new OpenMeteoWeatherService());
-    this.services.set('mapService', new DefaultMapService());
+    this.services.set('mapService', this.currentLanguage === 'zh' ? new GaodeMapService() : new DefaultMapService());
     this.services.set('siqsService', new DefaultSiqsService());
     this.services.set('geocodingService', new DefaultGeocodingService());
     this.services.set('cacheService', new DefaultCacheService());
@@ -185,6 +223,11 @@ export class ServiceContainer {
     this.services.set(serviceKey, service);
   }
 
+  // Method to manually switch map service based on language
+  switchMapServiceForLanguage(language: string): void {
+    this.updateMapServiceForLanguage(language);
+  }
+
   // Health check method
   healthCheck(): { [key: string]: boolean } {
     const health: { [key: string]: boolean } = {};
@@ -199,6 +242,11 @@ export class ServiceContainer {
     });
     
     return health;
+  }
+
+  // Get current language for debugging
+  getCurrentLanguage(): string {
+    return this.currentLanguage;
   }
 }
 

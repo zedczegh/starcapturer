@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -24,6 +23,7 @@ import CommunityAstroSpots from './pages/CommunityAstroSpots';
 import ProfileMini from "./pages/ProfileMini";
 import Messages from './pages/Messages';
 import MyReservations from './pages/MyReservations';
+import ServiceTest from './pages/ServiceTest';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -61,6 +61,7 @@ function AppContent() {
       <Route path="/astro-spot/:id" element={<AstroSpotProfile />} />
       <Route path="/messages" element={<Messages />} />
       <Route path="/my-reservations" element={<MyReservations />} />
+      <Route path="/service-test" element={<ServiceTest />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
