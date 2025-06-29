@@ -1,4 +1,3 @@
-
 import { IUserService, IAstroSpotService, IReservationService, IMessagingService } from './interfaces/IDatabaseService';
 import { IWeatherService } from './interfaces/IWeatherService';
 import { IMapService } from './interfaces/IMapService';
@@ -26,6 +25,7 @@ export class ServiceContainer {
   private services = new Map<string, any>();
   private configManager = ConfigManager.getInstance();
   private currentLanguage: string = 'en';
+  private eventListenerAdded: boolean = false;
 
   private constructor() {
     this.initializeServices();
@@ -40,23 +40,31 @@ export class ServiceContainer {
   }
 
   private setupLanguageListener(): void {
+    if (typeof window === 'undefined' || this.eventListenerAdded) return;
+    
     // Listen for language changes to automatically switch map service
-    if (typeof window !== 'undefined') {
-      window.addEventListener('language-changed', (event: Event) => {
-        const customEvent = event as CustomEvent;
-        const newLanguage = customEvent.detail?.language;
-        if (newLanguage && newLanguage !== this.currentLanguage) {
-          console.log(`Language changed from ${this.currentLanguage} to ${newLanguage}, updating map service`);
-          this.currentLanguage = newLanguage;
-          this.updateMapServiceForLanguage(newLanguage);
-        }
-      });
-
-      // Also check current language from localStorage
-      const storedLanguage = localStorage.getItem('app-language-preference');
-      if (storedLanguage && (storedLanguage === 'en' || storedLanguage === 'zh')) {
-        this.currentLanguage = storedLanguage;
+    const handleLanguageChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const newLanguage = customEvent.detail?.language;
+      if (newLanguage && newLanguage !== this.currentLanguage) {
+        console.log(`Language changed from ${this.currentLanguage} to ${newLanguage}, updating map service`);
+        this.currentLanguage = newLanguage;
+        this.updateMapServiceForLanguage(newLanguage);
+        
+        // Dispatch a service update event so components can refresh
+        window.dispatchEvent(new CustomEvent('service-updated', { 
+          detail: { service: 'mapService', language: newLanguage } 
+        }));
       }
+    };
+
+    window.addEventListener('language-changed', handleLanguageChange);
+    this.eventListenerAdded = true;
+
+    // Also check current language from localStorage
+    const storedLanguage = localStorage.getItem('app-language-preference');
+    if (storedLanguage && (storedLanguage === 'en' || storedLanguage === 'zh')) {
+      this.currentLanguage = storedLanguage;
     }
   }
 

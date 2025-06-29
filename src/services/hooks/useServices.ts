@@ -1,5 +1,4 @@
-
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { ServiceContainer } from '@/services/ServiceContainer';
 
 /**
@@ -7,19 +6,40 @@ import { ServiceContainer } from '@/services/ServiceContainer';
  * This provides a clean way to access services in React components
  */
 export const useServices = () => {
-  const services = useMemo(() => ServiceContainer.getInstance(), []);
+  const [serviceVersion, setServiceVersion] = useState(0);
+  
+  // Listen for service updates to refresh the services
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const handleServiceUpdate = () => {
+      console.log('Service updated, refreshing services...');
+      setServiceVersion(prev => prev + 1);
+    };
+    
+    window.addEventListener('service-updated', handleServiceUpdate);
+    
+    return () => {
+      window.removeEventListener('service-updated', handleServiceUpdate);
+    };
+  }, []);
 
-  return {
-    userService: services.getUserService(),
-    astroSpotService: services.getAstroSpotService(),
-    reservationService: services.getReservationService(),
-    messagingService: services.getMessagingService(),
-    weatherService: services.getWeatherService(),
-    mapService: services.getMapService(),
-    siqsService: services.getSiqsService(),
-    geocodingService: services.getGeocodingService(),
-    cacheService: services.getCacheService()
-  };
+  const services = useMemo(() => {
+    const container = ServiceContainer.getInstance();
+    return {
+      userService: container.getUserService(),
+      astroSpotService: container.getAstroSpotService(),
+      reservationService: container.getReservationService(),
+      messagingService: container.getMessagingService(),
+      weatherService: container.getWeatherService(),
+      mapService: container.getMapService(),
+      siqsService: container.getSiqsService(),
+      geocodingService: container.getGeocodingService(),
+      cacheService: container.getCacheService()
+    };
+  }, [serviceVersion]); // Re-memoize when serviceVersion changes
+
+  return services;
 };
 
 /**
