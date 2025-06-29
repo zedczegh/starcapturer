@@ -59,11 +59,12 @@ export class DefaultSiqsService implements ISiqsService {
       const results = new Map<string, SiqsResult>();
       const batchResults = await batchCalculateSiqs(jobs);
       
-      batchResults.forEach((result, key) => {
+      batchResults.forEach((result, index) => {
+        const key = `${index}`;
         results.set(key, {
           siqs: result.siqs || 0,
           confidence: 7,
-          weatherData: result.weatherData,
+          weatherData: result.siqsResult?.weatherData,
           metadata: {
             calculatedAt: new Date().toISOString(),
             provider: 'default'
