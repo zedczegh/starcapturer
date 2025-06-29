@@ -1,4 +1,3 @@
-
 import { ISiqsService, SiqsCalculationOptions, SiqsResult } from '../interfaces/ISiqsService';
 
 export class DefaultSiqsService implements ISiqsService {
@@ -73,7 +72,7 @@ export class DefaultSiqsService implements ISiqsService {
         results.set(key, {
           siqs: siqsValue,
           confidence: 7,
-          weatherData: result.weatherData, // Access weatherData directly from batch result
+          weatherData: undefined, // Weather data not available in batch results
           metadata: {
             calculatedAt: new Date().toISOString(),
             provider: 'default'
