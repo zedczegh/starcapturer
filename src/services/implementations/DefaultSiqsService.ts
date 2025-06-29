@@ -46,11 +46,14 @@ export class DefaultSiqsService implements ISiqsService {
     try {
       const { batchCalculateSiqs } = await import('@/services/realTimeSiqs/batchProcessor');
       
+      // Transform input to match expected SharedAstroSpot format
       const jobs = locations.map((loc, index) => ({
         id: `${index}`,
+        name: `Location ${index}`,
         latitude: loc.latitude,
         longitude: loc.longitude,
-        bortleScale: loc.bortleScale
+        bortleScale: loc.bortleScale,
+        timestamp: new Date().toISOString()
       }));
       
       const results = new Map<string, SiqsResult>();

@@ -8,11 +8,11 @@ export class DefaultGeocodingService implements IGeocodingService {
       const result = await getEnhancedLocationDetails(latitude, longitude);
       
       return {
-        formattedName: result.formattedName || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-        address: result.address,
-        city: result.city,
-        region: result.region,
-        country: result.country,
+        formattedName: result.formattedName || result.name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+        address: result.detailedName,
+        city: result.cityName,
+        region: result.stateName || result.countyName,
+        country: result.countryName,
         latitude,
         longitude
       };
@@ -32,10 +32,10 @@ export class DefaultGeocodingService implements IGeocodingService {
       const results = await searchLocations(query);
       
       return results.map(result => ({
-        formattedName: result.name || 'Unknown Location',
-        address: result.address,
-        city: result.city,
-        region: result.region,
+        formattedName: result.name || result.formattedName || 'Unknown Location',
+        address: result.formattedAddress,
+        city: result.administrativeArea,
+        region: result.administrativeArea,
         country: result.country,
         latitude: result.latitude,
         longitude: result.longitude
