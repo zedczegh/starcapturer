@@ -28,6 +28,8 @@ export class ServiceContainer {
   private eventListenerAdded: boolean = false;
 
   private constructor() {
+    // Initialize current language from localStorage first
+    this.initializeCurrentLanguage();
     this.initializeServices();
     this.setupLanguageListener();
   }
@@ -37,6 +39,16 @@ export class ServiceContainer {
       ServiceContainer.instance = new ServiceContainer();
     }
     return ServiceContainer.instance;
+  }
+
+  private initializeCurrentLanguage(): void {
+    if (typeof window === 'undefined') return;
+    
+    const storedLanguage = localStorage.getItem('app-language-preference');
+    if (storedLanguage && (storedLanguage === 'en' || storedLanguage === 'zh')) {
+      this.currentLanguage = storedLanguage;
+      console.log(`Initialized with stored language: ${this.currentLanguage}`);
+    }
   }
 
   private setupLanguageListener(): void {
@@ -60,12 +72,6 @@ export class ServiceContainer {
 
     window.addEventListener('language-changed', handleLanguageChange);
     this.eventListenerAdded = true;
-
-    // Also check current language from localStorage
-    const storedLanguage = localStorage.getItem('app-language-preference');
-    if (storedLanguage && (storedLanguage === 'en' || storedLanguage === 'zh')) {
-      this.currentLanguage = storedLanguage;
-    }
   }
 
   private updateMapServiceForLanguage(language: string): void {

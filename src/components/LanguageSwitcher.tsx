@@ -8,7 +8,18 @@ const LanguageSwitcher: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
 
   const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'zh' : 'en');
+    const newLanguage = language === 'en' ? 'zh' : 'en';
+    
+    // Update the language context
+    setLanguage(newLanguage);
+    
+    // Dispatch the language-changed event for services to listen to
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('language-changed', { 
+        detail: { language: newLanguage, previousLanguage: language } 
+      }));
+      console.log(`Language switched from ${language} to ${newLanguage}`);
+    }
   };
 
   return (
