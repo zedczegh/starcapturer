@@ -4,8 +4,8 @@
  */
 
 import { CacheItem, DEFAULT_TTL, CacheOptions } from './cacheTypes';
-import { getFromMemoryCache, setInMemoryCache } from './memoryCache';
-import { getFromStorageCache, setInStorageCache } from './storageCache';
+import { memoryCache } from './memoryCache';
+import { getCachedItem as getFromStorageCache, setCachedItem as setInStorageCache } from '../optimizedCache';
 
 // Cache prefix to avoid conflicts
 const SUPABASE_CACHE_PREFIX = 'supabase:';
@@ -34,7 +34,7 @@ export function getCachedSupabaseData<T>(
   const cacheKey = generateSupabaseCacheKey(table, query, params);
   
   // Try memory cache first (fastest)
-  const memoryData = getFromMemoryCache<T>(cacheKey);
+  const memoryData = memoryCache.get<T>(cacheKey);
   if (memoryData) {
     return memoryData;
   }
@@ -43,7 +43,7 @@ export function getCachedSupabaseData<T>(
   const storageData = getFromStorageCache<T>(cacheKey);
   if (storageData) {
     // Copy to memory for faster subsequent access
-    setInMemoryCache(cacheKey, storageData, DEFAULT_TTL);
+    memoryCache.set(cacheKey, storageData, DEFAULT_TTL);
     return storageData;
   }
   
@@ -68,7 +68,7 @@ export function cacheSupabaseData<T>(
   const cacheKey = generateSupabaseCacheKey(table, query, namespace ? { namespace } : undefined);
   
   // Always cache in memory
-  setInMemoryCache(cacheKey, data, ttl);
+  memoryCache.set(cacheKey, data, ttl);
   
   // Optionally persist to storage
   if (persistToStorage) {
@@ -90,7 +90,6 @@ export function clearSupabaseCacheForTable(table: string): void {
     }
   }
   
-  // Clear from memory cache
-  // This requires access to memory cache internals which we don't have directly
-  // Instead, we'll initialize the cache on app startup
+  // Memory cache doesn't have a direct way to clear by prefix
+  // but expired items will be cleaned up automatically
 }
