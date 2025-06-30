@@ -1,88 +1,70 @@
-
-import { useCallback, useState, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useMapTouchInteractions } from './useMapTouchInteractions';
 
 /**
- * Custom hook for managing map marker hover states with enhanced anti-flicker algorithm
+ * Enhanced hook for managing map marker interactions with mobile optimization
  */
 export const useMapMarkers = () => {
-  // State for currently hovered location ID
   const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
-  
-  // Refs for improved hover stability
-  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastHoverId = useRef<string | null>(null);
-  const hoverTimestamp = useRef<number>(0);
-  const touchStartPos = useRef<{x: number, y: number} | null>(null);
-  
-  // Check if on mobile device
   const isMobile = useIsMobile();
   
-  // Clean up timeouts on unmount
+  // Refs for better performance and state management
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastHoverId = useRef<string | null>(null);
+  const touchStartTime = useRef<number>(0);
+  const touchStartPos = useRef<{x: number, y: number} | null>(null);
+  const isScrolling = useRef<boolean>(false);
+  
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (hoverTimeoutRef.current !== null) {
+      if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
-      }
-      if (debounceTimeoutRef.current !== null) {
-        clearTimeout(debounceTimeoutRef.current);
       }
     };
   }, []);
 
-  /**
-   * Handle hover with improved anti-flicker algorithm
-   */
+  // Optimized hover handler with mobile considerations
   const handleHover = useCallback((id: string | null) => {
-    // Prevent redundant updates for same ID
+    // Prevent unnecessary updates
     if (id === lastHoverId.current) return;
     
-    // Clear any pending timeouts
-    if (hoverTimeoutRef.current !== null) {
+    // Clear existing timeout
+    if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
       hoverTimeoutRef.current = null;
     }
     
-    if (debounceTimeoutRef.current !== null) {
-      clearTimeout(debounceTimeoutRef.current);
-      debounceTimeoutRef.current = null;
-    }
-    
-    // Track current time
-    const now = Date.now();
-    
-    // For new hover target, set with slight delay for better stability
     if (id !== null) {
-      // If rapidly changing between markers, use longer delay
-      const delay = isMobile ? 
-        100 : // Mobile delay
-        (now - hoverTimestamp.current < 300 ? 40 : 20); // Desktop delay
+      // Immediate hover for desktop, slight delay for mobile
+      const delay = isMobile ? 50 : 0;
       
-      debounceTimeoutRef.current = setTimeout(() => {
+      if (delay > 0) {
+        hoverTimeoutRef.current = setTimeout(() => {
+          setHoveredLocationId(id);
+          lastHoverId.current = id;
+        }, delay);
+      } else {
         setHoveredLocationId(id);
         lastHoverId.current = id;
-        hoverTimestamp.current = Date.now();
-        debounceTimeoutRef.current = null;
-      }, delay);
-    } 
-    // When leaving a marker completely
-    else {
-      // Add a delay to prevent flicker on quick mouse movements
+      }
+    } else {
+      // Clear hover with appropriate delay
+      const clearDelay = isMobile ? 100 : 25;
       hoverTimeoutRef.current = setTimeout(() => {
         setHoveredLocationId(null);
         lastHoverId.current = null;
-        hoverTimeoutRef.current = null;
-      }, isMobile ? 250 : 50); // Longer delay for mobile
+      }, clearDelay);
     }
   }, [isMobile]);
 
-  // Get touch interaction handlers
-  const { handleTouchStart: baseHandleTouchStart, handleTouchEnd, handleTouchMove: baseHandleTouchMove } = useMapTouchInteractions(handleHover);
-  
-  // Wrap touch start to capture position
+  // Enhanced touch start handler
   const handleTouchStart = useCallback((e: React.TouchEvent, id: string) => {
+    if (!isMobile) return;
+    
+    touchStartTime.current = Date.now();
+    isScrolling.current = false;
+    
     if (e.touches && e.touches[0]) {
       touchStartPos.current = {
         x: e.touches[0].clientX,
@@ -90,14 +72,49 @@ export const useMapMarkers = () => {
       };
     }
     
-    baseHandleTouchStart(e, id);
-  }, [baseHandleTouchStart]);
-  
-  // Wrap touch move to use captured position
+    // Set hover state immediately for better responsiveness
+    handleHover(id);
+  }, [isMobile, handleHover]);
+
+  // Enhanced touch end handler
+  const handleTouchEnd = useCallback((e: React.TouchEvent, id: string | null) => {
+    if (!isMobile) return;
+    
+    const touchDuration = Date.now() - touchStartTime.current;
+    
+    // If it was a quick tap and not scrolling
+    if (touchDuration < 500 && !isScrolling.current) {
+      // Keep hover state longer for mobile users to interact
+      setTimeout(() => {
+        handleHover(null);
+      }, 3000); // 3 seconds for mobile interaction
+    } else {
+      // Clear immediately if it was a long press or scroll
+      handleHover(null);
+    }
+    
+    // Reset tracking
+    touchStartPos.current = null;
+    touchStartTime.current = 0;
+    isScrolling.current = false;
+  }, [isMobile, handleHover]);
+
+  // Enhanced touch move handler
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    touchStartPos.current = baseHandleTouchMove(e, touchStartPos.current);
-  }, [baseHandleTouchMove]);
-  
+    if (!isMobile || !touchStartPos.current) return;
+    
+    if (e.touches && e.touches[0]) {
+      const moveX = Math.abs(e.touches[0].clientX - touchStartPos.current.x);
+      const moveY = Math.abs(e.touches[0].clientY - touchStartPos.current.y);
+      
+      // Detect scrolling with generous threshold
+      if (moveX > 15 || moveY > 15) {
+        isScrolling.current = true;
+        handleHover(null);
+      }
+    }
+  }, [isMobile, handleHover]);
+
   return {
     hoveredLocationId,
     handleHover,

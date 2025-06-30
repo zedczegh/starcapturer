@@ -1,20 +1,21 @@
 
 /**
- * Cache type definitions
+ * Cache type definitions for the application
  */
 
-export type CacheItem<T> = {
+export interface CacheItem<T = any> {
   data: T;
-  expires: number;
-};
+  timestamp: number;
+  ttl: number;
+}
 
 export interface CacheOptions {
   ttl?: number;
-  namespace?: string;
   persistToStorage?: boolean;
-  priority?: 'high' | 'medium' | 'low';
+  namespace?: string;
 }
 
-export const DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
-export const LOW_PRIORITY_TTL = 3 * 60 * 1000; // 3 minutes
-export const HIGH_PRIORITY_TTL = 10 * 60 * 1000; // 10 minutes
+export const DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+export type CacheKey = string;
+export type CacheValue<T> = T;

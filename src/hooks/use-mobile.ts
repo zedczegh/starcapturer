@@ -2,61 +2,107 @@
 import { useState, useEffect } from 'react';
 
 /**
- * Enhanced hook to detect mobile devices with better reliability
- * Accounts for modern devices and different screen sizes
+ * Enhanced mobile detection with better performance and reliability
  */
 export function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState<boolean>(false);
   
   useEffect(() => {
-    // Function to check if the device is mobile
+    // Comprehensive mobile detection function
     const checkMobile = () => {
-      // Check for touch support (most reliable indicator)
-      const hasTouch = 'ontouchstart' in window || 
-                       navigator.maxTouchPoints > 0 || 
-                       (navigator as any).msMaxTouchPoints > 0;
+      // Primary check: screen width (most reliable for responsive design)
+      const isNarrowScreen = window.innerWidth < 768;
       
-      // Check for mobile user agent (less reliable but still useful)
-      const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      // Secondary check: touch capability
+      const hasTouchSupport = 'ontouchstart' in window || 
+                              navigator.maxTouchPoints > 0 || 
+                              (navigator as any).msMaxTouchPoints > 0;
+      
+      // Tertiary check: user agent (fallback)
+      const mobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
       );
       
-      // Check screen width (most devices under 768px are considered mobile)
-      const narrowScreen = window.innerWidth < 768;
+      // Special handling for iPads in desktop mode
+      const isPadInDesktopMode = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
       
-      // iOS-specific detection that works even in browsers that spoof UA
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.platform) ||
-                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      // Device pixel ratio check (helps identify high-DPI mobile devices)
+      const isHighDPI = window.devicePixelRatio > 1.5;
       
-      // Combined check giving more weight to touch support and screen size
-      return (hasTouch && narrowScreen) || 
-             (mobileUA && narrowScreen) || 
-             isIOS ||
-             narrowScreen; // Fall back to screen size if other checks are inconclusive
+      // Combined logic: prioritize screen width, but consider other factors
+      const shouldBeMobile = isNarrowScreen || 
+                           (hasTouchSupport && (mobileUserAgent || isPadInDesktopMode)) ||
+                           (isNarrowScreen && isHighDPI);
+      
+      return shouldBeMobile;
     };
     
     // Set initial state
     setIsMobile(checkMobile());
     
-    // Update on resize
+    // Debounced resize handler for better performance
+    let resizeTimeout: ReturnType<typeof setTimeout>;
+    
     const handleResize = () => {
-      setIsMobile(checkMobile());
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        setIsMobile(checkMobile());
+      }, 150); // Debounce for 150ms
     };
     
-    // Handle orientation changes explicitly for better reliability on mobile
+    // Orientation change handler with delay for dimension updates
     const handleOrientationChange = () => {
-      // Small delay to ensure dimensions have updated
-      setTimeout(handleResize, 100);
+      setTimeout(() => {
+        setIsMobile(checkMobile());
+      }, 100);
     };
     
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleOrientationChange);
+    // Use passive listeners for better scroll performance
+    window.addEventListener('resize', handleResize, { passive: true });
+    window.addEventListener('orientationchange', handleOrientationChange, { passive: true });
     
+    // Cleanup
     return () => {
+      clearTimeout(resizeTimeout);
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleOrientationChange);
     };
   }, []);
   
   return isMobile;
+}
+
+// Additional hook for getting window dimensions (useful for precise mobile layouts)
+export function useWindowSize() {
+  const [windowSize, setWindowSize] = useState({
+    width: 0,
+    height: 0,
+  });
+
+  useEffect(() => {
+    // Debounced resize handler
+    let resizeTimeout: ReturnType<typeof setTimeout>;
+    
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        setWindowSize({
+          width: window.innerWidth,
+          height: window.innerHeight,
+        });
+      }, 100);
+    };
+    
+    // Set initial size
+    handleResize();
+    
+    window.addEventListener('resize', handleResize, { passive: true });
+    
+    return () => {
+      clearTimeout(resizeTimeout);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  return windowSize;
 }

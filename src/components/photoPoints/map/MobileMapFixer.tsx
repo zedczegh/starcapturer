@@ -5,11 +5,8 @@ import L from 'leaflet';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 /**
- * Component to apply mobile-specific fixes for common map issues
- * - Fixes marker positioning during zoom/pan
- * - Improves touch responsiveness
- * - Fixes iOS Safari rendering issues
- * - Handles _leaflet_pos errors
+ * Enhanced mobile map optimization component
+ * Fixes common mobile issues and improves performance
  */
 export const MobileMapFixer: React.FC = () => {
   const map = useMap();
@@ -18,110 +15,160 @@ export const MobileMapFixer: React.FC = () => {
   useEffect(() => {
     if (!map || !isMobile) return;
     
-    // Fix for marker positioning issues during zoom
+    // Performance optimization: reduce tile loading on mobile
+    const optimizeMapPerformance = () => {
+      try {
+        // Adjust tile layer settings for mobile
+        map.eachLayer((layer) => {
+          if (layer instanceof L.TileLayer) {
+            // Reduce concurrent tile loading on mobile
+            (layer as any).options.updateWhenIdle = true;
+            (layer as any).options.updateWhenZooming = false;
+            (layer as any).options.keepBuffer = 1;
+          }
+        });
+        
+        // Disable double-click zoom on mobile (can interfere with touch)
+        map.doubleClickZoom.disable();
+        
+        // Optimize touch interactions
+        if (map.touchZoom) {
+          map.touchZoom.disable();
+          map.touchZoom.enable({ pinch: true });
+        }
+        
+        // Improve drag performance on mobile
+        if (map.dragging) {
+          map.dragging.disable();
+          map.dragging.enable();
+        }
+        
+      } catch (error) {
+        console.warn('Error optimizing map performance:', error);
+      }
+    };
+    
+    // Fix marker positioning issues during zoom/pan
     const fixMarkerPositioning = () => {
       if (!map._panes) return;
       
       try {
-        // Apply hardware acceleration to marker pane
         const markerPane = map._panes.markerPane;
         if (markerPane) {
+          // Apply hardware acceleration
           markerPane.style.willChange = 'transform';
           markerPane.style.transform = 'translate3d(0,0,0)';
           
-          // Force a repaint to fix positioning
-          setTimeout(() => {
+          // Force repaint with optimized timing
+          requestAnimationFrame(() => {
             if (markerPane) {
-              // Toggle a property to force a repaint
-              markerPane.style.zIndex = String(parseInt(markerPane.style.zIndex || '600') + 1);
+              const currentZIndex = parseInt(markerPane.style.zIndex || '600');
+              markerPane.style.zIndex = String(currentZIndex + 1);
+              
               setTimeout(() => {
                 if (markerPane) {
                   markerPane.style.zIndex = '600';
                 }
-              }, 10);
+              }, 16); // One frame delay
             }
-          }, 100);
+          });
         }
       } catch (error) {
-        console.error("Error fixing marker positioning:", error);
+        console.warn('Error fixing marker positioning:', error);
       }
     };
     
-    // Ensure map is properly sized to prevent _leaflet_pos errors
+    // Ensure proper map sizing and prevent layout issues
     const ensureMapSize = () => {
       try {
-        // Force the map to recalculate its dimensions
-        map.invalidateSize({ animate: false, pan: false });
-        
-        // Check if container size is valid
-        const container = map.getContainer();
-        if (container && (container.clientWidth === 0 || container.clientHeight === 0)) {
-          console.warn("Map container has zero width or height");
+        // Use animation frame for smoother size calculation
+        requestAnimationFrame(() => {
+          map.invalidateSize({ animate: false, pan: false });
           
-          // Try again after a delay
-          setTimeout(() => map.invalidateSize(), 200);
-        }
+          const container = map.getContainer();
+          if (container && (container.clientWidth === 0 || container.clientHeight === 0)) {
+            console.warn('Map container has invalid dimensions');
+            
+            // Retry after a short delay
+            setTimeout(() => {
+              map.invalidateSize({ animate: false, pan: false });
+            }, 100);
+          }
+        });
       } catch (error) {
-        console.error("Error ensuring map size:", error);
+        console.warn('Error ensuring map size:', error);
       }
     };
     
-    // Run size check on initialization
-    ensureMapSize();
+    // iOS-specific optimizations
+    const applyIOSOptimizations = () => {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      
+      if (isIOS) {
+        try {
+          // Fix tile flickering on iOS
+          const tilePane = map._panes.tilePane;
+          if (tilePane) {
+            tilePane.style.webkitBackfaceVisibility = 'hidden';
+            tilePane.style.webkitTransform = 'translate3d(0,0,0)';
+          }
+          
+          // iOS zoom fix
+          map.on('zoom', () => {
+            try {
+              if (map._panes && map._panes.markerPane) {
+                const markerPane = map._panes.markerPane;
+                markerPane.style.display = 'none';
+                
+                // Use requestAnimationFrame for smoother restoration
+                requestAnimationFrame(() => {
+                  if (markerPane) {
+                    markerPane.style.display = '';
+                  }
+                });
+              }
+            } catch (error) {
+              console.warn('Error in iOS zoom fix:', error);
+            }
+          });
+          
+        } catch (error) {
+          console.warn('Error applying iOS optimizations:', error);
+        }
+      }
+    };
     
-    // Re-render markers after zoom to fix positions
+    // Initialize all optimizations
+    const initializeOptimizations = () => {
+      optimizeMapPerformance();
+      ensureMapSize();
+      applyIOSOptimizations();
+      fixMarkerPositioning();
+    };
+    
+    // Run initial optimizations
+    initializeOptimizations();
+    
+    // Set up event listeners with optimized handlers
     map.on('zoomanim', fixMarkerPositioning);
     map.on('zoomend', fixMarkerPositioning);
     map.on('moveend', fixMarkerPositioning);
     map.on('resize', ensureMapSize);
     
-    // iOS Safari specific fixes
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    if (isIOS) {
-      // Fix flickering tiles on iOS
-      try {
-        const tilePane = map._panes.tilePane;
-        if (tilePane) {
-          tilePane.style.webkitBackfaceVisibility = 'hidden';
-        }
-      } catch (error) {
-        console.error("Error applying iOS tile pane fix:", error);
-      }
-      
-      // Fix for markers not appearing after zoom on iOS
-      map.on('zoom', () => {
-        try {
-          if (map._panes && map._panes.markerPane) {
-            // Toggle visibility to force iOS to redraw markers
-            map._panes.markerPane.style.display = 'none';
-            setTimeout(() => {
-              if (map._panes.markerPane) {
-                map._panes.markerPane.style.display = '';
-              }
-            }, 10);
-          }
-        } catch (error) {
-          console.error("Error handling iOS zoom fix:", error);
-        }
-      });
-    }
+    // Periodic size check for dynamic layouts
+    const sizeCheckInterval = setInterval(() => {
+      ensureMapSize();
+    }, 2000);
     
-    // Apply the initial fixes
-    fixMarkerPositioning();
-    
-    // Periodically check map size in case container resizes
-    const sizeInterval = setInterval(ensureMapSize, 2000);
-    
+    // Cleanup function
     return () => {
-      // Clean up event listeners
       map.off('zoomanim', fixMarkerPositioning);
       map.off('zoomend', fixMarkerPositioning);
       map.off('moveend', fixMarkerPositioning);
       map.off('resize', ensureMapSize);
-      map.off('zoom');
+      map.off('zoom'); // Remove iOS-specific zoom handler
       
-      // Clear interval
-      clearInterval(sizeInterval);
+      clearInterval(sizeCheckInterval);
     };
   }, [map, isMobile]);
   
