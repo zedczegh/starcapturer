@@ -1,50 +1,48 @@
 
 import { useEffect } from 'react';
-import { prefetchCriticalResources } from '@/utils/resourcePrefetcher';
+import { preloadCriticalResources, optimizeImageLoading } from '@/utils/performanceOptimizer';
 import { initializeCache } from '@/utils/optimizedCache';
-import { initSiqsCache } from '@/services/realTimeSiqs/siqsCache';
-import { prefetchCommunityAstroSpots } from '@/lib/api/fetchCommunityAstroSpots';
 
 /**
- * Hook to initialize application performance optimizations
+ * Hook to initialize app performance optimizations
  */
-export function useAppInitializer() {
+const useAppInitializer = () => {
   useEffect(() => {
     // Initialize performance optimizations
-    const startTime = performance.now();
-    
-    // Initialize caches in parallel
-    Promise.all([
-      // Initialize main cache
-      new Promise<void>(resolve => {
-        initializeCache();
-        resolve();
-      }),
+    const initializePerformance = () => {
+      console.log('Initializing performance optimizations...');
       
-      // Initialize SIQS cache
-      new Promise<void>(resolve => {
-        initSiqsCache();
-        resolve();
-      })
-    ]).then(() => {
-      console.log(`Caches initialized in ${(performance.now() - startTime).toFixed(2)}ms`);
+      // Preload critical resources
+      preloadCriticalResources();
       
-      // Prefetch critical resources after small delay
+      // Initialize cache system
+      initializeCache();
+      
+      // Set up image optimization
       setTimeout(() => {
-        prefetchCriticalResources();
-        
-        // Prefetch community spots data
-        prefetchCommunityAstroSpots();
-      }, 1000);
-    });
-    
-    console.log(`App initialization started in ${(performance.now() - startTime).toFixed(2)}ms`);
-    
-    // Clean up any resources if needed
-    return () => {
-      // Cleanup code if necessary
+        optimizeImageLoading();
+      }, 100);
+      
+      // Clean up unused service workers
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(registration => {
+            if (registration.scope.includes('old-')) {
+              registration.unregister();
+            }
+          });
+        });
+      }
     };
+    
+    // Use requestIdleCallback for non-critical initialization
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(initializePerformance);
+    } else {
+      // Fallback for browsers without requestIdleCallback
+      setTimeout(initializePerformance, 100);
+    }
   }, []);
-}
+};
 
 export default useAppInitializer;

@@ -1,64 +1,113 @@
 
 /**
- * In-memory cache implementation
+ * Optimized in-memory cache for frequently accessed data
  */
 
-import type { CacheItem } from './cacheTypes';
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  ttl: number;
+  accessCount: number;
+  lastAccessed: number;
+}
 
-// In-memory cache for fastest access
-const memoryCache = new Map<string, CacheItem<any>>();
+class MemoryCache {
+  private cache = new Map<string, CacheEntry<any>>();
+  private maxSize = 100; // Maximum number of entries
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
-/**
- * Get item from memory cache
- */
-export function getFromMemoryCache<T>(key: string): T | null {
-  const item = memoryCache.get(key);
-  if (item && item.expires > Date.now()) {
-    return item.data as T;
+  constructor() {
+    this.startCleanup();
   }
-  return null;
-}
 
-/**
- * Add item to memory cache
- */
-export function setInMemoryCache<T>(key: string, data: T, ttlMs: number): void {
-  const expires = Date.now() + ttlMs;
-  memoryCache.set(key, { data, expires });
-}
-
-/**
- * Delete item from memory cache
- */
-export function deleteFromMemoryCache(key: string): void {
-  memoryCache.delete(key);
-}
-
-/**
- * Clear memory cache with optional prefix
- */
-export function clearMemoryCache(prefix?: string): void {
-  if (prefix) {
-    for (const key of memoryCache.keys()) {
-      if (key.startsWith(prefix)) {
-        memoryCache.delete(key);
-      }
+  set<T>(key: string, data: T, ttl: number = 5 * 60 * 1000): void {
+    // Clean up if cache is getting too large
+    if (this.cache.size >= this.maxSize) {
+      this.evictLeastUsed();
     }
-  } else {
-    memoryCache.clear();
+
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl,
+      accessCount: 0,
+      lastAccessed: Date.now()
+    });
+  }
+
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+
+    const now = Date.now();
+    
+    // Check if expired
+    if (now - entry.timestamp > entry.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    // Update access statistics
+    entry.accessCount++;
+    entry.lastAccessed = now;
+
+    return entry.data as T;
+  }
+
+  delete(key: string): void {
+    this.cache.delete(key);
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+
+  private evictLeastUsed(): void {
+    let leastUsedKey = '';
+    let leastUsedScore = Infinity;
+
+    // Find least recently used item with lowest access count
+    this.cache.forEach((entry, key) => {
+      const score = entry.accessCount / (Date.now() - entry.lastAccessed + 1);
+      if (score < leastUsedScore) {
+        leastUsedScore = score;
+        leastUsedKey = key;
+      }
+    });
+
+    if (leastUsedKey) {
+      this.cache.delete(leastUsedKey);
+    }
+  }
+
+  private startCleanup(): void {
+    // Clean up expired entries every 5 minutes
+    this.cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      const keysToDelete: string[] = [];
+
+      this.cache.forEach((entry, key) => {
+        if (now - entry.timestamp > entry.ttl) {
+          keysToDelete.push(key);
+        }
+      });
+
+      keysToDelete.forEach(key => this.cache.delete(key));
+    }, 5 * 60 * 1000);
+  }
+
+  getCacheStats(): { size: number; maxSize: number; hitRate: number } {
+    let totalAccess = 0;
+    this.cache.forEach(entry => {
+      totalAccess += entry.accessCount;
+    });
+
+    return {
+      size: this.cache.size,
+      maxSize: this.maxSize,
+      hitRate: totalAccess / Math.max(1, this.cache.size)
+    };
   }
 }
 
-/**
- * Get the memory cache size
- */
-export function memoryCacheSize(): number {
-  return memoryCache.size;
-}
-
-/**
- * Get all keys in memory cache
- */
-export function memoryCacheKeys(): string[] {
-  return Array.from(memoryCache.keys());
-}
+export const memoryCache = new MemoryCache();

@@ -1,9 +1,16 @@
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import ComprehensiveServiceTest from '@/components/test/ComprehensiveServiceTest';
-import MapServiceTest from '@/components/test/MapServiceTest';
+import { LazyComprehensiveServiceTest, LazyMapServiceTest } from '@/components/lazy/LazyServiceTest';
 import NavBar from '@/components/NavBar';
+import { Loader2 } from 'lucide-react';
+
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center p-8">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    <span className="ml-2 text-muted-foreground">Loading tests...</span>
+  </div>
+);
 
 const ServiceTest: React.FC = () => {
   const { t } = useLanguage();
@@ -22,10 +29,14 @@ const ServiceTest: React.FC = () => {
             </p>
           </div>
 
-          <ComprehensiveServiceTest />
+          <Suspense fallback={<LoadingSpinner />}>
+            <LazyComprehensiveServiceTest />
+          </Suspense>
           
           <div className="grid md:grid-cols-2 gap-6">
-            <MapServiceTest />
+            <Suspense fallback={<LoadingSpinner />}>
+              <LazyMapServiceTest />
+            </Suspense>
           </div>
         </div>
       </div>
