@@ -34,8 +34,14 @@ export function getFromStorageCache<T>(key: string): T | null {
  */
 export function setInStorageCache<T>(key: string, data: T, ttlMs: number): boolean {
   try {
-    const expires = Date.now() + ttlMs;
-    const item: CacheItem<T> = { data, expires };
+    const now = Date.now();
+    const expires = now + ttlMs;
+    const item: CacheItem<T> = { 
+      data, 
+      timestamp: now,
+      ttl: ttlMs,
+      expires 
+    };
     localStorage.setItem(`${CACHE_PREFIX}${key}`, JSON.stringify(item));
     return true;
   } catch (e) {
