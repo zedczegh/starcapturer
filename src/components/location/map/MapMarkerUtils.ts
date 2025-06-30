@@ -54,6 +54,14 @@ export const getTileLayerOptions = (isMobile: boolean = false) => {
   };
 };
 
+// Get fast tile layer for better performance
+export const getFastTileLayer = () => {
+  return {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  };
+};
+
 // Create optimized marker icons with mobile considerations
 export const createOptimizedMarker = (
   color: string = '#f43f5e',
@@ -120,6 +128,41 @@ export const createOptimizedMarker = (
     return icon;
   } catch (error) {
     console.error("Error creating optimized marker:", error);
+    return new L.Icon.Default();
+  }
+};
+
+// Alias for backward compatibility
+export const createCustomMarker = (color: string = '#f43f5e', shape: string = 'teardrop', scale: number = 1.0): L.DivIcon | null => {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const size = 24 * scale;
+    const anchorOffset = 12 * scale;
+    
+    const markerHtmlStyles = `
+      background-color: ${color};
+      width: ${size}px;
+      height: ${size}px;
+      display: block;
+      position: relative;
+      border-radius: ${shape === 'circle' ? '50%' : '50% 50% 50% 0'};
+      transform: ${shape === 'circle' ? 'none' : 'rotate(-45deg)'};
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    `;
+
+    const icon = L.divIcon({
+      className: "custom-marker-icon",
+      iconAnchor: [anchorOffset, size],
+      popupAnchor: [0, -size],
+      html: `<span style="${markerHtmlStyles}"></span>`,
+      iconSize: [size, size]
+    });
+
+    return icon;
+  } catch (error) {
+    console.error("Error creating custom marker:", error);
     return new L.Icon.Default();
   }
 };

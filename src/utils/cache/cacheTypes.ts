@@ -7,6 +7,7 @@ export interface CacheItem<T = any> {
   data: T;
   timestamp: number;
   ttl: number;
+  expires: number; // Add expires property for storage cache compatibility
 }
 
 export interface CacheOptions {

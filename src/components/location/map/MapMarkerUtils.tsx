@@ -69,6 +69,16 @@ export function createCustomMarker(color = '#f43f5e'): L.DivIcon | null {
 }
 
 /**
+ * Get fast tile layer for better performance
+ */
+export function getFastTileLayer() {
+  return {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  };
+}
+
+/**
  * Configure Leaflet default settings
  * Avoids SSR issues by running only on client side
  */

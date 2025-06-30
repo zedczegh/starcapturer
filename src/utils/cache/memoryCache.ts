@@ -1,113 +1,157 @@
 
 /**
- * Optimized in-memory cache for frequently accessed data
+ * Enhanced in-memory cache implementation for better performance
  */
 
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-  ttl: number;
-  accessCount: number;
-  lastAccessed: number;
-}
+import type { CacheItem, CacheKey, CacheValue } from './cacheTypes';
 
 class MemoryCache {
-  private cache = new Map<string, CacheEntry<any>>();
-  private maxSize = 100; // Maximum number of entries
-  private cleanupInterval: NodeJS.Timeout | null = null;
+  private cache = new Map<CacheKey, CacheItem>();
+  private maxSize: number;
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
-  constructor() {
-    this.startCleanup();
+  constructor(maxSize = 1000) {
+    this.maxSize = maxSize;
+    this.startCleanupInterval();
   }
 
-  set<T>(key: string, data: T, ttl: number = 5 * 60 * 1000): void {
-    // Clean up if cache is getting too large
-    if (this.cache.size >= this.maxSize) {
-      this.evictLeastUsed();
+  /**
+   * Get an item from cache
+   */
+  get<T>(key: CacheKey): T | null {
+    const item = this.cache.get(key);
+    
+    if (!item) {
+      return null;
     }
-
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now(),
-      ttl,
-      accessCount: 0,
-      lastAccessed: Date.now()
-    });
-  }
-
-  get<T>(key: string): T | null {
-    const entry = this.cache.get(key);
-    if (!entry) return null;
-
-    const now = Date.now();
     
     // Check if expired
-    if (now - entry.timestamp > entry.ttl) {
+    if (Date.now() > item.expires) {
       this.cache.delete(key);
       return null;
     }
-
-    // Update access statistics
-    entry.accessCount++;
-    entry.lastAccessed = now;
-
-    return entry.data as T;
+    
+    return item.data as T;
   }
 
-  delete(key: string): void {
-    this.cache.delete(key);
+  /**
+   * Set an item in cache
+   */
+  set<T>(key: CacheKey, data: CacheValue<T>, ttl = 5 * 60 * 1000): void {
+    // Remove oldest items if cache is full
+    if (this.cache.size >= this.maxSize) {
+      this.evictOldest();
+    }
+    
+    const expires = Date.now() + ttl;
+    const item: CacheItem<T> = {
+      data,
+      timestamp: Date.now(),
+      ttl,
+      expires
+    };
+    
+    this.cache.set(key, item);
   }
 
+  /**
+   * Check if an item exists and is not expired
+   */
+  has(key: CacheKey): boolean {
+    const item = this.cache.get(key);
+    if (!item) return false;
+    
+    if (Date.now() > item.expires) {
+      this.cache.delete(key);
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * Delete an item from cache
+   */
+  delete(key: CacheKey): boolean {
+    return this.cache.delete(key);
+  }
+
+  /**
+   * Clear all items from cache
+   */
   clear(): void {
     this.cache.clear();
   }
 
-  private evictLeastUsed(): void {
-    let leastUsedKey = '';
-    let leastUsedScore = Infinity;
-
-    // Find least recently used item with lowest access count
-    this.cache.forEach((entry, key) => {
-      const score = entry.accessCount / (Date.now() - entry.lastAccessed + 1);
-      if (score < leastUsedScore) {
-        leastUsedScore = score;
-        leastUsedKey = key;
-      }
-    });
-
-    if (leastUsedKey) {
-      this.cache.delete(leastUsedKey);
-    }
-  }
-
-  private startCleanup(): void {
-    // Clean up expired entries every 5 minutes
-    this.cleanupInterval = setInterval(() => {
-      const now = Date.now();
-      const keysToDelete: string[] = [];
-
-      this.cache.forEach((entry, key) => {
-        if (now - entry.timestamp > entry.ttl) {
-          keysToDelete.push(key);
-        }
-      });
-
-      keysToDelete.forEach(key => this.cache.delete(key));
-    }, 5 * 60 * 1000);
-  }
-
-  getCacheStats(): { size: number; maxSize: number; hitRate: number } {
-    let totalAccess = 0;
-    this.cache.forEach(entry => {
-      totalAccess += entry.accessCount;
-    });
-
+  /**
+   * Get cache statistics
+   */
+  getStats() {
     return {
       size: this.cache.size,
       maxSize: this.maxSize,
-      hitRate: totalAccess / Math.max(1, this.cache.size)
+      keys: Array.from(this.cache.keys())
     };
+  }
+
+  /**
+   * Remove expired items
+   */
+  private cleanup(): void {
+    const now = Date.now();
+    const keysToDelete: CacheKey[] = [];
+    
+    for (const [key, item] of this.cache.entries()) {
+      if (now > item.expires) {
+        keysToDelete.push(key);
+      }
+    }
+    
+    keysToDelete.forEach(key => this.cache.delete(key));
+  }
+
+  /**
+   * Evict oldest items when cache is full
+   */
+  private evictOldest(): void {
+    const entries = Array.from(this.cache.entries());
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    
+    // Remove oldest 20% of items
+    const itemsToRemove = Math.ceil(entries.length * 0.2);
+    for (let i = 0; i < itemsToRemove; i++) {
+      this.cache.delete(entries[i][0]);
+    }
+  }
+
+  /**
+   * Start periodic cleanup
+   */
+  private startCleanupInterval(): void {
+    // Clean up every 5 minutes
+    this.cleanupInterval = setInterval(() => {
+      this.cleanup();
+    }, 5 * 60 * 1000);
+  }
+
+  /**
+   * Stop cleanup interval (for cleanup)
+   */
+  destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    this.clear();
   }
 }
 
+// Export singleton instance
 export const memoryCache = new MemoryCache();
+
+// Cleanup on page unload
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    memoryCache.destroy();
+  });
+}

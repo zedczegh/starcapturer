@@ -2,7 +2,6 @@
 import React from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import { useIsMobile } from '@/hooks/use-mobile';
 import LocationsGrid from './calculatedLocations/LocationsGrid';
 import EmptyCalculatedState from './calculatedLocations/EmptyCalculatedState';
 import LoadMoreButtons from './calculatedLocations/LoadMoreButtons';
@@ -40,7 +39,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
   maxLoadMoreClicks = 2
 }) => {
   const { t } = useLanguage();
-  const isMobile = useIsMobile();
   const navigate = useNavigate();
   
   // Set up the event listener for expanding search radius
@@ -90,7 +88,6 @@ const CalculatedLocations: React.FC<CalculatedLocationsProps> = ({
       <LocationsGrid 
         locations={sortedLocations}
         initialLoad={initialLoad}
-        isMobile={isMobile}
         onViewDetails={handleViewLocation}
       />
       
