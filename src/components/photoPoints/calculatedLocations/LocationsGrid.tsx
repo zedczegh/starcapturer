@@ -5,6 +5,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoLocationCard from '../PhotoLocationCard';
 import { motion } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
+import MobileSection from '@/components/ui/mobile-section';
 
 interface LocationsGridProps {
   locations: SharedAstroSpot[];
@@ -20,9 +21,9 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
-  // Mobile-optimized grid layout
+  // Mobile-optimized grid layout with borderless frames
   const gridClassName = isMobile 
-    ? "grid grid-cols-1 gap-3" // Reduced gap on mobile
+    ? "grid grid-cols-1 gap-3" 
     : "grid grid-cols-1 md:grid-cols-2 gap-4";
   
   // Reduced animation complexity on mobile for better performance
@@ -63,18 +64,24 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
         <motion.div
           key={location.id || `${location.latitude}-${location.longitude}`}
           variants={itemVariants}
-          whileHover={!isMobile ? { // Disable hover animations on mobile
+          whileHover={!isMobile ? {
             scale: 1.02, 
             boxShadow: "0 4px 20px rgba(139, 92, 246, 0.15)"
           } : undefined}
           className="transition-all duration-300"
         >
-          <PhotoLocationCard
-            location={location}
-            index={index}
-            onViewDetails={() => onViewDetails(location)}
-            showRealTimeSiqs={true}
-          />
+          <MobileSection 
+            padding={isMobile ? "sm" : "md"}
+            spacing="none"
+            className="h-full hover:bg-cosmic-800/30 border-0"
+          >
+            <PhotoLocationCard
+              location={location}
+              index={index}
+              onViewDetails={() => onViewDetails(location)}
+              showRealTimeSiqs={true}
+            />
+          </MobileSection>
         </motion.div>
       ))}
     </motion.div>

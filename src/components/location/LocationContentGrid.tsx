@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import SIQSSummary from "@/components/SIQSSummary";
 import WeatherConditions from "@/components/WeatherConditions";
@@ -9,6 +8,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import ClearSkyRateDisplay from "./ClearSkyRateDisplay";
 import MoonlessNightDisplay from "./MoonlessNightDisplay";
 import ForecastTabs from "./ForecastTabs";
+import MobileSection from "@/components/ui/mobile-section";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface LocationContentGridProps {
   locationData: any;
@@ -38,6 +39,7 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
   onRefreshLongRange
 }) => {
   const { language } = useLanguage();
+  const isMobile = useIsMobile();
   
   const weatherData = useMemo(() => ({
     temperature: locationData?.weatherData?.temperature || 0,
@@ -78,55 +80,60 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
     return language === 'en' ? "Loading..." : "加载中...";
   }, [language]);
 
-  // Get clear sky rate from location data
   const clearSkyRate = useMemo(() => {
     return locationData?.clearSkyData?.annualRate || 60;
   }, [locationData?.clearSkyData]);
 
-  // Get monthly rates from location data
   const monthlyRates = useMemo(() => {
     return locationData?.clearSkyData?.monthlyRates || {};
   }, [locationData?.clearSkyData]);
 
-  // Get clearest months from historical data
   const clearestMonths = useMemo(() => {
     return locationData?.historicalData?.clearestMonths || [];
   }, [locationData?.historicalData]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 transition-all">
-      <div className="space-y-6 lg:space-y-8">
-        <WeatherConditions
-          weatherData={weatherData}
-          moonPhase={moonPhaseString}
-          bortleScale={bortleScale}
-          seeingConditions={seeingConditionsString}
-          forecastData={forecastData}
-        />
+    <div className={`grid grid-cols-1 ${isMobile ? 'gap-4' : 'lg:grid-cols-2 gap-6 lg:gap-8'} transition-all`}>
+      <div className="space-y-4 lg:space-y-6">
+        <MobileSection>
+          <WeatherConditions
+            weatherData={weatherData}
+            moonPhase={moonPhaseString}
+            bortleScale={bortleScale}
+            seeingConditions={seeingConditionsString}
+            forecastData={forecastData}
+          />
+        </MobileSection>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ClearSkyRateDisplay 
-            latitude={locationData.latitude} 
-            longitude={locationData.longitude}
-            clearSkyRate={clearSkyRate}
-            monthlyRates={monthlyRates}
-            clearestMonths={clearestMonths}
-          />
-          <MoonlessNightDisplay
-            latitude={locationData.latitude}
-            longitude={locationData.longitude}
-          />
+        <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'md:grid-cols-2 gap-4'}`}>
+          <MobileSection padding="sm">
+            <ClearSkyRateDisplay 
+              latitude={locationData.latitude} 
+              longitude={locationData.longitude}
+              clearSkyRate={clearSkyRate}
+              monthlyRates={monthlyRates}
+              clearestMonths={clearestMonths}
+            />
+          </MobileSection>
+          <MobileSection padding="sm">
+            <MoonlessNightDisplay
+              latitude={locationData.latitude}
+              longitude={locationData.longitude}
+            />
+          </MobileSection>
         </div>
         
-        <SIQSSummary
-          siqsResult={locationData.siqsResult || null}
-          weatherData={weatherData}
-          locationData={locationData}
-        />
+        <MobileSection>
+          <SIQSSummary
+            siqsResult={locationData.siqsResult || null}
+            weatherData={weatherData}
+            locationData={locationData}
+          />
+        </MobileSection>
       </div>
       
-      <div className="space-y-6 lg:space-y-8">
-        <div className="relative z-60">
+      <div className="space-y-4 lg:space-y-6">
+        <MobileSection className="relative z-60">
           <LocationUpdater 
             locationData={locationData}
             onLocationUpdate={onLocationUpdate}
@@ -134,16 +141,18 @@ const LocationContentGrid: React.FC<LocationContentGridProps> = ({
             setGettingUserLocation={setGettingUserLocation}
             setStatusMessage={setStatusMessage}
           />
-        </div>
+        </MobileSection>
         
-        <ForecastTabs
-          forecastData={forecastData}
-          longRangeForecast={longRangeForecast}
-          forecastLoading={forecastLoading}
-          longRangeLoading={longRangeLoading}
-          onRefreshForecast={onRefreshForecast}
-          onRefreshLongRange={onRefreshLongRange}
-        />
+        <MobileSection>
+          <ForecastTabs
+            forecastData={forecastData}
+            longRangeForecast={longRangeForecast}
+            forecastLoading={forecastLoading}
+            longRangeLoading={longRangeLoading}
+            onRefreshForecast={onRefreshForecast}
+            onRefreshLongRange={onRefreshLongRange}
+          />
+        </MobileSection>
       </div>
     </div>
   );

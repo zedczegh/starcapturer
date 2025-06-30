@@ -1,17 +1,21 @@
 
 import React from "react";
-import { Card as ShadcnCard } from "@/components/ui/card";
+import BorderlessFrame from "@/components/ui/borderless-frame";
 
 interface CardProps {
   children: React.ReactNode;
   className?: string;
+  variant?: 'default' | 'elevated' | 'subtle';
 }
 
-const Card: React.FC<CardProps> = ({ children, className = "" }) => {
+const Card: React.FC<CardProps> = ({ children, className = "", variant = "default" }) => {
   return (
-    <ShadcnCard className={`bg-cosmic-900/70 backdrop-blur-md border border-cosmic-700/50 hover:border-cosmic-600/70 transition-colors duration-300 shadow-md hover:shadow-lg ${className}`}>
+    <BorderlessFrame 
+      variant={variant}
+      className={`hover:bg-cosmic-800/40 transition-colors duration-300 ${className}`}
+    >
       {children}
-    </ShadcnCard>
+    </BorderlessFrame>
   );
 };
 
