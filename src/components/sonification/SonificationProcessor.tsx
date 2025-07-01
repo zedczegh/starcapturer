@@ -1,27 +1,42 @@
-
 import React, { useState, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Upload, Music, Play, Pause, Download, RotateCcw } from 'lucide-react';
+import { Music, Sun, Moon, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import ImageUploadZone from './ImageUploadZone';
 import SonificationControls from './SonificationControls';
 import AudioVisualization from './AudioVisualization';
-import { analyzeAstronomyImage, generateAudioFromAnalysis } from '@/utils/sonification/audioProcessor';
+import { analyzeAstronomyImage, generateAudioFromAnalysis, exportToMp3 } from '@/utils/sonification/audioProcessor';
 
 interface AnalysisResult {
+  // Deep sky objects
   stars: number;
   nebulae: number;
   galaxies: number;
+  
+  // Planetary/Solar objects
+  planets: number;
+  moons: number;
+  sunspots: number;
+  solarFlares: number;
+  
+  // Image characteristics
   brightness: number;
+  contrast: number;
+  saturation: number;
+  imageType: 'deep-sky' | 'planetary' | 'solar' | 'lunar' | 'mixed';
+  
   colorProfile: {
     red: number;
     green: number;
     blue: number;
   };
+  
   dominantFrequencies: number[];
+  harmonicStructure: number[];
+  rhythmPattern: number[];
 }
 
 const SonificationProcessor: React.FC = () => {
@@ -54,20 +69,20 @@ const SonificationProcessor: React.FC = () => {
     setProcessingProgress(0);
 
     try {
-      // Simulate processing steps
-      setProcessingProgress(20);
+      // Enhanced processing steps
+      setProcessingProgress(15);
       
-      // Analyze the image
+      // Analyze the image with enhanced detection
       const analysis = await analyzeAstronomyImage(uploadedImage);
       setAnalysisResult(analysis);
-      setProcessingProgress(60);
+      setProcessingProgress(50);
 
-      // Generate audio
+      // Generate enhanced audio
       const audio = await generateAudioFromAnalysis(analysis);
       setAudioBuffer(audio);
       setProcessingProgress(100);
 
-      toast.success(t('Image processed successfully!', '图像处理成功！'));
+      toast.success(t('Enhanced image analysis completed!', '增强图像分析完成！'));
     } catch (error) {
       console.error('Error processing image:', error);
       toast.error(t('Failed to process image', '处理图像失败'));
@@ -113,71 +128,61 @@ const SonificationProcessor: React.FC = () => {
     }
   }, [currentSource]);
 
-  const downloadAudio = useCallback(() => {
-    if (!audioBuffer || !audioContext) return;
+  const downloadAudio = useCallback(async () => {
+    if (!audioBuffer) return;
 
-    // Convert AudioBuffer to WAV and download
-    const length = audioBuffer.length;
-    const sampleRate = audioBuffer.sampleRate;
-    const buffer = new ArrayBuffer(44 + length * 2);
-    const view = new DataView(buffer);
-
-    // WAV header
-    const writeString = (offset: number, string: string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-      }
-    };
-
-    writeString(0, 'RIFF');
-    view.setUint32(4, 36 + length * 2, true);
-    writeString(8, 'WAVE');
-    writeString(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeString(36, 'data');
-    view.setUint32(40, length * 2, true);
-
-    const channelData = audioBuffer.getChannelData(0);
-    let offset = 44;
-    for (let i = 0; i < length; i++) {
-      const sample = Math.max(-1, Math.min(1, channelData[i]));
-      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-      offset += 2;
+    try {
+      const mp3Blob = await exportToMp3(audioBuffer);
+      const url = URL.createObjectURL(mp3Blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `astronomy-sonification-${analysisResult?.imageType || 'audio'}.mp3`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast.success(t('Audio downloaded as MP3', '音频已下载为MP3格式'));
+    } catch (error) {
+      console.error('Error downloading audio:', error);
+      toast.error(t('Failed to download audio', '下载音频失败'));
     }
-
-    const blob = new Blob([buffer], { type: 'audio/wav' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'astronomy-sonification.wav';
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [audioBuffer, audioContext]);
+  }, [audioBuffer, analysisResult, t]);
 
   const resetProcessor = useCallback(() => {
     setUploadedImage(null);
     setImagePreview(null);
     setAnalysisResult(null);
     setAudioBuffer(null);
-    stopAudio();
+    if (currentSource) {
+      currentSource.stop();
+      setCurrentSource(null);
+    }
+    setIsPlaying(false);
     setProcessingProgress(0);
-  }, [stopAudio]);
+  }, [currentSource]);
+
+  const getImageTypeIcon = () => {
+    if (!analysisResult) return <Music className="h-5 w-5" />;
+    
+    switch (analysisResult.imageType) {
+      case 'solar': return <Sun className="h-5 w-5 text-yellow-400" />;
+      case 'lunar': return <Moon className="h-5 w-5 text-gray-300" />;
+      case 'planetary': return <Globe className="h-5 w-5 text-blue-400" />;
+      default: return <Music className="h-5 w-5 text-purple-400" />;
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-primary mb-2">
-          {t('Astronomy Image Sonification', '天文图像声化')}
-        </h2>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          {getImageTypeIcon()}
+          <h2 className="text-2xl font-bold text-primary">
+            {t('Enhanced Astronomy Sonification', '增强天文声化处理')}
+          </h2>
+        </div>
         <p className="text-cosmic-400">
-          {t('Upload an astronomy image to generate a harmonic tune based on its celestial data', 
-             '上传天文图像以基于其天体数据生成和声曲调')}
+          {t('Upload astronomy images for enhanced AI-powered sonification with planetary and solar object detection', 
+             '上传天文图像进行增强AI驱动的声化处理，支持行星和太阳天体检测')}
         </p>
       </div>
 
@@ -191,7 +196,7 @@ const SonificationProcessor: React.FC = () => {
         {isProcessing && (
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span>{t('Processing image...', '处理图像中...')}</span>
+              <span>{t('Processing with enhanced algorithms...', '使用增强算法处理中...')}</span>
               <span>{processingProgress}%</span>
             </div>
             <Progress value={processingProgress} className="w-full" />
@@ -202,14 +207,16 @@ const SonificationProcessor: React.FC = () => {
           <div className="mt-4 flex justify-center">
             <Button onClick={processImage} className="flex items-center gap-2">
               <Music className="h-4 w-4" />
-              {t('Generate Sonification', '生成声化')}
+              {t('Generate Enhanced Sonification', '生成增强声化')}
             </Button>
           </div>
         )}
 
         {analysisResult && (
           <div className="mt-6 space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            {/* Enhanced statistics grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              {/* Deep sky objects */}
               <div className="text-center p-3 bg-cosmic-800/30 rounded-lg">
                 <div className="font-semibold text-primary">{analysisResult.stars}</div>
                 <div className="text-cosmic-400">{t('Stars', '恒星')}</div>
@@ -225,6 +232,46 @@ const SonificationProcessor: React.FC = () => {
               <div className="text-center p-3 bg-cosmic-800/30 rounded-lg">
                 <div className="font-semibold text-primary">{Math.round(analysisResult.brightness * 100)}%</div>
                 <div className="text-cosmic-400">{t('Brightness', '亮度')}</div>
+              </div>
+              
+              {/* Planetary/Solar objects - only show if detected */}
+              {(analysisResult.planets > 0 || analysisResult.moons > 0 || analysisResult.sunspots > 0 || analysisResult.solarFlares > 0) && (
+                <>
+                  {analysisResult.planets > 0 && (
+                    <div className="text-center p-3 bg-blue-800/30 rounded-lg">
+                      <div className="font-semibold text-blue-300">{analysisResult.planets}</div>
+                      <div className="text-cosmic-400">{t('Planets', '行星')}</div>
+                    </div>
+                  )}
+                  {analysisResult.moons > 0 && (
+                    <div className="text-center p-3 bg-gray-700/30 rounded-lg">
+                      <div className="font-semibold text-gray-300">{analysisResult.moons}</div>
+                      <div className="text-cosmic-400">{t('Moons', '卫星')}</div>
+                    </div>
+                  )}
+                  {analysisResult.sunspots > 0 && (
+                    <div className="text-center p-3 bg-orange-800/30 rounded-lg">
+                      <div className="font-semibold text-orange-300">{analysisResult.sunspots}</div>
+                      <div className="text-cosmic-400">{t('Sunspots', '太阳黑子')}</div>
+                    </div>
+                  )}
+                  {analysisResult.solarFlares > 0 && (
+                    <div className="text-center p-3 bg-yellow-800/30 rounded-lg">
+                      <div className="font-semibold text-yellow-300">{analysisResult.solarFlares}</div>
+                      <div className="text-cosmic-400">{t('Solar Flares', '太阳耀斑')}</div>
+                    </div>
+                  )}
+                </>
+              )}
+              
+              {/* Image characteristics */}
+              <div className="text-center p-3 bg-cosmic-800/30 rounded-lg">
+                <div className="font-semibold text-primary">{Math.round(analysisResult.contrast * 100)}%</div>
+                <div className="text-cosmic-400">{t('Contrast', '对比度')}</div>
+              </div>
+              <div className="text-center p-3 bg-cosmic-800/30 rounded-lg">
+                <div className="font-semibold text-primary">{Math.round(analysisResult.saturation * 100)}%</div>
+                <div className="text-cosmic-400">{t('Saturation', '饱和度')}</div>
               </div>
             </div>
 

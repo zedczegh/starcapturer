@@ -18,16 +18,16 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
   const { t } = useLanguage();
 
   const handleFileSelect = useCallback((file: File) => {
-    const validTypes = ['image/jpeg', 'image/png', 'image/fits', 'application/fits'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const validTypes = ['image/jpeg', 'image/png', 'image/fits', 'application/fits', 'image/tiff'];
+    const maxSize = 50 * 1024 * 1024; // 50MB
 
-    if (!validTypes.some(type => file.type.includes(type.split('/')[1]))) {
-      toast.error(t('Please upload a valid image file (JPG, PNG, FITS)', '请上传有效的图像文件 (JPG, PNG, FITS)'));
+    if (!validTypes.some(type => file.type.includes(type.split('/')[1]) || file.name.toLowerCase().includes(type.split('/')[1]))) {
+      toast.error(t('Please upload a valid image file (JPG, PNG, FITS, TIFF)', '请上传有效的图像文件 (JPG, PNG, FITS, TIFF)'));
       return;
     }
 
     if (file.size > maxSize) {
-      toast.error(t('File size must be less than 10MB', '文件大小必须小于10MB'));
+      toast.error(t('File size must be less than 50MB', '文件大小必须小于50MB'));
       return;
     }
 
@@ -65,13 +65,16 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
           <p className="text-sm text-cosmic-400 mb-4">
             {t('Drag and drop or click to select', '拖放或点击选择')}
           </p>
-          <p className="text-xs text-cosmic-500">
-            {t('Supports JPG, PNG, FITS formats (max 10MB)', '支持 JPG, PNG, FITS 格式 (最大10MB)')}
+          <p className="text-xs text-cosmic-500 mb-2">
+            {t('Supports JPG, PNG, FITS, TIFF formats (max 50MB)', '支持 JPG, PNG, FITS, TIFF 格式 (最大50MB)')}
+          </p>
+          <p className="text-xs text-cosmic-400">
+            {t('Supports deep sky, planetary, and solar imaging', '支持深空、行星和太阳成像')}
           </p>
           <input
             id="image-upload"
             type="file"
-            accept="image/*,.fits,.fit"
+            accept="image/*,.fits,.fit,.tiff,.tif"
             onChange={handleFileInput}
             className="hidden"
             disabled={isProcessing}
@@ -95,7 +98,7 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
           <input
             id="image-upload"
             type="file"
-            accept="image/*,.fits,.fit"
+            accept="image/*,.fits,.fit,.tiff,.tif"
             onChange={handleFileInput}
             className="hidden"
             disabled={isProcessing}
