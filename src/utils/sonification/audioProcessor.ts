@@ -30,28 +30,41 @@ interface AnalysisResult {
   rhythmPattern: number[];
 }
 
-export async function analyzeAstronomyImage(file: File, expectedType?: string): Promise<AnalysisResult> {
+export async function analyzeAstronomyImage(file: File, expectedType?: string, onProgress?: (progress: number) => void): Promise<AnalysisResult> {
   return new Promise((resolve) => {
     const img = new Image();
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    img.onload = () => {
-      canvas.width = Math.min(img.width, 2048);
-      canvas.height = Math.min(img.height, 2048);
-      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+    img.onload = async () => {
+      try {
+        onProgress?.(20);
+        
+        canvas.width = Math.min(img.width, 1024); // Reduced size for faster processing
+        canvas.height = Math.min(img.height, 1024);
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
-      if (!imageData) {
+        onProgress?.(40);
+
+        const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
+        if (!imageData) {
+          resolve(getDefaultAnalysis());
+          return;
+        }
+
+        onProgress?.(60);
+
+        const analysis = await processAdvancedImageData(imageData, file.name, expectedType, onProgress);
+        onProgress?.(100);
+        resolve(analysis);
+      } catch (error) {
+        console.error('Error in image analysis:', error);
         resolve(getDefaultAnalysis());
-        return;
       }
-
-      const analysis = processAdvancedImageData(imageData, file.name, expectedType);
-      resolve(analysis);
     };
 
     img.onerror = () => {
+      console.error('Error loading image');
       resolve(getDefaultAnalysis());
     };
 
@@ -59,7 +72,7 @@ export async function analyzeAstronomyImage(file: File, expectedType?: string): 
   });
 }
 
-function processAdvancedImageData(imageData: ImageData, filename: string, expectedType?: string): AnalysisResult {
+async function processAdvancedImageData(imageData: ImageData, filename: string, expectedType?: string, onProgress?: (progress: number) => void): Promise<AnalysisResult> {
   const { data, width, height } = imageData;
   const pixels = data.length / 4;
   
@@ -67,6 +80,8 @@ function processAdvancedImageData(imageData: ImageData, filename: string, expect
   let brightness = 0, minBrightness = 255, maxBrightness = 0;
   let brightPixels = 0, darkRegions = 0, colorfulRegions = 0;
   let circularFeatures = 0, linearFeatures = 0;
+
+  onProgress?.(65);
 
   // Basic pixel analysis
   for (let y = 0; y < height - 1; y++) {
@@ -105,6 +120,8 @@ function processAdvancedImageData(imageData: ImageData, filename: string, expect
     }
   }
 
+  onProgress?.(75);
+
   const avgRed = totalRed / pixels / 255;
   const avgGreen = totalGreen / pixels / 255;
   const avgBlue = totalBlue / pixels / 255;
@@ -114,25 +131,37 @@ function processAdvancedImageData(imageData: ImageData, filename: string, expect
 
   const imageType = expectedType as any || determineImageType(filename, avgBrightness, contrast, circularFeatures, linearFeatures);
 
+  onProgress?.(85);
+
   // Advanced astronomical object detection
   let stars = 0, nebulae = 0, galaxies = 0;
   let planets = 0, moons = 0, sunspots = 0, solarFlares = 0;
 
-  if (imageType === 'deep-sky') {
-    // Use advanced detection algorithms for deep sky objects
-    const starResult = detectStars(imageData);
-    const nebulaResult = detectNebulae(imageData, starResult.mask);
-    const galaxyResult = detectGalaxies(imageData, starResult.mask, nebulaResult.mask);
-    
-    stars = starResult.count;
-    nebulae = nebulaResult.count;
-    galaxies = galaxyResult.count;
-  } else {
-    // Use basic detection for non-deep-sky objects
+  try {
+    if (imageType === 'deep-sky') {
+      // Use advanced detection algorithms for deep sky objects
+      const starResult = detectStars(imageData);
+      const nebulaResult = detectNebulae(imageData, starResult.mask);
+      const galaxyResult = detectGalaxies(imageData, starResult.mask, nebulaResult.mask);
+      
+      stars = starResult.count;
+      nebulae = nebulaResult.count;
+      galaxies = galaxyResult.count;
+    } else {
+      // Use basic detection for non-deep-sky objects
+      const basicDetection = detectBasicAstronomicalObjects(imageType, brightPixels, darkRegions, 
+                                                           colorfulRegions, circularFeatures, linearFeatures, pixels);
+      ({ stars, nebulae, galaxies, planets, moons, sunspots, solarFlares } = basicDetection);
+    }
+  } catch (error) {
+    console.error('Error in advanced detection, using fallback:', error);
+    // Fallback to basic detection
     const basicDetection = detectBasicAstronomicalObjects(imageType, brightPixels, darkRegions, 
                                                          colorfulRegions, circularFeatures, linearFeatures, pixels);
     ({ stars, nebulae, galaxies, planets, moons, sunspots, solarFlares } = basicDetection);
   }
+
+  onProgress?.(95);
 
   const frequencies = generateEnhancedFrequencies({ stars, nebulae, galaxies, planets, moons, sunspots, solarFlares }, 
                                                  avgRed, avgGreen, avgBlue, avgBrightness, contrast, saturation, imageType);

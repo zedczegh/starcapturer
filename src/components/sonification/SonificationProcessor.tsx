@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
@@ -81,15 +80,11 @@ const SonificationProcessor: React.FC = () => {
     setProcessingProgress(0);
 
     try {
-      setProcessingProgress(15);
-      
-      const analysis = await analyzeAstronomyImage(uploadedImage, selectedImageType);
+      const analysis = await analyzeAstronomyImage(uploadedImage, selectedImageType, setProcessingProgress);
       setAnalysisResult(analysis);
-      setProcessingProgress(50);
 
       const audio = await generateAudioFromAnalysis(analysis);
       setAudioBuffer(audio);
-      setProcessingProgress(100);
       setStep('results');
 
       toast.success(t('Image analysis and sonification completed!', '图像分析和声化完成！'));
@@ -221,26 +216,26 @@ const SonificationProcessor: React.FC = () => {
       {/* Progress Steps */}
       <div className="flex justify-center">
         <div className="flex items-center space-x-4">
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-            step === 'select' ? 'bg-primary text-primary-foreground' : 
-            ['upload', 'results'].includes(step) ? 'bg-primary/20 text-primary' : 'bg-cosmic-800 text-cosmic-400'
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all duration-300 ${
+            step === 'select' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 
+            ['upload', 'results'].includes(step) ? 'bg-primary/20 text-primary border-2 border-primary/30' : 'bg-cosmic-800 text-cosmic-400'
           }`}>
             1
           </div>
-          <div className={`w-16 h-0.5 ${
-            ['upload', 'results'].includes(step) ? 'bg-primary' : 'bg-cosmic-800'
+          <div className={`w-16 h-1 rounded-full transition-all duration-500 ${
+            ['upload', 'results'].includes(step) ? 'bg-gradient-to-r from-primary to-primary/60' : 'bg-cosmic-800'
           }`} />
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-            step === 'upload' ? 'bg-primary text-primary-foreground' : 
-            step === 'results' ? 'bg-primary/20 text-primary' : 'bg-cosmic-800 text-cosmic-400'
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all duration-300 ${
+            step === 'upload' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 
+            step === 'results' ? 'bg-primary/20 text-primary border-2 border-primary/30' : 'bg-cosmic-800 text-cosmic-400'
           }`}>
             2
           </div>
-          <div className={`w-16 h-0.5 ${
-            step === 'results' ? 'bg-primary' : 'bg-cosmic-800'
+          <div className={`w-16 h-1 rounded-full transition-all duration-500 ${
+            step === 'results' ? 'bg-gradient-to-r from-primary to-primary/60' : 'bg-cosmic-800'
           }`} />
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-            step === 'results' ? 'bg-primary text-primary-foreground' : 'bg-cosmic-800 text-cosmic-400'
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all duration-300 ${
+            step === 'results' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-cosmic-800 text-cosmic-400'
           }`}>
             3
           </div>
@@ -296,20 +291,35 @@ const SonificationProcessor: React.FC = () => {
             />
 
             {isProcessing && (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-cosmic-400">
                     {t('Analyzing image and generating sonification...', '分析图像并生成声化...')}
                   </span>
                   <span className="text-primary font-medium">{processingProgress}%</span>
                 </div>
-                <Progress value={processingProgress} className="w-full" />
+                <Progress 
+                  value={processingProgress} 
+                  className="w-full h-3 bg-cosmic-800/50" 
+                  colorClass="bg-gradient-to-r from-primary via-primary/80 to-primary/60 shadow-lg shadow-primary/20"
+                />
+                <div className="flex justify-center">
+                  <div className="flex space-x-1">
+                    {[0, 1, 2].map((i) => (
+                      <div
+                        key={i}
+                        className="w-2 h-2 bg-primary rounded-full animate-pulse"
+                        style={{ animationDelay: `${i * 0.2}s` }}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
             {uploadedImage && !isProcessing && (
               <div className="flex justify-center">
-                <Button onClick={processImage} className="flex items-center gap-2 px-8">
+                <Button onClick={processImage} className="flex items-center gap-2 px-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20">
                   <Music className="h-4 w-4" />
                   {t('Generate Sonification', '生成声化')}
                 </Button>
