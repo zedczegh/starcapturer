@@ -170,18 +170,18 @@ function detectAstronomicalObjects(imageType: string, brightPixels: number, dark
     case 'solar':
       sunspots = Math.min(Math.floor(darkRegions / 5000), 50);
       solarFlares = Math.min(Math.floor(brightPixels / 2000), 20);
-      stars = Math.floor(brightPixels / 10000);
+      stars = 0;
       break;
       
     case 'lunar':
       moons = 1;
-      stars = Math.min(Math.floor(brightPixels / 500), 200);
+      stars = 0;
       break;
       
     case 'planetary':
       planets = Math.min(Math.floor(circular / 1000), 5);
       moons = Math.min(Math.floor(circular / 5000), 10);
-      stars = Math.min(Math.floor(brightPixels / 200), 500);
+      stars = 0;
       break;
       
     case 'deep-sky':

@@ -1,9 +1,10 @@
+
 import React, { useState, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Music, ArrowLeft, Upload } from 'lucide-react';
+import { Music, ArrowLeft, Upload, Sun, Moon, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import ImageTypeSelector from './ImageTypeSelector';
 import ImageUploadZone from './ImageUploadZone';

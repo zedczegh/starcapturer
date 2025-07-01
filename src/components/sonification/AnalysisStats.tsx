@@ -4,7 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Star, Cloud, Circle, Palette, Contrast, Brightness, Sun, Moon, Globe } from 'lucide-react';
+import { Star, Cloud, Circle, Palette, Contrast, Sun, Moon, Globe } from 'lucide-react';
 
 interface AnalysisResult {
   stars: number;
@@ -68,8 +68,9 @@ const AnalysisStats: React.FC<AnalysisStatsProps> = ({ analysisResult }) => {
   const typeConfig = getImageTypeConfig();
   const TypeIcon = typeConfig.icon;
 
+  // Only show stars for deep-sky images, disable for solar/lunar/planetary
   const celestialObjects = [
-    ...(analysisResult.stars > 0 ? [{ 
+    ...(analysisResult.imageType === 'deep-sky' && analysisResult.stars > 0 ? [{ 
       icon: Star, 
       label: t('Stars', '恒星'), 
       value: analysisResult.stars, 
@@ -115,7 +116,7 @@ const AnalysisStats: React.FC<AnalysisStatsProps> = ({ analysisResult }) => {
 
   const imageProperties = [
     { 
-      icon: Brightness, 
+      icon: Sun, 
       label: t('Brightness', '亮度'), 
       value: Math.round(analysisResult.brightness * 100), 
       unit: '%',
