@@ -1,4 +1,3 @@
-
 interface AnalysisResult {
   // Deep sky objects
   stars: number;
@@ -29,7 +28,7 @@ interface AnalysisResult {
   rhythmPattern: number[];
 }
 
-export async function analyzeAstronomyImage(file: File): Promise<AnalysisResult> {
+export async function analyzeAstronomyImage(file: File, expectedType?: string): Promise<AnalysisResult> {
   return new Promise((resolve) => {
     const img = new Image();
     const canvas = document.createElement('canvas');
@@ -46,7 +45,7 @@ export async function analyzeAstronomyImage(file: File): Promise<AnalysisResult>
         return;
       }
 
-      const analysis = processEnhancedImageData(imageData, file.name);
+      const analysis = processEnhancedImageData(imageData, file.name, expectedType);
       resolve(analysis);
     };
 
@@ -58,7 +57,7 @@ export async function analyzeAstronomyImage(file: File): Promise<AnalysisResult>
   });
 }
 
-function processEnhancedImageData(imageData: ImageData, filename: string): AnalysisResult {
+function processEnhancedImageData(imageData: ImageData, filename: string, expectedType?: string): AnalysisResult {
   const { data, width, height } = imageData;
   const pixels = data.length / 4;
   
@@ -119,8 +118,8 @@ function processEnhancedImageData(imageData: ImageData, filename: string): Analy
   const contrast = (maxBrightness - minBrightness) / 255;
   const saturation = Math.max(avgRed, avgGreen, avgBlue) - Math.min(avgRed, avgGreen, avgBlue);
 
-  // Determine image type based on characteristics and filename
-  const imageType = determineImageType(filename, avgBrightness, contrast, circularFeatures, linearFeatures);
+  // Use expected type if provided, otherwise determine from characteristics
+  const imageType = expectedType as any || determineImageType(filename, avgBrightness, contrast, circularFeatures, linearFeatures);
 
   // Enhanced object detection based on image type
   const detection = detectAstronomicalObjects(imageType, brightPixels, darkRegions, colorfulRegions, 

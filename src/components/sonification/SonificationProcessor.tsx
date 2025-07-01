@@ -3,12 +3,16 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Music, Sun, Moon, Globe } from 'lucide-react';
+import { Music, ArrowLeft, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import ImageTypeSelector from './ImageTypeSelector';
 import ImageUploadZone from './ImageUploadZone';
+import AnalysisStats from './AnalysisStats';
 import SonificationControls from './SonificationControls';
 import AudioVisualization from './AudioVisualization';
 import { analyzeAstronomyImage, generateAudioFromAnalysis, exportToMp3 } from '@/utils/sonification/audioProcessor';
+
+type ImageType = 'deep-sky' | 'solar' | 'planetary' | 'lunar';
 
 interface AnalysisResult {
   // Deep sky objects
@@ -41,6 +45,8 @@ interface AnalysisResult {
 
 const SonificationProcessor: React.FC = () => {
   const { t } = useLanguage();
+  const [step, setStep] = useState<'select' | 'upload' | 'results'>('select');
+  const [selectedImageType, setSelectedImageType] = useState<ImageType>('deep-sky');
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -50,6 +56,11 @@ const SonificationProcessor: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const [currentSource, setCurrentSource] = useState<AudioBufferSourceNode | null>(null);
+
+  const handleImageTypeSelect = useCallback((type: ImageType) => {
+    setSelectedImageType(type);
+    setStep('upload');
+  }, []);
 
   const handleImageUpload = useCallback((file: File) => {
     setUploadedImage(file);
@@ -69,20 +80,18 @@ const SonificationProcessor: React.FC = () => {
     setProcessingProgress(0);
 
     try {
-      // Enhanced processing steps
       setProcessingProgress(15);
       
-      // Analyze the image with enhanced detection
-      const analysis = await analyzeAstronomyImage(uploadedImage);
+      const analysis = await analyzeAstronomyImage(uploadedImage, selectedImageType);
       setAnalysisResult(analysis);
       setProcessingProgress(50);
 
-      // Generate enhanced audio
       const audio = await generateAudioFromAnalysis(analysis);
       setAudioBuffer(audio);
       setProcessingProgress(100);
+      setStep('results');
 
-      toast.success(t('Enhanced image analysis completed!', '增强图像分析完成！'));
+      toast.success(t('Image analysis and sonification completed!', '图像分析和声化完成！'));
     } catch (error) {
       console.error('Error processing image:', error);
       toast.error(t('Failed to process image', '处理图像失败'));
@@ -90,7 +99,7 @@ const SonificationProcessor: React.FC = () => {
       setIsProcessing(false);
       setProcessingProgress(0);
     }
-  }, [uploadedImage, t]);
+  }, [uploadedImage, selectedImageType, t]);
 
   const playAudio = useCallback(async () => {
     if (!audioBuffer) return;
@@ -148,6 +157,8 @@ const SonificationProcessor: React.FC = () => {
   }, [audioBuffer, analysisResult, t]);
 
   const resetProcessor = useCallback(() => {
+    setStep('select');
+    setSelectedImageType('deep-sky');
     setUploadedImage(null);
     setImagePreview(null);
     setAnalysisResult(null);
@@ -159,6 +170,23 @@ const SonificationProcessor: React.FC = () => {
     setIsPlaying(false);
     setProcessingProgress(0);
   }, [currentSource]);
+
+  const goBack = useCallback(() => {
+    if (step === 'upload') {
+      setStep('select');
+      setUploadedImage(null);
+      setImagePreview(null);
+    } else if (step === 'results') {
+      setStep('upload');
+      setAnalysisResult(null);
+      setAudioBuffer(null);
+      if (currentSource) {
+        currentSource.stop();
+        setCurrentSource(null);
+      }
+      setIsPlaying(false);
+    }
+  }, [step, currentSource]);
 
   const getImageTypeIcon = () => {
     if (!analysisResult) return <Music className="h-5 w-5" />;
@@ -172,122 +200,168 @@ const SonificationProcessor: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Header */}
       <div className="text-center">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          {getImageTypeIcon()}
-          <h2 className="text-2xl font-bold text-primary">
-            {t('Enhanced Astronomy Sonification', '增强天文声化处理')}
-          </h2>
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <div className="p-3 bg-primary/10 rounded-full">
+            <Music className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-3xl font-bold text-primary">
+            {t('Astronomy Sonification', '天文声化处理')}
+          </h1>
         </div>
-        <p className="text-cosmic-400">
-          {t('Upload astronomy images for enhanced AI-powered sonification with planetary and solar object detection', 
-             '上传天文图像进行增强AI驱动的声化处理，支持行星和太阳天体检测')}
+        <p className="text-cosmic-400 max-w-2xl mx-auto">
+          {t('Transform your astronomy images into beautiful harmonic compositions. Upload your photos and let AI create unique soundscapes based on celestial data.', 
+             '将您的天文图像转换为美妙的和声作品。上传您的照片，让AI根据天体数据创造独特的音景。')}
         </p>
       </div>
 
-      <Card className="p-6 bg-cosmic-900/40 backdrop-blur-md">
-        <ImageUploadZone
-          onImageUpload={handleImageUpload}
-          imagePreview={imagePreview}
-          isProcessing={isProcessing}
-        />
-
-        {isProcessing && (
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span>{t('Processing with enhanced algorithms...', '使用增强算法处理中...')}</span>
-              <span>{processingProgress}%</span>
-            </div>
-            <Progress value={processingProgress} className="w-full" />
+      {/* Progress Steps */}
+      <div className="flex justify-center">
+        <div className="flex items-center space-x-4">
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+            step === 'select' ? 'bg-primary text-primary-foreground' : 
+            ['upload', 'results'].includes(step) ? 'bg-primary/20 text-primary' : 'bg-cosmic-800 text-cosmic-400'
+          }`}>
+            1
           </div>
-        )}
+          <div className={`w-16 h-0.5 ${
+            ['upload', 'results'].includes(step) ? 'bg-primary' : 'bg-cosmic-800'
+          }`} />
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+            step === 'upload' ? 'bg-primary text-primary-foreground' : 
+            step === 'results' ? 'bg-primary/20 text-primary' : 'bg-cosmic-800 text-cosmic-400'
+          }`}>
+            2
+          </div>
+          <div className={`w-16 h-0.5 ${
+            step === 'results' ? 'bg-primary' : 'bg-cosmic-800'
+          }`} />
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+            step === 'results' ? 'bg-primary text-primary-foreground' : 'bg-cosmic-800 text-cosmic-400'
+          }`}>
+            3
+          </div>
+        </div>
+      </div>
 
-        {uploadedImage && !isProcessing && !analysisResult && (
-          <div className="mt-4 flex justify-center">
-            <Button onClick={processImage} className="flex items-center gap-2">
-              <Music className="h-4 w-4" />
-              {t('Generate Enhanced Sonification', '生成增强声化')}
+      {/* Main Content */}
+      <Card className="p-8 bg-cosmic-900/40 backdrop-blur-md border-cosmic-700/50">
+        {/* Back Button */}
+        {step !== 'select' && (
+          <div className="mb-6">
+            <Button 
+              variant="ghost" 
+              onClick={goBack}
+              className="flex items-center gap-2 text-cosmic-400 hover:text-cosmic-200"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {t('Back', '返回')}
             </Button>
           </div>
         )}
 
-        {analysisResult && (
-          <div className="mt-6 space-y-4">
-            {/* Enhanced statistics grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              {/* Deep sky objects */}
-              <div className="text-center p-3 bg-cosmic-800/30 rounded-lg">
-                <div className="font-semibold text-primary">{analysisResult.stars}</div>
-                <div className="text-cosmic-400">{t('Stars', '恒星')}</div>
-              </div>
-              <div className="text-center p-3 bg-cosmic-800/30 rounded-lg">
-                <div className="font-semibold text-primary">{analysisResult.nebulae}</div>
-                <div className="text-cosmic-400">{t('Nebulae', '星云')}</div>
-              </div>
-              <div className="text-center p-3 bg-cosmic-800/30 rounded-lg">
-                <div className="font-semibold text-primary">{analysisResult.galaxies}</div>
-                <div className="text-cosmic-400">{t('Galaxies', '星系')}</div>
-              </div>
-              <div className="text-center p-3 bg-cosmic-800/30 rounded-lg">
-                <div className="font-semibold text-primary">{Math.round(analysisResult.brightness * 100)}%</div>
-                <div className="text-cosmic-400">{t('Brightness', '亮度')}</div>
-              </div>
-              
-              {/* Planetary/Solar objects - only show if detected */}
-              {(analysisResult.planets > 0 || analysisResult.moons > 0 || analysisResult.sunspots > 0 || analysisResult.solarFlares > 0) && (
-                <>
-                  {analysisResult.planets > 0 && (
-                    <div className="text-center p-3 bg-blue-800/30 rounded-lg">
-                      <div className="font-semibold text-blue-300">{analysisResult.planets}</div>
-                      <div className="text-cosmic-400">{t('Planets', '行星')}</div>
-                    </div>
-                  )}
-                  {analysisResult.moons > 0 && (
-                    <div className="text-center p-3 bg-gray-700/30 rounded-lg">
-                      <div className="font-semibold text-gray-300">{analysisResult.moons}</div>
-                      <div className="text-cosmic-400">{t('Moons', '卫星')}</div>
-                    </div>
-                  )}
-                  {analysisResult.sunspots > 0 && (
-                    <div className="text-center p-3 bg-orange-800/30 rounded-lg">
-                      <div className="font-semibold text-orange-300">{analysisResult.sunspots}</div>
-                      <div className="text-cosmic-400">{t('Sunspots', '太阳黑子')}</div>
-                    </div>
-                  )}
-                  {analysisResult.solarFlares > 0 && (
-                    <div className="text-center p-3 bg-yellow-800/30 rounded-lg">
-                      <div className="font-semibold text-yellow-300">{analysisResult.solarFlares}</div>
-                      <div className="text-cosmic-400">{t('Solar Flares', '太阳耀斑')}</div>
-                    </div>
-                  )}
-                </>
-              )}
-              
-              {/* Image characteristics */}
-              <div className="text-center p-3 bg-cosmic-800/30 rounded-lg">
-                <div className="font-semibold text-primary">{Math.round(analysisResult.contrast * 100)}%</div>
-                <div className="text-cosmic-400">{t('Contrast', '对比度')}</div>
-              </div>
-              <div className="text-center p-3 bg-cosmic-800/30 rounded-lg">
-                <div className="font-semibold text-primary">{Math.round(analysisResult.saturation * 100)}%</div>
-                <div className="text-cosmic-400">{t('Saturation', '饱和度')}</div>
-              </div>
+        {/* Step 1: Image Type Selection */}
+        {step === 'select' && (
+          <ImageTypeSelector
+            selectedType={selectedImageType}
+            onTypeSelect={handleImageTypeSelect}
+          />
+        )}
+
+        {/* Step 2: Image Upload */}
+        {step === 'upload' && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-cosmic-200 mb-2">
+                {t('Upload Your Image', '上传您的图像')}
+              </h2>
+              <p className="text-cosmic-400">
+                {t('Selected type:', '选择的类型：')} 
+                <span className="text-primary font-medium ml-1">
+                  {selectedImageType === 'deep-sky' && t('Deep Sky', '深空')}
+                  {selectedImageType === 'solar' && t('Solar', '太阳')}
+                  {selectedImageType === 'planetary' && t('Planetary', '行星')}
+                  {selectedImageType === 'lunar' && t('Lunar', '月球')}
+                </span>
+              </p>
             </div>
 
-            <AudioVisualization 
-              analysisResult={analysisResult}
-              isPlaying={isPlaying}
+            <ImageUploadZone
+              onImageUpload={handleImageUpload}
+              imagePreview={imagePreview}
+              isProcessing={isProcessing}
             />
 
-            <SonificationControls
-              isPlaying={isPlaying}
-              onPlay={playAudio}
-              onStop={stopAudio}
-              onDownload={downloadAudio}
-              onReset={resetProcessor}
-              hasAudio={!!audioBuffer}
-            />
+            {isProcessing && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-cosmic-400">
+                    {t('Analyzing image and generating sonification...', '分析图像并生成声化...')}
+                  </span>
+                  <span className="text-primary font-medium">{processingProgress}%</span>
+                </div>
+                <Progress value={processingProgress} className="w-full" />
+              </div>
+            )}
+
+            {uploadedImage && !isProcessing && (
+              <div className="flex justify-center">
+                <Button onClick={processImage} className="flex items-center gap-2 px-8">
+                  <Music className="h-4 w-4" />
+                  {t('Generate Sonification', '生成声化')}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 3: Results */}
+        {step === 'results' && analysisResult && (
+          <div className="space-y-8">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-cosmic-200 mb-2">
+                {t('Analysis Complete', '分析完成')}
+              </h2>
+              <p className="text-cosmic-400">
+                {t('Your astronomy image has been analyzed and converted to audio', '您的天文图像已被分析并转换为音频')}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column: Image Preview */}
+              <div className="space-y-4">
+                {imagePreview && (
+                  <div className="relative">
+                    <img
+                      src={imagePreview}
+                      alt="Analyzed astronomy image"
+                      className="w-full max-h-96 object-contain rounded-lg bg-cosmic-800/20"
+                    />
+                  </div>
+                )}
+                
+                <AudioVisualization 
+                  analysisResult={analysisResult}
+                  isPlaying={isPlaying}
+                />
+              </div>
+
+              {/* Right Column: Analysis Results */}
+              <div className="space-y-6">
+                <AnalysisStats analysisResult={analysisResult} />
+                
+                <SonificationControls
+                  isPlaying={isPlaying}
+                  onPlay={playAudio}
+                  onStop={stopAudio}
+                  onDownload={downloadAudio}
+                  onReset={resetProcessor}
+                  hasAudio={!!audioBuffer}
+                />
+              </div>
+            </div>
           </div>
         )}
       </Card>
