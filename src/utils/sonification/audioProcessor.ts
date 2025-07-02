@@ -38,33 +38,44 @@ export async function analyzeAstronomyImage(file: File, expectedType?: string, o
 
     img.onload = async () => {
       try {
-        onProgress?.(20);
+        console.log('Image loaded, starting analysis...');
+        onProgress?.(15);
         
-        canvas.width = Math.min(img.width, 1024); // Reduced size for faster processing
-        canvas.height = Math.min(img.height, 1024);
-        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        onProgress?.(40);
-
-        const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
-        if (!imageData) {
+        // Optimize canvas size for better performance
+        const maxSize = 800;
+        const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        canvas.width = Math.floor(img.width * scale);
+        canvas.height = Math.floor(img.height * scale);
+        
+        console.log(`Canvas size: ${canvas.width}x${canvas.height}`);
+        
+        if (!ctx) {
+          console.error('Canvas context not available');
           resolve(getDefaultAnalysis());
           return;
         }
 
-        onProgress?.(60);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        onProgress?.(30);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        console.log('Image data extracted, processing...');
+        onProgress?.(45);
 
         const analysis = await processAdvancedImageData(imageData, file.name, expectedType, onProgress);
+        console.log('Analysis complete:', analysis);
         onProgress?.(100);
         resolve(analysis);
       } catch (error) {
         console.error('Error in image analysis:', error);
+        onProgress?.(100);
         resolve(getDefaultAnalysis());
       }
     };
 
-    img.onerror = () => {
-      console.error('Error loading image');
+    img.onerror = (error) => {
+      console.error('Error loading image:', error);
+      onProgress?.(100);
       resolve(getDefaultAnalysis());
     };
 
@@ -76,69 +87,59 @@ async function processAdvancedImageData(imageData: ImageData, filename: string, 
   const { data, width, height } = imageData;
   const pixels = data.length / 4;
   
+  console.log(`Processing ${pixels} pixels...`);
+  
   let totalRed = 0, totalGreen = 0, totalBlue = 0;
   let brightness = 0, minBrightness = 255, maxBrightness = 0;
   let brightPixels = 0, darkRegions = 0, colorfulRegions = 0;
   let circularFeatures = 0, linearFeatures = 0;
 
-  onProgress?.(65);
+  onProgress?.(50);
 
-  // Basic pixel analysis
-  for (let y = 0; y < height - 1; y++) {
-    for (let x = 0; x < width - 1; x++) {
-      const i = (y * width + x) * 4;
-      const r = data[i], g = data[i + 1], b = data[i + 2];
-      
-      totalRed += r; totalGreen += g; totalBlue += b;
-      
-      const pixelBrightness = (r + g + b) / 3;
-      brightness += pixelBrightness;
-      minBrightness = Math.min(minBrightness, pixelBrightness);
-      maxBrightness = Math.max(maxBrightness, pixelBrightness);
-      
-      if (pixelBrightness > 200) brightPixels++;
-      if (pixelBrightness < 30) darkRegions++;
-      
-      const colorVariance = Math.abs(r - g) + Math.abs(g - b) + Math.abs(r - b);
-      if (colorVariance > 60) colorfulRegions++;
-      
-      if (x < width - 1 && y < height - 1) {
-        const nextPixel = (y * width + (x + 1)) * 4;
-        const belowPixel = ((y + 1) * width + x) * 4;
-        
-        const horizontalGradient = Math.abs(data[i] - data[nextPixel]);
-        const verticalGradient = Math.abs(data[i] - data[belowPixel]);
-        
-        if (horizontalGradient > 50 && verticalGradient > 50) {
-          circularFeatures++;
-        }
-        
-        if (Math.abs(horizontalGradient - verticalGradient) > 30) {
-          linearFeatures++;
-        }
-      }
-    }
+  // Optimized pixel analysis with sampling for large images
+  const sampleRate = Math.max(1, Math.floor(pixels / 100000)); // Sample every N pixels for very large images
+  let sampledPixels = 0;
+
+  for (let i = 0; i < data.length; i += 4 * sampleRate) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    
+    totalRed += r; totalGreen += g; totalBlue += b;
+    sampledPixels++;
+    
+    const pixelBrightness = (r + g + b) / 3;
+    brightness += pixelBrightness;
+    minBrightness = Math.min(minBrightness, pixelBrightness);
+    maxBrightness = Math.max(maxBrightness, pixelBrightness);
+    
+    if (pixelBrightness > 200) brightPixels++;
+    if (pixelBrightness < 30) darkRegions++;
+    
+    const colorVariance = Math.abs(r - g) + Math.abs(g - b) + Math.abs(r - b);
+    if (colorVariance > 60) colorfulRegions++;
   }
 
-  onProgress?.(75);
+  onProgress?.(65);
 
-  const avgRed = totalRed / pixels / 255;
-  const avgGreen = totalGreen / pixels / 255;
-  const avgBlue = totalBlue / pixels / 255;
-  const avgBrightness = brightness / pixels / 255;
+  // Calculate averages based on sampled pixels
+  const avgRed = totalRed / sampledPixels / 255;
+  const avgGreen = totalGreen / sampledPixels / 255;
+  const avgBlue = totalBlue / sampledPixels / 255;
+  const avgBrightness = brightness / sampledPixels / 255;
   const contrast = (maxBrightness - minBrightness) / 255;
   const saturation = Math.max(avgRed, avgGreen, avgBlue) - Math.min(avgRed, avgGreen, avgBlue);
 
   const imageType = expectedType as any || determineImageType(filename, avgBrightness, contrast, circularFeatures, linearFeatures);
+  console.log(`Detected image type: ${imageType}`);
 
-  onProgress?.(85);
+  onProgress?.(75);
 
-  // Advanced astronomical object detection
+  // Enhanced astronomical object detection
   let stars = 0, nebulae = 0, galaxies = 0;
   let planets = 0, moons = 0, sunspots = 0, solarFlares = 0;
 
   try {
     if (imageType === 'deep-sky') {
+      console.log('Running advanced deep-sky detection...');
       // Use advanced detection algorithms for deep sky objects
       const starResult = detectStars(imageData);
       const nebulaResult = detectNebulae(imageData, starResult.mask);
@@ -147,26 +148,29 @@ async function processAdvancedImageData(imageData: ImageData, filename: string, 
       stars = starResult.count;
       nebulae = nebulaResult.count;
       galaxies = galaxyResult.count;
+      
+      console.log(`Deep-sky detection: ${stars} stars, ${nebulae} nebulae, ${galaxies} galaxies`);
     } else {
+      console.log(`Running basic detection for ${imageType}...`);
       // Use basic detection for non-deep-sky objects
       const basicDetection = detectBasicAstronomicalObjects(imageType, brightPixels, darkRegions, 
-                                                           colorfulRegions, circularFeatures, linearFeatures, pixels);
+                                                           colorfulRegions, circularFeatures, linearFeatures, sampledPixels);
       ({ stars, nebulae, galaxies, planets, moons, sunspots, solarFlares } = basicDetection);
     }
   } catch (error) {
     console.error('Error in advanced detection, using fallback:', error);
     // Fallback to basic detection
     const basicDetection = detectBasicAstronomicalObjects(imageType, brightPixels, darkRegions, 
-                                                         colorfulRegions, circularFeatures, linearFeatures, pixels);
+                                                         colorfulRegions, circularFeatures, linearFeatures, sampledPixels);
     ({ stars, nebulae, galaxies, planets, moons, sunspots, solarFlares } = basicDetection);
   }
 
-  onProgress?.(95);
+  onProgress?.(90);
 
   const frequencies = generateEnhancedFrequencies({ stars, nebulae, galaxies, planets, moons, sunspots, solarFlares }, 
                                                  avgRed, avgGreen, avgBlue, avgBrightness, contrast, saturation, imageType);
 
-  return {
+  const result = {
     stars, nebulae, galaxies, planets, moons, sunspots, solarFlares,
     brightness: avgBrightness,
     contrast,
@@ -175,6 +179,9 @@ async function processAdvancedImageData(imageData: ImageData, filename: string, 
     colorProfile: { red: avgRed, green: avgGreen, blue: avgBlue },
     ...frequencies
   };
+
+  console.log('Final analysis result:', result);
+  return result;
 }
 
 function determineImageType(filename: string, brightness: number, contrast: number, 
@@ -222,10 +229,10 @@ function detectBasicAstronomicalObjects(imageType: string, brightPixels: number,
       break;
       
     case 'deep-sky':
-      // Basic fallback detection for deep-sky (advanced algorithm preferred)
-      stars = Math.min(Math.floor(brightPixels / 50), 2000);
-      nebulae = Math.min(Math.floor(colorfulRegions / 800), 100);
-      galaxies = Math.min(Math.floor(linear / 8000), 50);
+      // Enhanced detection for deep-sky
+      stars = Math.min(Math.floor(brightPixels / 25), 3000); // More sensitive star detection
+      nebulae = Math.min(Math.floor(colorfulRegions / 500), 150); // More sensitive nebula detection
+      galaxies = Math.min(Math.floor(linear / 4000), 80); // More sensitive galaxy detection
       break;
       
     default: // mixed

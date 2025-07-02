@@ -28,7 +28,7 @@ const Progress = React.forwardRef<
     >
       <ProgressPrimitive.Indicator
         className={cn(
-          "h-full w-full flex-1 transition-all duration-700 ease-out relative",
+          "h-full w-full flex-1 transition-all duration-700 ease-out relative overflow-hidden",
           colorClass || "bg-primary"
         )}
         style={{ 
@@ -36,22 +36,25 @@ const Progress = React.forwardRef<
           backgroundColor: !colorClass && style?.backgroundColor ? style.backgroundColor : undefined
         }}
       >
-        {/* Animated shimmer effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" 
-             style={{ 
-               animation: `shimmer 2s ease-in-out infinite`,
-               backgroundSize: '200% 100%'
-             }} 
+        {/* Animated shimmer effect using CSS */}
+        <div 
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+          style={{
+            animation: 'shimmer 2s ease-in-out infinite',
+            transform: 'translateX(-100%)'
+          }}
         />
       </ProgressPrimitive.Indicator>
       
-      {/* Add shimmer keyframes to global styles */}
-      <style jsx>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
+      {/* Global shimmer animation styles */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+          }
+        `
+      }} />
     </ProgressPrimitive.Root>
   );
 })

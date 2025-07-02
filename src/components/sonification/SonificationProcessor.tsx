@@ -3,7 +3,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Music, ArrowLeft, Upload, Sun, Moon, Globe } from 'lucide-react';
+import { Music, ArrowLeft, Upload, Sun, Moon, Globe, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import ImageTypeSelector from './ImageTypeSelector';
 import ImageUploadZone from './ImageUploadZone';
@@ -51,6 +51,7 @@ const SonificationProcessor: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState<string>('');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -78,22 +79,51 @@ const SonificationProcessor: React.FC = () => {
 
     setIsProcessing(true);
     setProcessingProgress(0);
+    setProcessingStage(t('Initializing...', '初始化...'));
 
     try {
-      const analysis = await analyzeAstronomyImage(uploadedImage, selectedImageType, setProcessingProgress);
+      console.log('Starting image processing...');
+      
+      const progressCallback = (progress: number) => {
+        setProcessingProgress(progress);
+        
+        // Update processing stage based on progress
+        if (progress < 20) {
+          setProcessingStage(t('Loading image...', '加载图像...'));
+        } else if (progress < 40) {
+          setProcessingStage(t('Preprocessing image...', '预处理图像...'));
+        } else if (progress < 60) {
+          setProcessingStage(t('Extracting image data...', '提取图像数据...'));
+        } else if (progress < 80) {
+          setProcessingStage(t('Detecting astronomical objects...', '检测天体对象...'));
+        } else if (progress < 95) {
+          setProcessingStage(t('Generating audio frequencies...', '生成音频频率...'));
+        } else {
+          setProcessingStage(t('Finalizing analysis...', '完成分析...'));
+        }
+      };
+
+      const analysis = await analyzeAstronomyImage(uploadedImage, selectedImageType, progressCallback);
       setAnalysisResult(analysis);
 
+      setProcessingStage(t('Creating sonification...', '创建声化...'));
       const audio = await generateAudioFromAnalysis(analysis);
       setAudioBuffer(audio);
       setStep('results');
 
-      toast.success(t('Image analysis and sonification completed!', '图像分析和声化完成！'));
+      toast.success(t('Image analysis and sonification completed!', '图像分析和声化完成！'), {
+        description: t(`Detected ${analysis.stars} stars, ${analysis.nebulae} nebulae, ${analysis.galaxies} galaxies`, 
+                      `检测到 ${analysis.stars} 颗恒星，${analysis.nebulae} 个星云，${analysis.galaxies} 个星系`)
+      });
     } catch (error) {
       console.error('Error processing image:', error);
-      toast.error(t('Failed to process image', '处理图像失败'));
+      toast.error(t('Failed to process image', '处理图像失败'), {
+        description: t('Please try again with a different image', '请尝试使用其他图像')
+      });
     } finally {
       setIsProcessing(false);
       setProcessingProgress(0);
+      setProcessingStage('');
     }
   }, [uploadedImage, selectedImageType, t]);
 
@@ -165,6 +195,7 @@ const SonificationProcessor: React.FC = () => {
     }
     setIsPlaying(false);
     setProcessingProgress(0);
+    setProcessingStage('');
   }, [currentSource]);
 
   const goBack = useCallback(() => {
@@ -213,44 +244,44 @@ const SonificationProcessor: React.FC = () => {
         </p>
       </div>
 
-      {/* Progress Steps */}
+      {/* Enhanced Progress Steps */}
       <div className="flex justify-center">
         <div className="flex items-center space-x-4">
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all duration-300 ${
-            step === 'select' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 
+          <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-300 ${
+            step === 'select' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110' : 
             ['upload', 'results'].includes(step) ? 'bg-primary/20 text-primary border-2 border-primary/30' : 'bg-cosmic-800 text-cosmic-400'
           }`}>
-            1
+            {['upload', 'results'].includes(step) ? <CheckCircle className="h-5 w-5" /> : '1'}
           </div>
-          <div className={`w-16 h-1 rounded-full transition-all duration-500 ${
+          <div className={`w-20 h-1 rounded-full transition-all duration-500 ${
             ['upload', 'results'].includes(step) ? 'bg-gradient-to-r from-primary to-primary/60' : 'bg-cosmic-800'
           }`} />
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all duration-300 ${
-            step === 'upload' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 
+          <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-300 ${
+            step === 'upload' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110' : 
             step === 'results' ? 'bg-primary/20 text-primary border-2 border-primary/30' : 'bg-cosmic-800 text-cosmic-400'
           }`}>
-            2
+            {step === 'results' ? <CheckCircle className="h-5 w-5" /> : step === 'upload' ? <Upload className="h-5 w-5" /> : '2'}
           </div>
-          <div className={`w-16 h-1 rounded-full transition-all duration-500 ${
+          <div className={`w-20 h-1 rounded-full transition-all duration-500 ${
             step === 'results' ? 'bg-gradient-to-r from-primary to-primary/60' : 'bg-cosmic-800'
           }`} />
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all duration-300 ${
-            step === 'results' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-cosmic-800 text-cosmic-400'
+          <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-300 ${
+            step === 'results' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110' : 'bg-cosmic-800 text-cosmic-400'
           }`}>
-            3
+            {step === 'results' ? <Music className="h-5 w-5" /> : '3'}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <Card className="p-8 bg-cosmic-900/40 backdrop-blur-md border-cosmic-700/50">
+      <Card className="p-8 bg-cosmic-900/40 backdrop-blur-md border-cosmic-700/50 shadow-2xl">
         {/* Back Button */}
         {step !== 'select' && (
           <div className="mb-6">
             <Button 
               variant="ghost" 
               onClick={goBack}
-              className="flex items-center gap-2 text-cosmic-400 hover:text-cosmic-200"
+              className="flex items-center gap-2 text-cosmic-400 hover:text-cosmic-200 hover:bg-cosmic-800/50 transition-all duration-200"
             >
               <ArrowLeft className="h-4 w-4" />
               {t('Back', '返回')}
@@ -291,25 +322,35 @@ const SonificationProcessor: React.FC = () => {
             />
 
             {isProcessing && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-cosmic-400">
-                    {t('Analyzing image and generating sonification...', '分析图像并生成声化...')}
-                  </span>
-                  <span className="text-primary font-medium">{processingProgress}%</span>
+              <div className="space-y-6">
+                <div className="text-center">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full mb-4">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                    <span className="text-primary font-medium">{processingStage}</span>
+                  </div>
                 </div>
-                <Progress 
-                  value={processingProgress} 
-                  className="w-full h-3 bg-cosmic-800/50" 
-                  colorClass="bg-gradient-to-r from-primary via-primary/80 to-primary/60 shadow-lg shadow-primary/20"
-                />
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-cosmic-400">
+                      {t('Processing astronomy image...', '处理天文图像...')}
+                    </span>
+                    <span className="text-primary font-semibold">{processingProgress}%</span>
+                  </div>
+                  <Progress 
+                    value={processingProgress} 
+                    className="w-full h-4 bg-cosmic-800/50" 
+                    colorClass="bg-gradient-to-r from-primary via-primary/90 to-primary/70 shadow-lg shadow-primary/30"
+                  />
+                </div>
+                
                 <div className="flex justify-center">
-                  <div className="flex space-x-1">
-                    {[0, 1, 2].map((i) => (
+                  <div className="flex space-x-2">
+                    {[0, 1, 2, 3].map((i) => (
                       <div
                         key={i}
-                        className="w-2 h-2 bg-primary rounded-full animate-pulse"
-                        style={{ animationDelay: `${i * 0.2}s` }}
+                        className="w-3 h-3 bg-primary/60 rounded-full animate-bounce"
+                        style={{ animationDelay: `${i * 0.15}s`, animationDuration: '1s' }}
                       />
                     ))}
                   </div>
@@ -319,8 +360,11 @@ const SonificationProcessor: React.FC = () => {
 
             {uploadedImage && !isProcessing && (
               <div className="flex justify-center">
-                <Button onClick={processImage} className="flex items-center gap-2 px-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20">
-                  <Music className="h-4 w-4" />
+                <Button 
+                  onClick={processImage} 
+                  className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 transition-all duration-200 hover:shadow-xl hover:shadow-primary/30 hover:scale-105"
+                >
+                  <Music className="h-5 w-5" />
                   {t('Generate Sonification', '生成声化')}
                 </Button>
               </div>
@@ -332,8 +376,14 @@ const SonificationProcessor: React.FC = () => {
         {step === 'results' && analysisResult && (
           <div className="space-y-8">
             <div className="text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 rounded-full mb-4">
+                <CheckCircle className="h-5 w-5 text-green-400" />
+                <span className="text-green-400 font-medium">
+                  {t('Analysis Complete', '分析完成')}
+                </span>
+              </div>
               <h2 className="text-xl font-semibold text-cosmic-200 mb-2">
-                {t('Analysis Complete', '分析完成')}
+                {t('Sonification Ready', '声化准备就绪')}
               </h2>
               <p className="text-cosmic-400">
                 {t('Your astronomy image has been analyzed and converted to audio', '您的天文图像已被分析并转换为音频')}
@@ -344,12 +394,13 @@ const SonificationProcessor: React.FC = () => {
               {/* Left Column: Image Preview */}
               <div className="space-y-4">
                 {imagePreview && (
-                  <div className="relative">
+                  <div className="relative group">
                     <img
                       src={imagePreview}
                       alt="Analyzed astronomy image"
-                      className="w-full max-h-96 object-contain rounded-lg bg-cosmic-800/20"
+                      className="w-full max-h-96 object-contain rounded-lg bg-cosmic-800/20 shadow-lg"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-cosmic-900/20 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
                 )}
                 
