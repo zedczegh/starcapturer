@@ -6,7 +6,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, Calendar, Music } from 'lucide-react';
+import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, Calendar, Music, Calculator } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -68,6 +68,7 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
     },
     { icon: Calendar, label: t('My Reservations', '我的预订'), path: '/my-reservations' },
     { icon: Music, label: t('Sonification', '声化处理器'), path: '/sonification' },
+    { icon: Calculator, label: t('Sampling Calculator', '采样计算器'), path: '/sampling-calculator' },
     { icon: Link2, label: t('Useful Links', '资源'), path: '/useful-links' },
     { icon: Info, label: t('About SIQS', '关于SIQS'), path: '/about' },
     { icon: Settings, label: t('Settings', '设置'), path: '/settings' },
