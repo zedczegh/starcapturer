@@ -37,8 +37,6 @@ export const cmosSensors: CmosSensor[] = [
     resolutionY: 3008,
     sensorSizeX: 11.3,
     sensorSizeY: 11.3,
-    sensorSizeX: 23.6,
-    sensorSizeY: 15.8,
     readNoise: 1.2,
     fullWellCapacity: 51000,
     quantumEfficiency: 91
