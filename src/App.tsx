@@ -1,84 +1,119 @@
 
-import { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LanguageProvider } from '@/contexts/LanguageContext';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
 import { HelmetProvider } from 'react-helmet-async';
-import { Toaster } from '@/components/ui/sonner';
-import PageLoader from '@/components/loaders/PageLoader';
-import './App.css';
+import { LanguageProvider } from './contexts/LanguageContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { useBookingNotifications } from './hooks/useBookingNotifications';
+import { Loader2 } from 'lucide-react';
 
-// Lazy load components
-const Index = lazy(() => import('@/pages/Index'));
-const LocationDetailsPage = lazy(() => import('@/pages/LocationDetails'));
-const PhotoPointsPage = lazy(() => import('@/pages/PhotoPointsNearby'));
-const CommunityPage = lazy(() => import('@/pages/CommunityAstroSpots'));
-const CollectionsPage = lazy(() => import('@/pages/Collections'));
-const ProfilePage = lazy(() => import('@/pages/Profile'));
-const UserProfilePage = lazy(() => import('@/pages/ProfileMini'));
-const SettingsPage = lazy(() => import('@/pages/Preferences'));
-const BortleNowPage = lazy(() => import('@/pages/BortleNow'));
-const AboutPage = lazy(() => import('@/pages/About'));
-const UsefulLinksPage = lazy(() => import('@/pages/UsefulLinks'));
-const AstroSpotsPage = lazy(() => import('@/pages/CommunityAstroSpots'));
-const AstroSpotDetailsPage = lazy(() => import('@/pages/AstroSpotProfile'));
-const ManageAstroSpotsPage = lazy(() => import('@/pages/ManageAstroSpots'));
-const MyReservationsPage = lazy(() => import('@/pages/MyReservations'));
-const MessagesPage = lazy(() => import('@/pages/Messages'));
-const SonificationProcessorPage = lazy(() => import('@/pages/SonificationProcessor'));
-const SamplingCalculatorPage = lazy(() => import('@/pages/SamplingCalculator'));
+// Lazy load heavy components
+import { LazyPhotoPointsNearby, LazyLocationDetails, LazyCommunityAstroSpots } from './components/lazy/LazyPhotoPoints';
+
+// Keep light components as regular imports
+import IndexPage from './pages/Index';
+import NotFound from './pages/NotFound';
+import AboutSIQS from './pages/AboutSIQS';
+import About from './pages/About';
+import UsefulLinks from './pages/UsefulLinks';
+import ShareLocation from './pages/ShareLocation';
+import Collections from './pages/Collections';
+import Profile from './pages/Profile';
+import PreferencesPage from './pages/Preferences';
+import ManageAstroSpots from './pages/ManageAstroSpots';
+import AstroSpotProfile from './pages/AstroSpotProfile';
+import ProfileMini from "./pages/ProfileMini";
+import Messages from './pages/Messages';
+import MyReservations from './pages/MyReservations';
+import ServiceTest from './pages/ServiceTest';
+import SonificationProcessor from './pages/SonificationProcessor';
+import './App.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+      retry: false,
+      staleTime: 60 * 1000, // 1 minute
+      gcTime: 5 * 60 * 1000, // 5 minutes
     },
   },
 });
 
+import useAppInitializer from './hooks/useAppInitializer';
+
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-cosmic-900">
+    <div className="flex flex-col items-center space-y-4">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <p className="text-cosmic-200">Loading...</p>
+    </div>
+  </div>
+);
+
+function AppContent() {
+  // Add the booking notifications hook
+  useBookingNotifications();
+  
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/photo-points" replace />} />
+      <Route path="/photo-points" element={
+        <Suspense fallback={<LoadingFallback />}>
+          <LazyPhotoPointsNearby />
+        </Suspense>
+      } />
+      <Route path="/community" element={
+        <Suspense fallback={<LoadingFallback />}>
+          <LazyCommunityAstroSpots />
+        </Suspense>
+      } />
+      <Route path="/about-siqs" element={<AboutSIQS />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/location/:id" element={
+        <Suspense fallback={<LoadingFallback />}>
+          <LazyLocationDetails />
+        </Suspense>
+      } />
+      <Route path="/location/siqs-calculator" element={
+        <Suspense fallback={<LoadingFallback />}>
+          <LazyLocationDetails />
+        </Suspense>
+      } />
+      <Route path="/links" element={<UsefulLinks />} />
+      <Route path="/useful-links" element={<UsefulLinks />} />
+      <Route path="/share" element={<ShareLocation />} />
+      <Route path="/collections" element={<Collections />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/profile/:id" element={<ProfileMini />} />
+      <Route path="/settings" element={<PreferencesPage />} />
+      <Route path="/manage-astro-spots" element={<ManageAstroSpots />} />
+      <Route path="/astro-spot/:id" element={<AstroSpotProfile />} />
+      <Route path="/messages" element={<Messages />} />
+      <Route path="/my-reservations" element={<MyReservations />} />
+      <Route path="/sonification" element={<SonificationProcessor />} />
+      <Route path="/service-test" element={<ServiceTest />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
 function App() {
+  // Add the initializer hook to setup performance optimizations
+  useAppInitializer();
+  
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <LanguageProvider>
-            <AuthProvider>
-              <Router>
-                <div className="min-h-screen">
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/location/:coordinates" element={<LocationDetailsPage />} />
-                      <Route path="/photo-points" element={<PhotoPointsPage />} />
-                      <Route path="/community" element={<CommunityPage />} />
-                      <Route path="/collections" element={<CollectionsPage />} />
-                      <Route path="/profile" element={<ProfilePage />} />
-                      <Route path="/user/:userId" element={<UserProfilePage />} />
-                      <Route path="/settings" element={<SettingsPage />} />
-                      <Route path="/bortle-now" element={<BortleNowPage />} />
-                      <Route path="/about" element={<AboutPage />} />
-                      <Route path="/useful-links" element={<UsefulLinksPage />} />
-                      <Route path="/astro-spots" element={<AstroSpotsPage />} />
-                      <Route path="/astro-spot/:id" element={<AstroSpotDetailsPage />} />
-                      <Route path="/manage-astro-spots" element={<ManageAstroSpotsPage />} />
-                      <Route path="/my-reservations" element={<MyReservationsPage />} />
-                      <Route path="/messages" element={<MessagesPage />} />
-                      <Route path="/sonification" element={<SonificationProcessorPage />} />
-                      <Route path="/sampling-calculator" element={<SamplingCalculatorPage />} />
-                    </Routes>
-                  </Suspense>
-                  <Toaster 
-                    position="top-right"
-                    expand={true}
-                    richColors
-                    closeButton
-                  />
-                </div>
-              </Router>
-            </AuthProvider>
+            <Router>
+              <AuthProvider>
+                <AppContent />
+              </AuthProvider>
+            </Router>
           </LanguageProvider>
         </ThemeProvider>
       </QueryClientProvider>
