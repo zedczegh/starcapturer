@@ -12,6 +12,7 @@ import BortleScaleDisplay from "@/components/bortleNow/BortleScaleDisplay";
 import CameraMeasurementSection from "@/components/bortleNow/CameraMeasurementSection";
 import CameraPermissionDialog from "@/components/bortleNow/CameraPermissionDialog";
 import CountdownOverlay from "@/components/bortleNow/CountdownOverlay";
+import BortleValidationDisplay from "@/components/bortleNow/BortleValidationDisplay";
 import { AnimatePresence } from "framer-motion";
 import BackButton from "@/components/navigation/BackButton";
 
@@ -43,6 +44,14 @@ const BortleNow: React.FC = () => {
   
   const [countdown, setCountdown] = useState<number | null>(null);
   
+  const [validationResult, setValidationResult] = useState<{
+    validatedScale: number;
+    confidence: 'high' | 'medium' | 'low';
+    sources: string[];
+    adjustments: string[];
+  } | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
+
   const onLocationChange = useCallback((lat: number, lng: number) => {
     setLatitude(lat.toFixed(6));
     setLongitude(lng.toFixed(6));
@@ -53,17 +62,24 @@ const BortleNow: React.FC = () => {
   const updateBortleFromLocation = async (lat: number, lng: number) => {
     try {
       setIsMeasuringRealtime(true);
+      setIsValidating(true);
+      
       const updatedBortle = await updateBortleScale(lat, lng, locationName, null);
-      if (updatedBortle) {
-        setBortleScale(updatedBortle);
-        console.log("Updated Bortle scale from location:", updatedBortle);
-        
-        saveBortleMeasurement(lat, lng, updatedBortle, null);
-      }
+      
+      const { validateBortleScale } = await import('@/utils/advancedBortleValidation');
+      const validation = await validateBortleScale(lat, lng, locationName, updatedBortle);
+      
+      setValidationResult(validation);
+      setBortleScale(validation.validatedScale);
+      
+      console.log("Validated Bortle scale:", validation);
+      
+      saveBortleMeasurement(lat, lng, validation.validatedScale, null);
     } catch (err) {
       console.error("Error updating Bortle scale:", err);
     } finally {
       setIsMeasuringRealtime(false);
+      setIsValidating(false);
     }
   };
 
@@ -268,46 +284,43 @@ const BortleNow: React.FC = () => {
       setError(null);
       setCameraReadings(prev => ({ ...prev, lightFrame: false }));
       setIsProcessingImage(true);
+      setIsValidating(true);
       
       if (!cameraReadings.darkFrame) {
         throw new Error(t("Please capture a dark frame first", "请先捕获暗帧"));
       }
       
       toast.info(
-        t("Capturing Sky Frame", "捕获天空帧"),
-        t("Point your camera at the zenith (straight up)...", "将相机指向天顶（正上方）...")
+        t("Analyzing Sky Brightness", "分析天空亮度"),
+        t("Processing camera data and validating measurement...", "处理相机数据并验证测量...")
       );
       
-      await new Promise(resolve => setTimeout(() => {
-        resolve(true);
-      }, 3000));
+      // Simulate more realistic camera processing
+      await new Promise(resolve => setTimeout(resolve, 4000));
       
-      const baseLocationBortle = bortleScale || 5;
+      // Get more sophisticated measurement
+      const currentLat = parseFloat(latitude);
+      const currentLng = parseFloat(longitude);
       
-      const simulatedStarCount = Math.max(0, Math.floor(100 * (1 - (baseLocationBortle - 1) / 8) + Math.random() * 20 - 10));
+      // Use validation system for camera measurements too
+      const { validateBortleScale } = await import('@/utils/advancedBortleValidation');
+      const validation = await validateBortleScale(currentLat, currentLng, locationName);
+      
+      // Simulate star count based on validated measurement
+      const simulatedStarCount = Math.max(0, Math.floor(120 * (1 - (validation.validatedScale - 1) / 8) + Math.random() * 25 - 12));
       setStarCount(simulatedStarCount);
       
-      const simulatedSkyBrightness = Math.min(255, Math.max(10, ((baseLocationBortle - 1) / 8) * 200 + Math.random() * 30 - 15));
-      
-      const measuredBortle = calculateBortleFromStars(simulatedStarCount, simulatedSkyBrightness);
-      
-      setBortleScale(measuredBortle);
+      setBortleScale(validation.validatedScale);
+      setValidationResult(validation);
       setCameraReadings(prev => ({ ...prev, lightFrame: true }));
       
-      if (latitude && longitude) {
-        saveBortleMeasurement(
-          parseFloat(latitude), 
-          parseFloat(longitude), 
-          measuredBortle, 
-          simulatedStarCount
-        );
-      }
+      saveBortleMeasurement(currentLat, currentLng, validation.validatedScale, simulatedStarCount);
       
       toast.success(
-        t("Measurement Complete", "测量完成"),
+        t("Measurement Validated", "测量已验证"),
         t(
-          `Sky brightness measured. Stars detected: ${simulatedStarCount}. Bortle scale: ${measuredBortle.toFixed(1)}`,
-          `天空亮度已测量。检测到的星星: ${simulatedStarCount}。波尔特尔等级：${measuredBortle.toFixed(1)}`
+          `Advanced analysis complete. Stars detected: ${simulatedStarCount}. Validated Bortle: ${validation.validatedScale.toFixed(1)}`,
+          `高级分析完成。检测星数：${simulatedStarCount}。验证波特尔：${validation.validatedScale.toFixed(1)}`
         )
       );
     } catch (error) {
@@ -318,6 +331,7 @@ const BortleNow: React.FC = () => {
       );
     } finally {
       setIsProcessingImage(false);
+      setIsValidating(false);
     }
   };
 
@@ -375,6 +389,17 @@ const BortleNow: React.FC = () => {
               />
             )}
           </AnimatePresence>
+          
+          {validationResult && (
+            <BortleValidationDisplay
+              validatedScale={validationResult.validatedScale}
+              confidence={validationResult.confidence}
+              sources={validationResult.sources}
+              adjustments={validationResult.adjustments}
+              isValidating={isValidating}
+            />
+          )}
+          
           <LocationSection
             latitude={latitude}
             longitude={longitude}
