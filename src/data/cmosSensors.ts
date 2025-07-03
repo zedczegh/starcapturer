@@ -110,6 +110,360 @@ export const cmosSensors: CMOSSensor[] = [
     category: "Planetary"
   },
   
+  // ZWO Cameras
+  {
+    name: "ASI120MM-S",
+    manufacturer: "ZWO",
+    pixelSize: 3.75,
+    resolution: { width: 1280, height: 960 },
+    sensorType: "Mono",
+    category: "Planetary"
+  },
+  {
+    name: "ASI120MC-S",
+    manufacturer: "ZWO",
+    pixelSize: 3.75,
+    resolution: { width: 1280, height: 960 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "ASI174MM",
+    manufacturer: "ZWO", 
+    pixelSize: 5.86,
+    resolution: { width: 1936, height: 1216 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI174MC",
+    manufacturer: "ZWO",
+    pixelSize: 5.86,
+    resolution: { width: 1936, height: 1216 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI183MM",
+    manufacturer: "ZWO",
+    pixelSize: 2.4,
+    resolution: { width: 5496, height: 3672 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI183MC",
+    manufacturer: "ZWO",
+    pixelSize: 2.4,
+    resolution: { width: 5496, height: 3672 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI224MC",
+    manufacturer: "ZWO",
+    pixelSize: 3.75,
+    resolution: { width: 1304, height: 976 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "ASI290MM",
+    manufacturer: "ZWO",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Mono",
+    category: "Planetary"
+  },
+  {
+    name: "ASI290MC",
+    manufacturer: "ZWO",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "ASI294MM",
+    manufacturer: "ZWO",
+    pixelSize: 4.63,
+    resolution: { width: 4144, height: 2822 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI294MC",
+    manufacturer: "ZWO",
+    pixelSize: 4.63,
+    resolution: { width: 4144, height: 2822 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI533MM",
+    manufacturer: "ZWO",
+    pixelSize: 3.76,
+    resolution: { width: 3008, height: 3008 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI533MC",
+    manufacturer: "ZWO",
+    pixelSize: 3.76,
+    resolution: { width: 3008, height: 3008 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI571MM",
+    manufacturer: "ZWO",
+    pixelSize: 3.76,
+    resolution: { width: 6144, height: 4096 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI571MC",
+    manufacturer: "ZWO",
+    pixelSize: 3.76,
+    resolution: { width: 6144, height: 4096 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI678MC",
+    manufacturer: "ZWO",
+    pixelSize: 2.0,
+    resolution: { width: 3840, height: 2160 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+
+  // QHY Cameras
+  {
+    name: "QHY5III174M",
+    manufacturer: "QHY",
+    pixelSize: 5.86,
+    resolution: { width: 1936, height: 1216 },
+    sensorType: "Mono",
+    category: "Guiding"
+  },
+  {
+    name: "QHY5III174C",
+    manufacturer: "QHY",
+    pixelSize: 5.86,
+    resolution: { width: 1936, height: 1216 },
+    sensorType: "Color",
+    category: "Guiding"
+  },
+  {
+    name: "QHY183M",
+    manufacturer: "QHY",
+    pixelSize: 2.4,
+    resolution: { width: 5496, height: 3672 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY183C",
+    manufacturer: "QHY",
+    pixelSize: 2.4,
+    resolution: { width: 5496, height: 3672 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY224C",
+    manufacturer: "QHY",
+    pixelSize: 3.75,
+    resolution: { width: 1304, height: 976 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "QHY290M",
+    manufacturer: "QHY",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Mono",
+    category: "Planetary"
+  },
+  {
+    name: "QHY290C",
+    manufacturer: "QHY",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "QHY294M",
+    manufacturer: "QHY",
+    pixelSize: 4.63,
+    resolution: { width: 4144, height: 2822 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY294C",
+    manufacturer: "QHY",
+    pixelSize: 4.63,
+    resolution: { width: 4144, height: 2822 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY533M",
+    manufacturer: "QHY",
+    pixelSize: 3.76,
+    resolution: { width: 3008, height: 3008 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY533C",
+    manufacturer: "QHY",
+    pixelSize: 3.76,
+    resolution: { width: 3008, height: 3008 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY571M",
+    manufacturer: "QHY",
+    pixelSize: 3.76,
+    resolution: { width: 6144, height: 4096 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY571C",
+    manufacturer: "QHY",
+    pixelSize: 3.76,
+    resolution: { width: 6144, height: 4096 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+
+  // ToupTek Cameras
+  {
+    name: "G3M178M",
+    manufacturer: "ToupTek",
+    pixelSize: 2.4,
+    resolution: { width: 3096, height: 2080 },
+    sensorType: "Mono",
+    category: "Planetary"
+  },
+  {
+    name: "G3M178C",
+    manufacturer: "ToupTek",
+    pixelSize: 2.4,
+    resolution: { width: 3096, height: 2080 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "G3M290M",
+    manufacturer: "ToupTek",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Mono",
+    category: "Planetary"
+  },
+  {
+    name: "G3M290C",
+    manufacturer: "ToupTek",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "G3M294M",
+    manufacturer: "ToupTek",
+    pixelSize: 4.63,
+    resolution: { width: 4144, height: 2822 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3M294C",
+    manufacturer: "ToupTek",
+    pixelSize: 4.63,
+    resolution: { width: 4144, height: 2822 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+
+  // SBIG Cameras
+  {
+    name: "STF-8300M",
+    manufacturer: "SBIG",
+    pixelSize: 5.4,
+    resolution: { width: 3326, height: 2504 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "STF-8300C",
+    manufacturer: "SBIG",
+    pixelSize: 5.4,
+    resolution: { width: 3326, height: 2504 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "STXL-6303E",
+    manufacturer: "SBIG",
+    pixelSize: 9.0,
+    resolution: { width: 3072, height: 2048 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "STX-16803",
+    manufacturer: "SBIG",
+    pixelSize: 9.0,
+    resolution: { width: 4096, height: 4096 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+
+  // Moravian Cameras
+  {
+    name: "G2-1600",
+    manufacturer: "Moravian",
+    pixelSize: 7.4,
+    resolution: { width: 1536, height: 1024 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "G2-4000",
+    manufacturer: "Moravian",
+    pixelSize: 7.4,
+    resolution: { width: 2048, height: 2048 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3-16200",
+    manufacturer: "Moravian",
+    pixelSize: 6.0,
+    resolution: { width: 4540, height: 3648 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "G4-16000",
+    manufacturer: "Moravian",
+    pixelSize: 3.8,
+    resolution: { width: 4904, height: 3280 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  
   // Omnivision Sensors
   {
     name: "OV2710",
