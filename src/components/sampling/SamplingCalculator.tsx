@@ -228,6 +228,12 @@ const SamplingCalculator: React.FC = () => {
                           <SelectItem value="ToupTek">ToupTek</SelectItem>
                           <SelectItem value="SBIG">SBIG</SelectItem>
                           <SelectItem value="Moravian">Moravian</SelectItem>
+                          <SelectItem value="Player One">Player One</SelectItem>
+                          <SelectItem value="Atik">Atik</SelectItem>
+                          <SelectItem value="FLIR">FLIR</SelectItem>
+                          <SelectItem value="Altair">Altair</SelectItem>
+                          <SelectItem value="Starlight Xpress">Starlight Xpress</SelectItem>
+                          <SelectItem value="Omegon">Omegon</SelectItem>
                           <SelectItem value="Sony">Sony</SelectItem>
                           <SelectItem value="Canon">Canon</SelectItem>
                           <SelectItem value="Nikon">Nikon</SelectItem>

@@ -109,6 +109,38 @@ export const cmosSensors: CMOSSensor[] = [
     sensorType: "Color",
     category: "Planetary"
   },
+  {
+    name: "IMX455",
+    manufacturer: "Sony",
+    pixelSize: 3.76,
+    resolution: { width: 9576, height: 6388 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "IMX492",
+    manufacturer: "Sony",
+    pixelSize: 3.45,
+    resolution: { width: 7728, height: 5368 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "IMX410",
+    manufacturer: "Sony",
+    pixelSize: 5.94,
+    resolution: { width: 6072, height: 4040 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "IMX174",
+    manufacturer: "Sony",
+    pixelSize: 5.86,
+    resolution: { width: 1936, height: 1216 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
   
   // ZWO Cameras
   {
@@ -239,8 +271,80 @@ export const cmosSensors: CMOSSensor[] = [
     sensorType: "Color",
     category: "Planetary"
   },
+  {
+    name: "ASI462MC",
+    manufacturer: "ZWO",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI485MC",
+    manufacturer: "ZWO",
+    pixelSize: 3.45,
+    resolution: { width: 2464, height: 2056 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI385MC",
+    manufacturer: "ZWO",
+    pixelSize: 3.75,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Color",
+    category: "All-round"
+  },
+  {
+    name: "ASI464MC",
+    manufacturer: "ZWO",
+    pixelSize: 3.76,
+    resolution: { width: 2712, height: 1538 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI2600MM",
+    manufacturer: "ZWO",
+    pixelSize: 3.76,
+    resolution: { width: 6248, height: 4176 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI2600MC",
+    manufacturer: "ZWO",
+    pixelSize: 3.76,
+    resolution: { width: 6248, height: 4176 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI6200MM",
+    manufacturer: "ZWO",
+    pixelSize: 3.76,
+    resolution: { width: 9576, height: 6388 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI6200MC",
+    manufacturer: "ZWO",
+    pixelSize: 3.76,
+    resolution: { width: 9576, height: 6388 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "ASI128MC",
+    manufacturer: "ZWO",
+    pixelSize: 5.97,
+    resolution: { width: 1280, height: 1024 },
+    sensorType: "Color",
+    category: "All-round"
+  },
 
-  // QHY Cameras
+  // QHY Cameras - Extensive Collection
   {
     name: "QHY5III174M",
     manufacturer: "QHY",
@@ -345,6 +449,142 @@ export const cmosSensors: CMOSSensor[] = [
     sensorType: "Color",
     category: "Deep Sky"
   },
+  {
+    name: "QHY600M",
+    manufacturer: "QHY",
+    pixelSize: 3.76,
+    resolution: { width: 9576, height: 6388 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY600C",
+    manufacturer: "QHY",
+    pixelSize: 3.76,
+    resolution: { width: 9576, height: 6388 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY600M PH",
+    manufacturer: "QHY",
+    pixelSize: 3.76,
+    resolution: { width: 9576, height: 6388 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY268M",
+    manufacturer: "QHY",
+    pixelSize: 3.76,
+    resolution: { width: 6280, height: 4210 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY268C",
+    manufacturer: "QHY",
+    pixelSize: 3.76,
+    resolution: { width: 6280, height: 4210 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY410C",
+    manufacturer: "QHY",
+    pixelSize: 5.94,
+    resolution: { width: 6072, height: 4040 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY492M",
+    manufacturer: "QHY",
+    pixelSize: 3.45,
+    resolution: { width: 7728, height: 5368 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY492C",
+    manufacturer: "QHY",
+    pixelSize: 3.45,
+    resolution: { width: 7728, height: 5368 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY178M",
+    manufacturer: "QHY",
+    pixelSize: 2.4,
+    resolution: { width: 3096, height: 2080 },
+    sensorType: "Mono",
+    category: "Planetary"
+  },
+  {
+    name: "QHY178C",
+    manufacturer: "QHY",
+    pixelSize: 2.4,
+    resolution: { width: 3096, height: 2080 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "QHY5L-II-M",
+    manufacturer: "QHY",
+    pixelSize: 3.75,
+    resolution: { width: 1280, height: 960 },
+    sensorType: "Mono",
+    category: "Guiding"
+  },
+  {
+    name: "QHY5L-II-C",
+    manufacturer: "QHY",
+    pixelSize: 3.75,
+    resolution: { width: 1280, height: 960 },
+    sensorType: "Color",
+    category: "Guiding"
+  },
+  {
+    name: "QHY163M",
+    manufacturer: "QHY",
+    pixelSize: 3.8,
+    resolution: { width: 4656, height: 3522 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY163C",
+    manufacturer: "QHY",
+    pixelSize: 3.8,
+    resolution: { width: 4656, height: 3522 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY128C",
+    manufacturer: "QHY",
+    pixelSize: 5.97,
+    resolution: { width: 1280, height: 1024 },
+    sensorType: "Color",
+    category: "All-round"
+  },
+  {
+    name: "QHY367C",
+    manufacturer: "QHY",
+    pixelSize: 6.0,
+    resolution: { width: 7728, height: 5368 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "QHY16200A",
+    manufacturer: "QHY",
+    pixelSize: 6.0,
+    resolution: { width: 4540, height: 3648 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
 
   // ToupTek Cameras
   {
@@ -395,6 +635,46 @@ export const cmosSensors: CMOSSensor[] = [
     sensorType: "Color",
     category: "Deep Sky"
   },
+  {
+    name: "G3M385C",
+    manufacturer: "ToupTek",
+    pixelSize: 3.75,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Color",
+    category: "All-round"
+  },
+  {
+    name: "G3M462C",
+    manufacturer: "ToupTek",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3M224C",
+    manufacturer: "ToupTek",
+    pixelSize: 3.75,
+    resolution: { width: 1304, height: 976 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "G3M174M",
+    manufacturer: "ToupTek",
+    pixelSize: 5.86,
+    resolution: { width: 1936, height: 1216 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3M174C",
+    manufacturer: "ToupTek",
+    pixelSize: 5.86,
+    resolution: { width: 1936, height: 1216 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
 
   // SBIG Cameras
   {
@@ -426,6 +706,38 @@ export const cmosSensors: CMOSSensor[] = [
     manufacturer: "SBIG",
     pixelSize: 9.0,
     resolution: { width: 4096, height: 4096 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "STF-8050M",
+    manufacturer: "SBIG",
+    pixelSize: 7.4,
+    resolution: { width: 3326, height: 2504 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "STT-8300M",
+    manufacturer: "SBIG",
+    pixelSize: 5.4,
+    resolution: { width: 3326, height: 2504 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "STT-8300C",
+    manufacturer: "SBIG",
+    pixelSize: 5.4,
+    resolution: { width: 3326, height: 2504 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "STXL-11002M",
+    manufacturer: "SBIG",
+    pixelSize: 9.0,
+    resolution: { width: 4008, height: 2672 },
     sensorType: "Mono",
     category: "Deep Sky"
   },
@@ -463,7 +775,259 @@ export const cmosSensors: CMOSSensor[] = [
     sensorType: "Mono",
     category: "Deep Sky"
   },
-  
+  {
+    name: "G2-8300",
+    manufacturer: "Moravian",
+    pixelSize: 5.4,
+    resolution: { width: 3326, height: 2504 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "G4-9000",
+    manufacturer: "Moravian",
+    pixelSize: 3.69,
+    resolution: { width: 3584, height: 2574 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3-11000",
+    manufacturer: "Moravian",
+    pixelSize: 9.0,
+    resolution: { width: 4008, height: 2672 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "G4-6000",
+    manufacturer: "Moravian",
+    pixelSize: 4.54,
+    resolution: { width: 2758, height: 2208 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+
+  // Player One Astronomy Cameras
+  {
+    name: "Neptune-C II",
+    manufacturer: "Player One",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "Mars-C II",
+    manufacturer: "Player One",
+    pixelSize: 3.75,
+    resolution: { width: 1304, height: 976 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "Saturn-C SQR",
+    manufacturer: "Player One",
+    pixelSize: 3.76,
+    resolution: { width: 3008, height: 3008 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "Uranus-C",
+    manufacturer: "Player One",
+    pixelSize: 4.63,
+    resolution: { width: 4144, height: 2822 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "Apollo-M MAX",
+    manufacturer: "Player One",
+    pixelSize: 3.76,
+    resolution: { width: 9576, height: 6388 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Poseidon-M",
+    manufacturer: "Player One",
+    pixelSize: 3.76,
+    resolution: { width: 6248, height: 4176 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Poseidon-C",
+    manufacturer: "Player One",
+    pixelSize: 3.76,
+    resolution: { width: 6248, height: 4176 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "Ceres-C",
+    manufacturer: "Player One",
+    pixelSize: 2.4,
+    resolution: { width: 5496, height: 3672 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "Sedna-M",
+    manufacturer: "Player One",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Mono",
+    category: "Planetary"
+  },
+
+  // Atik Cameras
+  {
+    name: "Atik 383L+",
+    manufacturer: "Atik",
+    pixelSize: 5.4,
+    resolution: { width: 3326, height: 2504 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Atik 460EX",
+    manufacturer: "Atik",
+    pixelSize: 4.54,
+    resolution: { width: 2758, height: 2208 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Atik 314L+",
+    manufacturer: "Atik",
+    pixelSize: 6.45,
+    resolution: { width: 1392, height: 1040 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Atik 414EX",
+    manufacturer: "Atik",
+    pixelSize: 6.45,
+    resolution: { width: 1392, height: 1040 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Atik Horizon",
+    manufacturer: "Atik",
+    pixelSize: 3.76,
+    resolution: { width: 3008, height: 3008 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+
+  // FLIR/Point Grey Cameras
+  {
+    name: "Blackfly S BFS-PGE-50S5C",
+    manufacturer: "FLIR",
+    pixelSize: 3.45,
+    resolution: { width: 2464, height: 2056 },
+    sensorType: "Color",
+    category: "All-round"
+  },
+  {
+    name: "Chameleon3 CM3-U3-28S4C",
+    manufacturer: "FLIR",
+    pixelSize: 3.45,
+    resolution: { width: 1936, height: 1456 },
+    sensorType: "Color",
+    category: "All-round"
+  },
+
+  // Altair Cameras
+  {
+    name: "Altair GPCAM3 290M",
+    manufacturer: "Altair",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Mono",
+    category: "Planetary"
+  },
+  {
+    name: "Altair GPCAM3 290C",
+    manufacturer: "Altair",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "Altair GPCAM3 183M",
+    manufacturer: "Altair",
+    pixelSize: 2.4,
+    resolution: { width: 5496, height: 3672 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Altair GPCAM3 183C",
+    manufacturer: "Altair",
+    pixelSize: 2.4,
+    resolution: { width: 5496, height: 3672 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+
+  // Starlight Xpress Cameras
+  {
+    name: "SXV-H9",
+    manufacturer: "Starlight Xpress",
+    pixelSize: 20.0,
+    resolution: { width: 512, height: 512 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "SXV-H16",
+    manufacturer: "Starlight Xpress",
+    pixelSize: 7.4,
+    resolution: { width: 2048, height: 2048 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Lodestar X2",
+    manufacturer: "Starlight Xpress",
+    pixelSize: 8.6,
+    resolution: { width: 752, height: 582 },
+    sensorType: "Mono",
+    category: "Guiding"
+  },
+
+  // Omegon Cameras
+  {
+    name: "veTEC 533M",
+    manufacturer: "Omegon",
+    pixelSize: 3.76,
+    resolution: { width: 3008, height: 3008 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "veTEC 533C",
+    manufacturer: "Omegon",
+    pixelSize: 3.76,
+    resolution: { width: 3008, height: 3008 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "veTEC 571M",
+    manufacturer: "Omegon",
+    pixelSize: 3.76,
+    resolution: { width: 6144, height: 4096 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+
   // Omnivision Sensors
   {
     name: "OV2710",
