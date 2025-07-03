@@ -1,4 +1,3 @@
-
 export interface CMOSSensor {
   name: string;
   manufacturer: string;
@@ -586,7 +585,7 @@ export const cmosSensors: CMOSSensor[] = [
     category: "Deep Sky"
   },
 
-  // ToupTek Cameras
+  // ToupTek Cameras - Expanded Collection
   {
     name: "G3M178M",
     manufacturer: "ToupTek",
@@ -672,6 +671,95 @@ export const cmosSensors: CMOSSensor[] = [
     manufacturer: "ToupTek",
     pixelSize: 5.86,
     resolution: { width: 1936, height: 1216 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  // Additional ToupTek models
+  {
+    name: "G3M533M",
+    manufacturer: "ToupTek",
+    pixelSize: 3.76,
+    resolution: { width: 3008, height: 3008 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3M533C",
+    manufacturer: "ToupTek",
+    pixelSize: 3.76,
+    resolution: { width: 3008, height: 3008 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3M571M",
+    manufacturer: "ToupTek",
+    pixelSize: 3.76,
+    resolution: { width: 6144, height: 4096 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3M571C",
+    manufacturer: "ToupTek",
+    pixelSize: 3.76,
+    resolution: { width: 6144, height: 4096 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3M485C",
+    manufacturer: "ToupTek",
+    pixelSize: 3.45,
+    resolution: { width: 2464, height: 2056 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3M678C",
+    manufacturer: "ToupTek",
+    pixelSize: 2.0,
+    resolution: { width: 3840, height: 2160 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "G3M464C",
+    manufacturer: "ToupTek",
+    pixelSize: 3.76,
+    resolution: { width: 2712, height: 1538 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3M2600M",
+    manufacturer: "ToupTek",
+    pixelSize: 3.76,
+    resolution: { width: 6248, height: 4176 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3M2600C",
+    manufacturer: "ToupTek",
+    pixelSize: 3.76,
+    resolution: { width: 6248, height: 4176 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3M6200M",
+    manufacturer: "ToupTek",
+    pixelSize: 3.76,
+    resolution: { width: 9576, height: 6388 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "G3M6200C",
+    manufacturer: "ToupTek",
+    pixelSize: 3.76,
+    resolution: { width: 9576, height: 6388 },
     sensorType: "Color",
     category: "Deep Sky"
   },
@@ -808,13 +896,21 @@ export const cmosSensors: CMOSSensor[] = [
     category: "Deep Sky"
   },
 
-  // Player One Astronomy Cameras
+  // Player One Astronomy Cameras - Expanded Collection
   {
     name: "Neptune-C II",
     manufacturer: "Player One",
     pixelSize: 2.9,
     resolution: { width: 1936, height: 1096 },
     sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "Neptune-M II",
+    manufacturer: "Player One",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Mono",
     category: "Planetary"
   },
   {
@@ -826,11 +922,27 @@ export const cmosSensors: CMOSSensor[] = [
     category: "Planetary"
   },
   {
+    name: "Mars-M II",
+    manufacturer: "Player One",
+    pixelSize: 3.75,
+    resolution: { width: 1304, height: 976 },
+    sensorType: "Mono",
+    category: "Planetary"
+  },
+  {
     name: "Saturn-C SQR",
     manufacturer: "Player One",
     pixelSize: 3.76,
     resolution: { width: 3008, height: 3008 },
     sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "Saturn-M SQR",
+    manufacturer: "Player One",
+    pixelSize: 3.76,
+    resolution: { width: 3008, height: 3008 },
+    sensorType: "Mono",
     category: "Deep Sky"
   },
   {
@@ -842,11 +954,27 @@ export const cmosSensors: CMOSSensor[] = [
     category: "Deep Sky"
   },
   {
+    name: "Uranus-M",
+    manufacturer: "Player One",
+    pixelSize: 4.63,
+    resolution: { width: 4144, height: 2822 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
     name: "Apollo-M MAX",
     manufacturer: "Player One",
     pixelSize: 3.76,
     resolution: { width: 9576, height: 6388 },
     sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Apollo-C MAX",
+    manufacturer: "Player One",
+    pixelSize: 3.76,
+    resolution: { width: 9576, height: 6388 },
+    sensorType: "Color",
     category: "Deep Sky"
   },
   {
@@ -874,12 +1002,108 @@ export const cmosSensors: CMOSSensor[] = [
     category: "Deep Sky"
   },
   {
+    name: "Ceres-M",
+    manufacturer: "Player One",
+    pixelSize: 2.4,
+    resolution: { width: 5496, height: 3672 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
     name: "Sedna-M",
     manufacturer: "Player One",
     pixelSize: 2.9,
     resolution: { width: 1936, height: 1096 },
     sensorType: "Mono",
     category: "Planetary"
+  },
+  {
+    name: "Sedna-C",  
+    manufacturer: "Player One",
+    pixelSize: 2.9,
+    resolution: { width: 1936, height: 1096 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "Triton-C",
+    manufacturer: "Player One",
+    pixelSize: 5.86,
+    resolution: { width: 1936, height: 1216 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "Triton-M",
+    manufacturer: "Player One",
+    pixelSize: 5.86,
+    resolution: { width: 1936, height: 1216 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Ares-M",
+    manufacturer: "Player One",
+    pixelSize: 3.45,
+    resolution: { width: 2464, height: 2056 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Ares-C",
+    manufacturer: "Player One",
+    pixelSize: 3.45,
+    resolution: { width: 2464, height: 2056 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "Xena-M",
+    manufacturer: "Player One",
+    pixelSize: 3.76,
+    resolution: { width: 6280, height: 4210 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Xena-C",
+    manufacturer: "Player One",
+    pixelSize: 3.76,
+    resolution: { width: 6280, height: 4210 },
+    sensorType: "Color",
+    category: "Deep Sky"
+  },
+  {
+    name: "Pluto-M",
+    manufacturer: "Player One",
+    pixelSize: 2.0,
+    resolution: { width: 3840, height: 2160 },
+    sensorType: "Mono",
+    category: "Planetary"
+  },
+  {
+    name: "Pluto-C",
+    manufacturer: "Player One",
+    pixelSize: 2.0,
+    resolution: { width: 3840, height: 2160 },
+    sensorType: "Color",
+    category: "Planetary"
+  },
+  {
+    name: "Jupiter-M SQR",
+    manufacturer: "Player One",
+    pixelSize: 3.76,
+    resolution: { width: 2712, height: 1538 },
+    sensorType: "Mono",
+    category: "Deep Sky"
+  },
+  {
+    name: "Jupiter-C SQR",
+    manufacturer: "Player One",
+    pixelSize: 3.76,
+    resolution: { width: 2712, height: 1538 },
+    sensorType: "Color",
+    category: "Deep Sky"
   },
 
   // Atik Cameras

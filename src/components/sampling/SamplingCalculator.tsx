@@ -19,6 +19,7 @@ interface SamplingResult {
     width: number;
     height: number;
   };
+  effectiveFocalLength: number;
 }
 
 const SamplingCalculator: React.FC = () => {
@@ -28,6 +29,7 @@ const SamplingCalculator: React.FC = () => {
   const [seeing, setSeeing] = useState<number>(2.0);
   const [category, setCategory] = useState<string>('All');
   const [manufacturer, setManufacturer] = useState<string>('All');
+  const [opticalModifier, setOpticalModifier] = useState<number>(1.0); // 1.0 = no modifier
   const [result, setResult] = useState<SamplingResult | null>(null);
 
   // Calculate sampling when parameters change
@@ -35,14 +37,17 @@ const SamplingCalculator: React.FC = () => {
     if (focalLength && selectedSensor && seeing) {
       calculateSampling();
     }
-  }, [focalLength, selectedSensor, seeing]);
+  }, [focalLength, selectedSensor, seeing, opticalModifier]);
 
   const calculateSampling = () => {
     const sensor = cmosSensors.find(s => s.name === selectedSensor);
     if (!sensor || !focalLength || !seeing) return;
 
+    // Calculate effective focal length with barlow/reducer
+    const effectiveFocalLength = focalLength * opticalModifier;
+    
     // Calculate pixel scale in arcseconds per pixel
-    const pixelScale = (sensor.pixelSize * 206.265) / focalLength;
+    const pixelScale = (sensor.pixelSize * 206.265) / effectiveFocalLength;
     
     // Calculate sampling rate (pixel scale / seeing)
     const samplingRate = pixelScale / seeing;
@@ -83,7 +88,8 @@ const SamplingCalculator: React.FC = () => {
       fieldOfView: {
         width: fovWidth,
         height: fovHeight
-      }
+      },
+      effectiveFocalLength
     });
   };
 
@@ -113,6 +119,16 @@ const SamplingCalculator: React.FC = () => {
       case 'Well-sampled': return 'bg-green-500/20 text-green-300 border-green-500/30';
       case 'Over-sampled': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
       default: return 'bg-cosmic-700/50 text-cosmic-300 border-cosmic-600/30';
+    }
+  };
+
+  const getModifierDescription = (modifier: number) => {
+    if (modifier > 1.0) {
+      return t(`${modifier}x Barlow`, `${modifier}x 巴洛镜`);
+    } else if (modifier < 1.0) {
+      return t(`${modifier}x Reducer`, `${modifier}x 减焦镜`);
+    } else {
+      return t('No Modifier', '无光学附件');
     }
   };
 
@@ -159,7 +175,7 @@ const SamplingCalculator: React.FC = () => {
                     <Telescope className="h-5 w-5 text-primary" />
                     {t('Telescope Configuration', '望远镜配置')}
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="focalLength" className="text-white font-medium">
                         {t('Focal Length (mm)', '焦距 (毫米)')}
@@ -172,6 +188,29 @@ const SamplingCalculator: React.FC = () => {
                         placeholder={t('e.g., 1000', '例如：1000')}
                         className="cosmic-input bg-cosmic-700/50 border-cosmic-600/50 text-white placeholder:text-cosmic-400 h-12"
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-white font-medium">
+                        {t('Optical Modifier', '光学附件')}
+                      </Label>
+                      <Select value={opticalModifier.toString()} onValueChange={(value) => setOpticalModifier(Number(value))}>
+                        <SelectTrigger className="cosmic-input bg-cosmic-700/50 border-cosmic-600/50 text-white h-12">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-cosmic-800 border-cosmic-600/50">
+                          <SelectItem value="0.5">0.5x {t('Reducer', '减焦镜')}</SelectItem>
+                          <SelectItem value="0.67">0.67x {t('Reducer', '减焦镜')}</SelectItem>
+                          <SelectItem value="0.8">0.8x {t('Reducer', '减焦镜')}</SelectItem>
+                          <SelectItem value="1.0">{t('No Modifier', '无光学附件')}</SelectItem>
+                          <SelectItem value="1.25">1.25x {t('Barlow', '巴洛镜')}</SelectItem>
+                          <SelectItem value="1.5">1.5x {t('Barlow', '巴洛镜')}</SelectItem>
+                          <SelectItem value="2.0">2x {t('Barlow', '巴洛镜')}</SelectItem>
+                          <SelectItem value="2.5">2.5x {t('Barlow', '巴洛镜')}</SelectItem>
+                          <SelectItem value="3.0">3x {t('Barlow', '巴洛镜')}</SelectItem>
+                          <SelectItem value="4.0">4x {t('Barlow', '巴洛镜')}</SelectItem>
+                          <SelectItem value="5.0">5x {t('Barlow', '巴洛镜')}</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="seeing" className="text-white font-medium">
@@ -298,6 +337,16 @@ const SamplingCalculator: React.FC = () => {
                 <CardContent className="p-6 space-y-6">
                   {/* Key Metrics */}
                   <div className="grid grid-cols-1 gap-4">
+                    <div className="bg-cosmic-700/30 rounded-xl p-4 border border-cosmic-600/30">
+                      <Label className="text-cosmic-300 text-sm font-medium">
+                        {t('Effective Focal Length', '有效焦距')}
+                      </Label>
+                      <p className="text-2xl font-bold text-white font-mono mt-1">
+                        {result.effectiveFocalLength.toFixed(0)}mm
+                      </p>
+                      <p className="text-xs text-cosmic-400">{getModifierDescription(opticalModifier)}</p>
+                    </div>
+
                     <div className="bg-cosmic-700/30 rounded-xl p-4 border border-cosmic-600/30">
                       <Label className="text-cosmic-300 text-sm font-medium">
                         {t('Pixel Scale', '像素比例')}
