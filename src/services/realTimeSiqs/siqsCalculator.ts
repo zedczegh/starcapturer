@@ -133,7 +133,9 @@ export async function calculateRealTimeSiqs(
     let terrainCorrectedScale = null;
     
     try {
-      terrainCorrectedScale = await getTerrainCorrectedBortleScale(latitude, longitude);
+      // Get location name for terrain correction
+      const locationName = enhancedLocation?.name || `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`;
+      terrainCorrectedScale = await getTerrainCorrectedBortleScale(latitude, longitude, locationName);
       if (terrainCorrectedScale !== null) {
         finalBortleScale = terrainCorrectedScale;
       }
