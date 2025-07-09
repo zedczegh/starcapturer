@@ -58,7 +58,7 @@ function validateNighttimeCloudData(cloudCover: number, nighttimeData?: { averag
 }
 
 /**
- * Optimized real-time SIQS calculation with single-hour sampling option
+ * Optimized real-time SIQS calculation with single-hour sampling option and enhanced caching
  */
 export async function calculateRealTimeSiqs(
   latitude: number, 
@@ -68,6 +68,7 @@ export async function calculateRealTimeSiqs(
     useSingleHourSampling?: boolean;
     targetHour?: number;
     cacheDurationMins?: number;
+    priority?: 'high' | 'medium' | 'low';
   } = {}
 ): Promise<SiqsResult> {
   if (!isFinite(latitude) || !isFinite(longitude)) {
@@ -75,11 +76,12 @@ export async function calculateRealTimeSiqs(
     return { siqs: 0, isViable: false };
   }
   
-  // Default options
+  // Default options with performance optimizations
   const {
     useSingleHourSampling = true,
     targetHour = 1, // Default to 1 AM for best astronomical viewing
-    cacheDurationMins = 15
+    cacheDurationMins = 15,
+    priority = 'medium'
   } = options;
   
   // Generate a cache key
@@ -111,23 +113,26 @@ export async function calculateRealTimeSiqs(
   }
   
   try {
-    // Use Promise.all for parallel API calls
-    const [enhancedLocation, climateRegion, forecastData] = await Promise.all([
+    // Optimized parallel API calls with priority-based execution
+    const [enhancedLocation, climateRegion] = await Promise.all([
       findClosestEnhancedLocation(latitude, longitude),
-      findClimateRegion(latitude, longitude),
-      fetchForecastData({ latitude, longitude, days: 2 }).catch(() => null)
+      findClimateRegion(latitude, longitude)
     ]);
     
-    // Only fetch these if needed and after initial forecast check
-    const [weatherData, clearSkyData, pollutionData] = await Promise.all([
-      fetchWeatherData({ latitude, longitude }),
+    // Fetch critical data first
+    const weatherData = await fetchWeatherData({ latitude, longitude });
+    if (!weatherData) {
+      return { siqs: 0, isViable: false };
+    }
+    
+    // Fetch optional data in parallel (these can fail without breaking the calculation)
+    const [forecastData, clearSkyData, pollutionData] = await Promise.all([
+      fetchForecastData({ latitude, longitude, days: 2 }).catch(() => null),
       fetchClearSkyRate(latitude, longitude).catch(() => null),
       fetchLightPollutionData(latitude, longitude).catch(() => null)
     ]);
     
-    if (!weatherData) {
-      return { siqs: 0, isViable: false };
-    }
+    // Weather data is already validated above
     
     let finalBortleScale = bortleScale;
     let terrainCorrectedScale = null;

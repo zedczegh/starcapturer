@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useLocationFind } from './useLocationFind';
 import { useCalculatedLocationsFind } from './useCalculatedLocationsFind';
@@ -7,6 +7,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { currentSiqsStore } from '@/components/index/CalculatorSection'; 
 import { isWaterLocation } from '@/utils/validation';
 import { toast } from '@/hooks/use-toast';
+import { optimizedLocationDataService } from '@/services/optimized/LocationDataService';
+import { debounce } from '@/utils/performanceOptimizer';
 
 interface Location {
   latitude: number;
@@ -41,18 +43,14 @@ export const useRecommendedLocations = (
   const { findLocationsWithinRadius, sortLocationsByQuality } = useLocationFind();
   const { findCalculatedLocations } = useCalculatedLocationsFind();
   
-  const loadLocations = useCallback(async () => {
+  // Optimized load locations with debouncing and smart caching
+  const loadLocationsInternal = useCallback(async () => {
     if (!userLocation) {
       return;
     }
     
     try {
       setLoading(true);
-      
-      const isRadiusIncrease = searchRadius > prevRadiusRef.current && 
-                               prevLocationRef.current && 
-                               userLocation.latitude === prevLocationRef.current.latitude &&
-                               userLocation.longitude === prevLocationRef.current.longitude;
       
       const locationChanged = !prevLocationRef.current ||
         Math.abs(userLocation.latitude - prevLocationRef.current.latitude) > 0.001 ||
@@ -61,25 +59,31 @@ export const useRecommendedLocations = (
       prevRadiusRef.current = searchRadius;
       prevLocationRef.current = userLocation;
       
-      console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}, preserving: ${isRadiusIncrease && !locationChanged}`);
+      console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`);
       
-      const certifiedResults = await findLocationsWithinRadius(
-        userLocation.latitude,
-        userLocation.longitude,
-        DEFAULT_CERTIFIED_RADIUS
-      );
-      
-      const calculatedResults = await findCalculatedLocations(
+      // Start prefetching in background
+      optimizedLocationDataService.prefetchNearbyData(
         userLocation.latitude,
         userLocation.longitude,
         searchRadius
       );
       
-      const filteredCalculatedResults = calculatedResults.filter(loc => 
-        !isWaterLocation(loc.latitude, loc.longitude)
-      );
+      // Load certified and calculated locations in parallel using optimized service
+      const [certifiedResults, calculatedResults] = await Promise.all([
+        optimizedLocationDataService.getCertifiedLocations(
+          userLocation.latitude,
+          userLocation.longitude,
+          DEFAULT_CERTIFIED_RADIUS
+        ),
+        optimizedLocationDataService.getCalculatedLocations(
+          userLocation.latitude,
+          userLocation.longitude,
+          searchRadius,
+          20
+        )
+      ]);
       
-      const combinedResults = [...certifiedResults, ...filteredCalculatedResults];
+      const combinedResults = [...certifiedResults, ...calculatedResults];
       
       if (combinedResults.length === 0) {
         console.log("No locations found within the search radius");
@@ -115,7 +119,13 @@ export const useRecommendedLocations = (
     } finally {
       setLoading(false);
     }
-  }, [searchRadius, userLocation, t, findLocationsWithinRadius, findCalculatedLocations, sortLocationsByQuality]);
+  }, [searchRadius, userLocation, t, sortLocationsByQuality]);
+
+  // Debounced version to prevent excessive API calls
+  const loadLocations = useMemo(
+    () => debounce(loadLocationsInternal, 300),
+    [loadLocationsInternal]
+  );
   
   const loadMore = useCallback(async () => {
     if (!userLocation || !hasMore) {

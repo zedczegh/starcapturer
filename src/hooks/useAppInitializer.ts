@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { preloadCriticalResources, optimizeImageLoading } from '@/utils/performanceOptimizer';
 import { initializeCache } from '@/utils/optimizedCache';
+import { initLocationCache } from '@/services/locationCacheService';
 
 /**
  * Hook to initialize app performance optimizations
@@ -15,8 +16,9 @@ const useAppInitializer = () => {
       // Preload critical resources
       preloadCriticalResources();
       
-      // Initialize cache system
+      // Initialize cache systems
       initializeCache();
+      initLocationCache();
       
       // Set up image optimization
       setTimeout(() => {

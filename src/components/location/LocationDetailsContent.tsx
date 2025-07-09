@@ -30,7 +30,7 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
   const retryCount = useRef(0);
   const [isRetrying, setIsRetrying] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
-  const loadStateTimerRef = useRef<number | null>(null);
+  const loadStateTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     containerRef,
@@ -53,26 +53,36 @@ const LocationDetailsContent = memo<LocationDetailsContentProps>(({
     resetUpdateState
   } = useLocationContentManager(locationData, setLocationData, onLocationUpdate);
 
-  // Improved loading state management with faster transitions
+  // Enhanced loading state management with performance optimizations
   useEffect(() => {
     if (!loading && contentLoaded && memoizedLocationData) {
       // Mark as mounted first to prevent unmounting during state changes
       setContentMounted(true);
       
-      // Reduced delay for faster visible content
+      // Clear existing timer
       if (loadStateTimerRef.current) {
         clearTimeout(loadStateTimerRef.current);
       }
       
-      // Use requestAnimationFrame for smoother transitions
-      loadStateTimerRef.current = window.setTimeout(() => {
-        if (contentRef.current) {
-          // Use requestAnimationFrame for better performance
-          requestAnimationFrame(() => {
+      // Use optimized transition with minimal delay
+      if ('requestIdleCallback' in window) {
+        // Use idle callback for better performance
+        const idleCallback = () => {
+          if (contentRef.current) {
+            requestAnimationFrame(() => {
+              setContentVisible(true);
+            });
+          }
+        };
+        (window as any).requestIdleCallback(idleCallback, { timeout: 100 });
+      } else {
+        // Fallback with immediate execution for faster perceived performance
+        loadStateTimerRef.current = setTimeout(() => {
+          if (contentRef.current) {
             setContentVisible(true);
-          });
-        }
-      }, 50); // Reduced from 150ms to 50ms for faster display
+          }
+        }, 16); // Single frame delay for smoother animation
+      }
       
       return () => {
         if (loadStateTimerRef.current) {
