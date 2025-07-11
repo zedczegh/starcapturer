@@ -7,6 +7,7 @@ import LocationCard from "@/components/LocationCard";
 import RealTimeSiqsProvider from "@/components/photoPoints/cards/RealTimeSiqsProvider";
 import CommunityLocationsSkeleton from "@/components/community/CommunityLocationsSkeleton";
 import { motion } from "framer-motion";
+import { useBulkBookingAvailability } from "@/hooks/community/useBookingAvailability";
 
 interface CommunitySpotsListProps {
   isLoading: boolean;
@@ -30,6 +31,10 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
   onSiqsCalculated
 }) => {
   const { t } = useLanguage();
+  
+  // Get booking availability for all spots
+  const spotIds = sortedAstroSpots?.map(spot => spot.id) || [];
+  const { availabilities } = useBulkBookingAvailability(spotIds);
 
   if (isLoading) {
     return <CommunityLocationsSkeleton />;
@@ -116,6 +121,7 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
                     isCertified={false}
                     siqsLoading={loadingSiqs[spot.id] && !stabilizedSiqs[spot.id]}
                     userId={spot.user_id}
+                    availableBookings={availabilities[spot.id]?.availableSlots || 0}
                   />
                 </div>
                 <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />

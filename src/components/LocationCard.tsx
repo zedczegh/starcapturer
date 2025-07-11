@@ -6,6 +6,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import SiqsScoreBadge from "@/components/photoPoints/cards/SiqsScoreBadge";
 import { motion } from "framer-motion";
 import UserAvatarDisplay from "@/components/photoPoints/cards/UserAvatarDisplay";
+import BookingAvailableBanner from "@/components/community/BookingAvailableBanner";
 
 interface LocationCardProps {
   id: string;
@@ -17,6 +18,7 @@ interface LocationCardProps {
   isCertified?: boolean;
   siqsLoading?: boolean;
   userId?: string;
+  availableBookings?: number;
 }
 
 const LocationCard = ({
@@ -28,7 +30,8 @@ const LocationCard = ({
   timestamp,
   isCertified = false,
   siqsLoading = false,
-  userId
+  userId,
+  availableBookings = 0
 }: LocationCardProps) => {
   const { language, t } = useLanguage();
 
@@ -47,7 +50,8 @@ const LocationCard = ({
   };
 
   return (
-    <div className="bg-cosmic-900/70 backdrop-blur-md shadow-md rounded-xl p-4 border border-cosmic-800/50 transition-all hover:border-cosmic-700/50 hover:shadow-lg overflow-hidden">
+    <div className="bg-cosmic-900/70 backdrop-blur-md shadow-md rounded-xl p-4 border border-cosmic-800/50 transition-all hover:border-cosmic-700/50 hover:shadow-lg overflow-hidden relative">
+      <BookingAvailableBanner availableSlots={availableBookings} />
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-white">{name}</h3>
         <motion.div 
