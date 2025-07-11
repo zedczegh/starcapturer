@@ -51,7 +51,6 @@ const LocationCard = ({
 
   return (
     <div className="bg-cosmic-900/70 backdrop-blur-md shadow-md rounded-xl p-4 border border-cosmic-800/50 transition-all hover:border-cosmic-700/50 hover:shadow-lg overflow-hidden relative">
-      <BookingAvailableBanner availableSlots={availableBookings} />
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-white">{name}</h3>
         <motion.div 
@@ -65,6 +64,13 @@ const LocationCard = ({
           />
         </motion.div>
       </div>
+      
+      {/* Show booking banner under SIQS score */}
+      {availableBookings > 0 && (
+        <div className="mt-2 flex justify-end">
+          <BookingAvailableBanner availableSlots={availableBookings} className="" />
+        </div>
+      )}
       
       <div className="mt-2 text-sm text-cosmic-300 flex items-center">
         <MapPin className="h-3.5 w-3.5 mr-1.5 text-cosmic-400" />

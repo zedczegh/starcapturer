@@ -1,6 +1,7 @@
+
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, CheckCircle } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 
@@ -21,10 +22,10 @@ const BookingAvailableBanner: React.FC<BookingAvailableBannerProps> = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
-      className={`absolute top-2 left-2 z-10 ${className}`}
+      className={className}
     >
       <Badge 
         variant="secondary" 
