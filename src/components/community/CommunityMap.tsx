@@ -27,7 +27,14 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
   zoom = 3,
   onLocationUpdate
 }) => {
-  const userPosition = useUserGeolocation();
+  const { position: userPosition, updatePosition } = useUserGeolocation();
+
+  const handleLocationUpdate = (lat: number, lng: number) => {
+    updatePosition(lat, lng);
+    if (onLocationUpdate) {
+      onLocationUpdate(lat, lng);
+    }
+  };
 
   return (
     <MapContainer
@@ -43,7 +50,11 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
         maxZoom={19}
       />
       {userPosition && (
-        <CommunityUserLocationMarker position={userPosition} onLocationUpdate={onLocationUpdate} />
+        <CommunityUserLocationMarker 
+          position={userPosition} 
+          onLocationUpdate={handleLocationUpdate} 
+          draggable={!!onLocationUpdate}
+        />
       )}
       {locations.map((spot) => (
         <CommunityMapMarker

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
-// A tiny hook to safely grab user location, for community maps
+// Enhanced hook to handle user location with update capability
 export function useUserGeolocation() {
   const [position, setPosition] = useState<[number, number] | null>(null);
 
@@ -13,5 +13,9 @@ export function useUserGeolocation() {
     // Do not keep running: only initial grab
   }, []);
 
-  return position;
+  const updatePosition = useCallback((lat: number, lng: number) => {
+    setPosition([lat, lng]);
+  }, []);
+
+  return { position, updatePosition };
 }

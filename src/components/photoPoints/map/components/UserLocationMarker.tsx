@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createCustomMarker } from '@/components/location/map/MapMarkerUtils';
@@ -16,12 +16,14 @@ interface UserLocationMarkerProps {
   position: [number, number];
   currentSiqs?: number | null;
   onLocationUpdate?: (lat: number, lng: number) => void;
+  draggable?: boolean;
 }
 
 const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ 
   position,
   currentSiqs,
-  onLocationUpdate 
+  onLocationUpdate,
+  draggable = false
 }) => {
   const { t, language } = useLanguage();
   const { user } = useAuth();
@@ -34,6 +36,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const markerRef = useRef<any>(null);
   
   const userMarkerIcon = createCustomMarker('#e11d48', 'circle', isMobile ? 1.2 : 1.0);
 
@@ -111,6 +114,30 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
     setIsPopupOpen(false);
   }, []);
 
+  const handleDragEnd = useCallback((event: any) => {
+    const marker = event.target;
+    const newPosition = marker.getLatLng();
+    if (onLocationUpdate) {
+      onLocationUpdate(newPosition.lat, newPosition.lng);
+    }
+  }, [onLocationUpdate]);
+
+  // Setup dragging functionality
+  useEffect(() => {
+    const marker = markerRef.current;
+    if (marker && draggable) {
+      const leafletElement = marker.getLeafletElement ? marker.getLeafletElement() : marker;
+      if (leafletElement && leafletElement.dragging) {
+        leafletElement.dragging.enable();
+        leafletElement.on('dragend', handleDragEnd);
+        
+        return () => {
+          leafletElement.off('dragend', handleDragEnd);
+        };
+      }
+    }
+  }, [draggable, handleDragEnd]);
+
   return (
     <>
       <RealTimeSiqsProvider
@@ -122,6 +149,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
       />
       
       <Marker 
+        ref={markerRef}
         position={position} 
         icon={userMarkerIcon}
         onClick={handleMarkerClick}
