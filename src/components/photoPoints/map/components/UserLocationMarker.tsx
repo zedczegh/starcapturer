@@ -122,21 +122,39 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
     }
   }, [onLocationUpdate]);
 
-  // Setup dragging functionality
+  // Setup dragging functionality with proper leaflet access
   useEffect(() => {
-    const marker = markerRef.current;
-    if (marker && draggable) {
-      const leafletElement = marker.getLeafletElement ? marker.getLeafletElement() : marker;
-      if (leafletElement && leafletElement.dragging) {
-        leafletElement.dragging.enable();
-        leafletElement.on('dragend', handleDragEnd);
-        
-        return () => {
-          leafletElement.off('dragend', handleDragEnd);
-        };
+    if (!draggable) return;
+    
+    const timeout = setTimeout(() => {
+      const marker = markerRef.current;
+      if (marker) {
+        try {
+          // Access the leaflet marker instance properly
+          const leafletElement = marker.getLeafletElement && marker.getLeafletElement() || 
+                                  marker._leaflet_element || 
+                                  marker.leafletElement;
+          
+          if (leafletElement) {
+            leafletElement.dragging.enable();
+            leafletElement.on('dragend', handleDragEnd);
+            
+            // Clean up function
+            return () => {
+              leafletElement.off('dragend', handleDragEnd);
+              if (leafletElement.dragging) {
+                leafletElement.dragging.disable();
+              }
+            };
+          }
+        } catch (error) {
+          console.log('Could not enable marker dragging:', error);
+        }
       }
-    }
-  }, [draggable, handleDragEnd]);
+    }, 200); // Give more time for the marker to mount
+    
+    return () => clearTimeout(timeout);
+  }, [draggable, handleDragEnd, position]); // Include position to re-setup when marker moves
 
   return (
     <>
