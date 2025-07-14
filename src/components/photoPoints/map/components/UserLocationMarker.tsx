@@ -32,8 +32,8 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [siqsLoading, setSiqsLoading] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
-  const [locationName, setLocationName] = useState<string>('');
-  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+  const [locationName, setLocationName] = useState<string>(t("Your Location", "您的位置"));
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const markerRef = useRef<any>(null);
@@ -50,34 +50,35 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
     setTimeout(() => setForceUpdate(false), 100);
   }, []);
 
-  // Fetch location name when position changes
+  // Fetch location name when position changes (async, don't block popup)
   useEffect(() => {
     const fetchLocationName = async () => {
-      setIsLoadingLocation(true);
       try {
         const details = await getEnhancedLocationDetails(position[0], position[1], language === 'zh' ? 'zh' : 'en');
-        setLocationName(details.formattedName || '');
+        let newLocationName = details.formattedName || t("Your Location", "您的位置");
         
         if (details.isWater) {
           console.log("Location was detected as water but overriding for user marker");
           if (details.townName || details.cityName) {
             const nearestPlace = details.townName || details.cityName;
-            setLocationName(language === 'en' 
+            newLocationName = language === 'en' 
               ? `Near ${nearestPlace}`
-              : `靠近 ${nearestPlace}`);
+              : `靠近 ${nearestPlace}`;
           } else {
-            setLocationName(t("Your Location", "您的位置"));
+            newLocationName = t("Your Location", "您的位置");
           }
         }
+        
+        setLocationName(newLocationName);
       } catch (error) {
         console.error('Error fetching location name:', error);
         setLocationName(t("Your Location", "您的位置"));
-      } finally {
-        setIsLoadingLocation(false);
       }
     };
 
-    fetchLocationName();
+    // Add small delay to allow popup to open immediately, then update name
+    const timer = setTimeout(fetchLocationName, 100);
+    return () => clearTimeout(timer);
   }, [position, language, t]);
 
   // Force refresh SIQS data when position changes
@@ -179,9 +180,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
         >
           <div className="p-2 leaflet-popup-custom marker-popup-gradient min-w-[180px]">
             <strong>
-              {isLoadingLocation
-                ? <span className="animate-pulse text-xs text-muted-foreground">{t("Loading location...", "正在加载位置...")}</span>
-                : (locationName || t("Your Location", "您的位置"))}
+              {locationName}
             </strong>
             <div className="text-xs mt-1">
               {position[0].toFixed(5)}, {position[1].toFixed(5)}

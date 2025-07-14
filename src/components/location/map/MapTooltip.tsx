@@ -8,6 +8,10 @@ import { getSiqsScore, normalizeToSiqsScale } from '@/utils/siqsHelpers';
 import SiqsScoreBadge from '@/components/photoPoints/cards/SiqsScoreBadge';
 import RealTimeSiqsProvider from '@/components/photoPoints/cards/RealTimeSiqsProvider';
 import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
+import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCallback } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MapTooltipProps {
   name: string;
@@ -34,10 +38,13 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
   isDarkSkyReserve = false,
   certification = ''
 }) => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
+  const { user } = useAuth();
+  const isMobile = useIsMobile();
   const typedLanguage: Language = language === 'zh' ? 'zh' : 'en';
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [siqsLoading, setSiqsLoading] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   // Get enhanced location details using our custom hook
   const { detailedName, isWaterLocation } = useEnhancedLocationDetails({ 
@@ -61,6 +68,14 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
     setRealTimeSiqs(siqs !== null ? normalizeToSiqsScale(siqs) : null);
     setSiqsLoading(loading);
   };
+
+  const handleOpenDialog = useCallback(() => {
+    setIsDialogOpen(true);
+  }, []);
+
+  const handleCloseDialog = useCallback(() => {
+    setIsDialogOpen(false);
+  }, []);
 
   // Override water location name if needed
   const displayedName = isWaterLocation && !isCertified ? 
@@ -104,6 +119,29 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
             forceCertified={false} // Don't force certified default scores
           />
         </div>
+
+        {/* Create Astro Spot button for authenticated users */}
+        {user && latitude !== undefined && longitude !== undefined && (
+          <div className="mt-2">
+            <button 
+              onClick={handleOpenDialog}
+              className={`
+                text-xs flex items-center justify-center w-full 
+                bg-gradient-to-br from-purple-500/80 to-indigo-600/80 
+                text-white 
+                ${isMobile ? 'py-3' : 'py-1.5'} 
+                px-2 rounded-lg 
+                transition-all duration-300 
+                hover:scale-[1.02] hover:shadow-lg 
+                active:scale-[0.98]
+                shadow-md shadow-purple-500/30
+                border border-purple-500/20
+              `}
+            >
+              {t("Create My Astro Spot", "创建我的观星点")}
+            </button>
+          </div>
+        )}
         
         {children}
         
@@ -120,6 +158,16 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
           />
         )}
       </div>
+      
+      {/* Create Astro Spot Dialog */}
+      {user && isDialogOpen && latitude !== undefined && longitude !== undefined && (
+        <CreateAstroSpotDialog
+          latitude={latitude}
+          longitude={longitude}
+          defaultName={name || t("My Astro Spot", "我的观星点")}
+          onClose={handleCloseDialog}
+        />
+      )}
     </Popup>
   );
 };
