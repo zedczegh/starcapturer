@@ -7,7 +7,7 @@ import { Star, CloudSun, Target, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { motion } from 'framer-motion';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
-import { normalizeToSiqsScale } from '@/utils/siqsHelpers';
+import { normalizeToSiqsScale, getSiqsScore } from '@/utils/siqsHelpers';
 import { getMinimumClearNights } from '@/utils/weather/clearSkyUtils';
 import { fetchClearSkyRate } from '@/lib/api/clearSkyRate';
 
@@ -15,7 +15,7 @@ interface SpotAbstractDisplayProps {
   latitude: number;
   longitude: number;
   bortleScale?: number;
-  siqs?: number;
+  siqs?: number | { score: number; isViable: boolean } | null;
 }
 
 const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
@@ -31,14 +31,19 @@ const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
 
   console.log('SpotAbstractDisplay rendering with:', { latitude, longitude, bortleScale, siqs });
 
-  // Calculate SIQS score
+  // Calculate SIQS score using the same logic as community cards
   useEffect(() => {
     const fetchSiqs = async () => {
-      if (siqs) {
-        setRealTimeSiqs(normalizeToSiqsScale(siqs));
-        return;
+      // First try to use the provided SIQS value (from database)
+      if (siqs !== undefined && siqs !== null) {
+        const numericScore = getSiqsScore(siqs);
+        if (numericScore > 0) {
+          setRealTimeSiqs(normalizeToSiqsScale(numericScore));
+          return;
+        }
       }
 
+      // If no existing SIQS or invalid, calculate real-time SIQS
       setLoading(true);
       try {
         const result = await calculateRealTimeSiqs(latitude, longitude, bortleScale);
@@ -80,6 +85,12 @@ const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
   }, [latitude, longitude]);
 
   const displaySiqs = realTimeSiqs || 0.1;
+  
+  console.log('SpotAbstractDisplay SIQS calculation:', { 
+    providedSiqs: siqs, 
+    calculatedSiqs: realTimeSiqs, 
+    displaySiqs 
+  });
 
   // SIQS score interpretation and colors
   const siqsData = useMemo(() => {
