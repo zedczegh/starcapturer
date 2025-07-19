@@ -45,6 +45,7 @@ export function AdminVerificationMaterialsViewer({ spotId }: AdminVerificationMa
   const [applications, setApplications] = useState<VerificationMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+  const [hasApplications, setHasApplications] = useState(false);
 
   useEffect(() => {
     const fetchApplications = async () => {
@@ -77,9 +78,11 @@ export function AdminVerificationMaterialsViewer({ spotId }: AdminVerificationMa
         }));
         
         setApplications(transformedData);
+        setHasApplications(transformedData.length > 0);
       } catch (error) {
         console.error('Error fetching verification applications:', error);
-        toast.error('Failed to load verification materials');
+        // Don't show toast error for empty results
+        setHasApplications(false);
       } finally {
         setLoading(false);
       }
@@ -170,20 +173,9 @@ export function AdminVerificationMaterialsViewer({ spotId }: AdminVerificationMa
     );
   }
 
-  if (applications.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            Verification Materials
-          </CardTitle>
-          <CardDescription>
-            No verification applications found for this astro spot.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
+  // Only show if there are applications
+  if (!hasApplications || applications.length === 0) {
+    return null;
   }
 
   return (

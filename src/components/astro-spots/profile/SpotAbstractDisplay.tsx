@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
 import { normalizeToSiqsScale } from '@/utils/siqsHelpers';
 import { getMinimumClearNights } from '@/utils/weather/clearSkyUtils';
+import { fetchClearSkyRate } from '@/lib/api/clearSkyRate';
 
 interface SpotAbstractDisplayProps {
   latitude: number;
@@ -25,7 +26,7 @@ const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
 }) => {
   const { t } = useLanguage();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
-  const [clearSkyRate, setClearSkyRate] = useState<number>(60); // Default value
+  const [clearSkyData, setClearSkyData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   console.log('SpotAbstractDisplay rendering with:', { latitude, longitude, bortleScale, siqs });
@@ -57,21 +58,25 @@ const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
     fetchSiqs();
   }, [latitude, longitude, bortleScale, siqs]);
 
-  // Fetch clear sky rate (mock API call - replace with actual implementation)
+  // Fetch clear sky data using the same API as location details page
   useEffect(() => {
-    const fetchClearSkyRate = async () => {
+    const fetchClearSkyData = async () => {
       try {
-        // Mock implementation - replace with actual API call
-        // This would typically fetch from weather/climate API
-        const mockRate = Math.max(30, Math.min(90, 60 + Math.random() * 20));
-        setClearSkyRate(Math.round(mockRate));
+        const data = await fetchClearSkyRate(latitude, longitude);
+        setClearSkyData(data);
+        console.log('Fetched clear sky data:', data);
       } catch (error) {
-        console.error('Error fetching clear sky rate:', error);
-        setClearSkyRate(60); // Default fallback
+        console.error('Error fetching clear sky data:', error);
+        // Fallback data
+        setClearSkyData({
+          annualRate: 60,
+          monthlyRates: {},
+          clearestMonths: []
+        });
       }
     };
 
-    fetchClearSkyRate();
+    fetchClearSkyData();
   }, [latitude, longitude]);
 
   const displaySiqs = realTimeSiqs || 0.1;
@@ -105,9 +110,10 @@ const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
     return { interpretation, colorClass, bgClass };
   }, [displaySiqs, t]);
 
-  // Clear sky rate data
-  const clearSkyData = useMemo(() => {
-    const clearNights = getMinimumClearNights(clearSkyRate, latitude, longitude);
+  // Clear sky rate data using real API data
+  const clearSkyRateData = useMemo(() => {
+    const annualRate = clearSkyData?.annualRate || 60;
+    const clearNights = getMinimumClearNights(annualRate, latitude, longitude);
     
     let ratingText, ratingColor;
     if (clearNights >= 200) {
@@ -127,8 +133,15 @@ const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
       ratingColor = "text-red-500";
     }
 
-    return { clearNights, ratingText, ratingColor };
-  }, [clearSkyRate, latitude, longitude, t]);
+    return { 
+      annualRate, 
+      clearNights, 
+      ratingText, 
+      ratingColor,
+      isDarkSkyReserve: clearSkyData?.isDarkSkyReserve || false,
+      certification: clearSkyData?.certification || null
+    };
+  }, [clearSkyData, latitude, longitude, t]);
 
   return (
     <motion.div
@@ -195,7 +208,7 @@ const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CloudSun className={`h-4 w-4 ${clearSkyData.ratingColor}`} />
+                <CloudSun className={`h-4 w-4 ${clearSkyRateData.ratingColor}`} />
                 <span className="text-sm font-medium text-gray-300">
                   {t("Annual Clear Sky Rate", "年度晴空率")}
                 </span>
@@ -215,17 +228,17 @@ const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
               </div>
               
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className={`${clearSkyData.ratingColor} font-semibold`}>
-                  {clearSkyRate}%
+                <Badge variant="outline" className={`${clearSkyRateData.ratingColor} font-semibold`}>
+                  {clearSkyRateData.annualRate}%
                 </Badge>
-                <span className={`text-sm font-medium ${clearSkyData.ratingColor}`}>
-                  {clearSkyData.ratingText}
+                <span className={`text-sm font-medium ${clearSkyRateData.ratingColor}`}>
+                  {clearSkyRateData.ratingText}
                 </span>
               </div>
             </div>
             
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>~{clearSkyData.clearNights} {t("clear nights/year", "晴朗夜晚/年")}</span>
+              <span>~{clearSkyRateData.clearNights} {t("clear nights/year", "晴朗夜晚/年")}</span>
               <span>{t("Based on climate data", "基于气候数据")}</span>
             </div>
           </div>
