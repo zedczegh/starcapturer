@@ -5,6 +5,7 @@ import TimeSlotManager from '@/components/bookings/TimeSlotManager';
 import HostBookingsManager from '@/components/bookings/HostBookingsManager';
 import SpotImageGallery from '@/components/astro-spots/profile/SpotImageGallery';
 import SpotComments from '@/components/astro-spots/profile/SpotComments';
+import SpotAbstractDisplay from '@/components/astro-spots/profile/SpotAbstractDisplay';
 import { Comment } from '../types/comments';
 
 interface ProfileSectionsManagerProps {
@@ -40,6 +41,14 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
   
   return (
     <div className="p-6 space-y-6">
+      {/* Abstract Display with SIQS and Clear Sky Rate */}
+      <SpotAbstractDisplay
+        latitude={spot.latitude}
+        longitude={spot.longitude}
+        bortleScale={spot.bortlescale}
+        siqs={spot.siqs}
+      />
+      
       <SpotDetails
         description={spot.description}
         types={spot.astro_spot_types}
