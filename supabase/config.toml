@@ -67,3 +67,9 @@ multipurpose_postgres_port = 65432
 [functions]
 [functions.call-rpc]
 verify_jwt = true
+
+[functions.create-payment]
+verify_jwt = true
+
+[functions.verify-payment]
+verify_jwt = true

@@ -16,6 +16,7 @@ import DateRangePicker from './DateRangePicker';
 import GuestSelector from './GuestSelector';
 import PriceCalculator from './PriceCalculator';
 import { formatCurrency } from '@/utils/currencyUtils';
+import { PaymentButton } from '@/components/payments/PaymentButton';
 
 interface TimeSlotItemProps {
   timeSlot: any;
@@ -39,6 +40,9 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [guestCounts, setGuestCounts] = useState<Record<string, number>>({ adults: 1 });
+
+  // Calculate total guests from guestCounts
+  const selectedGuests = Object.values(guestCounts).reduce((total, count) => total + count, 0);
 
   // Safely parse and validate dates
   const getValidDate = (dateValue: any): Date | null => {
@@ -154,13 +158,8 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
       return;
     }
     
-    if (timeSlot.is_free) {
-      // For free bookings, book directly
-      bookTimeSlotMutation.mutate();
-    } else {
-      // For paid bookings, this would integrate with payment system
-      toast.info(t("Payment integration coming soon", "支付集成即将推出"));
-    }
+    // For free bookings, book directly
+    bookTimeSlotMutation.mutate();
   };
 
   const calculateNumberOfNights = () => {
@@ -379,17 +378,27 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
             <AlertDialogCancel className="bg-cosmic-700 border-cosmic-600 text-gray-300 hover:bg-cosmic-600">
               {t('Cancel', '取消')}
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleBooking}
-              disabled={!startDate || bookTimeSlotMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {bookTimeSlotMutation.isPending 
-                ? t('Booking...', '预订中...') 
-                : timeSlot.is_free 
-                  ? t('Book Free', '免费预订')
-                  : t('Book & Pay', '预订并支付')}
-            </AlertDialogAction>
+            {timeSlot.is_free ? (
+              <AlertDialogAction
+                onClick={handleBooking}
+                disabled={!startDate || bookTimeSlotMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {bookTimeSlotMutation.isPending 
+                  ? t('Booking...', '预订中...') 
+                  : t('Book Free', '免费预订')}
+              </AlertDialogAction>
+            ) : (
+              <PaymentButton
+                timeslotId={timeSlot.id}
+                amount={Number(timeSlot.price) * calculateNumberOfNights() * selectedGuests}
+                currency={timeSlot.currency === '$' ? 'usd' : 'usd'}
+                disabled={!startDate}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {t('Book & Pay', '预订并支付')} {formatCurrency(Number(timeSlot.price) * calculateNumberOfNights() * selectedGuests, timeSlot.currency)}
+              </PaymentButton>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

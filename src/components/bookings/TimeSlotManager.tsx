@@ -11,6 +11,7 @@ import { format, parseISO, isAfter, startOfDay, endOfDay, isWithinInterval } fro
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { groupTimeSlotsByConsecutiveDates, formatDateRanges } from '@/utils/dateRangeUtils';
+import { PaymentButton } from '@/components/payments/PaymentButton';
 
 interface TimeSlotManagerProps {
   spotId: string;

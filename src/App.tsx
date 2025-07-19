@@ -28,6 +28,7 @@ import Messages from './pages/Messages';
 import MyReservations from './pages/MyReservations';
 import ServiceTest from './pages/ServiceTest';
 import VerificationApplicationsManager from './components/admin/VerificationApplicationsManager';
+import PaymentSuccess from './pages/PaymentSuccess';
 import SonificationProcessor from './pages/SonificationProcessor';
 import SamplingCalculator from './pages/SamplingCalculator';
 import './App.css';
@@ -98,6 +99,7 @@ function AppContent() {
       <Route path="/sampling-calculator" element={<SamplingCalculator />} />
       <Route path="/service-test" element={<ServiceTest />} />
       <Route path="/admin/verification" element={<VerificationApplicationsManager />} />
+      <Route path="/payment-success" element={<PaymentSuccess />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
