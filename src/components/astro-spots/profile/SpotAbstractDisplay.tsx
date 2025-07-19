@@ -28,6 +28,8 @@ const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
   const [clearSkyRate, setClearSkyRate] = useState<number>(60); // Default value
   const [loading, setLoading] = useState(false);
 
+  console.log('SpotAbstractDisplay rendering with:', { latitude, longitude, bortleScale, siqs });
+
   // Calculate SIQS score
   useEffect(() => {
     const fetchSiqs = async () => {

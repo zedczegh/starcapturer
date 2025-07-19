@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,8 +22,43 @@ export function AdminVerificationControls({
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const [updating, setUpdating] = useState(false);
+  const [hasApplications, setHasApplications] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  if (!isAdmin) return null;
+  // Check if there are any verification applications for this spot
+  useEffect(() => {
+    const checkApplications = async () => {
+      if (!isAdmin) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('astro_spot_verification_applications')
+          .select('id')
+          .eq('spot_id', spotId)
+          .limit(1);
+
+        if (error) throw error;
+        
+        setHasApplications(data && data.length > 0);
+      } catch (error) {
+        console.error('Error checking verification applications:', error);
+        setHasApplications(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkApplications();
+  }, [spotId, isAdmin]);
+
+  // Only show controls if user is admin AND there are applications OR the spot already has a status other than unverified
+  if (!isAdmin || loading) return null;
+  
+  // Show controls if there are applications OR if the spot has been processed before (not unverified)
+  if (!hasApplications && currentStatus === 'unverified') return null;
 
   const handleVerify = async () => {
     if (!user) return;
