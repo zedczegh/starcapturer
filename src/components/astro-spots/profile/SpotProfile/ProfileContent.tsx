@@ -7,6 +7,8 @@ import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialo
 import ProfileHeaderSection from './ProfileHeaderSection';
 import ProfileSectionsManager from './ProfileSectionsManager';
 import ProfileEditButton from './ProfileEditButton';
+import VerificationBadge from '@/components/astro-spots/verification/VerificationBadge';
+import VerificationButton from '@/components/astro-spots/verification/VerificationButton';
 import useProfileContent from '@/hooks/astro-spots/useProfileContent';
 
 interface ProfileContentProps {
@@ -76,6 +78,26 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
         onMessageCreator={handleMessageCreator}
       />
       
+      {/* Verification Status and Button */}
+      <div className="px-6 py-4 border-b border-cosmic-700/30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-400">
+              {t("Verification Status", "验证状态")}:
+            </span>
+            <VerificationBadge status={spot.verification_status || 'unverified'} />
+          </div>
+          
+          <VerificationButton
+            spotId={spotId}
+            spotName={spot.name}
+            verificationStatus={spot.verification_status || 'unverified'}
+            isCreator={isCreator}
+            onStatusUpdate={refreshData}
+          />
+        </div>
+      </div>
+      
       <ProfileSectionsManager
         spotId={spotId}
         spot={spot}
@@ -88,6 +110,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
         onImagesUpdate={handleImagesUpdate}
         onCommentsUpdate={handleCommentsUpdate}
         onCommentSubmit={handleCommentSubmit}
+        verificationStatus={spot.verification_status || 'unverified'}
       />
 
       {showEditDialog && spot && isCreator && (

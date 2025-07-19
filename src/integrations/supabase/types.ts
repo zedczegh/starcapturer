@@ -214,6 +214,65 @@ export type Database = {
           },
         ]
       }
+      astro_spot_verification_applications: {
+        Row: {
+          accommodation_description: string | null
+          additional_notes: string | null
+          admin_notes: string | null
+          applicant_id: string
+          bortle_level: number | null
+          bortle_measurement_url: string | null
+          created_at: string
+          facility_images_urls: string[] | null
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          spot_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accommodation_description?: string | null
+          additional_notes?: string | null
+          admin_notes?: string | null
+          applicant_id: string
+          bortle_level?: number | null
+          bortle_measurement_url?: string | null
+          created_at?: string
+          facility_images_urls?: string[] | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          spot_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accommodation_description?: string | null
+          additional_notes?: string | null
+          admin_notes?: string | null
+          applicant_id?: string
+          bortle_level?: number | null
+          bortle_measurement_url?: string | null
+          created_at?: string
+          facility_images_urls?: string[] | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          spot_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "astro_spot_verification_applications_spot_id_fkey"
+            columns: ["spot_id"]
+            isOneToOne: false
+            referencedRelation: "user_astro_spots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_tags: {
         Row: {
           created_at: string | null
@@ -367,6 +426,7 @@ export type Database = {
           siqs: number | null
           updated_at: string
           user_id: string
+          verification_status: string | null
         }
         Insert: {
           bortlescale?: number | null
@@ -380,6 +440,7 @@ export type Database = {
           siqs?: number | null
           updated_at?: string
           user_id: string
+          verification_status?: string | null
         }
         Update: {
           bortlescale?: number | null
@@ -393,6 +454,7 @@ export type Database = {
           siqs?: number | null
           updated_at?: string
           user_id?: string
+          verification_status?: string | null
         }
         Relationships: []
       }

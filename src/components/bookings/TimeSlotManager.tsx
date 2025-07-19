@@ -15,9 +15,10 @@ import { groupTimeSlotsByConsecutiveDates, formatDateRanges } from '@/utils/date
 interface TimeSlotManagerProps {
   spotId: string;
   isCreator: boolean;
+  verificationStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
 }
 
-const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) => {
+const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator, verificationStatus }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [showAddForm, setShowAddForm] = useState(false);
@@ -130,6 +131,17 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
       
       {isCreator && (
         <div className="mb-6">
+          {verificationStatus !== 'verified' && (
+            <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+              <p className="text-yellow-400 text-sm">
+                {t(
+                  'Your AstroSpot must be verified before you can add time slots and start earning.',
+                  '您的观星点必须先通过验证才能添加时间段并开始盈利。'
+                )}
+              </p>
+            </div>
+          )}
+          
           {showAddForm ? (
             <TimeSlotForm 
               spotId={spotId} 
@@ -139,7 +151,8 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator }) 
           ) : (
             <Button 
               onClick={() => setShowAddForm(true)}
-              className="bg-blue-600 hover:bg-blue-700"
+              disabled={verificationStatus !== 'verified'}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t("Add Available Time Slot", "添加可用时间段")}
             </Button>

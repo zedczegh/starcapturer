@@ -16,6 +16,7 @@ interface ProfileSectionsManagerProps {
   isCreator: boolean;
   comments: Comment[];
   commentSending: boolean;
+  verificationStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
   onImagesUpdate: () => void;
   onCommentsUpdate: () => void;
   onCommentSubmit: (content: string, imageFile: File | null, parentId?: string | null) => Promise<void>;
@@ -30,6 +31,7 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
   isCreator,
   comments,
   commentSending,
+  verificationStatus,
   onImagesUpdate,
   onCommentsUpdate,
   onCommentSubmit
@@ -45,7 +47,11 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
       />
       
       <div className="space-y-4">
-        <TimeSlotManager spotId={spotId} isCreator={isCreator} />
+        <TimeSlotManager 
+          spotId={spotId} 
+          isCreator={isCreator} 
+          verificationStatus={verificationStatus}
+        />
         
         {isCreator && (
           <div className="border-t border-cosmic-700/30 pt-4">
