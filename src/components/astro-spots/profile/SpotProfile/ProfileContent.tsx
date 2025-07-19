@@ -10,6 +10,7 @@ import ProfileEditButton from './ProfileEditButton';
 import VerificationBadge from '@/components/astro-spots/verification/VerificationBadge';
 import VerificationButton from '@/components/astro-spots/verification/VerificationButton';
 import { AdminVerificationControls } from '@/components/astro-spots/verification/AdminVerificationControls';
+import { AdminVerificationMaterialsViewer } from '@/components/astro-spots/verification/AdminVerificationMaterialsViewer';
 import useProfileContent from '@/hooks/astro-spots/useProfileContent';
 
 interface ProfileContentProps {
@@ -106,6 +107,11 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
           currentStatus={spot.verification_status || 'unverified'}
           onStatusUpdate={refreshData}
         />
+      </div>
+
+      {/* Admin Verification Materials Viewer */}
+      <div className="px-6 py-4">
+        <AdminVerificationMaterialsViewer spotId={spotId} />
       </div>
       
       <ProfileSectionsManager

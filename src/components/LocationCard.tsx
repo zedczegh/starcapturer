@@ -7,6 +7,7 @@ import SiqsScoreBadge from "@/components/photoPoints/cards/SiqsScoreBadge";
 import { motion } from "framer-motion";
 import UserAvatarDisplay from "@/components/photoPoints/cards/UserAvatarDisplay";
 import BookingAvailableBanner from "@/components/community/BookingAvailableBanner";
+import { VerificationPendingBadge } from "@/components/astro-spots/verification/VerificationPendingBadge";
 
 interface LocationCardProps {
   id: string;
@@ -51,18 +52,21 @@ const LocationCard = ({
 
   return (
     <div className="bg-cosmic-900/70 backdrop-blur-md shadow-md rounded-xl p-4 border border-cosmic-800/50 transition-all hover:border-cosmic-700/50 hover:shadow-lg overflow-hidden relative">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-white">{name}</h3>
-        <motion.div 
-          initial={siqsLoading ? { opacity: 0.7 } : { opacity: 1 }}
-          animate={siqsLoading ? { opacity: [0.7, 1, 0.7], transition: { repeat: Infinity, duration: 1.5 } } : { opacity: 1 }}
-        >
-          <SiqsScoreBadge 
-            score={siqs} 
-            loading={siqsLoading} 
-            isCertified={isCertified}
-          />
-        </motion.div>
+      <div className="flex justify-between items-start">
+        <h3 className="text-lg font-medium text-white flex-1">{name}</h3>
+        <div className="flex flex-col items-end gap-2">
+          <motion.div 
+            initial={siqsLoading ? { opacity: 0.7 } : { opacity: 1 }}
+            animate={siqsLoading ? { opacity: [0.7, 1, 0.7], transition: { repeat: Infinity, duration: 1.5 } } : { opacity: 1 }}
+          >
+            <SiqsScoreBadge 
+              score={siqs} 
+              loading={siqsLoading} 
+              isCertified={isCertified}
+            />
+          </motion.div>
+          <VerificationPendingBadge spotId={id} />
+        </div>
       </div>
       
       {/* Show booking banner under SIQS score */}
