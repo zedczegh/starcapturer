@@ -3,13 +3,15 @@ import React from "react";
 import { User } from "lucide-react";
 import { motion } from "framer-motion";
 import ProfileTag from "@/components/profile/ProfileTag";
+import { AdminBadgeForUser } from "@/components/profile/AdminBadge";
 import type { ProfileData } from "@/utils/profile/profileCore";
 
 interface ProfileHeaderProps {
   profile: ProfileData;
+  userId?: string;
 }
 
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile, userId }) => {
   // Animation variants for staggered tag animations
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -36,9 +38,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile }) => {
         </div>
       )}
       <div>
-        <h2 className="text-2xl font-bold text-white">
-          {profile.username ? `@${profile.username}` : "Stargazer"}
-        </h2>
+        <div className="flex items-center gap-2 mb-1">
+          <h2 className="text-2xl font-bold text-white">
+            {profile.username ? `@${profile.username}` : "Stargazer"}
+          </h2>
+          {userId && <AdminBadgeForUser userId={userId} size="sm" />}
+        </div>
         {profile.tags && profile.tags.length > 0 && (
           <motion.div 
             className="mt-2 flex flex-wrap gap-2"

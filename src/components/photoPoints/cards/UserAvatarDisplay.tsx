@@ -2,6 +2,7 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import useCreatorProfile from "@/hooks/astro-spots/useCreatorProfile";
+import { AdminBadgeForUser } from '@/components/profile/AdminBadge';
 
 interface UserAvatarDisplayProps {
   userId?: string;
@@ -26,13 +27,18 @@ const UserAvatarDisplay: React.FC<UserAvatarDisplayProps> = ({
   }[size];
   
   return (
-    <div className={`${className}`}>
+    <div className={`relative ${className}`}>
       <Avatar className={`${sizeClass} border border-cosmic-700/50`}>
         <AvatarImage src={creatorProfile?.avatar_url} alt={creatorProfile?.username || 'User'} />
         <AvatarFallback className="bg-primary/20 text-primary-foreground text-xs">
           {creatorProfile?.username?.substring(0, 2)?.toUpperCase() || '?'}
         </AvatarFallback>
       </Avatar>
+      {size !== "sm" && userId && (
+        <div className="absolute -top-1 -right-1 scale-75">
+          <AdminBadgeForUser userId={userId} size="sm" />
+        </div>
+      )}
     </div>
   );
 };

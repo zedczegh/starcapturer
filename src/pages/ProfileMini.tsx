@@ -156,7 +156,7 @@ const ProfileMini: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950 flex flex-col items-center px-4 pt-20">
       <div className="max-w-xl w-full mx-auto mt-4 glassmorphism p-8 rounded-xl shadow-glow">
-        <ProfileHeader profile={profile} />
+        <ProfileHeader profile={profile} userId={profileId} />
         
         {profile.bio && (
           <ProfileBio bio={profile.bio} t={t} />
