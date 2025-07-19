@@ -46,14 +46,20 @@ const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
       // If no existing SIQS or invalid, calculate real-time SIQS
       setLoading(true);
       try {
-        const result = await calculateRealTimeSiqs(latitude, longitude, bortleScale);
+        const effectiveBortleScale = bortleScale || 5; // Use default Bortle scale of 5 if null
+        const result = await calculateRealTimeSiqs(latitude, longitude, effectiveBortleScale);
         if (result?.siqs) {
           setRealTimeSiqs(normalizeToSiqsScale(result.siqs));
+        } else {
+          // Fallback calculation based on Bortle scale
+          const estimatedSiqs = Math.max(0.1, 10 - effectiveBortleScale * 1.2);
+          setRealTimeSiqs(estimatedSiqs);
         }
       } catch (error) {
         console.error('Error calculating SIQS:', error);
         // Fallback to Bortle scale estimation
-        const estimatedSiqs = Math.max(0.1, 10 - bortleScale);
+        const effectiveBortleScale = bortleScale || 5;
+        const estimatedSiqs = Math.max(0.1, 10 - effectiveBortleScale * 1.2);
         setRealTimeSiqs(estimatedSiqs);
       } finally {
         setLoading(false);

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import TimeSlotForm from './TimeSlotForm';
@@ -22,6 +23,7 @@ interface TimeSlotManagerProps {
 const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator, verificationStatus }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { isAdmin } = useUserRole();
   const [showAddForm, setShowAddForm] = useState(false);
 
   // Fetch time slots for this spot
@@ -123,6 +125,9 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator, ve
     );
   }
 
+  // Check if user can manage time slots (admin override or verified creator)
+  const canManageTimeSlots = isAdmin || (isCreator && verificationStatus === 'verified');
+
   return (
     <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
       <h2 className="text-xl font-semibold text-gray-200 mb-3 flex items-center">
@@ -132,7 +137,7 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator, ve
       
       {isCreator && (
         <div className="mb-6">
-          {verificationStatus !== 'verified' && (
+          {!canManageTimeSlots && (
             <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
               <p className="text-yellow-400 text-sm">
                 {t(
@@ -152,7 +157,7 @@ const TimeSlotManager: React.FC<TimeSlotManagerProps> = ({ spotId, isCreator, ve
           ) : (
             <Button 
               onClick={() => setShowAddForm(true)}
-              disabled={verificationStatus !== 'verified'}
+              disabled={!canManageTimeSlots}
               className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t("Add Available Time Slot", "添加可用时间段")}
