@@ -93,21 +93,44 @@ export function AdminVerificationMaterialsViewer({ spotId }: AdminVerificationMa
     
     setDownloadingFile(url);
     try {
-      const { data, error } = await supabase.storage
+      // Get the public URL for the file
+      const { data: publicData } = supabase.storage
         .from('verification_materials')
-        .download(url);
+        .getPublicUrl(url);
 
-      if (error) throw error;
+      if (publicData?.publicUrl) {
+        // For public URLs, we can directly download
+        const response = await fetch(publicData.publicUrl);
+        if (!response.ok) {
+          throw new Error('Failed to fetch file');
+        }
+        const blob = await response.blob();
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+      } else {
+        // For private files, use the download method
+        const { data, error } = await supabase.storage
+          .from('verification_materials')
+          .download(url);
 
-      const blob = new Blob([data]);
-      const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
+        if (error) throw error;
+
+        const blob = new Blob([data]);
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+      }
     } catch (error) {
       console.error('Error downloading file:', error);
       toast.error('Failed to download file');

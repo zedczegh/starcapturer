@@ -28,13 +28,12 @@ export function AdminBadge({ userId, className = '', size = 'sm' }: AdminBadgePr
       className={`
         bg-amber-100 text-amber-800 border-amber-300 
         dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700
-        flex items-center gap-1 font-medium
+        flex items-center justify-center font-medium
         ${sizeClasses[size]} 
         ${className}
       `}
     >
       <Shield className="h-3 w-3" />
-      Admin
     </Badge>
   );
 }
@@ -92,13 +91,12 @@ export function AdminBadgeForUser({ userId, className = '', size = 'sm' }: Admin
       className={`
         bg-amber-100 text-amber-800 border-amber-300 
         dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700
-        flex items-center gap-1 font-medium
+        flex items-center justify-center font-medium
         ${sizeClasses[size]} 
         ${className}
       `}
     >
       <Shield className="h-3 w-3" />
-      Admin
     </Badge>
   );
 }
