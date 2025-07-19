@@ -37,7 +37,13 @@ const VerificationApplicationForm: React.FC<VerificationApplicationFormProps> = 
   const handleFileUpload = async (file: File, folder: string) => {
     if (!user) throw new Error('User not authenticated');
     
-    const fileName = `${user.id}/${folder}/${Date.now()}-${file.name}`;
+    // Sanitize filename to remove special characters and spaces
+    const sanitizedFileName = file.name
+      .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace special chars with underscore
+      .replace(/_{2,}/g, '_') // Replace multiple underscores with single
+      .toLowerCase();
+    
+    const fileName = `${user.id}/${folder}/${Date.now()}-${sanitizedFileName}`;
     const { data, error } = await supabase.storage
       .from('verification_materials')
       .upload(fileName, file);
