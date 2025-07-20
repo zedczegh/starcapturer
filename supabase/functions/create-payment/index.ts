@@ -45,10 +45,11 @@ serve(async (req) => {
       customerId = customers.data[0].id;
     }
 
-    // Create a one-time payment session
+    // Create a one-time payment session with standard payment methods only
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
+      payment_method_types: ["card"], // Only allow credit/debit cards
       line_items: [
         {
           price_data: {
