@@ -20,7 +20,8 @@ export async function fetchCommunityAstroSpots() {
           siqs,
           description,
           created_at,
-          user_id
+          user_id,
+          verification_status
         `)
         .order("created_at", { ascending: false })
         .limit(50),
@@ -31,17 +32,58 @@ export async function fetchCommunityAstroSpots() {
       }
     );
 
-    return (data || []).map((spot: any) => ({
-      id: spot.id,
-      name: spot.name,
-      latitude: Number(spot.latitude),
-      longitude: Number(spot.longitude),
-      bortleScale: spot.bortlescale ?? 4,
-      siqs: spot.siqs,
-      description: spot.description,
-      timestamp: spot.created_at,
-      user_id: spot.user_id, // Make sure we include the user_id
-    }));
+    // Get booking availability for each spot
+    const spotsWithBookings = await Promise.all(
+      (data || []).map(async (spot: any) => {
+        try {
+          // Count available time slots for this spot
+          const availabilityData = await fetchFromSupabase<any[]>(
+            "astro_spot_timeslots",
+            (query) => query
+              .select("id")
+              .eq("spot_id", spot.id)
+              .gte("start_time", new Date().toISOString()),
+            {
+              ttl: 2 * 60 * 1000, // 2 minutes cache for availability
+              namespace: `spot-availability-${spot.id}`
+            }
+          );
+          
+          const availableBookings = availabilityData?.length || 0;
+          
+          return {
+            id: spot.id,
+            name: spot.name,
+            latitude: Number(spot.latitude),
+            longitude: Number(spot.longitude),
+            bortleScale: spot.bortlescale ?? 4,
+            siqs: spot.siqs,
+            description: spot.description,
+            timestamp: spot.created_at,
+            user_id: spot.user_id,
+            verification_status: spot.verification_status,
+            availableBookings: availableBookings
+          };
+        } catch (error) {
+          console.error(`Error fetching availability for spot ${spot.id}:`, error);
+          return {
+            id: spot.id,
+            name: spot.name,
+            latitude: Number(spot.latitude),
+            longitude: Number(spot.longitude),
+            bortleScale: spot.bortlescale ?? 4,
+            siqs: spot.siqs,
+            description: spot.description,
+            timestamp: spot.created_at,
+            user_id: spot.user_id,
+            verification_status: spot.verification_status,
+            availableBookings: 0
+          };
+        }
+      })
+    );
+    
+    return spotsWithBookings;
   } catch (error) {
     console.error("Failed to fetch community astro spots:", error);
     return [];

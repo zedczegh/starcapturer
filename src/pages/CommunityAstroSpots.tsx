@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import PhotoPointsLayout from "@/components/photoPoints/PhotoPointsLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -9,6 +9,7 @@ import { useAnimationVariants } from "@/hooks/community/useAnimationVariants";
 import CommunitySpotHeader from "@/components/community/CommunitySpotHeader";
 import CommunityMapSection from "@/components/community/CommunityMapSection";
 import CommunitySpotsList from "@/components/community/CommunitySpotsList";
+import CommunityFilters, { CommunityFiltersState } from "@/components/community/CommunityFilters";
 
 // Default map center coordinates
 const DEFAULT_CENTER: [number, number] = [30, 104];
@@ -18,6 +19,12 @@ const CommunityAstroSpots: React.FC = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const { titleVariants, lineVariants, descVariants } = useAnimationVariants();
+  
+  // Filters state
+  const [filters, setFilters] = useState<CommunityFiltersState>({
+    bookingAvailable: false,
+    verificationPending: false
+  });
 
   // Use custom hook to handle all data and interactions
   const {
@@ -33,6 +40,28 @@ const CommunityAstroSpots: React.FC = () => {
     handleMarkerClick,
     refreshData
   } = useCommunityAstroSpots();
+  
+  // Filter spots based on active filters
+  const filteredAstroSpots = useMemo(() => {
+    if (!sortedAstroSpots) return [];
+    
+    return sortedAstroSpots.filter(spot => {
+      if (filters.bookingAvailable && (!spot.availableBookings || spot.availableBookings === 0)) {
+        return false;
+      }
+      
+      if (filters.verificationPending && spot.verification_status !== 'pending') {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [sortedAstroSpots, filters]);
+  
+  // Count active filters
+  const activeFiltersCount = useMemo(() => {
+    return Object.values(filters).filter(Boolean).length;
+  }, [filters]);
   
   // Handle refresh when returning from spot profile - without toast
   useEffect(() => {
@@ -59,7 +88,7 @@ const CommunityAstroSpots: React.FC = () => {
         {/* Map Section */}
         <CommunityMapSection 
           isLoading={isLoading}
-          sortedAstroSpots={sortedAstroSpots}
+          sortedAstroSpots={filteredAstroSpots}
           userLocation={userLocation}
           DEFAULT_CENTER={DEFAULT_CENTER}
           isMobile={isMobile}
@@ -67,10 +96,17 @@ const CommunityAstroSpots: React.FC = () => {
           onLocationUpdate={handleLocationUpdate}
         />
 
+        {/* Filters Section */}
+        <CommunityFilters
+          filters={filters}
+          onFiltersChange={setFilters}
+          activeFiltersCount={activeFiltersCount}
+        />
+
         {/* Spots List Section */}
         <CommunitySpotsList 
           isLoading={isLoading}
-          sortedAstroSpots={sortedAstroSpots}
+          sortedAstroSpots={filteredAstroSpots}
           isMobile={isMobile}
           onCardClick={handleCardClick}
           realTimeSiqs={realTimeSiqs}

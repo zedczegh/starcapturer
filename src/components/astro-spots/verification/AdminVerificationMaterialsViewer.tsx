@@ -49,7 +49,7 @@ export function AdminVerificationMaterialsViewer({ spotId }: AdminVerificationMa
 
   useEffect(() => {
     const fetchApplications = async () => {
-      if (!isAdmin || !spotId) {
+      if (!spotId) {
         setLoading(false);
         return;
       }
@@ -158,7 +158,8 @@ export function AdminVerificationMaterialsViewer({ spotId }: AdminVerificationMa
     );
   };
 
-  if (!isAdmin) return null;
+  // Only show to admins or applicants viewing their own application
+  if (!isAdmin && !applications.some(app => app.applicant_id === spotId)) return null;
 
   if (loading) {
     return (

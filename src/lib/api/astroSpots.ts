@@ -35,6 +35,8 @@ export interface SharedAstroSpot {
   cloudCover?: number;
   visibility?: number;
   type?: string;
+  verification_status?: string;
+  availableBookings?: number;
   timeInfo?: {
     isNighttime: boolean;
     timeUntilNight?: number;
