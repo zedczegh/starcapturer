@@ -45,7 +45,7 @@ serve(async (req) => {
       customerId = customers.data[0].id;
     }
 
-    // Create a one-time payment session with WeChat Pay and Alipay support
+    // Create a one-time payment session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
@@ -63,11 +63,6 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
-      payment_method_types: [
-        "card",
-        "wechat_pay", 
-        "alipay"
-      ],
       success_url: `${req.headers.get("origin")}/payment-success?session_id={CHECKOUT_SESSION_ID}&timeslot_id=${timeslotId}`,
       cancel_url: `${req.headers.get("origin")}/bookings`,
       metadata: {
