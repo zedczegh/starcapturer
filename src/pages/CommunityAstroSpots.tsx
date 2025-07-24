@@ -41,38 +41,63 @@ const CommunityAstroSpots: React.FC = () => {
     refreshData
   } = useCommunityAstroSpots();
   
+  console.log('🏠 Community page debug:', {
+    isLoading,
+    sortedAstroSpotsLength: sortedAstroSpots?.length || 0,
+    sortedAstroSpots: sortedAstroSpots?.slice(0, 3) || [], // Log first 3 spots
+    filters
+  });
+  
   // Filter spots based on active filters
   const filteredAstroSpots = useMemo(() => {
-    if (!sortedAstroSpots) return [];
+    if (!sortedAstroSpots) {
+      console.log('🚫 No sortedAstroSpots available');
+      return [];
+    }
     
-    console.log('🔍 Filtering with:', filters);
-    console.log('📊 Total spots:', sortedAstroSpots.length);
+    console.log('🔍 Starting filter process:', {
+      totalSpots: sortedAstroSpots.length,
+      filters,
+      firstSpotSample: sortedAstroSpots[0]
+    });
+    
+    // If no filters are active, return all spots
+    if (!filters.bookingAvailable && !filters.verificationPending) {
+      console.log('✅ No filters active, returning all spots:', sortedAstroSpots.length);
+      return sortedAstroSpots;
+    }
     
     const filtered = sortedAstroSpots.filter(spot => {
-      console.log('🏠 Checking spot:', spot.name, {
+      console.log(`🔍 Checking spot "${spot.name}":`, {
         availableBookings: spot.availableBookings,
-        verification_status: spot.verification_status
+        verification_status: spot.verification_status,
+        bookingFilter: filters.bookingAvailable,
+        verificationFilter: filters.verificationPending
       });
       
       // Booking availability filter
       if (filters.bookingAvailable) {
         const hasBookings = spot.availableBookings && spot.availableBookings > 0;
-        console.log(`✅ Booking filter: ${hasBookings}`);
+        console.log(`📅 Booking filter result for "${spot.name}": ${hasBookings}`);
         return hasBookings;
       }
       
       // Verification pending filter
       if (filters.verificationPending) {
         const isPending = spot.verification_status === 'pending';
-        console.log(`⏳ Verification filter: ${isPending}`);
+        console.log(`⏳ Verification filter result for "${spot.name}": ${isPending}`);
         return isPending;
       }
       
-      // No filters active, show all
-      return true;
+      return false;
     });
     
-    console.log('🎯 Filtered results:', filtered.length);
+    console.log('🎯 Filter results:', {
+      originalCount: sortedAstroSpots.length,
+      filteredCount: filtered.length,
+      activeFilters: filters
+    });
+    
     return filtered;
   }, [sortedAstroSpots, filters]);
   

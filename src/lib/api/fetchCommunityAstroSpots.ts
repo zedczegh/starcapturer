@@ -7,7 +7,9 @@ import { fetchFromSupabase } from "@/utils/supabaseFetch";
  */
 export async function fetchCommunityAstroSpots() {
   try {
-    // Use our optimized fetch utility with stronger caching
+    console.log('🚀 Starting fetchCommunityAstroSpots...');
+    
+    // Use our optimized fetch utility with NO CACHE to force fresh data
     const data = await fetchFromSupabase<any[]>(
       "user_astro_spots",
       (query) => query
@@ -26,16 +28,23 @@ export async function fetchCommunityAstroSpots() {
         .order("created_at", { ascending: false })
         .limit(50),
       {
-        ttl: 5 * 60 * 1000, // 5 minutes cache
-        persistToStorage: true,
-        namespace: 'community-spots-list' // Use namespace instead of cacheKey
+        skipCache: true, // Force no cache
+        forceRefresh: true // Force refresh
       }
     );
+
+    console.log('📊 Raw spots data:', { 
+      count: data?.length || 0,
+      firstSpot: data?.[0],
+      allSpots: data
+    });
 
     // Get booking availability for each spot
     const spotsWithBookings = await Promise.all(
       (data || []).map(async (spot: any) => {
         try {
+          console.log(`🔍 Fetching availability for spot: ${spot.name} (${spot.id})`);
+          
           // Count available time slots for this spot
           const availabilityData = await fetchFromSupabase<any[]>(
             "astro_spot_timeslots",
@@ -51,7 +60,9 @@ export async function fetchCommunityAstroSpots() {
           
           const availableBookings = availabilityData?.length || 0;
           
-          return {
+          console.log(`📅 Spot ${spot.name} has ${availableBookings} available bookings`);
+          
+          const result = {
             id: spot.id,
             name: spot.name,
             latitude: Number(spot.latitude),
@@ -64,9 +75,12 @@ export async function fetchCommunityAstroSpots() {
             verification_status: spot.verification_status,
             availableBookings: availableBookings
           };
+          
+          console.log(`✅ Processed spot: ${spot.name}`, result);
+          return result;
         } catch (error) {
-          console.error(`Error fetching availability for spot ${spot.id}:`, error);
-          return {
+          console.error(`❌ Error fetching availability for spot ${spot.id}:`, error);
+          const result = {
             id: spot.id,
             name: spot.name,
             latitude: Number(spot.latitude),
@@ -79,13 +93,21 @@ export async function fetchCommunityAstroSpots() {
             verification_status: spot.verification_status,
             availableBookings: 0
           };
+          
+          console.log(`⚠️ Fallback result for spot: ${spot.name}`, result);
+          return result;
         }
       })
     );
     
+    console.log('🎯 Final processed spots:', {
+      count: spotsWithBookings.length,
+      spots: spotsWithBookings
+    });
+    
     return spotsWithBookings;
   } catch (error) {
-    console.error("Failed to fetch community astro spots:", error);
+    console.error("❌ Failed to fetch community astro spots:", error);
     return [];
   }
 }

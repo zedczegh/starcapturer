@@ -25,7 +25,9 @@ export const useCommunityAstroSpots = () => {
   const { data: astrospots, isLoading, refetch } = useQuery({
     queryKey: ["community-astrospots-supabase"],
     queryFn: fetchCommunityAstroSpots,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 0, // Force fresh data
+    retry: 3,
+    retryDelay: 1000,
   });
   
   // Function to force data refresh
