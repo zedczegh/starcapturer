@@ -69,7 +69,7 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
         <Circle className="h-4 w-4 text-primary" />
         <span>{t("All Community Astrospots", "全部社区地点")}</span>
         <span className="text-sm font-normal text-muted-foreground ml-2">
-          ({t("Sorted by best SIQS score", "按照SIQS评分排序")})
+          ({t("Booking available spots first", "优先显示可预订地点")})
         </span>
       </h2>
 

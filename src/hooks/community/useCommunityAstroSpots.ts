@@ -75,18 +75,41 @@ export const useCommunityAstroSpots = () => {
     setUserLocation([lat, lng]);
   }, []);
 
-  // Sort locations by SIQS scores (highest first)
+  // Sort locations prioritizing spots with available bookings, then by SIQS scores
   const sortedAstroSpots = useMemo(() => {
     if (!astrospots) return [];
     
     // Add real-time SIQS values to spots for sorting
     const spotsWithRealtimeSiqs = astrospots.map(spot => ({
       ...spot,
-      realTimeSiqs: stabilizedSiqs[spot.id] ?? realTimeSiqs[spot.id] ?? spot.siqs
+      realTimeSiqs: stabilizedSiqs[spot.id] ?? realTimeSiqs[spot.id] ?? spot.siqs,
+      hasBookings: spot.availableBookings && spot.availableBookings > 0
     }));
     
-    // Sort using the utility function
-    return sortLocationsBySiqs(spotsWithRealtimeSiqs);
+    // Sort with booking availability as primary criteria, then SIQS
+    const sorted = spotsWithRealtimeSiqs.sort((a, b) => {
+      // First priority: spots with available bookings
+      if (a.hasBookings && !b.hasBookings) return -1;
+      if (!a.hasBookings && b.hasBookings) return 1;
+      
+      // Second priority: SIQS score (higher is better)
+      const aScore = a.realTimeSiqs || 0;
+      const bScore = b.realTimeSiqs || 0;
+      return bScore - aScore;
+    });
+
+    console.log(`Sorted ${sorted.length} astro spots with booking priority:`, {
+      spotsWithBookings: sorted.filter(s => s.hasBookings).length,
+      spotsWithoutBookings: sorted.filter(s => !s.hasBookings).length,
+      firstFewSpots: sorted.slice(0, 3).map(s => ({
+        name: s.name,
+        hasBookings: s.hasBookings,
+        availableBookings: s.availableBookings,
+        siqs: s.realTimeSiqs
+      }))
+    });
+
+    return sorted;
   }, [astrospots, realTimeSiqs, stabilizedSiqs]);
 
   // Improved navigation function with better error handling and detailed logging
