@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          link_url: string | null
+          message: string
+          metadata: Json | null
+          notification_type: string
+          related_application_id: string | null
+          related_spot_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link_url?: string | null
+          message: string
+          metadata?: Json | null
+          notification_type: string
+          related_application_id?: string | null
+          related_spot_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link_url?: string | null
+          message?: string
+          metadata?: Json | null
+          notification_type?: string
+          related_application_id?: string | null
+          related_spot_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       astro_spot_advantages: {
         Row: {
           advantage_name: string

@@ -12,6 +12,7 @@ import ProfileDropdownMenu from './ProfileDropdownMenu';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchUserProfile, ensureUserProfile } from '@/utils/profileUtils';
 import { toast } from 'sonner';
+import AdminNotificationBadge from '@/components/admin/AdminNotificationBadge';
 
 const ProfileButton = () => {
   const { user, signOut } = useAuth();
@@ -108,44 +109,47 @@ const ProfileButton = () => {
           </Button>
         </motion.div>
       ) : (
-        <DropdownMenu modal>
-          <DropdownMenuTrigger asChild>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="relative rounded-full p-0 hover:bg-transparent focus:ring-2 focus:ring-primary" 
-                aria-label="Profile"
+        <div className="flex items-center gap-2">
+          <AdminNotificationBadge />
+          <DropdownMenu modal>
+            <DropdownMenuTrigger asChild>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <div className="relative">
-                  <Avatar className="h-8 w-8 transition-transform duration-300 group-hover:scale-105">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
-                    ) : (
-                      <AvatarFallback className="bg-cosmic-800/60 text-cosmic-400">
-                        {user.email?.[0]?.toUpperCase() || "?"}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div className="absolute -top-1 -right-1">
-                    <AdminBadge size="sm" className="scale-75" />
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="relative rounded-full p-0 hover:bg-transparent focus:ring-2 focus:ring-primary" 
+                  aria-label="Profile"
+                >
+                  <div className="relative">
+                    <Avatar className="h-8 w-8 transition-transform duration-300 group-hover:scale-105">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
+                      ) : (
+                        <AvatarFallback className="bg-cosmic-800/60 text-cosmic-400">
+                          {user.email?.[0]?.toUpperCase() || "?"}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div className="absolute -top-1 -right-1">
+                      <AdminBadge size="sm" className="scale-75" />
+                    </div>
                   </div>
-                </div>
-              </Button>
-            </motion.div>
-          </DropdownMenuTrigger>
-          <ProfileDropdownMenu
-            user={user}
-            profile={profile}
-            onSignOut={handleSignOut}
-            email={user.email}
-          />
-        </DropdownMenu>
+                </Button>
+              </motion.div>
+            </DropdownMenuTrigger>
+            <ProfileDropdownMenu
+              user={user}
+              profile={profile}
+              onSignOut={handleSignOut}
+              email={user.email}
+            />
+          </DropdownMenu>
+        </div>
       )}
       <AuthDialog
         open={showAuthDialog}
