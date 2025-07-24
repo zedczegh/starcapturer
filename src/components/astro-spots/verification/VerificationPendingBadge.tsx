@@ -6,10 +6,11 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface VerificationPendingBadgeProps {
   spotId: string;
+  verificationStatus?: string;
   className?: string;
 }
 
-export function VerificationPendingBadge({ spotId, className = '' }: VerificationPendingBadgeProps) {
+export function VerificationPendingBadge({ spotId, verificationStatus, className = '' }: VerificationPendingBadgeProps) {
   const { isAdmin } = useUserRole();
   const [hasPendingApplication, setHasPendingApplication] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -22,6 +23,14 @@ export function VerificationPendingBadge({ spotId, className = '' }: Verificatio
       }
 
       try {
+        // First check if the spot itself has pending verification status
+        if (verificationStatus === 'pending') {
+          setHasPendingApplication(true);
+          setLoading(false);
+          return;
+        }
+
+        // Otherwise check for pending applications
         const { data, error } = await supabase
           .from('astro_spot_verification_applications')
           .select('id')
@@ -38,7 +47,7 @@ export function VerificationPendingBadge({ spotId, className = '' }: Verificatio
     };
 
     checkPendingApplication();
-  }, [spotId, isAdmin]);
+  }, [spotId, isAdmin, verificationStatus]);
 
   if (!isAdmin || loading || !hasPendingApplication) return null;
 

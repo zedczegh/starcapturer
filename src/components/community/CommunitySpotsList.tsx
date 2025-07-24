@@ -122,6 +122,7 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
                     siqsLoading={loadingSiqs[spot.id] && !stabilizedSiqs[spot.id]}
                     userId={spot.user_id}
                     availableBookings={availabilities[spot.id]?.availableSlots || 0}
+                    verificationStatus={spot.verification_status}
                   />
                 </div>
                 <span className="absolute inset-0 rounded-xl z-10 transition bg-black/0 group-hover:bg-primary/5" />

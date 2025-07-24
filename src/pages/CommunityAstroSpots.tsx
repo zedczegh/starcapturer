@@ -82,10 +82,10 @@ const CommunityAstroSpots: React.FC = () => {
         return hasBookings;
       }
       
-      // Verification pending filter
+      // Verification pending filter - check actual verification status
       if (filters.verificationPending) {
         const isPending = spot.verification_status === 'pending';
-        console.log(`⏳ Verification filter result for "${spot.name}": ${isPending}`);
+        console.log(`⏳ Verification filter result for "${spot.name}": ${isPending} (status: ${spot.verification_status})`);
         return isPending;
       }
       

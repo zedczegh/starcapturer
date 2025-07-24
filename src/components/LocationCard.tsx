@@ -20,6 +20,7 @@ interface LocationCardProps {
   siqsLoading?: boolean;
   userId?: string;
   availableBookings?: number;
+  verificationStatus?: string;
 }
 
 const LocationCard = ({
@@ -32,7 +33,8 @@ const LocationCard = ({
   isCertified = false,
   siqsLoading = false,
   userId,
-  availableBookings = 0
+  availableBookings = 0,
+  verificationStatus
 }: LocationCardProps) => {
   const { language, t } = useLanguage();
 
@@ -65,7 +67,7 @@ const LocationCard = ({
               isCertified={isCertified}
             />
           </motion.div>
-          <VerificationPendingBadge spotId={id} />
+          <VerificationPendingBadge spotId={id} verificationStatus={verificationStatus} />
         </div>
       </div>
       
