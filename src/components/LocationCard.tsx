@@ -7,7 +7,7 @@ import SiqsScoreBadge from "@/components/photoPoints/cards/SiqsScoreBadge";
 import { motion } from "framer-motion";
 import UserAvatarDisplay from "@/components/photoPoints/cards/UserAvatarDisplay";
 import BookingAvailableBanner from "@/components/community/BookingAvailableBanner";
-import { VerificationPendingBadge } from "@/components/astro-spots/verification/VerificationPendingBadge";
+import VerificationBadge from "@/components/astro-spots/verification/VerificationBadge";
 
 interface LocationCardProps {
   id: string;
@@ -67,7 +67,9 @@ const LocationCard = ({
               isCertified={isCertified}
             />
           </motion.div>
-          <VerificationPendingBadge spotId={id} verificationStatus={verificationStatus} />
+          {verificationStatus && verificationStatus !== 'unverified' && (
+            <VerificationBadge status={verificationStatus as 'unverified' | 'pending' | 'verified' | 'rejected'} />
+          )}
         </div>
       </div>
       
