@@ -27,7 +27,9 @@ const CommunityFilters: React.FC<CommunityFiltersProps> = ({
 
   const toggleFilter = (filterKey: keyof CommunityFiltersState) => {
     onFiltersChange({
-      ...filters,
+      // Reset all filters first, then set the clicked one
+      bookingAvailable: false,
+      verificationPending: false,
       [filterKey]: !filters[filterKey]
     });
   };

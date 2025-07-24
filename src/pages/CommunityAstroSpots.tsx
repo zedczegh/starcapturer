@@ -45,19 +45,35 @@ const CommunityAstroSpots: React.FC = () => {
   const filteredAstroSpots = useMemo(() => {
     if (!sortedAstroSpots) return [];
     
-    return sortedAstroSpots.filter(spot => {
+    console.log('🔍 Filtering with:', filters);
+    console.log('📊 Total spots:', sortedAstroSpots.length);
+    
+    const filtered = sortedAstroSpots.filter(spot => {
+      console.log('🏠 Checking spot:', spot.name, {
+        availableBookings: spot.availableBookings,
+        verification_status: spot.verification_status
+      });
+      
       // Booking availability filter
-      if (filters.bookingAvailable && (!spot.availableBookings || spot.availableBookings === 0)) {
-        return false;
+      if (filters.bookingAvailable) {
+        const hasBookings = spot.availableBookings && spot.availableBookings > 0;
+        console.log(`✅ Booking filter: ${hasBookings}`);
+        return hasBookings;
       }
       
       // Verification pending filter
-      if (filters.verificationPending && spot.verification_status !== 'pending') {
-        return false;
+      if (filters.verificationPending) {
+        const isPending = spot.verification_status === 'pending';
+        console.log(`⏳ Verification filter: ${isPending}`);
+        return isPending;
       }
       
+      // No filters active, show all
       return true;
     });
+    
+    console.log('🎯 Filtered results:', filtered.length);
+    return filtered;
   }, [sortedAstroSpots, filters]);
   
   // Count active filters
