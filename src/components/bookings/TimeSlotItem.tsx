@@ -142,14 +142,23 @@ const TimeSlotItem: React.FC<TimeSlotItemProps> = ({
   });
 
   const handleContactHost = () => {
-    if (timeSlot.astro_spot_reservations?.[0]?.profiles?.username) {
-      navigate('/messages', { 
-        state: { 
-          selectedUserId: timeSlot.creator_id,
-          selectedUsername: timeSlot.astro_spot_reservations[0].profiles.username
-        }
-      });
+    if (!timeSlot?.creator_id) {
+      console.error("Cannot contact host: Missing creator ID");
+      toast.error(t("Could not contact host: Missing host information", "无法联系主人：缺少主人信息"));
+      return;
     }
+    
+    // Navigate to messages with the host's user ID
+    navigate('/messages', { 
+      state: { 
+        selectedUserId: timeSlot.creator_id,
+        selectedUsername: "Host",
+        timestamp: Date.now()
+      },
+      replace: false
+    });
+    
+    console.log("Navigating to contact host:", timeSlot.creator_id);
   };
 
   const handleBooking = () => {
