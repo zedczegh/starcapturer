@@ -45,36 +45,19 @@ const CommunityAstroSpots: React.FC = () => {
   const filteredAstroSpots = useMemo(() => {
     if (!sortedAstroSpots) return [];
     
-    console.log('Filtering spots with filters:', filters);
-    console.log('Total spots before filtering:', sortedAstroSpots.length);
-    
-    const filtered = sortedAstroSpots.filter(spot => {
-      // Debug each filter condition
-      const hasBookingFilter = filters.bookingAvailable;
-      const hasBookings = spot.availableBookings && spot.availableBookings > 0;
-      const passesBookingFilter = !hasBookingFilter || hasBookings;
-      
-      const hasVerificationFilter = filters.verificationPending;
-      const isPending = spot.verification_status === 'pending';
-      const passesVerificationFilter = !hasVerificationFilter || isPending;
-      
-      const passes = passesBookingFilter && passesVerificationFilter;
-      
-      if (hasBookingFilter || hasVerificationFilter) {
-        console.log(`Spot ${spot.name}:`, {
-          availableBookings: spot.availableBookings,
-          verification_status: spot.verification_status,
-          passesBookingFilter,
-          passesVerificationFilter,
-          passes
-        });
+    return sortedAstroSpots.filter(spot => {
+      // Booking availability filter
+      if (filters.bookingAvailable && (!spot.availableBookings || spot.availableBookings === 0)) {
+        return false;
       }
       
-      return passes;
+      // Verification pending filter
+      if (filters.verificationPending && spot.verification_status !== 'pending') {
+        return false;
+      }
+      
+      return true;
     });
-    
-    console.log('Spots after filtering:', filtered.length);
-    return filtered;
   }, [sortedAstroSpots, filters]);
   
   // Count active filters
