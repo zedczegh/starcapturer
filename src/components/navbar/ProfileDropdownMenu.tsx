@@ -5,7 +5,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, Calendar, Music, Calculator } from 'lucide-react';
+import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, Calendar, Music, Calculator, Wallet } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -57,6 +57,7 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
       onClick: handleMessagesClick,
       badge: unreadMessagesCount
     },
+    { icon: Wallet, label: t('My Wallet', '我的钱包'), path: '/my-wallet' },
     { icon: User, label: t('Profile', '个人资料'), path: '/profile' },
     { icon: BookmarkPlus, label: t('My Collections', '我的收藏'), path: '/collections' },
     { 

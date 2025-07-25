@@ -24,6 +24,7 @@ import PreferencesPage from './pages/Preferences';
 import ManageAstroSpots from './pages/ManageAstroSpots';
 import AstroSpotProfile from './pages/AstroSpotProfile';
 import ProfileMini from "./pages/ProfileMini";
+import MyWallet from './pages/MyWallet';
 import Messages from './pages/Messages';
 import MyReservations from './pages/MyReservations';
 import ServiceTest from './pages/ServiceTest';
@@ -95,6 +96,7 @@ function AppContent() {
       <Route path="/astro-spot/:id" element={<AstroSpotProfile />} />
       <Route path="/messages" element={<Messages />} />
       <Route path="/my-reservations" element={<MyReservations />} />
+      <Route path="/my-wallet" element={<MyWallet />} />
       <Route path="/sonification" element={<SonificationProcessor />} />
       <Route path="/sampling-calculator" element={<SamplingCalculator />} />
       <Route path="/service-test" element={<ServiceTest />} />
