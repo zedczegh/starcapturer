@@ -5,6 +5,7 @@ import ProfileHeader from './ProfileHeader';
 import ProfileForm from './ProfileForm';
 import PasswordChangeForm from './PasswordChangeForm';
 import PaymentMethodsSection from './PaymentMethodsSection';
+import WalletSection from './WalletSection';
 
 const ProfileMain = ({
   displayUsername,
@@ -52,6 +53,7 @@ const ProfileMain = ({
       
       {/* Sidebar */}
       <div className="lg:col-span-1 space-y-6">
+        <WalletSection />
         <PaymentMethodsSection />
         <Card className="glassmorphism p-6 rounded-2xl border-cosmic-700/20">
           <h2 className="font-bold text-xl text-white mb-4 pb-2 border-b border-cosmic-700/30">
