@@ -45,53 +45,73 @@ const ProfileForm = ({ register, loading, onSubmit, tags, setTags }: ProfileForm
 
   return (
     <form onSubmit={onSubmit} className="space-y-8">
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="space-y-8">
+        {/* Personal Information Section */}
         <div className="space-y-6">
-          <div className="bg-cosmic-800/30 p-5 rounded-lg border border-cosmic-700/30">
-            <Label htmlFor="username" className="text-white mb-2 block text-lg">
-              {t("Username", "用户名")}
-            </Label>
-            <div className="relative">
-              <Input
-                id="username"
-                {...register('username', { required: true, minLength: 3 })}
-                className="pl-10 bg-cosmic-800/50 border-cosmic-700/40 text-white focus:border-primary focus:ring-1 focus:ring-primary/30"
-              />
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-cosmic-400">
-                <User className="w-5 h-5" />
+          <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+            <div className="w-1 h-6 bg-gradient-to-b from-primary to-[#8A6FD6] rounded-full"></div>
+            {t("Personal Information", "个人信息")}
+          </h3>
+          
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-gradient-to-br from-cosmic-800/30 to-cosmic-900/20 p-6 rounded-xl border border-cosmic-700/20 backdrop-blur-sm">
+              <Label htmlFor="username" className="text-white mb-3 block text-base font-medium">
+                {t("Username", "用户名")}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="username"
+                  {...register('username', { required: true, minLength: 3 })}
+                  className="pl-10 bg-cosmic-800/50 border-cosmic-700/30 text-white focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-cosmic-400">
+                  <User className="w-5 h-5" />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-cosmic-800/30 p-5 rounded-lg border border-cosmic-700/30">
-            <Label htmlFor="bio" className="text-white mb-2 block text-lg">
-              {t("Bio", "个人简介")}
-            </Label>
-            <Textarea
-              id="bio"
-              {...register('bio')}
-              className="bg-cosmic-800/50 border-cosmic-700/40 text-white focus:border-primary focus:ring-1 focus:ring-primary/30"
-              placeholder={t("Tell us about yourself...", "介绍一下你自己...")}
-            />
-          </div>
-          
-          {/* Tag selector */}
-          <div className="bg-cosmic-800/30 p-5 rounded-lg border border-cosmic-700/30">
-            <ProfileTagsSelector selectedTags={tags} onChange={handleTagChange} disabled={loading} />
+            <div className="bg-gradient-to-br from-cosmic-800/30 to-cosmic-900/20 p-6 rounded-xl border border-cosmic-700/20 backdrop-blur-sm">
+              <Label htmlFor="bio" className="text-white mb-3 block text-base font-medium">
+                {t("Bio", "个人简介")}
+              </Label>
+              <Textarea
+                id="bio"
+                {...register('bio')}
+                className="bg-cosmic-800/50 border-cosmic-700/30 text-white focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg min-h-[100px]"
+                placeholder={t("Tell us about your astronomical journey...", "介绍一下你的天文之旅...")}
+              />
+            </div>
           </div>
         </div>
+        
+        {/* Interests & Tags Section */}
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+            <div className="w-1 h-6 bg-gradient-to-b from-primary to-[#8A6FD6] rounded-full"></div>
+            {t("Astronomy Interests", "天文兴趣")}
+          </h3>
+          <ProfileTagsSelector selectedTags={tags} onChange={handleTagChange} disabled={loading} />
+        </div>
 
-        <div className="flex flex-col gap-6">
+        {/* Benefits Section */}
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+            <div className="w-1 h-6 bg-gradient-to-b from-primary to-[#8A6FD6] rounded-full"></div>
+            {t("Profile Benefits", "个人资料优势")}
+          </h3>
           <ProfileBenefits />
-          <div className="flex justify-end mt-auto">
-            <Button 
-              type="submit" 
-              className="bg-gradient-to-r from-primary to-[#8A6FD6] hover:opacity-90 text-white px-8 py-6 shadow-lg shadow-primary/20"
-              disabled={loading}
-            >
-              {loading ? t("Updating...", "更新中...") : t("Save Changes", "保存更改")}
-            </Button>
-          </div>
+        </div>
+
+        {/* Save Button */}
+        <div className="flex justify-center pt-6">
+          <Button 
+            type="submit" 
+            size="lg"
+            className="bg-gradient-to-r from-primary to-[#8A6FD6] hover:opacity-90 text-white px-12 py-4 rounded-xl shadow-lg shadow-primary/20 font-semibold text-base transition-all duration-300 hover:scale-[1.02]"
+            disabled={loading}
+          >
+            {loading ? t("Updating Profile...", "更新个人资料中...") : t("Save Profile Changes", "保存个人资料更改")}
+          </Button>
         </div>
       </div>
     </form>
