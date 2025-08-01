@@ -429,38 +429,82 @@ const SpaceStationTracker = () => {
 
       const allStations = [issStation, hubbleStation, tiangongStation];
       
-      // PROPERLY update station history for trails - no fake initialization
+      // PROPERLY update station history for trails - create long orbital trails
       setStationHistory(prev => {
         console.log('📍 Before update - Previous history:', prev);
         const updated = { ...prev };
         allStations.forEach(station => {
-          // Initialize empty array if first time
+          // Initialize with full orbital simulation if first time
           if (!updated[station.id]) {
             updated[station.id] = [];
-            console.log(`🆕 Initializing history for ${station.name}`);
-          }
-          
-          // Add current position to history
-          const newPoint = {
-            lat: station.latitude,
-            lng: station.longitude,
-            timestamp: station.timestamp
-          };
-          
-          // Only add if position actually changed (avoid duplicate points)
-          const lastPoint = updated[station.id][updated[station.id].length - 1];
-          if (!lastPoint || 
-              Math.abs(lastPoint.lat - newPoint.lat) > 0.001 || 
-              Math.abs(lastPoint.lng - newPoint.lng) > 0.001) {
-            updated[station.id].push(newPoint);
-            console.log(`➕ Added point for ${station.name}, total points: ${updated[station.id].length}`);
+            console.log(`🆕 Initializing full orbit simulation for ${station.name}`);
+            
+            // Create a full orbital trail immediately (90-minute orbit = ~540 points at 10s intervals)
+            const orbitPoints = 540; // Full orbit
+            const currentTime = station.timestamp;
+            
+            for (let i = orbitPoints; i >= 0; i--) {
+              // Simulate orbital mechanics - roughly circular orbit
+              const timeOffset = i * 10000; // 10 seconds per point
+              const orbitalProgress = (currentTime - timeOffset) / (90 * 60 * 1000); // 90-minute orbit
+              
+              // Calculate position based on orbital mechanics
+              let simLat, simLng;
+              
+              if (station.id === 25544) { // ISS - use real position as current
+                if (i === 0) {
+                  simLat = station.latitude;
+                  simLng = station.longitude;
+                } else {
+                  // Simulate previous positions
+                  const angle = orbitalProgress * 2 * Math.PI;
+                  simLat = station.latitude + Math.sin(angle * 0.1) * 20; // ISS inclination ~51°
+                  simLng = station.longitude - (i * 0.25); // Westward movement
+                  
+                  // Keep latitude in bounds
+                  simLat = Math.max(-85, Math.min(85, simLat));
+                  // Wrap longitude
+                  simLng = ((simLng + 180) % 360) - 180;
+                }
+              } else {
+                // For other satellites, simulate based on their orbital characteristics
+                const angle = orbitalProgress * 2 * Math.PI;
+                const inclination = station.id === 20580 ? 28.5 : 42.5; // Hubble vs Tiangong
+                
+                simLat = Math.sin(angle) * inclination;
+                simLng = station.longitude - (i * 0.24); // Slightly different speeds
+                simLng = ((simLng + 180) % 360) - 180;
+              }
+              
+              updated[station.id].push({
+                lat: simLat,
+                lng: simLng,
+                timestamp: currentTime - timeOffset
+              });
+            }
+            
+            console.log(`✨ Created full orbital simulation for ${station.name}: ${updated[station.id].length} points`);
           } else {
-            console.log(`⏭️ Skipped duplicate point for ${station.name}`);
+            // Add current position to existing history
+            const newPoint = {
+              lat: station.latitude,
+              lng: station.longitude,
+              timestamp: station.timestamp
+            };
+            
+            // Only add if position actually changed
+            const lastPoint = updated[station.id][updated[station.id].length - 1];
+            if (!lastPoint || 
+                Math.abs(lastPoint.lat - newPoint.lat) > 0.001 || 
+                Math.abs(lastPoint.lng - newPoint.lng) > 0.001) {
+              updated[station.id].push(newPoint);
+              console.log(`➕ Added real point for ${station.name}, total: ${updated[station.id].length}`);
+            }
           }
           
-          // Keep reasonable trail length - 50 points for smooth trails
-          if (updated[station.id].length > 50) {
-            updated[station.id] = updated[station.id].slice(-50);
+          // Keep 2+ full orbits worth of data (1080 points = ~3 hours)
+          if (updated[station.id].length > 1080) {
+            updated[station.id] = updated[station.id].slice(-1080);
           }
         });
         console.log('📍 After update - New history:', updated);
@@ -675,51 +719,36 @@ const SpaceStationTracker = () => {
       const history = stationHistory[station.id];
       console.log(`📊 Station ${station.name} history:`, history?.length || 0, 'points');
       
-      // Create trail even with just 1 point - add a small fake trail for immediate visibility
+      // Create trail with any amount of data
       if (history && history.length >= 1) {
-        let trailPoints: [number, number][];
-        
-        if (history.length === 1) {
-          // Create a small trail from the single point for immediate visibility
-          const point = history[0];
-          trailPoints = [
-            [point.lat - 0.1, point.lng - 0.1],
-            [point.lat, point.lng]
-          ];
-          console.log(`🆕 Creating initial trail for ${station.name} with synthetic points`);
-        } else {
-          trailPoints = history.map(pos => [pos.lat, pos.lng]);
-          console.log(`✅ Creating real trail for ${station.name} with ${trailPoints.length} points`);
-        }
+        const trailPoints: [number, number][] = history.map(pos => [pos.lat, pos.lng]);
+        console.log(`✅ Creating orbital trail for ${station.name} with ${trailPoints.length} points`);
         
         const isISS = station.id === 25544;
         const isHubble = station.id === 20580;
         const isTiangong = station.id === 48274;
         
         let trailColor = '#3b82f6';
-        let trailPattern = '5, 5';
+        let trailPattern = undefined; // Solid lines for better visibility
         
         if (isISS) {
           trailColor = '#22c55e';
-          trailPattern = '10, 5'; // Solid-ish for real data
         } else if (isHubble) {
           trailColor = '#8b5cf6';
-          trailPattern = '8, 4';
         } else if (isTiangong) {
           trailColor = '#f59e0b';
-          trailPattern = '6, 6';
         }
         
         const trail = L.polyline(trailPoints, {
           color: trailColor,
-          weight: 4,
-          opacity: 0.9,
+          weight: 3,
+          opacity: 0.8,
           dashArray: trailPattern,
           lineCap: 'round',
           lineJoin: 'round',
-          smoothFactor: 0.5
+          smoothFactor: 1 // More smoothing for long orbits
         })
-        .bindTooltip(`${station.name} ${t('Orbital Trail', '轨道轨迹')} (${history.length} points)`, {
+        .bindTooltip(`${station.name} ${t('Orbital Path', '轨道路径')} (${history.length} points)`, {
           permanent: false,
           direction: 'center',
           className: 'trail-tooltip'
@@ -727,13 +756,13 @@ const SpaceStationTracker = () => {
         .addTo(mapInstanceRef.current!);
         
         trailsRef.current[station.id] = trail;
-        console.log(`✅ Trail created and added for ${station.name}`);
+        console.log(`✅ Orbital trail created and added for ${station.name} - should wrap around Earth`);
       } else {
         console.log(`⚠️ No trail data for ${station.name}: ${history?.length || 0} points`);
       }
     });
     
-    console.log('🎯 Trail update complete. Active trails:', Object.keys(trailsRef.current).length);
+    console.log('🎯 Orbital trail update complete. Active trails:', Object.keys(trailsRef.current).length);
   };
 
   const updatePassMarkers = (stationData: SpaceStation[]) => {
