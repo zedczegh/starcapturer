@@ -36,9 +36,9 @@ const SpaceStationTracker = () => {
   const [stations, setStations] = useState<SpaceStation[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [showMap, setShowMap] = useState(true);
+  const showMap = true; // Always show map
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [trackingTrails, setTrackingTrails] = useState(true);
+  const trackingTrails = true; // Always show trails
   const [stationHistory, setStationHistory] = useState<{ [key: string]: { lat: number; lng: number; timestamp: number }[] }>({});
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -660,7 +660,12 @@ const SpaceStationTracker = () => {
   };
 
   const updateTrails = (stationData: SpaceStation[]) => {
-    if (!mapInstanceRef.current || !trackingTrails) return;
+    if (!mapInstanceRef.current) {
+      console.log('❌ No map instance for trails');
+      return;
+    }
+
+    console.log('🔄 updateTrails called with', stationData.length, 'stations');
 
     // Clear existing trails
     Object.values(trailsRef.current).forEach(trail => trail.remove());
@@ -668,10 +673,24 @@ const SpaceStationTracker = () => {
 
     stationData.forEach(station => {
       const history = stationHistory[station.id];
+      console.log(`📊 Station ${station.name} history:`, history?.length || 0, 'points');
       
-      // Only create trail if we have enough meaningful points
-      if (history && history.length >= 2) {
-        const trailPoints: [number, number][] = history.map(pos => [pos.lat, pos.lng]);
+      // Create trail even with just 1 point - add a small fake trail for immediate visibility
+      if (history && history.length >= 1) {
+        let trailPoints: [number, number][];
+        
+        if (history.length === 1) {
+          // Create a small trail from the single point for immediate visibility
+          const point = history[0];
+          trailPoints = [
+            [point.lat - 0.1, point.lng - 0.1],
+            [point.lat, point.lng]
+          ];
+          console.log(`🆕 Creating initial trail for ${station.name} with synthetic points`);
+        } else {
+          trailPoints = history.map(pos => [pos.lat, pos.lng]);
+          console.log(`✅ Creating real trail for ${station.name} with ${trailPoints.length} points`);
+        }
         
         const isISS = station.id === 25544;
         const isHubble = station.id === 20580;
@@ -693,12 +712,12 @@ const SpaceStationTracker = () => {
         
         const trail = L.polyline(trailPoints, {
           color: trailColor,
-          weight: 3,
-          opacity: 0.8,
+          weight: 4,
+          opacity: 0.9,
           dashArray: trailPattern,
           lineCap: 'round',
           lineJoin: 'round',
-          smoothFactor: 0.5 // Smooth the trail
+          smoothFactor: 0.5
         })
         .bindTooltip(`${station.name} ${t('Orbital Trail', '轨道轨迹')} (${history.length} points)`, {
           permanent: false,
@@ -708,11 +727,13 @@ const SpaceStationTracker = () => {
         .addTo(mapInstanceRef.current!);
         
         trailsRef.current[station.id] = trail;
-        console.log(`✅ Trail created for ${station.name} with ${trailPoints.length} points`);
+        console.log(`✅ Trail created and added for ${station.name}`);
       } else {
-        console.log(`⚠️ Insufficient trail data for ${station.name}: ${history?.length || 0} points`);
+        console.log(`⚠️ No trail data for ${station.name}: ${history?.length || 0} points`);
       }
     });
+    
+    console.log('🎯 Trail update complete. Active trails:', Object.keys(trailsRef.current).length);
   };
 
   const updatePassMarkers = (stationData: SpaceStation[]) => {
@@ -842,13 +863,17 @@ const SpaceStationTracker = () => {
 
   useEffect(() => {
     console.log('🚀 Main data fetch useEffect - starting...');
+    
+    // Auto-get user location on load
+    getUserLocation();
+    
     fetchStationData();
     
-    // Update every 15 seconds for real-time tracking
+    // Update every 10 seconds for real-time tracking
     const interval = setInterval(() => {
       console.log('⏰ Interval fetch...');
       fetchStationData();
-    }, 15000);
+    }, 10000);
     
     return () => {
       console.log('🧹 Cleaning up main useEffect...');
@@ -863,7 +888,7 @@ const SpaceStationTracker = () => {
     };
   }, []);
 
-  // Separate useEffect to update trails when stationHistory changes
+  // Force trail updates with proper timing
   useEffect(() => {
     console.log('🔄 StationHistory useEffect triggered:', {
       stationsLength: stations.length,
@@ -873,13 +898,14 @@ const SpaceStationTracker = () => {
       historyLengths: Object.fromEntries(Object.entries(stationHistory).map(([k, v]) => [k, v.length]))
     });
     
-    if (stations.length > 0 && mapInstanceRef.current && trackingTrails) {
-      console.log('✅ Conditions met, updating trails...');
-      updateTrails(stations);
-    } else {
-      console.log('❌ Conditions not met for trail update');
+    if (stations.length > 0 && mapInstanceRef.current) {
+      console.log('✅ Force updating trails now...');
+      // Give a small delay to ensure map is ready
+      setTimeout(() => {
+        updateTrails(stations);
+      }, 200);
     }
-  }, [stationHistory, trackingTrails, stations]);
+  }, [stationHistory, stations]);
 
   const formatCoordinate = (coord: number, type: 'lat' | 'lng') => {
     const direction = type === 'lat' ? (coord >= 0 ? 'N' : 'S') : (coord >= 0 ? 'E' : 'W');
@@ -941,44 +967,6 @@ const SpaceStationTracker = () => {
             <Orbit className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             {loading ? t('Updating...', '更新中...') : t('Refresh Data', '刷新数据')}
           </Button>
-          
-          <Button 
-            variant="outline"
-            onClick={() => setShowMap(!showMap)}
-            className="gap-2"
-          >
-            <Map className="h-4 w-4" />
-            {showMap ? t('Hide Map', '隐藏地图') : t('Show Map', '显示地图')}
-          </Button>
-
-          <Button 
-            variant="outline"
-            onClick={getUserLocation}
-            className="gap-2"
-          >
-            <Navigation className="h-4 w-4" />
-            {t('Use My Location', '使用我的位置')}
-          </Button>
-
-          {userLocation && (
-            <Button 
-              variant="outline"
-              onClick={centerOnUser}
-              className="gap-2"
-            >
-              <Crosshair className="h-4 w-4" />
-              {t('Center on Me', '居中到我')}
-            </Button>
-          )}
-
-          <Button 
-            variant={trackingTrails ? "default" : "outline"}
-            onClick={() => setTrackingTrails(!trackingTrails)}
-            className="gap-2"
-          >
-            <Target className="h-4 w-4" />
-            {trackingTrails ? t('Hide Trails', '隐藏轨迹') : t('Show Trails', '显示轨迹')}
-          </Button>
         </div>
 
         {showMap && (
@@ -1016,11 +1004,9 @@ const SpaceStationTracker = () => {
                   <div className="flex items-center gap-2">
                     ⭐ {t('Nearest Pass', '最近过境')}
                   </div>
-                  {trackingTrails && (
-                    <div className="flex items-center gap-2">
-                      ⋯⋯ {t('Real Orbital Trails', '真实轨道轨迹')}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    ⋯⋯ {t('Live Orbital Trails', '实时轨道轨迹')}
+                  </div>
                 </div>
                 <div className="mt-3 text-xs text-muted-foreground text-center">
                   {t('Click your red location marker to find the nearest space station pass', '点击红色位置标记找到最近的空间站过境')}
@@ -1108,17 +1094,9 @@ const SpaceStationTracker = () => {
                     size="sm" 
                     className="w-full mt-4"
                     onClick={() => {
-                      if (mapInstanceRef.current && showMap) {
+                      if (mapInstanceRef.current) {
                         mapInstanceRef.current.setView([station.latitude, station.longitude], 5);
                         markersRef.current[station.id]?.openPopup();
-                      } else {
-                        setShowMap(true);
-                        setTimeout(() => {
-                          if (mapInstanceRef.current) {
-                            mapInstanceRef.current.setView([station.latitude, station.longitude], 5);
-                            markersRef.current[station.id]?.openPopup();
-                          }
-                        }, 500);
                       }
                     }}
                   >
