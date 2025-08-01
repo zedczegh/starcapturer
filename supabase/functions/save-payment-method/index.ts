@@ -15,6 +15,21 @@ serve(async (req) => {
   try {
     const { payment_method_id, is_default } = await req.json();
     
+    // Validate required inputs
+    if (!payment_method_id) {
+      throw new Error("Missing required field: payment_method_id");
+    }
+    
+    // Validate payment method ID format (Stripe format: pm_xxx)
+    if (typeof payment_method_id !== 'string' || !payment_method_id.startsWith('pm_')) {
+      throw new Error("Invalid payment method ID format");
+    }
+    
+    // Validate is_default type
+    if (is_default !== undefined && typeof is_default !== 'boolean') {
+      throw new Error("is_default must be a boolean value");
+    }
+    
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",

@@ -48,15 +48,17 @@ export interface AppConfig {
 export const defaultConfig: AppConfig = {
   database: {
     provider: 'supabase',
-    url: process.env.SUPABASE_URL || '',
-    apiKey: process.env.SUPABASE_ANON_KEY || ''
+    url: 'https://fmnivvwpyriufxaebbzi.supabase.co',
+    apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZtbml2dndweXJpdWZ4YWViYnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODU3NTAsImV4cCI6MjA2MDM2MTc1MH0.HZX_hS0A1nUB3iO7wDmTjMBoYk3hQz6lqmyBEYvoQ9Y'
   },
   weather: {
     provider: 'openmeteo',
     baseUrl: 'https://api.open-meteo.com'
   },
   map: {
-    provider: 'gaode' // Using Gaode Maps for testing
+    provider: 'gaode',
+    // Note: Gaode API key should be moved to environment variables in production
+    apiKey: undefined // Remove hardcoded key for security
   },
   siqs: {
     provider: 'default'

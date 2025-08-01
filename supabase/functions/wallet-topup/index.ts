@@ -15,6 +15,27 @@ serve(async (req) => {
   try {
     const { amount, currency = 'usd', payment_method_id } = await req.json();
     
+    // Validate required inputs
+    if (!amount || !payment_method_id) {
+      throw new Error("Missing required fields: amount and payment_method_id");
+    }
+    
+    // Validate amount (min $1, max $10,000)
+    if (typeof amount !== 'number' || amount < 1 || amount > 10000) {
+      throw new Error("Amount must be between $1 and $10,000");
+    }
+    
+    // Validate currency
+    const allowedCurrencies = ['usd', 'eur', 'gbp'];
+    if (!allowedCurrencies.includes(currency.toLowerCase())) {
+      throw new Error("Unsupported currency");
+    }
+    
+    // Validate payment method ID format (Stripe format: pm_xxx)
+    if (typeof payment_method_id !== 'string' || !payment_method_id.startsWith('pm_')) {
+      throw new Error("Invalid payment method ID format");
+    }
+    
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
