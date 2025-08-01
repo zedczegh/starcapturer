@@ -136,34 +136,18 @@ const SpaceStationTracker = () => {
       userMarkerRef.current.remove();
     }
 
-    // Create highly visible user location marker
+    // Create highly visible user location marker with better styling
     const userIcon = L.divIcon({
       html: `
-        <div style="
-          background: #ef4444;
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          border: 3px solid white;
-          box-shadow: 0 0 15px rgba(239, 68, 68, 0.8), 0 0 30px rgba(239, 68, 68, 0.4);
-          position: relative;
-        ">
-          <div style="
-            position: absolute;
-            top: -8px;
-            left: -8px;
-            width: 34px;
-            height: 34px;
-            border: 2px solid #ef4444;
-            border-radius: 50%;
-            opacity: 0.3;
-            animation: userLocationPulse 2s infinite;
-          "></div>
+        <div class="user-location-outer">
+          <div class="user-location-inner">
+            📍
+          </div>
         </div>
       `,
       className: 'user-location-marker',
-      iconSize: [24, 24],
-      iconAnchor: [12, 12]
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
     });
 
     userMarkerRef.current = L.marker([location.lat, location.lng], { icon: userIcon })
@@ -186,16 +170,45 @@ const SpaceStationTracker = () => {
       })
       .addTo(mapInstanceRef.current);
 
-    // Add enhanced pulsing animation
+    // Add enhanced pulsing animation and user marker styles
     const style = document.createElement('style');
     style.textContent = `
       .user-location-marker {
         z-index: 1000 !important;
       }
+      .user-location-outer {
+        background: #ef4444;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 4px solid white;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.4);
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        animation: userLocationPulse 2s infinite;
+      }
+      .user-location-inner {
+        z-index: 1001;
+      }
+      .user-location-outer::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: -8px;
+        width: 36px;
+        height: 36px;
+        border: 3px solid #ef4444;
+        border-radius: 50%;
+        opacity: 0.4;
+        animation: userLocationPulse 2s infinite reverse;
+      }
       @keyframes userLocationPulse {
-        0% { transform: scale(1); opacity: 0.3; }
-        50% { transform: scale(1.2); opacity: 0.1; }
-        100% { transform: scale(1); opacity: 0.3; }
+        0% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.3); opacity: 0.3; }
+        100% { transform: scale(1); opacity: 0.8; }
       }
     `;
     if (!document.head.querySelector('[data-user-location-style]')) {
@@ -423,6 +436,14 @@ const SpaceStationTracker = () => {
         allStations.forEach(station => {
           if (!updated[station.id]) {
             updated[station.id] = [];
+            // Initialize with multiple points for immediate trail visibility
+            for (let i = 4; i >= 0; i--) {
+              updated[station.id].push({
+                lat: station.latitude + (i * 0.01), // Slight offset for initial trail
+                lng: station.longitude + (i * 0.01),
+                timestamp: station.timestamp - (i * 10000)
+              });
+            }
           }
           
           // Add current position to history
@@ -435,9 +456,9 @@ const SpaceStationTracker = () => {
           // Always add the point for trail visibility
           updated[station.id].push(newPoint);
           
-          // Keep only last 25 positions (about 4+ minutes of trail at 10s intervals)
-          if (updated[station.id].length > 25) {
-            updated[station.id] = updated[station.id].slice(-25);
+          // Keep only last 30 positions (about 5+ minutes of trail at 10s intervals)
+          if (updated[station.id].length > 30) {
+            updated[station.id] = updated[station.id].slice(-30);
           }
           
           console.log(`Updated trail for ${station.name}, points: ${updated[station.id].length}`); // Debug
@@ -485,13 +506,25 @@ const SpaceStationTracker = () => {
   const updateMapMarkers = (stationData: SpaceStation[]) => {
     if (!mapInstanceRef.current) return;
 
-    // Clear existing markers, trails, and pass markers
-    Object.values(markersRef.current).forEach(marker => marker.remove());
+    // Clear existing markers and trails (but preserve nearest pass marker)
+    Object.entries(markersRef.current).forEach(([key, marker]) => {
+      marker.remove();
+    });
     Object.values(trailsRef.current).forEach(trail => trail.remove());
-    Object.values(passMarkersRef.current).forEach(marker => marker.remove());
+    // Only clear prediction markers that aren't the special "nearest" one
+    Object.entries(passMarkersRef.current).forEach(([key, marker]) => {
+      if (key !== 'nearest') {
+        marker.remove();
+      }
+    });
     markersRef.current = {};
     trailsRef.current = {};
+    // Keep nearest pass marker but clear others
+    const nearestMarker = passMarkersRef.current['nearest'];
     passMarkersRef.current = {};
+    if (nearestMarker) {
+      passMarkersRef.current['nearest'] = nearestMarker;
+    }
 
     // Force trails to show if enabled - render trails FIRST
     if (trackingTrails) {
@@ -651,13 +684,14 @@ const SpaceStationTracker = () => {
         const passIcon = L.divIcon({
           html: `
             <div style="
-              background: rgba(${stationColor === '#22c55e' ? '34, 197, 94' : stationColor === '#8b5cf6' ? '139, 92, 246' : '245, 158, 11'}, 0.8);
-              width: 16px;
-              height: 16px;
+              background: ${stationColor === '#22c55e' ? '#22c55e' : stationColor === '#8b5cf6' ? '#8b5cf6' : '#f59e0b'};
+              width: 18px;
+              height: 18px;
               border-radius: 50%;
-              border: 2px solid white;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+              border: 3px solid white;
+              box-shadow: 0 3px 8px rgba(0,0,0,0.5);
               animation: passPulse 2s infinite;
+              opacity: 1;
             ">
             </div>
           `,
@@ -709,9 +743,9 @@ const SpaceStationTracker = () => {
         box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
       }
       @keyframes passPulse {
-        0% { transform: scale(1); opacity: 0.8; }
-        50% { transform: scale(1.4); opacity: 0.4; }
-        100% { transform: scale(1); opacity: 0.8; }
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.4); opacity: 0.7; }
+        100% { transform: scale(1); opacity: 1; }
       }
     `;
     if (!document.head.querySelector('[data-station-tooltip-style]')) {
