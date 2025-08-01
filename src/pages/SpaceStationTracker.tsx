@@ -467,15 +467,15 @@ const SpaceStationTracker = () => {
         return updated;
       });
       
+      console.log('✅ Station data fetched successfully:', allStations.length, 'stations');
       setStations(allStations);
       setLastUpdate(new Date());
       
-      // Don't call updateMapMarkers immediately - let state update first
-      setTimeout(() => updateMapMarkers(allStations), 100);
-      
+      // Update markers immediately, trails will update via useEffect
+      updateMapMarkers(allStations);
       
     } catch (error) {
-      console.error('Error fetching station data:', error);
+      console.error('❌ Error fetching station data:', error);
       toast.error(t('Failed to fetch station data', '获取空间站数据失败'));
     } finally {
       setLoading(false);
@@ -483,7 +483,11 @@ const SpaceStationTracker = () => {
   };
 
   const initializeMap = () => {
-    if (!mapRef.current || mapInstanceRef.current) return;
+    console.log('🗺️ initializeMap called - mapRef:', !!mapRef.current, 'mapInstance:', !!mapInstanceRef.current);
+    if (!mapRef.current || mapInstanceRef.current) {
+      console.log('🗺️ Map init skipped - no ref or already exists');
+      return;
+    }
 
     // Fix Leaflet default markers
     delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -493,6 +497,7 @@ const SpaceStationTracker = () => {
       shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
     });
 
+    console.log('🗺️ Creating Leaflet map...');
     const map = L.map(mapRef.current, {
       attributionControl: false // Hide Leaflet attribution
     }).setView([0, 0], 2);
@@ -502,6 +507,7 @@ const SpaceStationTracker = () => {
     }).addTo(map);
 
     mapInstanceRef.current = map;
+    console.log('✅ Map initialized successfully');
   };
 
   const updateMapMarkers = (stationData: SpaceStation[]) => {
@@ -530,8 +536,8 @@ const SpaceStationTracker = () => {
       }
     });
 
-    // Don't update trails here - they update via useEffect when stationHistory changes
-    // updateTrails(stationData);
+    // Update trails via useEffect when stationHistory changes
+    console.log('🔄 updateMapMarkers completed - trails will update separately');
     
     // Update pass markers
     updatePassMarkers(stationData);
@@ -825,26 +831,27 @@ const SpaceStationTracker = () => {
   };
 
   useEffect(() => {
+    console.log('🗺️ Map useEffect - showMap:', showMap);
     if (showMap) {
-      setTimeout(() => initializeMap(), 100);
+      setTimeout(() => {
+        console.log('🗺️ Initializing map...');
+        initializeMap();
+      }, 100);
     }
   }, [showMap]);
 
-  // Separate useEffect to update trails when stationHistory changes
   useEffect(() => {
-    if (stations.length > 0 && mapInstanceRef.current) {
-      console.log('🔄 Station history updated, refreshing trails...', stationHistory);
-      updateTrails(stations);
-    }
-  }, [stationHistory, trackingTrails, stations]);
-
-  useEffect(() => {
+    console.log('🚀 Main data fetch useEffect - starting...');
     fetchStationData();
     
-    // Update every 15 seconds for real-time tracking (less frequent for better trail building)
-    const interval = setInterval(fetchStationData, 15000);
+    // Update every 15 seconds for real-time tracking
+    const interval = setInterval(() => {
+      console.log('⏰ Interval fetch...');
+      fetchStationData();
+    }, 15000);
     
     return () => {
+      console.log('🧹 Cleaning up main useEffect...');
       clearInterval(interval);
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -854,7 +861,25 @@ const SpaceStationTracker = () => {
         userMarkerRef.current = null;
       }
     };
-  }, [userLocation]); // Add userLocation dependency to recalculate passes
+  }, []);
+
+  // Separate useEffect to update trails when stationHistory changes
+  useEffect(() => {
+    console.log('🔄 StationHistory useEffect triggered:', {
+      stationsLength: stations.length,
+      mapExists: !!mapInstanceRef.current,
+      trackingTrails,
+      historyKeys: Object.keys(stationHistory),
+      historyLengths: Object.fromEntries(Object.entries(stationHistory).map(([k, v]) => [k, v.length]))
+    });
+    
+    if (stations.length > 0 && mapInstanceRef.current && trackingTrails) {
+      console.log('✅ Conditions met, updating trails...');
+      updateTrails(stations);
+    } else {
+      console.log('❌ Conditions not met for trail update');
+    }
+  }, [stationHistory, trackingTrails, stations]);
 
   const formatCoordinate = (coord: number, type: 'lat' | 'lng') => {
     const direction = type === 'lat' ? (coord >= 0 ? 'N' : 'S') : (coord >= 0 ? 'E' : 'W');
