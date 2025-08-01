@@ -81,42 +81,56 @@ const SpaceStationTracker = () => {
       userMarkerRef.current.remove();
     }
 
-    // Create user location marker
+    // Create user location marker with simpler icon
     const userIcon = L.divIcon({
       html: `
         <div style="
           background: #ef4444;
-          width: 16px;
-          height: 16px;
+          width: 14px;
+          height: 14px;
           border-radius: 50%;
-          border: 3px solid white;
-          box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
-          animation: pulse 2s infinite;
+          border: 2px solid white;
+          box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
         "></div>
-        <style>
-          @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.7; }
-            100% { transform: scale(1); opacity: 1; }
-          }
-        </style>
       `,
-      className: '',
-      iconSize: [22, 22],
-      iconAnchor: [11, 11]
+      className: 'user-location-marker',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
     });
 
     userMarkerRef.current = L.marker([location.lat, location.lng], { icon: userIcon })
       .bindPopup(`
-        <div style="text-align: center;">
-          <h3 style="margin: 0 0 8px 0;">📍 ${t('Your Location', '您的位置')}</h3>
-          <p style="margin: 2px 0;">${location.lat.toFixed(4)}°, ${location.lng.toFixed(4)}°</p>
-          <p style="margin: 4px 0; font-size: 12px; color: #666;">
+        <div style="text-align: center; min-width: 150px;">
+          <h3 style="margin: 0 0 8px 0; color: #ef4444;">📍 ${t('Your Location', '您的位置')}</h3>
+          <p style="margin: 2px 0; font-size: 12px;">${location.lat.toFixed(4)}°, ${location.lng.toFixed(4)}°</p>
+          <p style="margin: 4px 0; font-size: 11px; color: #666;">
             ${t('Perfect for space station photography!', '观测空间站的绝佳位置！')}
           </p>
         </div>
       `)
+      .bindTooltip(t('Your Location', '您的位置'), {
+        permanent: false,
+        direction: 'top',
+        offset: [0, -10]
+      })
       .addTo(mapInstanceRef.current);
+
+    // Add pulsing animation via CSS
+    const style = document.createElement('style');
+    style.textContent = `
+      .user-location-marker {
+        animation: userPulse 2s infinite;
+      }
+      @keyframes userPulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.3); opacity: 0.7; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+    `;
+    if (!document.head.querySelector('[data-user-location-style]')) {
+      style.setAttribute('data-user-location-style', 'true');
+      document.head.appendChild(style);
+    }
   };
 
   const fetchStationData = async () => {
@@ -181,28 +195,34 @@ const SpaceStationTracker = () => {
 
       const allStations = [issStation, ...otherStations];
       
-      // Update station history for trails
-      if (trackingTrails) {
-        setStationHistory(prev => {
-          const updated = { ...prev };
-          allStations.forEach(station => {
-            if (!updated[station.id]) updated[station.id] = [];
-            
-            // Add current position to history
-            updated[station.id].push({
-              lat: station.latitude,
-              lng: station.longitude,
-              timestamp: station.timestamp
-            });
-            
-            // Keep only last 20 positions (about 3+ minutes of trail)
-            if (updated[station.id].length > 20) {
-              updated[station.id] = updated[station.id].slice(-20);
-            }
-          });
-          return updated;
+      // Update station history for trails - always update to ensure trails appear
+      setStationHistory(prev => {
+        const updated = { ...prev };
+        allStations.forEach(station => {
+          if (!updated[station.id]) updated[station.id] = [];
+          
+          // Add current position to history
+          const newPoint = {
+            lat: station.latitude,
+            lng: station.longitude,
+            timestamp: station.timestamp
+          };
+          
+          // Only add if position has changed significantly (avoid duplicate points)
+          const lastPoint = updated[station.id][updated[station.id].length - 1];
+          if (!lastPoint || 
+              Math.abs(lastPoint.lat - newPoint.lat) > 0.01 || 
+              Math.abs(lastPoint.lng - newPoint.lng) > 0.01) {
+            updated[station.id].push(newPoint);
+          }
+          
+          // Keep only last 30 positions (about 5 minutes of trail)
+          if (updated[station.id].length > 30) {
+            updated[station.id] = updated[station.id].slice(-30);
+          }
         });
-      }
+        return updated;
+      });
       
       setStations(allStations);
       setLastUpdate(new Date());
@@ -248,52 +268,79 @@ const SpaceStationTracker = () => {
     markersRef.current = {};
     trailsRef.current = {};
 
-    // Add trails first (so they appear behind markers)
+    // Add trails first (so they appear behind markers) - show trails if enabled and history exists
     if (trackingTrails) {
       stationData.forEach(station => {
         const history = stationHistory[station.id];
         if (history && history.length > 1) {
           const trailPoints: [number, number][] = history.map(pos => [pos.lat, pos.lng]);
           
+          const isISS = station.id === 25544;
           const trail = L.polyline(trailPoints, {
-            color: station.id === 25544 ? '#22c55e' : '#3b82f6',
-            weight: 2,
-            opacity: 0.7,
-            dashArray: '5, 5'
-          }).addTo(mapInstanceRef.current);
+            color: isISS ? '#22c55e' : '#3b82f6',
+            weight: 3,
+            opacity: 0.8,
+            dashArray: isISS ? '10, 5' : '5, 10', // Different dash patterns
+            lineCap: 'round'
+          })
+          .bindTooltip(`${station.name} ${t('Trail', '轨迹')}`, {
+            permanent: false,
+            direction: 'center'
+          })
+          .addTo(mapInstanceRef.current);
           
           trailsRef.current[station.id] = trail;
         }
       });
     }
 
-    // Add new markers
+    // Add new markers with enhanced identification
     stationData.forEach(station => {
       const isISS = station.id === 25544;
+      const isHubble = station.id === 20580;
+      const isTiangong = station.id === 48274;
+      
+      let stationEmoji = '🛰️';
+      let stationColor = '#3b82f6';
+      let stationName = station.name;
+      
+      if (isISS) {
+        stationEmoji = '🌟';
+        stationColor = '#22c55e';
+        stationName = 'ISS';
+      } else if (isHubble) {
+        stationEmoji = '🔭';
+        stationColor = '#8b5cf6';
+        stationName = 'Hubble';
+      } else if (isTiangong) {
+        stationEmoji = '🛸';
+        stationColor = '#f59e0b';
+        stationName = 'Tiangong';
+      }
       const icon = L.divIcon({
         html: `
           <div style="
-            background: ${isISS ? '#22c55e' : '#3b82f6'};
-            width: 24px;
-            height: 24px;
+            background: ${stationColor};
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
             border: 3px solid white;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.4);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
             position: relative;
           ">
-            🛰️
-            ${isISS ? '<div style="position: absolute; top: -30px; background: #22c55e; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; white-space: nowrap;">LIVE</div>' : ''}
+            ${stationEmoji}
+            ${isISS ? '<div style="position: absolute; top: -25px; background: #22c55e; color: white; padding: 1px 4px; border-radius: 3px; font-size: 8px; white-space: nowrap;">LIVE</div>' : ''}
           </div>
         `,
-        className: '',
-        iconSize: [30, 30],
-        iconAnchor: [15, 15]
+        className: `station-marker station-${station.id}`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
       });
 
       const distanceFromUser = userLocation ? 
@@ -301,20 +348,49 @@ const SpaceStationTracker = () => {
 
       const marker = L.marker([station.latitude, station.longitude], { icon })
         .bindPopup(`
-          <div style="min-width: 220px;">
-            <h3 style="margin: 0 0 8px 0; font-weight: bold;">${station.name}</h3>
+          <div style="min-width: 240px;">
+            <h3 style="margin: 0 0 8px 0; font-weight: bold; color: ${stationColor};">${stationEmoji} ${station.name}</h3>
             <p style="margin: 2px 0;"><strong>📏 Altitude:</strong> ${station.altitude} km</p>
             <p style="margin: 2px 0;"><strong>⚡ Velocity:</strong> ${station.velocity.toLocaleString()} km/h</p>
             <p style="margin: 2px 0;"><strong>👥 Crew:</strong> ${station.crew || 0}</p>
             <p style="margin: 2px 0;"><strong>📡 Status:</strong> ${station.visibility}</p>
             ${distanceFromUser ? `<p style="margin: 2px 0;"><strong>📍 Distance:</strong> ${distanceFromUser.toFixed(0)} km</p>` : ''}
-            ${isISS ? '<p style="margin: 4px 0; color: #22c55e; font-weight: bold;">📸 Great for photography!</p>' : ''}
+            ${isISS ? '<p style="margin: 4px 0; color: #22c55e; font-weight: bold;">📸 Perfect for photography!</p>' : ''}
+            ${isHubble ? '<p style="margin: 4px 0; color: #8b5cf6; font-weight: bold;">🔭 Space telescope</p>' : ''}
+            ${isTiangong ? '<p style="margin: 4px 0; color: #f59e0b; font-weight: bold;">🚀 Chinese space station</p>' : ''}
           </div>
         `)
+        .bindTooltip(`${stationEmoji} ${stationName}`, {
+          permanent: false,
+          direction: 'top',
+          offset: [0, -15],
+          className: 'station-tooltip'
+        })
         .addTo(mapInstanceRef.current);
 
       markersRef.current[station.id] = marker;
     });
+
+    // Add custom CSS for tooltips
+    const style = document.createElement('style');
+    style.textContent = `
+      .station-tooltip {
+        background: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 6px !important;
+        font-weight: bold !important;
+        font-size: 12px !important;
+        padding: 4px 8px !important;
+      }
+      .station-tooltip::before {
+        border-top-color: rgba(0, 0, 0, 0.8) !important;
+      }
+    `;
+    if (!document.head.querySelector('[data-station-tooltip-style]')) {
+      style.setAttribute('data-station-tooltip-style', 'true');
+      document.head.appendChild(style);
+    }
   };
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -462,17 +538,22 @@ const SpaceStationTracker = () => {
                 />
                 <div className="mt-4 flex flex-wrap gap-4 justify-center text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
-                    🟢 {t('Live ISS Position', 'ISS实时位置')}
+                    🌟 {t('ISS (Live)', 'ISS（实时）')}
                   </div>
                   <div className="flex items-center gap-2">
-                    🔵 {t('Simulated Positions', '模拟位置')}
+                    🔭 {t('Hubble Telescope', '哈勃望远镜')}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    🛸 {t('Tiangong Station', '天宫空间站')}
                   </div>
                   <div className="flex items-center gap-2">
                     🔴 {t('Your Location', '您的位置')}
                   </div>
-                  <div className="flex items-center gap-2">
-                    ⋯⋯ {t('Orbital Trails', '轨道轨迹')}
-                  </div>
+                  {trackingTrails && (
+                    <div className="flex items-center gap-2">
+                      ⋯⋯ {t('Orbital Trails', '轨道轨迹')}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
