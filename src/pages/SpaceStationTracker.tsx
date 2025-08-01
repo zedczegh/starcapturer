@@ -431,11 +431,13 @@ const SpaceStationTracker = () => {
       
       // PROPERLY update station history for trails - no fake initialization
       setStationHistory(prev => {
+        console.log('📍 Before update - Previous history:', prev);
         const updated = { ...prev };
         allStations.forEach(station => {
           // Initialize empty array if first time
           if (!updated[station.id]) {
             updated[station.id] = [];
+            console.log(`🆕 Initializing history for ${station.name}`);
           }
           
           // Add current position to history
@@ -451,6 +453,9 @@ const SpaceStationTracker = () => {
               Math.abs(lastPoint.lat - newPoint.lat) > 0.001 || 
               Math.abs(lastPoint.lng - newPoint.lng) > 0.001) {
             updated[station.id].push(newPoint);
+            console.log(`➕ Added point for ${station.name}, total points: ${updated[station.id].length}`);
+          } else {
+            console.log(`⏭️ Skipped duplicate point for ${station.name}`);
           }
           
           // Keep reasonable trail length - 50 points for smooth trails
@@ -458,14 +463,16 @@ const SpaceStationTracker = () => {
             updated[station.id] = updated[station.id].slice(-50);
           }
         });
+        console.log('📍 After update - New history:', updated);
         return updated;
       });
       
       setStations(allStations);
       setLastUpdate(new Date());
       
-      // Update map markers
-      updateMapMarkers(allStations);
+      // Don't call updateMapMarkers immediately - let state update first
+      setTimeout(() => updateMapMarkers(allStations), 100);
+      
       
     } catch (error) {
       console.error('Error fetching station data:', error);
@@ -500,6 +507,8 @@ const SpaceStationTracker = () => {
   const updateMapMarkers = (stationData: SpaceStation[]) => {
     if (!mapInstanceRef.current) return;
 
+    console.log('🔄 Updating map markers, station history state:', stationHistory);
+
     // Update existing markers instead of clearing and recreating them
     stationData.forEach(station => {
       const existingMarker = markersRef.current[station.id];
@@ -521,8 +530,8 @@ const SpaceStationTracker = () => {
       }
     });
 
-    // Update trails separately without affecting markers
-    updateTrails(stationData);
+    // Don't update trails here - they update via useEffect when stationHistory changes
+    // updateTrails(stationData);
     
     // Update pass markers
     updatePassMarkers(stationData);
@@ -821,6 +830,14 @@ const SpaceStationTracker = () => {
     }
   }, [showMap]);
 
+  // Separate useEffect to update trails when stationHistory changes
+  useEffect(() => {
+    if (stations.length > 0 && mapInstanceRef.current) {
+      console.log('🔄 Station history updated, refreshing trails...', stationHistory);
+      updateTrails(stations);
+    }
+  }, [stationHistory, trackingTrails, stations]);
+
   useEffect(() => {
     fetchStationData();
     
@@ -837,7 +854,7 @@ const SpaceStationTracker = () => {
         userMarkerRef.current = null;
       }
     };
-  }, []);
+  }, [userLocation]); // Add userLocation dependency to recalculate passes
 
   const formatCoordinate = (coord: number, type: 'lat' | 'lng') => {
     const direction = type === 'lat' ? (coord >= 0 ? 'N' : 'S') : (coord >= 0 ? 'E' : 'W');
