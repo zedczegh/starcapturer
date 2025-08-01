@@ -988,29 +988,6 @@ const SpaceStationTracker = () => {
                   className="w-full h-96 rounded-lg overflow-hidden border border-border"
                   style={{ minHeight: '400px' }}
                 />
-                <div className="mt-4 flex flex-wrap gap-4 justify-center text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    🌟 {t('ISS (Live)', 'ISS（实时）')}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    🔭 {t('Hubble Telescope', '哈勃望远镜')}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    🛸 {t('Tiangong Station', '天宫空间站')}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    🔴 {t('Your Location', '您的位置')}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    ⭐ {t('Nearest Pass', '最近过境')}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    ⋯⋯ {t('Live Orbital Trails', '实时轨道轨迹')}
-                  </div>
-                </div>
-                <div className="mt-3 text-xs text-muted-foreground text-center">
-                  {t('Click your red location marker to find the nearest space station pass', '点击红色位置标记找到最近的空间站过境')}
-                </div>
               </CardContent>
             </Card>
           </motion.div>
