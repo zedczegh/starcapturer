@@ -506,185 +506,224 @@ const SpaceStationTracker = () => {
   const updateMapMarkers = (stationData: SpaceStation[]) => {
     if (!mapInstanceRef.current) return;
 
-    // Clear existing markers and trails (but preserve nearest pass marker)
-    Object.entries(markersRef.current).forEach(([key, marker]) => {
-      marker.remove();
+    // Update existing markers instead of clearing and recreating them
+    stationData.forEach(station => {
+      const existingMarker = markersRef.current[station.id];
+      
+      if (existingMarker) {
+        // Just update position of existing marker - no visual jumping
+        existingMarker.setLatLng([station.latitude, station.longitude]);
+      } else {
+        // Only create new marker if it doesn't exist
+        createStationMarker(station);
+      }
     });
+
+    // Remove markers for stations that no longer exist
+    Object.keys(markersRef.current).forEach(markerId => {
+      if (!stationData.find(s => s.id.toString() === markerId)) {
+        markersRef.current[markerId].remove();
+        delete markersRef.current[markerId];
+      }
+    });
+
+    // Update trails separately without affecting markers
+    updateTrails(stationData);
+    
+    // Update pass markers
+    updatePassMarkers(stationData);
+  };
+
+  const createStationMarker = (station: SpaceStation) => {
+    if (!mapInstanceRef.current) return;
+    const isISS = station.id === 25544;
+    const isHubble = station.id === 20580;
+    const isTiangong = station.id === 48274;
+    
+    let stationEmoji = '🛰️';
+    let stationColor = '#3b82f6';
+    let stationName = station.name;
+    
+    if (isISS) {
+      stationEmoji = '🌟';
+      stationColor = '#22c55e';
+      stationName = 'ISS';
+    } else if (isHubble) {
+      stationEmoji = '🔭';
+      stationColor = '#8b5cf6';
+      stationName = 'Hubble';
+    } else if (isTiangong) {
+      stationEmoji = '🛸';
+      stationColor = '#f59e0b';
+      stationName = 'Tiangong';
+    }
+
+    const icon = L.divIcon({
+      html: `
+        <div style="
+          background: ${stationColor};
+          width: 26px;
+          height: 26px;
+          border-radius: 50%;
+          border: 3px solid white;
+          box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 14px;
+          font-weight: bold;
+          position: relative;
+        ">
+          ${stationEmoji}
+          ${isISS ? '<div style="position: absolute; top: -25px; background: #22c55e; color: white; padding: 1px 4px; border-radius: 3px; font-size: 8px; white-space: nowrap;">LIVE</div>' : ''}
+        </div>
+      `,
+      className: `station-marker station-${station.id}`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    const distanceFromUser = userLocation ? 
+      calculateDistance(userLocation.lat, userLocation.lng, station.latitude, station.longitude) : null;
+
+    const marker = L.marker([station.latitude, station.longitude], { icon })
+      .bindPopup(`
+        <div style="min-width: 240px;">
+          <h3 style="margin: 0 0 8px 0; font-weight: bold; color: ${stationColor};">${stationEmoji} ${station.name}</h3>
+          <p style="margin: 2px 0;"><strong>📏 Altitude:</strong> ${station.altitude} km</p>
+          <p style="margin: 2px 0;"><strong>⚡ Velocity:</strong> ${station.velocity.toLocaleString()} km/h</p>
+          <p style="margin: 2px 0;"><strong>👥 Crew:</strong> ${station.crew || 0}</p>
+          <p style="margin: 2px 0;"><strong>📡 Status:</strong> ${station.visibility}</p>
+          ${distanceFromUser ? `<p style="margin: 2px 0;"><strong>📍 Distance:</strong> ${distanceFromUser.toFixed(0)} km</p>` : ''}
+          ${station.nextPass ? `
+            <div style="margin: 8px 0; padding: 6px; background: rgba(34, 197, 94, 0.1); border-radius: 4px;">
+              <strong>🕐 Next Pass:</strong><br/>
+              Time: ${station.nextPass.time}<br/>
+              Direction: ${station.nextPass.direction}<br/>
+              Max Elevation: ${station.nextPass.elevation}°
+            </div>
+          ` : ''}
+          ${isISS ? '<p style="margin: 4px 0; color: #22c55e; font-weight: bold;">📸 Perfect for photography!</p>' : ''}
+          ${isHubble ? '<p style="margin: 4px 0; color: #8b5cf6; font-weight: bold;">🔭 Space telescope</p>' : ''}
+          ${isTiangong ? '<p style="margin: 4px 0; color: #f59e0b; font-weight: bold;">🚀 Chinese space station</p>' : ''}
+        </div>
+      `)
+      .bindTooltip(`${stationEmoji} ${stationName}`, {
+        permanent: false,
+        direction: 'top',
+        offset: [0, -15],
+        className: 'station-tooltip'
+      })
+      .on('mouseover', function(e) {
+        if (station.nextPass && userLocation) {
+          const hoverContent = `
+            <div style="text-align: center; min-width: 180px;">
+              <h4 style="margin: 0 0 6px 0; color: ${stationColor};">${stationEmoji} ${stationName}</h4>
+              <p style="margin: 2px 0; font-size: 12px;"><strong>🕐 Next Pass: ${station.nextPass.time}</strong></p>
+              <p style="margin: 2px 0; font-size: 11px;">Direction: ${station.nextPass.direction} • Elevation: ${station.nextPass.elevation}°</p>
+              <p style="margin: 4px 0; font-size: 10px; color: #666;">Click marker on map to see pass location</p>
+            </div>
+          `;
+          
+          if (hoverPopupRef.current) {
+            mapInstanceRef.current?.closePopup(hoverPopupRef.current);
+          }
+          
+          hoverPopupRef.current = L.popup({
+            closeButton: false,
+            className: 'hover-popup'
+          })
+            .setLatLng(e.latlng)
+            .setContent(hoverContent)
+            .openOn(mapInstanceRef.current!);
+        }
+      })
+      .on('mouseout', function() {
+        if (hoverPopupRef.current && mapInstanceRef.current) {
+          mapInstanceRef.current.closePopup(hoverPopupRef.current);
+          hoverPopupRef.current = null;
+        }
+      })
+      .addTo(mapInstanceRef.current);
+
+    markersRef.current[station.id] = marker;
+  };
+
+  const updateTrails = (stationData: SpaceStation[]) => {
+    if (!mapInstanceRef.current || !trackingTrails) return;
+
+    // Clear existing trails
     Object.values(trailsRef.current).forEach(trail => trail.remove());
-    // Only clear prediction markers that aren't the special "nearest" one
+    trailsRef.current = {};
+
+    stationData.forEach(station => {
+      const history = stationHistory[station.id];
+      
+      if (history && history.length > 1) {
+        const trailPoints: [number, number][] = history.map(pos => [pos.lat, pos.lng]);
+        
+        const isISS = station.id === 25544;
+        const isHubble = station.id === 20580;
+        
+        let trailColor = '#3b82f6';
+        if (isISS) trailColor = '#22c55e';
+        else if (isHubble) trailColor = '#8b5cf6';
+        
+        const trail = L.polyline(trailPoints, {
+          color: trailColor,
+          weight: 4,
+          opacity: 0.9,
+          dashArray: isISS ? '8, 4' : '6, 6',
+          lineCap: 'round',
+          lineJoin: 'round'
+        })
+        .bindTooltip(`${station.name} ${t('Trail', '轨迹')} (${history.length} points)`, {
+          permanent: false,
+          direction: 'center'
+        })
+        .addTo(mapInstanceRef.current!);
+        
+        trailsRef.current[station.id] = trail;
+      }
+    });
+  };
+
+  const updatePassMarkers = (stationData: SpaceStation[]) => {
+    if (!mapInstanceRef.current || !userLocation) return;
+
+    // Clear existing pass markers (except nearest)
     Object.entries(passMarkersRef.current).forEach(([key, marker]) => {
       if (key !== 'nearest') {
         marker.remove();
+        delete passMarkersRef.current[key];
       }
     });
-    markersRef.current = {};
-    trailsRef.current = {};
-    // Keep nearest pass marker but clear others
-    const nearestMarker = passMarkersRef.current['nearest'];
-    passMarkersRef.current = {};
-    if (nearestMarker) {
-      passMarkersRef.current['nearest'] = nearestMarker;
-    }
 
-    // Force trails to show if enabled - render trails FIRST
-    if (trackingTrails) {
-      stationData.forEach(station => {
-        const history = stationHistory[station.id];
-        console.log(`Station ${station.name} trail history:`, history); // Debug log
-        
-        if (history && history.length > 1) {
-          const trailPoints: [number, number][] = history.map(pos => [pos.lat, pos.lng]);
-          console.log(`Creating trail for ${station.name} with ${trailPoints.length} points`); // Debug log
-          
-          const isISS = station.id === 25544;
-          const isHubble = station.id === 20580;
-          
-          let trailColor = '#3b82f6';
-          if (isISS) trailColor = '#22c55e';
-          else if (isHubble) trailColor = '#8b5cf6';
-          
-          const trail = L.polyline(trailPoints, {
-            color: trailColor,
-            weight: 4, // Thicker lines
-            opacity: 0.9, // More visible
-            dashArray: isISS ? '8, 4' : '6, 6',
-            lineCap: 'round',
-            lineJoin: 'round'
-          })
-          .bindTooltip(`${station.name} ${t('Trail', '轨迹')} (${history.length} points)`, {
-            permanent: false,
-            direction: 'center'
-          })
-          .addTo(mapInstanceRef.current!);
-          
-          trailsRef.current[station.id] = trail;
-          console.log(`Trail added for ${station.name}`); // Debug log
-        } else {
-          console.log(`No trail data for ${station.name}, history length: ${history?.length || 0}`); // Debug log
-        }
-      });
-    }
-
-    // Add new markers with enhanced identification
     stationData.forEach(station => {
-      const isISS = station.id === 25544;
-      const isHubble = station.id === 20580;
-      const isTiangong = station.id === 48274;
-      
-      let stationEmoji = '🛰️';
-      let stationColor = '#3b82f6';
-      let stationName = station.name;
-      
-      if (isISS) {
-        stationEmoji = '🌟';
-        stationColor = '#22c55e';
-        stationName = 'ISS';
-      } else if (isHubble) {
-        stationEmoji = '🔭';
-        stationColor = '#8b5cf6';
-        stationName = 'Hubble';
-      } else if (isTiangong) {
-        stationEmoji = '🛸';
-        stationColor = '#f59e0b';
-        stationName = 'Tiangong';
-      }
-      const icon = L.divIcon({
-        html: `
-          <div style="
-            background: ${stationColor};
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            border: 3px solid white;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-            position: relative;
-          ">
-            ${stationEmoji}
-            ${isISS ? '<div style="position: absolute; top: -25px; background: #22c55e; color: white; padding: 1px 4px; border-radius: 3px; font-size: 8px; white-space: nowrap;">LIVE</div>' : ''}
-          </div>
-        `,
-        className: `station-marker station-${station.id}`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      });
+      if (station.nextPass) {
+        const isISS = station.id === 25544;
+        const isHubble = station.id === 20580;
+        const isTiangong = station.id === 48274;
+        
+        let stationColor = '#3b82f6';
+        let stationName = station.name;
+        
+        if (isISS) {
+          stationColor = '#22c55e';
+          stationName = 'ISS';
+        } else if (isHubble) {
+          stationColor = '#8b5cf6';
+          stationName = 'Hubble';
+        } else if (isTiangong) {
+          stationColor = '#f59e0b';
+          stationName = 'Tiangong';
+        }
 
-      const distanceFromUser = userLocation ? 
-        calculateDistance(userLocation.lat, userLocation.lng, station.latitude, station.longitude) : null;
-
-      const marker = L.marker([station.latitude, station.longitude], { icon })
-        .bindPopup(`
-          <div style="min-width: 240px;">
-            <h3 style="margin: 0 0 8px 0; font-weight: bold; color: ${stationColor};">${stationEmoji} ${station.name}</h3>
-            <p style="margin: 2px 0;"><strong>📏 Altitude:</strong> ${station.altitude} km</p>
-            <p style="margin: 2px 0;"><strong>⚡ Velocity:</strong> ${station.velocity.toLocaleString()} km/h</p>
-            <p style="margin: 2px 0;"><strong>👥 Crew:</strong> ${station.crew || 0}</p>
-            <p style="margin: 2px 0;"><strong>📡 Status:</strong> ${station.visibility}</p>
-            ${distanceFromUser ? `<p style="margin: 2px 0;"><strong>📍 Distance:</strong> ${distanceFromUser.toFixed(0)} km</p>` : ''}
-            ${station.nextPass ? `
-              <div style="margin: 8px 0; padding: 6px; background: rgba(34, 197, 94, 0.1); border-radius: 4px;">
-                <strong>🕐 Next Pass:</strong><br/>
-                Time: ${station.nextPass.time}<br/>
-                Direction: ${station.nextPass.direction}<br/>
-                Max Elevation: ${station.nextPass.elevation}°
-              </div>
-            ` : ''}
-            ${isISS ? '<p style="margin: 4px 0; color: #22c55e; font-weight: bold;">📸 Perfect for photography!</p>' : ''}
-            ${isHubble ? '<p style="margin: 4px 0; color: #8b5cf6; font-weight: bold;">🔭 Space telescope</p>' : ''}
-            ${isTiangong ? '<p style="margin: 4px 0; color: #f59e0b; font-weight: bold;">🚀 Chinese space station</p>' : ''}
-          </div>
-        `)
-        .bindTooltip(`${stationEmoji} ${stationName}`, {
-          permanent: false,
-          direction: 'top',
-          offset: [0, -15],
-          className: 'station-tooltip'
-        })
-        .on('mouseover', function(e) {
-          if (station.nextPass && userLocation) {
-            const hoverContent = `
-              <div style="text-align: center; min-width: 180px;">
-                <h4 style="margin: 0 0 6px 0; color: ${stationColor};">${stationEmoji} ${stationName}</h4>
-                <p style="margin: 2px 0; font-size: 12px;"><strong>🕐 Next Pass: ${station.nextPass.time}</strong></p>
-                <p style="margin: 2px 0; font-size: 11px;">Direction: ${station.nextPass.direction} • Elevation: ${station.nextPass.elevation}°</p>
-                <p style="margin: 4px 0; font-size: 10px; color: #666;">Click marker on map to see pass location</p>
-              </div>
-            `;
-            
-            if (hoverPopupRef.current) {
-              mapInstanceRef.current?.closePopup(hoverPopupRef.current);
-            }
-            
-            hoverPopupRef.current = L.popup({
-              closeButton: false,
-              className: 'hover-popup'
-            })
-              .setLatLng(e.latlng)
-              .setContent(hoverContent)
-              .openOn(mapInstanceRef.current!);
-          }
-        })
-        .on('mouseout', function() {
-          if (hoverPopupRef.current && mapInstanceRef.current) {
-            mapInstanceRef.current.closePopup(hoverPopupRef.current);
-            hoverPopupRef.current = null;
-          }
-        })
-        .addTo(mapInstanceRef.current);
-
-      markersRef.current[station.id] = marker;
-
-      // Add pass prediction marker if available
-      if (station.nextPass && userLocation) {
         const passIcon = L.divIcon({
           html: `
             <div style="
-              background: ${stationColor === '#22c55e' ? '#22c55e' : stationColor === '#8b5cf6' ? '#8b5cf6' : '#f59e0b'};
+              background: ${stationColor};
               width: 18px;
               height: 18px;
               border-radius: 50%;
@@ -696,8 +735,8 @@ const SpaceStationTracker = () => {
             </div>
           `,
           className: 'pass-marker',
-          iconSize: [20, 20],
-          iconAnchor: [10, 10]
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
         });
 
         const passMarker = L.marker([station.nextPass.lat, station.nextPass.lng], { icon: passIcon })
