@@ -4,7 +4,7 @@ import NavBar from '@/components/NavBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Satellite, MapPin, Clock, Users, Globe, Orbit, Map } from 'lucide-react';
+import { Satellite, MapPin, Clock, Users, Globe, Orbit, Map, Navigation, Camera, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import L from 'leaflet';
@@ -21,6 +21,7 @@ interface SpaceStation {
   timestamp: number;
   crew?: number;
   country: string;
+  previousPositions?: { lat: number; lng: number; timestamp: number }[];
 }
 
 const SpaceStationTracker = () => {
@@ -29,9 +30,94 @@ const SpaceStationTracker = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [showMap, setShowMap] = useState(true);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [trackingTrails, setTrackingTrails] = useState(true);
+  const [stationHistory, setStationHistory] = useState<{ [key: string]: { lat: number; lng: number; timestamp: number }[] }>({});
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<{ [key: string]: L.Marker }>({});
+  const trailsRef = useRef<{ [key: string]: L.Polyline }>({});
+  const userMarkerRef = useRef<L.Marker | null>(null);
+
+  const getUserLocation = async () => {
+    if (!navigator.geolocation) {
+      toast.error(t('Geolocation not supported', '不支持地理定位'));
+      return;
+    }
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
+        });
+      });
+
+      const location = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+
+      setUserLocation(location);
+      updateUserLocationMarker(location);
+      
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.setView([location.lat, location.lng], 6);
+      }
+      
+      toast.success(t('Location found', '已找到位置'));
+    } catch (error) {
+      console.error('Geolocation error:', error);
+      toast.error(t('Could not get your location', '无法获取您的位置'));
+    }
+  };
+
+  const updateUserLocationMarker = (location: { lat: number; lng: number }) => {
+    if (!mapInstanceRef.current) return;
+
+    // Remove existing user marker
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+    }
+
+    // Create user location marker
+    const userIcon = L.divIcon({
+      html: `
+        <div style="
+          background: #ef4444;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          border: 3px solid white;
+          box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+          animation: pulse 2s infinite;
+        "></div>
+        <style>
+          @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+          }
+        </style>
+      `,
+      className: '',
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
+
+    userMarkerRef.current = L.marker([location.lat, location.lng], { icon: userIcon })
+      .bindPopup(`
+        <div style="text-align: center;">
+          <h3 style="margin: 0 0 8px 0;">📍 ${t('Your Location', '您的位置')}</h3>
+          <p style="margin: 2px 0;">${location.lat.toFixed(4)}°, ${location.lng.toFixed(4)}°</p>
+          <p style="margin: 4px 0; font-size: 12px; color: #666;">
+            ${t('Perfect for space station photography!', '观测空间站的绝佳位置！')}
+          </p>
+        </div>
+      `)
+      .addTo(mapInstanceRef.current);
+  };
 
   const fetchStationData = async () => {
     try {
@@ -94,6 +180,30 @@ const SpaceStationTracker = () => {
       ];
 
       const allStations = [issStation, ...otherStations];
+      
+      // Update station history for trails
+      if (trackingTrails) {
+        setStationHistory(prev => {
+          const updated = { ...prev };
+          allStations.forEach(station => {
+            if (!updated[station.id]) updated[station.id] = [];
+            
+            // Add current position to history
+            updated[station.id].push({
+              lat: station.latitude,
+              lng: station.longitude,
+              timestamp: station.timestamp
+            });
+            
+            // Keep only last 20 positions (about 3+ minutes of trail)
+            if (updated[station.id].length > 20) {
+              updated[station.id] = updated[station.id].slice(-20);
+            }
+          });
+          return updated;
+        });
+      }
+      
       setStations(allStations);
       setLastUpdate(new Date());
       
@@ -132,50 +242,90 @@ const SpaceStationTracker = () => {
   const updateMapMarkers = (stationData: SpaceStation[]) => {
     if (!mapInstanceRef.current) return;
 
-    // Clear existing markers
+    // Clear existing markers and trails
     Object.values(markersRef.current).forEach(marker => marker.remove());
+    Object.values(trailsRef.current).forEach(trail => trail.remove());
     markersRef.current = {};
+    trailsRef.current = {};
+
+    // Add trails first (so they appear behind markers)
+    if (trackingTrails) {
+      stationData.forEach(station => {
+        const history = stationHistory[station.id];
+        if (history && history.length > 1) {
+          const trailPoints: [number, number][] = history.map(pos => [pos.lat, pos.lng]);
+          
+          const trail = L.polyline(trailPoints, {
+            color: station.id === 25544 ? '#22c55e' : '#3b82f6',
+            weight: 2,
+            opacity: 0.7,
+            dashArray: '5, 5'
+          }).addTo(mapInstanceRef.current);
+          
+          trailsRef.current[station.id] = trail;
+        }
+      });
+    }
 
     // Add new markers
     stationData.forEach(station => {
+      const isISS = station.id === 25544;
       const icon = L.divIcon({
         html: `
           <div style="
-            background: ${station.id === 25544 ? '#22c55e' : '#3b82f6'};
-            width: 20px;
-            height: 20px;
+            background: ${isISS ? '#22c55e' : '#3b82f6'};
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             border: 3px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 10px;
+            font-size: 12px;
             font-weight: bold;
+            position: relative;
           ">
             🛰️
+            ${isISS ? '<div style="position: absolute; top: -30px; background: #22c55e; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; white-space: nowrap;">LIVE</div>' : ''}
           </div>
         `,
         className: '',
-        iconSize: [26, 26],
-        iconAnchor: [13, 13]
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
       });
+
+      const distanceFromUser = userLocation ? 
+        calculateDistance(userLocation.lat, userLocation.lng, station.latitude, station.longitude) : null;
 
       const marker = L.marker([station.latitude, station.longitude], { icon })
         .bindPopup(`
-          <div style="min-width: 200px;">
+          <div style="min-width: 220px;">
             <h3 style="margin: 0 0 8px 0; font-weight: bold;">${station.name}</h3>
-            <p style="margin: 2px 0;"><strong>Altitude:</strong> ${station.altitude} km</p>
-            <p style="margin: 2px 0;"><strong>Velocity:</strong> ${station.velocity.toLocaleString()} km/h</p>
-            <p style="margin: 2px 0;"><strong>Crew:</strong> ${station.crew || 0}</p>
-            <p style="margin: 2px 0;"><strong>Status:</strong> ${station.visibility}</p>
+            <p style="margin: 2px 0;"><strong>📏 Altitude:</strong> ${station.altitude} km</p>
+            <p style="margin: 2px 0;"><strong>⚡ Velocity:</strong> ${station.velocity.toLocaleString()} km/h</p>
+            <p style="margin: 2px 0;"><strong>👥 Crew:</strong> ${station.crew || 0}</p>
+            <p style="margin: 2px 0;"><strong>📡 Status:</strong> ${station.visibility}</p>
+            ${distanceFromUser ? `<p style="margin: 2px 0;"><strong>📍 Distance:</strong> ${distanceFromUser.toFixed(0)} km</p>` : ''}
+            ${isISS ? '<p style="margin: 4px 0; color: #22c55e; font-weight: bold;">📸 Great for photography!</p>' : ''}
           </div>
         `)
         .addTo(mapInstanceRef.current);
 
       markersRef.current[station.id] = marker;
     });
+  };
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
   };
 
   useEffect(() => {
@@ -195,6 +345,9 @@ const SpaceStationTracker = () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+      }
+      if (userMarkerRef.current) {
+        userMarkerRef.current = null;
       }
     };
   }, []);
@@ -250,7 +403,7 @@ const SpaceStationTracker = () => {
           )}
         </motion.div>
 
-        <div className="flex justify-center gap-4 mb-6">
+        <div className="flex flex-wrap justify-center gap-4 mb-6">
           <Button 
             onClick={fetchStationData} 
             disabled={loading}
@@ -267,6 +420,24 @@ const SpaceStationTracker = () => {
           >
             <Map className="h-4 w-4" />
             {showMap ? t('Hide Map', '隐藏地图') : t('Show Map', '显示地图')}
+          </Button>
+
+          <Button 
+            variant="outline"
+            onClick={getUserLocation}
+            className="gap-2"
+          >
+            <Navigation className="h-4 w-4" />
+            {t('Use My Location', '使用我的位置')}
+          </Button>
+
+          <Button 
+            variant={trackingTrails ? "default" : "outline"}
+            onClick={() => setTrackingTrails(!trackingTrails)}
+            className="gap-2"
+          >
+            <Target className="h-4 w-4" />
+            {trackingTrails ? t('Hide Trails', '隐藏轨迹') : t('Show Trails', '显示轨迹')}
           </Button>
         </div>
 
@@ -289,8 +460,19 @@ const SpaceStationTracker = () => {
                   className="w-full h-96 rounded-lg overflow-hidden border border-border"
                   style={{ minHeight: '400px' }}
                 />
-                <div className="mt-4 text-sm text-muted-foreground text-center">
-                  🟢 {t('Live ISS Position', 'ISS实时位置')} • 🔵 {t('Simulated Positions', '模拟位置')}
+                <div className="mt-4 flex flex-wrap gap-4 justify-center text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    🟢 {t('Live ISS Position', 'ISS实时位置')}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    🔵 {t('Simulated Positions', '模拟位置')}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    🔴 {t('Your Location', '您的位置')}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    ⋯⋯ {t('Orbital Trails', '轨道轨迹')}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -352,6 +534,15 @@ const SpaceStationTracker = () => {
                       <span className="text-muted-foreground">{station.velocity.toLocaleString()} km/h</span>
                     </div>
                     
+                    {userLocation && (
+                      <div>
+                        <span className="font-medium">{t('Distance', '距离')}: </span>
+                        <span className="text-muted-foreground">
+                          {calculateDistance(userLocation.lat, userLocation.lng, station.latitude, station.longitude).toFixed(0)} km
+                        </span>
+                      </div>
+                    )}
+                    
                     {station.crew !== undefined && (
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4 text-primary" />
@@ -380,8 +571,8 @@ const SpaceStationTracker = () => {
                       }
                     }}
                   >
-                    <MapPin className="h-4 w-4 mr-2" />
-                    {t('View on Map', '在地图上查看')}
+                    <Camera className="h-4 w-4 mr-2" />
+                    {t('Track on Map', '在地图上追踪')}
                   </Button>
                 </CardContent>
               </Card>
@@ -399,8 +590,8 @@ const SpaceStationTracker = () => {
             {t('Real-time Space Tracking', '实时空间追踪')}
           </h3>
           <p className="text-muted-foreground max-w-3xl mx-auto">
-            {t('Real-time ISS data from official APIs, updated every 10 seconds. Green markers show live positions, blue markers show simulated positions for other space stations. Click on any station card to view its location on the map.', 
-               'ISS实时数据来自官方API，每10秒更新一次。绿色标记显示实时位置，蓝色标记显示其他空间站的模拟位置。点击任何空间站卡片即可在地图上查看其位置。')}
+            {t('Real-time ISS tracking with orbital trails and your location for perfect space station photography. Trails show the recent path, helping you predict where stations will appear next in the sky.', 
+               'ISS实时追踪，显示轨道轨迹和您的位置，助您完美拍摄空间站。轨迹显示最近路径，帮助您预测空间站在天空中的下一个位置。')}
           </p>
         </motion.div>
       </div>
