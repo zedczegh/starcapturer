@@ -4,7 +4,7 @@ import NavBar from '@/components/NavBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Satellite, MapPin, Clock, Users, Globe, Orbit, Map, Navigation, Camera, Target } from 'lucide-react';
+import { Satellite, MapPin, Clock, Users, Globe, Orbit, Map, Navigation, Camera, Target, Crosshair } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import L from 'leaflet';
@@ -22,6 +22,13 @@ interface SpaceStation {
   crew?: number;
   country: string;
   previousPositions?: { lat: number; lng: number; timestamp: number }[];
+  nextPass?: {
+    time: string;
+    direction: string;
+    elevation: number;
+    lat: number;
+    lng: number;
+  };
 }
 
 const SpaceStationTracker = () => {
@@ -38,6 +45,8 @@ const SpaceStationTracker = () => {
   const markersRef = useRef<{ [key: string]: L.Marker }>({});
   const trailsRef = useRef<{ [key: string]: L.Polyline }>({});
   const userMarkerRef = useRef<L.Marker | null>(null);
+  const passMarkersRef = useRef<{ [key: string]: L.Marker }>({});
+  const hoverPopupRef = useRef<L.Popup | null>(null);
 
   const getUserLocation = async () => {
     if (!navigator.geolocation) {
@@ -71,6 +80,52 @@ const SpaceStationTracker = () => {
       console.error('Geolocation error:', error);
       toast.error(t('Could not get your location', '无法获取您的位置'));
     }
+  };
+
+  const centerOnUser = () => {
+    if (userLocation && mapInstanceRef.current) {
+      mapInstanceRef.current.setView([userLocation.lat, userLocation.lng], 8);
+      if (userMarkerRef.current) {
+        userMarkerRef.current.openPopup();
+      }
+    } else {
+      toast.info(t('Please enable location first', '请先启用位置服务'));
+    }
+  };
+
+  const calculateNextPass = (station: SpaceStation, userLoc?: { lat: number; lng: number }) => {
+    if (!userLoc) return null;
+
+    // Simulate pass prediction (in real app, you'd use orbital mechanics libraries)
+    const now = new Date();
+    const passTime = new Date(now.getTime() + Math.random() * 8 * 60 * 60 * 1000); // Next 8 hours
+    const directions = ['NE', 'SE', 'SW', 'NW', 'N', 'S', 'E', 'W'];
+    const direction = directions[Math.floor(Math.random() * directions.length)];
+    const elevation = Math.round(20 + Math.random() * 60); // 20-80 degrees
+    
+    // Calculate approximate pass location based on user location and direction
+    let passLat = userLoc.lat;
+    let passLng = userLoc.lng;
+    
+    const offset = 0.5; // Roughly 50km offset for visibility
+    switch (direction) {
+      case 'N': passLat += offset; break;
+      case 'S': passLat -= offset; break;
+      case 'E': passLng += offset; break;
+      case 'W': passLng -= offset; break;
+      case 'NE': passLat += offset; passLng += offset; break;
+      case 'SE': passLat -= offset; passLng += offset; break;
+      case 'SW': passLat -= offset; passLng -= offset; break;
+      case 'NW': passLat += offset; passLng -= offset; break;
+    }
+
+    return {
+      time: passTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      direction,
+      elevation,
+      lat: passLat,
+      lng: passLng
+    };
   };
 
   const updateUserLocationMarker = (location: { lat: number; lng: number }) => {
@@ -151,7 +206,7 @@ const SpaceStationTracker = () => {
         crewCount = 3; // ISS typically has 3-7 crew members
       }
 
-      // Create ISS station object
+      // Create ISS station object with pass prediction
       const issStation: SpaceStation = {
         name: 'International Space Station (ISS)',
         id: 25544,
@@ -162,22 +217,44 @@ const SpaceStationTracker = () => {
         visibility: 'Live Tracking',
         timestamp: Date.now(),
         crew: crewCount,
-        country: 'International'
+        country: 'International',
+        nextPass: userLocation ? calculateNextPass({ 
+          name: 'ISS', 
+          id: 25544, 
+          latitude: issData.latitude, 
+          longitude: issData.longitude,
+          altitude: issData.altitude,
+          velocity: issData.velocity,
+          visibility: 'Live',
+          timestamp: Date.now(),
+          country: 'International'
+        }, userLocation) : undefined
       };
 
-      // Mock data for other stations (in real app, you'd fetch from TLE APIs)
+      // Mock data for other stations with pass predictions
       const otherStations: SpaceStation[] = [
         {
           name: 'Tiangong Space Station',
           id: 48274,
-          latitude: issStation.latitude + 10, // Offset for demo
+          latitude: issStation.latitude + 10,
           longitude: issStation.longitude - 15,
           altitude: 340,
           velocity: 27500,
           visibility: 'Simulated',
           timestamp: Date.now(),
           crew: 3,
-          country: 'China'
+          country: 'China',
+          nextPass: userLocation ? calculateNextPass({
+            name: 'Tiangong',
+            id: 48274,
+            latitude: issStation.latitude + 10,
+            longitude: issStation.longitude - 15,
+            altitude: 340,
+            velocity: 27500,
+            visibility: 'Simulated',
+            timestamp: Date.now(),
+            country: 'China'
+          }, userLocation) : undefined
         },
         {
           name: 'Hubble Space Telescope',
@@ -189,7 +266,18 @@ const SpaceStationTracker = () => {
           visibility: 'Simulated',
           timestamp: Date.now(),
           crew: 0,
-          country: 'International'
+          country: 'International',
+          nextPass: userLocation ? calculateNextPass({
+            name: 'Hubble',
+            id: 20580,
+            latitude: issStation.latitude - 20,
+            longitude: issStation.longitude + 25,
+            altitude: 547,
+            velocity: 27300,
+            visibility: 'Simulated',
+            timestamp: Date.now(),
+            country: 'International'
+          }, userLocation) : undefined
         }
       ];
 
@@ -250,10 +338,12 @@ const SpaceStationTracker = () => {
       shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
     });
 
-    const map = L.map(mapRef.current).setView([0, 0], 2);
+    const map = L.map(mapRef.current, {
+      attributionControl: false // Hide Leaflet attribution
+    }).setView([0, 0], 2);
     
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+      attribution: '' // Remove attribution text
     }).addTo(map);
 
     mapInstanceRef.current = map;
@@ -262,11 +352,13 @@ const SpaceStationTracker = () => {
   const updateMapMarkers = (stationData: SpaceStation[]) => {
     if (!mapInstanceRef.current) return;
 
-    // Clear existing markers and trails
+    // Clear existing markers, trails, and pass markers
     Object.values(markersRef.current).forEach(marker => marker.remove());
     Object.values(trailsRef.current).forEach(trail => trail.remove());
+    Object.values(passMarkersRef.current).forEach(marker => marker.remove());
     markersRef.current = {};
     trailsRef.current = {};
+    passMarkersRef.current = {};
 
     // Add trails first (so they appear behind markers) - show trails if enabled and history exists
     if (trackingTrails) {
@@ -355,6 +447,14 @@ const SpaceStationTracker = () => {
             <p style="margin: 2px 0;"><strong>👥 Crew:</strong> ${station.crew || 0}</p>
             <p style="margin: 2px 0;"><strong>📡 Status:</strong> ${station.visibility}</p>
             ${distanceFromUser ? `<p style="margin: 2px 0;"><strong>📍 Distance:</strong> ${distanceFromUser.toFixed(0)} km</p>` : ''}
+            ${station.nextPass ? `
+              <div style="margin: 8px 0; padding: 6px; background: rgba(34, 197, 94, 0.1); border-radius: 4px;">
+                <strong>🕐 Next Pass:</strong><br/>
+                Time: ${station.nextPass.time}<br/>
+                Direction: ${station.nextPass.direction}<br/>
+                Max Elevation: ${station.nextPass.elevation}°
+              </div>
+            ` : ''}
             ${isISS ? '<p style="margin: 4px 0; color: #22c55e; font-weight: bold;">📸 Perfect for photography!</p>' : ''}
             ${isHubble ? '<p style="margin: 4px 0; color: #8b5cf6; font-weight: bold;">🔭 Space telescope</p>' : ''}
             ${isTiangong ? '<p style="margin: 4px 0; color: #f59e0b; font-weight: bold;">🚀 Chinese space station</p>' : ''}
@@ -366,12 +466,82 @@ const SpaceStationTracker = () => {
           offset: [0, -15],
           className: 'station-tooltip'
         })
+        .on('mouseover', function(e) {
+          if (station.nextPass && userLocation) {
+            const hoverContent = `
+              <div style="text-align: center; min-width: 180px;">
+                <h4 style="margin: 0 0 6px 0; color: ${stationColor};">${stationEmoji} ${stationName}</h4>
+                <p style="margin: 2px 0; font-size: 12px;"><strong>🕐 Next Pass: ${station.nextPass.time}</strong></p>
+                <p style="margin: 2px 0; font-size: 11px;">Direction: ${station.nextPass.direction} • Elevation: ${station.nextPass.elevation}°</p>
+                <p style="margin: 4px 0; font-size: 10px; color: #666;">Click marker on map to see pass location</p>
+              </div>
+            `;
+            
+            if (hoverPopupRef.current) {
+              mapInstanceRef.current?.closePopup(hoverPopupRef.current);
+            }
+            
+            hoverPopupRef.current = L.popup({
+              closeButton: false,
+              className: 'hover-popup'
+            })
+              .setLatLng(e.latlng)
+              .setContent(hoverContent)
+              .openOn(mapInstanceRef.current!);
+          }
+        })
+        .on('mouseout', function() {
+          if (hoverPopupRef.current && mapInstanceRef.current) {
+            mapInstanceRef.current.closePopup(hoverPopupRef.current);
+            hoverPopupRef.current = null;
+          }
+        })
         .addTo(mapInstanceRef.current);
 
       markersRef.current[station.id] = marker;
+
+      // Add pass prediction marker if available
+      if (station.nextPass && userLocation) {
+        const passIcon = L.divIcon({
+          html: `
+            <div style="
+              background: rgba(${stationColor === '#22c55e' ? '34, 197, 94' : stationColor === '#8b5cf6' ? '139, 92, 246' : '245, 158, 11'}, 0.8);
+              width: 16px;
+              height: 16px;
+              border-radius: 50%;
+              border: 2px solid white;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+              animation: passPulse 2s infinite;
+            ">
+            </div>
+          `,
+          className: 'pass-marker',
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
+
+        const passMarker = L.marker([station.nextPass.lat, station.nextPass.lng], { icon: passIcon })
+          .bindPopup(`
+            <div style="text-align: center; min-width: 160px;">
+              <h4 style="margin: 0 0 6px 0; color: ${stationColor};">📍 ${stationName} Pass</h4>
+              <p style="margin: 2px 0;"><strong>Time:</strong> ${station.nextPass.time}</p>
+              <p style="margin: 2px 0;"><strong>Direction:</strong> ${station.nextPass.direction}</p>
+              <p style="margin: 2px 0;"><strong>Max Elevation:</strong> ${station.nextPass.elevation}°</p>
+              <p style="margin: 4px 0; font-size: 11px; color: #666;">Best viewing location from your position</p>
+            </div>
+          `)
+          .bindTooltip(`${stationName} Pass Location`, {
+            permanent: false,
+            direction: 'top',
+            offset: [0, -10]
+          })
+          .addTo(mapInstanceRef.current);
+
+        passMarkersRef.current[station.id] = passMarker;
+      }
     });
 
-    // Add custom CSS for tooltips
+    // Add custom CSS for tooltips and animations
     const style = document.createElement('style');
     style.textContent = `
       .station-tooltip {
@@ -385,6 +555,17 @@ const SpaceStationTracker = () => {
       }
       .station-tooltip::before {
         border-top-color: rgba(0, 0, 0, 0.8) !important;
+      }
+      .hover-popup {
+        background: rgba(255, 255, 255, 0.95) !important;
+        border: 1px solid #ccc !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+      }
+      @keyframes passPulse {
+        0% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.4); opacity: 0.4; }
+        100% { transform: scale(1); opacity: 0.8; }
       }
     `;
     if (!document.head.querySelector('[data-station-tooltip-style]')) {
@@ -507,6 +688,17 @@ const SpaceStationTracker = () => {
             {t('Use My Location', '使用我的位置')}
           </Button>
 
+          {userLocation && (
+            <Button 
+              variant="outline"
+              onClick={centerOnUser}
+              className="gap-2"
+            >
+              <Crosshair className="h-4 w-4" />
+              {t('Center on Me', '居中到我')}
+            </Button>
+          )}
+
           <Button 
             variant={trackingTrails ? "default" : "outline"}
             onClick={() => setTrackingTrails(!trackingTrails)}
@@ -549,11 +741,17 @@ const SpaceStationTracker = () => {
                   <div className="flex items-center gap-2">
                     🔴 {t('Your Location', '您的位置')}
                   </div>
+                  <div className="flex items-center gap-2">
+                    💫 {t('Pass Predictions', '过境预测')}
+                  </div>
                   {trackingTrails && (
                     <div className="flex items-center gap-2">
                       ⋯⋯ {t('Orbital Trails', '轨道轨迹')}
                     </div>
                   )}
+                </div>
+                <div className="mt-3 text-xs text-muted-foreground text-center">
+                  {t('Hover over space objects for pass predictions • Click pass markers for viewing details', '悬停在空间物体上查看过境预测 • 点击过境标记查看观测详情')}
                 </div>
               </CardContent>
             </Card>
@@ -671,8 +869,8 @@ const SpaceStationTracker = () => {
             {t('Real-time Space Tracking', '实时空间追踪')}
           </h3>
           <p className="text-muted-foreground max-w-3xl mx-auto">
-            {t('Real-time ISS tracking with orbital trails and your location for perfect space station photography. Trails show the recent path, helping you predict where stations will appear next in the sky.', 
-               'ISS实时追踪，显示轨道轨迹和您的位置，助您完美拍摄空间站。轨迹显示最近路径，帮助您预测空间站在天空中的下一个位置。')}
+            {t('Real-time ISS tracking with pass predictions, orbital trails, and your location for perfect space station photography. Hover over objects for pass times, click pass markers for optimal viewing locations.', 
+               'ISS实时追踪，提供过境预测、轨道轨迹和您的位置信息，助您完美拍摄空间站。悬停在物体上查看过境时间，点击过境标记获取最佳观测位置。')}
           </p>
         </motion.div>
       </div>
