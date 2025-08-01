@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
@@ -32,6 +32,8 @@ import VerificationApplicationsManager from './components/admin/VerificationAppl
 import PaymentSuccess from './pages/PaymentSuccess';
 import SonificationProcessor from './pages/SonificationProcessor';
 import SamplingCalculator from './pages/SamplingCalculator';
+
+const LazySpaceStationTracker = lazy(() => import('./pages/SpaceStationTracker'));
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -104,6 +106,11 @@ function AppContent() {
       <Route path="/my-wallet" element={<MyWallet />} />
       <Route path="/sonification" element={<SonificationProcessor />} />
       <Route path="/sampling-calculator" element={<SamplingCalculator />} />
+      <Route path="/space-tracker" element={
+        <Suspense fallback={<LoadingFallback />}>
+          <LazySpaceStationTracker />
+        </Suspense>
+      } />
       <Route path="/service-test" element={<ServiceTest />} />
       <Route path="/admin/verification" element={<VerificationApplicationsManager />} />
       <Route path="/payment-success" element={<PaymentSuccess />} />

@@ -5,7 +5,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, Calendar, Music, Calculator, Wallet } from 'lucide-react';
+import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Link2, Info, Calendar, Music, Calculator, Wallet, Satellite } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -67,6 +67,7 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
       badge: newReservationsCount
     },
     { icon: Calendar, label: t('My Reservations', '我的预订'), path: '/my-reservations' },
+    { icon: Satellite, label: t('Space Station Tracker', '空间站追踪'), path: '/space-tracker' },
     { icon: Music, label: t('Sonification', '声化处理器'), path: '/sonification' },
     { icon: Calculator, label: t('Sampling Calculator', '采样计算器'), path: '/sampling-calculator' },
     { icon: Link2, label: t('Useful Links', '资源'), path: '/useful-links' },
