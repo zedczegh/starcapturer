@@ -49,16 +49,35 @@ serve(async (req) => {
     );
 
     // Get authenticated user
-    const authHeader = req.headers.get("Authorization")!;
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("Authorization header required");
+    }
+    
     const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
+    const { data, error: authError } = await supabaseClient.auth.getUser(token);
     const user = data.user;
     
-    if (!user) {
+    if (authError || !user) {
       throw new Error("User not authenticated");
     }
 
     console.log("Processing wallet top-up for user:", user.id, "Amount:", amount);
+
+    // Rate limiting: Check recent transactions (max 5 transactions per hour)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: recentTransactions, error: recentError } = await supabaseClient
+      .from('wallet_transactions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('transaction_type', 'topup')
+      .gte('created_at', oneHourAgo);
+
+    if (recentError) {
+      console.error("Error checking rate limit:", recentError);
+    } else if (recentTransactions && recentTransactions.length >= 5) {
+      throw new Error("Rate limit exceeded. Maximum 5 top-ups per hour allowed.");
+    }
 
     // Get customer ID from Stripe
     const customers = await stripe.customers.list({ 
