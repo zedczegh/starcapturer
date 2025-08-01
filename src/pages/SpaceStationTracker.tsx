@@ -136,55 +136,189 @@ const SpaceStationTracker = () => {
       userMarkerRef.current.remove();
     }
 
-    // Create user location marker with simpler icon
+    // Create highly visible user location marker
     const userIcon = L.divIcon({
       html: `
         <div style="
           background: #ef4444;
-          width: 14px;
-          height: 14px;
+          width: 18px;
+          height: 18px;
           border-radius: 50%;
-          border: 2px solid white;
-          box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
-        "></div>
+          border: 3px solid white;
+          box-shadow: 0 0 15px rgba(239, 68, 68, 0.8), 0 0 30px rgba(239, 68, 68, 0.4);
+          position: relative;
+        ">
+          <div style="
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            width: 34px;
+            height: 34px;
+            border: 2px solid #ef4444;
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: userLocationPulse 2s infinite;
+          "></div>
+        </div>
       `,
       className: 'user-location-marker',
-      iconSize: [18, 18],
-      iconAnchor: [9, 9]
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
     });
 
     userMarkerRef.current = L.marker([location.lat, location.lng], { icon: userIcon })
       .bindPopup(`
-        <div style="text-align: center; min-width: 150px;">
+        <div style="text-align: center; min-width: 200px;">
           <h3 style="margin: 0 0 8px 0; color: #ef4444;">📍 ${t('Your Location', '您的位置')}</h3>
           <p style="margin: 2px 0; font-size: 12px;">${location.lat.toFixed(4)}°, ${location.lng.toFixed(4)}°</p>
           <p style="margin: 4px 0; font-size: 11px; color: #666;">
-            ${t('Perfect for space station photography!', '观测空间站的绝佳位置！')}
+            ${t('Click me to find nearest space station pass!', '点击我找到最近的空间站过境！')}
           </p>
         </div>
       `)
-      .bindTooltip(t('Your Location', '您的位置'), {
+      .bindTooltip(t('Your Location - Click for nearest pass!', '您的位置 - 点击查看最近过境！'), {
         permanent: false,
         direction: 'top',
-        offset: [0, -10]
+        offset: [0, -15]
+      })
+      .on('click', function() {
+        findAndShowNearestPass(location);
       })
       .addTo(mapInstanceRef.current);
 
-    // Add pulsing animation via CSS
+    // Add enhanced pulsing animation
     const style = document.createElement('style');
     style.textContent = `
       .user-location-marker {
-        animation: userPulse 2s infinite;
+        z-index: 1000 !important;
       }
-      @keyframes userPulse {
-        0% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.3); opacity: 0.7; }
-        100% { transform: scale(1); opacity: 1; }
+      @keyframes userLocationPulse {
+        0% { transform: scale(1); opacity: 0.3; }
+        50% { transform: scale(1.2); opacity: 0.1; }
+        100% { transform: scale(1); opacity: 0.3; }
       }
     `;
     if (!document.head.querySelector('[data-user-location-style]')) {
       style.setAttribute('data-user-location-style', 'true');
       document.head.appendChild(style);
+    }
+  };
+
+  const findAndShowNearestPass = (userLoc: { lat: number; lng: number }) => {
+    if (!stations.length) {
+      toast.info(t('No station data available yet', '暂无空间站数据'));
+      return;
+    }
+
+    let nearestPass: { station: SpaceStation; timeMinutes: number } | null = null;
+    let shortestTime = Infinity;
+
+    stations.forEach(station => {
+      if (station.nextPass) {
+        // Calculate time until pass (simplified)
+        const now = new Date();
+        const [hours, minutes] = station.nextPass.time.split(':').map(Number);
+        const passTime = new Date();
+        passTime.setHours(hours, minutes, 0, 0);
+        
+        // If pass time is earlier than now, assume it's tomorrow
+        if (passTime <= now) {
+          passTime.setDate(passTime.getDate() + 1);
+        }
+        
+        const minutesUntilPass = Math.floor((passTime.getTime() - now.getTime()) / (1000 * 60));
+        
+        if (minutesUntilPass < shortestTime) {
+          shortestTime = minutesUntilPass;
+          nearestPass = { station, timeMinutes: minutesUntilPass };
+        }
+      }
+    });
+
+    if (nearestPass && mapInstanceRef.current) {
+      const station = nearestPass.station;
+      const pass = station.nextPass!;
+      
+      // Create special marker for nearest pass
+      const nearestPassIcon = L.divIcon({
+        html: `
+          <div style="
+            background: linear-gradient(45deg, #22c55e, #16a34a);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            animation: nearestPassPulse 1.5s infinite;
+            position: relative;
+          ">
+            ⭐
+            <div style="
+              position: absolute;
+              top: -25px;
+              background: #22c55e;
+              color: white;
+              padding: 2px 6px;
+              border-radius: 4px;
+              font-size: 9px;
+              white-space: nowrap;
+              font-weight: bold;
+            ">NEXT</div>
+          </div>
+        `,
+        className: 'nearest-pass-marker',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      });
+
+      // Remove any existing nearest pass marker
+      if (passMarkersRef.current['nearest']) {
+        passMarkersRef.current['nearest'].remove();
+      }
+
+      const nearestPassMarker = L.marker([pass.lat, pass.lng], { icon: nearestPassIcon })
+        .bindPopup(`
+          <div style="text-align: center; min-width: 220px;">
+            <h3 style="margin: 0 0 8px 0; color: #22c55e;">⭐ ${t('NEAREST PASS', '最近过境')}</h3>
+            <h4 style="margin: 0 0 6px 0;">${station.name}</h4>
+            <p style="margin: 2px 0;"><strong>⏰ Time:</strong> ${pass.time} (${nearestPass.timeMinutes} min)</p>
+            <p style="margin: 2px 0;"><strong>🧭 Direction:</strong> ${pass.direction}</p>
+            <p style="margin: 2px 0;"><strong>📐 Max Elevation:</strong> ${pass.elevation}°</p>
+            <p style="margin: 4px 0; font-size: 11px; color: #22c55e; font-weight: bold;">
+              ${t('Perfect spot for photography!', '拍摄的完美地点！')}
+            </p>
+          </div>
+        `)
+        .addTo(mapInstanceRef.current);
+
+      passMarkersRef.current['nearest'] = nearestPassMarker;
+      
+      // Center map on the nearest pass location
+      mapInstanceRef.current.setView([pass.lat, pass.lng], 10);
+      nearestPassMarker.openPopup();
+      
+      // Add animation CSS
+      const animationStyle = document.createElement('style');
+      animationStyle.textContent = `
+        @keyframes nearestPassPulse {
+          0% { transform: scale(1); box-shadow: 0 0 20px rgba(34, 197, 94, 0.8); }
+          50% { transform: scale(1.1); box-shadow: 0 0 30px rgba(34, 197, 94, 1); }
+          100% { transform: scale(1); box-shadow: 0 0 20px rgba(34, 197, 94, 0.8); }
+        }
+      `;
+      if (!document.head.querySelector('[data-nearest-pass-animation]')) {
+        animationStyle.setAttribute('data-nearest-pass-animation', 'true');
+        document.head.appendChild(animationStyle);
+      }
+      
+      toast.success(t(`Next pass: ${station.name} in ${nearestPass.timeMinutes} minutes!`, `下一次过境：${station.name} ${nearestPass.timeMinutes} 分钟后！`));
+    } else {
+      toast.info(t('No upcoming passes found', '未找到即将到来的过境'));
     }
   };
 
@@ -283,11 +417,13 @@ const SpaceStationTracker = () => {
 
       const allStations = [issStation, ...otherStations];
       
-      // Update station history for trails - always update to ensure trails appear
+      // ALWAYS update station history for trails - ensure trails are built properly
       setStationHistory(prev => {
         const updated = { ...prev };
         allStations.forEach(station => {
-          if (!updated[station.id]) updated[station.id] = [];
+          if (!updated[station.id]) {
+            updated[station.id] = [];
+          }
           
           // Add current position to history
           const newPoint = {
@@ -296,18 +432,15 @@ const SpaceStationTracker = () => {
             timestamp: station.timestamp
           };
           
-          // Only add if position has changed significantly (avoid duplicate points)
-          const lastPoint = updated[station.id][updated[station.id].length - 1];
-          if (!lastPoint || 
-              Math.abs(lastPoint.lat - newPoint.lat) > 0.01 || 
-              Math.abs(lastPoint.lng - newPoint.lng) > 0.01) {
-            updated[station.id].push(newPoint);
+          // Always add the point for trail visibility
+          updated[station.id].push(newPoint);
+          
+          // Keep only last 25 positions (about 4+ minutes of trail at 10s intervals)
+          if (updated[station.id].length > 25) {
+            updated[station.id] = updated[station.id].slice(-25);
           }
           
-          // Keep only last 30 positions (about 5 minutes of trail)
-          if (updated[station.id].length > 30) {
-            updated[station.id] = updated[station.id].slice(-30);
-          }
+          console.log(`Updated trail for ${station.name}, points: ${updated[station.id].length}`); // Debug
         });
         return updated;
       });
@@ -318,7 +451,7 @@ const SpaceStationTracker = () => {
       // Update map markers
       updateMapMarkers(allStations);
       
-      toast.success(t('Space station data updated', '空间站数据已更新'));
+      // Removed toast to avoid spam - data updates silently
     } catch (error) {
       console.error('Error fetching station data:', error);
       toast.error(t('Failed to fetch station data', '获取空间站数据失败'));
@@ -360,28 +493,41 @@ const SpaceStationTracker = () => {
     trailsRef.current = {};
     passMarkersRef.current = {};
 
-    // Add trails first (so they appear behind markers) - show trails if enabled and history exists
+    // Force trails to show if enabled - render trails FIRST
     if (trackingTrails) {
       stationData.forEach(station => {
         const history = stationHistory[station.id];
+        console.log(`Station ${station.name} trail history:`, history); // Debug log
+        
         if (history && history.length > 1) {
           const trailPoints: [number, number][] = history.map(pos => [pos.lat, pos.lng]);
+          console.log(`Creating trail for ${station.name} with ${trailPoints.length} points`); // Debug log
           
           const isISS = station.id === 25544;
+          const isHubble = station.id === 20580;
+          
+          let trailColor = '#3b82f6';
+          if (isISS) trailColor = '#22c55e';
+          else if (isHubble) trailColor = '#8b5cf6';
+          
           const trail = L.polyline(trailPoints, {
-            color: isISS ? '#22c55e' : '#3b82f6',
-            weight: 3,
-            opacity: 0.8,
-            dashArray: isISS ? '10, 5' : '5, 10', // Different dash patterns
-            lineCap: 'round'
+            color: trailColor,
+            weight: 4, // Thicker lines
+            opacity: 0.9, // More visible
+            dashArray: isISS ? '8, 4' : '6, 6',
+            lineCap: 'round',
+            lineJoin: 'round'
           })
-          .bindTooltip(`${station.name} ${t('Trail', '轨迹')}`, {
+          .bindTooltip(`${station.name} ${t('Trail', '轨迹')} (${history.length} points)`, {
             permanent: false,
             direction: 'center'
           })
-          .addTo(mapInstanceRef.current);
+          .addTo(mapInstanceRef.current!);
           
           trailsRef.current[station.id] = trail;
+          console.log(`Trail added for ${station.name}`); // Debug log
+        } else {
+          console.log(`No trail data for ${station.name}, history length: ${history?.length || 0}`); // Debug log
         }
       });
     }
@@ -742,7 +888,7 @@ const SpaceStationTracker = () => {
                     🔴 {t('Your Location', '您的位置')}
                   </div>
                   <div className="flex items-center gap-2">
-                    💫 {t('Pass Predictions', '过境预测')}
+                    ⭐ {t('Nearest Pass', '最近过境')}
                   </div>
                   {trackingTrails && (
                     <div className="flex items-center gap-2">
@@ -751,7 +897,7 @@ const SpaceStationTracker = () => {
                   )}
                 </div>
                 <div className="mt-3 text-xs text-muted-foreground text-center">
-                  {t('Hover over space objects for pass predictions • Click pass markers for viewing details', '悬停在空间物体上查看过境预测 • 点击过境标记查看观测详情')}
+                  {t('Click your red location marker to find the nearest space station pass', '点击红色位置标记找到最近的空间站过境')}
                 </div>
               </CardContent>
             </Card>
