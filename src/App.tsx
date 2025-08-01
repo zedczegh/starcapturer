@@ -55,7 +55,7 @@ import { EnhancedLoadingFallback } from './components/ui/enhanced-loading';
 
 const LoadingFallback = () => (
   <EnhancedLoadingFallback 
-    message="Loading amazing astronomy content..."
+    message="Opening your next starry journey..."
     variant="detailed"
     showProgress={true}
   />

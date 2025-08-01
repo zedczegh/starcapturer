@@ -157,7 +157,7 @@ interface EnhancedLoadingFallbackProps {
 }
 
 export const EnhancedLoadingFallback: React.FC<EnhancedLoadingFallbackProps> = ({
-  message = "Loading amazing astronomy content...",
+  message = "Opening your next starry journey...",
   showProgress = false,
   progress = 0,
   variant = 'detailed',
