@@ -38,22 +38,27 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      retry: false,
-      staleTime: 60 * 1000, // 1 minute
-      gcTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnReconnect: 'always',
+    },
+    mutations: {
+      retry: 1,
     },
   },
 });
 
 import useAppInitializer from './hooks/useAppInitializer';
 
+import { EnhancedLoadingFallback } from './components/ui/enhanced-loading';
+
 const LoadingFallback = () => (
-  <div className="min-h-screen flex items-center justify-center bg-cosmic-900">
-    <div className="flex flex-col items-center space-y-4">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      <p className="text-cosmic-200">Loading...</p>
-    </div>
-  </div>
+  <EnhancedLoadingFallback 
+    message="Loading amazing astronomy content..."
+    variant="detailed"
+    showProgress={true}
+  />
 );
 
 function AppContent() {
