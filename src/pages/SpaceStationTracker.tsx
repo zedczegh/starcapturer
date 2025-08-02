@@ -421,10 +421,10 @@ const SpaceStationTracker = () => {
           // Initialize with full orbital simulation if first time
           if (!updated[station.id]) {
             updated[station.id] = [];
-            console.log(`🆕 Initializing 24hr orbital simulation for ${station.name}`);
+            console.log(`🆕 Initializing minimal orbital trail for ${station.name}`);
             
-            // Create 24-hour historical trail with optimized sampling (every 60 seconds)
-            const orbitPoints = 1440; // 24 hours at 1-minute intervals
+            // Create minimal trail - just 3 hours of recent orbital data
+            const orbitPoints = 180; // 3 hours at 1-minute intervals
             const currentTime = station.timestamp;
             
             // Define orbital parameters for accurate simulation
@@ -437,7 +437,7 @@ const SpaceStationTracker = () => {
             const params = orbitalParams[station.id as keyof typeof orbitalParams] || orbitalParams[25544];
             
             for (let i = orbitPoints; i >= 0; i--) {
-              const timeOffset = i * 60000; // 60 seconds per point (reduced from 10s)
+              const timeOffset = i * 60000; // 60 seconds per point
               const timeFromNow = (currentTime - timeOffset) / 1000; // seconds
               
               // Calculate orbital position using more accurate orbital mechanics
@@ -480,7 +480,7 @@ const SpaceStationTracker = () => {
               });
             }
             
-            console.log(`✨ Created 24hr orbital simulation for ${station.name}: ${updated[station.id].length} points`);
+            console.log(`✨ Created minimal 3hr trail for ${station.name}: ${updated[station.id].length} points`);
           } else {
             // Add current position to existing history
             const newPoint = {
@@ -499,24 +499,24 @@ const SpaceStationTracker = () => {
             }
           }
           
-          // Keep 24 hours worth of data (1440 points = 24 hours at 1-minute intervals)
-          if (updated[station.id].length > 1440) {
-            updated[station.id] = updated[station.id].slice(-1440);
+          // Keep only 3 hours worth of data (180 points = 3 hours at 1-minute intervals)
+          if (updated[station.id].length > 180) {
+            updated[station.id] = updated[station.id].slice(-180);
           }
         });
         console.log('📍 After update - New history:', updated);
         return updated;
       });
 
-      // CREATE FUTURE PREDICTIONS - calculate future orbital paths (24 hours with optimized sampling)
+      // CREATE FUTURE PREDICTIONS - minimal 3-hour future prediction
       setStationFuture(prev => {
-        console.log('🔮 Creating 24hr future predictions...');
+        console.log('🔮 Creating minimal 3hr future predictions...');
         const futureData = { ...prev };
         allStations.forEach(station => {
           futureData[station.id] = [];
           
-          // Create 24-hour future orbital prediction with optimized sampling
-          const futurePoints = 1440; // 24 hours at 1-minute intervals (reduced density)
+          // Create minimal 3-hour future orbital prediction
+          const futurePoints = 180; // 3 hours at 1-minute intervals
           const currentTime = station.timestamp;
           
           // Define orbital parameters for accurate simulation
@@ -529,7 +529,7 @@ const SpaceStationTracker = () => {
           const params = orbitalParams[station.id as keyof typeof orbitalParams] || orbitalParams[25544];
           
           for (let i = 0; i <= futurePoints; i++) {
-            const timeOffset = i * 60000; // 60 seconds per point (reduced from 10s)
+            const timeOffset = i * 60000; // 60 seconds per point
             const timeFromNow = (currentTime + timeOffset) / 1000; // seconds into future
             
             // Calculate orbital position using more accurate orbital mechanics
@@ -572,7 +572,7 @@ const SpaceStationTracker = () => {
             });
           }
           
-          console.log(`🔮 Created 24hr future prediction for ${station.name}: ${futureData[station.id].length} points`);
+          console.log(`🔮 Created minimal 3hr future prediction for ${station.name}: ${futureData[station.id].length} points`);
         });
         
         return futureData;
@@ -803,26 +803,26 @@ const SpaceStationTracker = () => {
         trailColor = '#f59e0b';
       }
       
-      // Create ONE continuous historical trail per station (solid line)
+      // Create ONE simple historical trail per station (solid line)
       if (history && history.length >= 1) {
-        // Sample the trail data to keep it clean and visible
-        const sampleRate = Math.max(1, Math.floor(history.length / 200)); // Max 200 points total
+        // Aggressive sampling - show only essential orbital points
+        const sampleRate = Math.max(1, Math.floor(history.length / 50)); // Max 50 points total
         const sampledHistory = history.filter((_, index) => index % sampleRate === 0);
         
-        // Create simple continuous trail - no tile wrapping duplicates
+        // Create simple continuous trail
         const trailPoints: [number, number][] = sampledHistory.map(pos => [pos.lat, pos.lng]);
         
-        console.log(`✅ Creating single continuous trail for ${station.name} with ${trailPoints.length} points`);
+        console.log(`✅ Creating minimal trail for ${station.name} with ${trailPoints.length} points`);
         
         const trail = L.polyline(trailPoints, {
           color: trailColor,
-          weight: 2,
-          opacity: 0.7,
+          weight: 1.5,
+          opacity: 0.6,
           lineCap: 'round',
           lineJoin: 'round',
-          smoothFactor: 2
+          smoothFactor: 3
         })
-        .bindTooltip(`${station.name} ${t('24hr History', '24小时历史')}`, {
+        .bindTooltip(`${station.name} ${t('Recent Path', '最近轨迹')}`, {
           permanent: false,
           direction: 'center',
           className: 'trail-tooltip'
@@ -830,30 +830,30 @@ const SpaceStationTracker = () => {
         .addTo(mapInstanceRef.current!);
         
         trailsRef.current[station.id] = trail;
-        console.log(`✅ Single historical trail created for ${station.name}`);
+        console.log(`✅ Minimal historical trail created for ${station.name}`);
       }
 
-      // Create ONE continuous future prediction trail per station (dashed line)
+      // Create ONE simple future prediction trail per station (dashed line)
       if (future && future.length >= 1) {
-        // Sample the future data for clean display
-        const sampleRate = Math.max(1, Math.floor(future.length / 150)); // Max 150 points for future
+        // Aggressive sampling for future
+        const sampleRate = Math.max(1, Math.floor(future.length / 40)); // Max 40 points for future
         const sampledFuture = future.filter((_, index) => index % sampleRate === 0);
         
-        // Create simple continuous future trail - no tile wrapping duplicates
+        // Create simple continuous future trail
         const futurePoints: [number, number][] = sampledFuture.map(pos => [pos.lat, pos.lng]);
         
-        console.log(`🔮 Creating single continuous future trail for ${station.name} with ${futurePoints.length} points`);
+        console.log(`🔮 Creating minimal future trail for ${station.name} with ${futurePoints.length} points`);
         
         const futureTrail = L.polyline(futurePoints, {
           color: trailColor,
-          weight: 1.5,
-          opacity: 0.5,
-          dashArray: '8, 8',
+          weight: 1,
+          opacity: 0.4,
+          dashArray: '6, 6',
           lineCap: 'round',
           lineJoin: 'round',
-          smoothFactor: 2
+          smoothFactor: 3
         })
-        .bindTooltip(`${station.name} ${t('24hr Future', '24小时未来')}`, {
+        .bindTooltip(`${station.name} ${t('Future Path', '未来轨迹')}`, {
           permanent: false,
           direction: 'center',
           className: 'future-trail-tooltip'
@@ -861,7 +861,7 @@ const SpaceStationTracker = () => {
         .addTo(mapInstanceRef.current!);
         
         futureTrailsRef.current[station.id] = futureTrail;
-        console.log(`🔮 Single future trail created for ${station.name}`);
+        console.log(`🔮 Minimal future trail created for ${station.name}`);
       }
     });
     
@@ -1001,11 +1001,11 @@ const SpaceStationTracker = () => {
     
     fetchStationData();
     
-    // Update every 10 seconds for real-time tracking
+    // Update every 30 seconds for stable tracking (reduced from 10 seconds)
     const interval = setInterval(() => {
       console.log('⏰ Interval fetch...');
       fetchStationData();
-    }, 10000);
+    }, 30000);
     
     return () => {
       console.log('🧹 Cleaning up main useEffect...');
