@@ -63,12 +63,15 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
     }
   }, [locationData, isLoading, statusMessage, setStatusMessage]);
 
-  // Clean up timeout on unmount
+  // Clean up timeouts and prevent memory leaks
   useEffect(() => {
     return () => {
       if (loadingMessageTimeoutRef.current) {
         clearTimeout(loadingMessageTimeoutRef.current);
+        loadingMessageTimeoutRef.current = null;
       }
+      // Clear any pending SIQS updates to prevent memory leaks
+      siqsUpdateRequiredRef.current = false;
     };
   }, []);
 
@@ -122,11 +125,23 @@ export function useLocationDetailsLogic({ id, location, navigate, t, setCachedDa
   useEffect(() => {
     // Only proceed if we're not loading, don't have location data, not already getting location,
     // and haven't already initialized location
-    if (!isLoading && !locationData && !loadingCurrentLocation && !locationInitializedRef.current && !previousLocationDataRef.current) {
+    const shouldGetCurrentLocation = !isLoading && !locationData && !loadingCurrentLocation && !locationInitializedRef.current && !previousLocationDataRef.current;
+    
+    console.log("LocationDetailsLogic: Location check", {
+      isLoading,
+      hasLocationData: !!locationData,
+      loadingCurrentLocation,
+      alreadyInitialized: locationInitializedRef.current,
+      hasPreviousData: !!previousLocationDataRef.current,
+      shouldGetCurrentLocation
+    });
+    
+    if (shouldGetCurrentLocation) {
       locationInitializedRef.current = true; // Mark as initialized to prevent multiple calls
+      console.log("LocationDetailsLogic: Getting current location...");
       handleUseCurrentLocation();
     }
-  }, [isLoading, locationData]);
+  }, [isLoading, locationData, loadingCurrentLocation]);
 
   const handleUseCurrentLocation = () => {
     if (loadingCurrentLocation) return; // Prevent multiple simultaneous calls

@@ -8,8 +8,10 @@ import { AuthProvider } from './contexts/AuthContext';
 import { useBookingNotifications } from './hooks/useBookingNotifications';
 import { Loader2 } from 'lucide-react';
 
-// Lazy load heavy components
-import { LazyPhotoPointsNearby, LazyLocationDetails, LazyCommunityAstroSpots } from './components/lazy/LazyPhotoPoints';
+// Lazy load heavy components for better performance
+const LazyPhotoPointsNearby = lazy(() => import('@/pages/PhotoPointsNearby'));
+const LazyLocationDetails = lazy(() => import('@/pages/LocationDetails'));  
+const LazyCommunityAstroSpots = lazy(() => import('@/pages/CommunityAstroSpots'));
 
 // Keep light components as regular imports
 import IndexPage from './pages/Index';
@@ -34,6 +36,7 @@ import SonificationProcessor from './pages/SonificationProcessor';
 import SamplingCalculator from './pages/SamplingCalculator';
 
 const LazySpaceStationTracker = lazy(() => import('./pages/SpaceStationTracker'));
+import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -41,12 +44,14 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
+      staleTime: 3 * 60 * 1000, // 3 minutes - reduced for faster updates
+      gcTime: 5 * 60 * 1000, // 5 minutes - reduced to free memory faster
       refetchOnReconnect: 'always',
+      networkMode: 'online', // Only run queries when online
     },
     mutations: {
       retry: 1,
+      networkMode: 'online',
     },
   },
 });
@@ -83,9 +88,11 @@ function AppContent() {
       <Route path="/about-siqs" element={<AboutSIQS />} />
       <Route path="/about" element={<About />} />
       <Route path="/location/:id" element={
-        <Suspense fallback={<LoadingFallback />}>
-          <LazyLocationDetails />
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingFallback />}>
+            <LazyLocationDetails />
+          </Suspense>
+        </ErrorBoundary>
       } />
       <Route path="/location/siqs-calculator" element={
         <Suspense fallback={<LoadingFallback />}>

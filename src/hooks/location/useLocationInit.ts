@@ -54,28 +54,33 @@ export const useLocationInit = (
 
   // Memoized function to handle initialization
   const handleInitialization = useCallback(() => {
-    if (!id || initAttempted || loadCompletedRef.current) return;
+    if (!id || initAttempted || loadCompletedRef.current) {
+      console.log("LocationInit: Skipping initialization", { id, initAttempted, loadCompleted: loadCompletedRef.current });
+      return;
+    }
     
     setInitAttempted(true);
-    console.log("LocationInit: Initializing with state:", initialState);
+    console.log("LocationInit: Starting initialization with ID:", id, "state:", initialState);
 
     // Check for local storage backup first
     if (!initialState && id) {
-      console.log("Checking for localStorage backup for ID:", id);
+      console.log("LocationInit: Checking localStorage for ID:", id);
       const storedData = getLocationDetailsById(id);
       
       if (storedData) {
-        console.log("Found location data in localStorage:", storedData);
+        console.log("LocationInit: Found data in localStorage:", storedData.name);
         updateLocationDataSafely(storedData);
         setIsLoading(false);
         loadCompletedRef.current = true;
         return;
+      } else {
+        console.log("LocationInit: No data found in localStorage for ID:", id);
       }
     }
 
     // Initialize from state data
     if (initialState) {
-      console.log("Initializing from provided state data:", initialState);
+      console.log("LocationInit: Initializing from state data:", initialState.name || 'unnamed');
       updateLocationDataSafely(initialState);
       setIsLoading(false);
       loadCompletedRef.current = true;
@@ -86,12 +91,13 @@ export const useLocationInit = (
     if (noRedirect) {
       // If noRedirect is true, just set loading to false and return null
       // The parent component will handle getting the current location
-      console.log("No location data found, but noRedirect flag is set. Letting parent component handle it.");
+      console.log("LocationInit: No data found, setting isLoading to false (noRedirect mode)");
       setIsLoading(false);
       loadCompletedRef.current = true;
       return;
     }
 
+    console.log("LocationInit: Attempting to initialize from external sources");
     // Initialize from external sources
     initializeLocationData({
       id,

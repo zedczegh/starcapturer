@@ -112,6 +112,7 @@ const LocationDetails = () => {
   }, [locationData?.latitude, locationData?.longitude, queryClient]);
 
   if (isLoading) {
+    console.log("LocationDetails: Showing loading screen");
     return <LocationDetailsLoading />;
   }
 
