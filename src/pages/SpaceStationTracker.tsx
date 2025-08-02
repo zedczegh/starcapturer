@@ -439,6 +439,36 @@ const SpaceStationTracker = () => {
     }).addTo(map);
 
     mapInstanceRef.current = map;
+    
+    // Add map styles to prevent z-index issues
+    const mapStyles = document.createElement('style');
+    mapStyles.textContent = `
+      .leaflet-container {
+        z-index: 1 !important;
+        position: relative;
+      }
+      .leaflet-control-attribution {
+        display: none !important;
+      }
+      .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+        background-color: rgba(15, 23, 42, 0.9);
+        color: #fff;
+        border-radius: 0.5rem;
+      }
+      .leaflet-control-zoom a {
+        background-color: rgba(15, 23, 42, 0.7) !important;
+        color: #fff !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      }
+      .leaflet-control-zoom a:hover {
+        background-color: rgba(30, 41, 59, 0.9) !important;
+      }
+    `;
+    if (!document.head.querySelector('[data-space-tracker-map-styles]')) {
+      mapStyles.setAttribute('data-space-tracker-map-styles', 'true');
+      document.head.appendChild(mapStyles);
+    }
+    
     console.log('✅ Map initialized successfully');
   };
 
