@@ -803,39 +803,26 @@ const SpaceStationTracker = () => {
         trailColor = '#f59e0b';
       }
       
-      // Create historical trail (solid line) with smart sampling for better visibility
+      // Create ONE continuous historical trail per station (solid line)
       if (history && history.length >= 1) {
-        // Sample the trail data to reduce visual clutter while maintaining coverage
-        const sampleRate = Math.max(1, Math.floor(history.length / 300)); // Max 300 points for clean display
+        // Sample the trail data to keep it clean and visible
+        const sampleRate = Math.max(1, Math.floor(history.length / 200)); // Max 200 points total
         const sampledHistory = history.filter((_, index) => index % sampleRate === 0);
         
-        const extendedTrailPoints: [number, number][] = [];
+        // Create simple continuous trail - no tile wrapping duplicates
+        const trailPoints: [number, number][] = sampledHistory.map(pos => [pos.lat, pos.lng]);
         
-        // Create points that extend across multiple world tiles for seamless wrapping
-        sampledHistory.forEach(pos => {
-          // Add original point
-          extendedTrailPoints.push([pos.lat, pos.lng]);
-          
-          // Add equivalent points on adjacent world tiles for seamless wrapping
-          if (pos.lng > 90) {
-            extendedTrailPoints.push([pos.lat, pos.lng - 360]);
-          }
-          if (pos.lng < -90) {
-            extendedTrailPoints.push([pos.lat, pos.lng + 360]);
-          }
-        });
+        console.log(`✅ Creating single continuous trail for ${station.name} with ${trailPoints.length} points`);
         
-        console.log(`✅ Creating optimized historical trail for ${station.name} with ${extendedTrailPoints.length} points (sampled from ${history.length})`);
-        
-        const trail = L.polyline(extendedTrailPoints, {
+        const trail = L.polyline(trailPoints, {
           color: trailColor,
-          weight: 2.5, // Slightly thinner for less visual dominance
-          opacity: 0.7, // Slightly more transparent
+          weight: 2,
+          opacity: 0.7,
           lineCap: 'round',
           lineJoin: 'round',
-          smoothFactor: 2 // More smoothing for cleaner appearance
+          smoothFactor: 2
         })
-        .bindTooltip(`${station.name} ${t('24hr History', '24小时历史')} (${sampledHistory.length} points)`, {
+        .bindTooltip(`${station.name} ${t('24hr History', '24小时历史')}`, {
           permanent: false,
           direction: 'center',
           className: 'trail-tooltip'
@@ -843,43 +830,30 @@ const SpaceStationTracker = () => {
         .addTo(mapInstanceRef.current!);
         
         trailsRef.current[station.id] = trail;
-        console.log(`✅ Optimized historical trail created for ${station.name}`);
+        console.log(`✅ Single historical trail created for ${station.name}`);
       }
 
-      // Create future prediction trail (dashed line) with smart sampling
+      // Create ONE continuous future prediction trail per station (dashed line)
       if (future && future.length >= 1) {
-        // Sample the future data to reduce visual clutter
-        const sampleRate = Math.max(1, Math.floor(future.length / 200)); // Max 200 points for future
+        // Sample the future data for clean display
+        const sampleRate = Math.max(1, Math.floor(future.length / 150)); // Max 150 points for future
         const sampledFuture = future.filter((_, index) => index % sampleRate === 0);
         
-        const extendedFuturePoints: [number, number][] = [];
+        // Create simple continuous future trail - no tile wrapping duplicates
+        const futurePoints: [number, number][] = sampledFuture.map(pos => [pos.lat, pos.lng]);
         
-        // Create points that extend across multiple world tiles for seamless wrapping
-        sampledFuture.forEach(pos => {
-          // Add original point
-          extendedFuturePoints.push([pos.lat, pos.lng]);
-          
-          // Add equivalent points on adjacent world tiles for seamless wrapping
-          if (pos.lng > 90) {
-            extendedFuturePoints.push([pos.lat, pos.lng - 360]);
-          }
-          if (pos.lng < -90) {
-            extendedFuturePoints.push([pos.lat, pos.lng + 360]);
-          }
-        });
+        console.log(`🔮 Creating single continuous future trail for ${station.name} with ${futurePoints.length} points`);
         
-        console.log(`🔮 Creating optimized future trail for ${station.name} with ${extendedFuturePoints.length} points (sampled from ${future.length})`);
-        
-        const futureTrail = L.polyline(extendedFuturePoints, {
+        const futureTrail = L.polyline(futurePoints, {
           color: trailColor,
-          weight: 2, // Thinner for future predictions
-          opacity: 0.5, // More transparent for future predictions
-          dashArray: '8, 8', // Dashed line for future predictions
+          weight: 1.5,
+          opacity: 0.5,
+          dashArray: '8, 8',
           lineCap: 'round',
           lineJoin: 'round',
           smoothFactor: 2
         })
-        .bindTooltip(`${station.name} ${t('24hr Future', '24小时未来')} (${sampledFuture.length} points)`, {
+        .bindTooltip(`${station.name} ${t('24hr Future', '24小时未来')}`, {
           permanent: false,
           direction: 'center',
           className: 'future-trail-tooltip'
@@ -887,26 +861,7 @@ const SpaceStationTracker = () => {
         .addTo(mapInstanceRef.current!);
         
         futureTrailsRef.current[station.id] = futureTrail;
-        console.log(`🔮 Optimized future trail created for ${station.name}`);
-        
-        // Connect future trail to pass marker if it exists (simplified connection)
-        if (station.nextPass && sampledFuture.length > 0) {
-          const connectionPoints: [number, number][] = [
-            [sampledFuture[sampledFuture.length - 1].lat, sampledFuture[sampledFuture.length - 1].lng],
-            [station.nextPass.lat, station.nextPass.lng]
-          ];
-          
-          const connectionLine = L.polyline(connectionPoints, {
-            color: trailColor,
-            weight: 1.5,
-            opacity: 0.3,
-            dashArray: '3, 3',
-            lineCap: 'round'
-          })
-          .addTo(mapInstanceRef.current!);
-          
-          console.log(`🔗 Connected future trail to pass marker for ${station.name}`);
-        }
+        console.log(`🔮 Single future trail created for ${station.name}`);
       }
     });
     
