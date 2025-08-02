@@ -136,7 +136,7 @@ const SpaceStationTracker = () => {
       userMarkerRef.current.remove();
     }
 
-    // Create highly visible user location marker with better styling
+    // Create larger user location marker without pulsing effects
     const userIcon = L.divIcon({
       html: `
         <div class="user-location-outer">
@@ -146,8 +146,8 @@ const SpaceStationTracker = () => {
         </div>
       `,
       className: 'user-location-marker',
-      iconSize: [30, 30],
-      iconAnchor: [15, 15]
+      iconSize: [40, 40],
+      iconAnchor: [20, 20]
     });
 
     userMarkerRef.current = L.marker([location.lat, location.lng], { icon: userIcon })
@@ -170,7 +170,7 @@ const SpaceStationTracker = () => {
       })
       .addTo(mapInstanceRef.current);
 
-    // Add enhanced pulsing animation and user marker styles
+    // Add larger user marker styles without pulsing animation
     const style = document.createElement('style');
     style.textContent = `
       .user-location-marker {
@@ -178,37 +178,19 @@ const SpaceStationTracker = () => {
       }
       .user-location-outer {
         background: #ef4444;
-        width: 20px;
-        height: 20px;
+        width: 30px;
+        height: 30px;
         border-radius: 50%;
-        border: 4px solid white;
-        box-shadow: 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.4);
+        border: 5px solid white;
+        box-shadow: 0 0 25px rgba(239, 68, 68, 0.8), 0 0 50px rgba(239, 68, 68, 0.4);
         position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 12px;
-        animation: userLocationPulse 2s infinite;
+        font-size: 16px;
       }
       .user-location-inner {
         z-index: 1001;
-      }
-      .user-location-outer::before {
-        content: '';
-        position: absolute;
-        top: -8px;
-        left: -8px;
-        width: 36px;
-        height: 36px;
-        border: 3px solid #ef4444;
-        border-radius: 50%;
-        opacity: 0.4;
-        animation: userLocationPulse 2s infinite reverse;
-      }
-      @keyframes userLocationPulse {
-        0% { transform: scale(1); opacity: 0.8; }
-        50% { transform: scale(1.3); opacity: 0.3; }
-        100% { transform: scale(1); opacity: 0.8; }
       }
     `;
     if (!document.head.querySelector('[data-user-location-style]')) {
@@ -429,7 +411,7 @@ const SpaceStationTracker = () => {
 
       const allStations = [issStation, hubbleStation, tiangongStation];
       
-      // PROPERLY update station history for trails - create long orbital trails
+      // PROPERLY update station history for trails - create long orbital trails with accurate orbital mechanics
       setStationHistory(prev => {
         console.log('📍 Before update - Previous history:', prev);
         const updated = { ...prev };
@@ -443,38 +425,51 @@ const SpaceStationTracker = () => {
             const orbitPoints = 540; // Full orbit
             const currentTime = station.timestamp;
             
+            // Define orbital parameters for accurate simulation
+            const orbitalParams = {
+              25544: { inclination: 51.6, altitude: 408, period: 92.68 }, // ISS
+              20580: { inclination: 28.5, altitude: 547, period: 96.7 },  // Hubble
+              48274: { inclination: 42.8, altitude: 340, period: 91.4 }   // Tiangong
+            };
+            
+            const params = orbitalParams[station.id as keyof typeof orbitalParams] || orbitalParams[25544];
+            
             for (let i = orbitPoints; i >= 0; i--) {
-              // Simulate orbital mechanics - roughly circular orbit
               const timeOffset = i * 10000; // 10 seconds per point
-              const orbitalProgress = (currentTime - timeOffset) / (90 * 60 * 1000); // 90-minute orbit
+              const timeFromNow = (currentTime - timeOffset) / 1000; // seconds
               
-              // Calculate position based on orbital mechanics
-              let simLat, simLng;
+              // Calculate orbital position using more accurate orbital mechanics
+              const meanMotion = 2 * Math.PI / (params.period * 60); // radians per second
+              const meanAnomaly = meanMotion * timeFromNow;
               
-              if (station.id === 25544) { // ISS - use real position as current
-                if (i === 0) {
-                  simLat = station.latitude;
-                  simLng = station.longitude;
-                } else {
-                  // Simulate previous positions
-                  const angle = orbitalProgress * 2 * Math.PI;
-                  simLat = station.latitude + Math.sin(angle * 0.1) * 20; // ISS inclination ~51°
-                  simLng = station.longitude - (i * 0.25); // Westward movement
-                  
-                  // Keep latitude in bounds
-                  simLat = Math.max(-85, Math.min(85, simLat));
-                  // Wrap longitude
-                  simLng = ((simLng + 180) % 360) - 180;
-                }
+              // Use true anomaly approximation for circular orbit
+              const trueAnomaly = meanAnomaly;
+              
+              // Calculate latitude using orbital inclination
+              const argumentOfLatitude = trueAnomaly + (station.id / 1000); // Add phase offset per satellite
+              const latitude = Math.asin(Math.sin(params.inclination * Math.PI / 180) * Math.sin(argumentOfLatitude)) * 180 / Math.PI;
+              
+              // Calculate longitude with Earth's rotation
+              const earthRotationRate = 2 * Math.PI / (24 * 3600); // radians per second (sidereal day)
+              const orbitalLongitude = trueAnomaly * 180 / Math.PI;
+              const earthRotation = earthRotationRate * timeFromNow * 180 / Math.PI;
+              
+              let longitude;
+              let finalLatitude;
+              if (i === 0 && station.id === 25544) {
+                // Use real ISS position for current point
+                finalLatitude = station.latitude;
+                longitude = station.longitude;
               } else {
-                // For other satellites, simulate based on their orbital characteristics
-                const angle = orbitalProgress * 2 * Math.PI;
-                const inclination = station.id === 20580 ? 28.5 : 42.5; // Hubble vs Tiangong
-                
-                simLat = Math.sin(angle) * inclination;
-                simLng = station.longitude - (i * 0.24); // Slightly different speeds
-                simLng = ((simLng + 180) % 360) - 180;
+                // Calculate longitude with proper Earth rotation compensation
+                finalLatitude = latitude;
+                longitude = station.longitude + orbitalLongitude - earthRotation;
+                // Normalize longitude to -180 to 180
+                longitude = ((longitude + 180) % 360) - 180;
               }
+              
+              const simLat = i === 0 && station.id === 25544 ? station.latitude : Math.max(-85, Math.min(85, finalLatitude));
+              const simLng = i === 0 && station.id === 25544 ? station.longitude : longitude;
               
               updated[station.id].push({
                 lat: simLat,
