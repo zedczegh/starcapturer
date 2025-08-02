@@ -98,16 +98,21 @@ const SpaceStationTracker = () => {
   const calculateNextPass = (station: SpaceStation, userLoc?: { lat: number; lng: number }) => {
     if (!userLoc) return null;
 
-    // Simulate pass prediction (in real app, you'd use orbital mechanics libraries)
+    // Use a more stable prediction time - round to nearest 5 minutes to reduce marker jumping
     const now = new Date();
-    const passTime = new Date(now.getTime() + Math.random() * 8 * 60 * 60 * 1000); // Next 8 hours
+    const roundedMinutes = Math.round(now.getMinutes() / 5) * 5;
+    const stableTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), roundedMinutes, 0, 0);
+    
+    // Calculate pass time with more stable timing (6-12 hours from stable time)
+    const passTime = new Date(stableTime.getTime() + (6 + Math.random() * 6) * 60 * 60 * 1000);
+    
     const directions = ['NE', 'SE', 'SW', 'NW', 'N', 'S', 'E', 'W'];
     const direction = directions[Math.floor(Math.random() * directions.length)];
     const elevation = Math.round(20 + Math.random() * 60); // 20-80 degrees
     
-    // Calculate approximate pass location based on user location and direction
-    let passLat = userLoc.lat;
-    let passLng = userLoc.lng;
+    // Calculate more stable pass location using rounded coordinates to reduce jumping
+    let passLat = Math.round(userLoc.lat * 100) / 100; // Round to 2 decimal places
+    let passLng = Math.round(userLoc.lng * 100) / 100;
     
     const offset = 0.5; // Roughly 50km offset for visibility
     switch (direction) {
@@ -125,8 +130,8 @@ const SpaceStationTracker = () => {
       time: passTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       direction,
       elevation,
-      lat: passLat,
-      lng: passLng
+      lat: Math.round(passLat * 100) / 100, // Round to reduce jumping
+      lng: Math.round(passLng * 100) / 100
     };
   };
 
@@ -508,16 +513,18 @@ const SpaceStationTracker = () => {
         return updated;
       });
 
-      // CREATE FUTURE PREDICTIONS - minimal 3-hour future prediction
+      // CREATE FUTURE PREDICTIONS - use stable time reference to prevent marker jumping
       setStationFuture(prev => {
-        console.log('🔮 Creating minimal 3hr future predictions...');
+        console.log('🔮 Creating stable future predictions...');
         const futureData = { ...prev };
         allStations.forEach(station => {
           futureData[station.id] = [];
           
+          // Use stable time reference - round to nearest minute to reduce prediction variance
+          const stableCurrentTime = Math.floor(station.timestamp / 60000) * 60000;
+          
           // Create minimal 3-hour future orbital prediction
           const futurePoints = 180; // 3 hours at 1-minute intervals
-          const currentTime = station.timestamp;
           
           // Define orbital parameters for accurate simulation
           const orbitalParams = {
@@ -528,9 +535,20 @@ const SpaceStationTracker = () => {
           
           const params = orbitalParams[station.id as keyof typeof orbitalParams] || orbitalParams[25544];
           
+          // Use rounded/stable starting position for ISS to reduce jumping
+          let startLat, startLng;
+          if (station.id === 25544) {
+            // Round ISS position to reduce micro-variations that cause jumping
+            startLat = Math.round(station.latitude * 1000) / 1000; // 3 decimal places
+            startLng = Math.round(station.longitude * 1000) / 1000;
+          } else {
+            startLat = station.latitude;
+            startLng = station.longitude;
+          }
+          
           for (let i = 0; i <= futurePoints; i++) {
             const timeOffset = i * 60000; // 60 seconds per point
-            const timeFromNow = (currentTime + timeOffset) / 1000; // seconds into future
+            const timeFromNow = (stableCurrentTime + timeOffset) / 1000; // seconds into future
             
             // Calculate orbital position using more accurate orbital mechanics
             const meanMotion = 2 * Math.PI / (params.period * 60); // radians per second
@@ -551,28 +569,28 @@ const SpaceStationTracker = () => {
             let longitude;
             let finalLatitude;
             if (i === 0 && station.id === 25544) {
-              // Use real ISS position for current point
-              finalLatitude = station.latitude;
-              longitude = station.longitude;
+              // Use stable starting position for current point
+              finalLatitude = startLat;
+              longitude = startLng;
             } else {
               // Calculate longitude with proper Earth rotation compensation
               finalLatitude = latitude;
-              longitude = station.longitude + orbitalLongitude - earthRotation;
+              longitude = startLng + orbitalLongitude - earthRotation;
               // Normalize longitude to -180 to 180
               longitude = ((longitude + 180) % 360) - 180;
             }
             
-            const simLat = i === 0 && station.id === 25544 ? station.latitude : Math.max(-85, Math.min(85, finalLatitude));
-            const simLng = i === 0 && station.id === 25544 ? station.longitude : longitude;
+            const simLat = i === 0 && station.id === 25544 ? startLat : Math.max(-85, Math.min(85, finalLatitude));
+            const simLng = i === 0 && station.id === 25544 ? startLng : longitude;
             
             futureData[station.id].push({
               lat: simLat,
               lng: simLng,
-              timestamp: currentTime + timeOffset
+              timestamp: stableCurrentTime + timeOffset
             });
           }
           
-          console.log(`🔮 Created minimal 3hr future prediction for ${station.name}: ${futureData[station.id].length} points`);
+          console.log(`🔮 Created stable 3hr future prediction for ${station.name}: ${futureData[station.id].length} points`);
         });
         
         return futureData;
