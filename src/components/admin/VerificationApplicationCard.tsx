@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { MapPin, Download, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { MapPin, CheckCircle, XCircle } from 'lucide-react';
+import ApplicationMaterials from './ApplicationMaterials';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -110,30 +111,18 @@ const VerificationApplicationCard: React.FC<VerificationApplicationCardProps> = 
 
   const downloadFile = async (url: string, filename: string) => {
     try {
+      // Open in new tab instead of forcing download
       if (url.startsWith('http')) {
-        // Public URL - direct download
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        link.click();
+        window.open(url, '_blank');
       } else {
-        // Storage path - get signed URL
-        const { data, error } = await supabase.storage
+        const { data } = supabase.storage
           .from('verification-materials')
-          .download(url);
-        
-        if (error) throw error;
-        
-        const objectUrl = URL.createObjectURL(data);
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = filename;
-        link.click();
-        URL.revokeObjectURL(objectUrl);
+          .getPublicUrl(url);
+        window.open(data.publicUrl, '_blank');
       }
     } catch (error) {
-      console.error('Error downloading file:', error);
-      toast.error('Failed to download file');
+      console.error('Error opening file:', error);
+      toast.error('Failed to open file');
     }
   };
 
@@ -188,42 +177,10 @@ const VerificationApplicationCard: React.FC<VerificationApplicationCardProps> = 
         </div>
 
         {/* Application Materials */}
+        <ApplicationMaterials application={application} />
+
+        {/* Text Content */}
         <div className="space-y-3">
-          {application.bortle_measurement_url && (
-            <div className="flex items-center justify-between bg-cosmic-900/40 rounded-lg p-3">
-              <span className="text-sm text-cosmic-200">Bortle Measurement</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => downloadFile(application.bortle_measurement_url!, 'bortle-measurement.pdf')}
-                className="flex items-center gap-1"
-              >
-                <Download className="h-4 w-4" />
-                Download
-              </Button>
-            </div>
-          )}
-
-          {application.facility_images_urls && application.facility_images_urls.length > 0 && (
-            <div className="bg-cosmic-900/40 rounded-lg p-3">
-              <p className="text-sm text-cosmic-200 mb-2">Facility Images ({application.facility_images_urls.length})</p>
-              <div className="flex flex-wrap gap-2">
-                {application.facility_images_urls.map((url, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => downloadFile(url, `facility-image-${index + 1}.jpg`)}
-                    className="flex items-center gap-1"
-                  >
-                    <Download className="h-4 w-4" />
-                    Image {index + 1}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {application.accommodation_description && (
             <div className="bg-cosmic-900/40 rounded-lg p-3">
               <p className="text-sm text-cosmic-200">
