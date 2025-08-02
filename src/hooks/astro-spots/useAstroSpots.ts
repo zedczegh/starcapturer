@@ -6,10 +6,12 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { SharedAstroSpot } from "@/types/weather";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export const useAstroSpots = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { isAdmin } = useUserRole();
   const queryClient = useQueryClient();
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
@@ -22,11 +24,17 @@ export const useAstroSpots = () => {
       
       console.log('Fetching AstroSpots for user:', user.id);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('user_astro_spots')
         .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .eq('user_id', user.id);
+      
+      // Only hide rejected spots for regular users, admins can see all their spots
+      if (!isAdmin) {
+        query = query.neq('verification_status', 'rejected');
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
       
@@ -39,10 +47,11 @@ export const useAstroSpots = () => {
         description: spot.description,
         siqs: spot.siqs,
         timestamp: spot.created_at,
-        user_id: spot.user_id
+        user_id: spot.user_id,
+        verification_status: spot.verification_status
       })) as SharedAstroSpot[];
     },
-    enabled: !!user,
+    enabled: !!user && isAdmin !== null,
     refetchOnWindowFocus: false,
     staleTime: 0, // Always fetch fresh data to prevent cached data issues
     retry: 2,

@@ -25,6 +25,7 @@ export async function fetchCommunityAstroSpots() {
           user_id,
           verification_status
         `)
+        .neq("verification_status", "rejected") // Hide rejected spots from community
         .order("created_at", { ascending: false })
         .limit(50),
       {
