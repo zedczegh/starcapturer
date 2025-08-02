@@ -141,7 +141,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   }, [message]);
 
   return (
-    <div className="border-t border-cosmic-800/50 p-4 bg-cosmic-900/70 space-y-3 sticky bottom-0 backdrop-blur-md z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+    <div className="border-t border-cosmic-700/40 p-4 bg-gradient-to-t from-cosmic-900/95 via-cosmic-900/85 to-cosmic-900/70 space-y-3 sticky bottom-0 backdrop-blur-xl z-20 shadow-[0_-8px_24px_-12px_rgba(124,58,237,0.15)]">
       {imagePreview && (
         <div className="relative inline-block">
           <img 
@@ -225,11 +225,11 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
           </PopoverContent>
         </Popover>
         
-        <div className="relative flex-grow bg-cosmic-800/30 rounded-full border border-cosmic-700/50">
+        <div className="relative flex-grow bg-cosmic-800/40 hover:bg-cosmic-800/50 rounded-2xl border border-cosmic-700/40 hover:border-cosmic-600/50 transition-all duration-300 focus-within:border-primary/40 focus-within:bg-cosmic-800/50 shadow-lg">
           <div className="flex items-center">
             <textarea
               ref={textareaRef}
-              className="w-full bg-transparent rounded-full py-2 px-4 pr-12 text-cosmic-100 min-h-[45px] max-h-[120px] resize-none focus:outline-none"
+              className="w-full bg-transparent rounded-2xl py-3 px-4 pr-12 text-cosmic-100 placeholder:text-cosmic-400 min-h-[45px] max-h-[120px] resize-none focus:outline-none transition-colors duration-200"
               placeholder={t("Type your message...", "输入您的消息...")}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -281,12 +281,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
           </div>
         </div>
         <Button
-          className="flex-shrink-0 rounded-full h-10 w-10 p-0"
+          className="flex-shrink-0 rounded-full h-10 w-10 p-0 transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg disabled:opacity-50 disabled:hover:scale-100"
           onClick={handleSend}
           disabled={sending || (!message.trim() && !imageFile)}
           variant={message.trim() || imageFile ? "default" : "ghost"}
         >
-          <Send className="h-5 w-5" />
+          <Send className={`h-5 w-5 transition-transform duration-200 ${sending ? 'animate-pulse' : ''}`} />
           <span className="sr-only">{t("Send", "发送")}</span>
         </Button>
       </div>

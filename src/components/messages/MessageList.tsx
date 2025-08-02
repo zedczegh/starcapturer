@@ -50,14 +50,14 @@ const MessageList: React.FC<MessageListProps> = memo(({
   }, [scrollToBottom]);
   
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-gradient-to-b from-cosmic-900/40 to-cosmic-950/40">
+    <div className="flex flex-col h-full overflow-hidden bg-gradient-to-b from-cosmic-900/50 via-cosmic-900/30 to-cosmic-950/50">
       <MessageHeader 
         conversation={activeConversation} 
         onBack={onBack}
       />
       
-      <ScrollArea className="flex-1 p-4 pt-6">
-        <div className="space-y-2">
+      <ScrollArea className="flex-1 p-4 pt-6 styled-scrollbar">
+        <div className="space-y-3">
           {messages.length === 0 ? (
             <EmptyMessages />
           ) : (
