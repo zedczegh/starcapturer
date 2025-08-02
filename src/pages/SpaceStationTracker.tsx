@@ -443,17 +443,19 @@ const SpaceStationTracker = () => {
   };
 
   const updateMapMarkers = (stationData: SpaceStation[]) => {
-    if (!mapInstanceRef.current) return;
+    console.log('🔄 updateMapMarkers called with', stationData.length, 'stations');
+    if (!mapInstanceRef.current) {
+      console.log('❌ No map instance for markers');
+      return;
+    }
 
-    console.log('🔄 Updating map markers, station history state:', stationHistory);
-
-    // Update existing markers instead of clearing and recreating them
+    // Update existing markers with smooth transitions
     stationData.forEach(station => {
       const existingMarker = markersRef.current[station.id];
       
       if (existingMarker) {
-        // Just update position of existing marker - no visual jumping
-        existingMarker.setLatLng([station.latitude, station.longitude]);
+        // Smooth transition to new position with proper orbital interpolation
+        animateMarkerToPosition(existingMarker, station);
       } else {
         // Only create new marker if it doesn't exist
         createStationMarker(station);
@@ -576,6 +578,57 @@ const SpaceStationTracker = () => {
       .addTo(mapInstanceRef.current);
 
     markersRef.current[station.id] = marker;
+    
+    // Add smooth transition styles to marker
+    const markerElement = marker.getElement();
+    if (markerElement) {
+      markerElement.style.transition = 'transform 2s ease-out';
+      markerElement.style.willChange = 'transform';
+    }
+  };
+
+  // Animate marker to new position with smooth orbital movement
+  const animateMarkerToPosition = (marker: L.Marker, station: SpaceStation) => {
+    const currentLatLng = marker.getLatLng();
+    const targetLatLng = L.latLng(station.latitude, station.longitude);
+    
+    // Only animate if there's a meaningful position change
+    const distance = currentLatLng.distanceTo(targetLatLng);
+    if (distance < 10) { // Less than 10 meters, no need to animate
+      return;
+    }
+    
+    // Get marker element for CSS animation
+    const markerElement = marker.getElement();
+    if (!markerElement) return;
+    
+    // Calculate movement direction for orbital realism
+    const latDiff = targetLatLng.lat - currentLatLng.lat;
+    const lngDiff = targetLatLng.lng - currentLatLng.lng;
+    
+    // Handle longitude wrap-around for smooth orbital movement
+    let adjustedLngDiff = lngDiff;
+    if (Math.abs(lngDiff) > 180) {
+      adjustedLngDiff = lngDiff > 0 ? lngDiff - 360 : lngDiff + 360;
+    }
+    
+    // Smooth transition duration based on distance (orbital speed consideration)
+    const maxDistance = 1000000; // 1000km in meters
+    const baseDuration = 2000; // 2 seconds base
+    const duration = Math.min(baseDuration, Math.max(500, (distance / maxDistance) * baseDuration));
+    
+    // Apply smooth transition
+    markerElement.style.transition = `transform ${duration}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`;
+    
+    // Animate to new position
+    marker.setLatLng(targetLatLng);
+    
+    // Reset transition after animation
+    setTimeout(() => {
+      if (markerElement) {
+        markerElement.style.transition = 'transform 2s ease-out';
+      }
+    }, duration);
   };
 
   const updateTrails = (stationData: SpaceStation[]) => {
