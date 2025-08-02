@@ -40,10 +40,12 @@ const SpaceStationTracker = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const trackingTrails = true; // Always show trails
   const [stationHistory, setStationHistory] = useState<{ [key: string]: { lat: number; lng: number; timestamp: number }[] }>({});
+  const [stationFuture, setStationFuture] = useState<{ [key: string]: { lat: number; lng: number; timestamp: number }[] }>({});
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<{ [key: string]: L.Marker }>({});
   const trailsRef = useRef<{ [key: string]: L.Polyline }>({});
+  const futureTrailsRef = useRef<{ [key: string]: L.Polyline }>({});
   const userMarkerRef = useRef<L.Marker | null>(null);
   const passMarkersRef = useRef<{ [key: string]: L.Marker }>({});
   const hoverPopupRef = useRef<L.Popup | null>(null);
@@ -505,6 +507,76 @@ const SpaceStationTracker = () => {
         console.log('📍 After update - New history:', updated);
         return updated;
       });
+
+      // CREATE FUTURE PREDICTIONS - calculate future orbital paths
+      setStationFuture(prev => {
+        console.log('🔮 Creating future predictions...');
+        const futureData = { ...prev };
+        allStations.forEach(station => {
+          futureData[station.id] = [];
+          
+          // Create future orbital prediction (next 3 hours)
+          const futurePoints = 1080; // 3 hours of future orbit
+          const currentTime = station.timestamp;
+          
+          // Define orbital parameters for accurate simulation
+          const orbitalParams = {
+            25544: { inclination: 51.6, altitude: 408, period: 92.68 }, // ISS
+            20580: { inclination: 28.5, altitude: 547, period: 96.7 },  // Hubble
+            48274: { inclination: 42.8, altitude: 340, period: 91.4 }   // Tiangong
+          };
+          
+          const params = orbitalParams[station.id as keyof typeof orbitalParams] || orbitalParams[25544];
+          
+          for (let i = 0; i <= futurePoints; i++) {
+            const timeOffset = i * 10000; // 10 seconds per point
+            const timeFromNow = (currentTime + timeOffset) / 1000; // seconds into future
+            
+            // Calculate orbital position using more accurate orbital mechanics
+            const meanMotion = 2 * Math.PI / (params.period * 60); // radians per second
+            const meanAnomaly = meanMotion * timeFromNow;
+            
+            // Use true anomaly approximation for circular orbit
+            const trueAnomaly = meanAnomaly;
+            
+            // Calculate latitude using orbital inclination
+            const argumentOfLatitude = trueAnomaly + (station.id / 1000); // Add phase offset per satellite
+            const latitude = Math.asin(Math.sin(params.inclination * Math.PI / 180) * Math.sin(argumentOfLatitude)) * 180 / Math.PI;
+            
+            // Calculate longitude with Earth's rotation
+            const earthRotationRate = 2 * Math.PI / (24 * 3600); // radians per second (sidereal day)
+            const orbitalLongitude = trueAnomaly * 180 / Math.PI;
+            const earthRotation = earthRotationRate * timeFromNow * 180 / Math.PI;
+            
+            let longitude;
+            let finalLatitude;
+            if (i === 0 && station.id === 25544) {
+              // Use real ISS position for current point
+              finalLatitude = station.latitude;
+              longitude = station.longitude;
+            } else {
+              // Calculate longitude with proper Earth rotation compensation
+              finalLatitude = latitude;
+              longitude = station.longitude + orbitalLongitude - earthRotation;
+              // Normalize longitude to -180 to 180
+              longitude = ((longitude + 180) % 360) - 180;
+            }
+            
+            const simLat = i === 0 && station.id === 25544 ? station.latitude : Math.max(-85, Math.min(85, finalLatitude));
+            const simLng = i === 0 && station.id === 25544 ? station.longitude : longitude;
+            
+            futureData[station.id].push({
+              lat: simLat,
+              lng: simLng,
+              timestamp: currentTime + timeOffset
+            });
+          }
+          
+          console.log(`🔮 Created future prediction for ${station.name}: ${futureData[station.id].length} points`);
+        });
+        
+        return futureData;
+      });
       
       console.log('✅ Station data fetched successfully:', allStations.length, 'stations');
       setStations(allStations);
@@ -708,42 +780,58 @@ const SpaceStationTracker = () => {
 
     // Clear existing trails
     Object.values(trailsRef.current).forEach(trail => trail.remove());
+    Object.values(futureTrailsRef.current).forEach(trail => trail.remove());
     trailsRef.current = {};
+    futureTrailsRef.current = {};
 
     stationData.forEach(station => {
       const history = stationHistory[station.id];
-      console.log(`📊 Station ${station.name} history:`, history?.length || 0, 'points');
+      const future = stationFuture[station.id];
+      console.log(`📊 Station ${station.name} history:`, history?.length || 0, 'points, future:', future?.length || 0, 'points');
       
-      // Create trail with any amount of data
+      const isISS = station.id === 25544;
+      const isHubble = station.id === 20580;
+      const isTiangong = station.id === 48274;
+      
+      let trailColor = '#3b82f6';
+      
+      if (isISS) {
+        trailColor = '#22c55e';
+      } else if (isHubble) {
+        trailColor = '#8b5cf6';
+      } else if (isTiangong) {
+        trailColor = '#f59e0b';
+      }
+      
+      // Create historical trail (solid line) with extended coordinates for tile wrapping
       if (history && history.length >= 1) {
-        const trailPoints: [number, number][] = history.map(pos => [pos.lat, pos.lng]);
-        console.log(`✅ Creating orbital trail for ${station.name} with ${trailPoints.length} points`);
+        const extendedTrailPoints: [number, number][] = [];
         
-        const isISS = station.id === 25544;
-        const isHubble = station.id === 20580;
-        const isTiangong = station.id === 48274;
+        // Create points that extend across multiple world tiles for seamless wrapping
+        history.forEach(pos => {
+          // Add original point
+          extendedTrailPoints.push([pos.lat, pos.lng]);
+          
+          // Add equivalent points on adjacent world tiles for seamless wrapping
+          if (pos.lng > 90) {
+            extendedTrailPoints.push([pos.lat, pos.lng - 360]);
+          }
+          if (pos.lng < -90) {
+            extendedTrailPoints.push([pos.lat, pos.lng + 360]);
+          }
+        });
         
-        let trailColor = '#3b82f6';
-        let trailPattern = undefined; // Solid lines for better visibility
+        console.log(`✅ Creating historical orbital trail for ${station.name} with ${extendedTrailPoints.length} points (with tile wrapping)`);
         
-        if (isISS) {
-          trailColor = '#22c55e';
-        } else if (isHubble) {
-          trailColor = '#8b5cf6';
-        } else if (isTiangong) {
-          trailColor = '#f59e0b';
-        }
-        
-        const trail = L.polyline(trailPoints, {
+        const trail = L.polyline(extendedTrailPoints, {
           color: trailColor,
           weight: 3,
           opacity: 0.8,
-          dashArray: trailPattern,
           lineCap: 'round',
           lineJoin: 'round',
-          smoothFactor: 1 // More smoothing for long orbits
+          smoothFactor: 1
         })
-        .bindTooltip(`${station.name} ${t('Orbital Path', '轨道路径')} (${history.length} points)`, {
+        .bindTooltip(`${station.name} ${t('Historical Path', '历史轨迹')} (${history.length} points)`, {
           permanent: false,
           direction: 'center',
           className: 'trail-tooltip'
@@ -751,13 +839,75 @@ const SpaceStationTracker = () => {
         .addTo(mapInstanceRef.current!);
         
         trailsRef.current[station.id] = trail;
-        console.log(`✅ Orbital trail created and added for ${station.name} - should wrap around Earth`);
-      } else {
-        console.log(`⚠️ No trail data for ${station.name}: ${history?.length || 0} points`);
+        console.log(`✅ Historical orbital trail created for ${station.name} - wraps around tiles`);
+      }
+
+      // Create future prediction trail (dashed line) with extended coordinates
+      if (future && future.length >= 1) {
+        const extendedFuturePoints: [number, number][] = [];
+        
+        // Create points that extend across multiple world tiles for seamless wrapping
+        future.forEach(pos => {
+          // Add original point
+          extendedFuturePoints.push([pos.lat, pos.lng]);
+          
+          // Add equivalent points on adjacent world tiles for seamless wrapping
+          if (pos.lng > 90) {
+            extendedFuturePoints.push([pos.lat, pos.lng - 360]);
+          }
+          if (pos.lng < -90) {
+            extendedFuturePoints.push([pos.lat, pos.lng + 360]);
+          }
+        });
+        
+        console.log(`🔮 Creating future prediction trail for ${station.name} with ${extendedFuturePoints.length} points (with tile wrapping)`);
+        
+        const futureTrail = L.polyline(extendedFuturePoints, {
+          color: trailColor,
+          weight: 2.5,
+          opacity: 0.6,
+          dashArray: '10, 10', // Dashed line for future predictions
+          lineCap: 'round',
+          lineJoin: 'round',
+          smoothFactor: 1
+        })
+        .bindTooltip(`${station.name} ${t('Future Prediction', '未来预测')} (${future.length} points)`, {
+          permanent: false,
+          direction: 'center',
+          className: 'future-trail-tooltip'
+        })
+        .addTo(mapInstanceRef.current!);
+        
+        futureTrailsRef.current[station.id] = futureTrail;
+        console.log(`🔮 Future prediction trail created for ${station.name} - connects to pass marker`);
+        
+        // Connect future trail to pass marker if it exists
+        if (station.nextPass) {
+          const connectionPoints: [number, number][] = [
+            [future[future.length - 1].lat, future[future.length - 1].lng],
+            [station.nextPass.lat, station.nextPass.lng]
+          ];
+          
+          const connectionLine = L.polyline(connectionPoints, {
+            color: trailColor,
+            weight: 2,
+            opacity: 0.4,
+            dashArray: '5, 5',
+            lineCap: 'round'
+          })
+          .bindTooltip(`${t('Connection to Pass Location', '连接到过境位置')}`, {
+            permanent: false,
+            direction: 'center',
+            className: 'connection-tooltip'
+          })
+          .addTo(mapInstanceRef.current!);
+          
+          console.log(`🔗 Connected future trail to pass marker for ${station.name}`);
+        }
       }
     });
     
-    console.log('🎯 Orbital trail update complete. Active trails:', Object.keys(trailsRef.current).length);
+    console.log('🎯 Orbital trail update complete. Active trails:', Object.keys(trailsRef.current).length, 'future trails:', Object.keys(futureTrailsRef.current).length);
   };
 
   const updatePassMarkers = (stationData: SpaceStation[]) => {
@@ -912,24 +1062,26 @@ const SpaceStationTracker = () => {
     };
   }, []);
 
-  // Force trail updates with proper timing
+  // Force trail updates with proper timing - include future data
   useEffect(() => {
-    console.log('🔄 StationHistory useEffect triggered:', {
+    console.log('🔄 StationHistory & Future useEffect triggered:', {
       stationsLength: stations.length,
       mapExists: !!mapInstanceRef.current,
       trackingTrails,
       historyKeys: Object.keys(stationHistory),
-      historyLengths: Object.fromEntries(Object.entries(stationHistory).map(([k, v]) => [k, v.length]))
+      futureKeys: Object.keys(stationFuture),
+      historyLengths: Object.fromEntries(Object.entries(stationHistory).map(([k, v]) => [k, v.length])),
+      futureLengths: Object.fromEntries(Object.entries(stationFuture).map(([k, v]) => [k, v.length]))
     });
     
     if (stations.length > 0 && mapInstanceRef.current) {
-      console.log('✅ Force updating trails now...');
+      console.log('✅ Force updating trails and future predictions now...');
       // Give a small delay to ensure map is ready
       setTimeout(() => {
         updateTrails(stations);
       }, 200);
     }
-  }, [stationHistory, stations]);
+  }, [stationHistory, stationFuture, stations]);
 
   const formatCoordinate = (coord: number, type: 'lat' | 'lng') => {
     const direction = type === 'lat' ? (coord >= 0 ? 'N' : 'S') : (coord >= 0 ? 'E' : 'W');
