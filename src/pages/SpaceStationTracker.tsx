@@ -421,10 +421,10 @@ const SpaceStationTracker = () => {
           // Initialize with full orbital simulation if first time
           if (!updated[station.id]) {
             updated[station.id] = [];
-            console.log(`🆕 Initializing full orbit simulation for ${station.name}`);
+            console.log(`🆕 Initializing 24hr orbital simulation for ${station.name}`);
             
-            // Create a full orbital trail immediately (90-minute orbit = ~540 points at 10s intervals)
-            const orbitPoints = 540; // Full orbit
+            // Create 24-hour historical trail with optimized sampling (every 60 seconds)
+            const orbitPoints = 1440; // 24 hours at 1-minute intervals
             const currentTime = station.timestamp;
             
             // Define orbital parameters for accurate simulation
@@ -437,7 +437,7 @@ const SpaceStationTracker = () => {
             const params = orbitalParams[station.id as keyof typeof orbitalParams] || orbitalParams[25544];
             
             for (let i = orbitPoints; i >= 0; i--) {
-              const timeOffset = i * 10000; // 10 seconds per point
+              const timeOffset = i * 60000; // 60 seconds per point (reduced from 10s)
               const timeFromNow = (currentTime - timeOffset) / 1000; // seconds
               
               // Calculate orbital position using more accurate orbital mechanics
@@ -480,7 +480,7 @@ const SpaceStationTracker = () => {
               });
             }
             
-            console.log(`✨ Created full orbital simulation for ${station.name}: ${updated[station.id].length} points`);
+            console.log(`✨ Created 24hr orbital simulation for ${station.name}: ${updated[station.id].length} points`);
           } else {
             // Add current position to existing history
             const newPoint = {
@@ -499,24 +499,24 @@ const SpaceStationTracker = () => {
             }
           }
           
-          // Keep 2+ full orbits worth of data (1080 points = ~3 hours)
-          if (updated[station.id].length > 1080) {
-            updated[station.id] = updated[station.id].slice(-1080);
+          // Keep 24 hours worth of data (1440 points = 24 hours at 1-minute intervals)
+          if (updated[station.id].length > 1440) {
+            updated[station.id] = updated[station.id].slice(-1440);
           }
         });
         console.log('📍 After update - New history:', updated);
         return updated;
       });
 
-      // CREATE FUTURE PREDICTIONS - calculate future orbital paths
+      // CREATE FUTURE PREDICTIONS - calculate future orbital paths (24 hours with optimized sampling)
       setStationFuture(prev => {
-        console.log('🔮 Creating future predictions...');
+        console.log('🔮 Creating 24hr future predictions...');
         const futureData = { ...prev };
         allStations.forEach(station => {
           futureData[station.id] = [];
           
-          // Create future orbital prediction (next 3 hours)
-          const futurePoints = 1080; // 3 hours of future orbit
+          // Create 24-hour future orbital prediction with optimized sampling
+          const futurePoints = 1440; // 24 hours at 1-minute intervals (reduced density)
           const currentTime = station.timestamp;
           
           // Define orbital parameters for accurate simulation
@@ -529,7 +529,7 @@ const SpaceStationTracker = () => {
           const params = orbitalParams[station.id as keyof typeof orbitalParams] || orbitalParams[25544];
           
           for (let i = 0; i <= futurePoints; i++) {
-            const timeOffset = i * 10000; // 10 seconds per point
+            const timeOffset = i * 60000; // 60 seconds per point (reduced from 10s)
             const timeFromNow = (currentTime + timeOffset) / 1000; // seconds into future
             
             // Calculate orbital position using more accurate orbital mechanics
@@ -572,7 +572,7 @@ const SpaceStationTracker = () => {
             });
           }
           
-          console.log(`🔮 Created future prediction for ${station.name}: ${futureData[station.id].length} points`);
+          console.log(`🔮 Created 24hr future prediction for ${station.name}: ${futureData[station.id].length} points`);
         });
         
         return futureData;
@@ -803,12 +803,16 @@ const SpaceStationTracker = () => {
         trailColor = '#f59e0b';
       }
       
-      // Create historical trail (solid line) with extended coordinates for tile wrapping
+      // Create historical trail (solid line) with smart sampling for better visibility
       if (history && history.length >= 1) {
+        // Sample the trail data to reduce visual clutter while maintaining coverage
+        const sampleRate = Math.max(1, Math.floor(history.length / 300)); // Max 300 points for clean display
+        const sampledHistory = history.filter((_, index) => index % sampleRate === 0);
+        
         const extendedTrailPoints: [number, number][] = [];
         
         // Create points that extend across multiple world tiles for seamless wrapping
-        history.forEach(pos => {
+        sampledHistory.forEach(pos => {
           // Add original point
           extendedTrailPoints.push([pos.lat, pos.lng]);
           
@@ -821,17 +825,17 @@ const SpaceStationTracker = () => {
           }
         });
         
-        console.log(`✅ Creating historical orbital trail for ${station.name} with ${extendedTrailPoints.length} points (with tile wrapping)`);
+        console.log(`✅ Creating optimized historical trail for ${station.name} with ${extendedTrailPoints.length} points (sampled from ${history.length})`);
         
         const trail = L.polyline(extendedTrailPoints, {
           color: trailColor,
-          weight: 3,
-          opacity: 0.8,
+          weight: 2.5, // Slightly thinner for less visual dominance
+          opacity: 0.7, // Slightly more transparent
           lineCap: 'round',
           lineJoin: 'round',
-          smoothFactor: 1
+          smoothFactor: 2 // More smoothing for cleaner appearance
         })
-        .bindTooltip(`${station.name} ${t('Historical Path', '历史轨迹')} (${history.length} points)`, {
+        .bindTooltip(`${station.name} ${t('24hr History', '24小时历史')} (${sampledHistory.length} points)`, {
           permanent: false,
           direction: 'center',
           className: 'trail-tooltip'
@@ -839,15 +843,19 @@ const SpaceStationTracker = () => {
         .addTo(mapInstanceRef.current!);
         
         trailsRef.current[station.id] = trail;
-        console.log(`✅ Historical orbital trail created for ${station.name} - wraps around tiles`);
+        console.log(`✅ Optimized historical trail created for ${station.name}`);
       }
 
-      // Create future prediction trail (dashed line) with extended coordinates
+      // Create future prediction trail (dashed line) with smart sampling
       if (future && future.length >= 1) {
+        // Sample the future data to reduce visual clutter
+        const sampleRate = Math.max(1, Math.floor(future.length / 200)); // Max 200 points for future
+        const sampledFuture = future.filter((_, index) => index % sampleRate === 0);
+        
         const extendedFuturePoints: [number, number][] = [];
         
         // Create points that extend across multiple world tiles for seamless wrapping
-        future.forEach(pos => {
+        sampledFuture.forEach(pos => {
           // Add original point
           extendedFuturePoints.push([pos.lat, pos.lng]);
           
@@ -860,18 +868,18 @@ const SpaceStationTracker = () => {
           }
         });
         
-        console.log(`🔮 Creating future prediction trail for ${station.name} with ${extendedFuturePoints.length} points (with tile wrapping)`);
+        console.log(`🔮 Creating optimized future trail for ${station.name} with ${extendedFuturePoints.length} points (sampled from ${future.length})`);
         
         const futureTrail = L.polyline(extendedFuturePoints, {
           color: trailColor,
-          weight: 2.5,
-          opacity: 0.6,
-          dashArray: '10, 10', // Dashed line for future predictions
+          weight: 2, // Thinner for future predictions
+          opacity: 0.5, // More transparent for future predictions
+          dashArray: '8, 8', // Dashed line for future predictions
           lineCap: 'round',
           lineJoin: 'round',
-          smoothFactor: 1
+          smoothFactor: 2
         })
-        .bindTooltip(`${station.name} ${t('Future Prediction', '未来预测')} (${future.length} points)`, {
+        .bindTooltip(`${station.name} ${t('24hr Future', '24小时未来')} (${sampledFuture.length} points)`, {
           permanent: false,
           direction: 'center',
           className: 'future-trail-tooltip'
@@ -879,26 +887,21 @@ const SpaceStationTracker = () => {
         .addTo(mapInstanceRef.current!);
         
         futureTrailsRef.current[station.id] = futureTrail;
-        console.log(`🔮 Future prediction trail created for ${station.name} - connects to pass marker`);
+        console.log(`🔮 Optimized future trail created for ${station.name}`);
         
-        // Connect future trail to pass marker if it exists
-        if (station.nextPass) {
+        // Connect future trail to pass marker if it exists (simplified connection)
+        if (station.nextPass && sampledFuture.length > 0) {
           const connectionPoints: [number, number][] = [
-            [future[future.length - 1].lat, future[future.length - 1].lng],
+            [sampledFuture[sampledFuture.length - 1].lat, sampledFuture[sampledFuture.length - 1].lng],
             [station.nextPass.lat, station.nextPass.lng]
           ];
           
           const connectionLine = L.polyline(connectionPoints, {
             color: trailColor,
-            weight: 2,
-            opacity: 0.4,
-            dashArray: '5, 5',
+            weight: 1.5,
+            opacity: 0.3,
+            dashArray: '3, 3',
             lineCap: 'round'
-          })
-          .bindTooltip(`${t('Connection to Pass Location', '连接到过境位置')}`, {
-            permanent: false,
-            direction: 'center',
-            className: 'connection-tooltip'
           })
           .addTo(mapInstanceRef.current!);
           
