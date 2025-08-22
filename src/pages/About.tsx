@@ -8,7 +8,6 @@ import { ArrowLeft, Star } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NavBar from "@/components/NavBar";
 
-// Import all the necessary components
 import AboutHeader from "@/components/about/AboutHeader";
 import AboutTeam from "@/components/about/AboutTeam";
 import SiqsSection from "@/components/about/SiqsSection";
@@ -17,6 +16,7 @@ import LocationDiscoverySection from "@/components/about/LocationDiscoverySectio
 import PhotoPointsFeature from "@/components/about/PhotoPointsFeature";
 import DarkSkyKnowledge from "@/components/about/DarkSkyKnowledge";
 import AboutFooter from "@/components/about/AboutFooter";
+import ResourcesSection from "@/components/about/ResourcesSection";
 
 const About = () => {
   const { t } = useLanguage();
@@ -113,6 +113,7 @@ const About = () => {
           <PhotoPointsFeature />
           <LocationDiscoverySection />
           <DarkSkyKnowledge />
+          <ResourcesSection />
           <AboutFooter />
         </div>
       </div>
