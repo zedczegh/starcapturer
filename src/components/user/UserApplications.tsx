@@ -39,6 +39,7 @@ const UserApplications = () => {
   const [applications, setApplications] = useState<UserApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const fetchUserApplications = async () => {
     if (!user) return;
@@ -105,6 +106,34 @@ const UserApplications = () => {
       toast.error("Error", "Failed to withdraw application. Please try again.");
     } finally {
       setWithdrawing(null);
+    }
+  };
+
+  const handleDeleteApplication = async (applicationId: string) => {
+    setDeleting(applicationId);
+    try {
+      const { error } = await supabase
+        .from('astro_spot_verification_applications')
+        .delete()
+        .eq('id', applicationId)
+        .eq('applicant_id', user?.id)
+        .eq('status', 'withdrawn'); // Only allow deletion of withdrawn applications
+
+      if (error) {
+        console.error('Error deleting application:', error);
+        toast.error("Error", "Failed to delete application. Please try again.");
+        return;
+      }
+
+      // Remove from local state
+      setApplications(prev => prev.filter(app => app.id !== applicationId));
+
+      toast.success("Application Deleted", "Your verification application has been permanently deleted.");
+    } catch (error) {
+      console.error('Error deleting application:', error);
+      toast.error("Error", "Failed to delete application. Please try again.");
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -197,8 +226,9 @@ const UserApplications = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
                           disabled={withdrawing === application.id}
+                          title="Withdraw application"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -208,16 +238,49 @@ const UserApplications = () => {
                           <AlertDialogTitle>Withdraw Application</AlertDialogTitle>
                           <AlertDialogDescription>
                             Are you sure you want to withdraw your verification application for "{application.spot.name}"?
-                            This action cannot be undone.
+                            You can permanently delete it later if needed.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => handleWithdrawApplication(application.id)}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-amber-600 hover:bg-amber-700"
                           >
                             Withdraw
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                  {application.status === 'withdrawn' && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          disabled={deleting === application.id}
+                          title="Delete application permanently"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Application</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to permanently delete your verification application for "{application.spot.name}"?
+                            This action cannot be undone and all application data will be lost.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteApplication(application.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Delete Permanently
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
