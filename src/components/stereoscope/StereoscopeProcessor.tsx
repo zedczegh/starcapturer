@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, Eye, Download, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
@@ -12,6 +13,14 @@ interface ProcessingParams {
   edgeWeight: number;
   blurSigma: number;
   contrastAlpha: number;
+  starThreshold: number;
+  nebulaDepthBoost: number;
+  colorChannelWeights: {
+    red: number;
+    green: number;
+    blue: number;
+  };
+  objectType: 'nebula' | 'galaxy' | 'planetary' | 'mixed';
 }
 
 const StereoscopeProcessor: React.FC = () => {
@@ -27,7 +36,15 @@ const StereoscopeProcessor: React.FC = () => {
     maxShift: 30,
     edgeWeight: 0.3,
     blurSigma: 1.0,
-    contrastAlpha: 1.2
+    contrastAlpha: 1.2,
+    starThreshold: 200,
+    nebulaDepthBoost: 1.5,
+    colorChannelWeights: {
+      red: 0.299,
+      green: 0.587,
+      blue: 0.114
+    },
+    objectType: 'nebula'
   });
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,36 +62,106 @@ const StereoscopeProcessor: React.FC = () => {
     }
   };
 
-  const generateDepthMap = useCallback((
+  const generateAstroDepthMap = useCallback((
     canvas: HTMLCanvasElement, 
     ctx: CanvasRenderingContext2D,
     width: number,
     height: number,
-    edgeWeight: number,
-    blurSigma: number
+    params: ProcessingParams
   ): ImageData => {
-    // Get grayscale image data
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
     
-    // Convert to grayscale and create depth map
+    // Create weighted grayscale using astrophotography-specific weights
     const grayData = new Uint8ClampedArray(width * height);
+    const starMask = new Uint8ClampedArray(width * height);
+    
     for (let i = 0; i < data.length; i += 4) {
-      const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      
+      // Weighted grayscale for astronomy (emphasize different wavelengths)
+      const gray = Math.round(
+        params.colorChannelWeights.red * r + 
+        params.colorChannelWeights.green * g + 
+        params.colorChannelWeights.blue * b
+      );
       grayData[i / 4] = gray;
+      
+      // Detect stars (bright point sources)
+      const brightness = Math.max(r, g, b);
+      starMask[i / 4] = brightness > params.starThreshold ? 255 : 0;
     }
 
-    // Create depth map (invert: bright = near, dark = far)
+    // Create base depth map based on object type
     const depthData = new Uint8ClampedArray(width * height);
-    for (let i = 0; i < grayData.length; i++) {
-      depthData[i] = 255 - grayData[i];
+    
+    if (params.objectType === 'nebula') {
+      // For nebulae: brighter = closer (gas density), darker = farther
+      for (let i = 0; i < grayData.length; i++) {
+        if (starMask[i] === 255) {
+          // Stars stay at infinity (minimal depth)
+          depthData[i] = 50;
+        } else {
+          // Nebula depth based on brightness with boost
+          depthData[i] = Math.min(255, grayData[i] * params.nebulaDepthBoost);
+        }
+      }
+    } else if (params.objectType === 'galaxy') {
+      // For galaxies: center brighter = closer, spiral arms = varying depth
+      for (let i = 0; i < grayData.length; i++) {
+        if (starMask[i] === 255) {
+          depthData[i] = 30; // Foreground stars
+        } else {
+          // Galaxy core closer, arms farther
+          const y = Math.floor(i / width);
+          const x = i % width;
+          const centerX = width / 2;
+          const centerY = height / 2;
+          const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+          const normalizedDist = Math.min(1, distFromCenter / (Math.min(width, height) / 2));
+          depthData[i] = Math.min(255, grayData[i] * (1.5 - normalizedDist * 0.5));
+        }
+      }
+    } else if (params.objectType === 'planetary') {
+      // For planets: center closer, limb farther (spherical shape)
+      for (let i = 0; i < grayData.length; i++) {
+        const y = Math.floor(i / width);
+        const x = i % width;
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+        const normalizedDist = Math.min(1, distFromCenter / (Math.min(width, height) / 4));
+        
+        // Spherical depth model
+        const sphereDepth = Math.cos(normalizedDist * Math.PI / 2);
+        depthData[i] = Math.min(255, grayData[i] * sphereDepth);
+      }
+    } else { // mixed
+      // Standard inversion with star handling
+      for (let i = 0; i < grayData.length; i++) {
+        if (starMask[i] === 255) {
+          depthData[i] = 50;
+        } else {
+          depthData[i] = 255 - grayData[i];
+        }
+      }
     }
 
-    // Simple edge detection (Sobel-like)
+    // Enhanced edge detection for astrophotography
     const edgeData = new Uint8ClampedArray(width * height);
     for (let y = 1; y < height - 1; y++) {
       for (let x = 1; x < width - 1; x++) {
         const idx = y * width + x;
+        
+        // Skip edge detection on stars to preserve point sources
+        if (starMask[idx] === 255) {
+          edgeData[idx] = 0;
+          continue;
+        }
+        
+        // Enhanced Sobel for nebula structures
         const gx = -grayData[idx - width - 1] + grayData[idx - width + 1] +
                   -2 * grayData[idx - 1] + 2 * grayData[idx + 1] +
                   -grayData[idx + width - 1] + grayData[idx + width + 1];
@@ -85,22 +172,32 @@ const StereoscopeProcessor: React.FC = () => {
       }
     }
 
-    // Combine depth and edges
+    // Combine depth and edges (avoid edges on stars)
     for (let i = 0; i < depthData.length; i++) {
-      const combinedDepth = (1 - edgeWeight) * depthData[i] + edgeWeight * (255 - edgeData[i]);
+      if (starMask[i] === 255) {
+        continue; // Keep stars as-is
+      }
+      const combinedDepth = (1 - params.edgeWeight) * depthData[i] + 
+                           params.edgeWeight * (255 - edgeData[i]);
       depthData[i] = Math.round(combinedDepth);
     }
 
-    // Apply Gaussian blur approximation
-    const blurRadius = Math.round(blurSigma * 3);
+    // Apply adaptive Gaussian blur (less blur on stars)
+    const blurRadius = Math.round(params.blurSigma * 3);
     if (blurRadius > 0) {
       const blurredData = new Uint8ClampedArray(width * height);
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
+          const idx = y * width + x;
+          
+          // Reduce blur on stars
+          const effectiveRadius = starMask[idx] === 255 ? 
+            Math.max(1, Math.round(blurRadius * 0.3)) : blurRadius;
+          
           let sum = 0;
           let count = 0;
-          for (let by = -blurRadius; by <= blurRadius; by++) {
-            for (let bx = -blurRadius; bx <= blurRadius; bx++) {
+          for (let by = -effectiveRadius; by <= effectiveRadius; by++) {
+            for (let bx = -effectiveRadius; bx <= effectiveRadius; bx++) {
               const nx = x + bx;
               const ny = y + by;
               if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
@@ -109,7 +206,7 @@ const StereoscopeProcessor: React.FC = () => {
               }
             }
           }
-          blurredData[y * width + x] = Math.round(sum / count);
+          blurredData[idx] = Math.round(sum / count);
         }
       }
       depthData.set(blurredData);
@@ -119,10 +216,10 @@ const StereoscopeProcessor: React.FC = () => {
     const depthImageData = new ImageData(width, height);
     for (let i = 0; i < depthData.length; i++) {
       const value = depthData[i];
-      depthImageData.data[i * 4] = value;     // R
-      depthImageData.data[i * 4 + 1] = value; // G
-      depthImageData.data[i * 4 + 2] = value; // B
-      depthImageData.data[i * 4 + 3] = 255;   // A
+      depthImageData.data[i * 4] = value;
+      depthImageData.data[i * 4 + 1] = value;
+      depthImageData.data[i * 4 + 2] = value;
+      depthImageData.data[i * 4 + 3] = 255;
     }
 
     return depthImageData;
@@ -268,8 +365,8 @@ const StereoscopeProcessor: React.FC = () => {
 
       const { width, height } = canvas;
 
-      // Generate depth map
-      const depthMap = generateDepthMap(canvas, ctx, width, height, params.edgeWeight, params.blurSigma);
+      // Generate astrophotography depth map
+      const depthMap = generateAstroDepthMap(canvas, ctx, width, height, params);
       
       // Create depth map preview
       const depthCanvas = document.createElement('canvas');
@@ -393,6 +490,113 @@ const StereoscopeProcessor: React.FC = () => {
             <CardContent>
               <div className="space-y-6">
                 <div>
+                  <Label>{t('Object Type', '天体类型')}</Label>
+                  <Select 
+                    value={params.objectType} 
+                    onValueChange={(value: 'nebula' | 'galaxy' | 'planetary' | 'mixed') => 
+                      setParams(prev => ({ ...prev, objectType: value }))
+                    }
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="nebula">{t('Nebula', '星云')}</SelectItem>
+                      <SelectItem value="galaxy">{t('Galaxy', '星系')}</SelectItem>
+                      <SelectItem value="planetary">{t('Planetary', '行星')}</SelectItem>
+                      <SelectItem value="mixed">{t('Mixed/Other', '混合/其他')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-cosmic-400 mt-1">
+                    {t('Optimizes depth mapping for different astronomical objects', '为不同天体优化深度映射')}
+                  </p>
+                </div>
+
+                <div>
+                  <Label>{t('Star Threshold', '恒星阈值')} ({params.starThreshold})</Label>
+                  <Slider
+                    value={[params.starThreshold]}
+                    onValueChange={([value]) => setParams(prev => ({ ...prev, starThreshold: value }))}
+                    min={150}
+                    max={250}
+                    step={10}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-cosmic-400 mt-1">
+                    {t('Brightness threshold for star detection (keeps stars at infinity)', '恒星检测的亮度阈值（保持恒星在无限远处）')}
+                  </p>
+                </div>
+
+                <div>
+                  <Label>{t('Nebula Depth Boost', '星云深度增强')} ({params.nebulaDepthBoost.toFixed(1)})</Label>
+                  <Slider
+                    value={[params.nebulaDepthBoost * 10]}
+                    onValueChange={([value]) => setParams(prev => ({ ...prev, nebulaDepthBoost: value / 10 }))}
+                    min={10}
+                    max={25}
+                    step={1}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-cosmic-400 mt-1">
+                    {t('Enhances depth perception in nebula structures', '增强星云结构的深度感知')}
+                  </p>
+                </div>
+
+                <div>
+                  <Label>{t('Color Channel Weights', '颜色通道权重')}</Label>
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-red-400 text-xs w-12">R:</span>
+                      <Slider
+                        value={[params.colorChannelWeights.red * 100]}
+                        onValueChange={([value]) => setParams(prev => ({ 
+                          ...prev, 
+                          colorChannelWeights: { ...prev.colorChannelWeights, red: value / 100 }
+                        }))}
+                        min={10}
+                        max={50}
+                        step={1}
+                        className="flex-1"
+                      />
+                      <span className="text-xs w-8">{(params.colorChannelWeights.red * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400 text-xs w-12">G:</span>
+                      <Slider
+                        value={[params.colorChannelWeights.green * 100]}
+                        onValueChange={([value]) => setParams(prev => ({ 
+                          ...prev, 
+                          colorChannelWeights: { ...prev.colorChannelWeights, green: value / 100 }
+                        }))}
+                        min={30}
+                        max={70}
+                        step={1}
+                        className="flex-1"
+                      />
+                      <span className="text-xs w-8">{(params.colorChannelWeights.green * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-400 text-xs w-12">B:</span>
+                      <Slider
+                        value={[params.colorChannelWeights.blue * 100]}
+                        onValueChange={([value]) => setParams(prev => ({ 
+                          ...prev, 
+                          colorChannelWeights: { ...prev.colorChannelWeights, blue: value / 100 }
+                        }))}
+                        min={5}
+                        max={30}
+                        step={1}
+                        className="flex-1"
+                      />
+                      <span className="text-xs w-8">{(params.colorChannelWeights.blue * 100).toFixed(0)}%</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-cosmic-400 mt-1">
+                    {t('Weight each color channel for depth calculation (useful for narrowband images)', '为深度计算加权每个颜色通道（对窄带图像有用）')}
+                  </p>
+                </div>
+
+                <div>
                   <Label>{t('Maximum Shift', '最大偏移')} ({params.maxShift}px)</Label>
                   <Slider
                     value={[params.maxShift]}
@@ -433,7 +637,7 @@ const StereoscopeProcessor: React.FC = () => {
                     className="mt-2"
                   />
                   <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Smoothness of depth transitions', '深度过渡的平滑度')}
+                    {t('Smoothness of depth transitions (stars get less blur)', '深度过渡的平滑度（恒星模糊较少）')}
                   </p>
                 </div>
 
