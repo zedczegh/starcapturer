@@ -4,8 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Calendar, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useToast, toast } from "@/hooks/use-toast";
 import ApplicationMaterials from "@/components/admin/ApplicationMaterials";
 
 interface UserApplication {
@@ -35,6 +38,7 @@ const UserApplications = () => {
   const { user } = useAuth();
   const [applications, setApplications] = useState<UserApplication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [withdrawing, setWithdrawing] = useState<string | null>(null);
 
   const fetchUserApplications = async () => {
     if (!user) return;
@@ -73,11 +77,43 @@ const UserApplications = () => {
     fetchUserApplications();
   }, [user]);
 
+  const handleWithdrawApplication = async (applicationId: string) => {
+    setWithdrawing(applicationId);
+    try {
+      const { error } = await supabase
+        .from('astro_spot_verification_applications')
+        .update({ status: 'withdrawn' })
+        .eq('id', applicationId)
+        .eq('applicant_id', user?.id);
+
+      if (error) {
+        console.error('Error withdrawing application:', error);
+        toast.error("Error", "Failed to withdraw application. Please try again.");
+        return;
+      }
+
+      // Update local state
+      setApplications(prev => prev.map(app => 
+        app.id === applicationId 
+          ? { ...app, status: 'withdrawn', updated_at: new Date().toISOString() }
+          : app
+      ));
+
+      toast.success("Application Withdrawn", "Your verification application has been successfully withdrawn.");
+    } catch (error) {
+      console.error('Error withdrawing application:', error);
+      toast.error("Error", "Failed to withdraw application. Please try again.");
+    } finally {
+      setWithdrawing(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { color: 'bg-amber-500/20 text-amber-400 border-amber-500/30', icon: AlertCircle, label: 'Pending Review' },
       approved: { color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', icon: CheckCircle, label: 'Approved' },
-      rejected: { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: XCircle, label: 'Rejected' }
+      rejected: { color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: XCircle, label: 'Rejected' },
+      withdrawn: { color: 'bg-gray-500/20 text-gray-400 border-gray-500/30', icon: XCircle, label: 'Withdrawn' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
@@ -153,7 +189,41 @@ const UserApplications = () => {
                     )}
                   </CardDescription>
                 </div>
-                {getStatusBadge(application.status)}
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(application.status)}
+                  {application.status === 'pending' && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                          disabled={withdrawing === application.id}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Withdraw Application</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to withdraw your verification application for "{application.spot.name}"?
+                            This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleWithdrawApplication(application.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Withdraw
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               </div>
             </CardHeader>
 

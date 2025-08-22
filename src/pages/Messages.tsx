@@ -58,43 +58,64 @@ const MessageContent = memo(({ user }: { user: any }) => {
 
   // Show tabs for all authenticated users
   return (
-    <div className={`container mx-auto px-2 md:px-4 ${isMobile ? 'py-2 pt-16' : 'py-6 pt-20'} max-w-6xl`}>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} mb-6`}>
-          <TabsTrigger value="messages">Messages</TabsTrigger>
-          <TabsTrigger value="applications">My Applications</TabsTrigger>
-          {isAdmin && <TabsTrigger value="notifications">Admin Notifications</TabsTrigger>}
-        </TabsList>
+    <div className={`min-h-[calc(100vh-80px)] ${isMobile ? 'pt-16' : 'pt-20'}`}>
+      <div className="container mx-auto px-2 md:px-4 py-4 max-w-6xl">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Messages</h1>
+          <p className="text-muted-foreground">Connect with other astronomers and track your applications</p>
+        </div>
         
-        <TabsContent value="messages" className="mt-0">
-          <MessageContainer
-            activeConversation={activeConversation}
-            conversations={conversations}
-            loading={loading}
-            messages={messages}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onSelectConversation={handleSelectConversation}
-            onBack={handleBack}
-            onSendMessage={handleSendMessage}
-            onUnsendMessage={handleUnsendMessage}
-            onDeleteConversation={handleDeleteConversation}
-            sending={sending}
-            isProcessingAction={isProcessingAction}
-            currentUserId={user.id}
-          />
-        </TabsContent>
-        
-        <TabsContent value="applications" className="mt-0">
-          <UserApplications />
-        </TabsContent>
-        
-        {isAdmin && (
-          <TabsContent value="notifications" className="mt-0">
-            <AdminNotifications />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} mb-6 bg-card/50 backdrop-blur-sm`}>
+            <TabsTrigger value="messages" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              Messages
+            </TabsTrigger>
+            <TabsTrigger value="applications" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+              My Applications
+            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="notifications" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                Admin Notifications
+              </TabsTrigger>
+            )}
+          </TabsList>
+          
+          <TabsContent value="messages" className="mt-0">
+            <div className="bg-card/30 backdrop-blur-sm rounded-lg border border-border/50 overflow-hidden">
+              <MessageContainer
+                activeConversation={activeConversation}
+                conversations={conversations}
+                loading={loading}
+                messages={messages}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                onSelectConversation={handleSelectConversation}
+                onBack={handleBack}
+                onSendMessage={handleSendMessage}
+                onUnsendMessage={handleUnsendMessage}
+                onDeleteConversation={handleDeleteConversation}
+                sending={sending}
+                isProcessingAction={isProcessingAction}
+                currentUserId={user.id}
+              />
+            </div>
           </TabsContent>
-        )}
-      </Tabs>
+          
+          <TabsContent value="applications" className="mt-0">
+            <div className="bg-card/30 backdrop-blur-sm rounded-lg border border-border/50 p-6">
+              <UserApplications />
+            </div>
+          </TabsContent>
+          
+          {isAdmin && (
+            <TabsContent value="notifications" className="mt-0">
+              <div className="bg-card/30 backdrop-blur-sm rounded-lg border border-border/50 p-6">
+                <AdminNotifications />
+              </div>
+            </TabsContent>
+          )}
+        </Tabs>
+      </div>
     </div>
   );
 });
@@ -104,7 +125,7 @@ const Messages = memo(() => {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-cosmic-900 to-cosmic-950">
+    <div className="min-h-screen bg-gradient-to-br from-cosmic-900 via-cosmic-950 to-purple-950/30">
       <NavBar />
       
       {!user ? (
