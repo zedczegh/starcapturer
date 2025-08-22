@@ -377,6 +377,48 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_astro_spots: {
+        Row: {
+          bortlescale: number | null
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          siqs: number | null
+          spot_id: string
+          updated_at: string
+          user_id: string
+          verification_status: string | null
+        }
+        Insert: {
+          bortlescale?: number | null
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          name: string
+          siqs?: number | null
+          spot_id: string
+          updated_at?: string
+          user_id: string
+          verification_status?: string | null
+        }
+        Update: {
+          bortlescale?: number | null
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+          siqs?: number | null
+          spot_id?: string
+          updated_at?: string
+          user_id?: string
+          verification_status?: string | null
+        }
+        Relationships: []
+      }
       saved_locations: {
         Row: {
           bortlescale: number | null
