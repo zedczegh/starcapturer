@@ -10,6 +10,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useLocation } from "react-router-dom";
 import AdminNotifications from "@/components/admin/AdminNotifications";
+import UserApplications from "@/components/user/UserApplications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Memoize the MessageContent component to prevent unnecessary re-renders
@@ -55,60 +56,45 @@ const MessageContent = memo(({ user }: { user: any }) => {
     }
   }, [activeConversation]);
 
-  if (isAdmin) {
-    return (
-      <div className={`container mx-auto px-2 md:px-4 ${isMobile ? 'py-2 pt-16' : 'py-6 pt-20'} max-w-6xl`}>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="messages">Messages</TabsTrigger>
-            <TabsTrigger value="notifications">Admin Notifications</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="messages" className="mt-0">
-            <MessageContainer
-              activeConversation={activeConversation}
-              conversations={conversations}
-              loading={loading}
-              messages={messages}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              onSelectConversation={handleSelectConversation}
-              onBack={handleBack}
-              onSendMessage={handleSendMessage}
-              onUnsendMessage={handleUnsendMessage}
-              onDeleteConversation={handleDeleteConversation}
-              sending={sending}
-              isProcessingAction={isProcessingAction}
-              currentUserId={user.id}
-            />
-          </TabsContent>
-          
+  // Show tabs for all authenticated users
+  return (
+    <div className={`container mx-auto px-2 md:px-4 ${isMobile ? 'py-2 pt-16' : 'py-6 pt-20'} max-w-6xl`}>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} mb-6`}>
+          <TabsTrigger value="messages">Messages</TabsTrigger>
+          <TabsTrigger value="applications">My Applications</TabsTrigger>
+          {isAdmin && <TabsTrigger value="notifications">Admin Notifications</TabsTrigger>}
+        </TabsList>
+        
+        <TabsContent value="messages" className="mt-0">
+          <MessageContainer
+            activeConversation={activeConversation}
+            conversations={conversations}
+            loading={loading}
+            messages={messages}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            onSelectConversation={handleSelectConversation}
+            onBack={handleBack}
+            onSendMessage={handleSendMessage}
+            onUnsendMessage={handleUnsendMessage}
+            onDeleteConversation={handleDeleteConversation}
+            sending={sending}
+            isProcessingAction={isProcessingAction}
+            currentUserId={user.id}
+          />
+        </TabsContent>
+        
+        <TabsContent value="applications" className="mt-0">
+          <UserApplications />
+        </TabsContent>
+        
+        {isAdmin && (
           <TabsContent value="notifications" className="mt-0">
             <AdminNotifications />
           </TabsContent>
-        </Tabs>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`container mx-auto px-2 md:px-4 ${isMobile ? 'py-2 pt-16' : 'py-6 pt-20'} max-w-6xl`}>
-      <MessageContainer
-        activeConversation={activeConversation}
-        conversations={conversations}
-        loading={loading}
-        messages={messages}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        onSelectConversation={handleSelectConversation}
-        onBack={handleBack}
-        onSendMessage={handleSendMessage}
-        onUnsendMessage={handleUnsendMessage}
-        onDeleteConversation={handleDeleteConversation}
-        sending={sending}
-        isProcessingAction={isProcessingAction}
-        currentUserId={user.id}
-      />
+        )}
+      </Tabs>
     </div>
   );
 });
