@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from "@/contexts/LanguageContext";
+import BookmarkButton from '@/components/astroSpots/BookmarkButton';
 
 const AstroSpotProfile = () => {
   const { id } = useParams();
@@ -165,17 +166,19 @@ const AstroSpotProfile = () => {
             className="text-gray-300 hover:bg-cosmic-800/50"
           />
           
-          <Button
-            onClick={handleShareProfile}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1 bg-cosmic-800/30 border-cosmic-700/50 hover:bg-cosmic-800/50 text-gray-300"
-          >
-            <Share2 className="h-4 w-4" />
-            <span className="hidden sm:inline">
-              {t("Share", "分享")}
-            </span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleShareProfile}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1 bg-cosmic-800/30 border-cosmic-700/50 hover:bg-cosmic-800/50 text-gray-300"
+            >
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {t("Share", "分享")}
+              </span>
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (

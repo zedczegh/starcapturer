@@ -12,6 +12,7 @@ import VerificationButton from '@/components/astro-spots/verification/Verificati
 import { AdminVerificationControls } from '@/components/astro-spots/verification/AdminVerificationControls';
 import { AdminVerificationMaterialsViewer } from '@/components/astro-spots/verification/AdminVerificationMaterialsViewer';
 import useProfileContent from '@/hooks/astro-spots/useProfileContent';
+import BookmarkButton from '@/components/astroSpots/BookmarkButton';
 
 interface ProfileContentProps {
   spotId: string;
@@ -90,13 +91,27 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
             <VerificationBadge status={spot.verification_status || 'unverified'} />
           </div>
           
-          <VerificationButton
-            spotId={spotId}
-            spotName={spot.name}
-            verificationStatus={spot.verification_status || 'unverified'}
-            isCreator={isCreator}
-            onStatusUpdate={refreshData}
-          />
+          <div className="flex items-center gap-2">
+            <BookmarkButton
+              astroSpot={{
+                id: spot.id,
+                name: spot.name,
+                latitude: spot.latitude,
+                longitude: spot.longitude,
+                bortlescale: spot.bortlescale,
+                siqs: spot.siqs,
+                verification_status: spot.verification_status
+              }}
+              size="sm"
+            />
+            <VerificationButton
+              spotId={spotId}
+              spotName={spot.name}
+              verificationStatus={spot.verification_status || 'unverified'}
+              isCreator={isCreator}
+              onStatusUpdate={refreshData}
+            />
+          </div>
         </div>
       </div>
       

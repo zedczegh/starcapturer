@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from "@/contexts/AuthContext";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import NavBar from "@/components/NavBar";
 import AstroFooter from "@/components/index/AstroFooter";
 import AstroSpotsLoadingSkeleton from "@/components/astro-spots/AstroSpotsLoadingSkeleton";
@@ -10,6 +10,7 @@ import EmptyAstroSpotsState from '@/components/astro-spots/EmptyAstroSpotsState'
 import AstroSpotGrid from '@/components/astro-spots/AstroSpotGrid';
 import { useAstroSpots } from '@/hooks/astro-spots/useAstroSpots';
 import { useNotifications } from '@/hooks/useNotifications';
+import LocationStatusMessage from "@/components/location/LocationStatusMessage";
 
 const ManageAstroSpots = () => {
   const { user } = useAuth();
@@ -45,12 +46,13 @@ const ManageAstroSpots = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900">
         <NavBar />
-        <div className="container py-8">
-          <p className="text-muted-foreground">
-            {t("Please sign in to manage your AstroSpots", "请登录以管理您的观星点")}
-          </p>
+        <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
+          <LocationStatusMessage
+            message={t("Please sign in to manage your AstroSpots", "请登录以管理您的观星点")}
+            type="error"
+          />
         </div>
       </div>
     );
@@ -58,30 +60,24 @@ const ManageAstroSpots = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 relative">
-      <div
-        className="fixed inset-0 z-0 pointer-events-none select-none"
-        aria-hidden="true"
-        style={{
-          background: "url('/lovable-uploads/bae4bb9f-d2ce-4f1b-9eae-e0e022866a36.png') center center / cover no-repeat",
-          filter: 'blur(2.5px) brightness(0.88) saturate(1.14)',
-        }}
-      />
-      <div
-        className="fixed inset-0 z-0 pointer-events-none"
-        aria-hidden="true"
-        style={{
-          background: 'linear-gradient(120deg, rgba(10,17,34,0.87) 0%, rgba(40,22,44,0.80) 100%)',
-        }}
-      />
       <NavBar />
-      <div className="relative z-10 container py-10 px-2 md:px-6">
+      <div className="container mx-auto px-4 py-8 pt-16 md:pt-20 min-h-screen">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent mb-2">
+            {t("My AstroSpots", "我的观星点")}
+          </h1>
+          <p className="text-cosmic-400">
+            {t("Manage and share your astronomy observation spots", "管理和分享您的天文观测点")}
+          </p>
+        </div>
+
         <AstroSpotsHeader
           spotsCount={spots?.length || 0}
           editMode={editMode}
           onToggleEditMode={() => setEditMode(!editMode)}
         />
-
-        <div className="bg-cosmic-900/60 glassmorphism rounded-2xl border border-cosmic-700/40 shadow-glow px-4 py-8 md:py-10">
+        
+        <div className="mt-8 bg-cosmic-900/60 glassmorphism rounded-2xl border border-cosmic-700/40 shadow-glow px-4 py-8">
           {isLoading ? (
             <AstroSpotsLoadingSkeleton />
           ) : spots && spots.length > 0 ? (
