@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, Music, Calculator, Satellite, Eye } from 'lucide-react';
+import { Wrench, Music, Calculator, Satellite, Eye } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -41,7 +41,7 @@ const UtilitiesButton: React.FC = () => {
           size="sm" 
           className="relative h-9 w-9 p-0 text-cosmic-200 hover:text-white hover:bg-cosmic-800/50 transition-all duration-300"
         >
-          <Settings className="h-4 w-4" />
+          <Wrench className="h-4 w-4" />
           <span className="sr-only">{t('Utilities Menu', '实用工具菜单')}</span>
         </Button>
       </DropdownMenuTrigger>
@@ -60,7 +60,7 @@ const UtilitiesButton: React.FC = () => {
           <div className="px-4 py-3 border-b border-cosmic-700/30">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center border border-amber-500/30">
-                <Settings className="h-4 w-4 text-amber-400" />
+                <Wrench className="h-4 w-4 text-amber-400" />
               </div>
               <span className="font-semibold text-white">{t('Utilities', '实用工具')}</span>
             </div>
