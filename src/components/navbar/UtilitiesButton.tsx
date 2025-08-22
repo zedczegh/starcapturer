@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Wrench, Music, Calculator, Satellite, Eye } from 'lucide-react';
+import { Wrench, Music, Calculator, Satellite, Eye, Video } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -20,6 +20,7 @@ const UtilitiesButton: React.FC = () => {
     { icon: Music, label: t('Sonification', '声化处理器'), path: '/sonification' },
     { icon: Calculator, label: t('Sampling Calculator', '采样计算器'), path: '/sampling-calculator' },
     { icon: Eye, label: t('Stereoscope Processor', '立体镜处理器'), path: '/stereoscope' },
+    { icon: Video, label: t('3D Star Field Generator', '3D星场生成器'), path: '/star-field-generator' },
   ];
 
   const menuItemVariants = {

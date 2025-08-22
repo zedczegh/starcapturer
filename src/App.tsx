@@ -35,6 +35,7 @@ import PaymentSuccess from './pages/PaymentSuccess';
 import SonificationProcessor from './pages/SonificationProcessor';
 import SamplingCalculator from './pages/SamplingCalculator';
 import StereoscopeProcessor from './pages/StereoscopeProcessor';
+import StarFieldGenerator from './pages/StarFieldGenerator';
 
 const LazySpaceStationTracker = lazy(() => import('./pages/SpaceStationTracker'));
 import ErrorBoundary from './components/ErrorBoundary';
@@ -115,6 +116,7 @@ function AppContent() {
       <Route path="/sonification" element={<SonificationProcessor />} />
       <Route path="/sampling-calculator" element={<SamplingCalculator />} />
       <Route path="/stereoscope" element={<StereoscopeProcessor />} />
+      <Route path="/star-field-generator" element={<StarFieldGenerator />} />
       <Route path="/space-tracker" element={
         <Suspense fallback={<LoadingFallback />}>
           <LazySpaceStationTracker />
