@@ -10,7 +10,7 @@ interface StarData {
   z: number;
   brightness: number;
   size: number;
-  color: string;
+  color3d: string;
 }
 
 interface StarField3DProps {
@@ -27,6 +27,7 @@ interface StarField3DProps {
   };
   isAnimating: boolean;
   isRecording: boolean;
+  separatedImages?: { starImage: string; nebulaImage: string } | null;
 }
 
 const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: boolean }> = ({ 
@@ -48,7 +49,7 @@ const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: bool
       positions[i * 3 + 2] = star.z;
 
       // Convert HSL color to RGB
-      const color = new THREE.Color(star.color);
+      const color = new THREE.Color(star.color3d);
       colors[i * 3] = color.r;
       colors[i * 3 + 1] = color.g;
       colors[i * 3 + 2] = color.b;
@@ -152,7 +153,7 @@ const CameraController: React.FC<{ settings: any }> = ({ settings }) => {
   return null;
 };
 
-const StarField3D: React.FC<StarField3DProps> = ({ stars, settings, isAnimating, isRecording }) => {
+const StarField3D: React.FC<StarField3DProps> = ({ stars, settings, isAnimating, isRecording, separatedImages }) => {
   if (stars.length === 0) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-cosmic-950 to-cosmic-900 rounded-b-lg">

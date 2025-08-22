@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import StarField3D from './StarField3D';
 import StarDetectionControls from './StarDetectionControls';
 import AnimationControls from './AnimationControls';
+import { detectStarsFromImage, separateStarsAndNebula, DetectedStar } from '@/utils/starDetection';
 
 interface StarData {
   x: number;
@@ -22,16 +23,31 @@ interface StarData {
   color: string;
 }
 
+interface Star3D extends DetectedStar {
+  z: number;
+  color3d: string;
+}
+
 const StarFieldGenerator: React.FC = () => {
   const { t } = useLanguage();
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [detectedStars, setDetectedStars] = useState<StarData[]>([]);
+  const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null);
+  const [detectedStars, setDetectedStars] = useState<DetectedStar[]>([]);
+  const [stars3D, setStars3D] = useState<Star3D[]>([]);
+  const [separatedImages, setSeparatedImages] = useState<{ starImage: string; nebulaImage: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Animation settings
+  // Detection settings
+  const [detectionSettings, setDetectionSettings] = useState({
+    threshold: 50,
+    minStarSize: 2,
+    maxStarSize: 20,
+    sigma: 1.5,
+    sensitivity: 0.7
+  });
   const [animationSettings, setAnimationSettings] = useState({
     speed: 1,
     direction: 'forward',
@@ -51,13 +67,20 @@ const StarFieldGenerator: React.FC = () => {
     reader.onload = (e) => {
       const result = e.target?.result as string;
       setUploadedImage(result);
-      toast.success(t('Image uploaded successfully', '图像上传成功'));
+      
+      // Create image element for processing
+      const img = new Image();
+      img.onload = () => {
+        setImageElement(img);
+        toast.success(t('Image uploaded successfully', '图像上传成功'));
+      };
+      img.src = result;
     };
     reader.readAsDataURL(file);
   }, [t]);
 
   const detectStars = useCallback(async () => {
-    if (!uploadedImage) {
+    if (!imageElement) {
       toast.error(t('Please upload an image first', '请先上传图像'));
       return;
     }
@@ -65,34 +88,46 @@ const StarFieldGenerator: React.FC = () => {
     setIsProcessing(true);
     
     try {
-      // Simulate star detection processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.info(t('Analyzing image for stars...', '正在分析图像中的星体...'));
       
-      // Generate mock star data based on the image
-      const mockStars: StarData[] = Array.from({ length: animationSettings.starCount }, (_, i) => ({
-        x: (Math.random() - 0.5) * 200,
-        y: (Math.random() - 0.5) * 200,
+      // Detect stars from the actual image
+      const stars = await detectStarsFromImage(imageElement, detectionSettings);
+      
+      if (stars.length === 0) {
+        toast.warning(t('No stars detected. Try adjusting the detection settings.', '未检测到星体。请尝试调整检测设置。'));
+        return;
+      }
+      
+      setDetectedStars(stars);
+      
+      // Convert to 3D stars for rendering
+      const stars3DData: Star3D[] = stars.map(star => ({
+        ...star,
         z: Math.random() * animationSettings.depth,
-        brightness: Math.random() * 0.8 + 0.2,
-        size: Math.random() * 2 + 0.5,
-        color: `hsl(${200 + Math.random() * 60}, 70%, ${60 + Math.random() * 30}%)`
+        color3d: `rgb(${star.color.r}, ${star.color.g}, ${star.color.b})`
       }));
+      setStars3D(stars3DData);
       
-      setDetectedStars(mockStars);
-      toast.success(t(`Detected ${mockStars.length} stars!`, `检测到 ${mockStars.length} 颗恒星！`));
+      // Create separated star and nebula images
+      toast.info(t('Separating stars from nebula...', '正在分离星体和星云...'));
+      const separated = await separateStarsAndNebula(imageElement, stars);
+      setSeparatedImages(separated);
+      
+      toast.success(t(`Successfully detected ${stars.length} stars!`, `成功检测到 ${stars.length} 颗星体！`));
     } catch (error) {
-      toast.error(t('Star detection failed', '星体检测失败'));
+      console.error('Star detection error:', error);
+      toast.error(t('Star detection failed. Please try a different image.', '星体检测失败。请尝试不同的图像。'));
     } finally {
       setIsProcessing(false);
     }
-  }, [uploadedImage, animationSettings.starCount, animationSettings.depth, t]);
+  }, [imageElement, detectionSettings, t]);
 
   const toggleAnimation = useCallback(() => {
     setIsAnimating(prev => !prev);
   }, []);
 
   const startRecording = useCallback(() => {
-    if (detectedStars.length === 0) {
+    if (stars3D.length === 0) {
       toast.error(t('Please detect stars first', '请先检测星体'));
       return;
     }
@@ -105,11 +140,14 @@ const StarFieldGenerator: React.FC = () => {
       setIsRecording(false);
       toast.success(t('Video generated successfully!', '视频生成成功！'));
     }, animationSettings.duration * 1000);
-  }, [detectedStars, animationSettings.duration, t]);
+  }, [stars3D, animationSettings.duration, t]);
 
   const resetAll = useCallback(() => {
     setUploadedImage(null);
+    setImageElement(null);
     setDetectedStars([]);
+    setStars3D([]);
+    setSeparatedImages(null);
     setIsAnimating(false);
     setIsRecording(false);
     if (fileInputRef.current) {
@@ -190,14 +228,14 @@ const StarFieldGenerator: React.FC = () => {
           {/* Star Detection Controls */}
           {uploadedImage && (
             <StarDetectionControls
-              settings={animationSettings}
-              onSettingsChange={setAnimationSettings}
+              settings={detectionSettings}
+              onSettingsChange={setDetectionSettings}
               disabled={isProcessing}
             />
           )}
 
           {/* Animation Controls */}
-          {detectedStars.length > 0 && (
+          {stars3D.length > 0 && (
             <AnimationControls
               settings={animationSettings}
               onSettingsChange={setAnimationSettings}
@@ -220,7 +258,7 @@ const StarFieldGenerator: React.FC = () => {
               {t('Reset', '重置')}
             </Button>
             
-            {detectedStars.length > 0 && (
+            {stars3D.length > 0 && (
               <Button
                 onClick={startRecording}
                 disabled={isRecording}
@@ -242,18 +280,19 @@ const StarFieldGenerator: React.FC = () => {
                 {t('3D Star Field Preview', '3D星场预览')}
               </CardTitle>
               <CardDescription className="text-cosmic-400">
-                {detectedStars.length > 0 
-                  ? t(`Showing ${detectedStars.length} detected stars`, `显示 ${detectedStars.length} 颗检测到的星体`)
+                {stars3D.length > 0 
+                  ? t(`Showing ${stars3D.length} detected stars`, `显示 ${stars3D.length} 颗检测到的星体`)
                   : t('Upload and detect stars to see 3D preview', '上传并检测星体以查看3D预览')
                 }
               </CardDescription>
             </CardHeader>
             <CardContent className="h-[500px] p-0">
               <StarField3D
-                stars={detectedStars}
+                stars={stars3D}
                 settings={animationSettings}
                 isAnimating={isAnimating}
                 isRecording={isRecording}
+                separatedImages={separatedImages}
               />
             </CardContent>
           </Card>
