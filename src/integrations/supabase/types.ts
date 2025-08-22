@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -688,11 +688,11 @@ export type Database = {
     }
     Functions: {
       delete_conversation: {
-        Args: { partner_id: string; current_user_id: string }
+        Args: { current_user_id: string; partner_id: string }
         Returns: undefined
       }
       get_or_create_wallet: {
-        Args: { p_user_id: string; p_currency?: string }
+        Args: { p_currency?: string; p_user_id: string }
         Returns: string
       }
       get_spot_type_color: {
@@ -704,31 +704,31 @@ export type Database = {
         Returns: boolean
       }
       insert_astro_spot_reservation: {
-        Args: { p_timeslot_id: string; p_user_id: string; p_status?: string }
+        Args: { p_status?: string; p_timeslot_id: string; p_user_id: string }
         Returns: string
       }
       insert_astro_spot_timeslot: {
         Args:
           | {
-              p_spot_id: string
               p_creator_id: string
-              p_start_time: string
+              p_currency?: string
+              p_description?: string
               p_end_time: string
               p_max_capacity?: number
-              p_description?: string
+              p_pets_policy?: string
               p_price?: number
-              p_currency?: string
+              p_spot_id: string
+              p_start_time: string
             }
           | {
-              p_spot_id: string
               p_creator_id: string
-              p_start_time: string
+              p_currency?: string
+              p_description?: string
               p_end_time: string
               p_max_capacity?: number
-              p_description?: string
               p_price?: number
-              p_currency?: string
-              p_pets_policy?: string
+              p_spot_id: string
+              p_start_time: string
             }
         Returns: string
       }
@@ -739,39 +739,39 @@ export type Database = {
       update_astro_spot_timeslot: {
         Args:
           | {
-              p_id: string
-              p_spot_id: string
               p_creator_id: string
-              p_start_time: string
-              p_end_time: string
-              p_max_capacity?: number
-              p_description?: string
-              p_price?: number
               p_currency?: string
+              p_description?: string
+              p_end_time: string
+              p_id: string
+              p_max_capacity?: number
+              p_pets_policy?: string
+              p_price?: number
+              p_spot_id: string
+              p_start_time: string
             }
           | {
-              p_id: string
-              p_spot_id: string
               p_creator_id: string
-              p_start_time: string
-              p_end_time: string
-              p_max_capacity?: number
-              p_description?: string
-              p_price?: number
               p_currency?: string
-              p_pets_policy?: string
+              p_description?: string
+              p_end_time: string
+              p_id: string
+              p_max_capacity?: number
+              p_price?: number
+              p_spot_id: string
+              p_start_time: string
             }
         Returns: boolean
       }
       update_wallet_balance: {
         Args: {
-          p_user_id: string
           p_amount: number
-          p_transaction_type: string
           p_currency?: string
           p_description?: string
           p_related_booking_id?: string
           p_stripe_payment_intent_id?: string
+          p_transaction_type: string
+          p_user_id: string
         }
         Returns: string
       }
