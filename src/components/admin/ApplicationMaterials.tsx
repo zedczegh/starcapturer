@@ -10,10 +10,18 @@ const getPublicUrl = (path: string): string => {
     return path;
   }
   
-  // Get public URL from Supabase storage
-  const { data } = supabase.storage
+  // Get public URL from Supabase storage - check both possible bucket names
+  let { data } = supabase.storage
     .from('verification-materials')
     .getPublicUrl(path);
+  
+  // If the public bucket doesn't work, try the private bucket
+  if (!data.publicUrl.includes('verification-materials')) {
+    const privateData = supabase.storage
+      .from('verification_materials')
+      .getPublicUrl(path);
+    data = privateData.data;
+  }
   
   return data.publicUrl;
 };
