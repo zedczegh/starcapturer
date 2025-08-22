@@ -420,6 +420,15 @@ const StereoscopeProcessor: React.FC = () => {
     link.click();
   };
 
+  const downloadDepthMap = () => {
+    if (!depthMapUrl) return;
+    
+    const link = document.createElement('a');
+    link.href = depthMapUrl;
+    link.download = `depth-map-${selectedImage?.name || 'image'}.png`;
+    link.click();
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
@@ -679,11 +688,15 @@ const StereoscopeProcessor: React.FC = () => {
             {depthMapUrl && (
               <Card className="cosmic-border bg-cosmic-900/50 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle className="text-primary">
+                  <CardTitle className="text-primary flex items-center justify-between">
                     {t('Generated Depth Map', '生成的深度图')}
+                    <Button onClick={downloadDepthMap} variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      {t('Download', '下载')}
+                    </Button>
                   </CardTitle>
                   <CardDescription>
-                    {t('Brighter areas appear closer, darker areas further away', '较亮区域显示更近，较暗区域更远')}
+                    {t('Brighter areas appear closer, darker areas further away. Stars are kept at background depth.', '较亮区域显示更近，较暗区域更远。恒星保持在背景深度。')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -723,6 +736,12 @@ const StereoscopeProcessor: React.FC = () => {
                       <li>{t('Parallel method: Look "through" the screen as if focusing on something far behind it', '平行方法：看"穿过"屏幕，好像聚焦在屏幕后面的某个东西')}</li>
                       <li>{t('Print on 7×4 inch card with images 65-75mm apart for stereo viewers', '打印在7×4英寸卡片上，图像间距65-75毫米，用于立体观看器')}</li>
                     </ul>
+                    <div className="mt-3 p-3 bg-cosmic-700/30 rounded border-l-4 border-primary/50">
+                      <p className="font-medium text-cosmic-200 mb-1">{t('About Star Appearance:', '关于恒星外观：')}</p>
+                      <p className="text-xs">
+                        {t('Stars may look "doubled" or shifted in individual left/right images - this is normal! The 3D effect and proper star alignment only appear when viewed as a stereo pair using the methods above. Stars are intentionally kept at background depth to maintain astronomical realism.', '恒星在单独的左右图像中可能看起来"重影"或偏移 - 这是正常的！3D效果和正确的恒星对齐只有在使用上述方法作为立体对观看时才会出现。恒星被有意保持在背景深度以保持天文真实性。')}
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
