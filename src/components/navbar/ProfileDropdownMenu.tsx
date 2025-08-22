@@ -4,11 +4,8 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Info, Calendar, Music, Calculator, Satellite, Eye, Wrench, ChevronRight } from 'lucide-react';
+import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Info, Calendar, Music, Calculator, Satellite, Eye, Wrench } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -138,44 +135,41 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
             </motion.div>
           ))}
           
-          {/* Utilities Submenu */}
-          <motion.div
-            custom={menuItems.length}
-            initial="hidden"
-            animate="visible"
-            variants={menuItemVariants}
-          >
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="mx-2 px-4 py-3 flex gap-3 items-center hover:bg-gradient-to-r hover:from-amber-500/10 hover:to-orange-500/10 hover:border-amber-500/20 rounded-xl transition-all duration-300 cursor-pointer group border border-transparent data-[state=open]:bg-gradient-to-r data-[state=open]:from-amber-500/10 data-[state=open]:to-orange-500/10">
-                <div className="w-8 h-8 rounded-lg bg-cosmic-800/50 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
-                  <Wrench className="h-4 w-4 text-cosmic-300 group-hover:text-amber-400 transition-colors" />
+          {/* Utilities Section */}
+          <div className="mx-4 my-3">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent flex-1" />
+              <span className="text-xs text-amber-400 font-medium px-2">{t('Utilities', '实用工具')}</span>
+              <div className="h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent flex-1" />
+            </div>
+          </div>
+          
+          {utilityItems.map(({ icon: Icon, label, path }, j) => (
+            <motion.div
+              key={path}
+              custom={menuItems.length + j + 1}
+              initial="hidden"
+              animate="visible"
+              variants={menuItemVariants}
+            >
+              <DropdownMenuItem
+                onClick={() => navigate(path)}
+                className="mx-2 px-4 py-2.5 flex gap-3 items-center hover:bg-gradient-to-r hover:from-amber-500/10 hover:to-orange-500/10 hover:border-amber-500/20 rounded-xl transition-all duration-300 cursor-pointer group border border-transparent"
+              >
+                <div className="w-7 h-7 rounded-lg bg-cosmic-800/50 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
+                  <Icon className="h-3.5 w-3.5 text-cosmic-300 group-hover:text-amber-400 transition-colors" />
                 </div>
-                <span className="flex-1 text-cosmic-100 group-hover:text-white font-medium">{t('Utilities', '实用工具')}</span>
-                <ChevronRight className="h-4 w-4 text-cosmic-400 group-hover:text-white transition-colors" />
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="z-[250] min-w-[240px] rounded-xl bg-gradient-to-br from-cosmic-950/95 to-cosmic-900/95 backdrop-blur-xl border border-cosmic-700/30 shadow-xl">
-                {utilityItems.map(({ icon: Icon, label, path }, j) => (
-                  <DropdownMenuItem
-                    key={path}
-                    onClick={() => navigate(path)}
-                    className="mx-2 px-4 py-3 flex gap-3 items-center hover:bg-gradient-to-r hover:from-amber-500/10 hover:to-orange-500/10 rounded-lg transition-all duration-300 cursor-pointer group"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-cosmic-800/50 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
-                      <Icon className="h-3.5 w-3.5 text-cosmic-300 group-hover:text-amber-400 transition-colors" />
-                    </div>
-                    <span className="text-cosmic-100 group-hover:text-white font-medium text-sm">{label}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          </motion.div>
+                <span className="text-cosmic-100 group-hover:text-white font-medium text-sm">{label}</span>
+              </DropdownMenuItem>
+            </motion.div>
+          ))}
         </div>
         
         <div className="h-px bg-gradient-to-r from-transparent via-cosmic-700/50 to-transparent mx-4 my-3" />
         
         {/* Sign Out Button */}
         <motion.div
-          custom={menuItems.length + 2}
+          custom={menuItems.length + utilityItems.length + 2}
           initial="hidden"
           animate="visible"
           variants={menuItemVariants}
