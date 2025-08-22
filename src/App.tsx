@@ -34,6 +34,7 @@ import VerificationApplicationsManager from './components/admin/VerificationAppl
 import PaymentSuccess from './pages/PaymentSuccess';
 import SonificationProcessor from './pages/SonificationProcessor';
 import SamplingCalculator from './pages/SamplingCalculator';
+import StereoscopeProcessor from './pages/StereoscopeProcessor';
 
 const LazySpaceStationTracker = lazy(() => import('./pages/SpaceStationTracker'));
 import ErrorBoundary from './components/ErrorBoundary';
@@ -113,6 +114,7 @@ function AppContent() {
       <Route path="/my-wallet" element={<MyWallet />} />
       <Route path="/sonification" element={<SonificationProcessor />} />
       <Route path="/sampling-calculator" element={<SamplingCalculator />} />
+      <Route path="/stereoscope" element={<StereoscopeProcessor />} />
       <Route path="/space-tracker" element={
         <Suspense fallback={<LoadingFallback />}>
           <LazySpaceStationTracker />
