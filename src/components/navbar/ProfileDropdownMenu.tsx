@@ -153,7 +153,7 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
                 <span className="flex-1 text-cosmic-100 group-hover:text-white font-medium">{t('Utilities', '实用工具')}</span>
                 <ChevronRight className="h-4 w-4 text-cosmic-400 group-hover:text-white transition-colors" />
               </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="min-w-[240px] rounded-xl bg-gradient-to-br from-cosmic-950/95 to-cosmic-900/95 backdrop-blur-xl border border-cosmic-700/30 shadow-xl">
+              <DropdownMenuSubContent className="z-[250] min-w-[240px] rounded-xl bg-gradient-to-br from-cosmic-950/95 to-cosmic-900/95 backdrop-blur-xl border border-cosmic-700/30 shadow-xl">
                 {utilityItems.map(({ icon: Icon, label, path }, j) => (
                   <DropdownMenuItem
                     key={path}
