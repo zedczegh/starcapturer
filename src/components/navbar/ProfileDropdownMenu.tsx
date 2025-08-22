@@ -5,7 +5,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Info, Calendar, Music, Calculator, Satellite, Eye, Wrench, ChevronRight } from 'lucide-react';
+import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Info, Calendar } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -39,7 +39,6 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { unreadMessagesCount, newReservationsCount, markMessagesAsViewed, markAstroSpotsAsViewed } = useNotifications();
-  const [showUtilities, setShowUtilities] = useState(false);
 
   const handleMessagesClick = () => {
     markMessagesAsViewed();
@@ -69,13 +68,6 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
     { icon: Calendar, label: t('My Reservations', '我的预订'), path: '/my-reservations' },
     { icon: Info, label: t('About SIQS', '关于SIQS'), path: '/about' },
     { icon: Settings, label: t('Settings', '设置'), path: '/settings' },
-  ];
-
-  const utilityItems = [
-    { icon: Satellite, label: t('Space Station Tracker', '空间站追踪'), path: '/space-tracker' },
-    { icon: Music, label: t('Sonification', '声化处理器'), path: '/sonification' },
-    { icon: Calculator, label: t('Sampling Calculator', '采样计算器'), path: '/sampling-calculator' },
-    { icon: Eye, label: t('Stereoscope Processor', '立体镜处理器'), path: '/stereoscope' },
   ];
 
   return (
@@ -136,45 +128,7 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
             </motion.div>
           ))}
           
-          {/* Custom Utilities Hover Menu */}
-          <motion.div
-            custom={menuItems.length}
-            initial="hidden"
-            animate="visible"
-            variants={menuItemVariants}
-            className="relative"
-            onMouseEnter={() => setShowUtilities(true)}
-            onMouseLeave={() => setShowUtilities(false)}
-          >
-            <div className="mx-2 px-4 py-3 flex gap-3 items-center hover:bg-gradient-to-r hover:from-amber-500/10 hover:to-orange-500/10 hover:border-amber-500/20 rounded-xl transition-all duration-300 cursor-pointer group border border-transparent">
-              <div className="w-8 h-8 rounded-lg bg-cosmic-800/50 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
-                <Wrench className="h-4 w-4 text-cosmic-300 group-hover:text-amber-400 transition-colors" />
-              </div>
-              <span className="flex-1 text-cosmic-100 group-hover:text-white font-medium">{t('Utilities', '实用工具')}</span>
-              <ChevronRight className="h-4 w-4 text-cosmic-400 group-hover:text-white transition-colors" />
-            </div>
-            
-            {/* Custom Submenu */}
-            {showUtilities && (
-              <div 
-                className="absolute left-full top-0 ml-2 w-64 rounded-xl bg-gradient-to-br from-cosmic-950/98 to-cosmic-900/98 backdrop-blur-xl border border-cosmic-700/40 shadow-2xl p-2"
-                style={{ zIndex: 9999 }}
-              >
-                {utilityItems.map(({ icon: Icon, label, path }) => (
-                  <div
-                    key={path}
-                    onClick={() => navigate(path)}
-                    className="px-3 py-2.5 flex gap-3 items-center hover:bg-gradient-to-r hover:from-amber-500/15 hover:to-orange-500/15 rounded-lg transition-all duration-300 cursor-pointer group"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-cosmic-800/50 flex items-center justify-center group-hover:bg-amber-500/25 transition-colors">
-                      <Icon className="h-3.5 w-3.5 text-cosmic-300 group-hover:text-amber-400 transition-colors" />
-                    </div>
-                    <span className="text-cosmic-100 group-hover:text-white font-medium text-sm">{label}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.div>
+          {/* Remove the custom utilities hover menu */}
         </div>
         
         <div className="h-px bg-gradient-to-r from-transparent via-cosmic-700/50 to-transparent mx-4 my-3" />
