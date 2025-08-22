@@ -40,13 +40,13 @@ const StarFieldGenerator: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Detection settings
+  // Detection settings - optimized for automatic detection
   const [detectionSettings, setDetectionSettings] = useState({
-    threshold: 50,
-    minStarSize: 2,
-    maxStarSize: 20,
-    sigma: 1.5,
-    sensitivity: 0.7
+    threshold: 15, // Lower threshold for faint stars
+    minStarSize: 1,
+    maxStarSize: 30,
+    sigma: 0.8, // Less aggressive noise reduction
+    sensitivity: 0.3 // More sensitive detection
   });
   const [animationSettings, setAnimationSettings] = useState({
     speed: 1,
@@ -100,12 +100,19 @@ const StarFieldGenerator: React.FC = () => {
       
       setDetectedStars(stars);
       
-      // Convert to 3D stars for rendering
-      const stars3DData: Star3D[] = stars.map(star => ({
-        ...star,
-        z: Math.random() * animationSettings.depth,
-        color3d: `rgb(${star.color.r}, ${star.color.g}, ${star.color.b})`
-      }));
+      // Convert to 3D stars for rendering with proper depth distribution
+      const stars3DData: Star3D[] = stars.map((star, index) => {
+        // Create depth based on star brightness (brighter stars closer)
+        const depthFactor = 0.3 + (star.brightness * 0.7); // 0.3 to 1.0
+        const baseDepth = animationSettings.depth * (1 - depthFactor);
+        const randomVariation = (Math.random() - 0.5) * animationSettings.depth * 0.2;
+        
+        return {
+          ...star,
+          z: Math.max(5, baseDepth + randomVariation),
+          color3d: `rgb(${star.color.r}, ${star.color.g}, ${star.color.b})`
+        };
+      });
       setStars3D(stars3DData);
       
       // Create separated star and nebula images

@@ -54,7 +54,9 @@ const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: bool
       colors[i * 3 + 1] = color.g;
       colors[i * 3 + 2] = color.b;
 
-      sizes[i] = star.size * settings.brightness;
+      // Size based on star brightness and distance
+      const distanceScale = Math.max(0.5, 1 - (star.z / 200)); // Closer stars appear larger
+      sizes[i] = Math.max(1, star.size * settings.brightness * distanceScale * 2);
     });
 
     return [positions, colors, sizes];
@@ -129,12 +131,13 @@ const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: bool
         />
       </bufferGeometry>
       <pointsMaterial
-        size={2}
+        size={3}
         sizeAttenuation={true}
         vertexColors={true}
         transparent={true}
-        opacity={0.8}
+        opacity={0.9}
         blending={THREE.AdditiveBlending}
+        depthWrite={false}
       />
     </points>
   );

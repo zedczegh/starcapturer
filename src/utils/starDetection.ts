@@ -21,11 +21,11 @@ export interface StarDetectionSettings {
 }
 
 const DEFAULT_SETTINGS: StarDetectionSettings = {
-  threshold: 50,
-  minStarSize: 2,
-  maxStarSize: 20,
-  sigma: 1.5,
-  sensitivity: 0.7
+  threshold: 15, // Much lower for faint stars
+  minStarSize: 1,
+  maxStarSize: 30,
+  sigma: 0.8, // Less aggressive noise reduction
+  sensitivity: 0.3 // More sensitive detection
 };
 
 /**
@@ -109,7 +109,7 @@ function getLuminance(r: number, g: number, b: number): number {
 }
 
 /**
- * Find local maxima (potential stars)
+ * Find local maxima (potential stars) with adaptive threshold
  */
 function findLocalMaxima(
   imageData: ImageData,
@@ -120,19 +120,35 @@ function findLocalMaxima(
   const { data, width, height } = imageData;
   const maxima: Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number } }> = [];
 
-  for (let y = minSize; y < height - minSize; y++) {
-    for (let x = minSize; x < width - minSize; x++) {
+  // Calculate adaptive threshold based on image statistics
+  let totalLuminance = 0;
+  let pixelCount = 0;
+  
+  for (let i = 0; i < data.length; i += 4) {
+    const luminance = getLuminance(data[i], data[i + 1], data[i + 2]);
+    totalLuminance += luminance;
+    pixelCount++;
+  }
+  
+  const avgLuminance = totalLuminance / pixelCount;
+  const adaptiveThreshold = Math.max(threshold, avgLuminance * 1.5);
+
+  console.log(`Image stats: avg=${avgLuminance.toFixed(2)}, threshold=${adaptiveThreshold.toFixed(2)}`);
+
+  for (let y = Math.max(minSize, 2); y < height - Math.max(minSize, 2); y++) {
+    for (let x = Math.max(minSize, 2); x < width - Math.max(minSize, 2); x++) {
       const idx = (y * width + x) * 4;
       const r = data[idx];
       const g = data[idx + 1];
       const b = data[idx + 2];
       const luminance = getLuminance(r, g, b);
 
-      if (luminance < threshold) continue;
+      // Use adaptive threshold
+      if (luminance < adaptiveThreshold) continue;
 
-      // Check if this is a local maximum
+      // Check if this is a local maximum with smaller radius for better detection
       let isMaximum = true;
-      const checkRadius = Math.min(maxSize, 5);
+      const checkRadius = Math.min(3, Math.max(1, minSize));
 
       for (let dy = -checkRadius; dy <= checkRadius && isMaximum; dy++) {
         for (let dx = -checkRadius; dx <= checkRadius && isMaximum; dx++) {
@@ -201,7 +217,7 @@ function calculateStarSize(
 }
 
 /**
- * Filter stars by quality metrics
+ * Filter stars by quality metrics with relaxed criteria
  */
 function filterStarQuality(
   stars: Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number } }>,
@@ -210,34 +226,42 @@ function filterStarQuality(
 ): DetectedStar[] {
   const validStars: DetectedStar[] = [];
 
+  console.log(`Filtering ${stars.length} potential stars...`);
+
   for (const star of stars) {
     const size = calculateStarSize(imageData, star.x, star.y, settings.maxStarSize);
     
-    // Filter by size constraints
-    if (size < settings.minStarSize || size > settings.maxStarSize) continue;
+    // More relaxed size filtering
+    if (size < 0.5 || size > settings.maxStarSize * 1.5) continue;
 
-    // Calculate signal-to-noise ratio
+    // Calculate signal-to-noise ratio with more forgiving threshold
     const signal = star.value;
-    const noise = calculateLocalNoise(imageData, star.x, star.y, size * 2);
-    const snr = noise > 0 ? signal / noise : signal;
+    const noise = calculateLocalNoise(imageData, star.x, star.y, Math.max(3, size * 2));
+    const snr = noise > 0 ? signal / noise : signal / 10; // Fallback SNR
 
-    // Filter by signal-to-noise ratio
-    if (snr < (settings.sensitivity * 10)) continue;
+    // Much more relaxed SNR filtering
+    const minSNR = Math.max(1.2, settings.sensitivity * 5);
+    if (snr < minSNR) continue;
+
+    // Calculate final star size based on brightness and actual measured size
+    const finalSize = Math.max(0.5, Math.min(8, size * (star.value / 255) + 0.5));
 
     validStars.push({
       x: star.x,
       y: star.y,
-      brightness: star.value / 255,
-      size: Math.max(1, size / 2),
+      brightness: Math.max(0.1, star.value / 255),
+      size: finalSize,
       color: star.color,
       signal: snr
     });
   }
 
-  // Sort by brightness (keep the brightest stars)
+  console.log(`Found ${validStars.length} valid stars after filtering`);
+
+  // Sort by brightness and keep more stars
   return validStars
     .sort((a, b) => b.brightness - a.brightness)
-    .slice(0, 2000); // Limit to 2000 brightest stars
+    .slice(0, 5000); // Increased limit
 }
 
 /**
