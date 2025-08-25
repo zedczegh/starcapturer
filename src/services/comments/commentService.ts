@@ -121,22 +121,28 @@ export const createComment = async (
       spot_id: spotId,
       content: content.trim(),
       image_url: imageUrls && imageUrls.length > 0 ? imageUrls[0] : null, // backward compatibility
-      image_urls: imageUrls || null,
+      image_urls: imageUrls && imageUrls.length > 0 ? imageUrls : null, // Ensure we don't pass empty arrays
       parent_id: parentId || null
     };
     
     console.log("Comment data to insert:", commentData);
+    console.log("Image URLs array length:", imageUrls?.length || 0);
+    console.log("Final image_urls value:", commentData.image_urls);
     
-    const { error: insertError } = await supabase
+    const { data: insertResult, error: insertError } = await supabase
       .from("astro_spot_comments")
-      .insert(commentData);
+      .insert(commentData)
+      .select(); // Add select to get the inserted data back
+    
+    console.log("Insert result:", insertResult);
     
     if (insertError) {
       console.error("Error posting comment:", insertError);
+      console.error("Full error details:", JSON.stringify(insertError, null, 2));
       return false;
     }
     
-    console.log("Comment created successfully");
+    console.log("Comment created successfully with data:", insertResult);
     console.log("=== CREATE COMMENT DEBUG END ===");
     return true;
   } catch (err) {

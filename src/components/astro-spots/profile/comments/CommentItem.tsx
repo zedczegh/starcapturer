@@ -108,6 +108,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
                       src={url}
                       alt={t("Comment attachment", "评论附件") + ` ${idx + 1}`}
                       className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
+                      onClick={() => window.open(url, '_blank')}
                       loading="lazy"
                     />
                   </div>
@@ -121,6 +122,8 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
                       src={comment.image_url}
                       alt={t("Comment attachment", "评论附件")}
                       className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
+                      onClick={() => window.open(comment.image_url!, '_blank')}
+                      loading="lazy"
                     />
                   </div>
                 </div>
@@ -191,31 +194,44 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
                       
                       {/* Reply image attachments */}
                       {(reply.image_urls && reply.image_urls.length > 0) ? (
-                        <div className="grid grid-cols-2 gap-2">
-                          {reply.image_urls.map((url, idx) => (
-                            <div key={idx} className="aspect-square overflow-hidden rounded-md border border-border/30 bg-muted/20">
+                        <div className="mt-2">
+                          {reply.image_urls.length === 1 ? (
+                            <div className="max-w-sm overflow-hidden rounded-md border border-border/30 bg-muted/20">
                               <img
-                                src={url}
-                                alt={t("Reply attachment", "回复附件") + ` ${idx + 1}`}
-                                className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
-                                loading="lazy"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        reply.image_url && (
-                          <div className="max-w-32">
-                            <div className="aspect-square overflow-hidden rounded-md border border-border/30 bg-muted/20">
-                              <img 
-                                src={reply.image_url}
+                                src={reply.image_urls[0]}
                                 alt={t("Reply attachment", "回复附件")}
-                                className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
+                                className="w-full h-auto object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
+                                onClick={() => window.open(reply.image_urls![0], '_blank')}
                               />
                             </div>
-                          </div>
-                        )
-                      )}
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2">
+                              {reply.image_urls.map((url, idx) => (
+                                <div key={idx} className="aspect-square overflow-hidden rounded-md border border-border/30 bg-muted/20">
+                                  <img
+                                    src={url}
+                                    alt={t("Reply attachment", "回复附件") + ` ${idx + 1}`}
+                                    className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
+                                     onClick={() => window.open(url, '_blank')}
+                                     loading="lazy"
+                                   />
+                                 </div>
+                               ))}
+                             </div>
+                           )}
+                         </div>
+                       ) : reply.image_url ? (
+                         <div className="mt-2 max-w-32">
+                           <div className="aspect-square overflow-hidden rounded-md border border-border/30 bg-muted/20">
+                             <img 
+                               src={reply.image_url}
+                               alt={t("Reply attachment", "回复附件")}
+                               className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
+                               onClick={() => window.open(reply.image_url!, '_blank')}
+                             />
+                           </div>
+                         </div>
+                       ) : null}
                     </div>
                   </div>
                 </div>
