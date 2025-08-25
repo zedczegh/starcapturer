@@ -65,6 +65,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
         image_url: comment.image_url || (comment.image_urls && comment.image_urls.length > 0 ? comment.image_urls[0] : null),
         image_urls: comment.image_urls || null,
         parent_id: comment.parent_id,
+        user_id: comment.user_id, // Include user_id for ownership checks
         profiles: profilesMap[comment.user_id] || { username: null, avatar_url: null },
         replies: [] // Initialize empty replies array for each comment
       };
@@ -147,6 +148,32 @@ export const createComment = async (
     return true;
   } catch (err) {
     console.error("Exception in createComment:", err);
+    return false;
+  }
+};
+
+/**
+ * Deletes a comment
+ */
+export const deleteComment = async (commentId: string, userId: string): Promise<boolean> => {
+  try {
+    console.log(`Deleting comment ${commentId} for user ${userId}`);
+    
+    const { error } = await supabase
+      .from("astro_spot_comments")
+      .delete()
+      .eq('id', commentId)
+      .eq('user_id', userId); // Ensure user can only delete their own comments
+    
+    if (error) {
+      console.error("Error deleting comment:", error);
+      return false;
+    }
+    
+    console.log("Comment deleted successfully");
+    return true;
+  } catch (err) {
+    console.error("Exception in deleteComment:", err);
     return false;
   }
 };

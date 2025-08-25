@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from "sonner";
 import { Comment } from '@/components/astro-spots/profile/types/comments';
+import { deleteComment } from '@/services/comments/commentService';
 import { uploadCommentImages, ensureCommentImagesBucket } from '@/utils/comments/commentImageUtils';
 import { fetchComments, createComment } from '@/services/comments/commentService';
 import { useAuth } from "@/contexts/AuthContext";
@@ -136,12 +137,42 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     }
   };
 
+  const deleteCommentById = async (commentId: string): Promise<{ success: boolean, comments?: Comment[] }> => {
+    if (!authUser) {
+      toast.error(t("You must be logged in to delete comments", "您必须登录才能删除评论"));
+      return { success: false };
+    }
+    
+    try {
+      const success = await deleteComment(commentId, authUser.id);
+      
+      if (!success) {
+        toast.error(t("Failed to delete comment.", "删除评论失败。"));
+        return { success: false };
+      }
+      
+      // Immediately fetch updated comments to refresh the UI
+      const updatedComments = await fetchComments(spotId);
+      setComments(updatedComments); // Update local state immediately
+      
+      toast.success(t("Comment deleted!", "评论已删除！"));
+      
+      return { success: true, comments: updatedComments };
+      
+    } catch (err) {
+      console.error("Exception when deleting comment:", err);
+      toast.error(t("Failed to delete comment.", "删除评论失败。"));
+      return { success: false };
+    }
+  };
+
   return {
     commentSending,
     comments,
     loaded,
     submitComment,
     fetchComments: loadComments,
+    deleteComment: deleteCommentById,
     storageChecked
   };
 };

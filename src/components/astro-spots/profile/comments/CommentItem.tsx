@@ -1,24 +1,37 @@
 
 import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { useLanguage } from "@/contexts/LanguageContext";
-import { Comment } from '../types/comments';
-import CommentInput from './CommentInput';
-import { Button } from "@/components/ui/button";
-import { MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { MessageSquare, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import CommentInput from "./CommentInput";
+import { Comment } from '../types/comments';
+import { useAuth } from "@/contexts/AuthContext";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface CommentItemProps {
   comment: Comment;
   onReply: (content: string, images: File[], parentId: string, imageUrls?: string[]) => Promise<void>;
+  onDelete?: (commentId: string) => Promise<void>;
 }
 
-const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
+const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete }) => {
   const { t } = useLanguage();
   const { user: authUser } = useAuth();
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // Determine if we should collapse replies
   const hasReplies = comment.replies && comment.replies.length > 0;
@@ -34,6 +47,21 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
   const handleToggleReplies = () => {
     setShowAllReplies(!showAllReplies);
   };
+
+  const handleDeleteComment = async () => {
+    if (!onDelete) return;
+    
+    setDeleting(true);
+    try {
+      await onDelete(comment.id);
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const isCommentOwner = authUser?.id === comment.user_id;
 
   const handleReplySubmit = async (content: string, images: File[] = [], imageUrls: string[] = []) => {
     if (!authUser) return;
@@ -79,7 +107,38 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
           <div className="bg-card/60 backdrop-blur-sm rounded-xl p-4 border border-border/50 shadow-sm transition-all duration-200 group-hover:shadow-md group-hover:border-border/80">
             <div className="flex justify-between items-start mb-2">
               <span className="font-semibold text-sm text-foreground">{username}</span>
-              <span className="text-xs text-muted-foreground">{formattedCreatedAt}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{formattedCreatedAt}</span>
+                {isCommentOwner && onDelete && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        disabled={deleting}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t("Delete Comment", "删除评论")}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t("Are you sure you want to delete this comment? This action cannot be undone.", 
+                             "您确定要删除此评论吗？此操作无法撤销。")}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t("Cancel", "取消")}</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteComment} className="bg-destructive hover:bg-destructive/90">
+                          {t("Delete", "删除")}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
             </div>
             
             {comment.content && (
@@ -183,7 +242,38 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
                         <span className="font-medium text-xs text-foreground">
                           {reply.profiles?.username || t("Anonymous", "匿名用户")}
                         </span>
-                        <span className="text-xs text-muted-foreground">{getFormattedDate(reply.created_at)}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{getFormattedDate(reply.created_at)}</span>
+                          {authUser?.id === reply.user_id && onDelete && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  disabled={deleting}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>{t("Delete Reply", "删除回复")}</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {t("Are you sure you want to delete this reply? This action cannot be undone.", 
+                                       "您确定要删除此回复吗？此操作无法撤销。")}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>{t("Cancel", "取消")}</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => onDelete(reply.id)} className="bg-destructive hover:bg-destructive/90">
+                                    {t("Delete", "删除")}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
                       </div>
                       
                       {reply.content && (

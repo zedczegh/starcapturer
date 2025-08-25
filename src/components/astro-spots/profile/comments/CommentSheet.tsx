@@ -15,6 +15,7 @@ interface CommentSheetProps {
   user: boolean;
   onSubmit: (content: string, images?: File[], imageUrls?: string[]) => Promise<void>;
   onReply: (content: string, images: File[], parentId: string, imageUrls?: string[]) => Promise<void>;
+  onDelete?: (commentId: string) => Promise<void>;
   sending: boolean;
 }
 
@@ -25,6 +26,7 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
   user,
   onSubmit,
   onReply,
+  onDelete,
   sending
 }) => {
   const { t } = useLanguage();
@@ -84,6 +86,7 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
                   key={comment.id} 
                   comment={comment} 
                   onReply={handleReply}
+                  onDelete={onDelete}
                 />
               ))
             )}
