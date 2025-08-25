@@ -30,9 +30,10 @@ export const uploadCommentImage = async (
       return null;
     }
 
-    // Generate simple, clean filename
+    // Generate file path with folder structure to avoid UUID parsing issues
     const fileExtension = imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `${uuidv4()}.${fileExtension}`;
+    const uuid = uuidv4();
+    const fileName = `comments/${uuid}.${fileExtension}`;
     
     console.log("Uploading comment image:", fileName);
 
