@@ -112,22 +112,22 @@ export const createComment = async (
       return false;
     }
     
-    console.log("=== SIMPLE COMMENT SAVE ===");
+    console.log("=== SIMPLE COMMENT SAVE (LIKE MESSAGES) ===");
     console.log("Creating comment with:");
     console.log("  - content:", content);
     console.log("  - imageUrls:", imageUrls);
     console.log("  - userId:", userId);
     console.log("  - spotId:", spotId);
     
-    // Simple approach: use both image_url (single) and image_urls (array) for compatibility
+    // Simple approach: use single image_url field (like messages)
     const singleImageUrl = imageUrls && imageUrls.length > 0 ? imageUrls[0] : null;
     
     const commentData = {
       user_id: userId,
       spot_id: spotId,
       content: content.trim(),
-      image_url: singleImageUrl,  // Single image for simple display
-      image_urls: imageUrls,      // Array for flexibility
+      image_url: singleImageUrl,  // Single image like messages
+      image_urls: imageUrls,      // Array for compatibility
       parent_id: parentId || null
     };
     

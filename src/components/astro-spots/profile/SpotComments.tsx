@@ -16,7 +16,7 @@ interface SpotCommentsProps {
   comments: Comment[];
   user: boolean;
   onCommentsUpdate: () => void;
-  onSubmit?: (content: string, images?: File[], parentId?: string | null, imageUrls?: string[]) => Promise<void>;
+  onSubmit?: (content: string, imageFile?: File | null, parentId?: string | null) => Promise<void>;
   onDelete?: (commentId: string) => Promise<void>;
   sending: boolean;
 }
@@ -41,34 +41,34 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     setLocalComments(comments);
   }, [comments]);
 
-  const handleCommentSubmit = async (content: string, images: File[] = [], imageUrls: string[] = []) => {
+  const handleCommentSubmit = async (content: string, imageFile: File | null = null) => {
     if (!authUser) {
       toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
       return;
     }
 
     // Allow either text or images (or both)
-    if (!content.trim() && images.length === 0 && imageUrls.length === 0) {
+    if (!content.trim() && !imageFile) {
       toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
       return;
     }
 
     if (onSubmit) {
       console.log("Submitting new comment");
-      await onSubmit(content, images, undefined, imageUrls);
+      await onSubmit(content, imageFile, undefined);
       // Make sure we refresh comments after submission
       onCommentsUpdate();
     }
   };
 
-  const handleReplySubmit = async (content: string, images: File[], parentId: string, imageUrls: string[] = []) => {
+  const handleReplySubmit = async (content: string, imageFile: File | null, parentId: string) => {
     if (!authUser) {
       toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
       return;
     }
 
     // Allow either text or images (or both)
-    if (!content.trim() && images.length === 0 && imageUrls.length === 0) {
+    if (!content.trim() && !imageFile) {
       toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
       return;
     }
@@ -76,7 +76,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     if (onSubmit) {
       console.log(`Submitting reply to comment: ${parentId}`);
       // Pass the parent ID parameter
-      await onSubmit(content, images, parentId, imageUrls);
+      await onSubmit(content, imageFile, parentId);
       onCommentsUpdate();
     }
   };

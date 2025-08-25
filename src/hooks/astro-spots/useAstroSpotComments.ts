@@ -48,9 +48,8 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
 
   const submitComment = async (
     content: string, 
-    imageFiles: File[] = [], 
-    parentId?: string | null,
-    imageUrls: string[] = []
+    imageFile: File | null = null, 
+    parentId?: string | null
   ): Promise<{ success: boolean, comments?: Comment[] }> => {
     if (!authUser) {
       toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
@@ -58,7 +57,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     }
     
     // Validate that there is either text or images
-    if (!content.trim() && imageFiles.length === 0 && imageUrls.length === 0) {
+    if (!content.trim() && !imageFile) {
       toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
       return { success: false };
     }
@@ -68,57 +67,47 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     try {
       const userId = authUser.id;
       
-      console.log("=== COMPLETE COMMENT FLOW TRACE ===");
+      console.log("=== SIMPLE COMMENT FLOW (LIKE MESSAGES) ===");
       console.log("1. Starting comment submission");
       console.log("   - Content:", content);
-      console.log("   - ImageFiles count:", imageFiles.length);
-      console.log("   - Pre-uploaded imageUrls:", imageUrls);
+      console.log("   - ImageFile:", imageFile ? `${imageFile.name} (${imageFile.size} bytes)` : 'none');
       console.log("   - ParentId:", parentId);
       console.log("   - UserId:", userId);
       console.log("   - SpotId:", spotId);
       
-      let finalImageUrls: string[] = [...imageUrls];
+      let imageUrl: string | null = null;
       
-      // Only upload if we have files and no URLs (URLs means images were already uploaded)
-      if (imageFiles.length > 0 && imageUrls.length === 0) {
-        console.log("2. Need to upload images first");
-        console.log("   - Starting image upload process...");
+      // Upload image if provided (like messages)
+      if (imageFile) {
+        console.log("2. Uploading image...");
+        const { useMessageUpload } = await import('@/hooks/messaging/useMessageUpload');
+        // Use the hook properly
+        const uploadHook = useMessageUpload();
         
-        // Check if storage is accessible
-        const bucketReady = await ensureCommentImagesBucket();
-        if (!bucketReady) {
-          console.error("   - FAILED: Storage bucket is not accessible");
-          toast.error(t("Failed to access storage. Please try again later.", "无法访问存储。请稍后再试。"));
+        try {
+          imageUrl = await uploadHook.uploadMessageImage(imageFile);
+          console.log("   - Upload result:", imageUrl);
+        } catch (uploadError) {
+          console.error("   - Upload failed:", uploadError);
+          toast.error(t("Failed to upload image", "图片上传失败"));
           return { success: false };
         }
         
-        console.log("   - Storage bucket is ready, uploading files...");
-        const uploadedUrls = await uploadCommentImages(imageFiles, t);
-        console.log("   - Upload completed. Result URLs:", uploadedUrls);
-        console.log("   - Upload success count:", uploadedUrls.length, "out of", imageFiles.length);
-        
-        if (uploadedUrls.length === 0) {
-          console.error("   - FAILED: No URLs returned from upload");
-          toast.error(t("Failed to upload images", "图片上传失败"));
+        if (!imageUrl) {
+          console.error("   - No URL returned from upload");
+          toast.error(t("Failed to upload image", "图片上传失败"));
           return { success: false };
         }
-        
-        finalImageUrls = uploadedUrls;
-        console.log("   - SUCCESS: Images uploaded, final URLs:", finalImageUrls);
-      } else if (imageUrls.length > 0) {
-        console.log("2. Using pre-uploaded image URLs");
-        console.log("   - Pre-uploaded URLs:", imageUrls);
       } else {
-        console.log("2. No images to process");
+        console.log("2. No image to upload");
       }
       
       console.log("3. Creating comment in database");
-      console.log("   - Final image URLs to save:", finalImageUrls);
-      console.log("   - URLs array length:", finalImageUrls.length);
-      console.log("   - URLs array content:", JSON.stringify(finalImageUrls));
+      console.log("   - Final image URL:", imageUrl);
       
-      // Create the comment with all image URLs
-      const success = await createComment(userId, spotId, content, finalImageUrls.length > 0 ? finalImageUrls : null, parentId);
+      // Create the comment with single image URL (like messages)
+      const imageUrls = imageUrl ? [imageUrl] : null;
+      const success = await createComment(userId, spotId, content, imageUrls, parentId);
       console.log("4. Database creation result:", success);
       
       if (!success) {
@@ -131,29 +120,22 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       }
       
       console.log("5. Refreshing comments from database");
-      // Immediately fetch updated comments to refresh the UI
       const updatedComments = await fetchComments(spotId);
       console.log("   - Retrieved comments count:", updatedComments.length);
-      if (updatedComments.length > 0) {
-        console.log("   - First comment has image_urls:", updatedComments[0]?.image_urls);
-        console.log("   - First comment has image_url:", updatedComments[0]?.image_url);
-      }
-      setComments(updatedComments); // Update local state immediately
+      setComments(updatedComments);
       
       toast.success(parentId 
         ? t("Reply posted!", "回复已发表！") 
         : t("Comment posted!", "评论已发表！")
       );
       
-      console.log("6. SUCCESS: Comment flow completed successfully");
-      console.log("=== COMPLETE COMMENT FLOW TRACE END ===");
+      console.log("6. SUCCESS: Simple comment flow completed");
+      console.log("=== SIMPLE COMMENT FLOW END ===");
       return { success: true, comments: updatedComments };
       
     } catch (err) {
       console.error("=== COMMENT FLOW EXCEPTION ===");
       console.error("Exception when posting comment:", err);
-      console.error("Exception details:", err instanceof Error ? err.message : String(err));
-      console.error("Exception stack:", err instanceof Error ? err.stack : 'No stack');
       toast.error(parentId 
         ? t("Failed to post reply.", "回复发送失败。") 
         : t("Failed to post comment.", "评论发送失败。")

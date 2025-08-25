@@ -22,7 +22,7 @@ import {
 
 interface CommentItemProps {
   comment: Comment;
-  onReply: (content: string, images: File[], parentId: string, imageUrls?: string[]) => Promise<void>;
+  onReply: (content: string, imageFile: File | null, parentId: string) => Promise<void>;
   onDelete?: (commentId: string) => Promise<void>;
 }
 
@@ -63,9 +63,9 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
 
   const isCommentOwner = authUser?.id === comment.user_id;
 
-  const handleReplySubmit = async (content: string, images: File[] = [], imageUrls: string[] = []) => {
+  const handleReplySubmit = async (content: string, imageFile: File | null = null) => {
     if (!authUser) return;
-    await onReply(content, images, comment.id, imageUrls);
+    await onReply(content, imageFile, comment.id);
     setShowReplyInput(false);
   };
 
@@ -147,34 +147,13 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
               </p>
             )}
             
-            {/* Simple single image display like messages */}
             {comment.image_url && (
-              <div className="mt-2 mb-3 max-w-sm">
+              <div className="mt-2">
                 <img
                   src={comment.image_url}
-                  alt={t("Comment attachment", "评论附件")}
-                  className="w-full h-auto rounded-lg border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => window.open(comment.image_url!, '_blank')}
-                  onError={(e) => {
-                    console.error("Comment image failed to load:", comment.image_url);
-                    e.currentTarget.src = 'https://placehold.co/400x400/121927/8888aa?text=Image+Not+Found';
-                  }}
-                />
-              </div>
-            )}
-            
-            {/* Array support as fallback */}
-            {!comment.image_url && comment.image_urls && comment.image_urls.length > 0 && (
-              <div className="mt-2 mb-3 max-w-sm">
-                <img
-                  src={comment.image_urls[0]}
-                  alt={t("Comment attachment", "评论附件")}
-                  className="w-full h-auto rounded-lg border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => window.open(comment.image_urls![0], '_blank')}
-                  onError={(e) => {
-                    console.error("Comment image failed to load:", comment.image_urls![0]);
-                    e.currentTarget.src = 'https://placehold.co/400x400/121927/8888aa?text=Image+Not+Found';
-                  }}
+                  alt="Comment attachment"
+                  className="w-full h-auto rounded-lg"
+                  style={{ maxHeight: '200px', objectFit: 'cover' }}
                 />
               </div>
             )}
@@ -272,55 +251,13 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
                         </p>
                       )}
                       
-                      {/* Reply images - Simple display like spot images */}
-                      {reply.image_urls && reply.image_urls.length > 0 && (
+                      {reply.image_url && (
                         <div className="mt-2">
-                          {reply.image_urls.length === 1 ? (
-                            <div className="max-w-xs">
-                              <img
-                                src={reply.image_urls[0]}
-                                alt={t("Reply attachment", "回复附件")}
-                                className="w-full h-auto rounded-md border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => window.open(reply.image_urls![0], '_blank')}
-                                onError={(e) => {
-                                  console.error("Reply image failed to load:", reply.image_urls![0]);
-                                  e.currentTarget.src = 'https://placehold.co/300x300/121927/8888aa?text=Image+Not+Found';
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            <div className="grid grid-cols-2 gap-2 max-w-sm">
-                              {reply.image_urls.map((url, idx) => (
-                                <div key={idx} className="aspect-square">
-                                  <img
-                                    src={url}
-                                    alt={t("Reply attachment", "回复附件") + ` ${idx + 1}`}
-                                    className="w-full h-full object-cover rounded-md border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
-                                    onClick={() => window.open(url, '_blank')}
-                                    onError={(e) => {
-                                      console.error("Reply image failed to load:", url);
-                                      e.currentTarget.src = 'https://placehold.co/150x150/121927/8888aa?text=Error';
-                                    }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Legacy single image support */}
-                      {(!reply.image_urls || reply.image_urls.length === 0) && reply.image_url && (
-                        <div className="mt-2 max-w-xs">
-                          <img 
+                          <img
                             src={reply.image_url}
-                            alt={t("Reply attachment", "回复附件")}
-                            className="w-full h-auto rounded-md border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => window.open(reply.image_url!, '_blank')}
-                            onError={(e) => {
-                              console.error("Reply image failed to load:", reply.image_url);
-                              e.currentTarget.src = 'https://placehold.co/300x300/121927/8888aa?text=Image+Not+Found';
-                            }}
+                            alt="Reply attachment"
+                            className="w-full h-auto rounded-lg"
+                            style={{ maxHeight: '200px', objectFit: 'cover' }}
                           />
                         </div>
                       )}

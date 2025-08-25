@@ -1,14 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, ImagePlus, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { uploadCommentImage } from "@/utils/comments/commentImageUtils";
 import { toast } from "sonner";
 
 interface CommentInputProps {
-  onSubmit: (content: string, images?: File[], imageUrls?: string[]) => Promise<void>;
+  onSubmit: (content: string, imageFile?: File | null) => Promise<void>;
   sending: boolean;
   isReply?: boolean;
 }
@@ -16,95 +15,67 @@ interface CommentInputProps {
 const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply = false }) => {
   const { t } = useLanguage();
   const [commentText, setCommentText] = useState('');
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Allow either text or images (or both)
-    if (!commentText.trim() && imageFiles.length === 0) {
+    if (!commentText.trim() && !imageFile) {
       toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
       return;
     }
     
     try {
-      // Simple single image upload like messages
-      let imageUrl: string | undefined = undefined;
-      if (imageFiles.length > 0) {
-        setUploading(true);
-        console.log('Uploading single image for comment');
-        const singleFile = imageFiles[0]; // Just take the first image for now
-        const url = await uploadCommentImage(singleFile, t);
-        
-        if (!url) {
-          toast.error(t("Image upload failed, comment not submitted", "图片上传失败，评论未提交"));
-          return;
-        }
-        
-        imageUrl = url;
-        console.log('Image uploaded successfully:', imageUrl);
-      }
-      
-      // Submit comment with simple approach - pass imageUrl as the third parameter  
-      if (imageUrl) {
-        await onSubmit(commentText.trim(), [], [imageUrl]); // Pass as imageUrls array
-      } else {
-        await onSubmit(commentText.trim(), [], []); // No images
-      }
+      // Submit comment with image file directly (like messages)
+      await onSubmit(commentText.trim(), imageFile);
       
       // Clear form on success
       setCommentText('');
-      setImageFiles([]);
-      setImagePreviews([]);
+      setImageFile(null);
+      setImagePreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } catch (error) {
       console.error('Comment submission failed:', error);
       toast.error(t("Failed to submit comment", "评论提交失败"));
-    } finally {
-      setUploading(false);
     }
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      const validFiles: File[] = [];
-      const newPreviews: string[] = [];
-      
-      // For now, only allow one image like messages
-      const file = files[0];
-      if (!file) return;
-      
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error(t(`${file.name} is not an image file`, `${file.name} 不是图片文件`));
-        return;
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        // Check file size (5MB limit like messages)
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(t('Image must be less than 5MB', '图片必须小于5MB'));
+          return;
+        }
+        
+        setImageFile(file);
+        
+        // Create image preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setImagePreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // Not an image file
+        toast.error(t('Only image files are allowed', '仅允许上传图片文件'));
       }
-      
-      // Validate file size (60MB limit)
-      if (file.size > 60 * 1024 * 1024) {
-        toast.error(t(`${file.name} must be less than 60MB`, `${file.name} 必须小于60MB`));
-        return;
-      }
-      
-      validFiles.push(file);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setImagePreviews([result]); // Only one preview
-      };
-      reader.readAsDataURL(file);
-      
-      setImageFiles([file]); // Only one file
     }
   };
 
-  const handleRemoveImage = (index: number) => {
-    setImageFiles(prev => prev.filter((_, i) => i !== index));
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -124,27 +95,21 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
         )}
       </div>
 
-      {imagePreviews.length > 0 && (
-        <div className="max-w-xs">
-          <div className="relative group">
-            <div className="aspect-square overflow-hidden rounded-lg border border-border/50 bg-muted/30">
-              <img 
-                src={imagePreviews[0]} 
-                alt="Comment attachment preview"
-                className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setImageFiles([]);
-                setImagePreviews([]);
-              }}
-              className="absolute -top-2 -right-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full p-1.5 shadow-md transition-colors duration-200 opacity-0 group-hover:opacity-100"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
+      {imagePreview && (
+        <div className="relative inline-block">
+          <img 
+            src={imagePreview} 
+            alt="Preview" 
+            className="h-20 rounded-md border border-border/50"
+          />
+          <Button
+            variant="destructive"
+            size="sm"
+            className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
+            onClick={handleRemoveImage}
+          >
+            <X className="h-3 w-3" />
+          </Button>
         </div>
       )}
 
@@ -156,23 +121,23 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
           </div>
           <input 
             type="file"
+            ref={fileInputRef}
             className="hidden"
             accept="image/*"
-            multiple
             onChange={handleImageSelect}
-            disabled={sending || uploading}
+            disabled={sending}
           />
         </label>
         <Button 
           type="submit" 
           size="sm" 
-          disabled={sending || uploading || (!commentText.trim() && imageFiles.length === 0)}
+          disabled={sending || (!commentText.trim() && !imageFile)}
           className="min-w-20 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200 hover:scale-105 disabled:scale-100"
         >
-          {(sending || uploading) ? (
+          {sending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              {uploading ? t("Uploading...", "上传中...") : (isReply ? t("Reply", "回复") : t("Submit", "提交"))}
+              {isReply ? t("Reply", "回复") : t("Submit", "提交")}
             </>
           ) : (
             <>

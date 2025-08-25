@@ -167,11 +167,11 @@ export const useProfileContent = (
   // Handler for submitting a new comment
   const handleCommentSubmit = useCallback(async (
     content: string,
-    images: File[] = [],
+    imageFile: File | null = null,
     parentId?: string | null
   ) => {
-    console.log(`Comment submission starting with images: ${images.length}, parent: ${parentId || 'none'}`);
-    await submitComment(content, images, parentId);
+    console.log(`Comment submission starting with imageFile: ${imageFile ? imageFile.name : 'none'}, parent: ${parentId || 'none'}`);
+    await submitComment(content, imageFile, parentId);
   }, [submitComment]);
 
   // Handle images update (Gallery)
