@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from "sonner";
 import { Comment } from '@/components/astro-spots/profile/types/comments';
@@ -69,44 +68,61 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     try {
       const userId = authUser.id;
       
-      let finalImageUrls: string[] = [...imageUrls];
+      console.log("=== COMPLETE COMMENT FLOW TRACE ===");
+      console.log("1. Starting comment submission");
+      console.log("   - Content:", content);
+      console.log("   - ImageFiles count:", imageFiles.length);
+      console.log("   - Pre-uploaded imageUrls:", imageUrls);
+      console.log("   - ParentId:", parentId);
+      console.log("   - UserId:", userId);
+      console.log("   - SpotId:", spotId);
       
-      console.log("=== HOOK COMMENT DEBUG ===");
-      console.log("Initial imageUrls:", imageUrls);
-      console.log("ImageFiles count:", imageFiles.length);
-      console.log("Initial finalImageUrls:", finalImageUrls);
+      let finalImageUrls: string[] = [...imageUrls];
       
       // Only upload if we have files and no URLs (URLs means images were already uploaded)
       if (imageFiles.length > 0 && imageUrls.length === 0) {
-        console.log("Starting image upload process...");
+        console.log("2. Need to upload images first");
+        console.log("   - Starting image upload process...");
+        
         // Check if storage is accessible
         const bucketReady = await ensureCommentImagesBucket();
         if (!bucketReady) {
-          console.error("Storage bucket is not accessible");
+          console.error("   - FAILED: Storage bucket is not accessible");
           toast.error(t("Failed to access storage. Please try again later.", "无法访问存储。请稍后再试。"));
           return { success: false };
         }
         
+        console.log("   - Storage bucket is ready, uploading files...");
         const uploadedUrls = await uploadCommentImages(imageFiles, t);
-        console.log("Upload result URLs:", uploadedUrls);
+        console.log("   - Upload completed. Result URLs:", uploadedUrls);
+        console.log("   - Upload success count:", uploadedUrls.length, "out of", imageFiles.length);
+        
         if (uploadedUrls.length === 0) {
-          console.error("No URLs returned from upload");
+          console.error("   - FAILED: No URLs returned from upload");
           toast.error(t("Failed to upload images", "图片上传失败"));
           return { success: false };
         }
+        
         finalImageUrls = uploadedUrls;
-        console.log("Final imageUrls after upload:", finalImageUrls);
+        console.log("   - SUCCESS: Images uploaded, final URLs:", finalImageUrls);
+      } else if (imageUrls.length > 0) {
+        console.log("2. Using pre-uploaded image URLs");
+        console.log("   - Pre-uploaded URLs:", imageUrls);
+      } else {
+        console.log("2. No images to process");
       }
       
-      console.log("About to create comment with URLs:", finalImageUrls);
-      console.log("Passing to createComment:", finalImageUrls.length > 0 ? finalImageUrls : null);
+      console.log("3. Creating comment in database");
+      console.log("   - Final image URLs to save:", finalImageUrls);
+      console.log("   - URLs array length:", finalImageUrls.length);
+      console.log("   - URLs array content:", JSON.stringify(finalImageUrls));
       
       // Create the comment with all image URLs
       const success = await createComment(userId, spotId, content, finalImageUrls.length > 0 ? finalImageUrls : null, parentId);
-      console.log("Comment creation result:", success);
-      console.log("=== HOOK COMMENT DEBUG END ===");
+      console.log("4. Database creation result:", success);
       
       if (!success) {
+        console.error("   - FAILED: Database creation failed");
         toast.error(parentId 
           ? t("Failed to post reply.", "回复发送失败。") 
           : t("Failed to post comment.", "评论发送失败。")
@@ -114,8 +130,14 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         return { success: false };
       }
       
+      console.log("5. Refreshing comments from database");
       // Immediately fetch updated comments to refresh the UI
       const updatedComments = await fetchComments(spotId);
+      console.log("   - Retrieved comments count:", updatedComments.length);
+      if (updatedComments.length > 0) {
+        console.log("   - First comment has image_urls:", updatedComments[0]?.image_urls);
+        console.log("   - First comment has image_url:", updatedComments[0]?.image_url);
+      }
       setComments(updatedComments); // Update local state immediately
       
       toast.success(parentId 
@@ -123,10 +145,15 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         : t("Comment posted!", "评论已发表！")
       );
       
+      console.log("6. SUCCESS: Comment flow completed successfully");
+      console.log("=== COMPLETE COMMENT FLOW TRACE END ===");
       return { success: true, comments: updatedComments };
       
     } catch (err) {
+      console.error("=== COMMENT FLOW EXCEPTION ===");
       console.error("Exception when posting comment:", err);
+      console.error("Exception details:", err instanceof Error ? err.message : String(err));
+      console.error("Exception stack:", err instanceof Error ? err.stack : 'No stack');
       toast.error(parentId 
         ? t("Failed to post reply.", "回复发送失败。") 
         : t("Failed to post comment.", "评论发送失败。")
