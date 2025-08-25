@@ -152,8 +152,9 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
                 <img
                   src={comment.image_url}
                   alt="Comment attachment"
-                  className="w-full h-auto rounded-lg"
+                  className="max-w-xs h-auto rounded-lg border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
                   style={{ maxHeight: '200px', objectFit: 'cover' }}
+                  onClick={() => window.open(comment.image_url!, '_blank')}
                 />
               </div>
             )}
@@ -256,8 +257,9 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
                           <img
                             src={reply.image_url}
                             alt="Reply attachment"
-                            className="w-full h-auto rounded-lg"
-                            style={{ maxHeight: '200px', objectFit: 'cover' }}
+                            className="max-w-32 h-auto rounded-md border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
+                            style={{ maxHeight: '120px', objectFit: 'cover' }}
+                            onClick={() => window.open(reply.image_url!, '_blank')}
                           />
                         </div>
                       )}
