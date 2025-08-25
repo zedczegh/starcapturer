@@ -15,7 +15,7 @@ interface CommentInputProps {
 
 const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply = false }) => {
   const { t } = useLanguage();
-  const { uploadImages, uploading } = useCommentImageUpload();
+  const { uploadImages, uploading, uploadProgress } = useCommentImageUpload();
   const [commentText, setCommentText] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -33,15 +33,21 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
       // Upload images first if any
       let uploadedImageUrls: string[] = [];
       if (imageFiles.length > 0) {
-        console.log('Uploading images before submitting comment');
+        console.log('CommentInput: Uploading images before submitting comment');
         uploadedImageUrls = await uploadImages(imageFiles);
+        
+        // If we had files but no successful uploads, don't submit
         if (imageFiles.length > 0 && uploadedImageUrls.length === 0) {
-          // All uploads failed
+          console.error('CommentInput: All image uploads failed, aborting comment submission');
+          toast.error(t("Image upload failed, comment not submitted", "图片上传失败，评论未提交"));
           return;
         }
+        
+        console.log(`CommentInput: Successfully uploaded ${uploadedImageUrls.length}/${imageFiles.length} images`);
       }
       
       // Submit comment with uploaded image URLs
+      console.log('CommentInput: Submitting comment with URLs:', uploadedImageUrls);
       await onSubmit(commentText.trim(), [], uploadedImageUrls);
       
       // Clear form on success
@@ -157,7 +163,10 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
           className="min-w-20 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200 hover:scale-105 disabled:scale-100"
         >
           {(sending || uploading) ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              {uploading ? `${Math.round(uploadProgress)}%` : (isReply ? t("Reply", "回复") : t("Submit", "提交"))}
+            </>
           ) : (
             <>
               <Send className="h-4 w-4 mr-1" />
