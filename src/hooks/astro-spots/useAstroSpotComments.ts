@@ -70,8 +70,14 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       let finalImageUrls: string[] = [...imageUrls];
       
+      console.log("=== HOOK COMMENT DEBUG ===");
+      console.log("Initial imageUrls:", imageUrls);
+      console.log("ImageFiles count:", imageFiles.length);
+      console.log("Initial finalImageUrls:", finalImageUrls);
+      
       // Only upload if we have files and no URLs (URLs means images were already uploaded)
       if (imageFiles.length > 0 && imageUrls.length === 0) {
+        console.log("Starting image upload process...");
         // Check if storage is accessible
         const bucketReady = await ensureCommentImagesBucket();
         if (!bucketReady) {
@@ -81,15 +87,23 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         }
         
         const uploadedUrls = await uploadCommentImages(imageFiles, t);
+        console.log("Upload result URLs:", uploadedUrls);
         if (uploadedUrls.length === 0) {
+          console.error("No URLs returned from upload");
           toast.error(t("Failed to upload images", "图片上传失败"));
           return { success: false };
         }
         finalImageUrls = uploadedUrls;
+        console.log("Final imageUrls after upload:", finalImageUrls);
       }
+      
+      console.log("About to create comment with URLs:", finalImageUrls);
+      console.log("Passing to createComment:", finalImageUrls.length > 0 ? finalImageUrls : null);
       
       // Create the comment with all image URLs
       const success = await createComment(userId, spotId, content, finalImageUrls.length > 0 ? finalImageUrls : null, parentId);
+      console.log("Comment creation result:", success);
+      console.log("=== HOOK COMMENT DEBUG END ===");
       
       if (!success) {
         toast.error(parentId 
