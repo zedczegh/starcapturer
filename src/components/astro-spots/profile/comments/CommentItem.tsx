@@ -147,45 +147,8 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
               </p>
             )}
             
-            {/* Image attachments - Simple display like SpotImageGallery */}
-            {comment.image_urls && comment.image_urls.length > 0 && (
-              <div className="mt-2 mb-3">
-                {comment.image_urls.length === 1 ? (
-                  <div className="max-w-sm">
-                    <img
-                      src={comment.image_urls[0]}
-                      alt={t("Comment attachment", "评论附件")}
-                      className="w-full h-auto rounded-lg border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => window.open(comment.image_urls![0], '_blank')}
-                      onError={(e) => {
-                        console.error("Comment image failed to load:", comment.image_urls![0]);
-                        e.currentTarget.src = 'https://placehold.co/400x400/121927/8888aa?text=Image+Not+Found';
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2 max-w-md">
-                    {comment.image_urls.map((url, idx) => (
-                      <div key={idx} className="aspect-square">
-                        <img
-                          src={url}
-                          alt={t("Comment attachment", "评论附件") + ` ${idx + 1}`}
-                          className="w-full h-full object-cover rounded-lg border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={() => window.open(url, '_blank')}
-                          onError={(e) => {
-                            console.error("Comment image failed to load:", url);
-                            e.currentTarget.src = 'https://placehold.co/200x200/121927/8888aa?text=Error';
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {/* Legacy single image support */}
-            {(!comment.image_urls || comment.image_urls.length === 0) && comment.image_url && (
+            {/* Simple single image display like messages */}
+            {comment.image_url && (
               <div className="mt-2 mb-3 max-w-sm">
                 <img
                   src={comment.image_url}
@@ -194,6 +157,22 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
                   onClick={() => window.open(comment.image_url!, '_blank')}
                   onError={(e) => {
                     console.error("Comment image failed to load:", comment.image_url);
+                    e.currentTarget.src = 'https://placehold.co/400x400/121927/8888aa?text=Image+Not+Found';
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* Array support as fallback */}
+            {!comment.image_url && comment.image_urls && comment.image_urls.length > 0 && (
+              <div className="mt-2 mb-3 max-w-sm">
+                <img
+                  src={comment.image_urls[0]}
+                  alt={t("Comment attachment", "评论附件")}
+                  className="w-full h-auto rounded-lg border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => window.open(comment.image_urls![0], '_blank')}
+                  onError={(e) => {
+                    console.error("Comment image failed to load:", comment.image_urls![0]);
                     e.currentTarget.src = 'https://placehold.co/400x400/121927/8888aa?text=Image+Not+Found';
                   }}
                 />

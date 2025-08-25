@@ -112,59 +112,42 @@ export const createComment = async (
       return false;
     }
     
-    console.log("=== DATABASE SAVE TRACE ===");
-    console.log("1. createComment called with:");
-    console.log("   - userId:", userId);
-    console.log("   - spotId:", spotId);
-    console.log("   - content:", content);
-    console.log("   - imageUrls:", imageUrls);
-    console.log("   - imageUrls type:", typeof imageUrls);
-    console.log("   - imageUrls length:", imageUrls?.length);
-    console.log("   - parentId:", parentId);
+    console.log("=== SIMPLE COMMENT SAVE ===");
+    console.log("Creating comment with:");
+    console.log("  - content:", content);
+    console.log("  - imageUrls:", imageUrls);
+    console.log("  - userId:", userId);
+    console.log("  - spotId:", spotId);
+    
+    // Simple approach: use both image_url (single) and image_urls (array) for compatibility
+    const singleImageUrl = imageUrls && imageUrls.length > 0 ? imageUrls[0] : null;
     
     const commentData = {
       user_id: userId,
       spot_id: spotId,
       content: content.trim(),
-      image_url: imageUrls && imageUrls.length > 0 ? imageUrls[0] : null, // backward compatibility
-      image_urls: imageUrls, // Direct assignment - let Supabase handle it
+      image_url: singleImageUrl,  // Single image for simple display
+      image_urls: imageUrls,      // Array for flexibility
       parent_id: parentId || null
     };
     
-    console.log("2. Comment data prepared for database:");
-    console.log("   - Full commentData object:", JSON.stringify(commentData, null, 2));
-    console.log("   - image_urls field specifically:", commentData.image_urls);
+    console.log("Saving to database:", commentData);
     
     const { data: insertResult, error: insertError } = await supabase
       .from("astro_spot_comments")
       .insert(commentData)
-      .select(); // Get the inserted data back to verify
-    
-    console.log("3. Database insert result:");
-    console.log("   - insertResult:", insertResult);
-    console.log("   - insertError:", insertError);
+      .select();
     
     if (insertError) {
-      console.error("   - FAILED: Database insert error:", insertError);
-      console.error("   - Error code:", insertError.code);
-      console.error("   - Error message:", insertError.message);
-      console.error("   - Error details:", insertError.details);
+      console.error("DATABASE ERROR:", insertError);
       return false;
     }
     
-    if (insertResult && insertResult[0]) {
-      console.log("4. SUCCESS: Comment saved to database");
-      console.log("   - Saved comment ID:", insertResult[0].id);
-      console.log("   - Saved image_urls:", insertResult[0].image_urls);
-      console.log("   - Saved image_url:", insertResult[0].image_url);
-    }
-    
-    console.log("=== DATABASE SAVE TRACE END ===");
+    console.log("SUCCESS: Comment saved with image_url:", insertResult[0]?.image_url);
+    console.log("=== SIMPLE COMMENT SAVE END ===");
     return true;
   } catch (err) {
-    console.error("=== DATABASE SAVE EXCEPTION ===");
     console.error("Exception in createComment:", err);
-    console.error("Exception stack:", err instanceof Error ? err.stack : 'No stack');
     return false;
   }
 };
