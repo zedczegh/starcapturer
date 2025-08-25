@@ -20,7 +20,7 @@ const ProfileButton = () => {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const navigate = useNavigate();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [profile, setProfile] = useState<{ username: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ username: string | null; avatar_url?: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,7 +52,10 @@ const ProfileButton = () => {
           if (isMounted && profileData) {
             console.log("Profile loaded in ProfileButton:", profileData);
             if (profileData.avatar_url) setAvatarUrl(profileData.avatar_url);
-            setProfile({ username: profileData.username });
+            setProfile({ 
+              username: profileData.username,
+              avatar_url: profileData.avatar_url 
+            });
             setLoading(false);
           }
         } catch (error) {

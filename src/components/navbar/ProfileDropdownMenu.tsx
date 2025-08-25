@@ -6,6 +6,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { BookmarkPlus, User, LogOut, Settings, MapPin, MessageCircle, Info, Calendar } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -14,7 +15,7 @@ import NotificationBadge from './NotificationBadge';
 
 interface ProfileDropdownMenuProps {
   user: any;
-  profile: { username: string | null } | null;
+  profile: { username: string | null; avatar_url?: string | null } | null;
   onSignOut: () => void;
   email: string | null;
 }
@@ -85,9 +86,15 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
         {/* Enhanced Header */}
         <DropdownMenuLabel className="px-6 pt-4 pb-3 flex flex-col border-none">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-[#8A6FD6]/20 flex items-center justify-center border border-primary/30">
-              <User className="h-5 w-5 text-primary" />
-            </div>
+            <Avatar className="w-10 h-10 border-2 border-primary/30">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+              ) : (
+                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-[#8A6FD6]/20 text-primary">
+                  <User className="h-5 w-5" />
+                </AvatarFallback>
+              )}
+            </Avatar>
             <div className="flex-1">
               <span className="font-semibold text-lg text-white block leading-tight">
                 {profile && profile.username ? profile.username : t('Account', '账户')}
