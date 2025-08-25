@@ -53,11 +53,6 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
     
     // Transform the data to match our Comment type
     const allComments = commentsData.map((comment: any) => {
-      console.log("=== FETCH COMMENT DEBUG ===");
-      console.log("Raw comment data:", comment);
-      console.log("Image URL:", comment.image_url);
-      console.log("Image URLs:", comment.image_urls);
-      
       const transformedComment = {
         id: comment.id,
         content: comment.content,
@@ -70,8 +65,6 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
         replies: [] // Initialize empty replies array for each comment
       };
       
-      console.log("Transformed comment:", transformedComment);
-      console.log("=== FETCH COMMENT DEBUG END ===");
       return transformedComment;
     });
     
@@ -112,21 +105,21 @@ export const createComment = async (
       return false;
     }
     
-    console.log("=== SIMPLE COMMENT SAVE (LIKE MESSAGES) ===");
+    console.log("=== CREATING COMMENT (LIKE MESSAGES) ===");
     console.log("Creating comment with:");
     console.log("  - content:", content);
     console.log("  - imageUrls:", imageUrls);
     console.log("  - userId:", userId);
     console.log("  - spotId:", spotId);
     
-    // Simple approach: use single image_url field (like messages)
+    // Simple approach: use single image_url field (exactly like messages)
     const singleImageUrl = imageUrls && imageUrls.length > 0 ? imageUrls[0] : null;
     
     const commentData = {
       user_id: userId,
       spot_id: spotId,
       content: content.trim(),
-      image_url: singleImageUrl,  // Single image like messages
+      image_url: singleImageUrl,  // Single image exactly like messages
       image_urls: imageUrls,      // Array for compatibility
       parent_id: parentId || null
     };
@@ -144,7 +137,7 @@ export const createComment = async (
     }
     
     console.log("SUCCESS: Comment saved with image_url:", insertResult[0]?.image_url);
-    console.log("=== SIMPLE COMMENT SAVE END ===");
+    console.log("=== CREATING COMMENT END ===");
     return true;
   } catch (err) {
     console.error("Exception in createComment:", err);

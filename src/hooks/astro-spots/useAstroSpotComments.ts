@@ -2,33 +2,63 @@ import { useState, useCallback, useEffect } from 'react';
 import { toast } from "sonner";
 import { Comment } from '@/components/astro-spots/profile/types/comments';
 import { deleteComment } from '@/services/comments/commentService';
-import { uploadCommentImages, ensureCommentImagesBucket } from '@/utils/comments/commentImageUtils';
 import { fetchComments, createComment } from '@/services/comments/commentService';
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from 'uuid';
 
 export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: string) => string) => {
   const [commentSending, setCommentSending] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [storageChecked, setStorageChecked] = useState(false);
   const { user: authUser } = useAuth();
 
-  // Initialize bucket checking when hook is first used - don't try to create it anymore
-  useEffect(() => {
-    const checkStorage = async () => {
-      try {
-        const available = await ensureCommentImagesBucket();
-        setStorageChecked(true);
-        if (!available) {
-          console.log("Comment images storage is not accessible. Some features may be limited.");
-        }
-      } catch (err) {
-        console.error("Error checking comment image storage:", err);
-        setStorageChecked(true);
+  // Simple upload function like messages
+  const uploadMessageImage = async (imageFile: File): Promise<string | null> => {
+    if (!imageFile) return null;
+    
+    try {
+      console.log("Uploading comment image like message...");
+      
+      // Generate a unique filename
+      const uniqueId = uuidv4();
+      const fileExt = imageFile.name.split('.').pop() || 'jpg';
+      const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const fileName = `${uniqueId}.${sanitizedExt}`;
+      
+      console.log("Uploading with filename:", fileName);
+      
+      // Upload the image to message_images bucket (same as messages)
+      const { error: uploadError } = await supabase.storage
+        .from('message_images')
+        .upload(fileName, imageFile, {
+          contentType: imageFile.type,
+          cacheControl: '3600',
+          upsert: false
+        });
+        
+      if (uploadError) {
+        console.error("Error uploading comment image:", uploadError);
+        return null;
       }
-    };
-    checkStorage();
-  }, []);
+      
+      // Get the public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('message_images')
+        .getPublicUrl(fileName);
+      
+      if (!publicUrlData?.publicUrl) {
+        console.error("Failed to get public URL for comment image");
+        return null;
+      }
+      
+      console.log("Comment image uploaded successfully:", publicUrlData.publicUrl);
+      return publicUrlData.publicUrl;
+    } catch (err) {
+      console.error("Exception during comment image upload:", err);
+      return null;
+    }
+  };
 
   // Load comments function with better error handling
   const loadComments = useCallback(async () => {
@@ -67,7 +97,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     try {
       const userId = authUser.id;
       
-      console.log("=== SIMPLE COMMENT FLOW (LIKE MESSAGES) ===");
+      console.log("=== SIMPLE COMMENT FLOW (EXACTLY LIKE MESSAGES) ===");
       console.log("1. Starting comment submission");
       console.log("   - Content:", content);
       console.log("   - ImageFile:", imageFile ? `${imageFile.name} (${imageFile.size} bytes)` : 'none');
@@ -77,21 +107,11 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       
       let imageUrl: string | null = null;
       
-      // Upload image if provided (like messages)
+      // Upload image if provided (exactly like messages)
       if (imageFile) {
         console.log("2. Uploading image...");
-        const { useMessageUpload } = await import('@/hooks/messaging/useMessageUpload');
-        // Use the hook properly
-        const uploadHook = useMessageUpload();
-        
-        try {
-          imageUrl = await uploadHook.uploadMessageImage(imageFile);
-          console.log("   - Upload result:", imageUrl);
-        } catch (uploadError) {
-          console.error("   - Upload failed:", uploadError);
-          toast.error(t("Failed to upload image", "图片上传失败"));
-          return { success: false };
-        }
+        imageUrl = await uploadMessageImage(imageFile);
+        console.log("   - Upload result:", imageUrl);
         
         if (!imageUrl) {
           console.error("   - No URL returned from upload");
@@ -105,7 +125,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       console.log("3. Creating comment in database");
       console.log("   - Final image URL:", imageUrl);
       
-      // Create the comment with single image URL (like messages)
+      // Create the comment with single image URL (exactly like messages)
       const imageUrls = imageUrl ? [imageUrl] : null;
       const success = await createComment(userId, spotId, content, imageUrls, parentId);
       console.log("4. Database creation result:", success);
@@ -181,8 +201,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     loaded,
     submitComment,
     fetchComments: loadComments,
-    deleteComment: deleteCommentById,
-    storageChecked
+    deleteComment: deleteCommentById
   };
 };
 
