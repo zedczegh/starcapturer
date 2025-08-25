@@ -50,13 +50,12 @@ export const uploadSingleCommentImage = async (
       return null;
     }
     
-    // Generate a unique filename with proper format
-    const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(2, 15);
+    // Generate a unique filename using UUID format
+    const uniqueId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const fileExt = imageFile.name.split('.').pop() || 'jpg';
     const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
-    // Use timestamp and random string for better compatibility
-    const fileName = `comment_${timestamp}_${randomId}.${sanitizedExt}`;
+    // Use simple format that's compatible with database constraints
+    const fileName = `${uniqueId}.${sanitizedExt}`;
     
     console.log("Uploading comment image with filename:", fileName);
     

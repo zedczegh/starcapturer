@@ -47,8 +47,8 @@ export const useMessageUpload = () => {
     try {
       // Generate a unique filename
       const uniqueId = uuidv4();
-      const fileExt = imageFile.name.split('.').pop() || '';
-      const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const fileExt = imageFile.name.split('.').pop() || 'jpg';
+      const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
       const fileName = `${uniqueId}.${sanitizedExt}`;
       
       console.log("Uploading message image with filename:", fileName);
