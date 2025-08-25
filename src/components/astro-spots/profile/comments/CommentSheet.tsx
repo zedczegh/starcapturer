@@ -57,21 +57,22 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md md:max-w-lg overflow-y-auto bg-cosmic-900/95 border-cosmic-700">
-        <SheetHeader>
-          <SheetTitle className="text-cosmic-100">
-            {t("All Comments", "所有评论")} ({comments.length})
+      <SheetContent className="w-full sm:max-w-lg md:max-w-xl overflow-y-auto bg-background/95 backdrop-blur-lg border-border/50">
+        <SheetHeader className="border-b border-border/30 pb-4">
+          <SheetTitle className="text-foreground font-semibold">
+            {t("All Comments", "所有评论")} <span className="text-muted-foreground">({comments.length})</span>
           </SheetTitle>
         </SheetHeader>
         
-        <div className="mt-6 flex flex-col h-[calc(100vh-150px)]">
+        <div className="mt-6 flex flex-col h-[calc(100vh-180px)]">
           <div 
             ref={commentListRef}
-            className="flex-1 space-y-6 overflow-y-auto pr-2"
+            className="flex-1 space-y-6 overflow-y-auto pr-2 styled-scrollbar"
           >
             {comments.length === 0 ? (
-              <div className="text-center py-8 text-cosmic-400">
-                {t("No comments yet. Be the first to comment!", "暂无评论。成为第一个评论的人！")}
+              <div className="text-center py-12 text-muted-foreground">
+                <div className="mb-2 text-lg">💬</div>
+                <p className="text-sm">{t("No comments yet. Be the first to comment!", "暂无评论。成为第一个评论的人！")}</p>
               </div>
             ) : (
               comments.map((comment) => (
@@ -85,7 +86,7 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
           </div>
           
           {user && authUser && (
-            <div className="pt-4 mt-4 border-t border-cosmic-700/30 sticky bottom-0 bg-cosmic-900/95">
+            <div className="pt-4 mt-4 border-t border-border/30 sticky bottom-0 bg-background/95 backdrop-blur-sm rounded-t-lg">
               <CommentInput
                 onSubmit={onSubmit}
                 sending={sending}

@@ -231,4 +231,46 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+
+  /* Custom scrollbar for comment sections */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.3) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.3);
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+
+  /* Enhanced hover effects for interactive elements */
+  .hover-lift {
+    @apply transition-all duration-200 hover:scale-[1.02] hover:shadow-lg;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-glow;
+  }
+
+  /* Form input enhancements */
+  .form-input-enhanced {
+    @apply bg-background/50 border-border/50 focus:border-primary/60 focus:bg-background/80 focus:ring-1 focus:ring-primary/20 transition-all duration-200 placeholder:text-muted-foreground/60;
+  }
+
+  /* Button enhancements */
+  .btn-primary-enhanced {
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200 hover:scale-105 active:scale-95 disabled:scale-100 disabled:opacity-50;
+  }
 }

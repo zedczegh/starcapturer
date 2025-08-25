@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Creates the comment_images bucket if it doesn't exist
@@ -51,12 +50,13 @@ export const uploadSingleCommentImage = async (
       return null;
     }
     
-    // Generate a unique filename with proper extension
-    const uniqueId = uuidv4();
+    // Generate a unique filename with proper format
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 15);
     const fileExt = imageFile.name.split('.').pop() || 'jpg';
     const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
-    // Use proper path format for storage
-    const fileName = `${uniqueId}.${sanitizedExt}`;
+    // Use timestamp and random string for better compatibility
+    const fileName = `comment_${timestamp}_${randomId}.${sanitizedExt}`;
     
     console.log("Uploading comment image with filename:", fileName);
     

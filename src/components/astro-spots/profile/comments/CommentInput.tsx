@@ -75,28 +75,37 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <Textarea
-        value={commentText}
-        onChange={(e) => setCommentText(e.target.value)}
-        placeholder={isReply ? t("Write a reply...", "撰写回复...") : t("Add a comment...", "添加评论...")}
-        className={`${isReply ? 'min-h-16' : 'min-h-24'} bg-cosmic-800/40 border-cosmic-700/40 focus:border-primary`}
-        disabled={sending}
-      />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="relative">
+        <Textarea
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          placeholder={isReply ? t("Write a reply...", "撰写回复...") : t("Add a comment...", "添加评论...")}
+          className={`${isReply ? 'min-h-20' : 'min-h-28'} resize-none bg-background/50 border-border/50 focus:border-primary/60 focus:bg-background/80 transition-all duration-200 placeholder:text-muted-foreground/60`}
+          disabled={sending}
+        />
+        {commentText.length > 0 && (
+          <div className="absolute bottom-2 right-2 text-xs text-muted-foreground/60">
+            {commentText.length}/1000
+          </div>
+        )}
+      </div>
 
       {imagePreviews.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {imagePreviews.map((preview, index) => (
-            <div key={index} className="relative inline-block">
-              <img 
-                src={preview} 
-                alt={isReply ? `Reply attachment ${index + 1} preview` : `Comment attachment ${index + 1} preview`}
-                className="h-24 w-auto rounded-md border border-cosmic-700/50"
-              />
+            <div key={index} className="relative group">
+              <div className="aspect-square overflow-hidden rounded-lg border border-border/50 bg-muted/30">
+                <img 
+                  src={preview} 
+                  alt={isReply ? `Reply attachment ${index + 1} preview` : `Comment attachment ${index + 1} preview`}
+                  className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                />
+              </div>
               <button
                 type="button"
                 onClick={() => handleRemoveImage(index)}
-                className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground p-1 rounded-full"
+                className="absolute -top-2 -right-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full p-1.5 shadow-md transition-colors duration-200 opacity-0 group-hover:opacity-100"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -105,9 +114,9 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
         </div>
       )}
 
-      <div className="flex gap-2 justify-end">
-        <label className="cursor-pointer">
-          <div className="flex items-center gap-2 px-3 py-2 text-sm text-primary/90 hover:text-primary hover:bg-cosmic-800/30 rounded-md">
+      <div className="flex items-center justify-between pt-2">
+        <label className="cursor-pointer group">
+          <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 group-hover:scale-105">
             <ImagePlus className="h-4 w-4" />
             <span>{t("Add Image", "添加图片")}</span>
           </div>
@@ -124,14 +133,16 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
           type="submit" 
           size="sm" 
           disabled={sending || (!commentText.trim() && imageFiles.length === 0)}
-          className="flex gap-1 items-center"
+          className="min-w-20 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200 hover:scale-105 disabled:scale-100"
         >
           {sending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Send className="h-4 w-4" />
+            <>
+              <Send className="h-4 w-4 mr-1" />
+              {isReply ? t("Reply", "回复") : t("Submit", "提交")}
+            </>
           )}
-          {isReply ? t("Reply", "回复") : t("Submit", "提交")}
         </Button>
       </div>
     </form>

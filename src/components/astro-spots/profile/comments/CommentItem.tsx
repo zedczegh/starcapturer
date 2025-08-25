@@ -57,169 +57,184 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
   const isReply = false; // Main comments are not replies
 
   return (
-    <div className={`flex gap-3 ${isReply ? 'pl-8 mt-3' : ''}`}>
-      <div className="flex-shrink-0">
-        <Avatar className="w-9 h-9">
-          {comment.profiles?.avatar_url ? (
-            <AvatarImage 
-              src={comment.profiles.avatar_url} 
-              alt={username} 
-              className="object-cover"
-            />
-          ) : (
-            <AvatarFallback className="bg-cosmic-800 text-cosmic-200">
-              {userInitial}
-            </AvatarFallback>
-          )}
-        </Avatar>
-      </div>
-      <div className="flex-grow">
-        <div className="bg-cosmic-800/40 rounded-lg p-3">
-          <div className="flex justify-between items-start">
-            <span className="font-medium text-sm text-cosmic-200">{username}</span>
-            <span className="text-xs text-cosmic-400">{formattedCreatedAt}</span>
-          </div>
-          <p className="mt-1 text-sm text-cosmic-100">
-            {comment.content}
-          </p>
-          
-          {/* Image attachments */}
-          {(comment.image_urls && comment.image_urls.length > 0) ? (
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {comment.image_urls.map((url, idx) => (
-                <img
-                  key={idx}
-                  src={url}
-                  alt={t("Comment attachment", "评论附件") + ` ${idx + 1}`}
-                  className="max-h-48 w-full object-cover rounded-md border border-cosmic-700/50"
-                  loading="lazy"
-                />
-              ))}
-            </div>
-          ) : (
-            comment.image_url && (
-              <div className="mt-2">
-                <img 
-                  src={comment.image_url}
-                  alt={t("Comment attachment", "评论附件")}
-                  className="max-h-48 rounded-md border border-cosmic-700/50"
-                />
-              </div>
-            )
-          )}
+    <div className={`group ${isReply ? 'pl-6 mt-4 border-l-2 border-border/30' : ''}`}>
+      <div className="flex gap-3">
+        <div className="flex-shrink-0">
+          <Avatar className={`${isReply ? 'w-8 h-8' : 'w-10 h-10'} ring-2 ring-background shadow-sm`}>
+            {comment.profiles?.avatar_url ? (
+              <AvatarImage 
+                src={comment.profiles.avatar_url} 
+                alt={username} 
+                className="object-cover"
+              />
+            ) : (
+              <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                {userInitial}
+              </AvatarFallback>
+            )}
+          </Avatar>
         </div>
         
-        {/* Reply button */}
-        {!isReply && authUser && (
-          <div className="mt-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleToggleReplyInput}
-              className="text-xs text-cosmic-400 hover:text-cosmic-200 p-1 h-auto"
-            >
-              <MessageSquare className="h-3.5 w-3.5 mr-1" />
-              {t("Reply", "回复")}
-            </Button>
-          </div>
-        )}
-        
-        {/* Reply input */}
-        {showReplyInput && authUser && (
-          <div className="mt-2">
-            <CommentInput
-              onSubmit={handleReplySubmit}
-              sending={false}
-              isReply={true}
-            />
-          </div>
-        )}
-        
-        {/* Replies section */}
-        {hasReplies && (
-          <div className="mt-3 space-y-3">
-            {visibleReplies.map((reply) => (
-              <div key={reply.id} className="flex gap-3 pl-4 border-l-2 border-cosmic-700/30">
-                <div className="flex-shrink-0">
-                  <Avatar className="w-7 h-7">
-                    {reply.profiles?.avatar_url ? (
-                      <AvatarImage 
-                        src={reply.profiles.avatar_url} 
-                        alt={reply.profiles?.username || t("Anonymous", "匿名用户")} 
-                        className="object-cover"
-                      />
-                    ) : (
-                      <AvatarFallback className="bg-cosmic-800 text-cosmic-200 text-xs">
-                        {(reply.profiles?.username || "U").charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                </div>
-                <div className="flex-grow">
-                  <div className="bg-cosmic-800/30 rounded-lg p-2">
-                    <div className="flex justify-between items-start">
-                      <span className="font-medium text-xs text-cosmic-200">
-                        {reply.profiles?.username || t("Anonymous", "匿名用户")}
-                      </span>
-                      <span className="text-xs text-cosmic-500">{getFormattedDate(reply.created_at)}</span>
-                    </div>
-                    <p className="mt-0.5 text-sm text-cosmic-100">
-                      {reply.content}
-                    </p>
-                    
-                    {/* Reply image attachments */}
-                    {(reply.image_urls && reply.image_urls.length > 0) ? (
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        {reply.image_urls.map((url, idx) => (
-                          <img
-                            key={idx}
-                            src={url}
-                            alt={t("Reply attachment", "回复附件") + ` ${idx + 1}`}
-                            className="max-h-32 w-full object-cover rounded-md border border-cosmic-700/50"
-                            loading="lazy"
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      reply.image_url && (
-                        <div className="mt-2">
-                          <img 
-                            src={reply.image_url}
-                            alt={t("Reply attachment", "回复附件")}
-                            className="max-h-32 rounded-md border border-cosmic-700/50"
-                          />
-                        </div>
-                      )
-                    )}
+        <div className="flex-grow min-w-0">
+          <div className="bg-card/60 backdrop-blur-sm rounded-xl p-4 border border-border/50 shadow-sm transition-all duration-200 group-hover:shadow-md group-hover:border-border/80">
+            <div className="flex justify-between items-start mb-2">
+              <span className="font-semibold text-sm text-foreground">{username}</span>
+              <span className="text-xs text-muted-foreground">{formattedCreatedAt}</span>
+            </div>
+            
+            {comment.content && (
+              <p className="text-sm text-foreground/90 leading-relaxed mb-3">
+                {comment.content}
+              </p>
+            )}
+            
+            {/* Image attachments */}
+            {(comment.image_urls && comment.image_urls.length > 0) ? (
+              <div className={`grid gap-2 mb-3 ${comment.image_urls.length === 1 ? 'grid-cols-1 max-w-sm' : comment.image_urls.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                {comment.image_urls.map((url, idx) => (
+                  <div key={idx} className="aspect-square overflow-hidden rounded-lg border border-border/30 bg-muted/20">
+                    <img
+                      src={url}
+                      alt={t("Comment attachment", "评论附件") + ` ${idx + 1}`}
+                      className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              comment.image_url && (
+                <div className="mb-3 max-w-sm">
+                  <div className="aspect-square overflow-hidden rounded-lg border border-border/30 bg-muted/20">
+                    <img 
+                      src={comment.image_url}
+                      alt={t("Comment attachment", "评论附件")}
+                      className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
+                    />
                   </div>
                 </div>
-              </div>
-            ))}
-            
-            {/* View more/less replies toggle */}
-            {hasMoreThanFiveReplies && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleToggleReplies}
-                className="text-xs text-cosmic-400 hover:text-cosmic-200 p-1 h-auto ml-4"
-              >
-                {showAllReplies ? (
-                  <>
-                    <ChevronUp className="h-3.5 w-3.5 mr-1" />
-                    {t("Show less replies", "显示更少回复")}
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-3.5 w-3.5 mr-1" />
-                    {t("Show all replies", "显示所有回复")} 
-                    ({comment.replies.length - 5} {t("more", "更多")})
-                  </>
-                )}
-              </Button>
+              )
             )}
           </div>
-        )}
+          
+          {/* Reply button */}
+          {!isReply && authUser && (
+            <div className="mt-2 ml-1">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleToggleReplyInput}
+                className="text-xs text-muted-foreground hover:text-foreground p-2 h-auto font-medium transition-all duration-200 hover:bg-muted/50 rounded-lg"
+              >
+                <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                {t("Reply", "回复")}
+              </Button>
+            </div>
+          )}
+          
+          {/* Reply input */}
+          {showReplyInput && authUser && (
+            <div className="mt-3 ml-1">
+              <CommentInput
+                onSubmit={handleReplySubmit}
+                sending={false}
+                isReply={true}
+              />
+            </div>
+          )}
+          
+          {/* Replies section */}
+          {hasReplies && (
+            <div className="mt-4 space-y-4">
+              {visibleReplies.map((reply) => (
+                <div key={reply.id} className="flex gap-3 pl-4 border-l-2 border-border/20">
+                  <div className="flex-shrink-0">
+                    <Avatar className="w-7 h-7 ring-1 ring-background">
+                      {reply.profiles?.avatar_url ? (
+                        <AvatarImage 
+                          src={reply.profiles.avatar_url} 
+                          alt={reply.profiles?.username || t("Anonymous", "匿名用户")} 
+                          className="object-cover"
+                        />
+                      ) : (
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
+                          {(reply.profiles?.username || "U").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                  </div>
+                  <div className="flex-grow min-w-0">
+                    <div className="bg-muted/30 rounded-lg p-3 border border-border/30">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-medium text-xs text-foreground">
+                          {reply.profiles?.username || t("Anonymous", "匿名用户")}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{getFormattedDate(reply.created_at)}</span>
+                      </div>
+                      
+                      {reply.content && (
+                        <p className="text-sm text-foreground/90 leading-relaxed mb-2">
+                          {reply.content}
+                        </p>
+                      )}
+                      
+                      {/* Reply image attachments */}
+                      {(reply.image_urls && reply.image_urls.length > 0) ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {reply.image_urls.map((url, idx) => (
+                            <div key={idx} className="aspect-square overflow-hidden rounded-md border border-border/30 bg-muted/20">
+                              <img
+                                src={url}
+                                alt={t("Reply attachment", "回复附件") + ` ${idx + 1}`}
+                                className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
+                                loading="lazy"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        reply.image_url && (
+                          <div className="max-w-32">
+                            <div className="aspect-square overflow-hidden rounded-md border border-border/30 bg-muted/20">
+                              <img 
+                                src={reply.image_url}
+                                alt={t("Reply attachment", "回复附件")}
+                                className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
+                              />
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {/* View more/less replies toggle */}
+              {hasMoreThanFiveReplies && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleReplies}
+                  className="text-xs ml-4 bg-background/50 hover:bg-background border-border/50 transition-all duration-200"
+                >
+                  {showAllReplies ? (
+                    <>
+                      <ChevronUp className="h-3.5 w-3.5 mr-1" />
+                      {t("Show less replies", "显示更少回复")}
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3.5 w-3.5 mr-1" />
+                      {t("Show all replies", "显示所有回复")} 
+                      ({comment.replies.length - 5} {t("more", "更多")})
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

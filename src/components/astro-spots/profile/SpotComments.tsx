@@ -80,7 +80,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
   };
 
   return (
-    <div className="bg-cosmic-800/30 rounded-lg p-5 backdrop-blur-sm border border-cosmic-700/30">
+    <div className="bg-card/40 backdrop-blur-sm rounded-xl p-6 border border-border/40 shadow-sm">
       <CommentHeader 
         commentCount={localComments.length}
         onViewAll={() => setShowCommentsSheet(true)}
@@ -91,7 +91,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         {localComments.length === 0 ? (
           <EmptyComments />
         ) : (
-          <motion.div layout className="space-y-6 mt-4">
+          <motion.div layout className="space-y-5 mt-5">
             {localComments.slice(0, 2).map((comment) => (
               <CommentItem 
                 key={comment.id} 
@@ -104,7 +104,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
       </AnimatePresence>
       
       {user && (
-        <div className="mt-4 pt-4 border-t border-cosmic-700/30">
+        <div className="mt-6 pt-5 border-t border-border/40">
           <CommentInput
             onSubmit={handleCommentSubmit}
             sending={sending}
