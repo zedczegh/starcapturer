@@ -147,46 +147,57 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
               </p>
             )}
             
-            {/* Image attachments */}
-            {(() => {
-              console.log("=== DISPLAY DEBUG ===");
-              console.log("Comment ID:", comment.id);
-              console.log("Comment image_urls:", comment.image_urls);
-              console.log("Comment image_url:", comment.image_url);
-              console.log("Has image_urls array:", Array.isArray(comment.image_urls));
-              console.log("Image_urls length:", comment.image_urls?.length);
-              console.log("=== DISPLAY DEBUG END ===");
-              return null;
-            })()}
-            
-            {(comment.image_urls && comment.image_urls.length > 0) ? (
-              <div className={`grid gap-2 mb-3 ${comment.image_urls.length === 1 ? 'grid-cols-1 max-w-sm' : comment.image_urls.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
-                {comment.image_urls.map((url, idx) => (
-                  <div key={idx} className="aspect-square overflow-hidden rounded-lg border border-border/30 bg-muted/20">
+            {/* Image attachments - Simple display like SpotImageGallery */}
+            {comment.image_urls && comment.image_urls.length > 0 && (
+              <div className="mt-2 mb-3">
+                {comment.image_urls.length === 1 ? (
+                  <div className="max-w-sm">
                     <img
-                      src={url}
-                      alt={t("Comment attachment", "评论附件") + ` ${idx + 1}`}
-                      className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
-                      onClick={() => window.open(url, '_blank')}
-                      loading="lazy"
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              comment.image_url && (
-                <div className="mb-3 max-w-sm">
-                  <div className="aspect-square overflow-hidden rounded-lg border border-border/30 bg-muted/20">
-                    <img 
-                      src={comment.image_url}
+                      src={comment.image_urls[0]}
                       alt={t("Comment attachment", "评论附件")}
-                      className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
-                      onClick={() => window.open(comment.image_url!, '_blank')}
-                      loading="lazy"
+                      className="w-full h-auto rounded-lg border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => window.open(comment.image_urls![0], '_blank')}
+                      onError={(e) => {
+                        console.error("Comment image failed to load:", comment.image_urls![0]);
+                        e.currentTarget.src = 'https://placehold.co/400x400/121927/8888aa?text=Image+Not+Found';
+                      }}
                     />
                   </div>
-                </div>
-              )
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 max-w-md">
+                    {comment.image_urls.map((url, idx) => (
+                      <div key={idx} className="aspect-square">
+                        <img
+                          src={url}
+                          alt={t("Comment attachment", "评论附件") + ` ${idx + 1}`}
+                          className="w-full h-full object-cover rounded-lg border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(url, '_blank')}
+                          onError={(e) => {
+                            console.error("Comment image failed to load:", url);
+                            e.currentTarget.src = 'https://placehold.co/200x200/121927/8888aa?text=Error';
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Legacy single image support */}
+            {(!comment.image_urls || comment.image_urls.length === 0) && comment.image_url && (
+              <div className="mt-2 mb-3 max-w-sm">
+                <img
+                  src={comment.image_url}
+                  alt={t("Comment attachment", "评论附件")}
+                  className="w-full h-auto rounded-lg border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => window.open(comment.image_url!, '_blank')}
+                  onError={(e) => {
+                    console.error("Comment image failed to load:", comment.image_url);
+                    e.currentTarget.src = 'https://placehold.co/400x400/121927/8888aa?text=Image+Not+Found';
+                  }}
+                />
+              </div>
             )}
           </div>
           
@@ -282,46 +293,58 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
                         </p>
                       )}
                       
-                      {/* Reply image attachments */}
-                      {(reply.image_urls && reply.image_urls.length > 0) ? (
+                      {/* Reply images - Simple display like spot images */}
+                      {reply.image_urls && reply.image_urls.length > 0 && (
                         <div className="mt-2">
                           {reply.image_urls.length === 1 ? (
-                            <div className="max-w-sm overflow-hidden rounded-md border border-border/30 bg-muted/20">
+                            <div className="max-w-xs">
                               <img
                                 src={reply.image_urls[0]}
                                 alt={t("Reply attachment", "回复附件")}
-                                className="w-full h-auto object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
+                                className="w-full h-auto rounded-md border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
                                 onClick={() => window.open(reply.image_urls![0], '_blank')}
+                                onError={(e) => {
+                                  console.error("Reply image failed to load:", reply.image_urls![0]);
+                                  e.currentTarget.src = 'https://placehold.co/300x300/121927/8888aa?text=Image+Not+Found';
+                                }}
                               />
                             </div>
                           ) : (
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 gap-2 max-w-sm">
                               {reply.image_urls.map((url, idx) => (
-                                <div key={idx} className="aspect-square overflow-hidden rounded-md border border-border/30 bg-muted/20">
+                                <div key={idx} className="aspect-square">
                                   <img
                                     src={url}
                                     alt={t("Reply attachment", "回复附件") + ` ${idx + 1}`}
-                                    className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
-                                     onClick={() => window.open(url, '_blank')}
-                                     loading="lazy"
-                                   />
-                                 </div>
-                               ))}
-                             </div>
-                           )}
-                         </div>
-                       ) : reply.image_url ? (
-                         <div className="mt-2 max-w-32">
-                           <div className="aspect-square overflow-hidden rounded-md border border-border/30 bg-muted/20">
-                             <img 
-                               src={reply.image_url}
-                               alt={t("Reply attachment", "回复附件")}
-                               className="w-full h-full object-cover transition-transform duration-200 hover:scale-105 cursor-pointer"
-                               onClick={() => window.open(reply.image_url!, '_blank')}
-                             />
-                           </div>
-                         </div>
-                       ) : null}
+                                    className="w-full h-full object-cover rounded-md border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
+                                    onClick={() => window.open(url, '_blank')}
+                                    onError={(e) => {
+                                      console.error("Reply image failed to load:", url);
+                                      e.currentTarget.src = 'https://placehold.co/150x150/121927/8888aa?text=Error';
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Legacy single image support */}
+                      {(!reply.image_urls || reply.image_urls.length === 0) && reply.image_url && (
+                        <div className="mt-2 max-w-xs">
+                          <img 
+                            src={reply.image_url}
+                            alt={t("Reply attachment", "回复附件")}
+                            className="w-full h-auto rounded-md border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(reply.image_url!, '_blank')}
+                            onError={(e) => {
+                              console.error("Reply image failed to load:", reply.image_url);
+                              e.currentTarget.src = 'https://placehold.co/300x300/121927/8888aa?text=Image+Not+Found';
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
