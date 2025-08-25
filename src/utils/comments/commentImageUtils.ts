@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from 'uuid';
@@ -18,9 +17,26 @@ export const ensureCommentImagesBucket = async (): Promise<boolean> => {
 };
 
 /**
- * Uploads an image to the comment_images bucket and returns the public URL
+ * Uploads multiple images to the comment_images bucket and returns the public URLs
  */
-export const uploadCommentImage = async (
+export const uploadCommentImages = async (
+  imageFiles: File[], 
+  t: (key: string, fallback: string) => string
+): Promise<string[]> => {
+  try {
+    const uploadPromises = imageFiles.map(file => uploadSingleCommentImage(file, t));
+    const results = await Promise.all(uploadPromises);
+    return results.filter(url => url !== null) as string[];
+  } catch (err) {
+    console.error("Exception during multiple image upload:", err);
+    return [];
+  }
+};
+
+/**
+ * Uploads a single image to the comment_images bucket and returns the public URL
+ */
+export const uploadSingleCommentImage = async (
   imageFile: File, 
   t: (key: string, fallback: string) => string
 ): Promise<string | null> => {
@@ -35,12 +51,12 @@ export const uploadCommentImage = async (
       return null;
     }
     
-    // Generate a unique filename
+    // Generate a unique filename with proper extension
     const uniqueId = uuidv4();
-    const fileExt = imageFile.name.split('.').pop() || '';
+    const fileExt = imageFile.name.split('.').pop() || 'jpg';
     const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
-    // Store filename as a path (without dot notation which causes issues)
-    const fileName = `${uniqueId}-${sanitizedExt}`; 
+    // Use forward slash to create a proper file path
+    const fileName = `${uniqueId}.${sanitizedExt}`;
     
     console.log("Uploading comment image with filename:", fileName);
     
@@ -76,3 +92,6 @@ export const uploadCommentImage = async (
     return null;
   }
 };
+
+// Legacy single image upload function for backward compatibility
+export const uploadCommentImage = uploadSingleCommentImage;

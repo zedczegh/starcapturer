@@ -16,7 +16,7 @@ interface SpotCommentsProps {
   comments: Comment[];
   user: boolean;
   onCommentsUpdate: () => void;
-  onSubmit?: (content: string, imageFile: File | null, parentId?: string | null) => Promise<void>;
+  onSubmit?: (content: string, images?: File[], parentId?: string | null) => Promise<void>;
   sending: boolean;
 }
 
@@ -39,42 +39,42 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     setLocalComments(comments);
   }, [comments]);
 
-  const handleCommentSubmit = async (content: string, imageFile: File | null = null) => {
+  const handleCommentSubmit = async (content: string, images: File[] = []) => {
     if (!authUser) {
       toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
       return;
     }
 
-    // Validate content is not empty when uploading an image
-    if (!content.trim() && imageFile) {
-      toast.error(t("Please add some text to your comment", "请为您的评论添加一些文字"));
+    // Allow either text or images (or both)
+    if (!content.trim() && images.length === 0) {
+      toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
       return;
     }
 
     if (onSubmit) {
       console.log("Submitting new comment");
-      await onSubmit(content, imageFile);
+      await onSubmit(content, images);
       // Make sure we refresh comments after submission
       onCommentsUpdate();
     }
   };
 
-  const handleReplySubmit = async (content: string, imageFile: File | null, parentId: string) => {
+  const handleReplySubmit = async (content: string, images: File[], parentId: string) => {
     if (!authUser) {
       toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
       return;
     }
 
-    // Validate content is not empty when uploading an image
-    if (!content.trim() && imageFile) {
-      toast.error(t("Please add some text to your comment", "请为您的评论添加一些文字"));
+    // Allow either text or images (or both)
+    if (!content.trim() && images.length === 0) {
+      toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
       return;
     }
 
     if (onSubmit) {
       console.log(`Submitting reply to comment: ${parentId}`);
       // Pass the parent ID parameter
-      await onSubmit(content, imageFile, parentId);
+      await onSubmit(content, images, parentId);
       onCommentsUpdate();
     }
   };

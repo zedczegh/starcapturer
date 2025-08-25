@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from "sonner";
 import { Comment } from '@/components/astro-spots/profile/types/comments';
-import { uploadCommentImage, ensureCommentImagesBucket } from '@/utils/comments/commentImageUtils';
+import { uploadCommentImages, ensureCommentImagesBucket } from '@/utils/comments/commentImageUtils';
 import { fetchComments, createComment } from '@/services/comments/commentService';
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -48,7 +48,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
 
   const submitComment = async (
     content: string, 
-    imageFile: File | null, 
+    imageFiles: File[] = [], 
     parentId?: string | null
   ): Promise<{ success: boolean, comments?: Comment[] }> => {
     if (!authUser) {
@@ -56,14 +56,8 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       return { success: false };
     }
     
-    // Always require text content with an image
-    if (imageFile && !content.trim()) {
-      toast.error(t("Please add some text with your image", "请为您的图片添加一些文字"));
-      return { success: false };
-    }
-    
-    // Validate that there is either text or image
-    if (!content.trim() && !imageFile) {
+    // Validate that there is either text or images
+    if (!content.trim() && imageFiles.length === 0) {
       toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
       return { success: false };
     }
@@ -73,8 +67,8 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     try {
       const userId = authUser.id;
       
-      let imageUrl: string | null = null;
-      if (imageFile) {
+      let imageUrls: string[] = [];
+      if (imageFiles.length > 0) {
         // Check if storage is accessible
         const bucketReady = await ensureCommentImagesBucket();
         if (!bucketReady) {
@@ -83,12 +77,15 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
           return { success: false };
         }
         
-        imageUrl = await uploadCommentImage(imageFile, t);
-        if (!imageUrl) {
-          toast.error(t("Failed to upload image", "图片上传失败"));
+        imageUrls = await uploadCommentImages(imageFiles, t);
+        if (imageUrls.length === 0) {
+          toast.error(t("Failed to upload images", "图片上传失败"));
           return { success: false };
         }
       }
+      
+      // For now, store the first image URL for backward compatibility
+      const imageUrl = imageUrls.length > 0 ? imageUrls[0] : null;
       
       const success = await createComment(userId, spotId, content, imageUrl, parentId);
       

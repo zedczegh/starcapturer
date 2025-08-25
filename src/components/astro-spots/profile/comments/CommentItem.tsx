@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface CommentItemProps {
   comment: Comment;
-  onReply: (content: string, imageFile: File | null, parentId: string) => Promise<void>;
+  onReply: (content: string, images: File[], parentId: string) => Promise<void>;
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
@@ -35,9 +35,9 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
     setShowAllReplies(!showAllReplies);
   };
 
-  const handleReplySubmit = async (content: string, imageFile: File | null) => {
+  const handleReplySubmit = async (content: string, images: File[]) => {
     if (!authUser) return;
-    await onReply(content, imageFile, comment.id);
+    await onReply(content, images, comment.id);
     setShowReplyInput(false);
   };
 

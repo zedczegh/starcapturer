@@ -20,7 +20,7 @@ interface ProfileSectionsManagerProps {
   verificationStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
   onImagesUpdate: () => void;
   onCommentsUpdate: () => void;
-  onCommentSubmit: (content: string, imageFile: File | null, parentId?: string | null) => Promise<void>;
+  onCommentSubmit: (content: string, images?: File[], parentId?: string | null) => Promise<void>;
 }
 
 const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({

@@ -13,8 +13,8 @@ interface CommentSheetProps {
   onOpenChange: (open: boolean) => void;
   comments: Comment[];
   user: boolean;
-  onSubmit: (content: string, image?: File | null) => void;
-  onReply: (content: string, image: File | null, parentId: string) => Promise<void>;
+  onSubmit: (content: string, images?: File[]) => void;
+  onReply: (content: string, images: File[], parentId: string) => Promise<void>;
   sending: boolean;
 }
 
@@ -38,19 +38,19 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
     }
   }, [open, comments.length]);
 
-  const handleReply = async (content: string, imageFile: File | null, parentId: string) => {
+  const handleReply = async (content: string, images: File[], parentId: string) => {
     if (!authUser) {
       toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
       return;
     }
     
-    // Validate content is not empty when uploading an image
-    if (!content.trim() && imageFile) {
-      toast.error(t("Please add some text to your comment", "请为您的评论添加一些文字"));
+    // Allow either text or images (or both)
+    if (!content.trim() && images.length === 0) {
+      toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
       return;
     }
     
-    await onReply(content, imageFile, parentId);
+    await onReply(content, images, parentId);
   };
 
   console.log(`CommentSheet received ${comments.length} comments`);
