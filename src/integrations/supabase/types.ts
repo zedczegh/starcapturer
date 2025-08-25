@@ -737,6 +737,22 @@ export type Database = {
         Args: { p_currency?: string; p_user_id: string }
         Returns: string
       }
+      get_public_profile: {
+        Args: { p_user_id: string }
+        Returns: {
+          avatar_url: string
+          id: string
+          username: string
+        }[]
+      }
+      get_public_profiles: {
+        Args: { p_user_ids: string[] }
+        Returns: {
+          avatar_url: string
+          id: string
+          username: string
+        }[]
+      }
       get_spot_type_color: {
         Args: { type_name: string }
         Returns: string
@@ -776,6 +792,10 @@ export type Database = {
       }
       is_username_available: {
         Args: { username_to_check: string }
+        Returns: boolean
+      }
+      ping_db: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
       update_astro_spot_timeslot: {

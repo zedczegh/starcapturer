@@ -38,9 +38,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
     // We need to fetch user profiles separately
     const userIds = [...new Set(commentsData.map(comment => comment.user_id))];
     const { data: profilesData, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, username, avatar_url")
-      .in('id', userIds);
+      .rpc('get_public_profiles', { p_user_ids: userIds });
       
     if (profilesError) {
       console.error("Error fetching profiles:", profilesError);

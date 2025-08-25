@@ -74,10 +74,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
       // Try to ping supabase before attempting login
       try {
         const pingStart = Date.now();
-        // Use a simple query instead of RPC since ping_db isn't in the TypeScript types yet
-        const { data: pingData, error: pingError } = await supabase
-          .from('profiles')
-          .select('count(*)', { count: 'exact', head: true });
+        const { data: pingData, error: pingError } = await supabase.rpc('ping_db');
         
         const pingTime = Date.now() - pingStart;
         

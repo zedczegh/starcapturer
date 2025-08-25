@@ -57,14 +57,12 @@ const VerificationApplicationsManager: React.FC = () => {
       const applicationsWithUsernames = await Promise.all(
         (data || []).map(async (app) => {
           const { data: profile } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', app.applicant_id)
-            .single();
+            .rpc('get_public_profile', { p_user_id: app.applicant_id });
           
+          const profileData = profile?.[0];
           return {
             ...app,
-            applicant_username: profile?.username || 'Unknown'
+            applicant_username: profileData?.username || 'Unknown'
           };
         })
       );

@@ -130,9 +130,7 @@ export const useConversations = () => {
 
       // Fetch profiles for all unique users
       const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id,username,avatar_url')
-        .in('id', userIdsArray);
+        .rpc('get_public_profiles', { p_user_ids: userIdsArray });
 
       if (profilesError) throw profilesError;
 

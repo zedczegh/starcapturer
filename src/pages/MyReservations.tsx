@@ -106,9 +106,7 @@ const MyReservations = () => {
         
         if (userIds.length > 0) {
           const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, username')
-            .in('id', userIds);
+            .rpc('get_public_profiles', { p_user_ids: userIds });
 
           // Add profile data to reservations
           return validReservations.map(reservation => ({

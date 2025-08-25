@@ -8,16 +8,12 @@ export const useCreatorProfile = (userId: string | undefined) => {
     queryKey: ['creatorProfile', userId],
     queryFn: async () => {
       if (!userId) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('username, avatar_url')
-        .eq('id', userId)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('get_public_profile', { p_user_id: userId });
       if (error) {
         console.error("Error fetching creator profile:", error);
         return null;
       }
-      return data;
+      return data?.[0] || null;
     },
     enabled: !!userId
   });

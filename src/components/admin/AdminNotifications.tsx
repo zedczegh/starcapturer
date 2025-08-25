@@ -126,14 +126,12 @@ const AdminNotifications: React.FC = () => {
       const applicationsWithProfiles = await Promise.all(
         (data || []).map(async (app) => {
           const { data: profile } = await supabase
-            .from('profiles')
-            .select('username, avatar_url')
-            .eq('id', app.applicant_id)
-            .single();
+            .rpc('get_public_profile', { p_user_id: app.applicant_id });
 
+          const profileData = profile?.[0];
           return {
             ...app,
-            profiles: profile || { username: null, avatar_url: null }
+            profiles: profileData || { username: null, avatar_url: null }
           };
         })
       );
