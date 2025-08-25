@@ -142,10 +142,11 @@ export const uploadCommentImages = async (
   t: (key: string, fallback: string) => string
 ): Promise<string[]> => {
   if (!imageFiles?.length) {
-    console.log("No images to upload");
+    console.log("=== UPLOAD DEBUG: No images to upload ===");
     return [];
   }
 
+  console.log("=== IMAGE UPLOAD PROCESS START ===");
   console.log(`Starting batch upload of ${imageFiles.length} images`);
 
   try {
@@ -154,14 +155,16 @@ export const uploadCommentImages = async (
     
     for (let i = 0; i < imageFiles.length; i++) {
       const file = imageFiles[i];
-      console.log(`Uploading image ${i + 1}/${imageFiles.length}: ${file.name}`);
+      console.log(`--- Uploading image ${i + 1}/${imageFiles.length}: ${file.name} ---`);
       
       const url = await uploadCommentImage(file, t);
+      console.log(`Upload result for ${file.name}:`, url);
+      
       if (url) {
         results.push(url);
-        console.log(`Successfully uploaded ${i + 1}/${imageFiles.length}`);
+        console.log(`✓ Successfully uploaded ${i + 1}/${imageFiles.length}: ${url}`);
       } else {
-        console.error(`Failed to upload ${i + 1}/${imageFiles.length}: ${file.name}`);
+        console.error(`✗ Failed to upload ${i + 1}/${imageFiles.length}: ${file.name}`);
       }
       
       // Add small delay between uploads to prevent rate limiting
@@ -170,7 +173,11 @@ export const uploadCommentImages = async (
       }
     }
     
-    console.log(`Batch upload complete: ${results.length}/${imageFiles.length} successful`);
+    console.log(`--- BATCH UPLOAD COMPLETE ---`);
+    console.log(`Success: ${results.length}/${imageFiles.length} images uploaded`);
+    console.log(`Final URLs array:`, results);
+    console.log(`URLs array length:`, results.length);
+    console.log(`URLs JSON:`, JSON.stringify(results));
     
     if (results.length !== imageFiles.length) {
       const failedCount = imageFiles.length - results.length;
@@ -179,9 +186,13 @@ export const uploadCommentImages = async (
       toast.success(t(`All ${results.length} images uploaded successfully`, `所有 ${results.length} 张图片上传成功`));
     }
     
+    console.log("=== IMAGE UPLOAD PROCESS END ===");
     return results;
   } catch (error) {
+    console.error("=== UPLOAD PROCESS EXCEPTION ===");
     console.error("Exception during batch image upload:", error);
+    console.error("Exception details:", error instanceof Error ? error.message : String(error));
+    console.error("Exception stack:", error instanceof Error ? error.stack : 'No stack');
     toast.error(t("Batch upload failed", "批量上传失败"));
     return [];
   }

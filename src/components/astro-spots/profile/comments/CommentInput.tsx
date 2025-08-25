@@ -29,33 +29,58 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
       return;
     }
     
+    console.log("=== COMMENT INPUT SUBMISSION START ===");
+    console.log("1. Form submitted with:");
+    console.log("   - commentText:", commentText);
+    console.log("   - imageFiles count:", imageFiles.length);
+    console.log("   - imageFiles:", imageFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
+    
     try {
       // Upload images first if any
       let uploadedImageUrls: string[] = [];
       if (imageFiles.length > 0) {
-        console.log('CommentInput: Uploading images before submitting comment');
+        console.log('2. Uploading images before submitting comment');
+        console.log('   - Files to upload:', imageFiles.length);
+        
         uploadedImageUrls = await uploadImages(imageFiles);
+        console.log('3. Upload completed');
+        console.log('   - Uploaded URLs:', uploadedImageUrls);
+        console.log('   - Upload success count:', uploadedImageUrls.length);
+        console.log('   - URLs JSON:', JSON.stringify(uploadedImageUrls));
         
         // If we had files but no successful uploads, don't submit
         if (imageFiles.length > 0 && uploadedImageUrls.length === 0) {
-          console.error('CommentInput: All image uploads failed, aborting comment submission');
+          console.error('4. FAILED: All image uploads failed, aborting comment submission');
           toast.error(t("Image upload failed, comment not submitted", "图片上传失败，评论未提交"));
           return;
         }
         
-        console.log(`CommentInput: Successfully uploaded ${uploadedImageUrls.length}/${imageFiles.length} images`);
+        console.log(`4. SUCCESS: Uploaded ${uploadedImageUrls.length}/${imageFiles.length} images`);
+      } else {
+        console.log('2. No images to upload, proceeding with text-only comment');
       }
       
       // Submit comment with uploaded image URLs
-      console.log('CommentInput: Submitting comment with URLs:', uploadedImageUrls);
+      console.log('5. Submitting comment to onSubmit callback');
+      console.log('   - commentText:', commentText.trim());
+      console.log('   - imageFiles (should be empty array):', []);
+      console.log('   - uploadedImageUrls:', uploadedImageUrls);
+      console.log('   - uploadedImageUrls length:', uploadedImageUrls.length);
+      
       await onSubmit(commentText.trim(), [], uploadedImageUrls);
+      console.log('6. onSubmit callback completed successfully');
       
       // Clear form on success
       setCommentText('');
       setImageFiles([]);
       setImagePreviews([]);
+      console.log('7. Form cleared');
+      console.log("=== COMMENT INPUT SUBMISSION SUCCESS ===");
     } catch (error) {
+      console.error('=== COMMENT INPUT SUBMISSION ERROR ===');
       console.error('Comment submission failed:', error);
+      console.error('Error details:', error instanceof Error ? error.message : String(error));
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
       toast.error(t("Failed to submit comment", "评论提交失败"));
     }
   };
