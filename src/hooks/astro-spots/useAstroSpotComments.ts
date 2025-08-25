@@ -173,6 +173,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     }
     
     try {
+      console.log("Deleting comment:", commentId);
       const success = await deleteComment(commentId, authUser.id);
       
       if (!success) {
@@ -180,11 +181,25 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         return { success: false };
       }
       
-      // Immediately fetch updated comments to refresh the UI
-      const updatedComments = await fetchComments(spotId);
-      setComments(updatedComments); // Update local state immediately
+      // Optimistic update - remove the comment immediately from local state
+      const updatedComments = comments.filter(comment => {
+        if (comment.id === commentId) {
+          return false; // Remove the comment
+        }
+        // Also remove from replies
+        if (comment.replies) {
+          comment.replies = comment.replies.filter(reply => reply.id !== commentId);
+        }
+        return true;
+      });
       
+      setComments(updatedComments);
       toast.success(t("Comment deleted!", "评论已删除！"));
+      
+      // Only fetch once in background to sync with server
+      setTimeout(() => {
+        loadComments().catch(console.error);
+      }, 500);
       
       return { success: true, comments: updatedComments };
       

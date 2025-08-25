@@ -113,7 +113,7 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex items-center justify-between pt-3">
         <label className="cursor-pointer group">
           <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 group-hover:scale-105">
             <ImagePlus className="h-4 w-4" />
@@ -132,17 +132,17 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
           type="submit" 
           size="sm" 
           disabled={sending || (!commentText.trim() && !imageFile)}
-          className="min-w-20 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200 hover:scale-105 disabled:scale-100"
+          className="min-w-20 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200 hover:scale-105 disabled:scale-100 shadow-sm"
         >
           {sending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              {isReply ? t("Reply", "回复") : t("Submit", "提交")}
+              {isReply ? t("Posting...", "发布中...") : t("Posting...", "发布中...")}
             </>
           ) : (
             <>
               <Send className="h-4 w-4 mr-1" />
-              {isReply ? t("Reply", "回复") : t("Submit", "提交")}
+              {isReply ? t("Reply", "回复") : t("Post", "发布")}
             </>
           )}
         </Button>
