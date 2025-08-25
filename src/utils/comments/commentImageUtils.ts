@@ -9,15 +9,22 @@ export const uploadCommentImage = async (
   imageFile: File, 
   t: (key: string, fallback: string) => string
 ): Promise<string | null> => {
+  console.log("=== UPLOAD DEBUG START ===");
+  console.log("File details:", {
+    name: imageFile.name,
+    size: imageFile.size,
+    type: imageFile.type
+  });
+
   try {
     if (!imageFile) {
-      console.error("No image file provided");
+      console.error("DEBUG: No image file provided");
       return null;
     }
 
     // Validate file type
     if (!imageFile.type.startsWith('image/')) {
-      console.error("Invalid file type:", imageFile.type);
+      console.error("DEBUG: Invalid file type:", imageFile.type);
       toast.error(t("Please select a valid image file", "请选择有效的图片文件"));
       return null;
     }
@@ -25,103 +32,104 @@ export const uploadCommentImage = async (
     // Validate file size (60MB limit)
     const maxSize = 60 * 1024 * 1024; // 60MB
     if (imageFile.size > maxSize) {
-      console.error("File too large:", imageFile.size);
+      console.error("DEBUG: File too large:", imageFile.size);
       toast.error(t("Image must be less than 60MB", "图片必须小于60MB"));
       return null;
     }
 
-    // Use timestamp + random string to avoid UUID parsing issues
-    const timestamp = Date.now();
-    const randomStr = Math.random().toString(36).substring(2, 8);
-    const fileExtension = imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `img_${timestamp}_${randomStr}.${fileExtension}`;
+    // Check authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log("DEBUG: Auth check:", { user: user?.id, authError });
     
-    console.log("Uploading comment image with filename:", fileName);
-    console.log("File size:", imageFile.size, "bytes");
-    console.log("File type:", imageFile.type);
-
-    // First, let's test bucket access
-    try {
-      const { data: bucketData, error: bucketError } = await supabase.storage
-        .from('comment_images')
-        .list('', { limit: 1 });
-      
-      if (bucketError) {
-        console.error("Bucket access error:", bucketError);
-        toast.error(t("Storage access denied", "存储访问被拒绝"));
-        return null;
-      }
-      console.log("Bucket access confirmed");
-    } catch (bucketErr) {
-      console.error("Bucket test failed:", bucketErr);
-      toast.error(t("Storage not available", "存储不可用"));
+    if (authError || !user) {
+      console.error("DEBUG: Authentication failed:", authError);
+      toast.error(t("Authentication required", "需要身份验证"));
       return null;
     }
 
-    // Upload to Supabase storage with explicit options
+    // Test bucket access with detailed logging
+    console.log("DEBUG: Testing bucket access...");
+    const { data: bucketData, error: bucketError } = await supabase.storage
+      .from('comment_images')
+      .list('', { limit: 1 });
+    
+    console.log("DEBUG: Bucket test result:", { bucketData, bucketError });
+    
+    if (bucketError) {
+      console.error("DEBUG: Bucket access error:", bucketError);
+      toast.error(t("Storage access denied", "存储访问被拒绝"));
+      return null;
+    }
+
+    // Use simple filename without any folder structure
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    const fileExtension = imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileName = `comment_${timestamp}_${randomStr}.${fileExtension}`;
+    
+    console.log("DEBUG: Generated filename:", fileName);
+
+    // Prepare upload with minimal options
+    const uploadOptions = {
+      contentType: imageFile.type,
+      cacheControl: '3600',
+      upsert: false
+    };
+    
+    console.log("DEBUG: Upload options:", uploadOptions);
+    console.log("DEBUG: Starting upload...");
+
+    // Upload to Supabase storage
     const { data, error: uploadError } = await supabase.storage
       .from('comment_images')
-      .upload(fileName, imageFile, {
-        contentType: imageFile.type,
-        cacheControl: '3600',
-        upsert: false,
-        duplex: 'half'
-      });
+      .upload(fileName, imageFile, uploadOptions);
+
+    console.log("DEBUG: Upload result:", { data, uploadError });
 
     if (uploadError) {
-      console.error("Upload error details:", {
+      console.error("DEBUG: Upload error full details:", {
         message: uploadError.message,
         error: uploadError,
         fileName,
         fileSize: imageFile.size,
-        fileType: imageFile.type
+        fileType: imageFile.type,
+        userId: user.id
       });
       
-      // Check for specific error types
-      if (uploadError.message?.includes('uuid')) {
-        console.error("UUID parsing error detected");
-        toast.error(t("Upload system error. Please try again.", "上传系统错误。请重试。"));
-      } else if (uploadError.message?.includes('size')) {
-        toast.error(t("File too large", "文件太大"));
-      } else if (uploadError.message?.includes('policy')) {
-        toast.error(t("Upload not allowed", "不允许上传"));
-      } else {
-        toast.error(t("Failed to upload image", "图片上传失败"));
-      }
+      toast.error(t("Upload failed: " + uploadError.message, "上传失败: " + uploadError.message));
       return null;
     }
 
     if (!data?.path) {
-      console.error("No upload path returned from Supabase");
+      console.error("DEBUG: No upload path returned from Supabase");
       toast.error(t("Upload failed - no path", "上传失败 - 无路径"));
       return null;
     }
 
-    console.log("Upload successful, path:", data.path);
+    console.log("DEBUG: Upload successful, path:", data.path);
 
     // Get public URL
     const { data: urlData } = supabase.storage
       .from('comment_images')
       .getPublicUrl(data.path);
 
+    console.log("DEBUG: Public URL result:", urlData);
+
     if (!urlData?.publicUrl) {
-      console.error("Failed to get public URL for uploaded file");
+      console.error("DEBUG: Failed to get public URL for uploaded file");
       toast.error(t("Failed to get image URL", "无法获取图片URL"));
       return null;
     }
 
-    console.log("Image uploaded successfully:", urlData.publicUrl);
+    console.log("DEBUG: SUCCESS - Image uploaded:", urlData.publicUrl);
+    console.log("=== UPLOAD DEBUG END ===");
     return urlData.publicUrl;
 
   } catch (error) {
-    console.error("Exception during image upload:", error);
-    console.error("Error details:", {
-      message: (error as Error)?.message,
-      stack: (error as Error)?.stack,
-      fileName: imageFile?.name,
-      fileSize: imageFile?.size
-    });
-    toast.error(t("Upload failed due to system error", "系统错误导致上传失败"));
+    console.error("DEBUG: Exception during image upload:", error);
+    console.error("DEBUG: Error stack:", (error as Error)?.stack);
+    console.log("=== UPLOAD DEBUG END (ERROR) ===");
+    toast.error(t("Upload system error", "上传系统错误"));
     return null;
   }
 };
