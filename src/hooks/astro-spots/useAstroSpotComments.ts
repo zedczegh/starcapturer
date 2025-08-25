@@ -49,7 +49,8 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
   const submitComment = async (
     content: string, 
     imageFiles: File[] = [], 
-    parentId?: string | null
+    parentId?: string | null,
+    imageUrls: string[] = []
   ): Promise<{ success: boolean, comments?: Comment[] }> => {
     if (!authUser) {
       toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
@@ -57,7 +58,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     }
     
     // Validate that there is either text or images
-    if (!content.trim() && imageFiles.length === 0) {
+    if (!content.trim() && imageFiles.length === 0 && imageUrls.length === 0) {
       toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
       return { success: false };
     }
@@ -67,8 +68,10 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     try {
       const userId = authUser.id;
       
-      let imageUrls: string[] = [];
-      if (imageFiles.length > 0) {
+      let finalImageUrls: string[] = [...imageUrls];
+      
+      // Only upload if we have files and no URLs (URLs means images were already uploaded)
+      if (imageFiles.length > 0 && imageUrls.length === 0) {
         // Check if storage is accessible
         const bucketReady = await ensureCommentImagesBucket();
         if (!bucketReady) {
@@ -77,15 +80,16 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
           return { success: false };
         }
         
-        imageUrls = await uploadCommentImages(imageFiles, t);
-        if (imageUrls.length === 0) {
+        const uploadedUrls = await uploadCommentImages(imageFiles, t);
+        if (uploadedUrls.length === 0) {
           toast.error(t("Failed to upload images", "图片上传失败"));
           return { success: false };
         }
+        finalImageUrls = uploadedUrls;
       }
       
       // Create the comment with all image URLs
-      const success = await createComment(userId, spotId, content, imageUrls.length > 0 ? imageUrls : null, parentId);
+      const success = await createComment(userId, spotId, content, finalImageUrls.length > 0 ? finalImageUrls : null, parentId);
       
       if (!success) {
         toast.error(parentId 

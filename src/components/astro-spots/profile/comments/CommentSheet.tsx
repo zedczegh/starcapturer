@@ -13,8 +13,8 @@ interface CommentSheetProps {
   onOpenChange: (open: boolean) => void;
   comments: Comment[];
   user: boolean;
-  onSubmit: (content: string, images?: File[]) => void;
-  onReply: (content: string, images: File[], parentId: string) => Promise<void>;
+  onSubmit: (content: string, images?: File[], imageUrls?: string[]) => Promise<void>;
+  onReply: (content: string, images: File[], parentId: string, imageUrls?: string[]) => Promise<void>;
   sending: boolean;
 }
 
@@ -38,19 +38,23 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
     }
   }, [open, comments.length]);
 
-  const handleReply = async (content: string, images: File[], parentId: string) => {
+  const handleCommentSubmit = async (content: string, images: File[] = [], imageUrls: string[] = []) => {
+    await onSubmit(content, images, imageUrls);
+  };
+
+  const handleReply = async (content: string, images: File[] = [], parentId: string, imageUrls: string[] = []) => {
     if (!authUser) {
       toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
       return;
     }
     
     // Allow either text or images (or both)
-    if (!content.trim() && images.length === 0) {
+    if (!content.trim() && images.length === 0 && imageUrls.length === 0) {
       toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
       return;
     }
     
-    await onReply(content, images, parentId);
+    await onReply(content, images, parentId, imageUrls);
   };
 
   console.log(`CommentSheet received ${comments.length} comments`);
@@ -88,7 +92,7 @@ const CommentSheet: React.FC<CommentSheetProps> = ({
           {user && authUser && (
             <div className="pt-4 mt-4 border-t border-border/30 sticky bottom-0 bg-background/95 backdrop-blur-sm rounded-t-lg">
               <CommentInput
-                onSubmit={onSubmit}
+                onSubmit={handleCommentSubmit}
                 sending={sending}
               />
             </div>

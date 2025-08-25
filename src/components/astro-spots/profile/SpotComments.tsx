@@ -16,7 +16,7 @@ interface SpotCommentsProps {
   comments: Comment[];
   user: boolean;
   onCommentsUpdate: () => void;
-  onSubmit?: (content: string, images?: File[], parentId?: string | null) => Promise<void>;
+  onSubmit?: (content: string, images?: File[], parentId?: string | null, imageUrls?: string[]) => Promise<void>;
   sending: boolean;
 }
 
@@ -39,34 +39,34 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     setLocalComments(comments);
   }, [comments]);
 
-  const handleCommentSubmit = async (content: string, images: File[] = []) => {
+  const handleCommentSubmit = async (content: string, images: File[] = [], imageUrls: string[] = []) => {
     if (!authUser) {
       toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
       return;
     }
 
     // Allow either text or images (or both)
-    if (!content.trim() && images.length === 0) {
+    if (!content.trim() && images.length === 0 && imageUrls.length === 0) {
       toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
       return;
     }
 
     if (onSubmit) {
       console.log("Submitting new comment");
-      await onSubmit(content, images);
+      await onSubmit(content, images, undefined, imageUrls);
       // Make sure we refresh comments after submission
       onCommentsUpdate();
     }
   };
 
-  const handleReplySubmit = async (content: string, images: File[], parentId: string) => {
+  const handleReplySubmit = async (content: string, images: File[], parentId: string, imageUrls: string[] = []) => {
     if (!authUser) {
       toast.error(t("You must be logged in to comment", "您必须登录才能评论"));
       return;
     }
 
     // Allow either text or images (or both)
-    if (!content.trim() && images.length === 0) {
+    if (!content.trim() && images.length === 0 && imageUrls.length === 0) {
       toast.error(t("Please enter a comment or attach an image", "请输入评论或附加图片"));
       return;
     }
@@ -74,7 +74,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
     if (onSubmit) {
       console.log(`Submitting reply to comment: ${parentId}`);
       // Pass the parent ID parameter
-      await onSubmit(content, images, parentId);
+      await onSubmit(content, images, parentId, imageUrls);
       onCommentsUpdate();
     }
   };

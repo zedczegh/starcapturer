@@ -1,96 +1,115 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Creates the comment_images bucket if it doesn't exist
- * Uses a "try-it-and-see" approach rather than trying to create the bucket first
+ * Upload a single image to the comment_images bucket
  */
-export const ensureCommentImagesBucket = async (): Promise<boolean> => {
-  try {
-    // Assume the bucket exists; avoid admin APIs from the client.
-    // We'll rely on storage policies for access control.
-    return true;
-  } catch {
-    return true;
-  }
-};
-
-/**
- * Uploads multiple images to the comment_images bucket and returns the public URLs
- */
-export const uploadCommentImages = async (
-  imageFiles: File[], 
-  t: (key: string, fallback: string) => string
-): Promise<string[]> => {
-  try {
-    const uploadPromises = imageFiles.map(file => uploadSingleCommentImage(file, t));
-    const results = await Promise.all(uploadPromises);
-    return results.filter(url => url !== null) as string[];
-  } catch (err) {
-    console.error("Exception during multiple image upload:", err);
-    return [];
-  }
-};
-
-/**
- * Uploads a single image to the comment_images bucket and returns the public URL
- */
-export const uploadSingleCommentImage = async (
+export const uploadCommentImage = async (
   imageFile: File, 
   t: (key: string, fallback: string) => string
 ): Promise<string | null> => {
   try {
-    if (!imageFile) return null;
-    
-    // Check if bucket is accessible
-    const bucketReady = await ensureCommentImagesBucket();
-    if (!bucketReady) {
-      console.error("Comment images bucket is not accessible");
-      toast.error(t("Failed to access storage", "无法访问存储"));
+    if (!imageFile) {
+      console.error("No image file provided");
       return null;
     }
+
+    // Validate file type
+    if (!imageFile.type.startsWith('image/')) {
+      console.error("Invalid file type:", imageFile.type);
+      toast.error(t("Please select a valid image file", "请选择有效的图片文件"));
+      return null;
+    }
+
+    // Validate file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (imageFile.size > maxSize) {
+      console.error("File too large:", imageFile.size);
+      toast.error(t("Image must be less than 5MB", "图片必须小于5MB"));
+      return null;
+    }
+
+    // Generate simple, clean filename
+    const fileExtension = imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileName = `${uuidv4()}.${fileExtension}`;
     
-    // Generate a unique filename using UUID format
-    const uniqueId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const fileExt = imageFile.name.split('.').pop() || 'jpg';
-    const sanitizedExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '');
-    // Use simple format that's compatible with database constraints
-    const fileName = `${uniqueId}.${sanitizedExt}`;
-    
-    console.log("Uploading comment image with filename:", fileName);
-    
-    // Upload the image to the bucket
-    const { error: uploadError } = await supabase.storage
+    console.log("Uploading comment image:", fileName);
+
+    // Upload to Supabase storage
+    const { data, error: uploadError } = await supabase.storage
       .from('comment_images')
       .upload(fileName, imageFile, {
         contentType: imageFile.type,
         cacheControl: '3600',
         upsert: false
       });
-      
+
     if (uploadError) {
-      console.error("Error uploading image:", uploadError);
+      console.error("Upload error:", uploadError);
       toast.error(t("Failed to upload image", "图片上传失败"));
       return null;
     }
-    
-    // Get the public URL
-    const { data: publicUrlData } = supabase.storage
-      .from('comment_images')
-      .getPublicUrl(fileName);
-    
-    if (!publicUrlData?.publicUrl) {
-      console.error("Failed to get public URL for image");
+
+    if (!data?.path) {
+      console.error("No upload path returned");
       return null;
     }
-    
-    console.log("Image uploaded successfully, public URL:", publicUrlData.publicUrl);
-    return publicUrlData.publicUrl;
-  } catch (err) {
-    console.error("Exception during image upload:", err);
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('comment_images')
+      .getPublicUrl(data.path);
+
+    if (!urlData?.publicUrl) {
+      console.error("Failed to get public URL");
+      return null;
+    }
+
+    console.log("Image uploaded successfully:", urlData.publicUrl);
+    return urlData.publicUrl;
+
+  } catch (error) {
+    console.error("Exception during image upload:", error);
+    toast.error(t("Upload failed", "上传失败"));
     return null;
   }
 };
 
-// Legacy single image upload function for backward compatibility
-export const uploadCommentImage = uploadSingleCommentImage;
+/**
+ * Upload multiple images to the comment_images bucket
+ */
+export const uploadCommentImages = async (
+  imageFiles: File[], 
+  t: (key: string, fallback: string) => string
+): Promise<string[]> => {
+  if (!imageFiles?.length) {
+    return [];
+  }
+
+  try {
+    const uploadPromises = imageFiles.map(file => uploadCommentImage(file, t));
+    const results = await Promise.all(uploadPromises);
+    
+    // Filter out failed uploads
+    const successfulUploads = results.filter(url => url !== null) as string[];
+    
+    if (successfulUploads.length !== imageFiles.length) {
+      const failedCount = imageFiles.length - successfulUploads.length;
+      toast.error(t(`${failedCount} images failed to upload`, `${failedCount} 张图片上传失败`));
+    }
+    
+    return successfulUploads;
+  } catch (error) {
+    console.error("Exception during multiple image upload:", error);
+    toast.error(t("Upload failed", "上传失败"));
+    return [];
+  }
+};
+
+// Legacy exports for backward compatibility
+export const uploadSingleCommentImage = uploadCommentImage;
+export const ensureCommentImagesBucket = async (): Promise<boolean> => {
+  // Always return true since we're handling this at the storage policy level
+  return true;
+};

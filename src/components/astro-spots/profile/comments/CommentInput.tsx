@@ -4,21 +4,23 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, ImagePlus, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useCommentImageUpload } from "@/hooks/comments/useCommentImageUpload";
 import { toast } from "sonner";
 
 interface CommentInputProps {
-  onSubmit: (content: string, images?: File[]) => void;
+  onSubmit: (content: string, images?: File[], imageUrls?: string[]) => Promise<void>;
   sending: boolean;
   isReply?: boolean;
 }
 
 const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply = false }) => {
   const { t } = useLanguage();
+  const { uploadImages, uploading } = useCommentImageUpload();
   const [commentText, setCommentText] = useState('');
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Allow either text or images (or both)
@@ -27,10 +29,29 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
       return;
     }
     
-    onSubmit(commentText.trim(), imageFiles);
-    setCommentText('');
-    setImageFiles([]);
-    setImagePreviews([]);
+    try {
+      // Upload images first if any
+      let uploadedImageUrls: string[] = [];
+      if (imageFiles.length > 0) {
+        console.log('Uploading images before submitting comment');
+        uploadedImageUrls = await uploadImages(imageFiles);
+        if (imageFiles.length > 0 && uploadedImageUrls.length === 0) {
+          // All uploads failed
+          return;
+        }
+      }
+      
+      // Submit comment with uploaded image URLs
+      await onSubmit(commentText.trim(), [], uploadedImageUrls);
+      
+      // Clear form on success
+      setCommentText('');
+      setImageFiles([]);
+      setImagePreviews([]);
+    } catch (error) {
+      console.error('Comment submission failed:', error);
+      toast.error(t("Failed to submit comment", "评论提交失败"));
+    }
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,16 +147,16 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
             accept="image/*"
             multiple
             onChange={handleImageSelect}
-            disabled={sending}
+            disabled={sending || uploading}
           />
         </label>
         <Button 
           type="submit" 
           size="sm" 
-          disabled={sending || (!commentText.trim() && imageFiles.length === 0)}
+          disabled={sending || uploading || (!commentText.trim() && imageFiles.length === 0)}
           className="min-w-20 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200 hover:scale-105 disabled:scale-100"
         >
-          {sending ? (
+          {(sending || uploading) ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <>
