@@ -52,16 +52,27 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
     }, {} as Record<string, any>);
     
     // Transform the data to match our Comment type
-    const allComments = commentsData.map((comment: any) => ({
-      id: comment.id,
-      content: comment.content,
-      created_at: comment.created_at,
-      image_url: comment.image_url || (comment.image_urls && comment.image_urls.length > 0 ? comment.image_urls[0] : null),
-      image_urls: comment.image_urls || null,
-      parent_id: comment.parent_id,
-      profiles: profilesMap[comment.user_id] || { username: null, avatar_url: null },
-      replies: [] // Initialize empty replies array for each comment
-    }));
+    const allComments = commentsData.map((comment: any) => {
+      console.log("=== FETCH COMMENT DEBUG ===");
+      console.log("Raw comment data:", comment);
+      console.log("Image URL:", comment.image_url);
+      console.log("Image URLs:", comment.image_urls);
+      
+      const transformedComment = {
+        id: comment.id,
+        content: comment.content,
+        created_at: comment.created_at,
+        image_url: comment.image_url || (comment.image_urls && comment.image_urls.length > 0 ? comment.image_urls[0] : null),
+        image_urls: comment.image_urls || null,
+        parent_id: comment.parent_id,
+        profiles: profilesMap[comment.user_id] || { username: null, avatar_url: null },
+        replies: [] // Initialize empty replies array for each comment
+      };
+      
+      console.log("Transformed comment:", transformedComment);
+      console.log("=== FETCH COMMENT DEBUG END ===");
+      return transformedComment;
+    });
     
     // Separate top-level comments and replies
     const topLevelComments = allComments.filter(comment => !comment.parent_id);
@@ -100,18 +111,25 @@ export const createComment = async (
       return false;
     }
     
+    console.log("=== CREATE COMMENT DEBUG ===");
     console.log(`Creating comment for user: ${userId}, spot: ${spotId}, parent: ${parentId || 'none'}`);
+    console.log("Content:", content);
+    console.log("Image URLs received:", imageUrls);
+    
+    const commentData = {
+      user_id: userId,
+      spot_id: spotId,
+      content: content.trim(),
+      image_url: imageUrls && imageUrls.length > 0 ? imageUrls[0] : null, // backward compatibility
+      image_urls: imageUrls || null,
+      parent_id: parentId || null
+    };
+    
+    console.log("Comment data to insert:", commentData);
     
     const { error: insertError } = await supabase
       .from("astro_spot_comments")
-      .insert({
-        user_id: userId,
-        spot_id: spotId,
-        content: content.trim(),
-        image_url: imageUrls && imageUrls.length > 0 ? imageUrls[0] : null, // backward compatibility
-        image_urls: imageUrls || null,
-        parent_id: parentId || null
-      });
+      .insert(commentData);
     
     if (insertError) {
       console.error("Error posting comment:", insertError);
@@ -119,6 +137,7 @@ export const createComment = async (
     }
     
     console.log("Comment created successfully");
+    console.log("=== CREATE COMMENT DEBUG END ===");
     return true;
   } catch (err) {
     console.error("Exception in createComment:", err);

@@ -89,6 +89,17 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
             )}
             
             {/* Image attachments */}
+            {(() => {
+              console.log("=== DISPLAY DEBUG ===");
+              console.log("Comment ID:", comment.id);
+              console.log("Comment image_urls:", comment.image_urls);
+              console.log("Comment image_url:", comment.image_url);
+              console.log("Has image_urls array:", Array.isArray(comment.image_urls));
+              console.log("Image_urls length:", comment.image_urls?.length);
+              console.log("=== DISPLAY DEBUG END ===");
+              return null;
+            })()}
+            
             {(comment.image_urls && comment.image_urls.length > 0) ? (
               <div className={`grid gap-2 mb-3 ${comment.image_urls.length === 1 ? 'grid-cols-1 max-w-sm' : comment.image_urls.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
                 {comment.image_urls.map((url, idx) => (
