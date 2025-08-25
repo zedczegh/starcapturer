@@ -4,6 +4,7 @@ export interface Comment {
   content: string;
   created_at: string;
   image_url?: string | null;
+  image_urls?: string[] | null;
   profiles?: {
     username: string | null;
     avatar_url: string | null;
@@ -11,3 +12,4 @@ export interface Comment {
   parent_id?: string | null;
   replies?: Comment[];
 }
+

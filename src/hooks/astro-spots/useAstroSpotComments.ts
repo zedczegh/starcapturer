@@ -84,10 +84,8 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
         }
       }
       
-      // For now, store the first image URL for backward compatibility
-      const imageUrl = imageUrls.length > 0 ? imageUrls[0] : null;
-      
-      const success = await createComment(userId, spotId, content, imageUrl, parentId);
+      // Create the comment with all image URLs
+      const success = await createComment(userId, spotId, content, imageUrls.length > 0 ? imageUrls : null, parentId);
       
       if (!success) {
         toast.error(parentId 

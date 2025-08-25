@@ -83,15 +83,29 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
             {comment.content}
           </p>
           
-          {/* Image attachment */}
-          {comment.image_url && (
-            <div className="mt-2">
-              <img 
-                src={comment.image_url}
-                alt={t("Comment attachment", "评论附件")}
-                className="max-h-48 rounded-md border border-cosmic-700/50"
-              />
+          {/* Image attachments */}
+          {(comment.image_urls && comment.image_urls.length > 0) ? (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {comment.image_urls.map((url, idx) => (
+                <img
+                  key={idx}
+                  src={url}
+                  alt={t("Comment attachment", "评论附件") + ` ${idx + 1}`}
+                  className="max-h-48 w-full object-cover rounded-md border border-cosmic-700/50"
+                  loading="lazy"
+                />
+              ))}
             </div>
+          ) : (
+            comment.image_url && (
+              <div className="mt-2">
+                <img 
+                  src={comment.image_url}
+                  alt={t("Comment attachment", "评论附件")}
+                  className="max-h-48 rounded-md border border-cosmic-700/50"
+                />
+              </div>
+            )
           )}
         </div>
         
@@ -153,15 +167,29 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply }) => {
                       {reply.content}
                     </p>
                     
-                    {/* Reply image attachment */}
-                    {reply.image_url && (
-                      <div className="mt-2">
-                        <img 
-                          src={reply.image_url}
-                          alt={t("Reply attachment", "回复附件")}
-                          className="max-h-32 rounded-md border border-cosmic-700/50"
-                        />
+                    {/* Reply image attachments */}
+                    {(reply.image_urls && reply.image_urls.length > 0) ? (
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        {reply.image_urls.map((url, idx) => (
+                          <img
+                            key={idx}
+                            src={url}
+                            alt={t("Reply attachment", "回复附件") + ` ${idx + 1}`}
+                            className="max-h-32 w-full object-cover rounded-md border border-cosmic-700/50"
+                            loading="lazy"
+                          />
+                        ))}
                       </div>
+                    ) : (
+                      reply.image_url && (
+                        <div className="mt-2">
+                          <img 
+                            src={reply.image_url}
+                            alt={t("Reply attachment", "回复附件")}
+                            className="max-h-32 rounded-md border border-cosmic-700/50"
+                          />
+                        </div>
+                      )
                     )}
                   </div>
                 </div>

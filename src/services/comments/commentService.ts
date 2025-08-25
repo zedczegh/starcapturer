@@ -17,6 +17,7 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
         content,
         created_at,
         image_url,
+        image_urls,
         user_id,
         parent_id
       `)
@@ -55,7 +56,8 @@ export const fetchComments = async (spotId: string): Promise<Comment[]> => {
       id: comment.id,
       content: comment.content,
       created_at: comment.created_at,
-      image_url: comment.image_url,
+      image_url: comment.image_url || (comment.image_urls && comment.image_urls.length > 0 ? comment.image_urls[0] : null),
+      image_urls: comment.image_urls || null,
       parent_id: comment.parent_id,
       profiles: profilesMap[comment.user_id] || { username: null, avatar_url: null },
       replies: [] // Initialize empty replies array for each comment
@@ -88,13 +90,13 @@ export const createComment = async (
   userId: string,
   spotId: string,
   content: string,
-  imageUrl: string | null,
+  imageUrls: string[] | null,
   parentId?: string | null
 ): Promise<boolean> => {
   try {
-    // Validate that content is not empty if image is being added
-    if (!content.trim() && imageUrl) {
-      console.error("Comment content cannot be empty when uploading an image");
+    // Allow image-only comments; require either text or at least one image
+    if (!content.trim() && (!imageUrls || imageUrls.length === 0)) {
+      console.error("Comment must have text or at least one image");
       return false;
     }
     
@@ -106,7 +108,8 @@ export const createComment = async (
         user_id: userId,
         spot_id: spotId,
         content: content.trim(),
-        image_url: imageUrl,
+        image_url: imageUrls && imageUrls.length > 0 ? imageUrls[0] : null, // backward compatibility
+        image_urls: imageUrls || null,
         parent_id: parentId || null
       });
     

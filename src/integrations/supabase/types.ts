@@ -88,6 +88,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          image_urls: string[] | null
           parent_id: string | null
           spot_id: string
           updated_at: string
@@ -98,6 +99,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          image_urls?: string[] | null
           parent_id?: string | null
           spot_id: string
           updated_at?: string
@@ -108,6 +110,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          image_urls?: string[] | null
           parent_id?: string | null
           spot_id?: string
           updated_at?: string
