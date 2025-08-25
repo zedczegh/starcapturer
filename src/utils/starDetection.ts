@@ -1,6 +1,6 @@
 /**
  * Advanced star detection utilities for astronomy images
- * Implements algorithms similar to StarNet and StarXTerminator
+ * Implements sophisticated algorithms inspired by StarXTerminator
  */
 
 export interface DetectedStar {
@@ -10,6 +10,8 @@ export interface DetectedStar {
   size: number;
   color: { r: number; g: number; b: number };
   signal: number; // Signal-to-noise ratio
+  confidence: number; // Detection confidence (0-1)
+  type: 'point' | 'extended' | 'saturated'; // Star classification
 }
 
 export interface StarDetectionSettings {
@@ -21,11 +23,11 @@ export interface StarDetectionSettings {
 }
 
 const DEFAULT_SETTINGS: StarDetectionSettings = {
-  threshold: 15, // Much lower for faint stars
-  minStarSize: 1,
-  maxStarSize: 30,
-  sigma: 0.8, // Less aggressive noise reduction
-  sensitivity: 0.3 // More sensitive detection
+  threshold: 8, // Lower threshold for faint stars
+  minStarSize: 0.5,
+  maxStarSize: 50,
+  sigma: 0.5, // Minimal noise reduction to preserve star details
+  sensitivity: 0.6 // High sensitivity detection
 };
 
 /**
@@ -109,77 +111,385 @@ function getLuminance(r: number, g: number, b: number): number {
 }
 
 /**
- * Find local maxima (potential stars) with adaptive threshold
+ * Multi-scale star detection using morphological operations
+ * Inspired by StarXTerminator's approach
  */
-function findLocalMaxima(
+function detectStarsMultiScale(
   imageData: ImageData,
-  threshold: number,
-  minSize: number,
-  maxSize: number
-): Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number } }> {
+  settings: StarDetectionSettings
+): Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number }; confidence: number; type: 'point' | 'extended' | 'saturated' }> {
   const { data, width, height } = imageData;
-  const maxima: Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number } }> = [];
+  const stars: Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number }; confidence: number; type: 'point' | 'extended' | 'saturated' }> = [];
 
-  // Calculate adaptive threshold based on image statistics
-  let totalLuminance = 0;
-  let pixelCount = 0;
+  // Calculate background statistics
+  const backgroundStats = calculateBackgroundStatistics(imageData);
+  const dynamicThreshold = backgroundStats.median + (backgroundStats.mad * 5); // 5-sigma detection
+
+  console.log(`Background: median=${backgroundStats.median.toFixed(2)}, MAD=${backgroundStats.mad.toFixed(2)}, threshold=${dynamicThreshold.toFixed(2)}`);
+
+  // Multi-scale detection with different kernel sizes
+  const scales = [1, 2, 3, 5]; // Different star sizes to detect
   
-  for (let i = 0; i < data.length; i += 4) {
-    const luminance = getLuminance(data[i], data[i + 1], data[i + 2]);
-    totalLuminance += luminance;
-    pixelCount++;
+  for (const scale of scales) {
+    const detectedAtScale = detectStarsAtScale(imageData, scale, dynamicThreshold, settings);
+    stars.push(...detectedAtScale);
   }
+
+  // Remove duplicates and merge nearby detections
+  return mergeDuplicateDetections(stars, 3);
+}
+
+/**
+ * Calculate robust background statistics using median and MAD
+ */
+function calculateBackgroundStatistics(imageData: ImageData): { median: number; mad: number; mean: number } {
+  const { data } = imageData;
+  const values: number[] = [];
+
+  // Sample every 4th pixel to speed up computation
+  for (let i = 0; i < data.length; i += 16) {
+    const luminance = getLuminance(data[i], data[i + 1], data[i + 2]);
+    values.push(luminance);
+  }
+
+  values.sort((a, b) => a - b);
   
-  const avgLuminance = totalLuminance / pixelCount;
-  const adaptiveThreshold = Math.max(threshold, avgLuminance * 1.5);
+  const median = values[Math.floor(values.length / 2)];
+  const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+  
+  // Calculate Median Absolute Deviation (MAD)
+  const deviations = values.map(val => Math.abs(val - median));
+  deviations.sort((a, b) => a - b);
+  const mad = deviations[Math.floor(deviations.length / 2)] * 1.4826; // Scale factor for normal distribution
 
-  console.log(`Image stats: avg=${avgLuminance.toFixed(2)}, threshold=${adaptiveThreshold.toFixed(2)}`);
+  return { median, mad, mean };
+}
 
-  for (let y = Math.max(minSize, 2); y < height - Math.max(minSize, 2); y++) {
-    for (let x = Math.max(minSize, 2); x < width - Math.max(minSize, 2); x++) {
+/**
+ * Detect stars at a specific scale using morphological operations
+ */
+function detectStarsAtScale(
+  imageData: ImageData, 
+  scale: number, 
+  threshold: number,
+  settings: StarDetectionSettings
+): Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number }; confidence: number; type: 'point' | 'extended' | 'saturated' }> {
+  const { data, width, height } = imageData;
+  const stars: Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number }; confidence: number; type: 'point' | 'extended' | 'saturated' }> = [];
+  
+  // Create morphological kernel
+  const kernel = createCircularKernel(scale);
+  
+  // Apply top-hat transform to enhance point sources
+  const topHat = morphologicalTopHat(imageData, kernel);
+  
+  // Find local maxima in the enhanced image
+  const stepSize = Math.max(1, Math.floor(scale / 2));
+  
+  for (let y = scale * 2; y < height - scale * 2; y += stepSize) {
+    for (let x = scale * 2; x < width - scale * 2; x += stepSize) {
       const idx = (y * width + x) * 4;
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
-      const luminance = getLuminance(r, g, b);
-
-      // Use adaptive threshold
-      if (luminance < adaptiveThreshold) continue;
-
-      // Check if this is a local maximum with smaller radius for better detection
-      let isMaximum = true;
-      const checkRadius = Math.min(3, Math.max(1, minSize));
-
-      for (let dy = -checkRadius; dy <= checkRadius && isMaximum; dy++) {
-        for (let dx = -checkRadius; dx <= checkRadius && isMaximum; dx++) {
-          if (dx === 0 && dy === 0) continue;
-
-          const ny = y + dy;
-          const nx = x + dx;
-
-          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-            const nIdx = (ny * width + nx) * 4;
-            const nLuminance = getLuminance(data[nIdx], data[nIdx + 1], data[nIdx + 2]);
-            
-            if (nLuminance > luminance) {
-              isMaximum = false;
-            }
-          }
+      const luminance = getLuminance(topHat[idx], topHat[idx + 1], topHat[idx + 2]);
+      
+      if (luminance < threshold) continue;
+      
+      // Check if this is a local maximum
+      if (isLocalMaximum(topHat, width, height, x, y, scale * 2)) {
+        const originalIdx = (y * width + x) * 4;
+        const originalColor = {
+          r: data[originalIdx],
+          g: data[originalIdx + 1],
+          b: data[originalIdx + 2]
+        };
+        
+        // Calculate confidence based on peak sharpness and contrast
+        const confidence = calculateStarConfidence(imageData, x, y, scale, threshold);
+        
+        // Classify star type
+        const starType = classifyStar(imageData, x, y, scale, luminance);
+        
+        if (confidence > 0.3) { // Minimum confidence threshold
+          stars.push({
+            x,
+            y,
+            value: luminance,
+            color: originalColor,
+            confidence,
+            type: starType
+          });
         }
-      }
-
-      if (isMaximum) {
-        maxima.push({
-          x,
-          y,
-          value: luminance,
-          color: { r, g, b }
-        });
       }
     }
   }
+  
+  return stars;
+}
 
-  return maxima;
+/**
+ * Create circular morphological kernel
+ */
+function createCircularKernel(radius: number): boolean[][] {
+  const size = radius * 2 + 1;
+  const kernel: boolean[][] = [];
+  const center = radius;
+  
+  for (let y = 0; y < size; y++) {
+    kernel[y] = [];
+    for (let x = 0; x < size; x++) {
+      const distance = Math.sqrt((x - center) ** 2 + (y - center) ** 2);
+      kernel[y][x] = distance <= radius;
+    }
+  }
+  
+  return kernel;
+}
+
+/**
+ * Morphological top-hat transform to enhance point sources
+ */
+function morphologicalTopHat(imageData: ImageData, kernel: boolean[][]): Uint8ClampedArray {
+  const { data, width, height } = imageData;
+  const result = new Uint8ClampedArray(data.length);
+  const opened = morphologicalOpening(imageData, kernel);
+  
+  // Top-hat = original - opening
+  for (let i = 0; i < data.length; i += 4) {
+    result[i] = Math.max(0, data[i] - opened[i]); // R
+    result[i + 1] = Math.max(0, data[i + 1] - opened[i + 1]); // G
+    result[i + 2] = Math.max(0, data[i + 2] - opened[i + 2]); // B
+    result[i + 3] = data[i + 3]; // A
+  }
+  
+  return result;
+}
+
+/**
+ * Morphological opening (erosion followed by dilation)
+ */
+function morphologicalOpening(imageData: ImageData, kernel: boolean[][]): Uint8ClampedArray {
+  const eroded = morphologicalErosion(imageData, kernel);
+  const erodedImageData = new ImageData(eroded, imageData.width, imageData.height);
+  return morphologicalDilation(erodedImageData, kernel);
+}
+
+/**
+ * Morphological erosion
+ */
+function morphologicalErosion(imageData: ImageData, kernel: boolean[][]): Uint8ClampedArray {
+  const { data, width, height } = imageData;
+  const result = new Uint8ClampedArray(data.length);
+  const kernelRadius = Math.floor(kernel.length / 2);
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      let minR = 255, minG = 255, minB = 255;
+      
+      for (let ky = 0; ky < kernel.length; ky++) {
+        for (let kx = 0; kx < kernel[0].length; kx++) {
+          if (!kernel[ky][kx]) continue;
+          
+          const ny = y + ky - kernelRadius;
+          const nx = x + kx - kernelRadius;
+          
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            const nIdx = (ny * width + nx) * 4;
+            minR = Math.min(minR, data[nIdx]);
+            minG = Math.min(minG, data[nIdx + 1]);
+            minB = Math.min(minB, data[nIdx + 2]);
+          }
+        }
+      }
+      
+      result[idx] = minR;
+      result[idx + 1] = minG;
+      result[idx + 2] = minB;
+      result[idx + 3] = data[idx + 3];
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Morphological dilation
+ */
+function morphologicalDilation(imageData: ImageData, kernel: boolean[][]): Uint8ClampedArray {
+  const { data, width, height } = imageData;
+  const result = new Uint8ClampedArray(data.length);
+  const kernelRadius = Math.floor(kernel.length / 2);
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      let maxR = 0, maxG = 0, maxB = 0;
+      
+      for (let ky = 0; ky < kernel.length; ky++) {
+        for (let kx = 0; kx < kernel[0].length; kx++) {
+          if (!kernel[ky][kx]) continue;
+          
+          const ny = y + ky - kernelRadius;
+          const nx = x + kx - kernelRadius;
+          
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            const nIdx = (ny * width + nx) * 4;
+            maxR = Math.max(maxR, data[nIdx]);
+            maxG = Math.max(maxG, data[nIdx + 1]);
+            maxB = Math.max(maxB, data[nIdx + 2]);
+          }
+        }
+      }
+      
+      result[idx] = maxR;
+      result[idx + 1] = maxG;
+      result[idx + 2] = maxB;
+      result[idx + 3] = data[idx + 3];
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Check if point is local maximum
+ */
+function isLocalMaximum(data: Uint8ClampedArray, width: number, height: number, x: number, y: number, radius: number): boolean {
+  const centerIdx = (y * width + x) * 4;
+  const centerValue = getLuminance(data[centerIdx], data[centerIdx + 1], data[centerIdx + 2]);
+  
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      
+      const nx = x + dx;
+      const ny = y + dy;
+      
+      if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+        const nIdx = (ny * width + nx) * 4;
+        const nValue = getLuminance(data[nIdx], data[nIdx + 1], data[nIdx + 2]);
+        
+        if (nValue >= centerValue) {
+          return false;
+        }
+      }
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Calculate star detection confidence
+ */
+function calculateStarConfidence(imageData: ImageData, x: number, y: number, scale: number, threshold: number): number {
+  const { data, width, height } = imageData;
+  const centerIdx = (y * width + x) * 4;
+  const centerValue = getLuminance(data[centerIdx], data[centerIdx + 1], data[centerIdx + 2]);
+  
+  // Calculate radial profile to assess star-like characteristics
+  const radialProfile: number[] = [];
+  const maxRadius = scale * 3;
+  
+  for (let r = 1; r <= maxRadius; r++) {
+    let sum = 0;
+    let count = 0;
+    
+    // Sample points at this radius
+    const circumference = Math.max(8, Math.floor(2 * Math.PI * r));
+    for (let i = 0; i < circumference; i++) {
+      const angle = (2 * Math.PI * i) / circumference;
+      const px = Math.round(x + Math.cos(angle) * r);
+      const py = Math.round(y + Math.sin(angle) * r);
+      
+      if (px >= 0 && px < width && py >= 0 && py < height) {
+        const idx = (py * width + px) * 4;
+        sum += getLuminance(data[idx], data[idx + 1], data[idx + 2]);
+        count++;
+      }
+    }
+    
+    if (count > 0) {
+      radialProfile.push(sum / count);
+    }
+  }
+  
+  // Calculate confidence based on how well the profile matches a star
+  let confidence = 0;
+  
+  // Peak-to-background ratio
+  const background = radialProfile[radialProfile.length - 1] || 0;
+  const peakRatio = background > 0 ? centerValue / background : centerValue / 10;
+  confidence += Math.min(1, peakRatio / 10) * 0.4;
+  
+  // Radial decay (should decrease with distance)
+  let decayScore = 0;
+  for (let i = 1; i < radialProfile.length; i++) {
+    if (radialProfile[i] <= radialProfile[i - 1]) {
+      decayScore++;
+    }
+  }
+  confidence += (decayScore / Math.max(1, radialProfile.length - 1)) * 0.3;
+  
+  // Signal strength
+  const signalStrength = Math.min(1, centerValue / 255);
+  confidence += signalStrength * 0.3;
+  
+  return Math.min(1, confidence);
+}
+
+/**
+ * Classify star type based on characteristics
+ */
+function classifyStar(imageData: ImageData, x: number, y: number, scale: number, luminance: number): 'point' | 'extended' | 'saturated' {
+  if (luminance >= 250) {
+    return 'saturated';
+  }
+  
+  const measuredSize = calculateStarSize(imageData, x, y, scale * 2);
+  
+  if (measuredSize < 2) {
+    return 'point';
+  } else {
+    return 'extended';
+  }
+}
+
+/**
+ * Merge duplicate detections from multiple scales
+ */
+function mergeDuplicateDetections(
+  stars: Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number }; confidence: number; type: 'point' | 'extended' | 'saturated' }>,
+  mergeRadius: number
+): Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number }; confidence: number; type: 'point' | 'extended' | 'saturated' }> {
+  const merged: Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number }; confidence: number; type: 'point' | 'extended' | 'saturated' }> = [];
+  const used = new Set<number>();
+  
+  for (let i = 0; i < stars.length; i++) {
+    if (used.has(i)) continue;
+    
+    const star = stars[i];
+    const cluster = [star];
+    used.add(i);
+    
+    // Find nearby stars to merge
+    for (let j = i + 1; j < stars.length; j++) {
+      if (used.has(j)) continue;
+      
+      const other = stars[j];
+      const distance = Math.sqrt((star.x - other.x) ** 2 + (star.y - other.y) ** 2);
+      
+      if (distance <= mergeRadius) {
+        cluster.push(other);
+        used.add(j);
+      }
+    }
+    
+    // Create merged star (use highest confidence detection)
+    const best = cluster.reduce((prev, curr) => curr.confidence > prev.confidence ? curr : prev);
+    merged.push(best);
+  }
+  
+  return merged;
 }
 
 /**
@@ -217,51 +527,118 @@ function calculateStarSize(
 }
 
 /**
- * Filter stars by quality metrics with relaxed criteria
+ * Convert detected stars to final format with enhanced properties
  */
-function filterStarQuality(
-  stars: Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number } }>,
+function processDetectedStars(
+  stars: Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number }; confidence: number; type: 'point' | 'extended' | 'saturated' }>,
   imageData: ImageData,
   settings: StarDetectionSettings
 ): DetectedStar[] {
   const validStars: DetectedStar[] = [];
 
-  console.log(`Filtering ${stars.length} potential stars...`);
+  console.log(`Processing ${stars.length} detected stars...`);
 
   for (const star of stars) {
-    const size = calculateStarSize(imageData, star.x, star.y, settings.maxStarSize);
+    // Calculate precise star size
+    const size = calculatePreciseStarSize(imageData, star.x, star.y, star.type);
     
-    // More relaxed size filtering
-    if (size < 0.5 || size > settings.maxStarSize * 1.5) continue;
+    // Skip if size is out of reasonable bounds
+    if (size < settings.minStarSize || size > settings.maxStarSize) continue;
 
-    // Calculate signal-to-noise ratio with more forgiving threshold
+    // Calculate signal-to-noise ratio
     const signal = star.value;
     const noise = calculateLocalNoise(imageData, star.x, star.y, Math.max(3, size * 2));
-    const snr = noise > 0 ? signal / noise : signal / 10; // Fallback SNR
+    const snr = noise > 0 ? signal / noise : signal / 5;
 
-    // Much more relaxed SNR filtering
-    const minSNR = Math.max(1.2, settings.sensitivity * 5);
-    if (snr < minSNR) continue;
+    // Filter by confidence and SNR
+    if (star.confidence < 0.3 || snr < 2.0) continue;
 
-    // Calculate final star size based on brightness and actual measured size
-    const finalSize = Math.max(0.5, Math.min(8, size * (star.value / 255) + 0.5));
+    // Calculate final brightness with better scaling
+    const brightness = Math.max(0.05, Math.min(1.0, star.value / 255));
+    
+    // Adjust size based on star type and brightness
+    let finalSize = size;
+    switch (star.type) {
+      case 'point':
+        finalSize = Math.max(0.5, Math.min(3, size + brightness * 2));
+        break;
+      case 'extended':
+        finalSize = Math.max(2, Math.min(8, size + brightness * 3));
+        break;
+      case 'saturated':
+        finalSize = Math.max(4, Math.min(12, size + brightness * 4));
+        break;
+    }
 
     validStars.push({
       x: star.x,
       y: star.y,
-      brightness: Math.max(0.1, star.value / 255),
+      brightness,
       size: finalSize,
       color: star.color,
-      signal: snr
+      signal: snr,
+      confidence: star.confidence,
+      type: star.type
     });
   }
 
-  console.log(`Found ${validStars.length} valid stars after filtering`);
+  console.log(`Found ${validStars.length} valid stars after processing`);
 
-  // Sort by brightness and keep more stars
+  // Sort by confidence and brightness, then limit results
   return validStars
-    .sort((a, b) => b.brightness - a.brightness)
-    .slice(0, 5000); // Increased limit
+    .sort((a, b) => (b.confidence * b.brightness) - (a.confidence * a.brightness))
+    .slice(0, 3000); // Reasonable limit for performance
+}
+
+/**
+ * Calculate precise star size based on type
+ */
+function calculatePreciseStarSize(
+  imageData: ImageData,
+  centerX: number,
+  centerY: number,
+  type: 'point' | 'extended' | 'saturated'
+): number {
+  const { data, width, height } = imageData;
+  const centerIdx = (centerY * width + centerX) * 4;
+  const centerValue = getLuminance(data[centerIdx], data[centerIdx + 1], data[centerIdx + 2]);
+  
+  // Different size calculation based on star type
+  const maxRadius = type === 'point' ? 5 : type === 'extended' ? 10 : 15;
+  const threshold = centerValue * 0.1; // 10% of peak brightness
+  
+  let effectiveRadius = 0.5;
+  
+  // Measure radius where brightness drops below threshold
+  for (let r = 1; r <= maxRadius; r++) {
+    let averageBrightness = 0;
+    let count = 0;
+    
+    // Sample points at this radius
+    const samples = Math.max(8, Math.floor(2 * Math.PI * r));
+    for (let i = 0; i < samples; i++) {
+      const angle = (2 * Math.PI * i) / samples;
+      const x = Math.round(centerX + Math.cos(angle) * r);
+      const y = Math.round(centerY + Math.sin(angle) * r);
+      
+      if (x >= 0 && x < width && y >= 0 && y < height) {
+        const idx = (y * width + x) * 4;
+        averageBrightness += getLuminance(data[idx], data[idx + 1], data[idx + 2]);
+        count++;
+      }
+    }
+    
+    if (count > 0) {
+      averageBrightness /= count;
+      if (averageBrightness >= threshold) {
+        effectiveRadius = r;
+      } else {
+        break;
+      }
+    }
+  }
+  
+  return Math.max(0.5, effectiveRadius);
 }
 
 /**
@@ -303,7 +680,7 @@ function calculateLocalNoise(
 }
 
 /**
- * Main star detection function
+ * Main star detection function with advanced multi-scale approach
  */
 export async function detectStarsFromImage(
   imageElement: HTMLImageElement,
@@ -311,6 +688,8 @@ export async function detectStarsFromImage(
 ): Promise<DetectedStar[]> {
   return new Promise((resolve, reject) => {
     try {
+      console.log('Starting advanced star detection...');
+      
       // Create canvas and draw image
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -326,32 +705,30 @@ export async function detectStarsFromImage(
 
       // Get image data
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      console.log(`Processing image: ${canvas.width}x${canvas.height}`);
 
-      // Apply Gaussian blur to reduce noise
+      // Apply minimal Gaussian blur to reduce noise while preserving star details
       const blurredData = applyGaussianBlur(imageData, settings.sigma);
 
-      // Find local maxima (potential stars)
-      const maxima = findLocalMaxima(
-        blurredData,
-        settings.threshold,
-        settings.minStarSize,
-        settings.maxStarSize
-      );
+      // Multi-scale star detection using morphological operations
+      const rawDetections = detectStarsMultiScale(blurredData, settings);
+      console.log(`Multi-scale detection found ${rawDetections.length} candidates`);
 
-      // Filter and validate stars
-      const detectedStars = filterStarQuality(maxima, imageData, settings);
+      // Process and filter detections
+      const detectedStars = processDetectedStars(rawDetections, imageData, settings);
 
-      console.log(`Detected ${detectedStars.length} stars from ${maxima.length} candidates`);
+      console.log(`Final result: ${detectedStars.length} high-quality stars detected`);
       
       resolve(detectedStars);
     } catch (error) {
+      console.error('Star detection error:', error);
       reject(error);
     }
   });
 }
 
 /**
- * Create separated star and nebula images
+ * Create separated star and nebula images using advanced techniques
  */
 export async function separateStarsAndNebula(
   imageElement: HTMLImageElement,
@@ -359,6 +736,8 @@ export async function separateStarsAndNebula(
 ): Promise<{ starImage: string; nebulaImage: string }> {
   return new Promise((resolve, reject) => {
     try {
+      console.log('Starting advanced star-nebula separation...');
+      
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
@@ -370,73 +749,237 @@ export async function separateStarsAndNebula(
       canvas.width = imageElement.naturalWidth;
       canvas.height = imageElement.naturalHeight;
 
-      // Create star-only image
+      // Create precise star mask
+      const starMask = createPreciseStarMask(canvas.width, canvas.height, detectedStars);
+      
+      // Generate star-only image with realistic appearance
       ctx.fillStyle = 'black';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Draw detected stars
+      // Render stars with proper PSF (Point Spread Function)
       for (const star of detectedStars) {
-        const gradient = ctx.createRadialGradient(
-          star.x, star.y, 0,
-          star.x, star.y, star.size * 2
-        );
-        
-        const { r, g, b } = star.color;
-        gradient.addColorStop(0, `rgb(${r}, ${g}, ${b})`);
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        
-        ctx.fillStyle = gradient;
-        ctx.fillRect(
-          star.x - star.size * 2,
-          star.y - star.size * 2,
-          star.size * 4,
-          star.size * 4
-        );
+        renderStarWithPSF(ctx, star);
       }
       
       const starImage = canvas.toDataURL('image/png');
 
-      // Create nebula image (original with stars subtracted)
+      // Create nebula image using sophisticated star removal
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(imageElement, 0, 0);
       
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
+      const nebulaData = removeStarsFromImage(imageData, detectedStars, starMask);
+      
+      ctx.putImageData(nebulaData, 0, 0);
+      const nebulaImage = canvas.toDataURL('image/png');
 
-      // Subtract stars from original image
-      for (const star of detectedStars) {
-        const radius = star.size * 3;
+      console.log('Star-nebula separation completed');
+      resolve({ starImage, nebulaImage });
+    } catch (error) {
+      console.error('Separation error:', error);
+      reject(error);
+    }
+  });
+}
+
+/**
+ * Create precise star mask for better separation
+ */
+function createPreciseStarMask(width: number, height: number, stars: DetectedStar[]): Float32Array {
+  const mask = new Float32Array(width * height);
+  
+  for (const star of stars) {
+    const radius = Math.max(3, star.size * 4);
+    const centerX = Math.round(star.x);
+    const centerY = Math.round(star.y);
+    
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const x = centerX + dx;
+        const y = centerY + dy;
         
-        for (let dy = -radius; dy <= radius; dy++) {
-          for (let dx = -radius; dx <= radius; dx++) {
-            const x = Math.round(star.x + dx);
-            const y = Math.round(star.y + dy);
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const maskValue = Math.max(0, Math.min(1, 1 - (distance / radius)));
+          const idx = y * width + x;
+          
+          // Use maximum mask value for overlapping stars
+          mask[idx] = Math.max(mask[idx], maskValue * star.confidence);
+        }
+      }
+    }
+  }
+  
+  return mask;
+}
+
+/**
+ * Render star with realistic Point Spread Function
+ */
+function renderStarWithPSF(ctx: CanvasRenderingContext2D, star: DetectedStar) {
+  const { x, y, size, color, brightness, type } = star;
+  
+  // Create realistic star appearance based on type
+  let coreSize = size;
+  let haloSize = size * 2;
+  
+  switch (type) {
+    case 'point':
+      coreSize = Math.max(0.5, size * 0.8);
+      haloSize = size * 1.5;
+      break;
+    case 'extended':
+      coreSize = size;
+      haloSize = size * 2.5;
+      break;
+    case 'saturated':
+      coreSize = size * 1.2;
+      haloSize = size * 3;
+      break;
+  }
+  
+  // Core brightness
+  const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, coreSize);
+  const { r, g, b } = color;
+  
+  coreGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness})`);
+  coreGradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${brightness * 0.8})`);
+  coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.3})`);
+  
+  ctx.fillStyle = coreGradient;
+  ctx.fillRect(x - coreSize, y - coreSize, coreSize * 2, coreSize * 2);
+  
+  // Halo effect
+  const haloGradient = ctx.createRadialGradient(x, y, coreSize, x, y, haloSize);
+  haloGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness * 0.2})`);
+  haloGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  
+  ctx.fillStyle = haloGradient;
+  ctx.fillRect(x - haloSize, y - haloSize, haloSize * 2, haloSize * 2);
+  
+  // Diffraction spikes for bright stars
+  if (brightness > 0.7 && type !== 'point') {
+    renderDiffractionSpikes(ctx, star);
+  }
+}
+
+/**
+ * Render diffraction spikes for bright stars
+ */
+function renderDiffractionSpikes(ctx: CanvasRenderingContext2D, star: DetectedStar) {
+  const { x, y, size, color, brightness } = star;
+  const spikeLength = size * 8;
+  const spikeWidth = Math.max(1, size * 0.3);
+  
+  ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${brightness * 0.4})`;
+  ctx.lineWidth = spikeWidth;
+  ctx.lineCap = 'round';
+  
+  // Vertical spike
+  ctx.beginPath();
+  ctx.moveTo(x, y - spikeLength);
+  ctx.lineTo(x, y + spikeLength);
+  ctx.stroke();
+  
+  // Horizontal spike
+  ctx.beginPath();
+  ctx.moveTo(x - spikeLength, y);
+  ctx.lineTo(x + spikeLength, y);
+  ctx.stroke();
+}
+
+/**
+ * Remove stars from image using sophisticated inpainting
+ */
+function removeStarsFromImage(imageData: ImageData, stars: DetectedStar[], mask: Float32Array): ImageData {
+  const { data, width, height } = imageData;
+  const result = new ImageData(new Uint8ClampedArray(data), width, height);
+  const resultData = result.data;
+  
+  // For each star, perform local background estimation and inpainting
+  for (const star of stars) {
+    const radius = Math.max(5, star.size * 5);
+    const centerX = Math.round(star.x);
+    const centerY = Math.round(star.y);
+    
+    // Estimate local background
+    const background = estimateLocalBackground(imageData, centerX, centerY, radius * 2, radius * 3);
+    
+    // Apply inpainting within star region
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const x = centerX + dx;
+        const y = centerY + dy;
+        
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance <= radius) {
+            const idx = (y * width + x) * 4;
+            const maskIdx = y * width + x;
+            const maskValue = mask[maskIdx];
             
-            if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
-              const distance = Math.sqrt(dx * dx + dy * dy);
+            if (maskValue > 0.1) {
+              // Blend with background based on mask strength
+              const blendFactor = Math.min(1, maskValue);
               
-              if (distance <= radius) {
-                const idx = (y * canvas.width + x) * 4;
-                const falloff = Math.max(0, 1 - (distance / radius));
-                
-                // Reduce brightness based on star intensity and distance
-                const reduction = star.brightness * falloff * 0.8;
-                
-                data[idx] = Math.max(0, data[idx] - data[idx] * reduction);
-                data[idx + 1] = Math.max(0, data[idx + 1] - data[idx + 1] * reduction);
-                data[idx + 2] = Math.max(0, data[idx + 2] - data[idx + 2] * reduction);
-              }
+              resultData[idx] = lerp(data[idx], background.r, blendFactor);
+              resultData[idx + 1] = lerp(data[idx + 1], background.g, blendFactor);
+              resultData[idx + 2] = lerp(data[idx + 2], background.b, blendFactor);
             }
           }
         }
       }
-
-      ctx.putImageData(imageData, 0, 0);
-      const nebulaImage = canvas.toDataURL('image/png');
-
-      resolve({ starImage, nebulaImage });
-    } catch (error) {
-      reject(error);
     }
-  });
+  }
+  
+  return result;
+}
+
+/**
+ * Estimate local background color around a point
+ */
+function estimateLocalBackground(
+  imageData: ImageData, 
+  centerX: number, 
+  centerY: number, 
+  innerRadius: number, 
+  outerRadius: number
+): { r: number; g: number; b: number } {
+  const { data, width, height } = imageData;
+  const samples: { r: number; g: number; b: number }[] = [];
+  
+  // Sample points in annulus between inner and outer radius
+  for (let angle = 0; angle < Math.PI * 2; angle += 0.2) {
+    for (let r = innerRadius; r <= outerRadius; r += 2) {
+      const x = Math.round(centerX + Math.cos(angle) * r);
+      const y = Math.round(centerY + Math.sin(angle) * r);
+      
+      if (x >= 0 && x < width && y >= 0 && y < height) {
+        const idx = (y * width + x) * 4;
+        samples.push({
+          r: data[idx],
+          g: data[idx + 1],
+          b: data[idx + 2]
+        });
+      }
+    }
+  }
+  
+  if (samples.length === 0) {
+    return { r: 0, g: 0, b: 0 };
+  }
+  
+  // Use median for robust background estimation
+  samples.sort((a, b) => getLuminance(a.r, a.g, a.b) - getLuminance(b.r, b.g, b.b));
+  const medianIdx = Math.floor(samples.length / 2);
+  
+  return samples[medianIdx];
+}
+
+/**
+ * Linear interpolation helper
+ */
+function lerp(a: number, b: number, t: number): number {
+  return Math.round(a + (b - a) * t);
 }
