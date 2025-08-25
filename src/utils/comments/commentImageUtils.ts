@@ -9,42 +9,11 @@ import { v4 as uuidv4 } from 'uuid';
  */
 export const ensureCommentImagesBucket = async (): Promise<boolean> => {
   try {
-    console.log("Checking if comment_images bucket exists...");
-    
-    // First check if the bucket exists
-    const { data: buckets, error: listError } = await supabase.storage
-      .listBuckets();
-      
-    if (listError) {
-      console.error("Error listing buckets:", listError);
-      return false;
-    }
-    
-    // Check if our bucket exists in the list
-    const bucketExists = buckets.some(bucket => bucket.name === 'comment_images');
-    
-    if (!bucketExists) {
-      console.log("comment_images bucket doesn't exist, attempting to access anyway");
-    } else {
-      console.log("comment_images bucket exists");
-    }
-    
-    // Try to access the bucket (even if it doesn't exist)
-    const { error } = await supabase.storage
-      .from('comment_images')
-      .list('');
-      
-    if (error) {
-      console.error("Error accessing comment_images bucket:", error);
-      return false;
-    }
-    
-    // If we got here, the bucket exists and we have permissions
-    console.log("comment_images bucket is accessible");
+    // Assume the bucket exists; avoid admin APIs from the client.
+    // We'll rely on storage policies for access control.
     return true;
-  } catch (error) {
-    console.error("Exception checking comment_images bucket:", error);
-    return false;
+  } catch {
+    return true;
   }
 };
 
