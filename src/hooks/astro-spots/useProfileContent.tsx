@@ -58,7 +58,8 @@ export const useProfileContent = (
     commentSending,
     comments,
     submitComment,
-    fetchComments
+    fetchComments,
+    deleteComment
   } = useAstroSpotComments(spotId, t);
 
   // Function to trigger a refresh of all data with rate limiting
@@ -180,6 +181,12 @@ export const useProfileContent = (
     triggerRefresh();
   }, [refetchImages, triggerRefresh]);
 
+  // Handler for deleting a comment
+  const handleCommentDelete = useCallback(async (commentId: string) => {
+    console.log(`Comment deletion starting for comment: ${commentId}`);
+    await deleteComment(commentId);
+  }, [deleteComment]);
+
   return {
     spot,
     isLoading,
@@ -200,7 +207,8 @@ export const useProfileContent = (
     handleMessageCreator,
     storageChecked,
     refreshData,
-    triggerRefresh
+    triggerRefresh,
+    deleteComment: handleCommentDelete
   };
 };
 
