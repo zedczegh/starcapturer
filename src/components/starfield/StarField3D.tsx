@@ -11,17 +11,18 @@ interface StarData {
   brightness: number;
   size: number;
   color3d: string;
+  layer?: string;
 }
 
 interface StarField3DProps {
   stars: StarData[];
   settings: {
+    type: string;
     speed: number;
     direction: string;
     movement: string;
     duration: number;
     depth: number;
-    starCount: number;
     brightness: number;
     fieldOfView: number;
   };
