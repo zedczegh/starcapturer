@@ -67,9 +67,9 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
           continue;
         }
         
-        // Validate file size (5MB limit)
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(t(`${file.name} must be less than 5MB`, `${file.name} 必须小于5MB`));
+        // Validate file size (60MB limit)
+        if (file.size > 60 * 1024 * 1024) {
+          toast.error(t(`${file.name} must be less than 60MB`, `${file.name} 必须小于60MB`));
           continue;
         }
         
