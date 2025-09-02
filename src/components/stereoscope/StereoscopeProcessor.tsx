@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Upload, Eye, Download, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
@@ -21,6 +22,9 @@ interface ProcessingParams {
     blue: number;
   };
   objectType: 'nebula' | 'galaxy' | 'planetary' | 'mixed';
+  // New: star preservation controls
+  starParallaxPx: number; // uniform star shift in pixels to preserve roundness
+  preserveStarShapes: boolean; // if true, override per-pixel disparity for stars
 }
 
 const StereoscopeProcessor: React.FC = () => {
@@ -44,7 +48,9 @@ const StereoscopeProcessor: React.FC = () => {
       green: 0.587,
       blue: 0.114
     },
-    objectType: 'nebula'
+    objectType: 'nebula',
+    starParallaxPx: 3,
+    preserveStarShapes: true,
   });
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +74,7 @@ const StereoscopeProcessor: React.FC = () => {
     width: number,
     height: number,
     params: ProcessingParams
-  ): ImageData => {
+  ): { depthMap: ImageData; starMask: Uint8ClampedArray } => {
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
     
@@ -222,7 +228,7 @@ const StereoscopeProcessor: React.FC = () => {
       depthImageData.data[i * 4 + 3] = 255;
     }
 
-    return depthImageData;
+    return { depthMap: depthImageData, starMask };
   }, []);
 
   const createStereoViews = useCallback((
@@ -231,7 +237,8 @@ const StereoscopeProcessor: React.FC = () => {
     depthMap: ImageData,
     width: number,
     height: number,
-    maxShift: number
+    params: ProcessingParams,
+    starMask: Uint8ClampedArray
   ): { left: ImageData; right: ImageData } => {
     const originalData = ctx.getImageData(0, 0, width, height);
     const leftData = new ImageData(width, height);
@@ -249,8 +256,11 @@ const StereoscopeProcessor: React.FC = () => {
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
-        const shift = Math.round((depthMap.data[idx * 4] / 255.0) * maxShift);
-        
+        const baseShift = (depthMap.data[idx * 4] / 255.0) * params.maxShift;
+        let shift = Math.round(baseShift);
+        if (params.preserveStarShapes && starMask[idx] === 255) {
+          shift = Math.round(params.starParallaxPx);
+        }
         // Left view: shift left (negative x)
         const xLeft = Math.max(0, x - shift);
         if (xLeft >= 0 && xLeft < width) {
@@ -366,7 +376,7 @@ const StereoscopeProcessor: React.FC = () => {
       const { width, height } = canvas;
 
       // Generate astrophotography depth map
-      const depthMap = generateAstroDepthMap(canvas, ctx, width, height, params);
+      const { depthMap, starMask } = generateAstroDepthMap(canvas, ctx, width, height, params);
       
       // Create depth map preview
       const depthCanvas = document.createElement('canvas');
@@ -377,7 +387,7 @@ const StereoscopeProcessor: React.FC = () => {
       setDepthMapUrl(depthCanvas.toDataURL());
 
       // Create stereo views
-      const { left, right } = createStereoViews(canvas, ctx, depthMap, width, height, params.maxShift);
+      const { left, right } = createStereoViews(canvas, ctx, depthMap, width, height, params, starMask);
 
       // Create side-by-side result
       const resultCanvas = document.createElement('canvas');
