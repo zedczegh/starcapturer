@@ -81,24 +81,106 @@ const StereoscopeProcessor: React.FC = () => {
     // Create weighted grayscale using astrophotography-specific weights
     const grayData = new Uint8ClampedArray(width * height);
     const starMask = new Uint8ClampedArray(width * height);
-    
+    const lumData = new Uint8ClampedArray(width * height);
+
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
-      
       // Weighted grayscale for astronomy (emphasize different wavelengths)
       const gray = Math.round(
         params.colorChannelWeights.red * r + 
         params.colorChannelWeights.green * g + 
         params.colorChannelWeights.blue * b
       );
-      grayData[i / 4] = gray;
-      
-      // Detect stars (bright point sources)
+      const idx = i / 4;
+      grayData[idx] = gray;
+      // Use max channel as a quick luminance proxy for star cores
       const brightness = Math.max(r, g, b);
-      starMask[i / 4] = brightness > params.starThreshold ? 255 : 0;
+      lumData[idx] = brightness;
+      starMask[idx] = brightness > params.starThreshold ? 255 : 0;
     }
+
+    // Diffraction-spike aware star mask expansion (preserve Newtonian cross patterns)
+    // 1) Robust stats on grayscale to detect spike lines
+    let sum = 0, sumSq = 0;
+    for (let i = 0; i < grayData.length; i++) { sum += grayData[i]; sumSq += grayData[i] * grayData[i]; }
+    const mean = sum / grayData.length;
+    const variance = Math.max(0, sumSq / grayData.length - mean * mean);
+    const std = Math.sqrt(variance);
+    const spikeThr = Math.min(255, mean + 1.5 * std);
+
+    // 2) Seed centers: bright local maxima above threshold to limit work
+    const seedIndices: number[] = [];
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
+        if (lumData[idx] <= params.starThreshold) continue;
+        const c = lumData[idx];
+        let isMax = true;
+        for (let dy = -1; dy <= 1 && isMax; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nIdx = (y + dy) * width + (x + dx);
+            if (lumData[nIdx] > c) { isMax = false; break; }
+          }
+        }
+        if (isMax) seedIndices.push(idx);
+      }
+    }
+
+    // 3) Extend mask along 0°, 45°, 90°, 135° directions with decay and early-stop
+    const dirs = [
+      { dx: 1, dy: 0 },   // 0°
+      { dx: 0, dy: 1 },   // 90°
+      { dx: 1, dy: 1 },   // 45°
+      { dx: 1, dy: -1 },  // 135°
+    ];
+    const maxLen = Math.max(10, Math.round(Math.min(width, height) * 0.02));
+
+    for (const idx of seedIndices) {
+      const cx = idx % width;
+      const cy = Math.floor(idx / width);
+      const coreGray = grayData[idx];
+      // Allow spike pixels to be dimmer than core
+      const minSpikeVal = Math.max(spikeThr, Math.round(coreGray * 0.25));
+      for (const d of dirs) {
+        let belowCount = 0;
+        for (let s = 1; s <= maxLen; s++) {
+          const nx = cx + d.dx * s;
+          const ny = cy + d.dy * s;
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height) break;
+          const nIdx = ny * width + nx;
+          const val = grayData[nIdx];
+          if (val >= minSpikeVal) {
+            starMask[nIdx] = 255;
+            belowCount = 0;
+          } else {
+            belowCount++;
+            if (belowCount >= 2) break; // stop this arm if 2 consecutive below threshold
+          }
+        }
+      }
+    }
+
+    // 4) Gentle dilation to include star halos and fill tiny gaps
+    const dilated = new Uint8ClampedArray(starMask);
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
+        if (starMask[idx] === 255) continue;
+        let any = false;
+        for (let dy = -1; dy <= 1 && !any; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const nIdx = (y + dy) * width + (x + dx);
+            if (starMask[nIdx] === 255) { any = true; break; }
+          }
+        }
+        if (any) dilated[idx] = 255;
+      }
+    }
+    starMask.set(dilated);
 
     // Create base depth map based on object type
     const depthData = new Uint8ClampedArray(width * height);
