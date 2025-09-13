@@ -75,6 +75,8 @@ const StereoscopeProcessor: React.FC = () => {
     height: number,
     params: ProcessingParams
   ): { depthMap: ImageData; starMask: Uint8ClampedArray } => {
+    // Use the advanced scientific algorithm
+    return generateScientificAstroDepthMap(canvas, ctx, width, height, params);
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
     
