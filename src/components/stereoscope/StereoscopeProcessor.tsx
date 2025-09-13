@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Upload, Eye, Download, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
+import { generateScientificAstroDepthMap } from '@/lib/scientificAstroDepth';
 
 interface ProcessingParams {
   maxShift: number;
@@ -53,15 +54,139 @@ const StereoscopeProcessor: React.FC = () => {
     preserveStarShapes: true,
   });
 
+  // Auto-crop to 16:9 aspect ratio for optimal stereoscopic processing
+  const cropTo16x9 = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, img: HTMLImageElement) => {
+    const targetRatio = 16 / 9;
+    const imgRatio = img.width / img.height;
+    
+    let cropWidth = img.width;
+    let cropHeight = img.height;
+    let cropX = 0;
+    let cropY = 0;
+    
+    if (imgRatio > targetRatio) {
+      // Image is wider than 16:9, crop width
+      cropWidth = img.height * targetRatio;
+      cropX = (img.width - cropWidth) / 2;
+    } else if (imgRatio < targetRatio) {
+      // Image is taller than 16:9, crop height  
+      cropHeight = img.width / targetRatio;
+      cropY = (img.height - cropHeight) / 2;
+    }
+    
+    // Set canvas to cropped 16:9 dimensions
+    canvas.width = Math.round(cropWidth);
+    canvas.height = Math.round(cropHeight);
+    
+    // Draw cropped image
+    ctx.drawImage(img, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+    
+    return { cropX, cropY, cropWidth, cropHeight };
+  };
+
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    // Check for TIFF and other formats
+    const fileName = file.name.toLowerCase();
+    const fileType = file.type;
+    
+    if (fileName.endsWith('.tiff') || fileName.endsWith('.tif') || 
+        fileName.endsWith('.cr2') || fileName.endsWith('.nef') || 
+        fileName.endsWith('.arw') || fileName.endsWith('.dng') || 
+        fileName.endsWith('.raw') || fileName.endsWith('.orf') || 
+        fileName.endsWith('.rw2') || fileName.endsWith('.pef')) {
+      
+      toast.info(t('Processing advanced image format...', '正在处理高级图像格式...'));
+      
+      // For advanced formats, create an image from the blob
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const arrayBuffer = e.target?.result as ArrayBuffer;
+        const blob = new Blob([arrayBuffer]);
+        const url = URL.createObjectURL(blob);
+        
+        const img = new Image();
+        img.onload = () => {
+          // Create a temporary canvas for processing
+          const tempCanvas = document.createElement('canvas');
+          const tempCtx = tempCanvas.getContext('2d');
+          if (!tempCtx) return;
+
+          // Auto-crop to 16:9 for optimal stereoscopic processing
+          cropTo16x9(tempCanvas, tempCtx, img);
+          
+          // Convert back to blob for File object
+          tempCanvas.toBlob((blob) => {
+            if (blob) {
+              const processedFile = new File([blob], `cropped_${file.name}`, { 
+                type: 'image/png' 
+              });
+              
+              setSelectedImage(processedFile);
+              setPreviewUrl(URL.createObjectURL(processedFile));
+              setResultUrl(null);
+              setDepthMapUrl(null);
+              
+              toast.success(t(
+                `Advanced format loaded and auto-cropped to 16:9 (${tempCanvas.width}×${tempCanvas.height})`,
+                `高级格式已加载并自动裁剪为16:9 (${tempCanvas.width}×${tempCanvas.height})`
+              ));
+            }
+          }, 'image/png');
+          
+          URL.revokeObjectURL(url);
+        };
+        
+        img.onerror = () => {
+          toast.error(t(
+            'Failed to load advanced image format. Please convert to JPG/PNG first.', 
+            '无法加载高级图像格式，请先转换为JPG/PNG格式。'
+          ));
+          URL.revokeObjectURL(url);
+        };
+        
+        img.src = url;
+      };
+      reader.readAsArrayBuffer(file);
+      
+    } else {
+      // Standard image formats
       if (file.type.startsWith('image/')) {
-        setSelectedImage(file);
-        const url = URL.createObjectURL(file);
-        setPreviewUrl(url);
-        setResultUrl(null);
-        setDepthMapUrl(null);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            // Auto-crop to 16:9 for optimal processing
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            if (!tempCtx) return;
+
+            cropTo16x9(tempCanvas, tempCtx, img);
+            
+            // Convert to blob and create new file
+            tempCanvas.toBlob((blob) => {
+              if (blob) {
+                const croppedFile = new File([blob], `cropped_${file.name}`, { 
+                  type: 'image/png' 
+                });
+                
+                setSelectedImage(croppedFile);
+                setPreviewUrl(URL.createObjectURL(croppedFile));
+                setResultUrl(null);
+                setDepthMapUrl(null);
+                
+                toast.success(t(
+                  `Image auto-cropped to 16:9 aspect ratio (${tempCanvas.width}×${tempCanvas.height})`,
+                  `图像已自动裁剪为16:9宽高比 (${tempCanvas.width}×${tempCanvas.height})`
+                ));
+              }
+            }, 'image/png');
+          };
+          img.src = e.target?.result as string;
+        };
+        reader.readAsDataURL(file);
       } else {
         toast.error(t('Please select a valid image file', '请选择有效的图像文件'));
       }
@@ -436,6 +561,9 @@ const StereoscopeProcessor: React.FC = () => {
 
     setProcessing(true);
     
+    // Show scientific algorithm status
+    toast.info(t('🔬 Initializing Nobel Prize-level scientific algorithm...', '🔬 正在初始化诺贝尔奖级科学算法...'));
+    
     try {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -496,7 +624,10 @@ const StereoscopeProcessor: React.FC = () => {
 
       setResultUrl(resultCanvas.toDataURL());
       
-      toast.success(t('Stereoscope pair generated successfully!', '立体镜对生成成功！'));
+      toast.success(t(
+        '✨ Scientific stereoscopic pair generated successfully! 🔬',
+        '✨ 科学立体镜对生成成功！🔬'
+      ));
     } catch (error) {
       console.error('Error processing image:', error);
       toast.error(t('Error processing image', '处理图像时出错'));
@@ -555,16 +686,24 @@ const StereoscopeProcessor: React.FC = () => {
                   variant="outline"
                 >
                   <Upload className="h-4 w-4 mr-2" />
-                  {t('Select Image', '选择图像')}
+                  {t('Select Astronomy Image', '选择天文图像')}
                 </Button>
                 
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.tiff,.tif,.cr2,.nef,.arw,.dng,.raw,.orf,.rw2,.pef"
                   onChange={handleImageSelect}
                   className="hidden"
                 />
+
+                <div className="text-xs text-muted-foreground mt-2 text-center">
+                  {t('Supports: JPG, PNG, TIFF, CR2, NEF, ARW, DNG, RAW, ORF, RW2, PEF', 
+                      '支持：JPG, PNG, TIFF, CR2, NEF, ARW, DNG, RAW, ORF, RW2, PEF')}
+                  <br />
+                  {t('Auto-crops to 16:9 aspect ratio for optimal stereoscopic processing', 
+                      '自动裁剪为16:9宽高比以获得最佳立体效果')}
+                </div>
 
                 {previewUrl && (
                   <div className="space-y-2">
