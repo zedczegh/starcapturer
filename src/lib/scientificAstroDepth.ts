@@ -104,13 +104,30 @@ function analyzeSpectralEnergyDistribution(
     params.colorChannelWeights.blue * b;
   
   // Depth factor based on astronomical principles
-  // Hot bright objects (stars) = background
+  // Stellar depth based on brightness and color temperature
+  // Hot bright stars can be at various distances
   // Cool extended objects (nebulae) = foreground
   let depthFactor = 1.0;
   
   if (luminosity > params.starThreshold) {
-    // Likely stellar source - place at background
-    depthFactor = 0.1 + 0.1 * Math.random(); // Add slight randomness
+    // Stellar source - depth varies by brightness and temperature
+    // Brighter stars are often closer, but add realistic variation
+    const brightnessFactor = Math.min(1.0, luminosity / 255.0);
+    const temperatureFactor = Math.min(1.0, (temperature - 3000) / 10000);
+    
+    // Create depth variation: some stars closer, some farther
+    // Brighter stars have higher chance of being closer
+    const randomFactor = Math.random();
+    if (brightnessFactor > 0.8 && randomFactor < 0.3) {
+      // Very bright stars - some are foreground
+      depthFactor = 0.4 + 0.3 * randomFactor;
+    } else if (brightnessFactor > 0.6 && randomFactor < 0.2) {
+      // Medium bright stars - occasionally mid-ground
+      depthFactor = 0.2 + 0.2 * randomFactor;
+    } else {
+      // Most stars remain in background with variation
+      depthFactor = 0.05 + 0.15 * randomFactor;
+    }
   } else {
     // Extended emission - depth based on brightness and temperature
     const brightnessFactor = luminosity / 255.0;
@@ -268,8 +285,9 @@ export function generateScientificAstroDepthMap(
       const idx = y * width + x;
       
       if (starMask[idx] === 255) {
-        // Stars remain at background depth with slight randomization
-        depthData[idx] = 0.05 + 0.1 * Math.random();
+        // Stars use their pre-calculated depth from spectral analysis
+        // This allows some stars to be closer than nebulae
+        depthData[idx] = depthFactorMap[idx];
         continue;
       }
       

@@ -55,7 +55,10 @@ const StereoscopeProcessor: React.FC = () => {
   });
 
   // Add stereo spacing parameter
-  const [stereoSpacing, setStereoSpacing] = useState<number>(20);
+  const [stereoSpacing, setStereoSpacing] = useState<number>(60);
+  
+  // Add autocrop toggle
+  const [autoCrop, setAutoCrop] = useState<boolean>(false);
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -219,26 +222,28 @@ const StereoscopeProcessor: React.FC = () => {
         img.src = previewUrl!;
       });
 
-      // Auto-crop to 16:9 aspect ratio for optimal processing
+      // Optional auto-crop to 16:9 aspect ratio for optimal processing
       let finalWidth = img.width;
       let finalHeight = img.height;
       let cropX = 0;
       let cropY = 0;
       
-      const targetRatio = 16 / 9;
-      const currentRatio = finalWidth / finalHeight;
-      
-      if (Math.abs(currentRatio - targetRatio) > 0.1) {
-        if (currentRatio > targetRatio) {
-          // Image is wider than 16:9, crop width
-          finalWidth = Math.round(finalHeight * targetRatio);
-          cropX = (img.width - finalWidth) / 2;
-        } else {
-          // Image is taller than 16:9, crop height
-          finalHeight = Math.round(finalWidth / targetRatio);
-          cropY = (img.height - finalHeight) / 2;
+      if (autoCrop) {
+        const targetRatio = 16 / 9;
+        const currentRatio = finalWidth / finalHeight;
+        
+        if (Math.abs(currentRatio - targetRatio) > 0.1) {
+          if (currentRatio > targetRatio) {
+            // Image is wider than 16:9, crop width
+            finalWidth = Math.round(finalHeight * targetRatio);
+            cropX = (img.width - finalWidth) / 2;
+          } else {
+            // Image is taller than 16:9, crop height
+            finalHeight = Math.round(finalWidth / targetRatio);
+            cropY = (img.height - finalHeight) / 2;
+          }
+          toast.info(t('Auto-cropping to 16:9 for optimal processing', '自动裁剪为16:9以获得最佳处理效果'));
         }
-        toast.info(t('Auto-cropping to 16:9 for optimal processing', '自动裁剪为16:9以获得最佳处理效果'));
       }
 
       // Set canvas size
@@ -599,7 +604,7 @@ const StereoscopeProcessor: React.FC = () => {
                     </Button>
                   </CardTitle>
                   <CardDescription>
-                    {t('Brighter areas appear closer, darker areas further away. Stars are kept at background depth.', '较亮区域显示更近，较暗区域更远。恒星保持在背景深度。')}
+                    {t('Brighter areas appear closer, darker areas further away. Stars can now be at various depths.', '较亮区域显示更近，较暗区域更远。恒星现在可以处于不同深度。')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
