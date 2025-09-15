@@ -55,7 +55,7 @@ const StereoscopeProcessor: React.FC = () => {
   });
 
   // Add stereo spacing parameter
-  const [stereoSpacing, setStereoSpacing] = useState<number>(60);
+  const [stereoSpacing, setStereoSpacing] = useState<number>(300);
   
   // Add autocrop toggle
   const [autoCrop, setAutoCrop] = useState<boolean>(false);
@@ -207,12 +207,20 @@ const StereoscopeProcessor: React.FC = () => {
     setProcessing(true);
     
     try {
+      toast.info(t('Starting image processing...', '开始图像处理...'));
+      
+      // Use setTimeout to allow UI to update
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
       if (!ctx) {
         throw new Error('Could not get canvas context');
       }
+
+      toast.info(t('Loading and preparing image...', '加载并准备图像...'));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Load image
       const img = new Image();
@@ -253,9 +261,17 @@ const StereoscopeProcessor: React.FC = () => {
 
       const { width, height } = canvas;
 
+      toast.info(t('Analyzing astronomical structures...', '分析天文结构...'));
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Generate advanced scientific depth map
       toast.info(t('Initializing Nobel Prize-level scientific algorithm...', '初始化诺贝尔奖级科学算法...'));
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const { depthMap, starMask } = generateScientificAstroDepthMap(canvas, ctx, width, height, params);
+      
+      toast.info(t('Creating depth map visualization...', '创建深度图可视化...'));
+      await new Promise(resolve => setTimeout(resolve, 50));
       
       // Create depth map preview
       const depthCanvas = document.createElement('canvas');
@@ -265,8 +281,14 @@ const StereoscopeProcessor: React.FC = () => {
       depthCtx.putImageData(depthMap, 0, 0);
       setDepthMapUrl(depthCanvas.toDataURL());
 
+      toast.info(t('Generating stereoscopic views...', '生成立体视图...'));
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Create stereo views
       const { left, right } = createStereoViews(canvas, ctx, depthMap, width, height, params, starMask);
+
+      toast.info(t('Composing final stereoscopic pair...', '合成最终立体对...'));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Create side-by-side result with spacing
       const resultCanvas = document.createElement('canvas');
@@ -281,6 +303,9 @@ const StereoscopeProcessor: React.FC = () => {
       // Draw left and right views with spacing
       resultCtx.putImageData(left, 0, 0);
       resultCtx.putImageData(right, width + stereoSpacing, 0);
+
+      toast.info(t('Applying final adjustments...', '应用最终调整...'));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Apply contrast adjustment
       if (params.contrastAlpha !== 1.0) {
@@ -564,8 +589,8 @@ const StereoscopeProcessor: React.FC = () => {
                     value={[stereoSpacing]}
                     onValueChange={([value]) => setStereoSpacing(value)}
                     min={0}
-                    max={100}
-                    step={5}
+                    max={600}
+                    step={10}
                     className="mt-2"
                   />
                   <p className="text-xs text-cosmic-400 mt-1">
