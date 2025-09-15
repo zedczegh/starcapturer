@@ -264,10 +264,11 @@ const StereoscopeProcessor: React.FC = () => {
       toast.info(t('Analyzing astronomical structures...', '分析天文结构...'));
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Generate advanced scientific depth map
-      toast.info(t('Initializing Nobel Prize-level scientific algorithm...', '初始化诺贝尔奖级科学算法...'));
+      // Generate advanced scientific depth map with automatic parameter detection
+      toast.info(t('Initializing Enhanced Nobel Prize-level Scientific Algorithm...', '初始化增强型诺贝尔奖级科学算法...'));
       await new Promise(resolve => setTimeout(resolve, 100));
       
+      // Pass user-adjusted parameters as overrides to the automatic system
       const { depthMap, starMask } = generateScientificAstroDepthMap(canvas, ctx, width, height, params);
       
       toast.info(t('Creating depth map visualization...', '创建深度图可视化...'));
