@@ -91,7 +91,7 @@ const StereoscopeProcessor: React.FC = () => {
     ];
     
     return supportedFormats.some(format => file.type.startsWith(format)) || 
-           file.name.toLowerCase().match(/\.(tiff?|cr2|nef|arw|dng|raw|orf|rw2|pef)$/);
+           !!file.name.toLowerCase().match(/\.(tiff?|cr2|nef|arw|dng|raw|orf|rw2|pef)$/);
   };
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
