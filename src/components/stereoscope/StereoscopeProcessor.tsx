@@ -5,10 +5,12 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Upload, Eye, Download, Loader2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Upload, Eye, Download, Loader2, Layers } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { generateScientificAstroDepthMap } from '@/lib/scientificAstroDepth';
+import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 
 interface ProcessingParams {
   maxShift: number;
@@ -23,19 +25,33 @@ interface ProcessingParams {
     blue: number;
   };
   objectType: 'nebula' | 'galaxy' | 'planetary' | 'mixed';
-  // New: star preservation controls
-  starParallaxPx: number; // uniform star shift in pixels to preserve roundness
-  preserveStarShapes: boolean; // if true, override per-pixel disparity for stars
+  starParallaxPx: number;
+  preserveStarShapes: boolean;
 }
 
 const StereoscopeProcessor: React.FC = () => {
   const { t } = useLanguage();
+  
+  // Mode selection
+  const [processingMode, setProcessingMode] = useState<'fast' | 'traditional'>('fast');
+  
+  // Fast mode states
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
+  // Traditional mode states  
+  const [starlessImage, setStarlessImage] = useState<File | null>(null);
+  const [starsImage, setStarsImage] = useState<File | null>(null);
+  const [starlessPreview, setStarlessPreview] = useState<string | null>(null);
+  const [starsPreview, setStarsPreview] = useState<string | null>(null);
+  
+  // Common states
   const [processing, setProcessing] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [depthMapUrl, setDepthMapUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const starlessInputRef = useRef<HTMLInputElement>(null);
+  const starsInputRef = useRef<HTMLInputElement>(null);
   
   const [params, setParams] = useState<ProcessingParams>({
     maxShift: 30,
@@ -59,28 +75,70 @@ const StereoscopeProcessor: React.FC = () => {
   
   // Add autocrop toggle
   const [autoCrop, setAutoCrop] = useState<boolean>(false);
+  
+  // Traditional mode parameters
+  const [traditionalParams, setTraditionalParams] = useState<TraditionalMorphParams>({
+    horizontalDisplace: 20,
+    starShiftAmount: 3,
+    luminanceBlur: 1.5,
+    contrastBoost: 1.2
+  });
+
+  const validateImageFile = (file: File): boolean => {
+    const supportedFormats = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
+      'image/tiff', 'image/tif'  // Added TIFF support
+    ];
+    
+    return supportedFormats.some(format => file.type.startsWith(format)) || 
+           file.name.toLowerCase().match(/\.(tiff?|cr2|nef|arw|dng|raw|orf|rw2|pef)$/);
+  };
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const supportedFormats = [
-        'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
-        'image/tiff', 'image/tif'  // Added TIFF support
-      ];
-      
-      if (supportedFormats.some(format => file.type.startsWith(format)) || file.name.toLowerCase().match(/\.(tiff?|cr2|nef|arw|dng|raw|orf|rw2|pef)$/)) {
+      if (validateImageFile(file)) {
         setSelectedImage(file);
         const url = URL.createObjectURL(file);
         setPreviewUrl(url);
         setResultUrl(null);
         setDepthMapUrl(null);
         
-        // Auto-crop to 16:9 aspect ratio
         if (file.name.toLowerCase().match(/\.(tiff?|cr2|nef|arw|dng|raw|orf|rw2|pef)$/)) {
           toast.info(t('Advanced format detected. Processing for optimal results...', '检测到高级格式。正在处理以获得最佳结果...'));
         }
       } else {
         toast.error(t('Please select a valid image file (JPEG, PNG, TIFF, RAW formats supported)', '请选择有效的图像文件（支持JPEG、PNG、TIFF、RAW格式）'));
+      }
+    }
+  };
+
+  const handleStarlessImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (validateImageFile(file)) {
+        setStarlessImage(file);
+        const url = URL.createObjectURL(file);
+        setStarlessPreview(url);
+        setResultUrl(null);
+        setDepthMapUrl(null);
+      } else {
+        toast.error(t('Please select a valid starless image file', '请选择有效的无星图像文件'));
+      }
+    }
+  };
+
+  const handleStarsImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (validateImageFile(file)) {
+        setStarsImage(file);
+        const url = URL.createObjectURL(file);
+        setStarsPreview(url);
+        setResultUrl(null);
+        setDepthMapUrl(null);
+      } else {
+        toast.error(t('Please select a valid stars-only image file', '请选择有效的纯星图像文件'));
       }
     }
   };
@@ -139,78 +197,16 @@ const StereoscopeProcessor: React.FC = () => {
       }
     }
 
-    // Simple gap filling by copying from neighbors
-    for (let y = 1; y < height - 1; y++) {
-      for (let x = 1; x < width - 1; x++) {
-        const idx = (y * width + x) * 4;
-        
-        // Fill left view gaps
-        if (leftData.data[idx] === 0 && leftData.data[idx + 1] === 0 && leftData.data[idx + 2] === 0) {
-          const neighbors = [
-            ((y - 1) * width + x) * 4,
-            ((y + 1) * width + x) * 4,
-            (y * width + (x - 1)) * 4,
-            (y * width + (x + 1)) * 4
-          ];
-          
-          let r = 0, g = 0, b = 0, count = 0;
-          for (const nIdx of neighbors) {
-            if (leftData.data[nIdx] > 0 || leftData.data[nIdx + 1] > 0 || leftData.data[nIdx + 2] > 0) {
-              r += leftData.data[nIdx];
-              g += leftData.data[nIdx + 1];
-              b += leftData.data[nIdx + 2];
-              count++;
-            }
-          }
-          
-          if (count > 0) {
-            leftData.data[idx] = r / count;
-            leftData.data[idx + 1] = g / count;
-            leftData.data[idx + 2] = b / count;
-          }
-        }
-        
-        // Fill right view gaps
-        if (rightData.data[idx] === 0 && rightData.data[idx + 1] === 0 && rightData.data[idx + 2] === 0) {
-          const neighbors = [
-            ((y - 1) * width + x) * 4,
-            ((y + 1) * width + x) * 4,
-            (y * width + (x - 1)) * 4,
-            (y * width + (x + 1)) * 4
-          ];
-          
-          let r = 0, g = 0, b = 0, count = 0;
-          for (const nIdx of neighbors) {
-            if (rightData.data[nIdx] > 0 || rightData.data[nIdx + 1] > 0 || rightData.data[nIdx + 2] > 0) {
-              r += rightData.data[nIdx];
-              g += rightData.data[nIdx + 1];
-              b += rightData.data[nIdx + 2];
-              count++;
-            }
-          }
-          
-          if (count > 0) {
-            rightData.data[idx] = r / count;
-            rightData.data[idx + 1] = g / count;
-            rightData.data[idx + 2] = b / count;
-          }
-        }
-      }
-    }
-
     return { left: leftData, right: rightData };
   }, []);
 
-  const processImage = async () => {
+  const processFastMode = async () => {
     if (!selectedImage) return;
-
+    
     setProcessing(true);
     
     try {
       toast.info(t('Starting image processing...', '开始图像处理...'));
-      
-      // Use setTimeout to allow UI to update
-      await new Promise(resolve => setTimeout(resolve, 50));
       
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -219,10 +215,6 @@ const StereoscopeProcessor: React.FC = () => {
         throw new Error('Could not get canvas context');
       }
 
-      toast.info(t('Loading and preparing image...', '加载并准备图像...'));
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      // Load image
       const img = new Image();
       await new Promise((resolve, reject) => {
         img.onload = resolve;
@@ -242,11 +234,9 @@ const StereoscopeProcessor: React.FC = () => {
         
         if (Math.abs(currentRatio - targetRatio) > 0.1) {
           if (currentRatio > targetRatio) {
-            // Image is wider than 16:9, crop width
             finalWidth = Math.round(finalHeight * targetRatio);
             cropX = (img.width - finalWidth) / 2;
           } else {
-            // Image is taller than 16:9, crop height
             finalHeight = Math.round(finalWidth / targetRatio);
             cropY = (img.height - finalHeight) / 2;
           }
@@ -254,27 +244,13 @@ const StereoscopeProcessor: React.FC = () => {
         }
       }
 
-      // Set canvas size
       canvas.width = finalWidth;
       canvas.height = finalHeight;
       ctx.drawImage(img, cropX, cropY, finalWidth, finalHeight, 0, 0, finalWidth, finalHeight);
 
       const { width, height } = canvas;
-
-      toast.info(t('Analyzing astronomical structures...', '分析天文结构...'));
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Generate advanced scientific depth map with automatic parameter detection
-      toast.info(t('Initializing Enhanced Nobel Prize-level Scientific Algorithm...', '初始化增强型诺贝尔奖级科学算法...'));
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Pass user-adjusted parameters as overrides to the automatic system
       const { depthMap, starMask } = generateScientificAstroDepthMap(canvas, ctx, width, height, params);
       
-      toast.info(t('Creating depth map visualization...', '创建深度图可视化...'));
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      // Create depth map preview
       const depthCanvas = document.createElement('canvas');
       const depthCtx = depthCanvas.getContext('2d')!;
       depthCanvas.width = width;
@@ -282,42 +258,18 @@ const StereoscopeProcessor: React.FC = () => {
       depthCtx.putImageData(depthMap, 0, 0);
       setDepthMapUrl(depthCanvas.toDataURL());
 
-      toast.info(t('Generating stereoscopic views...', '生成立体视图...'));
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Create stereo views
       const { left, right } = createStereoViews(canvas, ctx, depthMap, width, height, params, starMask);
 
-      toast.info(t('Composing final stereoscopic pair...', '合成最终立体对...'));
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      // Create side-by-side result with spacing
       const resultCanvas = document.createElement('canvas');
       const resultCtx = resultCanvas.getContext('2d')!;
       resultCanvas.width = width * 2 + stereoSpacing;
       resultCanvas.height = height;
 
-      // Fill with black background
       resultCtx.fillStyle = '#000000';
       resultCtx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
 
-      // Draw left and right views with spacing
       resultCtx.putImageData(left, 0, 0);
       resultCtx.putImageData(right, width + stereoSpacing, 0);
-
-      toast.info(t('Applying final adjustments...', '应用最终调整...'));
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      // Apply contrast adjustment
-      if (params.contrastAlpha !== 1.0) {
-        const resultData = resultCtx.getImageData(0, 0, width * 2 + stereoSpacing, height);
-        for (let i = 0; i < resultData.data.length; i += 4) {
-          resultData.data[i] = Math.min(255, resultData.data[i] * params.contrastAlpha);
-          resultData.data[i + 1] = Math.min(255, resultData.data[i + 1] * params.contrastAlpha);
-          resultData.data[i + 2] = Math.min(255, resultData.data[i + 2] * params.contrastAlpha);
-        }
-        resultCtx.putImageData(resultData, 0, 0);
-      }
 
       setResultUrl(resultCanvas.toDataURL());
       
@@ -327,6 +279,51 @@ const StereoscopeProcessor: React.FC = () => {
       toast.error(t('Error processing image', '处理图像时出错'));
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const processTraditionalMode = async () => {
+    if (!starlessImage || !starsImage) {
+      toast.error(t('Please select both starless and stars-only images', '请选择无星和纯星图像'));
+      return;
+    }
+
+    setProcessing(true);
+    
+    try {
+      const processor = new TraditionalMorphProcessor();
+      const inputs: TraditionalInputs = {
+        starlessImage,
+        starsOnlyImage: starsImage
+      };
+
+      const { leftCanvas, rightCanvas, depthMap } = await processor.createTraditionalStereoPair(
+        inputs,
+        traditionalParams,
+        (step) => {
+          toast.info(t(step, step));
+        }
+      );
+
+      setDepthMapUrl(depthMap.toDataURL());
+      const finalPair = processor.createFinalStereoPair(leftCanvas, rightCanvas, stereoSpacing);
+      setResultUrl(finalPair.toDataURL());
+      processor.dispose();
+      
+      toast.success(t('Traditional morph stereoscopic pair created successfully!', '传统变形立体对创建成功！'));
+    } catch (error) {
+      console.error('Error processing traditional mode:', error);
+      toast.error(t('Error processing images in traditional mode', '传统模式处理图像时出错'));
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const processImage = async () => {
+    if (processingMode === 'fast') {
+      await processFastMode();
+    } else {
+      await processTraditionalMode();
     }
   };
 
@@ -360,261 +357,252 @@ const StereoscopeProcessor: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Input Section */}
-          <Card className="cosmic-border bg-cosmic-900/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-primary flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                {t('Image Input', '图像输入')}
-              </CardTitle>
-              <CardDescription>
-                {t('Upload a nebula or deep space image to create a stereoscopic pair', '上传星云或深空图像以创建立体对')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  {t('Select Image', '选择图像')}
-                </Button>
-                
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,.tiff,.tif,.cr2,.nef,.arw,.dng,.raw,.orf,.rw2,.pef"
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-
-                {previewUrl && (
-                  <div className="space-y-2">
-                    <Label>{t('Preview', '预览')}</Label>
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      className="w-full h-48 object-cover rounded-lg border border-cosmic-700"
+        <Tabs value={processingMode} onValueChange={(value) => setProcessingMode(value as 'fast' | 'traditional')} className="mb-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="fast" className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              {t('Fast Mode', '快速模式')}
+            </TabsTrigger>
+            <TabsTrigger value="traditional" className="flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              {t('Traditional Morph Mode', '传统变形模式')}
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="fast" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="cosmic-border bg-cosmic-900/50 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-primary flex items-center gap-2">
+                    <Upload className="h-5 w-5" />
+                    {t('Single Image Input', '单图像输入')}
+                  </CardTitle>
+                  <CardDescription>
+                    {t('Upload a nebula or deep space image. Our AI will automatically detect stars and nebula structures.', '上传星云或深空图像。我们的AI将自动检测恒星和星云结构。')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full"
+                      variant="outline"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {t('Select Image', '选择图像')}
+                    </Button>
+                    
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*,.tiff,.tif,.cr2,.nef,.arw,.dng,.raw,.orf,.rw2,.pef"
+                      onChange={handleImageSelect}
+                      className="hidden"
                     />
+
+                    {previewUrl && (
+                      <div className="space-y-2">
+                        <Label>{t('Preview', '预览')}</Label>
+                        <img
+                          src={previewUrl}
+                          alt="Preview"
+                          className="w-full h-48 object-cover rounded-lg border border-cosmic-700"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="autocrop">{t('Auto-crop to 16:9', '自动裁剪为16:9')}</Label>
+                      <Switch
+                        id="autocrop"
+                        checked={autoCrop}
+                        onCheckedChange={setAutoCrop}
+                      />
+                    </div>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          {/* Parameters Section */}
-          <Card className="cosmic-border bg-cosmic-900/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-primary">
-                {t('Processing Parameters', '处理参数')}
-              </CardTitle>
-              <CardDescription>
-                {t('Adjust parameters for optimal stereoscopic effect', '调整参数以获得最佳立体效果')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div>
-                  <Label>{t('Object Type', '天体类型')}</Label>
-                  <Select 
-                    value={params.objectType} 
-                    onValueChange={(value: 'nebula' | 'galaxy' | 'planetary' | 'mixed') => 
-                      setParams(prev => ({ ...prev, objectType: value }))
-                    }
-                  >
-                    <SelectTrigger className="mt-2">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="nebula">{t('Nebula', '星云')}</SelectItem>
-                      <SelectItem value="galaxy">{t('Galaxy', '星系')}</SelectItem>
-                      <SelectItem value="planetary">{t('Planetary', '行星')}</SelectItem>
-                      <SelectItem value="mixed">{t('Mixed/Other', '混合/其他')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Optimizes depth mapping for different astronomical objects', '为不同天体优化深度映射')}
-                  </p>
-                </div>
-
-                <div>
-                  <Label>{t('Star Threshold', '恒星阈值')} ({params.starThreshold})</Label>
-                  <Slider
-                    value={[params.starThreshold]}
-                    onValueChange={([value]) => setParams(prev => ({ ...prev, starThreshold: value }))}
-                    min={150}
-                    max={250}
-                    step={10}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Brightness threshold for star detection (keeps stars at infinity)', '恒星检测的亮度阈值（保持恒星在无限远处）')}
-                  </p>
-                </div>
-
-                <div>
-                  <Label>{t('Nebula Depth Boost', '星云深度增强')} ({params.nebulaDepthBoost.toFixed(1)})</Label>
-                  <Slider
-                    value={[params.nebulaDepthBoost * 10]}
-                    onValueChange={([value]) => setParams(prev => ({ ...prev, nebulaDepthBoost: value / 10 }))}
-                    min={10}
-                    max={25}
-                    step={1}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Enhances depth perception in nebula structures', '增强星云结构的深度感知')}
-                  </p>
-                </div>
-
-                <div>
-                  <Label>{t('Color Channel Weights', '颜色通道权重')}</Label>
-                  <div className="mt-2 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-red-400 text-xs w-12">R:</span>
+              <Card className="cosmic-border bg-cosmic-900/50 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-primary">
+                    {t('AI Auto-Intelligence Parameters', 'AI自动智能参数')}
+                  </CardTitle>
+                  <CardDescription>
+                    {t('Advanced parameters automatically optimized for your image. Manual adjustments available for fine-tuning.', '为您的图像自动优化的高级参数。可进行手动调整以进行微调。')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div>
+                      <Label>{t('Stereo Spacing', '立体间距')} ({stereoSpacing}px)</Label>
                       <Slider
-                        value={[params.colorChannelWeights.red * 100]}
-                        onValueChange={([value]) => setParams(prev => ({ 
-                          ...prev, 
-                          colorChannelWeights: { ...prev.colorChannelWeights, red: value / 100 }
-                        }))}
+                        value={[stereoSpacing]}
+                        onValueChange={([value]) => setStereoSpacing(value)}
+                        min={0}
+                        max={600}
+                        step={10}
+                        className="mt-2"
+                      />
+                      <p className="text-xs text-cosmic-400 mt-1">
+                        {t('Gap between left and right stereo images for easier viewing', '左右立体图像之间的间隔，便于观看')}
+                      </p>
+                    </div>
+
+                    <Button
+                      onClick={processImage}
+                      disabled={!selectedImage || processing}
+                      className="w-full"
+                    >
+                      {processing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Eye className="h-4 w-4 mr-2" />
+                      )}
+                      {processing ? t('Processing...', '处理中...') : t('Generate Fast Stereo Pair', '生成快速立体对')}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="traditional" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="cosmic-border bg-cosmic-900/50 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-primary flex items-center gap-2">
+                    <Layers className="h-5 w-5" />
+                    {t('Starless & Stars Images', '无星和恒星图像')}
+                  </CardTitle>
+                  <CardDescription>
+                    {t('Upload separate starless nebula and stars-only images for professional-quality 3D processing based on photographingspace.com methodology.', '上传分离的无星星云和纯星图像，基于photographingspace.com方法进行专业品质3D处理。')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium">{t('Starless Nebula Image', '无星星云图像')}</Label>
+                      <Button
+                        onClick={() => starlessInputRef.current?.click()}
+                        className="w-full mt-2"
+                        variant="outline"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {t('Select Starless Image', '选择无星图像')}
+                      </Button>
+                      
+                      <input
+                        ref={starlessInputRef}
+                        type="file"
+                        accept="image/*,.tiff,.tif,.cr2,.nef,.arw,.dng,.raw,.orf,.rw2,.pef"
+                        onChange={handleStarlessImageSelect}
+                        className="hidden"
+                      />
+
+                      {starlessPreview && (
+                        <div className="mt-2">
+                          <img
+                            src={starlessPreview}
+                            alt="Starless Preview"
+                            className="w-full h-32 object-cover rounded-lg border border-cosmic-700"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">{t('Stars-Only Image', '纯星图像')}</Label>
+                      <Button
+                        onClick={() => starsInputRef.current?.click()}
+                        className="w-full mt-2"
+                        variant="outline"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {t('Select Stars Image', '选择星图像')}
+                      </Button>
+                      
+                      <input
+                        ref={starsInputRef}
+                        type="file"
+                        accept="image/*,.tiff,.tif,.cr2,.nef,.arw,.dng,.raw,.orf,.rw2,.pef"
+                        onChange={handleStarsImageSelect}
+                        className="hidden"
+                      />
+
+                      {starsPreview && (
+                        <div className="mt-2">
+                          <img
+                            src={starsPreview}
+                            alt="Stars Preview"
+                            className="w-full h-32 object-cover rounded-lg border border-cosmic-700"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="cosmic-border bg-cosmic-900/50 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-primary">
+                    {t('Traditional Morph Parameters', '传统变形参数')}
+                  </CardTitle>
+                  <CardDescription>
+                    {t('Professional parameters based on J-P Metsavainio\'s methodology for authentic 3D astrophotography.', '基于J-P Metsavainio方法的专业参数，用于真实的3D天体摄影。')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div>
+                      <Label>{t('Horizontal Displacement', '水平位移')} ({traditionalParams.horizontalDisplace})</Label>
+                      <Slider
+                        value={[traditionalParams.horizontalDisplace]}
+                        onValueChange={([value]) => setTraditionalParams(prev => ({ ...prev, horizontalDisplace: value }))}
                         min={10}
                         max={50}
-                        step={1}
-                        className="flex-1"
+                        step={2}
+                        className="mt-2"
                       />
-                      <span className="text-xs w-8">{(params.colorChannelWeights.red * 100).toFixed(0)}%</span>
+                      <p className="text-xs text-cosmic-400 mt-1">
+                        {t('Controls nebula depth displacement effect (10-30 recommended)', '控制星云深度位移效果（推荐10-30）')}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-400 text-xs w-12">G:</span>
+
+                    <div>
+                      <Label>{t('Star Shift Amount', '恒星位移量')} ({traditionalParams.starShiftAmount}px)</Label>
                       <Slider
-                        value={[params.colorChannelWeights.green * 100]}
-                        onValueChange={([value]) => setParams(prev => ({ 
-                          ...prev, 
-                          colorChannelWeights: { ...prev.colorChannelWeights, green: value / 100 }
-                        }))}
-                        min={30}
-                        max={70}
+                        value={[traditionalParams.starShiftAmount]}
+                        onValueChange={([value]) => setTraditionalParams(prev => ({ ...prev, starShiftAmount: value }))}
+                        min={1}
+                        max={10}
                         step={1}
-                        className="flex-1"
+                        className="mt-2"
                       />
-                      <span className="text-xs w-8">{(params.colorChannelWeights.green * 100).toFixed(0)}%</span>
+                      <p className="text-xs text-cosmic-400 mt-1">
+                        {t('Distance to shift individual stars for 3D positioning', '移动单个恒星进行3D定位的距离')}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-blue-400 text-xs w-12">B:</span>
-                      <Slider
-                        value={[params.colorChannelWeights.blue * 100]}
-                        onValueChange={([value]) => setParams(prev => ({ 
-                          ...prev, 
-                          colorChannelWeights: { ...prev.colorChannelWeights, blue: value / 100 }
-                        }))}
-                        min={5}
-                        max={30}
-                        step={1}
-                        className="flex-1"
-                      />
-                      <span className="text-xs w-8">{(params.colorChannelWeights.blue * 100).toFixed(0)}%</span>
-                    </div>
+
+                    <Button
+                      onClick={processImage}
+                      disabled={!starlessImage || !starsImage || processing}
+                      className="w-full"
+                    >
+                      {processing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Layers className="h-4 w-4 mr-2" />
+                      )}
+                      {processing ? t('Processing...', '处理中...') : t('Generate Traditional Stereo Pair', '生成传统立体对')}
+                    </Button>
                   </div>
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Weight each color channel for depth calculation (useful for narrowband images)', '为深度计算加权每个颜色通道（对窄带图像有用）')}
-                  </p>
-                </div>
-
-                <div>
-                  <Label>{t('Maximum Shift', '最大偏移')} ({params.maxShift}px)</Label>
-                  <Slider
-                    value={[params.maxShift]}
-                    onValueChange={([value]) => setParams(prev => ({ ...prev, maxShift: value }))}
-                    min={10}
-                    max={60}
-                    step={5}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Controls the depth separation between left and right views', '控制左右视图之间的深度分离')}
-                  </p>
-                </div>
-
-                <div>
-                  <Label>{t('Edge Weight', '边缘权重')} ({params.edgeWeight.toFixed(1)})</Label>
-                  <Slider
-                    value={[params.edgeWeight * 10]}
-                    onValueChange={([value]) => setParams(prev => ({ ...prev, edgeWeight: value / 10 }))}
-                    min={1}
-                    max={5}
-                    step={1}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Balance between brightness and edge-based depth', '亮度与基于边缘的深度之间的平衡')}
-                  </p>
-                </div>
-
-                <div>
-                  <Label>{t('Blur Sigma', '模糊程度')} ({params.blurSigma.toFixed(1)})</Label>
-                  <Slider
-                    value={[params.blurSigma * 10]}
-                    onValueChange={([value]) => setParams(prev => ({ ...prev, blurSigma: value / 10 }))}
-                    min={5}
-                    max={30}
-                    step={5}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Smoothness of depth transitions (stars get less blur)', '深度过渡的平滑度（恒星模糊较少）')}
-                  </p>
-                </div>
-
-                <div>
-                  <Label>{t('Contrast', '对比度')} ({params.contrastAlpha.toFixed(1)})</Label>
-                  <Slider
-                    value={[params.contrastAlpha * 10]}
-                    onValueChange={([value]) => setParams(prev => ({ ...prev, contrastAlpha: value / 10 }))}
-                    min={8}
-                    max={15}
-                    step={1}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Final image contrast adjustment', '最终图像对比度调整')}
-                  </p>
-                </div>
-
-                <div>
-                  <Label>{t('Stereo Spacing', '立体间距')} ({stereoSpacing}px)</Label>
-                  <Slider
-                    value={[stereoSpacing]}
-                    onValueChange={([value]) => setStereoSpacing(value)}
-                    min={0}
-                    max={600}
-                    step={10}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Gap between left and right stereo images for easier viewing', '左右立体图像之间的间隔，便于观看')}
-                  </p>
-                </div>
-
-                <Button
-                  onClick={processImage}
-                  disabled={!selectedImage || processing}
-                  className="w-full"
-                >
-                  {processing ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Eye className="h-4 w-4 mr-2" />
-                  )}
-                  {processing ? t('Processing...', '处理中...') : t('Generate Stereo Pair', '生成立体对')}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Results Section */}
         {(depthMapUrl || resultUrl) && (
@@ -629,9 +617,6 @@ const StereoscopeProcessor: React.FC = () => {
                       {t('Download', '下载')}
                     </Button>
                   </CardTitle>
-                  <CardDescription>
-                    {t('Brighter areas appear closer, darker areas further away. Stars can now be at various depths.', '较亮区域显示更近，较暗区域更远。恒星现在可以处于不同深度。')}
-                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <img
@@ -653,9 +638,6 @@ const StereoscopeProcessor: React.FC = () => {
                       {t('Download', '下载')}
                     </Button>
                   </CardTitle>
-                  <CardDescription>
-                    {t('Side-by-side stereo pair. Use cross-eye viewing or stereo goggles to see the 3D effect', '并排立体对。使用交叉眼观看或立体眼镜查看3D效果')}
-                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <img
@@ -663,20 +645,6 @@ const StereoscopeProcessor: React.FC = () => {
                     alt="Stereoscopic Result"
                     className="w-full rounded-lg border border-cosmic-700"
                   />
-                  <div className="mt-4 text-sm text-cosmic-400 bg-cosmic-800/50 p-4 rounded-lg">
-                    <h4 className="font-semibold mb-2">{t('Viewing Instructions:', '观看说明：')}</h4>
-                    <ul className="space-y-1 list-disc list-inside">
-                      <li>{t('Cross-eye method: Cross your eyes until the two images merge into one 3D image', '交叉眼方法：交叉眼睛直到两个图像合并成一个3D图像')}</li>
-                      <li>{t('Parallel method: Look "through" the screen as if focusing on something far behind it', '平行方法：看"穿过"屏幕，好像聚焦在屏幕后面的某个东西')}</li>
-                      <li>{t('Print on 7×4 inch card with images 65-75mm apart for stereo viewers', '打印在7×4英寸卡片上，图像间距65-75毫米，用于立体观看器')}</li>
-                    </ul>
-                    <div className="mt-3 p-3 bg-cosmic-700/30 rounded border-l-4 border-primary/50">
-                      <p className="font-medium text-cosmic-200 mb-1">{t('About Star Appearance:', '关于恒星外观：')}</p>
-                      <p className="text-xs">
-                        {t('Stars may look "doubled" or shifted in individual left/right images - this is normal! The 3D effect and proper star alignment only appear when viewed as a stereo pair using the methods above. Stars are intentionally kept at background depth to maintain astronomical realism.', '恒星在单独的左右图像中可能看起来"重影"或偏移 - 这是正常的！3D效果和正确的恒星对齐只有在使用上述方法作为立体对观看时才会出现。恒星被有意保持在背景深度以保持天文真实性。')}
-                      </p>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             )}
