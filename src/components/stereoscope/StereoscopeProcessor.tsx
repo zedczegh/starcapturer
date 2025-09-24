@@ -237,11 +237,25 @@ const StereoscopeProcessor: React.FC = () => {
         const depthValue = depthMap.data[idx * 4] / 255.0;
         let shift = Math.round(depthValue * params.maxShift);
         
-        // Enhanced star handling with proper parallax
+        // Enhanced star handling with proper parallax - following astrophotography workflow
         if (params.preserveStarShapes && starMask[idx] === 255) {
-          shift = Math.round(params.starParallaxPx);
+          // Get star brightness to determine depth
+          const starBrightness = Math.max(
+            originalData.data[idx * 4],     // Red
+            originalData.data[idx * 4 + 1], // Green  
+            originalData.data[idx * 4 + 2]  // Blue
+          );
+          
+          // Bright stars (>200) appear closer (shifted right on right image)
+          // Dim stars (<200) appear further (shifted left on right image)
+          if (starBrightness > 200) {
+            shift = Math.round(params.starParallaxPx * 1.5); // Bright stars closer
+          } else {
+            shift = Math.round(-params.starParallaxPx * 0.5); // Dim stars further away
+          }
+          
           if (x < 10 && y < 10) { // Debug first few star pixels
-            console.log(`Star pixel at (${x},${y}) using parallax shift: ${shift}`);
+            console.log(`Star at (${x},${y}) brightness=${starBrightness}, shift=${shift}`);
           }
         }
         
