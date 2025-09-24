@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { generateScientificAstroDepthMap } from '@/lib/scientificAstroDepth';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 // @ts-ignore
-import Tiff from 'tiff.js';
+import * as UTIF from 'utif';
 
 interface ProcessingParams {
   maxShift: number;
@@ -107,8 +107,19 @@ const StereoscopeProcessor: React.FC = () => {
       reader.onload = (e) => {
         try {
           const buffer = e.target?.result as ArrayBuffer;
-          const tiff = new Tiff({ buffer });
-          const canvas = tiff.toCanvas();
+          const ifds = UTIF.decode(buffer);
+          UTIF.decodeImage(buffer, ifds[0]);
+          const rgba = UTIF.toRGBA8(ifds[0]);
+          
+          // Create canvas and draw the TIFF image
+          const canvas = document.createElement('canvas');
+          canvas.width = ifds[0].width;
+          canvas.height = ifds[0].height;
+          const ctx = canvas.getContext('2d')!;
+          
+          const imageData = new ImageData(new Uint8ClampedArray(rgba), ifds[0].width, ifds[0].height);
+          ctx.putImageData(imageData, 0, 0);
+          
           resolve(canvas.toDataURL());
         } catch (error) {
           reject(error);
