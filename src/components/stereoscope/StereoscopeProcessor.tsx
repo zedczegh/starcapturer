@@ -68,7 +68,7 @@ const StereoscopeProcessor: React.FC = () => {
       blue: 0.114
     },
     objectType: 'nebula',
-    starParallaxPx: 15, // Increased for better visibility
+    starParallaxPx: 3,
     preserveStarShapes: true,
   });
 
@@ -222,70 +222,35 @@ const StereoscopeProcessor: React.FC = () => {
       rightData.data[i] = 255; // Alpha
     }
 
-    // Count stars for debugging
-    let starCount = 0;
-    for (let i = 0; i < starMask.length; i++) {
-      if (starMask[i] === 255) starCount++;
-    }
-    console.log(`Detected ${starCount} star pixels`);
-    console.log(`Star parallax: ${params.starParallaxPx}px, Max shift: ${params.maxShift}px`);
-
-    // Process each source pixel and place it correctly in left/right views
+    // Apply depth-based shifting
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const srcIdx = y * width + x;
-        const srcPixelIdx = srcIdx * 4;
-        
-        // Get source pixel data
-        const r = originalData.data[srcPixelIdx];
-        const g = originalData.data[srcPixelIdx + 1];
-        const b = originalData.data[srcPixelIdx + 2];
-        
-        // Skip black pixels
-        if (r === 0 && g === 0 && b === 0) continue;
-        
-        let leftDestX = x;   // Left image - no shift for stars
-        let rightDestX = x;  // Right image - will be shifted for stars
-        
-        if (params.preserveStarShapes && starMask[srcIdx] === 255) {
-          // Star pixel - use original star pixel, just shift position
-          const starBrightness = Math.max(r, g, b);
-          
-          if (starBrightness > 150) {
-            // Bright stars appear closer - shift RIGHT on right image
-            rightDestX = x + Math.round(params.starParallaxPx);
-          } else {
-            // Dim stars appear further - shift LEFT on right image  
-            rightDestX = x - Math.round(params.starParallaxPx * 0.5);
-          }
-          
-          if (x < 5 && y < 5) {
-            console.log(`Original star at (${x},${y}) brightness=${starBrightness}, moving to rightX=${rightDestX}`);
-          }
-        } else {
-          // Non-star pixel - use depth map for subtle parallax
-          const depthValue = depthMap.data[srcPixelIdx] / 255.0;
-          const baseShift = Math.round(depthValue * params.maxShift);
-          leftDestX = x - baseShift;  // Left view shifts opposite
-          rightDestX = x + baseShift; // Right view normal shift
+        const idx = y * width + x;
+        const baseShift = (depthMap.data[idx * 4] / 255.0) * params.maxShift;
+        let shift = Math.round(baseShift);
+        if (params.preserveStarShapes && starMask[idx] === 255) {
+          shift = Math.round(params.starParallaxPx);
         }
-        
-        // Place original pixel in left view
-        if (leftDestX >= 0 && leftDestX < width) {
-          const leftDestIdx = (y * width + leftDestX) * 4;
-          leftData.data[leftDestIdx] = r;
-          leftData.data[leftDestIdx + 1] = g;
-          leftData.data[leftDestIdx + 2] = b;
-          leftData.data[leftDestIdx + 3] = 255;
+        // Left view: shift left (negative x)
+        const xLeft = Math.max(0, x - shift);
+        if (xLeft >= 0 && xLeft < width) {
+          const srcIdx = idx * 4;
+          const leftIdx = (y * width + xLeft) * 4;
+          leftData.data[leftIdx] = originalData.data[srcIdx];
+          leftData.data[leftIdx + 1] = originalData.data[srcIdx + 1];
+          leftData.data[leftIdx + 2] = originalData.data[srcIdx + 2];
+          leftData.data[leftIdx + 3] = 255;
         }
-        
-        // Place original pixel in right view
-        if (rightDestX >= 0 && rightDestX < width) {
-          const rightDestIdx = (y * width + rightDestX) * 4;
-          rightData.data[rightDestIdx] = r;
-          rightData.data[rightDestIdx + 1] = g;
-          rightData.data[rightDestIdx + 2] = b;
-          rightData.data[rightDestIdx + 3] = 255;
+
+        // Right view: shift right (positive x)
+        const xRight = Math.min(width - 1, x + shift);
+        if (xRight >= 0 && xRight < width) {
+          const srcIdx = idx * 4;
+          const rightIdx = (y * width + xRight) * 4;
+          rightData.data[rightIdx] = originalData.data[srcIdx];
+          rightData.data[rightIdx + 1] = originalData.data[srcIdx + 1];
+          rightData.data[rightIdx + 2] = originalData.data[srcIdx + 2];
+          rightData.data[rightIdx + 3] = 255;
         }
       }
     }
@@ -352,25 +317,6 @@ const StereoscopeProcessor: React.FC = () => {
       setDepthMapUrl(depthCanvas.toDataURL());
 
       const { left, right } = createStereoViews(canvas, ctx, depthMap, width, height, params, starMask);
-      
-      // Create debug star mask visualization
-      const starMaskCanvas = document.createElement('canvas');
-      starMaskCanvas.width = width;
-      starMaskCanvas.height = height;
-      const starMaskCtx = starMaskCanvas.getContext('2d')!;
-      const starMaskImageData = new ImageData(width, height);
-      
-      for (let i = 0; i < starMask.length; i++) {
-        const starValue = starMask[i];
-        const pixelIdx = i * 4;
-        starMaskImageData.data[pixelIdx] = starValue;     // Red
-        starMaskImageData.data[pixelIdx + 1] = starValue; // Green  
-        starMaskImageData.data[pixelIdx + 2] = starValue; // Blue
-        starMaskImageData.data[pixelIdx + 3] = 255;       // Alpha
-      }
-      
-      starMaskCtx.putImageData(starMaskImageData, 0, 0);
-      console.log('Star mask visualization created', starMaskCanvas.toDataURL());
 
       const resultCanvas = document.createElement('canvas');
       const resultCtx = resultCanvas.getContext('2d')!;
