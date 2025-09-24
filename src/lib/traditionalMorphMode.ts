@@ -172,9 +172,8 @@ export class TraditionalMorphProcessor {
     const lumCtx = luminanceMap.getContext('2d')!;
     const lumData = lumCtx.getImageData(0, 0, width, height);
     
-    // Create displaced image
+    // Create displaced image with proper interpolation
     const displacedData = this.ctx.createImageData(width, height);
-    displacedData.data.fill(0);
     
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -184,15 +183,23 @@ export class TraditionalMorphProcessor {
         const lumValue = lumData.data[idx] / 255; // Normalize to 0-1
         const displacement = Math.round((lumValue - 0.5) * horizontalAmount);
         
-        // Calculate source position
+        // Calculate source position with bounds checking
         const srcX = Math.max(0, Math.min(width - 1, x - displacement));
         const srcIdx = (y * width + srcX) * 4;
         
-        // Copy pixel with displacement
-        displacedData.data[idx] = originalData.data[srcIdx];
-        displacedData.data[idx + 1] = originalData.data[srcIdx + 1];
-        displacedData.data[idx + 2] = originalData.data[srcIdx + 2];
-        displacedData.data[idx + 3] = 255; // Full alpha
+        // Only copy valid pixels from starless image
+        if (srcX >= 0 && srcX < width) {
+          displacedData.data[idx] = originalData.data[srcIdx];
+          displacedData.data[idx + 1] = originalData.data[srcIdx + 1];
+          displacedData.data[idx + 2] = originalData.data[srcIdx + 2];
+          displacedData.data[idx + 3] = originalData.data[srcIdx + 3];
+        } else {
+          // Fill with black for out-of-bounds areas
+          displacedData.data[idx] = 0;
+          displacedData.data[idx + 1] = 0;
+          displacedData.data[idx + 2] = 0;
+          displacedData.data[idx + 3] = 255;
+        }
       }
     }
     
@@ -348,7 +355,7 @@ export class TraditionalMorphProcessor {
       const brightnessFactor = star.brightness / 255;
       
       // Only reposition significantly bright stars (leave dim stars in original position)
-      if (brightnessFactor > 0.5) {
+      if (brightnessFactor > 0.6) {
         // Calculate shift based on brightness and user parameter
         // Brighter stars get more shift (appear closer)
         // Following article: right shift = closer to viewer
@@ -361,28 +368,40 @@ export class TraditionalMorphProcessor {
           // Bright stars - mid-ground
           starShift = params.starShiftAmount * 0.6;
         } else {
-          // Medium stars - slight forward
+          // Medium bright stars - slight forward
           starShift = params.starShiftAmount * 0.3;
         }
         
-        // Extract and reposition the bright star
-        const radius = Math.max(3, Math.min(10, Math.ceil(brightnessFactor * 8)));
+        // Extract and reposition the bright star with precise masking
+        const radius = Math.max(2, Math.min(6, Math.ceil(brightnessFactor * 4)));
         const x1 = Math.max(0, star.x - radius);
         const y1 = Math.max(0, star.y - radius);
         const w = Math.min(radius * 2, width - x1);
         const h = Math.min(radius * 2, height - y1);
         
         if (w > 0 && h > 0 && starShift > 0) {
-          // Clear original position of this bright star
-          rightCtx.globalCompositeOperation = 'destination-out';
-          rightCtx.fillStyle = 'rgba(255,255,255,0.8)';
-          rightCtx.fillRect(x1, y1, w, h);
-          
-          // Get star data and redraw at shifted position
-          rightCtx.globalCompositeOperation = 'screen';
+          // Get star data before clearing
           const starData = starCtx.getImageData(x1, y1, w, h);
           
-          // Position with calculated shift (right shift = closer to viewer)
+          // Create mask to only clear actual star pixels (not background)
+          const maskData = new Uint8ClampedArray(starData.data.length);
+          for (let i = 0; i < starData.data.length; i += 4) {
+            const luminance = 0.299 * starData.data[i] + 0.587 * starData.data[i + 1] + 0.114 * starData.data[i + 2];
+            if (luminance > 50) { // Only mask bright pixels
+              maskData[i] = 255;
+              maskData[i + 1] = 255;
+              maskData[i + 2] = 255;
+              maskData[i + 3] = Math.min(255, luminance * 2); // Stronger clearing for brighter pixels
+            }
+          }
+          
+          // Clear original position using mask
+          rightCtx.globalCompositeOperation = 'destination-out';
+          const maskImageData = new ImageData(maskData, w, h);
+          rightCtx.putImageData(maskImageData, x1, y1);
+          
+          // Redraw star at shifted position
+          rightCtx.globalCompositeOperation = 'screen';
           const newX = Math.max(0, Math.min(width - w, x1 + starShift));
           rightCtx.putImageData(starData, newX, y1);
         }
