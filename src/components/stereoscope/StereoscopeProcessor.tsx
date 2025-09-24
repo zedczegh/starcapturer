@@ -248,19 +248,26 @@ const StereoscopeProcessor: React.FC = () => {
         let rightDestX = x;  // Right image - will be shifted for stars
         
         if (params.preserveStarShapes && starMask[srcIdx] === 255) {
-          // Star pixel - use original star pixel, just shift position
+          // Star pixel - only process if it's a genuine bright star (not hot pixels/noise)
           const starBrightness = Math.max(r, g, b);
           
-          if (starBrightness > 150) {
-            // Bright stars appear closer - shift RIGHT on right image
+          // Much higher threshold to avoid hot pixels - only process very bright stars
+          if (starBrightness > params.starThreshold + 50) {
+            // Very bright stars appear closer - shift RIGHT on right image
             rightDestX = x + Math.round(params.starParallaxPx);
+          } else if (starBrightness > params.starThreshold) {
+            // Medium bright stars appear further - shift LEFT on right image  
+            rightDestX = x - Math.round(params.starParallaxPx * 0.3);
           } else {
-            // Dim stars appear further - shift LEFT on right image  
-            rightDestX = x - Math.round(params.starParallaxPx * 0.5);
+            // Too dim - treat as nebula, not a star
+            const depthValue = depthMap.data[srcPixelIdx] / 255.0;
+            const baseShift = Math.round(depthValue * params.maxShift);
+            leftDestX = x - baseShift;
+            rightDestX = x + baseShift;
           }
           
           if (x < 5 && y < 5) {
-            console.log(`Original star at (${x},${y}) brightness=${starBrightness}, moving to rightX=${rightDestX}`);
+            console.log(`Star at (${x},${y}) brightness=${starBrightness}, threshold=${params.starThreshold}, moving to rightX=${rightDestX}`);
           }
         } else {
           // Non-star pixel - use depth map for subtle parallax
