@@ -230,79 +230,69 @@ const StereoscopeProcessor: React.FC = () => {
     console.log(`Detected ${starCount} star pixels`);
     console.log(`Star parallax: ${params.starParallaxPx}px, Max shift: ${params.maxShift}px`);
 
-    // Apply depth-based shifting - Fixed logic for proper stereo effect
+    // Process each source pixel and place it correctly in left/right views
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const idx = y * width + x;
-        const depthValue = depthMap.data[idx * 4] / 255.0;
-        let shift = Math.round(depthValue * params.maxShift);
+        const srcIdx = y * width + x;
+        const srcPixelIdx = srcIdx * 4;
         
-        // Enhanced star handling with proper parallax - following astrophotography workflow
-        if (params.preserveStarShapes && starMask[idx] === 255) {
-          // Get star brightness to determine depth
-          const starBrightness = Math.max(
-            originalData.data[idx * 4],     // Red
-            originalData.data[idx * 4 + 1], // Green  
-            originalData.data[idx * 4 + 2]  // Blue
-          );
+        // Get source pixel data
+        const r = originalData.data[srcPixelIdx];
+        const g = originalData.data[srcPixelIdx + 1];
+        const b = originalData.data[srcPixelIdx + 2];
+        
+        // Skip black pixels
+        if (r === 0 && g === 0 && b === 0) continue;
+        
+        let leftDestX = x;   // Left image position 
+        let rightDestX = x;  // Right image position
+        
+        if (params.preserveStarShapes && starMask[srcIdx] === 255) {
+          // Star pixel - determine depth based on brightness
+          const starBrightness = Math.max(r, g, b);
           
-          // Bright stars (>200) appear closer (shifted right on right image)
-          // Dim stars (<200) appear further (shifted left on right image)
           if (starBrightness > 200) {
-            shift = Math.round(params.starParallaxPx * 1.5); // Bright stars closer
+            // Bright stars appear closer - shift RIGHT on right image
+            leftDestX = x;     // No shift on left
+            rightDestX = x + Math.round(params.starParallaxPx * 1.5);
           } else {
-            shift = Math.round(-params.starParallaxPx * 0.5); // Dim stars further away
+            // Dim stars appear further - shift LEFT on right image  
+            leftDestX = x;     // No shift on left
+            rightDestX = x - Math.round(params.starParallaxPx * 0.5);
           }
           
-          if (x < 10 && y < 10) { // Debug first few star pixels
-            console.log(`Star at (${x},${y}) brightness=${starBrightness}, shift=${shift}`);
+          if (x < 5 && y < 5) {
+            console.log(`Star at (${x},${y}) brightness=${starBrightness}, rightDestX=${rightDestX}`);
           }
-        }
-        
-        const destIdx = idx * 4;
-        
-        // Debug star processing for right view
-        if (params.preserveStarShapes && starMask[idx] === 255) {
-          if (x < 5 && y < 5) { // Debug first few star pixels
-            console.log(`Processing star at (${x},${y}) with shift ${shift} for right view`);
-          }
-        }
-        
-        // Left view: get pixel data from RIGHT of current position (positive shift in source)
-        const xLeftSrc = x + shift;
-        if (xLeftSrc >= 0 && xLeftSrc < width) {
-          const leftSrcIdx = (y * width + xLeftSrc) * 4;
-          leftData.data[destIdx] = originalData.data[leftSrcIdx];
-          leftData.data[destIdx + 1] = originalData.data[leftSrcIdx + 1];
-          leftData.data[destIdx + 2] = originalData.data[leftSrcIdx + 2];
-          leftData.data[destIdx + 3] = 255;
         } else {
-          // Fill with original pixel if shift goes out of bounds
-          leftData.data[destIdx] = originalData.data[destIdx];
-          leftData.data[destIdx + 1] = originalData.data[destIdx + 1];
-          leftData.data[destIdx + 2] = originalData.data[destIdx + 2];
-          leftData.data[destIdx + 3] = 255;
+          // Non-star pixel - use depth map for subtle parallax
+          const depthValue = depthMap.data[srcPixelIdx] / 255.0;
+          const baseShift = Math.round(depthValue * params.maxShift);
+          leftDestX = x - baseShift;  // Left view shifts opposite
+          rightDestX = x + baseShift; // Right view normal shift
         }
-
-        // Right view: get pixel data from LEFT of current position (negative shift in source)
-        const xRightSrc = x - shift;
-        if (xRightSrc >= 0 && xRightSrc < width) {
-          const rightSrcIdx = (y * width + xRightSrc) * 4;
-          rightData.data[destIdx] = originalData.data[rightSrcIdx];
-          rightData.data[destIdx + 1] = originalData.data[rightSrcIdx + 1];
-          rightData.data[destIdx + 2] = originalData.data[rightSrcIdx + 2];
-          rightData.data[destIdx + 3] = 255;
+        
+        // Place pixel in left view
+        if (leftDestX >= 0 && leftDestX < width) {
+          const leftDestIdx = (y * width + leftDestX) * 4;
+          leftData.data[leftDestIdx] = r;
+          leftData.data[leftDestIdx + 1] = g;
+          leftData.data[leftDestIdx + 2] = b;
+          leftData.data[leftDestIdx + 3] = 255;
+        }
+        
+        // Place pixel in right view
+        if (rightDestX >= 0 && rightDestX < width) {
+          const rightDestIdx = (y * width + rightDestX) * 4;
+          rightData.data[rightDestIdx] = r;
+          rightData.data[rightDestIdx + 1] = g;
+          rightData.data[rightDestIdx + 2] = b;
+          rightData.data[rightDestIdx + 3] = 255;
           
-          // Debug specific star pixels in right view
-          if (params.preserveStarShapes && starMask[idx] === 255 && x < 5 && y < 5) {
-            console.log(`Star pixel (${x},${y}) in right view: src=${xRightSrc}, RGB=(${rightData.data[destIdx]},${rightData.data[destIdx + 1]},${rightData.data[destIdx + 2]})`);
+          // Debug star placement in right view
+          if (params.preserveStarShapes && starMask[srcIdx] === 255 && x < 5 && y < 5) {
+            console.log(`Placed star from (${x},${y}) to right view at (${rightDestX},${y}) RGB=(${r},${g},${b})`);
           }
-        } else {
-          // Fill with original pixel if shift goes out of bounds
-          rightData.data[destIdx] = originalData.data[destIdx];
-          rightData.data[destIdx + 1] = originalData.data[destIdx + 1];
-          rightData.data[destIdx + 2] = originalData.data[destIdx + 2];
-          rightData.data[destIdx + 3] = 255;
         }
       }
     }
