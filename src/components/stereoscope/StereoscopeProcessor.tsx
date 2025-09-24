@@ -68,7 +68,7 @@ const StereoscopeProcessor: React.FC = () => {
       blue: 0.114
     },
     objectType: 'nebula',
-    starParallaxPx: 3,
+    starParallaxPx: 8,
     preserveStarShapes: true,
   });
 
@@ -222,35 +222,50 @@ const StereoscopeProcessor: React.FC = () => {
       rightData.data[i] = 255; // Alpha
     }
 
-    // Apply depth-based shifting
+    // Apply depth-based shifting - Fixed logic for proper stereo effect
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
-        const baseShift = (depthMap.data[idx * 4] / 255.0) * params.maxShift;
-        let shift = Math.round(baseShift);
+        const depthValue = depthMap.data[idx * 4] / 255.0;
+        let shift = Math.round(depthValue * params.maxShift);
+        
+        // Enhanced star handling with proper parallax
         if (params.preserveStarShapes && starMask[idx] === 255) {
           shift = Math.round(params.starParallaxPx);
         }
-        // Left view: shift left (negative x)
-        const xLeft = Math.max(0, x - shift);
-        if (xLeft >= 0 && xLeft < width) {
-          const srcIdx = idx * 4;
-          const leftIdx = (y * width + xLeft) * 4;
-          leftData.data[leftIdx] = originalData.data[srcIdx];
-          leftData.data[leftIdx + 1] = originalData.data[srcIdx + 1];
-          leftData.data[leftIdx + 2] = originalData.data[srcIdx + 2];
-          leftData.data[leftIdx + 3] = 255;
+        
+        const destIdx = idx * 4;
+        
+        // Left view: get pixel data from RIGHT of current position (positive shift in source)
+        const xLeftSrc = x + shift;
+        if (xLeftSrc >= 0 && xLeftSrc < width) {
+          const leftSrcIdx = (y * width + xLeftSrc) * 4;
+          leftData.data[destIdx] = originalData.data[leftSrcIdx];
+          leftData.data[destIdx + 1] = originalData.data[leftSrcIdx + 1];
+          leftData.data[destIdx + 2] = originalData.data[leftSrcIdx + 2];
+          leftData.data[destIdx + 3] = 255;
+        } else {
+          // Fill with original pixel if shift goes out of bounds
+          leftData.data[destIdx] = originalData.data[destIdx];
+          leftData.data[destIdx + 1] = originalData.data[destIdx + 1];
+          leftData.data[destIdx + 2] = originalData.data[destIdx + 2];
+          leftData.data[destIdx + 3] = 255;
         }
 
-        // Right view: shift right (positive x)
-        const xRight = Math.min(width - 1, x + shift);
-        if (xRight >= 0 && xRight < width) {
-          const srcIdx = idx * 4;
-          const rightIdx = (y * width + xRight) * 4;
-          rightData.data[rightIdx] = originalData.data[srcIdx];
-          rightData.data[rightIdx + 1] = originalData.data[srcIdx + 1];
-          rightData.data[rightIdx + 2] = originalData.data[srcIdx + 2];
-          rightData.data[rightIdx + 3] = 255;
+        // Right view: get pixel data from LEFT of current position (negative shift in source)
+        const xRightSrc = x - shift;
+        if (xRightSrc >= 0 && xRightSrc < width) {
+          const rightSrcIdx = (y * width + xRightSrc) * 4;
+          rightData.data[destIdx] = originalData.data[rightSrcIdx];
+          rightData.data[destIdx + 1] = originalData.data[rightSrcIdx + 1];
+          rightData.data[destIdx + 2] = originalData.data[rightSrcIdx + 2];
+          rightData.data[destIdx + 3] = 255;
+        } else {
+          // Fill with original pixel if shift goes out of bounds
+          rightData.data[destIdx] = originalData.data[destIdx];
+          rightData.data[destIdx + 1] = originalData.data[destIdx + 1];
+          rightData.data[destIdx + 2] = originalData.data[destIdx + 2];
+          rightData.data[destIdx + 3] = 255;
         }
       }
     }
