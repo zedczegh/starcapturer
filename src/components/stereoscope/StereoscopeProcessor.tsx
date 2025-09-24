@@ -11,6 +11,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { generateScientificAstroDepthMap } from '@/lib/scientificAstroDepth';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
+// @ts-ignore
+import Tiff from 'tiff.js';
 
 interface ProcessingParams {
   maxShift: number;
@@ -94,18 +96,53 @@ const StereoscopeProcessor: React.FC = () => {
            !!file.name.toLowerCase().match(/\.(tiff?|cr2|nef|arw|dng|raw|orf|rw2|pef)$/);
   };
 
-  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const isTiffFile = (file: File): boolean => {
+    return file.type === 'image/tiff' || file.type === 'image/tif' || 
+           !!file.name.toLowerCase().match(/\.tiff?$/);
+  };
+
+  const convertTiffToDataURL = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const buffer = e.target?.result as ArrayBuffer;
+          const tiff = new Tiff({ buffer });
+          const canvas = tiff.toCanvas();
+          resolve(canvas.toDataURL());
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const createPreviewUrl = async (file: File): Promise<string> => {
+    if (isTiffFile(file)) {
+      return await convertTiffToDataURL(file);
+    }
+    return URL.createObjectURL(file);
+  };
+
+  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (validateImageFile(file)) {
         setSelectedImage(file);
-        const url = URL.createObjectURL(file);
-        setPreviewUrl(url);
-        setResultUrl(null);
-        setDepthMapUrl(null);
-        
-        if (file.name.toLowerCase().match(/\.(tiff?|cr2|nef|arw|dng|raw|orf|rw2|pef)$/)) {
-          toast.info(t('Advanced format detected. Processing for optimal results...', '检测到高级格式。正在处理以获得最佳结果...'));
+        try {
+          const url = await createPreviewUrl(file);
+          setPreviewUrl(url);
+          setResultUrl(null);
+          setDepthMapUrl(null);
+          
+          if (file.name.toLowerCase().match(/\.(tiff?|cr2|nef|arw|dng|raw|orf|rw2|pef)$/)) {
+            toast.info(t('Advanced format detected. Processing for optimal results...', '检测到高级格式。正在处理以获得最佳结果...'));
+          }
+        } catch (error) {
+          console.error('Error processing TIFF file:', error);
+          toast.error(t('Error processing TIFF file. Please try a different format.', '处理TIFF文件时出错。请尝试其他格式。'));
         }
       } else {
         toast.error(t('Please select a valid image file (JPEG, PNG, TIFF, RAW formats supported)', '请选择有效的图像文件（支持JPEG、PNG、TIFF、RAW格式）'));
@@ -113,30 +150,40 @@ const StereoscopeProcessor: React.FC = () => {
     }
   };
 
-  const handleStarlessImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStarlessImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (validateImageFile(file)) {
         setStarlessImage(file);
-        const url = URL.createObjectURL(file);
-        setStarlessPreview(url);
-        setResultUrl(null);
-        setDepthMapUrl(null);
+        try {
+          const url = await createPreviewUrl(file);
+          setStarlessPreview(url);
+          setResultUrl(null);
+          setDepthMapUrl(null);
+        } catch (error) {
+          console.error('Error processing TIFF file:', error);
+          toast.error(t('Error processing TIFF file. Please try a different format.', '处理TIFF文件时出错。请尝试其他格式。'));
+        }
       } else {
         toast.error(t('Please select a valid starless image file', '请选择有效的无星图像文件'));
       }
     }
   };
 
-  const handleStarsImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStarsImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (validateImageFile(file)) {
         setStarsImage(file);
-        const url = URL.createObjectURL(file);
-        setStarsPreview(url);
-        setResultUrl(null);
-        setDepthMapUrl(null);
+        try {
+          const url = await createPreviewUrl(file);
+          setStarsPreview(url);
+          setResultUrl(null);
+          setDepthMapUrl(null);
+        } catch (error) {
+          console.error('Error processing TIFF file:', error);
+          toast.error(t('Error processing TIFF file. Please try a different format.', '处理TIFF文件时出错。请尝试其他格式。'));
+        }
       } else {
         toast.error(t('Please select a valid stars-only image file', '请选择有效的纯星图像文件'));
       }

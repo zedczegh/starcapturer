@@ -5,6 +5,8 @@
  * and Dylan O'Donnell for creating 3D stereoscopic pairs from separate starless
  * and stars-only astronomical images.
  */
+// @ts-ignore
+import Tiff from 'tiff.js';
 
 export interface TraditionalMorphParams {
   horizontalDisplace: number; // 10-30 range for displacement filter
@@ -31,6 +33,36 @@ export class TraditionalMorphProcessor {
     this.ctx = ctx;
   }
 
+  private isTiffFile(file: File): boolean {
+    return file.type === 'image/tiff' || file.type === 'image/tif' || 
+           !!file.name.toLowerCase().match(/\.tiff?$/);
+  }
+
+  private async convertTiffToDataURL(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const buffer = e.target?.result as ArrayBuffer;
+          const tiff = new Tiff({ buffer });
+          const canvas = tiff.toCanvas();
+          resolve(canvas.toDataURL());
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  private async createImageUrl(file: File): Promise<string> {
+    if (this.isTiffFile(file)) {
+      return await this.convertTiffToDataURL(file);
+    }
+    return URL.createObjectURL(file);
+  }
+
   /**
    * Load and validate input images
    */
@@ -41,17 +73,20 @@ export class TraditionalMorphProcessor {
     const starlessImg = new Image();
     const starsImg = new Image();
     
-    // Load both images
+    // Load both images with TIFF support
+    const starlessUrl = await this.createImageUrl(inputs.starlessImage);
+    const starsUrl = await this.createImageUrl(inputs.starsOnlyImage);
+    
     await Promise.all([
       new Promise((resolve, reject) => {
         starlessImg.onload = resolve;
         starlessImg.onerror = reject;
-        starlessImg.src = URL.createObjectURL(inputs.starlessImage);
+        starlessImg.src = starlessUrl;
       }),
       new Promise((resolve, reject) => {
         starsImg.onload = resolve;
         starsImg.onerror = reject;
-        starsImg.src = URL.createObjectURL(inputs.starsOnlyImage);
+        starsImg.src = starsUrl;
       })
     ]);
 
