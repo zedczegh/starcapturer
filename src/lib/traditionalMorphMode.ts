@@ -350,60 +350,61 @@ export class TraditionalMorphProcessor {
     starCtx.drawImage(starsImg, 0, 0);
     
     // Position bright stars based on brightness for 3D depth effect
-    // Clear only the bright star regions first, then redraw them shifted
+    // Add shifted bright stars without clearing originals (screen blend handles overlays naturally)
     for (const star of starCenters) {
       const brightnessFactor = star.brightness / 255;
       
       // Only reposition significantly bright stars (leave dim stars in original position)
-      if (brightnessFactor > 0.6) {
+      if (brightnessFactor > 0.7) {
         // Calculate shift based on brightness and user parameter
         // Brighter stars get more shift (appear closer)
         // Following article: right shift = closer to viewer
         let starShift = 0;
         
-        if (brightnessFactor > 0.8) {
+        if (brightnessFactor > 0.85) {
           // Very bright stars - bring forward
           starShift = params.starShiftAmount * 1.0;
-        } else if (brightnessFactor > 0.7) {
+        } else if (brightnessFactor > 0.75) {
           // Bright stars - mid-ground
           starShift = params.starShiftAmount * 0.6;
         } else {
-          // Medium bright stars - slight forward
+          // Medium bright stars - minimal shift
           starShift = params.starShiftAmount * 0.3;
         }
         
-        // Extract and reposition the bright star with precise masking
-        const radius = Math.max(2, Math.min(6, Math.ceil(brightnessFactor * 4)));
+        // Extract star region for repositioning
+        const radius = Math.max(2, Math.min(5, Math.ceil(brightnessFactor * 3)));
         const x1 = Math.max(0, star.x - radius);
         const y1 = Math.max(0, star.y - radius);
         const w = Math.min(radius * 2, width - x1);
         const h = Math.min(radius * 2, height - y1);
         
         if (w > 0 && h > 0 && starShift > 0) {
-          // Get star data before clearing
+          // Get star data from original stars image
           const starData = starCtx.getImageData(x1, y1, w, h);
           
-          // Create mask to only clear actual star pixels (not background)
-          const maskData = new Uint8ClampedArray(starData.data.length);
+          // Filter to only include bright star pixels (avoid background noise)
+          const filteredData = new ImageData(w, h);
           for (let i = 0; i < starData.data.length; i += 4) {
             const luminance = 0.299 * starData.data[i] + 0.587 * starData.data[i + 1] + 0.114 * starData.data[i + 2];
-            if (luminance > 50) { // Only mask bright pixels
-              maskData[i] = 255;
-              maskData[i + 1] = 255;
-              maskData[i + 2] = 255;
-              maskData[i + 3] = Math.min(255, luminance * 2); // Stronger clearing for brighter pixels
+            if (luminance > 100) { // Only include bright pixels
+              filteredData.data[i] = starData.data[i];
+              filteredData.data[i + 1] = starData.data[i + 1];
+              filteredData.data[i + 2] = starData.data[i + 2];
+              filteredData.data[i + 3] = starData.data[i + 3];
+            } else {
+              // Make background transparent
+              filteredData.data[i] = 0;
+              filteredData.data[i + 1] = 0;
+              filteredData.data[i + 2] = 0;
+              filteredData.data[i + 3] = 0;
             }
           }
           
-          // Clear original position using mask
-          rightCtx.globalCompositeOperation = 'destination-out';
-          const maskImageData = new ImageData(maskData, w, h);
-          rightCtx.putImageData(maskImageData, x1, y1);
-          
-          // Redraw star at shifted position
+          // Add shifted bright star (screen blend naturally handles overlays)
           rightCtx.globalCompositeOperation = 'screen';
           const newX = Math.max(0, Math.min(width - w, x1 + starShift));
-          rightCtx.putImageData(starData, newX, y1);
+          rightCtx.putImageData(filteredData, newX, y1);
         }
       }
     }
