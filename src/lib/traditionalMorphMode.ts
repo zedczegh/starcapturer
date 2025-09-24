@@ -330,9 +330,11 @@ export class TraditionalMorphProcessor {
     // Draw displaced starless background
     rightCtx.drawImage(displacedStarless, 0, 0);
     
-    // Manually position individual stars in 3D space
+    // First, add ALL stars from original stars-only image as base layer
     rightCtx.globalCompositeOperation = 'screen';
+    rightCtx.drawImage(starsImg, 0, 0);
     
+    // Now manually reposition bright stars for 3D depth effect
     // Create temporary canvas for individual star manipulation
     const starCanvas = document.createElement('canvas');
     const starCtx = starCanvas.getContext('2d')!;
@@ -340,42 +342,50 @@ export class TraditionalMorphProcessor {
     starCanvas.height = height;
     starCtx.drawImage(starsImg, 0, 0);
     
-    // Position stars based on brightness (brighter = closer, more shift)
+    // Position bright stars based on brightness for 3D depth effect
+    // Clear only the bright star regions first, then redraw them shifted
     for (const star of starCenters) {
       const brightnessFactor = star.brightness / 255;
       
-      // Calculate shift based on brightness and user parameter
-      // Brighter stars get more shift (appear closer)
-      // Following article: left shift = away, right shift = closer
-      let starShift = 0;
-      
-      if (brightnessFactor > 0.8) {
-        // Very bright stars - bring forward
-        starShift = params.starShiftAmount * 0.8;
-      } else if (brightnessFactor > 0.6) {
-        // Medium bright stars - mid-ground
-        starShift = params.starShiftAmount * 0.4;
-      } else if (brightnessFactor > 0.4) {
-        // Dim stars - slight forward
-        starShift = params.starShiftAmount * 0.2;
-      } else {
-        // Very dim stars - background (minimal shift)
-        starShift = params.starShiftAmount * 0.1;
-      }
-      
-      // Extract star region and draw it at new position
-      const radius = Math.max(2, Math.min(8, Math.ceil(brightnessFactor * 6)));
-      const x1 = Math.max(0, star.x - radius);
-      const y1 = Math.max(0, star.y - radius);
-      const w = Math.min(radius * 2, width - x1);
-      const h = Math.min(radius * 2, height - y1);
-      
-      if (w > 0 && h > 0) {
-        const starData = starCtx.getImageData(x1, y1, w, h);
+      // Only reposition significantly bright stars (leave dim stars in original position)
+      if (brightnessFactor > 0.5) {
+        // Calculate shift based on brightness and user parameter
+        // Brighter stars get more shift (appear closer)
+        // Following article: right shift = closer to viewer
+        let starShift = 0;
         
-        // Position with calculated shift (right shift = closer to viewer)
-        const newX = Math.max(0, Math.min(width - w, x1 + starShift));
-        rightCtx.putImageData(starData, newX, y1);
+        if (brightnessFactor > 0.8) {
+          // Very bright stars - bring forward
+          starShift = params.starShiftAmount * 1.0;
+        } else if (brightnessFactor > 0.7) {
+          // Bright stars - mid-ground
+          starShift = params.starShiftAmount * 0.6;
+        } else {
+          // Medium stars - slight forward
+          starShift = params.starShiftAmount * 0.3;
+        }
+        
+        // Extract and reposition the bright star
+        const radius = Math.max(3, Math.min(10, Math.ceil(brightnessFactor * 8)));
+        const x1 = Math.max(0, star.x - radius);
+        const y1 = Math.max(0, star.y - radius);
+        const w = Math.min(radius * 2, width - x1);
+        const h = Math.min(radius * 2, height - y1);
+        
+        if (w > 0 && h > 0 && starShift > 0) {
+          // Clear original position of this bright star
+          rightCtx.globalCompositeOperation = 'destination-out';
+          rightCtx.fillStyle = 'rgba(255,255,255,0.8)';
+          rightCtx.fillRect(x1, y1, w, h);
+          
+          // Get star data and redraw at shifted position
+          rightCtx.globalCompositeOperation = 'screen';
+          const starData = starCtx.getImageData(x1, y1, w, h);
+          
+          // Position with calculated shift (right shift = closer to viewer)
+          const newX = Math.max(0, Math.min(width - w, x1 + starShift));
+          rightCtx.putImageData(starData, newX, y1);
+        }
       }
     }
     
