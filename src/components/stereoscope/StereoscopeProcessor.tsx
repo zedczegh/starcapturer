@@ -247,6 +247,13 @@ const StereoscopeProcessor: React.FC = () => {
         
         const destIdx = idx * 4;
         
+        // Debug star processing for right view
+        if (params.preserveStarShapes && starMask[idx] === 255) {
+          if (x < 5 && y < 5) { // Debug first few star pixels
+            console.log(`Processing star at (${x},${y}) with shift ${shift} for right view`);
+          }
+        }
+        
         // Left view: get pixel data from RIGHT of current position (positive shift in source)
         const xLeftSrc = x + shift;
         if (xLeftSrc >= 0 && xLeftSrc < width) {
@@ -271,6 +278,11 @@ const StereoscopeProcessor: React.FC = () => {
           rightData.data[destIdx + 1] = originalData.data[rightSrcIdx + 1];
           rightData.data[destIdx + 2] = originalData.data[rightSrcIdx + 2];
           rightData.data[destIdx + 3] = 255;
+          
+          // Debug specific star pixels in right view
+          if (params.preserveStarShapes && starMask[idx] === 255 && x < 5 && y < 5) {
+            console.log(`Star pixel (${x},${y}) in right view: src=${xRightSrc}, RGB=(${rightData.data[destIdx]},${rightData.data[destIdx + 1]},${rightData.data[destIdx + 2]})`);
+          }
         } else {
           // Fill with original pixel if shift goes out of bounds
           rightData.data[destIdx] = originalData.data[destIdx];
