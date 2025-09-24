@@ -244,25 +244,23 @@ const StereoscopeProcessor: React.FC = () => {
         // Skip black pixels
         if (r === 0 && g === 0 && b === 0) continue;
         
-        let leftDestX = x;   // Left image position 
-        let rightDestX = x;  // Right image position
+        let leftDestX = x;   // Left image - no shift for stars
+        let rightDestX = x;  // Right image - will be shifted for stars
         
         if (params.preserveStarShapes && starMask[srcIdx] === 255) {
-          // Star pixel - determine depth based on brightness
+          // Star pixel - use original star pixel, just shift position
           const starBrightness = Math.max(r, g, b);
           
-          if (starBrightness > 200) {
+          if (starBrightness > 150) {
             // Bright stars appear closer - shift RIGHT on right image
-            leftDestX = x;     // No shift on left
-            rightDestX = x + Math.round(params.starParallaxPx * 1.5);
+            rightDestX = x + Math.round(params.starParallaxPx);
           } else {
             // Dim stars appear further - shift LEFT on right image  
-            leftDestX = x;     // No shift on left
             rightDestX = x - Math.round(params.starParallaxPx * 0.5);
           }
           
           if (x < 5 && y < 5) {
-            console.log(`Star at (${x},${y}) brightness=${starBrightness}, rightDestX=${rightDestX}`);
+            console.log(`Original star at (${x},${y}) brightness=${starBrightness}, moving to rightX=${rightDestX}`);
           }
         } else {
           // Non-star pixel - use depth map for subtle parallax
@@ -272,7 +270,7 @@ const StereoscopeProcessor: React.FC = () => {
           rightDestX = x + baseShift; // Right view normal shift
         }
         
-        // Place pixel in left view
+        // Place original pixel in left view
         if (leftDestX >= 0 && leftDestX < width) {
           const leftDestIdx = (y * width + leftDestX) * 4;
           leftData.data[leftDestIdx] = r;
@@ -281,18 +279,13 @@ const StereoscopeProcessor: React.FC = () => {
           leftData.data[leftDestIdx + 3] = 255;
         }
         
-        // Place pixel in right view
+        // Place original pixel in right view
         if (rightDestX >= 0 && rightDestX < width) {
           const rightDestIdx = (y * width + rightDestX) * 4;
           rightData.data[rightDestIdx] = r;
           rightData.data[rightDestIdx + 1] = g;
           rightData.data[rightDestIdx + 2] = b;
           rightData.data[rightDestIdx + 3] = 255;
-          
-          // Debug star placement in right view
-          if (params.preserveStarShapes && starMask[srcIdx] === 255 && x < 5 && y < 5) {
-            console.log(`Placed star from (${x},${y}) to right view at (${rightDestX},${y}) RGB=(${r},${g},${b})`);
-          }
         }
       }
     }
