@@ -68,7 +68,7 @@ const StereoscopeProcessor: React.FC = () => {
       blue: 0.114
     },
     objectType: 'nebula',
-    starParallaxPx: 8,
+    starParallaxPx: 15, // Increased for better visibility
     preserveStarShapes: true,
   });
 
@@ -222,6 +222,14 @@ const StereoscopeProcessor: React.FC = () => {
       rightData.data[i] = 255; // Alpha
     }
 
+    // Count stars for debugging
+    let starCount = 0;
+    for (let i = 0; i < starMask.length; i++) {
+      if (starMask[i] === 255) starCount++;
+    }
+    console.log(`Detected ${starCount} star pixels`);
+    console.log(`Star parallax: ${params.starParallaxPx}px, Max shift: ${params.maxShift}px`);
+
     // Apply depth-based shifting - Fixed logic for proper stereo effect
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -232,6 +240,9 @@ const StereoscopeProcessor: React.FC = () => {
         // Enhanced star handling with proper parallax
         if (params.preserveStarShapes && starMask[idx] === 255) {
           shift = Math.round(params.starParallaxPx);
+          if (x < 10 && y < 10) { // Debug first few star pixels
+            console.log(`Star pixel at (${x},${y}) using parallax shift: ${shift}`);
+          }
         }
         
         const destIdx = idx * 4;
@@ -332,6 +343,25 @@ const StereoscopeProcessor: React.FC = () => {
       setDepthMapUrl(depthCanvas.toDataURL());
 
       const { left, right } = createStereoViews(canvas, ctx, depthMap, width, height, params, starMask);
+      
+      // Create debug star mask visualization
+      const starMaskCanvas = document.createElement('canvas');
+      starMaskCanvas.width = width;
+      starMaskCanvas.height = height;
+      const starMaskCtx = starMaskCanvas.getContext('2d')!;
+      const starMaskImageData = new ImageData(width, height);
+      
+      for (let i = 0; i < starMask.length; i++) {
+        const starValue = starMask[i];
+        const pixelIdx = i * 4;
+        starMaskImageData.data[pixelIdx] = starValue;     // Red
+        starMaskImageData.data[pixelIdx + 1] = starValue; // Green  
+        starMaskImageData.data[pixelIdx + 2] = starValue; // Blue
+        starMaskImageData.data[pixelIdx + 3] = 255;       // Alpha
+      }
+      
+      starMaskCtx.putImageData(starMaskImageData, 0, 0);
+      console.log('Star mask visualization created', starMaskCanvas.toDataURL());
 
       const resultCanvas = document.createElement('canvas');
       const resultCtx = resultCanvas.getContext('2d')!;
