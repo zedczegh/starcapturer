@@ -381,14 +381,22 @@ const StereoscopeProcessor: React.FC = () => {
 
       const resultCanvas = document.createElement('canvas');
       const resultCtx = resultCanvas.getContext('2d')!;
-      resultCanvas.width = width * 2 + stereoSpacing;
-      resultCanvas.height = height;
+      
+      // Add 600px borders around the entire image
+      const borderSize = 600;
+      const totalWidth = width * 2 + stereoSpacing + (borderSize * 2);
+      const totalHeight = height + (borderSize * 2);
+      
+      resultCanvas.width = totalWidth;
+      resultCanvas.height = totalHeight;
 
+      // Fill entire canvas with black (creates the border)
       resultCtx.fillStyle = '#000000';
       resultCtx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
 
-      resultCtx.putImageData(left, 0, 0);
-      resultCtx.putImageData(right, width + stereoSpacing, 0);
+      // Place left and right images with border offset
+      resultCtx.putImageData(left, borderSize, borderSize);
+      resultCtx.putImageData(right, borderSize + width + stereoSpacing, borderSize);
 
       setResultUrl(resultCanvas.toDataURL());
       
@@ -759,13 +767,11 @@ const StereoscopeProcessor: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="p-[600px] bg-black rounded-lg">
-                    <img
-                      src={resultUrl}
-                      alt="Stereoscopic Result"
-                      className="w-full rounded-lg"
-                    />
-                  </div>
+                  <img
+                    src={resultUrl}
+                    alt="Stereoscopic Result"
+                    className="w-full rounded-lg border border-cosmic-700"
+                  />
                 </CardContent>
               </Card>
             )}
