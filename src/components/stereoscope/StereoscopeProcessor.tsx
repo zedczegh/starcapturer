@@ -75,8 +75,8 @@ const StereoscopeProcessor: React.FC = () => {
   // Add stereo spacing parameter
   const [stereoSpacing, setStereoSpacing] = useState<number>(300);
   
-  // Add autocrop toggle
-  const [autoCrop, setAutoCrop] = useState<boolean>(false);
+  // Add border toggle
+  const [addBorders, setAddBorders] = useState<boolean>(true);
   
   // Traditional mode parameters
   const [traditionalParams, setTraditionalParams] = useState<TraditionalMorphParams>({
@@ -322,31 +322,9 @@ const StereoscopeProcessor: React.FC = () => {
         img.src = previewUrl!;
       });
 
-      // Optional auto-crop to 16:9 aspect ratio for optimal processing
-      let finalWidth = img.width;
-      let finalHeight = img.height;
-      let cropX = 0;
-      let cropY = 0;
-      
-      if (autoCrop) {
-        const targetRatio = 16 / 9;
-        const currentRatio = finalWidth / finalHeight;
-        
-        if (Math.abs(currentRatio - targetRatio) > 0.1) {
-          if (currentRatio > targetRatio) {
-            finalWidth = Math.round(finalHeight * targetRatio);
-            cropX = (img.width - finalWidth) / 2;
-          } else {
-            finalHeight = Math.round(finalWidth / targetRatio);
-            cropY = (img.height - finalHeight) / 2;
-          }
-          toast.info(t('Auto-cropping to 16:9 for optimal processing', '自动裁剪为16:9以获得最佳处理效果'));
-        }
-      }
-
-      canvas.width = finalWidth;
-      canvas.height = finalHeight;
-      ctx.drawImage(img, cropX, cropY, finalWidth, finalHeight, 0, 0, finalWidth, finalHeight);
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
 
       const { width, height } = canvas;
       const { depthMap, starMask } = generateScientificAstroDepthMap(canvas, ctx, width, height, params);
@@ -382,21 +360,33 @@ const StereoscopeProcessor: React.FC = () => {
       const resultCanvas = document.createElement('canvas');
       const resultCtx = resultCanvas.getContext('2d')!;
       
-      // Add 600px borders around the entire image
-      const borderSize = 600;
-      const totalWidth = width * 2 + stereoSpacing + (borderSize * 2);
-      const totalHeight = height + (borderSize * 2);
-      
-      resultCanvas.width = totalWidth;
-      resultCanvas.height = totalHeight;
+      if (addBorders) {
+        // Add 600px borders around the entire image
+        const borderSize = 600;
+        const totalWidth = width * 2 + stereoSpacing + (borderSize * 2);
+        const totalHeight = height + (borderSize * 2);
+        
+        resultCanvas.width = totalWidth;
+        resultCanvas.height = totalHeight;
 
-      // Fill entire canvas with black (creates the border)
-      resultCtx.fillStyle = '#000000';
-      resultCtx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
+        // Fill entire canvas with black (creates the border)
+        resultCtx.fillStyle = '#000000';
+        resultCtx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
 
-      // Place left and right images with border offset
-      resultCtx.putImageData(left, borderSize, borderSize);
-      resultCtx.putImageData(right, borderSize + width + stereoSpacing, borderSize);
+        // Place left and right images with border offset
+        resultCtx.putImageData(left, borderSize, borderSize);
+        resultCtx.putImageData(right, borderSize + width + stereoSpacing, borderSize);
+      } else {
+        // No borders - standard layout
+        resultCanvas.width = width * 2 + stereoSpacing;
+        resultCanvas.height = height;
+
+        resultCtx.fillStyle = '#000000';
+        resultCtx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
+
+        resultCtx.putImageData(left, 0, 0);
+        resultCtx.putImageData(right, width + stereoSpacing, 0);
+      }
 
       setResultUrl(resultCanvas.toDataURL());
       
@@ -433,7 +423,7 @@ const StereoscopeProcessor: React.FC = () => {
       );
 
       setDepthMapUrl(depthMap.toDataURL());
-      const finalPair = processor.createFinalStereoPair(leftCanvas, rightCanvas, stereoSpacing);
+      const finalPair = processor.createFinalStereoPair(leftCanvas, rightCanvas, stereoSpacing, addBorders);
       setResultUrl(finalPair.toDataURL());
       processor.dispose();
       
@@ -539,11 +529,11 @@ const StereoscopeProcessor: React.FC = () => {
                     )}
                     
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="autocrop">{t('Auto-crop to 16:9', '自动裁剪为16:9')}</Label>
+                      <Label htmlFor="borders">{t('Add 600px Black Borders', '添加600px黑色边框')}</Label>
                       <Switch
-                        id="autocrop"
-                        checked={autoCrop}
-                        onCheckedChange={setAutoCrop}
+                        id="borders"
+                        checked={addBorders}
+                        onCheckedChange={setAddBorders}
                       />
                     </div>
                   </div>
@@ -574,6 +564,15 @@ const StereoscopeProcessor: React.FC = () => {
                       <p className="text-xs text-cosmic-400 mt-1">
                         {t('Gap between left and right stereo images for easier viewing', '左右立体图像之间的间隔，便于观看')}
                       </p>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="borders-fast">{t('Add 600px Black Borders', '添加600px黑色边框')}</Label>
+                      <Switch
+                        id="borders-fast"
+                        checked={addBorders}
+                        onCheckedChange={setAddBorders}
+                      />
                     </div>
 
                     <Button
@@ -710,6 +709,15 @@ const StereoscopeProcessor: React.FC = () => {
                       <p className="text-xs text-cosmic-400 mt-1">
                         {t('Distance to shift individual stars for 3D positioning', '移动单个恒星进行3D定位的距离')}
                       </p>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="borders-traditional">{t('Add 600px Black Borders', '添加600px黑色边框')}</Label>
+                      <Switch
+                        id="borders-traditional"
+                        checked={addBorders}
+                        onCheckedChange={setAddBorders}
+                      />
                     </div>
 
                     <Button

@@ -441,7 +441,8 @@ export class TraditionalMorphProcessor {
   createFinalStereoPair(
     leftCanvas: HTMLCanvasElement, 
     rightCanvas: HTMLCanvasElement, 
-    spacing: number = 300
+    spacing: number = 300,
+    addBorders: boolean = true
   ): HTMLCanvasElement {
     const width = leftCanvas.width;
     const height = leftCanvas.height;
@@ -449,21 +450,35 @@ export class TraditionalMorphProcessor {
     const finalCanvas = document.createElement('canvas');
     const finalCtx = finalCanvas.getContext('2d')!;
     
-    // Add 600px borders around the entire image
-    const borderSize = 600;
-    const totalWidth = width * 2 + spacing + (borderSize * 2);
-    const totalHeight = height + (borderSize * 2);
-    
-    finalCanvas.width = totalWidth;
-    finalCanvas.height = totalHeight;
-    
-    // Fill entire canvas with black (creates the border)
-    finalCtx.fillStyle = '#000000';
-    finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-    
-    // Draw left and right views with border offset
-    finalCtx.drawImage(leftCanvas, borderSize, borderSize);
-    finalCtx.drawImage(rightCanvas, borderSize + width + spacing, borderSize);
+    if (addBorders) {
+      // Add 600px borders around the entire image
+      const borderSize = 600;
+      const totalWidth = width * 2 + spacing + (borderSize * 2);
+      const totalHeight = height + (borderSize * 2);
+      
+      finalCanvas.width = totalWidth;
+      finalCanvas.height = totalHeight;
+      
+      // Fill entire canvas with black (creates the border)
+      finalCtx.fillStyle = '#000000';
+      finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+      
+      // Draw left and right views with border offset
+      finalCtx.drawImage(leftCanvas, borderSize, borderSize);
+      finalCtx.drawImage(rightCanvas, borderSize + width + spacing, borderSize);
+    } else {
+      // No borders - standard layout
+      finalCanvas.width = width * 2 + spacing;
+      finalCanvas.height = height;
+      
+      // Black background
+      finalCtx.fillStyle = '#000000';
+      finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+      
+      // Draw left and right views with spacing
+      finalCtx.drawImage(leftCanvas, 0, 0);
+      finalCtx.drawImage(rightCanvas, width + spacing, 0);
+    }
     
     return finalCanvas;
   }
