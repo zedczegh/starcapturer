@@ -1146,7 +1146,7 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Combine left and right views into final stereo pair with spacing and 10px right edge autocrop
+   * Combine left and right views into final stereo pair with identical dimensions
    */
   createFinalStereoPair(
     leftCanvas: HTMLCanvasElement, 
@@ -1154,35 +1154,67 @@ export class TraditionalMorphProcessor {
     spacing: number = 300,
     addBorders: boolean = true
   ): HTMLCanvasElement {
-    const width = leftCanvas.width;
-    const height = leftCanvas.height;
+    const originalWidth = leftCanvas.width;
+    const originalHeight = leftCanvas.height;
     
-    // Create clean left canvas (no changes needed)
-    const cleanLeftCanvas = this.canvasPool.acquire(width, height);
+    // Crop both images to ensure identical clean dimensions
+    const cropAmount = 10; // Remove 10px from right edge of both images
+    const cleanWidth = originalWidth - cropAmount;
+    const cleanHeight = originalHeight;
+    
+    // Create identical-sized left canvas
+    const cleanLeftCanvas = this.canvasPool.acquire(cleanWidth, cleanHeight);
     const cleanLeftCtx = cleanLeftCanvas.getContext('2d')!;
-    cleanLeftCtx.drawImage(leftCanvas, 0, 0);
+    cleanLeftCtx.imageSmoothingEnabled = false;
     
-    // Create cropped right canvas - remove 10px from right edge for clean cut
-    const cropAmount = 10;
-    const croppedWidth = width - cropAmount;
-    const cleanRightCanvas = this.canvasPool.acquire(croppedWidth, height);
-    const cleanRightCtx = cleanRightCanvas.getContext('2d')!;
-    
-    // Draw right canvas cropped by 10px from the right edge
-    cleanRightCtx.drawImage(
-      rightCanvas, 
-      0, 0, croppedWidth, height,  // Source: crop 10px from right
-      0, 0, croppedWidth, height   // Destination: full cropped canvas
+    // Crop left image to clean dimensions (remove 10px from right)
+    cleanLeftCtx.drawImage(
+      leftCanvas,
+      0, 0, cleanWidth, cleanHeight,  // Source: crop right edge
+      0, 0, cleanWidth, cleanHeight   // Destination: exact size
     );
+    
+    // Create identical-sized right canvas
+    const cleanRightCanvas = this.canvasPool.acquire(cleanWidth, cleanHeight);
+    const cleanRightCtx = cleanRightCanvas.getContext('2d')!;
+    cleanRightCtx.imageSmoothingEnabled = false;
+    
+    // Crop right image to exact same dimensions (remove 10px from right)
+    cleanRightCtx.drawImage(
+      rightCanvas,
+      0, 0, cleanWidth, cleanHeight,  // Source: crop right edge
+      0, 0, cleanWidth, cleanHeight   // Destination: exact size
+    );
+    
+    // Ensure perfectly clean edges on both images
+    [cleanLeftCtx, cleanRightCtx].forEach(ctx => {
+      const imageData = ctx.getImageData(0, 0, cleanWidth, cleanHeight);
+      const data = imageData.data;
+      
+      // Clean the rightmost pixel column to ensure straight edge
+      for (let y = 0; y < cleanHeight; y++) {
+        const rightEdgeIdx = (y * cleanWidth + (cleanWidth - 1)) * 4;
+        const nearRightIdx = (y * cleanWidth + (cleanWidth - 2)) * 4;
+        
+        // Make the right edge pixel match the near-right pixel for smoothness
+        data[rightEdgeIdx] = data[nearRightIdx];
+        data[rightEdgeIdx + 1] = data[nearRightIdx + 1];
+        data[rightEdgeIdx + 2] = data[nearRightIdx + 2];
+        data[rightEdgeIdx + 3] = data[nearRightIdx + 3];
+      }
+      
+      ctx.putImageData(imageData, 0, 0);
+    });
     
     const finalCanvas = document.createElement('canvas');
     const finalCtx = finalCanvas.getContext('2d')!;
+    finalCtx.imageSmoothingEnabled = false;
     
     if (addBorders) {
       // Add 600px borders around the entire image
       const borderSize = 600;
-      const totalWidth = width + croppedWidth + spacing + (borderSize * 2);
-      const totalHeight = height + (borderSize * 2);
+      const totalWidth = cleanWidth * 2 + spacing + (borderSize * 2);
+      const totalHeight = cleanHeight + (borderSize * 2);
       
       finalCanvas.width = totalWidth;
       finalCanvas.height = totalHeight;
@@ -1191,28 +1223,28 @@ export class TraditionalMorphProcessor {
       finalCtx.fillStyle = '#000000';
       finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
       
-      // Draw left view (full width) and cropped right view
+      // Draw both images with identical dimensions
       finalCtx.drawImage(cleanLeftCanvas, borderSize, borderSize);
-      finalCtx.drawImage(cleanRightCanvas, borderSize + width + spacing, borderSize);
+      finalCtx.drawImage(cleanRightCanvas, borderSize + cleanWidth + spacing, borderSize);
     } else {
-      // No borders - standard layout
-      finalCanvas.width = width + croppedWidth + spacing;
-      finalCanvas.height = height;
+      // No borders - standard layout with identical image sizes
+      finalCanvas.width = cleanWidth * 2 + spacing;
+      finalCanvas.height = cleanHeight;
       
       // Black background
       finalCtx.fillStyle = '#000000';
       finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
       
-      // Draw left view (full width) and cropped right view
+      // Draw both images with identical dimensions
       finalCtx.drawImage(cleanLeftCanvas, 0, 0);
-      finalCtx.drawImage(cleanRightCanvas, width + spacing, 0);
+      finalCtx.drawImage(cleanRightCanvas, cleanWidth + spacing, 0);
     }
     
     // Clean up temporary canvases
     this.canvasPool.release(cleanLeftCanvas);
     this.canvasPool.release(cleanRightCanvas);
     
-    console.log(`✂️ Applied 10px autocrop to right edge for clean stereo pair`);
+    console.log(`✂️ Both images cropped to identical dimensions: ${cleanWidth}x${cleanHeight}`);
     
     return finalCanvas;
   }
