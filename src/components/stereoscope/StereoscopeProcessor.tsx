@@ -77,8 +77,8 @@ const StereoscopeProcessor: React.FC = () => {
   // Add stereo spacing parameter
   const [stereoSpacing, setStereoSpacing] = useState<number>(300);
   
-  // Add border toggle
-  const [addBorders, setAddBorders] = useState<boolean>(true);
+  // Add border size parameter (0-600px)
+  const [borderSize, setBorderSize] = useState<number>(600);
   
   // Traditional mode parameters
   const [traditionalParams, setTraditionalParams] = useState<TraditionalMorphParams>({
@@ -375,9 +375,8 @@ const StereoscopeProcessor: React.FC = () => {
       const resultCanvas = document.createElement('canvas');
       const resultCtx = resultCanvas.getContext('2d')!;
       
-      if (addBorders) {
-        // Add 600px borders around the entire image
-        const borderSize = 600;
+      if (borderSize > 0) {
+        // Add configurable borders around the entire image
         const totalWidth = width * 2 + stereoSpacing + (borderSize * 2);
         const totalHeight = height + (borderSize * 2);
         
@@ -450,10 +449,40 @@ const StereoscopeProcessor: React.FC = () => {
       setDepthMapUrl(depthMap.toDataURL());
       
       console.log('Creating final stereo pair...');
-      const finalPair = processor.createFinalStereoPair(leftCanvas, rightCanvas, stereoSpacing, addBorders);
+      
+      // Create final stereo pair with configurable borders
+      const finalCanvas = document.createElement('canvas');
+      const finalCtx = finalCanvas.getContext('2d')!;
+      
+      if (borderSize > 0) {
+        // Add configurable borders
+        const totalWidth = leftCanvas.width * 2 + stereoSpacing + (borderSize * 2);
+        const totalHeight = leftCanvas.height + (borderSize * 2);
+        
+        finalCanvas.width = totalWidth;
+        finalCanvas.height = totalHeight;
+
+        // Fill with black borders
+        finalCtx.fillStyle = '#000000';
+        finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+        // Place left and right images with border offset
+        finalCtx.drawImage(leftCanvas, borderSize, borderSize);
+        finalCtx.drawImage(rightCanvas, borderSize + leftCanvas.width + stereoSpacing, borderSize);
+      } else {
+        // No borders - standard layout
+        finalCanvas.width = leftCanvas.width * 2 + stereoSpacing;
+        finalCanvas.height = leftCanvas.height;
+
+        finalCtx.fillStyle = '#000000';
+        finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+        finalCtx.drawImage(leftCanvas, 0, 0);
+        finalCtx.drawImage(rightCanvas, leftCanvas.width + stereoSpacing, 0);
+      }
       
       console.log('Setting result URL...');
-      setResultUrl(finalPair.toDataURL());
+      setResultUrl(finalCanvas.toDataURL());
       
       processor.dispose();
       
@@ -593,13 +622,19 @@ const StereoscopeProcessor: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="borders-fast">{t('Add 600px Black Borders', '添加600px黑色边框')}</Label>
-                      <Switch
-                        id="borders-fast"
-                        checked={addBorders}
-                        onCheckedChange={setAddBorders}
+                    <div>
+                      <Label>{t('Border Size', '边框大小')} ({borderSize}px)</Label>
+                      <Slider
+                        value={[borderSize]}
+                        onValueChange={([value]) => setBorderSize(value)}
+                        min={0}
+                        max={600}
+                        step={25}
+                        className="mt-2"
                       />
+                      <p className="text-xs text-cosmic-400 mt-1">
+                        {t('Size of black borders around stereo pair (0 = no borders)', '立体对周围黑色边框的大小（0 = 无边框）')}
+                      </p>
                     </div>
 
                     {processing && (
@@ -748,13 +783,19 @@ const StereoscopeProcessor: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="borders-traditional">{t('Add 600px Black Borders', '添加600px黑色边框')}</Label>
-                      <Switch
-                        id="borders-traditional"
-                        checked={addBorders}
-                        onCheckedChange={setAddBorders}
+                    <div>
+                      <Label>{t('Border Size', '边框大小')} ({borderSize}px)</Label>
+                      <Slider
+                        value={[borderSize]}
+                        onValueChange={([value]) => setBorderSize(value)}
+                        min={0}
+                        max={600}
+                        step={25}
+                        className="mt-2"
                       />
+                      <p className="text-xs text-cosmic-400 mt-1">
+                        {t('Size of black borders around stereo pair (0 = no borders)', '立体对周围黑色边框的大小（0 = 无边框）')}
+                      </p>
                     </div>
 
                     {processing && (
