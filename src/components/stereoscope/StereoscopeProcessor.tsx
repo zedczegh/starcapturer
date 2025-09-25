@@ -466,9 +466,9 @@ const StereoscopeProcessor: React.FC = () => {
         finalCtx.fillStyle = '#000000';
         finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
-        // Place left and right images with border offset
-        finalCtx.drawImage(leftCanvas, borderSize, borderSize);
-        finalCtx.drawImage(rightCanvas, borderSize + leftCanvas.width + stereoSpacing, borderSize);
+        // CORRECTED: Place right image first, left image second for proper stereo viewing
+        finalCtx.drawImage(rightCanvas, borderSize, borderSize);
+        finalCtx.drawImage(leftCanvas, borderSize + leftCanvas.width + stereoSpacing, borderSize);
       } else {
         // No borders - standard layout
         finalCanvas.width = leftCanvas.width * 2 + stereoSpacing;
@@ -477,8 +477,9 @@ const StereoscopeProcessor: React.FC = () => {
         finalCtx.fillStyle = '#000000';
         finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
-        finalCtx.drawImage(leftCanvas, 0, 0);
-        finalCtx.drawImage(rightCanvas, leftCanvas.width + stereoSpacing, 0);
+        // CORRECTED: Place right image first, left image second for proper stereo alignment
+        finalCtx.drawImage(rightCanvas, 0, 0);
+        finalCtx.drawImage(leftCanvas, leftCanvas.width + stereoSpacing, 0);
       }
       
       console.log('Setting result URL...');

@@ -135,29 +135,29 @@ export class OptimizedDisplacementProcessor {
         const globalIdx = (globalY * width + x) * 4;
         const chunkIdx = (y * width + x) * 4;
         
-        // NATURAL displacement calculation - simplified and realistic
+        // CORRECTED displacement calculation for proper stereo effect
         const primaryDepth = primaryDepthData.data[globalIdx] / 255;
         
-        // Gentle, natural displacement based primarily on luminance
-        // Reduced multipliers for more realistic depth perception
-        const naturalDisplacement = (primaryDepth - 0.5) * horizontalAmount * 0.6; // Reduced intensity
+        // FIXED: Corrected displacement direction and reduced intensity for natural stereo
+        // Bright objects (high depth) should shift LEFT in right eye view for proper 3D depth
+        const naturalDisplacement = (primaryDepth - 0.5) * horizontalAmount * 0.4; // Further reduced
         
-        // Subtle structure and edge influence for realism
+        // Minimal structure and edge influence for smoother result
         const structureDepth = structureDepthData.data[globalIdx] / 255;
         const edgeDepth = edgeDepthData.data[globalIdx] / 255;
         
-        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.08; // Much gentler
-        const edgeAdjustment = (1 - edgeDepth - 0.5) * horizontalAmount * 0.05; // Subtle edge preservation
+        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.05; // Very subtle
+        const edgeAdjustment = (1 - edgeDepth - 0.5) * horizontalAmount * 0.03; // Minimal edge effect
         
-        // Combined displacement with natural limits
+        // Combined displacement with tighter natural limits
         const totalDisplacement = naturalDisplacement + structureAdjustment + edgeAdjustment;
         
-        // Clamp displacement to prevent extreme artifacts
-        const clampedDisplacement = Math.max(-horizontalAmount * 0.8, Math.min(horizontalAmount * 0.8, totalDisplacement));
-        const finalDisplacement = Math.floor(clampedDisplacement + 0.5);
+        // Tighter clamping to prevent gaps and artifacts
+        const clampedDisplacement = Math.max(-horizontalAmount * 0.5, Math.min(horizontalAmount * 0.5, totalDisplacement));
+        const finalDisplacement = Math.round(clampedDisplacement);
         
-        // Apply natural displacement with bounds checking
-        const srcX = x - finalDisplacement;
+        // CORRECTED: Apply displacement in correct direction for stereo (+ moves source right)
+        const srcX = x + finalDisplacement;
         
         if (srcX >= 0 && srcX < width) {
           const clampedSrcX = Math.max(0, Math.min(width - 1, srcX));
@@ -168,10 +168,14 @@ export class OptimizedDisplacementProcessor {
           chunkData.data[chunkIdx + 2] = originalData.data[srcIdx + 2];
           chunkData.data[chunkIdx + 3] = 255;
         } else {
-          // Black fill for out-of-bounds pixels
-          chunkData.data[chunkIdx] = 0;
-          chunkData.data[chunkIdx + 1] = 0;
-          chunkData.data[chunkIdx + 2] = 0;
+          // IMPROVED: Smart fill using nearest valid pixel instead of black gaps
+          const nearestX = Math.max(0, Math.min(width - 1, srcX));
+          const nearestIdx = (globalY * width + nearestX) * 4;
+          
+          // Use nearest valid pixel to eliminate gaps/stripes
+          chunkData.data[chunkIdx] = originalData.data[nearestIdx];
+          chunkData.data[chunkIdx + 1] = originalData.data[nearestIdx + 1]; 
+          chunkData.data[chunkIdx + 2] = originalData.data[nearestIdx + 2];
           chunkData.data[chunkIdx + 3] = 255;
         }
       }
