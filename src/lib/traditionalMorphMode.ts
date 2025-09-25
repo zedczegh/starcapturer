@@ -395,7 +395,7 @@ export class TraditionalMorphProcessor {
     starCtx.drawImage(starsImg, 0, 0);
     
     // Position bright stars based on brightness for 3D depth effect
-    // Add shifted bright stars without clearing originals (screen blend handles overlays naturally)
+    // Use proper blending instead of putImageData to avoid black boxes
     for (const star of starCenters) {
       const brightnessFactor = star.brightness / 255;
       
@@ -417,7 +417,7 @@ export class TraditionalMorphProcessor {
           starShift = params.starShiftAmount * 0.3;
         }
         
-        // Extract star region for repositioning
+        // Extract and reposition star using proper canvas blending
         const radius = Math.max(2, Math.min(5, Math.ceil(brightnessFactor * 3)));
         const x1 = Math.max(0, star.x - radius);
         const y1 = Math.max(0, star.y - radius);
@@ -425,31 +425,31 @@ export class TraditionalMorphProcessor {
         const h = Math.min(radius * 2, height - y1);
         
         if (w > 0 && h > 0 && starShift > 0) {
-          // Get star data from original stars image
-          const starData = starCtx.getImageData(x1, y1, w, h);
+          // Create temporary canvas for the star region
+          const tempCanvas = document.createElement('canvas');
+          const tempCtx = tempCanvas.getContext('2d')!;
+          tempCanvas.width = w;
+          tempCanvas.height = h;
           
-          // Filter to only include bright star pixels (avoid background noise)
-          const filteredData = new ImageData(w, h);
+          // Draw the star region from original stars image
+          tempCtx.drawImage(starsImg, x1, y1, w, h, 0, 0, w, h);
+          
+          // Get the image data to filter out non-bright pixels
+          const starData = tempCtx.getImageData(0, 0, w, h);
           for (let i = 0; i < starData.data.length; i += 4) {
             const luminance = 0.299 * starData.data[i] + 0.587 * starData.data[i + 1] + 0.114 * starData.data[i + 2];
-            if (luminance > 100) { // Only include bright pixels
-              filteredData.data[i] = starData.data[i];
-              filteredData.data[i + 1] = starData.data[i + 1];
-              filteredData.data[i + 2] = starData.data[i + 2];
-              filteredData.data[i + 3] = starData.data[i + 3];
-            } else {
-              // Make background transparent
-              filteredData.data[i] = 0;
-              filteredData.data[i + 1] = 0;
-              filteredData.data[i + 2] = 0;
-              filteredData.data[i + 3] = 0;
+            if (luminance <= 100) { // Make non-bright pixels transparent
+              starData.data[i + 3] = 0; // Set alpha to 0
             }
           }
           
-          // Add shifted bright star (screen blend naturally handles overlays)
+          // Put the filtered data back to temp canvas
+          tempCtx.putImageData(starData, 0, 0);
+          
+          // Draw the shifted star using screen blending (this respects globalCompositeOperation)
           rightCtx.globalCompositeOperation = 'screen';
           const newX = Math.max(0, Math.min(width - w, x1 + starShift));
-          rightCtx.putImageData(filteredData, newX, y1);
+          rightCtx.drawImage(tempCanvas, newX, y1);
         }
       }
     }
