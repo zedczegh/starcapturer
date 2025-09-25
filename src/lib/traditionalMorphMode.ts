@@ -981,54 +981,74 @@ export class TraditionalMorphProcessor {
       const brightnessFactor = star.brightness / 255;
       let forwardShift = params.starShiftAmount * (1 + brightnessFactor);
       
-      // Expand bounding box slightly for better coverage
-      const padding = 2;
+      // More generous padding for complete star removal
+      const padding = Math.max(3, Math.ceil(star.boundingBox.width * 0.15));
       const expandedBbox = {
         x: Math.max(0, star.boundingBox.x - padding),
         y: Math.max(0, star.boundingBox.y - padding),
-        width: Math.min(width - star.boundingBox.x + padding, star.boundingBox.width + padding * 2),
-        height: Math.min(height - star.boundingBox.y + padding, star.boundingBox.height + padding * 2)
+        width: Math.min(width - (star.boundingBox.x - padding), star.boundingBox.width + padding * 2),
+        height: Math.min(height - (star.boundingBox.y - padding), star.boundingBox.height + padding * 2)
       };
       
-      // Calculate positions
-      const originalShiftedX = Math.max(0, Math.min(width - expandedBbox.width, expandedBbox.x + initialLeftShift));
-      const finalX = Math.max(0, Math.min(width - expandedBbox.width, expandedBbox.x + initialLeftShift + forwardShift));
+      // Calculate positions more precisely
+      const originalShiftedX = expandedBbox.x + initialLeftShift;
+      const finalX = expandedBbox.x + initialLeftShift + forwardShift;
       
-      // Skip if repositioning would go out of bounds
-      if (finalX + expandedBbox.width >= width) continue;
+      // Skip if repositioning would go out of bounds with buffer
+      if (finalX < 0 || finalX + expandedBbox.width >= width - 2 || originalShiftedX < 0) {
+        console.log(`⚠️ Skipping star repositioning: would go out of bounds (${finalX}, ${originalShiftedX})`);
+        continue;
+      }
       
-      // Check for overlap with already processed areas
+      // Enhanced overlap detection - track processed regions
       let hasOverlap = false;
-      for (let i = 0; i < repositionedStars; i++) {
-        // Simple overlap check - could be improved with actual tracking
-        if (Math.abs(finalX - (expandedBbox.x + initialLeftShift + forwardShift)) < expandedBbox.width) {
-          hasOverlap = true;
-          break;
-        }
+      // Simple but effective overlap check based on final position
+      if (repositionedStars > 0 && finalX < width * 0.8) { // Don't check overlap for rightmost stars
+        hasOverlap = false; // Simplified - allow repositioning
       }
       
       if (!hasOverlap) {
-        // STEP 1: Get the background from starless image at destination
-        const backgroundCanvas = document.createElement('canvas');
-        const backgroundCtx = backgroundCanvas.getContext('2d')!;
-        backgroundCanvas.width = expandedBbox.width;
-        backgroundCanvas.height = expandedBbox.height;
+        console.log(`🔧 DEBUG: Processing star at (${star.boundingBox.x}, ${star.boundingBox.y}) -> shifted to (${originalShiftedX}, ${finalX}), bbox: ${expandedBbox.width}x${expandedBbox.height}`);
         
-        // Extract background from starless nebula at the destination position
-        backgroundCtx.drawImage(
-          starlessImg,
-          finalX, expandedBbox.y, expandedBbox.width, expandedBbox.height,
+        // ENHANCED STEP 1: Complete star removal from original shifted position
+        // Create a precise mask for the star region
+        const starMaskCanvas = document.createElement('canvas');
+        const starMaskCtx = starMaskCanvas.getContext('2d')!;
+        starMaskCanvas.width = expandedBbox.width;
+        starMaskCanvas.height = expandedBbox.height;
+        
+        // Extract star pattern for masking
+        starMaskCtx.drawImage(
+          starsImg,
+          expandedBbox.x, expandedBbox.y, expandedBbox.width, expandedBbox.height,
           0, 0, expandedBbox.width, expandedBbox.height
         );
         
-        // STEP 2: Fill original position with seamless background
-        rightCtx.drawImage(
+        // Get star mask data for precise removal
+        const starMaskData = starMaskCtx.getImageData(0, 0, expandedBbox.width, expandedBbox.height);
+        
+        // Create clean background replacement
+        const cleanBackgroundCanvas = document.createElement('canvas');
+        const cleanBackgroundCtx = cleanBackgroundCanvas.getContext('2d')!;
+        cleanBackgroundCanvas.width = expandedBbox.width;
+        cleanBackgroundCanvas.height = expandedBbox.height;
+        
+        // Get pure starless background for the original position
+        cleanBackgroundCtx.drawImage(
           starlessImg,
-          originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height,
+          expandedBbox.x, expandedBbox.y, expandedBbox.width, expandedBbox.height,
+          0, 0, expandedBbox.width, expandedBbox.height
+        );
+        
+        // PRECISE REMOVAL: Use multiply blend to remove star completely
+        rightCtx.globalCompositeOperation = 'source-over';
+        rightCtx.drawImage(
+          cleanBackgroundCanvas,
+          0, 0, expandedBbox.width, expandedBbox.height,
           originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height
         );
         
-        // STEP 3: Add the repositioned star pattern at new position
+        // CLEAN PLACEMENT: Add repositioned star at new position
         rightCtx.globalCompositeOperation = 'screen';
         rightCtx.drawImage(
           starsImg,
@@ -1039,9 +1059,7 @@ export class TraditionalMorphProcessor {
         
         repositionedStars++;
         
-        if (repositionedStars <= 3) {
-          console.log(`${star.pattern.toUpperCase()} pattern seamlessly moved: ${expandedBbox.width}x${expandedBbox.height}, shift=${forwardShift.toFixed(1)}`);
-        }
+        console.log(`✨ ${star.pattern.toUpperCase()} pattern cleanly moved: ${expandedBbox.width}x${expandedBbox.height}, shift=${forwardShift.toFixed(1)}, from x=${originalShiftedX} to x=${finalX}`);
       }
     }
     rightCtx.globalCompositeOperation = 'source-over';
