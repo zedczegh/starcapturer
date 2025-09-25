@@ -759,11 +759,13 @@ const StereoscopeProcessor: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <img
-                    src={resultUrl}
-                    alt="Stereoscopic Result"
-                    className="w-full rounded-lg border border-cosmic-700"
-                  />
+                  <div className="p-[600px] bg-black rounded-lg">
+                    <img
+                      src={resultUrl}
+                      alt="Stereoscopic Result"
+                      className="w-full rounded-lg"
+                    />
+                  </div>
                 </CardContent>
               </Card>
             )}
