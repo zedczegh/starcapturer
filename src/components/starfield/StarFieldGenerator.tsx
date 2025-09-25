@@ -79,43 +79,66 @@ const StarFieldGenerator: React.FC = () => {
   const analyzeStarSizes = (stars: DetectedStar[]): StarLayer[] => {
     if (stars.length === 0) return [];
 
-    // Sort stars by size
-    const sortedStars = [...stars].sort((a, b) => b.size - a.size);
+    // Sort stars by size and brightness for better analysis
+    const sortedStars = [...stars].sort((a, b) => {
+      const aScore = a.size * a.brightness;
+      const bScore = b.size * b.brightness;
+      return bScore - aScore;
+    });
+
+    // Calculate dynamic thresholds based on star distribution
+    const sizes = sortedStars.map(s => s.size);
+    const brightnesses = sortedStars.map(s => s.brightness);
     
-    // Create size-based layers
+    const sizeP75 = sizes[Math.floor(sizes.length * 0.25)] || 4;
+    const sizeP50 = sizes[Math.floor(sizes.length * 0.5)] || 2.5;
+    const sizeP25 = sizes[Math.floor(sizes.length * 0.75)] || 1.5;
+    
+    const brightnessP75 = brightnesses[Math.floor(brightnesses.length * 0.25)] || 0.8;
+    
+    // Create dynamic layers based on star distribution
     const layers: StarLayer[] = [
       {
-        name: 'Large Stars (Foreground)',
-        stars: sortedStars.filter(star => star.size >= 4),
+        name: 'Bright Foreground Stars',
+        stars: sortedStars.filter(star => star.size >= sizeP75 || star.brightness >= brightnessP75),
         averageSize: 0,
-        depth: 20, // Closest
+        depth: 15, // Closest
         color: '#ffffff'
       },
       {
-        name: 'Medium Stars (Mid-field)',
-        stars: sortedStars.filter(star => star.size >= 2 && star.size < 4),
+        name: 'Large Mid-field Stars',
+        stars: sortedStars.filter(star => 
+          star.size >= sizeP50 && star.size < sizeP75 && star.brightness < brightnessP75
+        ),
         averageSize: 0,
-        depth: 60, // Middle
+        depth: 35,
+        color: '#f0f8ff'
+      },
+      {
+        name: 'Medium Stars',
+        stars: sortedStars.filter(star => 
+          star.size >= sizeP25 && star.size < sizeP50 && star.brightness < brightnessP75
+        ),
+        averageSize: 0,
+        depth: 65,
         color: '#e6f3ff'
       },
       {
-        name: 'Small Stars (Background)',
-        stars: sortedStars.filter(star => star.size < 2),
+        name: 'Small Background Stars',
+        stars: sortedStars.filter(star => star.size < sizeP25 && star.brightness < brightnessP75),
         averageSize: 0,
-        depth: 100, // Farthest
+        depth: 95,
         color: '#cce7ff'
       }
     ];
 
-    // Calculate average sizes
-    layers.forEach(layer => {
-      if (layer.stars.length > 0) {
-        layer.averageSize = layer.stars.reduce((sum, star) => sum + star.size, 0) / layer.stars.length;
-      }
+    // Calculate average sizes and ensure no empty layers
+    const validLayers = layers.filter(layer => layer.stars.length > 0);
+    validLayers.forEach(layer => {
+      layer.averageSize = layer.stars.reduce((sum, star) => sum + star.size, 0) / layer.stars.length;
     });
 
-    // Filter out empty layers
-    return layers.filter(layer => layer.stars.length > 0);
+    return validLayers;
   };
 
   const processStarLayers = useCallback(async () => {
@@ -161,21 +184,78 @@ const StarFieldGenerator: React.FC = () => {
       const separated = await separateStarsAndNebula(imageElement, stars);
       setSeparatedImages(separated);
       
-      // Step 4: Create 3D star data with proper layering
+      // Step 4: Create 3D star data with improved spatial distribution
       toast.info(t('Step 4: Generating 3D star field...', '步骤4：生成3D星场...'));
       
       const processedStarsData: ProcessedStarData[] = [];
+      const occupiedPositions: Array<{x: number, y: number, z: number}> = [];
       
-      layers.forEach(layer => {
+      // Helper function to check for collisions and find optimal position
+      const findOptimalPosition = (star: DetectedStar, baseDepth: number, layerIndex: number): {x: number, y: number, z: number} => {
+        const baseX = (star.x - imageElement.width / 2) * 0.8; // Slightly reduced scaling for better distribution
+        const baseY = (star.y - imageElement.height / 2) * 0.8;
+        
+        // Create continuous depth distribution instead of discrete layers
+        const minDepth = 10 + layerIndex * 20;
+        const maxDepth = minDepth + 25;
+        
+        // Add size-based depth variation (larger stars closer)
+        const sizeDepthFactor = Math.max(0.3, 1 - (star.size / 10));
+        const depthRange = maxDepth - minDepth;
+        
+        // Use Perlin-like noise for natural depth variation
+        const noiseX = Math.sin(star.x * 0.01) * Math.cos(star.y * 0.01);
+        const noiseY = Math.cos(star.x * 0.01) * Math.sin(star.y * 0.01);
+        const depthNoise = (noiseX + noiseY) * 0.5 + 0.5; // Normalize to 0-1
+        
+        let finalDepth = minDepth + depthRange * sizeDepthFactor + depthNoise * 10;
+        
+        // Add brightness-based positioning (brighter stars more prominent)
+        if (star.brightness > 0.7) {
+          finalDepth *= 0.8; // Bring bright stars closer
+        }
+        
+        // Collision avoidance for dense areas
+        const minDistance = Math.max(3, star.size * 0.5);
+        let attempts = 0;
+        let finalX = baseX;
+        let finalY = baseY;
+        
+        while (attempts < 10) {
+          const hasCollision = occupiedPositions.some(pos => {
+            const distance = Math.sqrt(
+              Math.pow(pos.x - finalX, 2) + 
+              Math.pow(pos.y - finalY, 2) + 
+              Math.pow(pos.z - finalDepth, 2)
+            );
+            return distance < minDistance;
+          });
+          
+          if (!hasCollision) break;
+          
+          // Adjust position slightly to avoid collision
+          const angle = (attempts / 10) * Math.PI * 2;
+          const offset = attempts * 0.5;
+          finalX = baseX + Math.cos(angle) * offset;
+          finalY = baseY + Math.sin(angle) * offset;
+          finalDepth += attempts * 0.5;
+          attempts++;
+        }
+        
+        return { x: finalX, y: finalY, z: finalDepth };
+      };
+      
+      layers.forEach((layer, layerIndex) => {
         layer.stars.forEach(star => {
-          // Add random variation to depth within layer
-          const depthVariation = (Math.random() - 0.5) * 20;
-          const finalDepth = Math.max(5, layer.depth + depthVariation);
+          const position = findOptimalPosition(star, layer.depth, layerIndex);
+          
+          // Add to occupied positions for collision detection
+          occupiedPositions.push(position);
           
           processedStarsData.push({
-            x: (star.x - imageElement.width / 2) / 2, // Center and scale
-            y: (star.y - imageElement.height / 2) / 2,
-            z: finalDepth,
+            x: position.x,
+            y: position.y,
+            z: position.z,
             brightness: star.brightness,
             size: star.size,
             color3d: `rgb(${star.color.r}, ${star.color.g}, ${star.color.b})`,

@@ -55,9 +55,12 @@ const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: bool
       colors[i * 3 + 1] = color.g;
       colors[i * 3 + 2] = color.b;
 
-      // Size based on star brightness and distance
-      const distanceScale = Math.max(0.5, 1 - (star.z / 200)); // Closer stars appear larger
-      sizes[i] = Math.max(1, star.size * settings.brightness * distanceScale * 2);
+      // Improved size calculation for better visual distribution
+      const distanceScale = Math.max(0.3, 1 - (star.z / 150));
+      const brightnessScale = Math.pow(star.brightness, 0.7); // Non-linear brightness scaling
+      const sizeScale = Math.max(0.5, Math.min(3, star.size * 0.3)); // Limit size range
+      
+      sizes[i] = sizeScale * settings.brightness * distanceScale * brightnessScale * 2;
     });
 
     return [positions, colors, sizes];
@@ -74,15 +77,21 @@ const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: bool
       
       switch (settings.movement) {
         case 'zoom':
-          // Move stars toward camera for zoom effect
+          // Improved zoom with natural star distribution
           const direction = settings.direction === 'forward' ? 1 : -1;
-          positions[baseIndex + 2] = star.z - (time * settings.speed * 10 * direction) % settings.depth;
+          const starDepthFactor = star.z / 100; // Normalize depth
+          const speedVariation = 0.8 + (star.brightness * 0.4); // Brighter stars move slightly faster
           
-          // Reset star position when it goes too far
-          if (positions[baseIndex + 2] < -50) {
-            positions[baseIndex + 2] = settings.depth;
-          } else if (positions[baseIndex + 2] > settings.depth) {
-            positions[baseIndex + 2] = -50;
+          positions[baseIndex + 2] = star.z - (time * settings.speed * 8 * direction * speedVariation) % (settings.depth * 1.5);
+          
+          // Smooth wraparound with staggered reset positions
+          const resetThreshold = -60 - (i % 20); // Stagger reset positions
+          const respawnDistance = settings.depth + 20 + (i % 30);
+          
+          if (positions[baseIndex + 2] < resetThreshold) {
+            positions[baseIndex + 2] = respawnDistance;
+          } else if (positions[baseIndex + 2] > respawnDistance) {
+            positions[baseIndex + 2] = resetThreshold;
           }
           break;
           
