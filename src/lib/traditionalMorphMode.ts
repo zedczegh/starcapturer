@@ -991,30 +991,16 @@ export class TraditionalMorphProcessor {
     rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
     rightCtx.globalCompositeOperation = 'source-over';
     
-    onProgress?.('Moving star patterns with PERFECT depth intelligence (NO DUPLICATES)...', 80);
+    onProgress?.('Moving star patterns with CLEAN removal (NO ARTIFACTS)...', 80);
     
-    // Step 3: BULLETPROOF star repositioning with comprehensive cleanup
+    // Step 3: CLEAN star repositioning using destination-out for perfect removal
     let repositionedStars = 0;
     const brightStars = starPatterns.filter(star => star.brightness / 255 > 0.35).slice(0, 15);
     
-    // Create comprehensive removal mask for ALL star positions
-    const starRemovalMask = document.createElement('canvas');
-    const starRemovalCtx = starRemovalMask.getContext('2d')!;
-    starRemovalMask.width = width;
-    starRemovalMask.height = height;
-    starRemovalCtx.fillStyle = 'white';
-    starRemovalCtx.fillRect(0, 0, width, height);
-    
-    // Create clean repositioned stars layer
-    const repositionedStarsLayer = document.createElement('canvas');
-    const repositionedStarsCtx = repositionedStarsLayer.getContext('2d')!;
-    repositionedStarsLayer.width = width;
-    repositionedStarsLayer.height = height;
-    
-    // Track all processed areas to prevent any overlaps
+    // Track processed areas to prevent any overlaps
     const processedAreas: Array<{x: number, y: number, w: number, h: number, originalX: number}> = [];
     
-    console.log(`🎯 Processing ${brightStars.length} bright stars with stellar depth intelligence...`);
+    console.log(`🎯 Processing ${brightStars.length} bright stars with clean removal...`);
     
     for (const star of brightStars) {
       // Find corresponding stellar depth data with improved matching
@@ -1084,16 +1070,29 @@ export class TraditionalMorphProcessor {
       }
       
       if (!hasOverlap && finalX + expandedBbox.width < width && forwardShift > 1) {
-        // STEP 1: Mark original position for COMPLETE removal (black = remove everything)
-        starRemovalCtx.fillStyle = 'black';
-        starRemovalCtx.fillRect(originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height);
+        // STEP 1: Clean removal using destination-out (removes pixels cleanly)
+        rightCtx.globalCompositeOperation = 'destination-out';
+        rightCtx.fillStyle = 'rgba(255, 255, 255, 1)'; // White = completely remove
+        rightCtx.fillRect(originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height);
         
-        // STEP 2: Add star to clean repositioned layer
-        repositionedStarsCtx.drawImage(
+        // STEP 2: Fill with clean nebula background
+        rightCtx.globalCompositeOperation = 'destination-over'; // Behind existing content
+        rightCtx.drawImage(
+          starlessImg,
+          originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height,
+          originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height
+        );
+        
+        // STEP 3: Add repositioned star cleanly  
+        rightCtx.globalCompositeOperation = 'screen';
+        rightCtx.drawImage(
           starsImg,
           expandedBbox.x, expandedBbox.y, expandedBbox.width, expandedBbox.height,
           finalX, expandedBbox.y, expandedBbox.width, expandedBbox.height
         );
+        
+        // Reset to normal
+        rightCtx.globalCompositeOperation = 'source-over';
         
         // Track processed areas
         processedAreas.push({
@@ -1112,15 +1111,6 @@ export class TraditionalMorphProcessor {
         }
       }
     }
-    
-    // STEP 3: Apply COMPLETE star removal using multiply blend (removes everything)
-    rightCtx.globalCompositeOperation = 'multiply';
-    rightCtx.drawImage(starRemovalMask, 0, 0);
-    
-    // STEP 4: Add repositioned stars cleanly with screen blend
-    rightCtx.globalCompositeOperation = 'screen';  
-    rightCtx.drawImage(repositionedStarsLayer, 0, 0);
-    rightCtx.globalCompositeOperation = 'source-over';
     
     console.log(`🌟 Successfully repositioned ${repositionedStars} stars using stellar depth analysis (${processedAreas.length} areas processed)`);
     
