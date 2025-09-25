@@ -13,20 +13,22 @@ export class OptimizedDisplacementProcessor {
   private static readonly CHUNK_SIZE = 128; // Process in 128px high chunks
   private static readonly OVERLAP_SIZE = 4; // Overlap between chunks for seamless blending
   
-  /**
-   * Apply displacement processing in chunks to prevent UI freezing
-   */
-  static async applyOptimizedDisplacement(
-    source: HTMLImageElement | HTMLCanvasElement,
-    depthMaps: { 
-      primaryDepth: HTMLCanvasElement; 
-      structureDepth: HTMLCanvasElement; 
-      edgeDepth: HTMLCanvasElement; 
-      combinedDepth: HTMLCanvasElement 
-    },
-    horizontalAmount: number,
-    onProgress?: (step: string, progress?: number) => void
-  ): Promise<HTMLCanvasElement> {
+   /**
+    * Apply displacement processing in chunks to prevent UI freezing
+    * Enhanced with star protection for astronomical images
+    */
+   static async applyOptimizedDisplacement(
+     source: HTMLImageElement | HTMLCanvasElement,
+     depthMaps: { 
+       primaryDepth: HTMLCanvasElement; 
+       structureDepth: HTMLCanvasElement; 
+       edgeDepth: HTMLCanvasElement; 
+       combinedDepth: HTMLCanvasElement 
+     },
+     horizontalAmount: number,
+     onProgress?: (step: string, progress?: number) => void,
+     starMask?: HTMLCanvasElement // Optional star mask to protect star regions
+   ): Promise<HTMLCanvasElement> {
     const width = source.width;
     const height = source.height;
     
@@ -39,10 +41,16 @@ export class OptimizedDisplacementProcessor {
     
     const originalData = workCtx.getImageData(0, 0, width, height);
     
-    // Get depth data
-    const primaryDepthData = depthMaps.primaryDepth.getContext('2d')!.getImageData(0, 0, width, height);
-    const structureDepthData = depthMaps.structureDepth.getContext('2d')!.getImageData(0, 0, width, height);
-    const edgeDepthData = depthMaps.edgeDepth.getContext('2d')!.getImageData(0, 0, width, height);
+     // Get depth data
+     const primaryDepthData = depthMaps.primaryDepth.getContext('2d')!.getImageData(0, 0, width, height);
+     const structureDepthData = depthMaps.structureDepth.getContext('2d')!.getImageData(0, 0, width, height);
+     const edgeDepthData = depthMaps.edgeDepth.getContext('2d')!.getImageData(0, 0, width, height);
+     
+     // Get star mask data if provided for star protection
+     let starMaskData: ImageData | null = null;
+     if (starMask) {
+       starMaskData = starMask.getContext('2d')!.getImageData(0, 0, width, height);
+     }
     
     // Create result canvas
     const resultCanvas = document.createElement('canvas');
@@ -60,17 +68,18 @@ export class OptimizedDisplacementProcessor {
       
       onProgress?.(`Processing displacement chunk ${i + 1}/${chunks.length}...`, chunkProgress);
       
-      // Process this chunk with overlap handling
-      const chunkData = this.processChunk(
-        chunk, 
-        originalData, 
-        primaryDepthData, 
-        structureDepthData, 
-        edgeDepthData, 
-        horizontalAmount, 
-        width,
-        i > 0 // Has previous chunk for blending
-      );
+       // Process this chunk with overlap handling and star protection
+       const chunkData = this.processChunk(
+         chunk, 
+         originalData, 
+         primaryDepthData, 
+         structureDepthData, 
+         edgeDepthData, 
+         horizontalAmount, 
+         width,
+         i > 0, // Has previous chunk for blending
+         starMaskData // Pass star mask for protection
+       );
       
       // Apply chunk to result canvas with seamless blending
       if (i === 0) {
@@ -113,75 +122,86 @@ export class OptimizedDisplacementProcessor {
     return chunks;
   }
   
-  /**
-   * Process a single chunk of the displacement with overlap handling
-   */
-  private static processChunk(
-    chunk: DisplacementChunk,
-    originalData: ImageData,
-    primaryDepthData: ImageData,
-    structureDepthData: ImageData,
-    edgeDepthData: ImageData,
-    horizontalAmount: number,
-    width: number,
-    hasPrevious: boolean = false
-  ): ImageData {
+   /**
+    * Process a single chunk of the displacement with overlap handling and star protection
+    */
+   private static processChunk(
+     chunk: DisplacementChunk,
+     originalData: ImageData,
+     primaryDepthData: ImageData,
+     structureDepthData: ImageData,
+     edgeDepthData: ImageData,
+     horizontalAmount: number,
+     width: number,
+     hasPrevious: boolean = false,
+     starMaskData: ImageData | null = null
+   ): ImageData {
     const chunkData = new ImageData(width, chunk.height);
     
     for (let y = 0; y < chunk.height; y++) {
       const globalY = chunk.startY + y;
       
-      for (let x = 0; x < width; x++) {
-        const globalIdx = (globalY * width + x) * 4;
-        const chunkIdx = (y * width + x) * 4;
-        
-        // BALANCED displacement calculation - minimal artifacts on both sides
-        const primaryDepth = primaryDepthData.data[globalIdx] / 255;
-        
-        // BALANCED: Very gentle displacement centered around neutral
-        const naturalDisplacement = (primaryDepth - 0.5) * horizontalAmount * 0.25; // Much more subtle
-        
-        // Extremely minimal secondary effects 
-        const structureDepth = structureDepthData.data[globalIdx] / 255;
-        const edgeDepth = edgeDepthData.data[globalIdx] / 255;
-        
-        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.02; // Barely noticeable
-        const edgeAdjustment = (1 - edgeDepth - 0.5) * horizontalAmount * 0.01; // Minimal
-        
-        // Combined with very conservative limits
-        const totalDisplacement = naturalDisplacement + structureAdjustment + edgeAdjustment;
-        
-        // Tight clamping to prevent any strong artifacts
-        const clampedDisplacement = Math.max(-horizontalAmount * 0.3, Math.min(horizontalAmount * 0.3, totalDisplacement));
-        const finalDisplacement = Math.round(clampedDisplacement);
-        
-        // CENTERED: Apply gentle displacement both ways for balance
-        const srcX = x - finalDisplacement;
-        
-        if (srcX >= 0 && srcX < width) {
-          const clampedSrcX = Math.max(0, Math.min(width - 1, srcX));
-          const srcIdx = (globalY * width + clampedSrcX) * 4;
-          
-          chunkData.data[chunkIdx] = originalData.data[srcIdx];
-          chunkData.data[chunkIdx + 1] = originalData.data[srcIdx + 1];
-          chunkData.data[chunkIdx + 2] = originalData.data[srcIdx + 2];
-          chunkData.data[chunkIdx + 3] = 255;
-        } else {
-          // SMOOTH: Interpolated edge handling to minimize visible artifacts
-          const edgeX1 = Math.max(0, Math.min(width - 1, Math.floor(srcX)));
-          const edgeX2 = Math.max(0, Math.min(width - 1, Math.ceil(srcX)));
-          const blend = srcX - Math.floor(srcX);
-          
-          const idx1 = (globalY * width + edgeX1) * 4;
-          const idx2 = (globalY * width + edgeX2) * 4;
-          
-          // Linear interpolation for smoother edge handling
-          chunkData.data[chunkIdx] = Math.round(originalData.data[idx1] * (1 - blend) + originalData.data[idx2] * blend);
-          chunkData.data[chunkIdx + 1] = Math.round(originalData.data[idx1 + 1] * (1 - blend) + originalData.data[idx2 + 1] * blend);
-          chunkData.data[chunkIdx + 2] = Math.round(originalData.data[idx1 + 2] * (1 - blend) + originalData.data[idx2 + 2] * blend);
-          chunkData.data[chunkIdx + 3] = 255;
-        }
-      }
+       for (let x = 0; x < width; x++) {
+         const globalIdx = (globalY * width + x) * 4;
+         const chunkIdx = (y * width + x) * 4;
+         
+         // STAR PROTECTION: Check if this pixel is part of a star
+         let isStarPixel = false;
+         if (starMaskData) {
+           const starLuminance = (starMaskData.data[globalIdx] + starMaskData.data[globalIdx + 1] + starMaskData.data[globalIdx + 2]) / 3;
+           isStarPixel = starLuminance > 30; // Stars are bright pixels in mask
+         }
+         
+         if (isStarPixel) {
+           // PROTECTED: Copy star pixels without displacement to preserve precise positioning
+           chunkData.data[chunkIdx] = originalData.data[globalIdx];
+           chunkData.data[chunkIdx + 1] = originalData.data[globalIdx + 1];
+           chunkData.data[chunkIdx + 2] = originalData.data[globalIdx + 2];
+           chunkData.data[chunkIdx + 3] = 255;
+         } else {
+           // NEBULA DISPLACEMENT: Apply gentle displacement only to nebula regions
+           const primaryDepth = primaryDepthData.data[globalIdx] / 255;
+           
+           // NEBULA-FOCUSED: More aggressive displacement for nebulae, protected for stars
+           const naturalDisplacement = (primaryDepth - 0.5) * horizontalAmount * 0.4; // Higher for nebulae
+           
+           // Minimal secondary effects for smooth nebula flow
+           const structureDepth = structureDepthData.data[globalIdx] / 255;
+           const edgeDepth = edgeDepthData.data[globalIdx] / 255;
+           
+           const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.08;
+           const edgeAdjustment = (1 - edgeDepth - 0.5) * horizontalAmount * 0.05;
+           
+           // Combined displacement for nebula regions
+           const totalDisplacement = naturalDisplacement + structureAdjustment + edgeAdjustment;
+           
+           // Reasonable clamping for nebula displacement  
+           const clampedDisplacement = Math.max(-horizontalAmount * 0.6, Math.min(horizontalAmount * 0.6, totalDisplacement));
+           const finalDisplacement = Math.round(clampedDisplacement);
+           
+           // Apply displacement to nebula pixels
+           const srcX = x - finalDisplacement;
+           
+           if (srcX >= 0 && srcX < width) {
+             const clampedSrcX = Math.max(0, Math.min(width - 1, srcX));
+             const srcIdx = (globalY * width + clampedSrcX) * 4;
+             
+             chunkData.data[chunkIdx] = originalData.data[srcIdx];
+             chunkData.data[chunkIdx + 1] = originalData.data[srcIdx + 1];
+             chunkData.data[chunkIdx + 2] = originalData.data[srcIdx + 2];
+             chunkData.data[chunkIdx + 3] = 255;
+           } else {
+             // Smooth edge handling for nebula regions only
+             const edgeX = Math.max(0, Math.min(width - 1, srcX));
+             const edgeIdx = (globalY * width + edgeX) * 4;
+             
+             chunkData.data[chunkIdx] = originalData.data[edgeIdx];
+             chunkData.data[chunkIdx + 1] = originalData.data[edgeIdx + 1];
+             chunkData.data[chunkIdx + 2] = originalData.data[edgeIdx + 2];
+             chunkData.data[chunkIdx + 3] = 255;
+           }
+         }
+       }
     }
     
     return chunkData;

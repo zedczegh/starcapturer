@@ -556,22 +556,24 @@ export class TraditionalMorphProcessor {
     return resultCanvas;
   }
 
-  /**
-   * OPTIMIZED: Chunked displacement processing for better performance
-   */
-  async applyOptimizedDisplacement(
-    source: HTMLImageElement | HTMLCanvasElement,
-    depthMaps: { primaryDepth: HTMLCanvasElement; structureDepth: HTMLCanvasElement; edgeDepth: HTMLCanvasElement; combinedDepth: HTMLCanvasElement },
-    horizontalAmount: number,
-    onProgress?: (step: string, progress?: number) => void
-  ): Promise<HTMLCanvasElement> {
-    return OptimizedDisplacementProcessor.applyOptimizedDisplacement(
-      source, 
-      depthMaps, 
-      horizontalAmount, 
-      onProgress
-    );
-  }
+   /**
+    * OPTIMIZED: Chunked displacement processing for better performance with star protection
+    */
+   async applyOptimizedDisplacement(
+     source: HTMLImageElement | HTMLCanvasElement,
+     depthMaps: { primaryDepth: HTMLCanvasElement; structureDepth: HTMLCanvasElement; edgeDepth: HTMLCanvasElement; combinedDepth: HTMLCanvasElement },
+     horizontalAmount: number,
+     onProgress?: (step: string, progress?: number) => void,
+     starMask?: HTMLCanvasElement
+   ): Promise<HTMLCanvasElement> {
+     return OptimizedDisplacementProcessor.applyOptimizedDisplacement(
+       source, 
+       depthMaps, 
+       horizontalAmount, 
+       onProgress,
+       starMask
+     );
+   }
 
   /**
    * Legacy method for backward compatibility
@@ -1095,9 +1097,17 @@ export class TraditionalMorphProcessor {
     this.canvasPool.release(shiftedStarsCanvas);
     this.canvasPool.release(rightCanvasCopy);
     
-    onProgress?.('Applying optimized displacement with chunked processing...', 90);
-    // Step 4: OPTIMIZED displacement processing
-    const displacedCanvas = await this.applyOptimizedDisplacement(rightCanvas, depthMaps, params.horizontalDisplace, onProgress);
+     onProgress?.('Applying optimized displacement with star protection...', 90);
+     // Step 4: STAR-PROTECTED displacement processing
+     // Create star mask canvas from stars image for protection
+     const starMaskCanvas = this.canvasPool.acquire(width, height);
+     const starMaskCtx = starMaskCanvas.getContext('2d')!;
+     starMaskCtx.drawImage(starsImg, 0, 0);
+     
+     const displacedCanvas = await this.applyOptimizedDisplacement(rightCanvas, depthMaps, params.horizontalDisplace, onProgress, starMaskCanvas);
+     
+     // Clean up star mask
+     this.canvasPool.release(starMaskCanvas);
     
     // Replace right canvas content with displacement result
     rightCtx.clearRect(0, 0, width, height);
