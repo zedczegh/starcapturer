@@ -135,29 +135,28 @@ export class OptimizedDisplacementProcessor {
         const globalIdx = (globalY * width + x) * 4;
         const chunkIdx = (y * width + x) * 4;
         
-        // CORRECTED displacement calculation for proper stereo effect
+        // BALANCED displacement calculation - minimal artifacts on both sides
         const primaryDepth = primaryDepthData.data[globalIdx] / 255;
         
-        // FIXED: Corrected displacement direction and reduced intensity for natural stereo
-        // Bright objects (high depth) should shift LEFT in right eye view for proper 3D depth
-        const naturalDisplacement = (primaryDepth - 0.5) * horizontalAmount * 0.4; // Further reduced
+        // BALANCED: Very gentle displacement centered around neutral
+        const naturalDisplacement = (primaryDepth - 0.5) * horizontalAmount * 0.25; // Much more subtle
         
-        // Minimal structure and edge influence for smoother result
+        // Extremely minimal secondary effects 
         const structureDepth = structureDepthData.data[globalIdx] / 255;
         const edgeDepth = edgeDepthData.data[globalIdx] / 255;
         
-        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.05; // Very subtle
-        const edgeAdjustment = (1 - edgeDepth - 0.5) * horizontalAmount * 0.03; // Minimal edge effect
+        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.02; // Barely noticeable
+        const edgeAdjustment = (1 - edgeDepth - 0.5) * horizontalAmount * 0.01; // Minimal
         
-        // Combined displacement with tighter natural limits
+        // Combined with very conservative limits
         const totalDisplacement = naturalDisplacement + structureAdjustment + edgeAdjustment;
         
-        // Tighter clamping to prevent gaps and artifacts
-        const clampedDisplacement = Math.max(-horizontalAmount * 0.5, Math.min(horizontalAmount * 0.5, totalDisplacement));
+        // Tight clamping to prevent any strong artifacts
+        const clampedDisplacement = Math.max(-horizontalAmount * 0.3, Math.min(horizontalAmount * 0.3, totalDisplacement));
         const finalDisplacement = Math.round(clampedDisplacement);
         
-        // CORRECTED: Apply displacement in correct direction for stereo (+ moves source right)
-        const srcX = x + finalDisplacement;
+        // CENTERED: Apply gentle displacement both ways for balance
+        const srcX = x - finalDisplacement;
         
         if (srcX >= 0 && srcX < width) {
           const clampedSrcX = Math.max(0, Math.min(width - 1, srcX));
@@ -168,14 +167,18 @@ export class OptimizedDisplacementProcessor {
           chunkData.data[chunkIdx + 2] = originalData.data[srcIdx + 2];
           chunkData.data[chunkIdx + 3] = 255;
         } else {
-          // IMPROVED: Smart fill using nearest valid pixel instead of black gaps
-          const nearestX = Math.max(0, Math.min(width - 1, srcX));
-          const nearestIdx = (globalY * width + nearestX) * 4;
+          // SMOOTH: Interpolated edge handling to minimize visible artifacts
+          const edgeX1 = Math.max(0, Math.min(width - 1, Math.floor(srcX)));
+          const edgeX2 = Math.max(0, Math.min(width - 1, Math.ceil(srcX)));
+          const blend = srcX - Math.floor(srcX);
           
-          // Use nearest valid pixel to eliminate gaps/stripes
-          chunkData.data[chunkIdx] = originalData.data[nearestIdx];
-          chunkData.data[chunkIdx + 1] = originalData.data[nearestIdx + 1]; 
-          chunkData.data[chunkIdx + 2] = originalData.data[nearestIdx + 2];
+          const idx1 = (globalY * width + edgeX1) * 4;
+          const idx2 = (globalY * width + edgeX2) * 4;
+          
+          // Linear interpolation for smoother edge handling
+          chunkData.data[chunkIdx] = Math.round(originalData.data[idx1] * (1 - blend) + originalData.data[idx2] * blend);
+          chunkData.data[chunkIdx + 1] = Math.round(originalData.data[idx1 + 1] * (1 - blend) + originalData.data[idx2 + 1] * blend);
+          chunkData.data[chunkIdx + 2] = Math.round(originalData.data[idx1 + 2] * (1 - blend) + originalData.data[idx2 + 2] * blend);
           chunkData.data[chunkIdx + 3] = 255;
         }
       }
