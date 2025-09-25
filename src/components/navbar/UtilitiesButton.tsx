@@ -8,12 +8,23 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Wrench, Music, Calculator, Satellite, Eye, Video } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 const UtilitiesButton: React.FC = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const navigate = useNavigate();
+
+  const handleItemClick = (path: string) => {
+    if (!user) {
+      toast.error(t('Please log in to use this tool.', '请登录以使用此工具。'));
+      return;
+    }
+    navigate(path);
+  };
 
   const utilityItems = [
     { icon: Satellite, label: t('Space Station Tracker', '空间站追踪'), path: '/space-tracker' },
@@ -79,7 +90,7 @@ const UtilitiesButton: React.FC = () => {
                 variants={menuItemVariants}
               >
                 <DropdownMenuItem
-                  onClick={() => navigate(path)}
+                  onClick={() => handleItemClick(path)}
                   className="px-3 py-2.5 flex gap-3 items-center hover:bg-gradient-to-r hover:from-amber-500/15 hover:to-orange-500/15 rounded-lg transition-all duration-300 cursor-pointer group"
                 >
                   <div className="w-7 h-7 rounded-lg bg-cosmic-800/50 flex items-center justify-center group-hover:bg-amber-500/25 transition-colors">
