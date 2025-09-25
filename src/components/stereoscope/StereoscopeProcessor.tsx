@@ -466,9 +466,9 @@ const StereoscopeProcessor: React.FC = () => {
         finalCtx.fillStyle = '#000000';
         finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
-        // CORRECTED: Place right image first, left image second for proper stereo viewing
-        finalCtx.drawImage(rightCanvas, borderSize, borderSize);
-        finalCtx.drawImage(leftCanvas, borderSize + leftCanvas.width + stereoSpacing, borderSize);
+        // Place left and right images with border offset
+        finalCtx.drawImage(leftCanvas, borderSize, borderSize);
+        finalCtx.drawImage(rightCanvas, borderSize + leftCanvas.width + stereoSpacing, borderSize);
       } else {
         // No borders - standard layout
         finalCanvas.width = leftCanvas.width * 2 + stereoSpacing;
@@ -477,9 +477,8 @@ const StereoscopeProcessor: React.FC = () => {
         finalCtx.fillStyle = '#000000';
         finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
-        // CORRECTED: Place right image first, left image second for proper stereo alignment
-        finalCtx.drawImage(rightCanvas, 0, 0);
-        finalCtx.drawImage(leftCanvas, leftCanvas.width + stereoSpacing, 0);
+        finalCtx.drawImage(leftCanvas, 0, 0);
+        finalCtx.drawImage(rightCanvas, leftCanvas.width + stereoSpacing, 0);
       }
       
       console.log('Setting result URL...');
@@ -765,7 +764,7 @@ const StereoscopeProcessor: React.FC = () => {
                         className="mt-2"
                       />
                       <p className="text-xs text-cosmic-400 mt-1">
-                        {t('Controls nebula depth displacement effect (10-30 recommended). Shorter focal length = lower value.', '控制星云深度位移效果（推荐10-30）。较短焦距 = 较低数值。')}
+                        {t('Controls nebula depth displacement effect (10-30 recommended)', '控制星云深度位移效果（推荐10-30）')}
                       </p>
                     </div>
 
@@ -779,9 +778,9 @@ const StereoscopeProcessor: React.FC = () => {
                          step={1}
                          className="mt-2"
                        />
-                        <p className="text-xs text-cosmic-400 mt-1">
-                          {t('Distance to shift individual stars for 3D positioning. Shorter focal length = lower value.', '移动单个恒星进行3D定位的距离。较短焦距 = 较低数值。')}
-                        </p>
+                       <p className="text-xs text-cosmic-400 mt-1">
+                         {t('Distance to shift individual stars for 3D positioning', '移动单个恒星进行3D定位的距离')}
+                       </p>
                      </div>
 
                      <div>

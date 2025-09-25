@@ -11,24 +11,21 @@ export interface DisplacementChunk {
 
 export class OptimizedDisplacementProcessor {
   private static readonly CHUNK_SIZE = 128; // Process in 128px high chunks
-  private static readonly OVERLAP_SIZE = 4; // Overlap between chunks for seamless blending
   
-   /**
-    * Apply displacement processing in chunks to prevent UI freezing
-    * Enhanced with star protection for astronomical images
-    */
-   static async applyOptimizedDisplacement(
-     source: HTMLImageElement | HTMLCanvasElement,
-     depthMaps: { 
-       primaryDepth: HTMLCanvasElement; 
-       structureDepth: HTMLCanvasElement; 
-       edgeDepth: HTMLCanvasElement; 
-       combinedDepth: HTMLCanvasElement 
-     },
-     horizontalAmount: number,
-     onProgress?: (step: string, progress?: number) => void,
-     starMask?: HTMLCanvasElement // Optional star mask to protect star regions
-   ): Promise<HTMLCanvasElement> {
+  /**
+   * Apply displacement processing in chunks to prevent UI freezing
+   */
+  static async applyOptimizedDisplacement(
+    source: HTMLImageElement | HTMLCanvasElement,
+    depthMaps: { 
+      primaryDepth: HTMLCanvasElement; 
+      structureDepth: HTMLCanvasElement; 
+      edgeDepth: HTMLCanvasElement; 
+      combinedDepth: HTMLCanvasElement 
+    },
+    horizontalAmount: number,
+    onProgress?: (step: string, progress?: number) => void
+  ): Promise<HTMLCanvasElement> {
     const width = source.width;
     const height = source.height;
     
@@ -41,16 +38,10 @@ export class OptimizedDisplacementProcessor {
     
     const originalData = workCtx.getImageData(0, 0, width, height);
     
-     // Get depth data
-     const primaryDepthData = depthMaps.primaryDepth.getContext('2d')!.getImageData(0, 0, width, height);
-     const structureDepthData = depthMaps.structureDepth.getContext('2d')!.getImageData(0, 0, width, height);
-     const edgeDepthData = depthMaps.edgeDepth.getContext('2d')!.getImageData(0, 0, width, height);
-     
-     // Get star mask data if provided for star protection
-     let starMaskData: ImageData | null = null;
-     if (starMask) {
-       starMaskData = starMask.getContext('2d')!.getImageData(0, 0, width, height);
-     }
+    // Get depth data
+    const primaryDepthData = depthMaps.primaryDepth.getContext('2d')!.getImageData(0, 0, width, height);
+    const structureDepthData = depthMaps.structureDepth.getContext('2d')!.getImageData(0, 0, width, height);
+    const edgeDepthData = depthMaps.edgeDepth.getContext('2d')!.getImageData(0, 0, width, height);
     
     // Create result canvas
     const resultCanvas = document.createElement('canvas');
@@ -68,27 +59,19 @@ export class OptimizedDisplacementProcessor {
       
       onProgress?.(`Processing displacement chunk ${i + 1}/${chunks.length}...`, chunkProgress);
       
-       // Process this chunk with overlap handling and star protection
-       const chunkData = this.processChunk(
-         chunk, 
-         originalData, 
-         primaryDepthData, 
-         structureDepthData, 
-         edgeDepthData, 
-         horizontalAmount, 
-         width,
-         i > 0, // Has previous chunk for blending
-         starMaskData // Pass star mask for protection
-       );
+      // Process this chunk
+      const chunkData = this.processChunk(
+        chunk, 
+        originalData, 
+        primaryDepthData, 
+        structureDepthData, 
+        edgeDepthData, 
+        horizontalAmount, 
+        width
+      );
       
-      // Apply chunk to result canvas with seamless blending
-      if (i === 0) {
-        // First chunk - direct placement
-        resultCtx.putImageData(chunkData, 0, chunk.startY);
-      } else {
-        // Subsequent chunks - blend overlap region
-        this.blendChunkOverlap(resultCtx, chunkData, chunk, width);
-      }
+      // Apply chunk to result canvas
+      resultCtx.putImageData(chunkData, 0, chunk.startY);
       
       // Yield control every few chunks to prevent freezing
       if (i % 4 === 0) {
@@ -100,153 +83,83 @@ export class OptimizedDisplacementProcessor {
   }
   
   /**
-   * Calculate processing chunks with overlap for seamless blending
+   * Calculate processing chunks
    */
   private static calculateChunks(width: number, height: number): DisplacementChunk[] {
     const chunks: DisplacementChunk[] = [];
     
     for (let y = 0; y < height; y += this.CHUNK_SIZE) {
       const endY = Math.min(y + this.CHUNK_SIZE, height);
-      // Add overlap to all chunks except the first one
-      const actualStartY = y === 0 ? y : Math.max(0, y - this.OVERLAP_SIZE);
-      const actualHeight = endY - actualStartY;
-      
       chunks.push({
-        startY: actualStartY,
+        startY: y,
         endY: endY,
         width: width,
-        height: actualHeight
+        height: endY - y
       });
     }
     
     return chunks;
   }
   
-   /**
-    * Process a single chunk of the displacement with overlap handling and star protection
-    */
-   private static processChunk(
-     chunk: DisplacementChunk,
-     originalData: ImageData,
-     primaryDepthData: ImageData,
-     structureDepthData: ImageData,
-     edgeDepthData: ImageData,
-     horizontalAmount: number,
-     width: number,
-     hasPrevious: boolean = false,
-     starMaskData: ImageData | null = null
-   ): ImageData {
+  /**
+   * Process a single chunk of the displacement
+   */
+  private static processChunk(
+    chunk: DisplacementChunk,
+    originalData: ImageData,
+    primaryDepthData: ImageData,
+    structureDepthData: ImageData,
+    edgeDepthData: ImageData,
+    horizontalAmount: number,
+    width: number
+  ): ImageData {
     const chunkData = new ImageData(width, chunk.height);
     
     for (let y = 0; y < chunk.height; y++) {
       const globalY = chunk.startY + y;
       
-       for (let x = 0; x < width; x++) {
-         const globalIdx = (globalY * width + x) * 4;
-         const chunkIdx = (y * width + x) * 4;
-         
-         // STAR PROTECTION: Check if this pixel is part of a star
-         let isStarPixel = false;
-         let starBlendFactor = 0;
-         if (starMaskData) {
-           const starLuminance = (starMaskData.data[globalIdx] + starMaskData.data[globalIdx + 1] + starMaskData.data[globalIdx + 2]) / 3;
-           isStarPixel = starLuminance > 25; // Slightly lower threshold
-           starBlendFactor = Math.min(1, Math.max(0, (starLuminance - 15) / 40)); // Gradual blend factor
-         }
-         
-         if (isStarPixel && starBlendFactor > 0.8) {
-           // STRONG PROTECTION: Copy star pixels without displacement for bright stars
-           chunkData.data[chunkIdx] = originalData.data[globalIdx];
-           chunkData.data[chunkIdx + 1] = originalData.data[globalIdx + 1];
-           chunkData.data[chunkIdx + 2] = originalData.data[globalIdx + 2];
-           chunkData.data[chunkIdx + 3] = 255;
-         } else {
-           // NEBULA DISPLACEMENT: Apply ultra-gentle displacement for smooth depth flow
-           const primaryDepth = primaryDepthData.data[globalIdx] / 255;
-           
-           // ULTRA-GENTLE: Drastically reduced displacement to prevent "floating block" effect
-           const naturalDisplacement = (primaryDepth - 0.5) * horizontalAmount * 0.15; // Much lower
-           
-           // Minimal secondary effects for ultra-smooth result
-           const structureDepth = structureDepthData.data[globalIdx] / 255;
-           const edgeDepth = edgeDepthData.data[globalIdx] / 255;
-           
-           const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.02; // Tiny
-           const edgeAdjustment = (1 - edgeDepth - 0.5) * horizontalAmount * 0.01; // Minimal
-           
-           // Combined displacement with ultra-conservative values
-           let totalDisplacement = naturalDisplacement + structureAdjustment + edgeAdjustment;
-           
-           // BLEND with stars: Reduce displacement near star regions for smooth transitions
-           if (starBlendFactor > 0) {
-             totalDisplacement *= (1 - starBlendFactor * 0.7); // Smooth blend around stars
-           }
-           
-           // Ultra-conservative clamping to prevent any "layer" artifacts
-           const clampedDisplacement = Math.max(-horizontalAmount * 0.25, Math.min(horizontalAmount * 0.25, totalDisplacement));
-           const finalDisplacement = Math.round(clampedDisplacement);
-           
-           // Apply ultra-gentle displacement
-           const srcX = x - finalDisplacement;
-           
-           if (srcX >= 0 && srcX < width) {
-             const clampedSrcX = Math.max(0, Math.min(width - 1, srcX));
-             const srcIdx = (globalY * width + clampedSrcX) * 4;
-             
-             chunkData.data[chunkIdx] = originalData.data[srcIdx];
-             chunkData.data[chunkIdx + 1] = originalData.data[srcIdx + 1];
-             chunkData.data[chunkIdx + 2] = originalData.data[srcIdx + 2];
-             chunkData.data[chunkIdx + 3] = 255;
-           } else {
-             // Smooth edge handling for nebula regions only
-             const edgeX = Math.max(0, Math.min(width - 1, srcX));
-             const edgeIdx = (globalY * width + edgeX) * 4;
-             
-             chunkData.data[chunkIdx] = originalData.data[edgeIdx];
-             chunkData.data[chunkIdx + 1] = originalData.data[edgeIdx + 1];
-             chunkData.data[chunkIdx + 2] = originalData.data[edgeIdx + 2];
-             chunkData.data[chunkIdx + 3] = 255;
-           }
-         }
-       }
-    }
-    
-    return chunkData;
-  }
-  
-  /**
-   * Blend chunk overlap region for seamless transitions
-   */
-  private static blendChunkOverlap(
-    resultCtx: CanvasRenderingContext2D,
-    chunkData: ImageData,
-    chunk: DisplacementChunk,
-    width: number
-  ): void {
-    // Get current canvas data for blending
-    const existingData = resultCtx.getImageData(0, chunk.startY, width, chunk.height);
-    
-    for (let y = 0; y < this.OVERLAP_SIZE && y < chunk.height; y++) {
       for (let x = 0; x < width; x++) {
-        const idx = (y * width + x) * 4;
+        const globalIdx = (globalY * width + x) * 4;
+        const chunkIdx = (y * width + x) * 4;
         
-        // Blend factor: 0 at top (keep existing), 1 at bottom (use new)
-        const blendFactor = y / (this.OVERLAP_SIZE - 1);
+        // Multi-layer displacement calculation
+        const primaryDepth = primaryDepthData.data[globalIdx] / 255;
+        const structureDepth = structureDepthData.data[globalIdx] / 255;
+        const edgeDepth = edgeDepthData.data[globalIdx] / 255;
         
-        // Linear blend between existing and new pixels
-        chunkData.data[idx] = Math.round(
-          existingData.data[idx] * (1 - blendFactor) + chunkData.data[idx] * blendFactor
-        );
-        chunkData.data[idx + 1] = Math.round(
-          existingData.data[idx + 1] * (1 - blendFactor) + chunkData.data[idx + 1] * blendFactor
-        );
-        chunkData.data[idx + 2] = Math.round(
-          existingData.data[idx + 2] * (1 - blendFactor) + chunkData.data[idx + 2] * blendFactor
-        );
+        // Calculate adaptive displacement
+        const structureInfluence = Math.min(1, structureDepth * 1.5);
+        const edgeInfluence = Math.min(1, (1 - edgeDepth) * 1.2);
+        
+        // Combined displacement with optimized calculation
+        const baseDisplacement = (primaryDepth - 0.5) * horizontalAmount;
+        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.25 * structureInfluence;
+        const edgeAdjustment = (edgeDepth - 0.5) * horizontalAmount * 0.15 * edgeInfluence;
+        
+        const totalDisplacement = Math.round(baseDisplacement + structureAdjustment + edgeAdjustment);
+        
+        // Apply displacement with bounds checking
+        const srcX = x - totalDisplacement;
+        
+        if (srcX >= 0 && srcX < width) {
+          // Direct pixel copy without interpolation for better performance and no artifacts
+          const clampedSrcX = Math.max(0, Math.min(width - 1, Math.round(srcX)));
+          const srcIdx = (globalY * width + clampedSrcX) * 4;
+          
+          chunkData.data[chunkIdx] = originalData.data[srcIdx];
+          chunkData.data[chunkIdx + 1] = originalData.data[srcIdx + 1];
+          chunkData.data[chunkIdx + 2] = originalData.data[srcIdx + 2];
+          chunkData.data[chunkIdx + 3] = 255;
+        } else {
+          // Black fill for out-of-bounds pixels
+          chunkData.data[chunkIdx] = 0;
+          chunkData.data[chunkIdx + 1] = 0;
+          chunkData.data[chunkIdx + 2] = 0;
+          chunkData.data[chunkIdx + 3] = 255;
+        }
       }
     }
     
-    // Apply the blended chunk
-    resultCtx.putImageData(chunkData, 0, chunk.startY);
+    return chunkData;
   }
 }
