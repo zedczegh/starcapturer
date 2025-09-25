@@ -10,7 +10,6 @@ import * as UTIF from 'utif';
 import { OptimizedDisplacementProcessor } from './optimizedDisplacement';
 import { ScientificProcessor } from './scientificProcessor';
 import { DualDepthProcessor } from './dualDepthProcessor';
-import { StarShapeMatching } from './starShapeMatching';
 
 export interface TraditionalMorphParams {
   horizontalDisplace: number; // 10-30 range for displacement filter
@@ -28,7 +27,6 @@ export class TraditionalMorphProcessor {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private dualDepthProcessor: DualDepthProcessor;
-  private starShapeMatching: StarShapeMatching;
   
   constructor() {
     this.canvas = document.createElement('canvas');
@@ -38,7 +36,6 @@ export class TraditionalMorphProcessor {
     }
     this.ctx = ctx;
     this.dualDepthProcessor = new DualDepthProcessor();
-    this.starShapeMatching = new StarShapeMatching();
   }
 
   private isTiffFile(file: File): boolean {
@@ -994,101 +991,71 @@ export class TraditionalMorphProcessor {
     rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
     rightCtx.globalCompositeOperation = 'source-over';
     
-    onProgress?.('DEPTH-BASED: Direct star positioning using depth map...', 75);
+    onProgress?.('Moving star patterns with unified depth intelligence...', 80);
     
-    // Step 3: DIRECT approach - use stars image + depth map for positioning
-    onProgress?.('Creating depth-based star positioning...', 76);
+    // Step 3: SMART star repositioning using stellar depth data
+    let repositionedStars = 0;
+    const brightStars = starPatterns.filter(star => star.brightness / 255 > 0.35).slice(0, 15);
     
-    // Start with clean starless nebula
-    rightCtx.clearRect(0, 0, width, height);
-    rightCtx.drawImage(starlessImg, 0, 0);
-    
-    // Get unified depth data for displacement calculation
-    const depthData = unifiedResult.unifiedDepthMap.getContext('2d')!.getImageData(0, 0, width, height);
-    
-    // Create displaced stars layer using depth map
-    const displacedStarsCanvas = document.createElement('canvas');
-    const displacedStarsCtx = displacedStarsCanvas.getContext('2d')!;
-    displacedStarsCanvas.width = width;
-    displacedStarsCanvas.height = height;
-    
-    // Draw original stars image to analyze
-    this.ctx.clearRect(0, 0, width, height);
-    this.ctx.drawImage(starsImg, 0, 0);
-    const starsData = this.ctx.getImageData(0, 0, width, height);
-    
-    onProgress?.('Applying depth-based displacement to stars...', 78);
-    
-    // Apply depth-based displacement pixel by pixel
-    const displacedStarsData = displacedStarsCtx.createImageData(width, height);
-    
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const idx = (y * width + x) * 4;
+    for (const star of brightStars) {
+      // Find corresponding stellar depth data
+      const stellarData = stellarResult.stellarData.find(s => 
+        Math.sqrt((s.x - star.centerX) ** 2 + (s.y - star.centerY) ** 2) < 5
+      );
+      
+      let forwardShift = params.starShiftAmount;
+      
+      if (stellarData) {
+        // Use stellar distance estimation for accurate positioning
+        const distanceFactor = 1 - stellarData.estimatedDistance;
+        forwardShift *= (1 + distanceFactor * 2); // Closer stars move more forward
         
-        // Get star pixel data
-        const starR = starsData.data[idx];
-        const starG = starsData.data[idx + 1];
-        const starB = starsData.data[idx + 2];
-        const starLuminance = 0.299 * starR + 0.587 * starG + 0.114 * starB;
-        
-        // Only process pixels that have star content
-        if (starLuminance > 10) { // Threshold for star pixels
-          // Get depth value for displacement calculation
-          const depth = depthData.data[idx] / 255; // 0-1 range
-          
-          // Calculate displacement based on depth and stellar classification
-          let displacement = (depth - 0.5) * params.horizontalDisplace;
-          
-          // Enhanced displacement for detected stars
-          const nearestStar = this.findNearestDetectedStar(starPatterns, x, y, 10);
-          if (nearestStar) {
-            const stellarData = stellarResult.stellarData.find(s => 
-              Math.sqrt((s.x - nearestStar.centerX) ** 2 + (s.y - nearestStar.centerY) ** 2) < 8
-            );
-            
-            if (stellarData) {
-              // Apply stellar physics for better positioning
-              const distanceFactor = 1 - stellarData.estimatedDistance;
-              const classMultiplier = this.getClassMultiplier(stellarData.stellarClass);
-              displacement *= (0.8 + distanceFactor * 1.2) * classMultiplier;
-            }
-          }
-          
-          // Apply initial left shift (all stars start behind nebula)
-          displacement += initialLeftShift;
-          
-          // Calculate source position
-          const sourceX = x - Math.round(displacement);
-          
-          // Copy star pixel if source is within bounds
-          if (sourceX >= 0 && sourceX < width) {
-            const sourceIdx = (y * width + sourceX) * 4;
-            displacedStarsData.data[idx] = starsData.data[sourceIdx];
-            displacedStarsData.data[idx + 1] = starsData.data[sourceIdx + 1];
-            displacedStarsData.data[idx + 2] = starsData.data[sourceIdx + 2];
-            displacedStarsData.data[idx + 3] = starsData.data[sourceIdx + 3];
-          }
+        // Adjust for stellar class (brighter intrinsic stars are actually farther)
+        switch (stellarData.stellarClass) {
+          case 'O': 
+          case 'B': forwardShift *= 0.7; break; // Massive stars farther away
+          case 'M': 
+          case 'K': forwardShift *= 1.3; break; // Dwarf stars closer
         }
       }
       
-      // Progress update every 50 rows
-      if (y % 50 === 0) {
-        onProgress?.(`Processing stars row ${y}/${height}...`, 78 + (y / height) * 6);
+      const brightness = star.brightness / 255;
+      const expandedBbox = {
+        x: Math.max(0, star.boundingBox.x - 2),
+        y: Math.max(0, star.boundingBox.y - 2),
+        width: Math.min(width, star.boundingBox.width + 4),
+        height: Math.min(height, star.boundingBox.height + 4)
+      };
+      
+      const originalShiftedX = Math.max(0, Math.min(width - expandedBbox.width, expandedBbox.x + initialLeftShift));
+      const finalX = Math.max(0, Math.min(width - expandedBbox.width, expandedBbox.x + initialLeftShift + forwardShift));
+      
+      if (finalX + expandedBbox.width < width) {
+        // Fill original position with nebula background
+        rightCtx.drawImage(
+          starlessImg,
+          originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height,
+          originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height
+        );
+        
+        // Add repositioned star
+        rightCtx.globalCompositeOperation = 'screen';
+        rightCtx.drawImage(
+          starsImg,
+          expandedBbox.x, expandedBbox.y, expandedBbox.width, expandedBbox.height,
+          finalX, expandedBbox.y, expandedBbox.width, expandedBbox.height
+        );
+        rightCtx.globalCompositeOperation = 'source-over';
+        
+        repositionedStars++;
+        
+        if (repositionedStars <= 3 && stellarData) {
+          console.log(`⭐ ${stellarData.stellarClass}-class star moved: distance=${stellarData.estimatedDistance.toFixed(2)}, shift=${forwardShift.toFixed(1)}px`);
+        }
       }
     }
     
-    // Apply displaced stars to canvas
-    displacedStarsCtx.putImageData(displacedStarsData, 0, 0);
-    
-    onProgress?.('Adding stars to right image...', 84);
-    
-    // Add displaced stars to right image with screen blending
-    rightCtx.globalCompositeOperation = 'screen';
-    rightCtx.drawImage(displacedStarsCanvas, 0, 0);
-    rightCtx.globalCompositeOperation = 'source-over';
-    
-    console.log(`🌟 Applied depth-based star positioning using unified depth map`);
+    console.log(`🌟 Repositioned ${repositionedStars} stars using stellar distance estimates`);
     
     onProgress?.('Applying unified depth displacement...', 85);
     
@@ -1218,61 +1185,6 @@ export class TraditionalMorphProcessor {
     }
     
     return finalCanvas;
-  }
-
-  /**
-  /**
-   * Enhanced stellar photometry with smarter color temperature estimation
-   */
-  private estimateColorTemperature(color: { r: number; g: number; b: number }): number {
-    const { r, g, b } = color;
-    
-    // Avoid division by zero
-    if (r + g + b < 10) return 5000; // Default sun-like temperature
-    
-    // B-V color index approximation (simplified)
-    const bv = (b - g) / Math.max(1, (b + g + r) / 3);
-    
-    // Convert B-V to temperature (very simplified relationship)
-    // Real astronomy uses more complex calibrations
-    let temp = 4600 * (1/(0.92 * bv + 1.7) + 1/(0.92 * bv + 0.62));
-    
-    // Clamp to reasonable stellar temperature range
-    return Math.max(2000, Math.min(50000, temp));
-  }
-
-  /**
-   * Find nearest detected star to given coordinates
-   */
-  private findNearestDetectedStar(starPatterns: Array<any>, x: number, y: number, maxDistance: number): any | null {
-    let nearest = null;
-    let minDistance = maxDistance;
-    
-    for (const star of starPatterns) {
-      const distance = Math.sqrt((x - star.centerX) ** 2 + (y - star.centerY) ** 2);
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearest = star;
-      }
-    }
-    
-    return nearest;
-  }
-
-  /**
-   * Get stellar class multiplier for displacement
-   */
-  private getClassMultiplier(stellarClass: string): number {
-    switch (stellarClass) {
-      case 'O': return 0.6; // Blue supergiants - distant
-      case 'B': return 0.7; // Blue giants - distant  
-      case 'A': return 0.9; // White stars - moderate
-      case 'F': return 1.0; // Yellow-white - baseline
-      case 'G': return 1.1; // Sun-like - closer
-      case 'K': return 1.3; // Orange dwarfs - closer
-      case 'M': return 1.5; // Red dwarfs - very close
-      default: return 1.0;
-    }
   }
 
   /**
