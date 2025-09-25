@@ -997,15 +997,15 @@ export class TraditionalMorphProcessor {
       // More generous padding for complete star removal
       const padding = Math.max(3, Math.ceil(star.boundingBox.width * 0.15));
       const expandedBbox = {
-        x: Math.max(0, star.boundingBox.x - padding),
-        y: Math.max(0, star.boundingBox.y - padding),
-        width: Math.min(width - (star.boundingBox.x - padding), star.boundingBox.width + padding * 2),
-        height: Math.min(height - (star.boundingBox.y - padding), star.boundingBox.height + padding * 2)
+        x: Math.round(Math.max(0, star.boundingBox.x - padding)),
+        y: Math.round(Math.max(0, star.boundingBox.y - padding)),
+        width: Math.round(Math.min(width - (star.boundingBox.x - padding), star.boundingBox.width + padding * 2)),
+        height: Math.round(Math.min(height - (star.boundingBox.y - padding), star.boundingBox.height + padding * 2))
       };
       
-      // Calculate positions more precisely
-      const originalShiftedX = expandedBbox.x + initialLeftShift;
-      const finalX = expandedBbox.x + initialLeftShift + forwardShift;
+      // Calculate positions precisely and round to whole pixels to prevent rendering artifacts
+      const originalShiftedX = Math.round(expandedBbox.x + initialLeftShift);
+      const finalX = Math.round(expandedBbox.x + initialLeftShift + forwardShift);
       
       // Skip if repositioning would go out of bounds with stricter edge buffer
       const edgeBuffer = 5; // Increased buffer for clean edges
@@ -1055,6 +1055,8 @@ export class TraditionalMorphProcessor {
         
         // PRECISE REMOVAL: Use multiply blend to remove star completely
         rightCtx.globalCompositeOperation = 'source-over';
+        // Disable anti-aliasing for precise pixel operations
+        rightCtx.imageSmoothingEnabled = false;
         rightCtx.drawImage(
           cleanBackgroundCanvas,
           0, 0, expandedBbox.width, expandedBbox.height,
@@ -1068,6 +1070,8 @@ export class TraditionalMorphProcessor {
           expandedBbox.x, expandedBbox.y, expandedBbox.width, expandedBbox.height,
           finalX, expandedBbox.y, expandedBbox.width, expandedBbox.height
         );
+        // Re-enable anti-aliasing after precise operations
+        rightCtx.imageSmoothingEnabled = true;
         rightCtx.globalCompositeOperation = 'source-over';
         
         repositionedStars++;
