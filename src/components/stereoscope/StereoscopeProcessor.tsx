@@ -764,7 +764,7 @@ const StereoscopeProcessor: React.FC = () => {
                         className="mt-2"
                       />
                       <p className="text-xs text-cosmic-400 mt-1">
-                        {t('Controls nebula depth displacement effect (10-30 recommended). Shorter focal length = lower value.', '控制星云深度位移效果（推荐10-30）。较短焦距 = 较低数值。')}
+                        {t('Controls nebula depth displacement effect (10-30 recommended)', '控制星云深度位移效果（推荐10-30）')}
                       </p>
                     </div>
 
@@ -778,9 +778,9 @@ const StereoscopeProcessor: React.FC = () => {
                          step={1}
                          className="mt-2"
                        />
-                        <p className="text-xs text-cosmic-400 mt-1">
-                          {t('Distance to shift individual stars for 3D positioning. Shorter focal length = lower value.', '移动单个恒星进行3D定位的距离。较短焦距 = 较低数值。')}
-                        </p>
+                       <p className="text-xs text-cosmic-400 mt-1">
+                         {t('Distance to shift individual stars for 3D positioning', '移动单个恒星进行3D定位的距离')}
+                       </p>
                      </div>
 
                      <div>

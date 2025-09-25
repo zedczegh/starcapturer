@@ -11,7 +11,6 @@ export interface DisplacementChunk {
 
 export class OptimizedDisplacementProcessor {
   private static readonly CHUNK_SIZE = 128; // Process in 128px high chunks
-  private static readonly OVERLAP_SIZE = 4; // Overlap between chunks for seamless blending
   
   /**
    * Apply displacement processing in chunks to prevent UI freezing
@@ -60,7 +59,7 @@ export class OptimizedDisplacementProcessor {
       
       onProgress?.(`Processing displacement chunk ${i + 1}/${chunks.length}...`, chunkProgress);
       
-      // Process this chunk with overlap handling
+      // Process this chunk
       const chunkData = this.processChunk(
         chunk, 
         originalData, 
@@ -68,18 +67,11 @@ export class OptimizedDisplacementProcessor {
         structureDepthData, 
         edgeDepthData, 
         horizontalAmount, 
-        width,
-        i > 0 // Has previous chunk for blending
+        width
       );
       
-      // Apply chunk to result canvas with seamless blending
-      if (i === 0) {
-        // First chunk - direct placement
-        resultCtx.putImageData(chunkData, 0, chunk.startY);
-      } else {
-        // Subsequent chunks - blend overlap region
-        this.blendChunkOverlap(resultCtx, chunkData, chunk, width);
-      }
+      // Apply chunk to result canvas
+      resultCtx.putImageData(chunkData, 0, chunk.startY);
       
       // Yield control every few chunks to prevent freezing
       if (i % 4 === 0) {
@@ -91,22 +83,18 @@ export class OptimizedDisplacementProcessor {
   }
   
   /**
-   * Calculate processing chunks with overlap for seamless blending
+   * Calculate processing chunks
    */
   private static calculateChunks(width: number, height: number): DisplacementChunk[] {
     const chunks: DisplacementChunk[] = [];
     
     for (let y = 0; y < height; y += this.CHUNK_SIZE) {
       const endY = Math.min(y + this.CHUNK_SIZE, height);
-      // Add overlap to all chunks except the first one
-      const actualStartY = y === 0 ? y : Math.max(0, y - this.OVERLAP_SIZE);
-      const actualHeight = endY - actualStartY;
-      
       chunks.push({
-        startY: actualStartY,
+        startY: y,
         endY: endY,
         width: width,
-        height: actualHeight
+        height: endY - y
       });
     }
     
@@ -114,7 +102,7 @@ export class OptimizedDisplacementProcessor {
   }
   
   /**
-   * Process a single chunk of the displacement with overlap handling
+   * Process a single chunk of the displacement
    */
   private static processChunk(
     chunk: DisplacementChunk,
@@ -123,8 +111,7 @@ export class OptimizedDisplacementProcessor {
     structureDepthData: ImageData,
     edgeDepthData: ImageData,
     horizontalAmount: number,
-    width: number,
-    hasPrevious: boolean = false
+    width: number
   ): ImageData {
     const chunkData = new ImageData(width, chunk.height);
     
@@ -135,32 +122,28 @@ export class OptimizedDisplacementProcessor {
         const globalIdx = (globalY * width + x) * 4;
         const chunkIdx = (y * width + x) * 4;
         
-        // NATURAL displacement calculation - simplified and realistic
+        // Multi-layer displacement calculation
         const primaryDepth = primaryDepthData.data[globalIdx] / 255;
-        
-        // Gentle, natural displacement based primarily on luminance
-        // Reduced multipliers for more realistic depth perception
-        const naturalDisplacement = (primaryDepth - 0.5) * horizontalAmount * 0.6; // Reduced intensity
-        
-        // Subtle structure and edge influence for realism
         const structureDepth = structureDepthData.data[globalIdx] / 255;
         const edgeDepth = edgeDepthData.data[globalIdx] / 255;
         
-        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.08; // Much gentler
-        const edgeAdjustment = (1 - edgeDepth - 0.5) * horizontalAmount * 0.05; // Subtle edge preservation
+        // Calculate adaptive displacement
+        const structureInfluence = Math.min(1, structureDepth * 1.5);
+        const edgeInfluence = Math.min(1, (1 - edgeDepth) * 1.2);
         
-        // Combined displacement with natural limits
-        const totalDisplacement = naturalDisplacement + structureAdjustment + edgeAdjustment;
+        // Combined displacement with optimized calculation
+        const baseDisplacement = (primaryDepth - 0.5) * horizontalAmount;
+        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.25 * structureInfluence;
+        const edgeAdjustment = (edgeDepth - 0.5) * horizontalAmount * 0.15 * edgeInfluence;
         
-        // Clamp displacement to prevent extreme artifacts
-        const clampedDisplacement = Math.max(-horizontalAmount * 0.8, Math.min(horizontalAmount * 0.8, totalDisplacement));
-        const finalDisplacement = Math.floor(clampedDisplacement + 0.5);
+        const totalDisplacement = Math.round(baseDisplacement + structureAdjustment + edgeAdjustment);
         
-        // Apply natural displacement with bounds checking
-        const srcX = x - finalDisplacement;
+        // Apply displacement with bounds checking
+        const srcX = x - totalDisplacement;
         
         if (srcX >= 0 && srcX < width) {
-          const clampedSrcX = Math.max(0, Math.min(width - 1, srcX));
+          // Direct pixel copy without interpolation for better performance and no artifacts
+          const clampedSrcX = Math.max(0, Math.min(width - 1, Math.round(srcX)));
           const srcIdx = (globalY * width + clampedSrcX) * 4;
           
           chunkData.data[chunkIdx] = originalData.data[srcIdx];
@@ -178,41 +161,5 @@ export class OptimizedDisplacementProcessor {
     }
     
     return chunkData;
-  }
-  
-  /**
-   * Blend chunk overlap region for seamless transitions
-   */
-  private static blendChunkOverlap(
-    resultCtx: CanvasRenderingContext2D,
-    chunkData: ImageData,
-    chunk: DisplacementChunk,
-    width: number
-  ): void {
-    // Get current canvas data for blending
-    const existingData = resultCtx.getImageData(0, chunk.startY, width, chunk.height);
-    
-    for (let y = 0; y < this.OVERLAP_SIZE && y < chunk.height; y++) {
-      for (let x = 0; x < width; x++) {
-        const idx = (y * width + x) * 4;
-        
-        // Blend factor: 0 at top (keep existing), 1 at bottom (use new)
-        const blendFactor = y / (this.OVERLAP_SIZE - 1);
-        
-        // Linear blend between existing and new pixels
-        chunkData.data[idx] = Math.round(
-          existingData.data[idx] * (1 - blendFactor) + chunkData.data[idx] * blendFactor
-        );
-        chunkData.data[idx + 1] = Math.round(
-          existingData.data[idx + 1] * (1 - blendFactor) + chunkData.data[idx + 1] * blendFactor
-        );
-        chunkData.data[idx + 2] = Math.round(
-          existingData.data[idx + 2] * (1 - blendFactor) + chunkData.data[idx + 2] * blendFactor
-        );
-      }
-    }
-    
-    // Apply the blended chunk
-    resultCtx.putImageData(chunkData, 0, chunk.startY);
   }
 }

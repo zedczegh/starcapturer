@@ -1,25 +1,14 @@
 /**
- * Traditional Morph Mode - PERFORMANCE OPTIMIZED
+ * Traditional Morph Mode - Based on photographingspace.com methodology
  * 
  * This implementation follows the traditional workflow described by J-P Metsavainio
  * and Dylan O'Donnell for creating 3D stereoscopic pairs from separate starless
  * and stars-only astronomical images.
- * 
- * OPTIMIZATIONS:
- * - Canvas pooling for memory efficiency
- * - Chunked processing for large images  
- * - Star pattern caching
- * - Memory monitoring and management
- * - Improved resource cleanup
  */
 // @ts-ignore
 import * as UTIF from 'utif';
 import { OptimizedDisplacementProcessor } from './optimizedDisplacement';
 import { ScientificProcessor } from './scientificProcessor';
-import { CanvasPool } from './performance/CanvasPool';
-import { ChunkedProcessor } from './performance/ChunkedProcessor';
-import { StarPatternCache } from './performance/StarPatternCache';
-import { MemoryManager } from './performance/MemoryManager';
 
 export interface TraditionalMorphParams {
   horizontalDisplace: number; // 10-30 range for displacement filter
@@ -36,8 +25,6 @@ export interface TraditionalInputs {
 export class TraditionalMorphProcessor {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private canvasPool: CanvasPool;
-  private starPatternCache: StarPatternCache;
   
   constructor() {
     this.canvas = document.createElement('canvas');
@@ -46,11 +33,6 @@ export class TraditionalMorphProcessor {
       throw new Error('Could not create canvas context');
     }
     this.ctx = ctx;
-    this.canvasPool = CanvasPool.getInstance();
-    this.starPatternCache = StarPatternCache.getInstance();
-    
-    // Track memory usage
-    MemoryManager.trackResource(this);
   }
 
   private isTiffFile(file: File): boolean {
@@ -95,7 +77,7 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * PERFORMANCE OPTIMIZED: Smart loading with memory monitoring
+   * AI-ENHANCED: Smart loading with automatic optimization
    */
   async loadImages(inputs: TraditionalInputs): Promise<{
     starlessImg: HTMLImageElement;
@@ -105,7 +87,6 @@ export class TraditionalMorphProcessor {
     metadata: any;
     profile: any;
   }> {
-    return await MemoryManager.monitorOperation(async () => {
     const starlessImg = new Image();
     const starsImg = new Image();
     
@@ -176,18 +157,13 @@ export class TraditionalMorphProcessor {
       metadata,
       profile
     };
-    }, 'Image Loading').then(result => result.result);
   }
 
   /**
-   * PERFORMANCE OPTIMIZED: Calculate optimal size considering memory constraints
+   * SMART: Calculate optimal processing size based on complexity
    */
   private getOptimalProcessingSize(metadata: any, profile: any): number {
     const baseSize = 2048;
-    
-    // Get memory-aware recommendations
-    const memoryParams = MemoryManager.getOptimalProcessingParams(baseSize, baseSize);
-    let memorySizeLimit = Math.sqrt(memoryParams.chunkSize);
     
     // Adjust based on complexity
     let multiplier = 1;
@@ -202,21 +178,18 @@ export class TraditionalMorphProcessor {
     if (metadata.starCount > 300) multiplier *= 0.8;
     if (metadata.starCount > 500) multiplier *= 0.7;
     
-    // Consider memory constraints
-    const idealSize = Math.round(baseSize * multiplier);
-    const memoryConstrainedSize = Math.min(idealSize, memorySizeLimit);
-    
-    console.log(`🧠 Memory-aware sizing: ideal=${idealSize}, memory-limited=${memorySizeLimit}, chosen=${memoryConstrainedSize}`);
-    
-    return memoryConstrainedSize;
+    return Math.round(baseSize * multiplier);
   }
 
   /**
-   * OPTIMIZED: Resize image using canvas pool
+   * Resize image to target dimensions
    */
   private async resizeImage(img: HTMLImageElement, targetWidth: number, targetHeight: number): Promise<HTMLCanvasElement> {
-    const canvas = this.canvasPool.acquire(targetWidth, targetHeight);
+    const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
+    
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
     
     // Draw image centered and scaled to fit while maintaining aspect ratio
     const scale = Math.min(targetWidth / img.width, targetHeight / img.height);
@@ -295,11 +268,13 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * OPTIMIZED: Create structure-aware depth map using canvas pool
+   * Create structure-aware depth map using gradient analysis
    */
   private createStructureDepthMap(imageData: ImageData, width: number, height: number): HTMLCanvasElement {
-    const canvas = this.canvasPool.acquire(width, height);
+    const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
+    canvas.width = width;
+    canvas.height = height;
     
     const data = imageData.data;
     const structureData = new ImageData(width, height);
@@ -335,11 +310,13 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * OPTIMIZED: Create edge-preserving depth map using canvas pool
+   * Create edge-preserving depth map
    */
   private createEdgeDepthMap(imageData: ImageData, width: number, height: number): HTMLCanvasElement {
-    const canvas = this.canvasPool.acquire(width, height);
+    const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
+    canvas.width = width;
+    canvas.height = height;
     
     const data = imageData.data;
     const edgeData = new ImageData(width, height);
@@ -367,11 +344,13 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * OPTIMIZED: Intelligently fuse multiple depth maps using canvas pool
+   * Intelligently fuse multiple depth maps
    */
   private fuseDepthMaps(primary: HTMLCanvasElement, structure: HTMLCanvasElement, edge: HTMLCanvasElement): HTMLCanvasElement {
-    const canvas = this.canvasPool.acquire(primary.width, primary.height);
+    const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
+    canvas.width = primary.width;
+    canvas.height = primary.height;
     
     const width = primary.width;
     const height = primary.height;
@@ -388,29 +367,25 @@ export class TraditionalMorphProcessor {
       const structureVal = structureData.data[i] / 255;
       const edgeVal = edgeData.data[i] / 255;
       
-      // MORE NATURAL: Gentle fusion with smooth transitions
-      // Reduce weights significantly for more natural depth
-      const structureInfluence = structureVal * 0.15; // Much gentler structure influence
-      const edgeInfluence = (1 - edgeVal) * 0.1; // Subtle edge preservation
+      // Intelligent fusion with adaptive weights
+      const structureWeight = Math.min(1, structureVal * 2); // More weight for high-structure areas
+      const edgeWeight = Math.min(1, (1 - edgeVal) * 1.5); // More weight for edge areas
       
-      // Natural depth fusion - primarily based on luminance
+      // Combine with adaptive weighting
       const fusedVal = (
-        primaryVal * 0.85 +  // Dominant luminance-based depth
-        structureInfluence * 0.1 + // Gentle structure enhancement
-        edgeInfluence * 0.05  // Subtle edge preservation
-      );
+        primaryVal * 0.5 +
+        structureVal * structureWeight * 0.3 +
+        edgeVal * edgeWeight * 0.2
+      ) * 255;
       
-      // Clamp to reasonable range and smooth transitions
-      const clampedVal = Math.max(0.1, Math.min(0.9, fusedVal)) * 255;
-      
-      fusedData.data[i] = fusedData.data[i + 1] = fusedData.data[i + 2] = clampedVal;
+      fusedData.data[i] = fusedData.data[i + 1] = fusedData.data[i + 2] = Math.min(255, fusedVal);
       fusedData.data[i + 3] = 255;
     }
     
     ctx.putImageData(fusedData, 0, 0);
     
-    // Final smoothing for natural depth transitions
-    ctx.filter = 'blur(2px)';
+    // Final smoothing
+    ctx.filter = 'blur(0.5px)';
     ctx.drawImage(canvas, 0, 0);
     ctx.filter = 'none';
     
@@ -949,8 +924,10 @@ export class TraditionalMorphProcessor {
     
     onProgress?.('Creating left view (original complete image)...', 50);
     // LEFT VIEW: Original complete image (starless + stars)
-    const leftCanvas = this.canvasPool.acquire(width, height);
+    const leftCanvas = document.createElement('canvas');
     const leftCtx = leftCanvas.getContext('2d')!;
+    leftCanvas.width = width;
+    leftCanvas.height = height;
     
     // Draw starless background
     leftCtx.drawImage(starlessImg, 0, 0);
@@ -962,8 +939,10 @@ export class TraditionalMorphProcessor {
     
     onProgress?.('Creating right view using correct JP methodology...', 65);
     // RIGHT VIEW: Following exact JP methodology from photographingspace.com
-    const rightCanvas = this.canvasPool.acquire(width, height);
+    const rightCanvas = document.createElement('canvas');
     const rightCtx = rightCanvas.getContext('2d')!;
+    rightCanvas.width = width;
+    rightCanvas.height = height;
     
     // Step 1: Draw starless nebula as base layer
     rightCtx.drawImage(starlessImg, 0, 0);
@@ -972,8 +951,10 @@ export class TraditionalMorphProcessor {
     const initialLeftShift = -3; // ALL stars start 2-3 pixels left (behind nebula)
     
     // Create canvas for shifted star layer
-    const shiftedStarsCanvas = this.canvasPool.acquire(width, height);
-    const shiftedStarsCtx = shiftedStarsCanvas.getContext('2d')!
+    const shiftedStarsCanvas = document.createElement('canvas');
+    const shiftedStarsCtx = shiftedStarsCanvas.getContext('2d')!;
+    shiftedStarsCanvas.width = width;
+    shiftedStarsCanvas.height = height;
     
     // Draw all stars shifted left initially (behind nebula)
     shiftedStarsCtx.drawImage(starsImg, initialLeftShift, 0);
@@ -989,8 +970,10 @@ export class TraditionalMorphProcessor {
     const brightStars = starPatterns.filter(star => star.brightness / 255 > 0.35).slice(0, 15);
     
     // Create a copy of the current right canvas for reference
-    const rightCanvasCopy = this.canvasPool.acquire(width, height);
+    const rightCanvasCopy = document.createElement('canvas');
     const rightCopyCtx = rightCanvasCopy.getContext('2d')!;
+    rightCanvasCopy.width = width;
+    rightCanvasCopy.height = height;
     rightCopyCtx.drawImage(rightCanvas, 0, 0);
     
     // Process each star pattern individually with perfect blending
@@ -1001,23 +984,19 @@ export class TraditionalMorphProcessor {
       // More generous padding for complete star removal
       const padding = Math.max(3, Math.ceil(star.boundingBox.width * 0.15));
       const expandedBbox = {
-        x: Math.round(Math.max(0, star.boundingBox.x - padding)),
-        y: Math.round(Math.max(0, star.boundingBox.y - padding)),
-        width: Math.round(Math.min(width - (star.boundingBox.x - padding), star.boundingBox.width + padding * 2)),
-        height: Math.round(Math.min(height - (star.boundingBox.y - padding), star.boundingBox.height + padding * 2))
+        x: Math.max(0, star.boundingBox.x - padding),
+        y: Math.max(0, star.boundingBox.y - padding),
+        width: Math.min(width - (star.boundingBox.x - padding), star.boundingBox.width + padding * 2),
+        height: Math.min(height - (star.boundingBox.y - padding), star.boundingBox.height + padding * 2)
       };
       
-      // Calculate positions precisely and round to whole pixels to prevent rendering artifacts
-      const originalShiftedX = Math.round(expandedBbox.x + initialLeftShift);
-      const finalX = Math.round(expandedBbox.x + initialLeftShift + forwardShift);
+      // Calculate positions more precisely
+      const originalShiftedX = expandedBbox.x + initialLeftShift;
+      const finalX = expandedBbox.x + initialLeftShift + forwardShift;
       
-      // Skip if repositioning would go out of bounds with stricter edge buffer
-      const edgeBuffer = 5; // Increased buffer for clean edges
-      if (finalX < edgeBuffer || 
-          finalX + expandedBbox.width >= width - edgeBuffer || 
-          originalShiftedX < edgeBuffer ||
-          expandedBbox.x + expandedBbox.width >= width - edgeBuffer) {
-        console.log(`⚠️ Skipping star repositioning: would go too close to edges (${finalX}, ${originalShiftedX})`);
+      // Skip if repositioning would go out of bounds with buffer
+      if (finalX < 0 || finalX + expandedBbox.width >= width - 2 || originalShiftedX < 0) {
+        console.log(`⚠️ Skipping star repositioning: would go out of bounds (${finalX}, ${originalShiftedX})`);
         continue;
       }
       
@@ -1033,8 +1012,10 @@ export class TraditionalMorphProcessor {
         
         // ENHANCED STEP 1: Complete star removal from original shifted position
         // Create a precise mask for the star region
-        const starMaskCanvas = this.canvasPool.acquire(expandedBbox.width, expandedBbox.height);
+        const starMaskCanvas = document.createElement('canvas');
         const starMaskCtx = starMaskCanvas.getContext('2d')!;
+        starMaskCanvas.width = expandedBbox.width;
+        starMaskCanvas.height = expandedBbox.height;
         
         // Extract star pattern for masking
         starMaskCtx.drawImage(
@@ -1047,8 +1028,10 @@ export class TraditionalMorphProcessor {
         const starMaskData = starMaskCtx.getImageData(0, 0, expandedBbox.width, expandedBbox.height);
         
         // Create clean background replacement
-        const cleanBackgroundCanvas = this.canvasPool.acquire(expandedBbox.width, expandedBbox.height);
+        const cleanBackgroundCanvas = document.createElement('canvas');
         const cleanBackgroundCtx = cleanBackgroundCanvas.getContext('2d')!;
+        cleanBackgroundCanvas.width = expandedBbox.width;
+        cleanBackgroundCanvas.height = expandedBbox.height;
         
         // Get pure starless background for the original position
         cleanBackgroundCtx.drawImage(
@@ -1059,8 +1042,6 @@ export class TraditionalMorphProcessor {
         
         // PRECISE REMOVAL: Use multiply blend to remove star completely
         rightCtx.globalCompositeOperation = 'source-over';
-        // Disable anti-aliasing for precise pixel operations
-        rightCtx.imageSmoothingEnabled = false;
         rightCtx.drawImage(
           cleanBackgroundCanvas,
           0, 0, expandedBbox.width, expandedBbox.height,
@@ -1074,26 +1055,16 @@ export class TraditionalMorphProcessor {
           expandedBbox.x, expandedBbox.y, expandedBbox.width, expandedBbox.height,
           finalX, expandedBbox.y, expandedBbox.width, expandedBbox.height
         );
-        // Re-enable anti-aliasing after precise operations
-        rightCtx.imageSmoothingEnabled = true;
         rightCtx.globalCompositeOperation = 'source-over';
         
         repositionedStars++;
         
         console.log(`✨ ${star.pattern.toUpperCase()} pattern cleanly moved: ${expandedBbox.width}x${expandedBbox.height}, shift=${forwardShift.toFixed(1)}, from x=${originalShiftedX} to x=${finalX}`);
-        
-        // Clean up temporary canvases
-        this.canvasPool.release(starMaskCanvas);
-        this.canvasPool.release(cleanBackgroundCanvas);
       }
     }
     rightCtx.globalCompositeOperation = 'source-over';
     
     console.log(`Repositioned ${repositionedStars} bright stars forward from background position`);
-    
-    // Clean up temporary canvases
-    this.canvasPool.release(shiftedStarsCanvas);
-    this.canvasPool.release(rightCanvasCopy);
     
     onProgress?.('Applying optimized displacement with chunked processing...', 90);
     // Step 4: OPTIMIZED displacement processing
@@ -1124,8 +1095,13 @@ export class TraditionalMorphProcessor {
     if (scaleFactor < 1) {
       onProgress?.('Upscaling to original resolution...', 98);
       
-      const finalLeftCanvas = this.canvasPool.acquire(originalSize.width, originalSize.height);
-      const finalRightCanvas = this.canvasPool.acquire(originalSize.width, originalSize.height);
+      const finalLeftCanvas = document.createElement('canvas');
+      const finalRightCanvas = document.createElement('canvas');
+      
+      finalLeftCanvas.width = originalSize.width;
+      finalLeftCanvas.height = originalSize.height;
+      finalRightCanvas.width = originalSize.width;
+      finalRightCanvas.height = originalSize.height;
       
       const finalLeftCtx = finalLeftCanvas.getContext('2d')!;
       const finalRightCtx = finalRightCanvas.getContext('2d')!;
@@ -1154,7 +1130,7 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Combine left and right views into final stereo pair with identical dimensions
+   * Combine left and right views into final stereo pair with spacing
    */
   createFinalStereoPair(
     leftCanvas: HTMLCanvasElement, 
@@ -1162,67 +1138,17 @@ export class TraditionalMorphProcessor {
     spacing: number = 300,
     addBorders: boolean = true
   ): HTMLCanvasElement {
-    const originalWidth = leftCanvas.width;
-    const originalHeight = leftCanvas.height;
-    
-    // Crop both images to ensure identical clean dimensions
-    const cropAmount = 10; // Remove 10px from right edge of both images
-    const cleanWidth = originalWidth - cropAmount;
-    const cleanHeight = originalHeight;
-    
-    // Create identical-sized left canvas
-    const cleanLeftCanvas = this.canvasPool.acquire(cleanWidth, cleanHeight);
-    const cleanLeftCtx = cleanLeftCanvas.getContext('2d')!;
-    cleanLeftCtx.imageSmoothingEnabled = false;
-    
-    // Crop left image to clean dimensions (remove 10px from right)
-    cleanLeftCtx.drawImage(
-      leftCanvas,
-      0, 0, cleanWidth, cleanHeight,  // Source: crop right edge
-      0, 0, cleanWidth, cleanHeight   // Destination: exact size
-    );
-    
-    // Create identical-sized right canvas
-    const cleanRightCanvas = this.canvasPool.acquire(cleanWidth, cleanHeight);
-    const cleanRightCtx = cleanRightCanvas.getContext('2d')!;
-    cleanRightCtx.imageSmoothingEnabled = false;
-    
-    // Crop right image to exact same dimensions (remove 10px from right)
-    cleanRightCtx.drawImage(
-      rightCanvas,
-      0, 0, cleanWidth, cleanHeight,  // Source: crop right edge
-      0, 0, cleanWidth, cleanHeight   // Destination: exact size
-    );
-    
-    // Ensure perfectly clean edges on both images
-    [cleanLeftCtx, cleanRightCtx].forEach(ctx => {
-      const imageData = ctx.getImageData(0, 0, cleanWidth, cleanHeight);
-      const data = imageData.data;
-      
-      // Clean the rightmost pixel column to ensure straight edge
-      for (let y = 0; y < cleanHeight; y++) {
-        const rightEdgeIdx = (y * cleanWidth + (cleanWidth - 1)) * 4;
-        const nearRightIdx = (y * cleanWidth + (cleanWidth - 2)) * 4;
-        
-        // Make the right edge pixel match the near-right pixel for smoothness
-        data[rightEdgeIdx] = data[nearRightIdx];
-        data[rightEdgeIdx + 1] = data[nearRightIdx + 1];
-        data[rightEdgeIdx + 2] = data[nearRightIdx + 2];
-        data[rightEdgeIdx + 3] = data[nearRightIdx + 3];
-      }
-      
-      ctx.putImageData(imageData, 0, 0);
-    });
+    const width = leftCanvas.width;
+    const height = leftCanvas.height;
     
     const finalCanvas = document.createElement('canvas');
     const finalCtx = finalCanvas.getContext('2d')!;
-    finalCtx.imageSmoothingEnabled = false;
     
     if (addBorders) {
       // Add 600px borders around the entire image
       const borderSize = 600;
-      const totalWidth = cleanWidth * 2 + spacing + (borderSize * 2);
-      const totalHeight = cleanHeight + (borderSize * 2);
+      const totalWidth = width * 2 + spacing + (borderSize * 2);
+      const totalHeight = height + (borderSize * 2);
       
       finalCanvas.width = totalWidth;
       finalCanvas.height = totalHeight;
@@ -1231,50 +1157,30 @@ export class TraditionalMorphProcessor {
       finalCtx.fillStyle = '#000000';
       finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
       
-      // Draw both images with identical dimensions
-      finalCtx.drawImage(cleanLeftCanvas, borderSize, borderSize);
-      finalCtx.drawImage(cleanRightCanvas, borderSize + cleanWidth + spacing, borderSize);
+      // Draw left and right views with border offset
+      finalCtx.drawImage(leftCanvas, borderSize, borderSize);
+      finalCtx.drawImage(rightCanvas, borderSize + width + spacing, borderSize);
     } else {
-      // No borders - standard layout with identical image sizes
-      finalCanvas.width = cleanWidth * 2 + spacing;
-      finalCanvas.height = cleanHeight;
+      // No borders - standard layout
+      finalCanvas.width = width * 2 + spacing;
+      finalCanvas.height = height;
       
       // Black background
       finalCtx.fillStyle = '#000000';
       finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
       
-      // Draw both images with identical dimensions
-      finalCtx.drawImage(cleanLeftCanvas, 0, 0);
-      finalCtx.drawImage(cleanRightCanvas, cleanWidth + spacing, 0);
+      // Draw left and right views with spacing
+      finalCtx.drawImage(leftCanvas, 0, 0);
+      finalCtx.drawImage(rightCanvas, width + spacing, 0);
     }
-    
-    // Clean up temporary canvases
-    this.canvasPool.release(cleanLeftCanvas);
-    this.canvasPool.release(cleanRightCanvas);
-    
-    console.log(`✂️ Both images cropped to identical dimensions: ${cleanWidth}x${cleanHeight}`);
     
     return finalCanvas;
   }
 
   /**
-   * ENHANCED: Cleanup resources and memory
+   * Cleanup resources
    */
   dispose() {
-    // Clean up canvas pools and caches
-    this.canvasPool.clear();
-    this.starPatternCache.clear();
-    
-    // Clean up main canvas
-    MemoryManager.cleanupImageResources(this.canvas);
-    MemoryManager.untrackResource(this);
-    
-    // Force garbage collection if memory usage is high
-    const memStats = MemoryManager.getMemoryStats();
-    if (memStats.warning) {
-      MemoryManager.forceGarbageCollection();
-    }
-    
-    console.log('🗑️ TraditionalMorphProcessor disposed and cleaned up');
+    // Canvas cleanup happens automatically when references are lost
   }
 }
