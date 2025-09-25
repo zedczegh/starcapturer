@@ -333,7 +333,7 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Create stereo pair using traditional morphing method
+   * Create stereo pair using CORRECT traditional morphing method from photographingspace.com
    */
   async createTraditionalStereoPair(
     inputs: TraditionalInputs, 
@@ -347,25 +347,15 @@ export class TraditionalMorphProcessor {
     const width = starlessImg.width;
     const height = starlessImg.height;
     
-    onProgress?.('Creating luminance map for depth displacement...', 25);
+    onProgress?.('Creating luminance map for displacement filter...', 20);
     const luminanceMap = this.createLuminanceMap(starlessImg, params.luminanceBlur);
     
-    onProgress?.('Applying traditional displacement filter to nebula...', 40);
-    const displacedStarless = this.applyDisplacementFilter(starlessImg, luminanceMap, params.horizontalDisplace);
-    
-    onProgress?.('Detecting individual stars for 3D positioning...', 55);
+    onProgress?.('Detecting individual stars for proper 3D positioning...', 35);
     const starCenters = this.detectStarCenters(starsImg);
-    console.log(`Detected ${starCenters.length} stars for 3D positioning`);
+    console.log(`Detected ${starCenters.length} stars for traditional 3D positioning`);
     
-    // Debug star detection and brightness
-    const brightStars = starCenters.filter(star => star.brightness / 255 > 0.7);
-    console.log(`Found ${brightStars.length} bright stars (>70% brightness) for repositioning`);
-    brightStars.slice(0, 5).forEach((star, i) => {
-      console.log(`Star ${i}: pos(${star.x}, ${star.y}), brightness: ${(star.brightness / 255 * 100).toFixed(1)}%`);
-    });
-    
-    onProgress?.('Creating left view (original)...', 70);
-    // Left view: original starless + original stars
+    onProgress?.('Creating left view (original complete image)...', 50);
+    // LEFT VIEW: Original complete image (starless + stars)
     const leftCanvas = document.createElement('canvas');
     const leftCtx = leftCanvas.getContext('2d')!;
     leftCanvas.width = width;
@@ -379,124 +369,138 @@ export class TraditionalMorphProcessor {
     leftCtx.drawImage(starsImg, 0, 0);
     leftCtx.globalCompositeOperation = 'source-over';
     
-    onProgress?.('Creating right view with 3D star positioning...', 85);
-    // Right view: displaced starless + repositioned stars
+    onProgress?.('Creating right view using correct JP methodology...', 65);
+    // RIGHT VIEW: Following exact JP methodology from photographingspace.com
     const rightCanvas = document.createElement('canvas');
     const rightCtx = rightCanvas.getContext('2d')!;
     rightCanvas.width = width;
     rightCanvas.height = height;
     
-    // Draw displaced starless background
-    rightCtx.drawImage(displacedStarless, 0, 0);
+    // Step 1: Draw starless nebula as base layer
+    rightCtx.drawImage(starlessImg, 0, 0);
     
-    // First, add ALL stars from original stars-only image as base layer
+    // Step 2: Add star layer with initial LEFT shift (2-3 pixels behind nebula)
+    const initialLeftShift = -3; // ALL stars start 2-3 pixels left (behind nebula)
+    
+    // Create canvas for shifted star layer
+    const shiftedStarsCanvas = document.createElement('canvas');
+    const shiftedStarsCtx = shiftedStarsCanvas.getContext('2d')!;
+    shiftedStarsCanvas.width = width;
+    shiftedStarsCanvas.height = height;
+    
+    // Draw all stars shifted left initially (behind nebula)
+    shiftedStarsCtx.drawImage(starsImg, initialLeftShift, 0);
+    
+    // Add this shifted star layer with screen blending
     rightCtx.globalCompositeOperation = 'screen';
-    rightCtx.drawImage(starsImg, 0, 0);
+    rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
     
-    // Now manually reposition bright stars for 3D depth effect
-    // Create temporary canvas for individual star manipulation
-    const starCanvas = document.createElement('canvas');
-    const starCtx = starCanvas.getContext('2d')!;
-    starCanvas.width = width;
-    starCanvas.height = height;
-    starCtx.drawImage(starsImg, 0, 0);
+    onProgress?.('Positioning individual bright stars forward...', 75);
+    // Step 3: Selectively move individual bright stars RIGHT to bring them forward
+    // This is the KEY difference - we're bringing specific stars FORWARD from their background position
     
-    // Position stars using enhanced 3D layering for dramatic stereoscopic effect
-    // Based on photographingspace.com but with much more aggressive shifts
-    let processedStars = 0;
-    const baseLeftShift = -5; // Increased base shift - all stars start further behind nebula
+    let repositionedStars = 0;
+    const brightStars = starCenters.filter(star => star.brightness / 255 > 0.6); // Only reposition bright stars
     
-    for (const star of starCenters) {
+    for (const star of brightStars) {
       const brightnessFactor = star.brightness / 255;
       
-      // Process all visible stars (not just bright ones)
-      if (brightnessFactor > 0.1) {
-        // Calculate layered shifts for dramatic 3D depth effect
-        // Based on photographingspace.com methodology
-        let finalShift = baseLeftShift; // Start behind nebula
+      // Calculate how much to bring this star FORWARD (positive right shift)
+      let forwardShift = 0;
+      
+      if (brightnessFactor > 0.95) {
+        // Extremely bright stars - bring very close to viewer
+        forwardShift = params.starShiftAmount * 4.0;
+      } else if (brightnessFactor > 0.9) {
+        // Very bright stars - bring close to viewer  
+        forwardShift = params.starShiftAmount * 3.5;
+      } else if (brightnessFactor > 0.8) {
+        // Bright stars - bring moderately forward
+        forwardShift = params.starShiftAmount * 3.0;
+      } else if (brightnessFactor > 0.7) {
+        // Medium bright stars - bring slightly forward
+        forwardShift = params.starShiftAmount * 2.0;
+      } else {
+        // Dimmer bright stars - minimal forward movement
+        forwardShift = params.starShiftAmount * 1.0;
+      }
+      
+      // Extract individual star and reposition it
+      const radius = Math.max(3, Math.min(8, Math.ceil(brightnessFactor * 6)));
+      const x1 = Math.max(0, star.x - radius);
+      const y1 = Math.max(0, star.y - radius);
+      const w = Math.min(radius * 2, width - x1);
+      const h = Math.min(radius * 2, height - y1);
+      
+      if (w > 0 && h > 0 && forwardShift > 0) {
+        // Create temporary canvas for this individual star
+        const starCanvas = document.createElement('canvas');
+        const starCtx = starCanvas.getContext('2d')!;
+        starCanvas.width = w;
+        starCanvas.height = h;
         
-        // Create distinct depth layers - brighter stars come progressively forward
-        // MUCH MORE AGGRESSIVE shifts for dramatic 3D effect
-        if (brightnessFactor > 0.9) {
-          // Extremely bright stars - very close to viewer (large positive shift)
-          finalShift = baseLeftShift + (params.starShiftAmount * 5.0);
-        } else if (brightnessFactor > 0.8) {
-          // Very bright stars - close to viewer
-          finalShift = baseLeftShift + (params.starShiftAmount * 4.0);
-        } else if (brightnessFactor > 0.7) {
-          // Bright stars - moderately close
-          finalShift = baseLeftShift + (params.starShiftAmount * 3.5);
-        } else if (brightnessFactor > 0.6) {
-          // Medium bright stars - slightly forward
-          finalShift = baseLeftShift + (params.starShiftAmount * 3.0);
-        } else if (brightnessFactor > 0.5) {
-          // Dim bright stars - barely forward
-          finalShift = baseLeftShift + (params.starShiftAmount * 2.5);
-        } else if (brightnessFactor > 0.4) {
-          // Faint stars - just ahead of background
-          finalShift = baseLeftShift + (params.starShiftAmount * 2.0);
-        } else if (brightnessFactor > 0.3) {
-          // Very faint stars - slightly ahead
-          finalShift = baseLeftShift + (params.starShiftAmount * 1.5);
-        } else if (brightnessFactor > 0.2) {
-          // Background stars - minimally forward
-          finalShift = baseLeftShift + (params.starShiftAmount * 1.0);
-        } else {
-          // Very dim stars - stay behind nebula (just base left shift)
-          finalShift = baseLeftShift;
-        }
+        // Extract the star region from original stars image
+        starCtx.drawImage(starsImg, x1, y1, w, h, 0, 0, w, h);
         
-        // Debug star shifting
-        if (processedStars < 3) {
-          console.log(`Processing star at (${star.x}, ${star.y}): brightness=${(brightnessFactor * 100).toFixed(1)}%, finalShift=${finalShift}px, starShiftAmount=${params.starShiftAmount}`);
-        }
-        processedStars++;
-        
-        // Extract and reposition star using proper canvas blending
-        const radius = Math.max(2, Math.min(5, Math.ceil(brightnessFactor * 3)));
-        const x1 = Math.max(0, star.x - radius);
-        const y1 = Math.max(0, star.y - radius);
-        const w = Math.min(radius * 2, width - x1);
-        const h = Math.min(radius * 2, height - y1);
-        
-        if (w > 0 && h > 0 && Math.abs(finalShift) > 0) {
-          // Create temporary canvas for the star region
-          const tempCanvas = document.createElement('canvas');
-          const tempCtx = tempCanvas.getContext('2d')!;
-          tempCanvas.width = w;
-          tempCanvas.height = h;
-          
-          // Draw the star region from original stars image
-          tempCtx.drawImage(starsImg, x1, y1, w, h, 0, 0, w, h);
-          
-          // Get the image data to filter out non-bright pixels
-          const starData = tempCtx.getImageData(0, 0, w, h);
-          for (let i = 0; i < starData.data.length; i += 4) {
-            const luminance = 0.299 * starData.data[i] + 0.587 * starData.data[i + 1] + 0.114 * starData.data[i + 2];
-            if (luminance <= 100) { // Make non-bright pixels transparent
-              starData.data[i + 3] = 0; // Set alpha to 0
-            }
+        // Filter to keep only bright pixels (the actual star)
+        const starData = starCtx.getImageData(0, 0, w, h);
+        for (let i = 0; i < starData.data.length; i += 4) {
+          const luminance = 0.299 * starData.data[i] + 0.587 * starData.data[i + 1] + 0.114 * starData.data[i + 2];
+          if (luminance < brightnessFactor * 200) { // Keep only the brightest parts
+            starData.data[i + 3] = 0; // Make dimmer parts transparent
           }
-          
-          // Put the filtered data back to temp canvas
-          tempCtx.putImageData(starData, 0, 0);
-          
-          // Draw the shifted star using screen blending (this respects globalCompositeOperation)
-          rightCtx.globalCompositeOperation = 'screen';
-          const newX = Math.max(0, Math.min(width - w, x1 + finalShift));
-          rightCtx.drawImage(tempCanvas, newX, y1);
-          
-          // Debug first few star shifts
-          if (processedStars <= 3) {
-            console.log(`Star shifted from x=${x1} to x=${newX} (shift=${finalShift}, actual movement=${newX - x1})`);
-          }
+        }
+        starCtx.putImageData(starData, 0, 0);
+        
+        // Position this star forward from its initial left-shifted position
+        const finalX = Math.max(0, Math.min(width - w, x1 + initialLeftShift + forwardShift));
+        
+        // Draw the repositioned star with screen blending
+        rightCtx.globalCompositeOperation = 'screen';
+        rightCtx.drawImage(starCanvas, finalX, y1);
+        
+        repositionedStars++;
+        
+        if (repositionedStars <= 5) {
+          console.log(`Star repositioned: brightness=${(brightnessFactor * 100).toFixed(1)}%, initial_shift=${initialLeftShift}, forward_shift=${forwardShift}, final_pos=${finalX}`);
         }
       }
     }
-    
     rightCtx.globalCompositeOperation = 'source-over';
     
-    console.log(`Star processing complete: ${processedStars} bright stars repositioned out of ${starCenters.length} detected stars`);
+    console.log(`Repositioned ${repositionedStars} bright stars forward from background position`);
+    
+    onProgress?.('Applying displacement filter to create nebula depth...', 90);
+    // Step 4: Apply displacement filter to the NEBULA layer (not the stars!)
+    // This is applied to the composite right image to give the nebula 3D depth
+    const imageData = rightCtx.getImageData(0, 0, width, height);
+    const lumCtx = luminanceMap.getContext('2d')!;
+    const lumData = lumCtx.getImageData(0, 0, width, height);
+    const displacedData = rightCtx.createImageData(width, height);
+    
+    // Apply horizontal displacement based on luminance
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        
+        // Get displacement from luminance (brighter = more displacement)
+        const lumValue = lumData.data[idx] / 255;
+        const displacement = Math.round((lumValue - 0.5) * params.horizontalDisplace);
+        
+        // Calculate source position
+        const srcX = Math.max(0, Math.min(width - 1, x - displacement));
+        const srcIdx = (y * width + srcX) * 4;
+        
+        // Copy pixel data
+        displacedData.data[idx] = imageData.data[srcIdx];
+        displacedData.data[idx + 1] = imageData.data[srcIdx + 1];
+        displacedData.data[idx + 2] = imageData.data[srcIdx + 2];
+        displacedData.data[idx + 3] = imageData.data[srcIdx + 3];
+      }
+    }
+    
+    // Apply the displacement
+    rightCtx.putImageData(displacedData, 0, 0);
     
     onProgress?.('Applying final contrast adjustments...', 95);
     // Apply contrast boost to both views if specified
