@@ -293,26 +293,26 @@ export class TraditionalMorphProcessor {
   async createTraditionalStereoPair(
     inputs: TraditionalInputs, 
     params: TraditionalMorphParams,
-    onProgress?: (step: string) => void
+    onProgress?: (step: string, progress?: number) => void
   ): Promise<{ leftCanvas: HTMLCanvasElement; rightCanvas: HTMLCanvasElement; depthMap: HTMLCanvasElement }> {
     
-    onProgress?.('Loading and validating images...');
+    onProgress?.('Loading and validating images...', 10);
     const { starlessImg, starsImg } = await this.loadImages(inputs);
     
     const width = starlessImg.width;
     const height = starlessImg.height;
     
-    onProgress?.('Creating luminance map for depth displacement...');
+    onProgress?.('Creating luminance map for depth displacement...', 25);
     const luminanceMap = this.createLuminanceMap(starlessImg, params.luminanceBlur);
     
-    onProgress?.('Applying traditional displacement filter to nebula...');
+    onProgress?.('Applying traditional displacement filter to nebula...', 40);
     const displacedStarless = this.applyDisplacementFilter(starlessImg, luminanceMap, params.horizontalDisplace);
     
-    onProgress?.('Detecting individual stars for 3D positioning...');
+    onProgress?.('Detecting individual stars for 3D positioning...', 55);
     const starCenters = this.detectStarCenters(starsImg);
     console.log(`Detected ${starCenters.length} stars for 3D positioning`);
     
-    onProgress?.('Creating left view (original)...');
+    onProgress?.('Creating left view (original)...', 70);
     // Left view: original starless + original stars
     const leftCanvas = document.createElement('canvas');
     const leftCtx = leftCanvas.getContext('2d')!;
@@ -327,7 +327,7 @@ export class TraditionalMorphProcessor {
     leftCtx.drawImage(starsImg, 0, 0);
     leftCtx.globalCompositeOperation = 'source-over';
     
-    onProgress?.('Creating right view with 3D star positioning...');
+    onProgress?.('Creating right view with 3D star positioning...', 85);
     // Right view: displaced starless + repositioned stars
     const rightCanvas = document.createElement('canvas');
     const rightCtx = rightCanvas.getContext('2d')!;
@@ -411,7 +411,7 @@ export class TraditionalMorphProcessor {
     
     rightCtx.globalCompositeOperation = 'source-over';
     
-    onProgress?.('Applying final contrast adjustments...');
+    onProgress?.('Applying final contrast adjustments...', 95);
     // Apply contrast boost to both views if specified
     if (params.contrastBoost !== 1.0) {
       [leftCtx, rightCtx].forEach(ctx => {

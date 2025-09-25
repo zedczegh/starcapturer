@@ -1,63 +1,34 @@
+import * as React from "react"
+import * as ProgressPrimitive from "@radix-ui/react-progress"
 
-import * as React from "react";
-import * as ProgressPrimitive from "@radix-ui/react-progress";
-
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
 interface ProgressProps extends React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> {
-  className?: string;
-  style?: React.CSSProperties;
-  colorClass?: string; // For Tailwind color classes
+  colorClass?: string;
+  max?: number;
 }
 
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
   ProgressProps
->(({ className, value, style, colorClass, ...props }, ref) => {
-  // Ensure value is always at least 1 for visibility
-  const safeValue = value !== undefined && value !== null ? Math.max(1, value) : 1;
-  
-  return (
-    <ProgressPrimitive.Root
-      ref={ref}
+>(({ className, value, colorClass, max = 100, ...props }, ref) => (
+  <ProgressPrimitive.Root
+    ref={ref}
+    className={cn(
+      "relative h-4 w-full overflow-hidden rounded-full bg-secondary",
+      className
+    )}
+    {...props}
+  >
+    <ProgressPrimitive.Indicator
       className={cn(
-        "relative h-4 w-full overflow-hidden rounded-full bg-secondary/40 backdrop-blur-sm",
-        className
+        "h-full w-full flex-1 transition-all",
+        colorClass || "bg-primary"
       )}
-      {...props}
-    >
-      <ProgressPrimitive.Indicator
-        className={cn(
-          "h-full w-full flex-1 transition-all duration-700 ease-out relative overflow-hidden",
-          colorClass || "bg-primary"
-        )}
-        style={{ 
-          transform: `translateX(-${100 - (safeValue || 0)}%)`,
-          backgroundColor: !colorClass && style?.backgroundColor ? style.backgroundColor : undefined
-        }}
-      >
-        {/* Animated shimmer effect using CSS */}
-        <div 
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-          style={{
-            animation: 'shimmer 2s ease-in-out infinite',
-            transform: 'translateX(-100%)'
-          }}
-        />
-      </ProgressPrimitive.Indicator>
-      
-      {/* Global shimmer animation styles */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-          }
-        `
-      }} />
-    </ProgressPrimitive.Root>
-  );
-})
+      style={{ transform: `translateX(-${100 - ((value || 0) / max) * 100}%)` }}
+    />
+  </ProgressPrimitive.Root>
+))
 Progress.displayName = ProgressPrimitive.Root.displayName
 
 export { Progress }

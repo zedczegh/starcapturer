@@ -6,9 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 import { Upload, Eye, Download, Loader2, Layers } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { toast } from 'sonner';
 import { generateScientificAstroDepthMap } from '@/lib/scientificAstroDepth';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 // @ts-ignore
@@ -51,6 +51,8 @@ const StereoscopeProcessor: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [depthMapUrl, setDepthMapUrl] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [progressText, setProgressText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const starlessInputRef = useRef<HTMLInputElement>(null);
   const starsInputRef = useRef<HTMLInputElement>(null);
@@ -148,15 +150,14 @@ const StereoscopeProcessor: React.FC = () => {
           setResultUrl(null);
           setDepthMapUrl(null);
           
-          if (file.name.toLowerCase().match(/\.(tiff?|cr2|nef|arw|dng|raw|orf|rw2|pef)$/)) {
-            toast.info(t('Advanced format detected. Processing for optimal results...', '检测到高级格式。正在处理以获得最佳结果...'));
-          }
+          // Advanced format detected - no toast needed
         } catch (error) {
           console.error('Error processing TIFF file:', error);
-          toast.error(t('Error processing TIFF file. Please try a different format.', '处理TIFF文件时出错。请尝试其他格式。'));
+          // Error handled via console - no toast needed
         }
       } else {
-        toast.error(t('Please select a valid image file (JPEG, PNG, TIFF, RAW formats supported)', '请选择有效的图像文件（支持JPEG、PNG、TIFF、RAW格式）'));
+        // Invalid file format - error handled via console
+        console.error('Invalid image file format');
       }
     }
   };
@@ -173,10 +174,10 @@ const StereoscopeProcessor: React.FC = () => {
           setDepthMapUrl(null);
         } catch (error) {
           console.error('Error processing TIFF file:', error);
-          toast.error(t('Error processing TIFF file. Please try a different format.', '处理TIFF文件时出错。请尝试其他格式。'));
+          // Error handled via console
         }
       } else {
-        toast.error(t('Please select a valid starless image file', '请选择有效的无星图像文件'));
+        console.error('Invalid starless image file format');
       }
     }
   };
@@ -193,10 +194,10 @@ const StereoscopeProcessor: React.FC = () => {
           setDepthMapUrl(null);
         } catch (error) {
           console.error('Error processing TIFF file:', error);
-          toast.error(t('Error processing TIFF file. Please try a different format.', '处理TIFF文件时出错。请尝试其他格式。'));
+          // Error handled via console
         }
       } else {
-        toast.error(t('Please select a valid stars-only image file', '请选择有效的纯星图像文件'));
+        console.error('Invalid stars-only image file format');
       }
     }
   };
@@ -304,9 +305,11 @@ const StereoscopeProcessor: React.FC = () => {
     if (!selectedImage) return;
     
     setProcessing(true);
+    setProgress(0);
     
     try {
-      toast.info(t('Starting image processing...', '开始图像处理...'));
+      setProgressText(t('Starting image processing...', '开始图像处理...'));
+      setProgress(10);
       
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -326,8 +329,14 @@ const StereoscopeProcessor: React.FC = () => {
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
 
+      setProgressText(t('Analyzing image structure...', '分析图像结构...'));
+      setProgress(30);
+
       const { width, height } = canvas;
       const { depthMap, starMask } = generateScientificAstroDepthMap(canvas, ctx, width, height, params);
+      
+      setProgressText(t('Creating depth map...', '创建深度图...'));
+      setProgress(50);
       
       const depthCanvas = document.createElement('canvas');
       const depthCtx = depthCanvas.getContext('2d')!;
@@ -335,6 +344,9 @@ const StereoscopeProcessor: React.FC = () => {
       depthCanvas.height = height;
       depthCtx.putImageData(depthMap, 0, 0);
       setDepthMapUrl(depthCanvas.toDataURL());
+
+      setProgressText(t('Generating stereo views...', '生成立体视图...'));
+      setProgress(70);
 
       const { left, right } = createStereoViews(canvas, ctx, depthMap, width, height, params, starMask);
       
@@ -356,6 +368,9 @@ const StereoscopeProcessor: React.FC = () => {
       
       starMaskCtx.putImageData(starMaskImageData, 0, 0);
       console.log('Star mask visualization created', starMaskCanvas.toDataURL());
+
+      setProgressText(t('Compositing final stereo pair...', '合成最终立体对...'));
+      setProgress(90);
 
       const resultCanvas = document.createElement('canvas');
       const resultCtx = resultCanvas.getContext('2d')!;
@@ -389,23 +404,30 @@ const StereoscopeProcessor: React.FC = () => {
       }
 
       setResultUrl(resultCanvas.toDataURL());
-      
-      toast.success(t('Nobel Prize-level stereoscopic pair generated successfully!', '诺贝尔奖级立体镜对生成成功！'));
+      setProgress(100);
+      setProgressText(t('Processing complete!', '处理完成！'));
     } catch (error) {
       console.error('Error processing image:', error);
-      toast.error(t('Error processing image', '处理图像时出错'));
+      setProgressText(t('Error processing image', '处理图像时出错'));
     } finally {
       setProcessing(false);
+      if (!processing) {
+        setTimeout(() => {
+          setProgress(0);
+          setProgressText('');
+        }, 3000);
+      }
     }
   };
 
   const processTraditionalMode = async () => {
     if (!starlessImage || !starsImage) {
-      toast.error(t('Please select both starless and stars-only images', '请选择无星和纯星图像'));
+      console.error('Please select both starless and stars-only images');
       return;
     }
 
     setProcessing(true);
+    setProgress(0);
     
     try {
       const processor = new TraditionalMorphProcessor();
@@ -417,8 +439,9 @@ const StereoscopeProcessor: React.FC = () => {
       const { leftCanvas, rightCanvas, depthMap } = await processor.createTraditionalStereoPair(
         inputs,
         traditionalParams,
-        (step) => {
-          toast.info(t(step, step));
+        (step, progressValue) => {
+          setProgressText(t(step, step));
+          if (progressValue) setProgress(progressValue);
         }
       );
 
@@ -427,12 +450,19 @@ const StereoscopeProcessor: React.FC = () => {
       setResultUrl(finalPair.toDataURL());
       processor.dispose();
       
-      toast.success(t('Traditional morph stereoscopic pair created successfully!', '传统变形立体对创建成功！'));
+      setProgress(100);
+      setProgressText(t('Processing complete!', '处理完成！'));
     } catch (error) {
       console.error('Error processing traditional mode:', error);
-      toast.error(t('Error processing images in traditional mode', '传统模式处理图像时出错'));
+      setProgressText(t('Error processing images in traditional mode', '传统模式处理图像时出错'));
     } finally {
       setProcessing(false);
+      if (!processing) {
+        setTimeout(() => {
+          setProgress(0);
+          setProgressText('');
+        }, 3000);
+      }
     }
   };
 
@@ -527,15 +557,6 @@ const StereoscopeProcessor: React.FC = () => {
                         />
                       </div>
                     )}
-                    
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="borders">{t('Add 600px Black Borders', '添加600px黑色边框')}</Label>
-                      <Switch
-                        id="borders"
-                        checked={addBorders}
-                        onCheckedChange={setAddBorders}
-                      />
-                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -546,7 +567,7 @@ const StereoscopeProcessor: React.FC = () => {
                     {t('AI Auto-Intelligence Parameters', 'AI自动智能参数')}
                   </CardTitle>
                   <CardDescription>
-                    {t('Advanced parameters automatically optimized for your image. Manual adjustments available for fine-tuning.', '为您的图像自动优化的高级参数。可进行手动调整以进行微调。')}
+                    {t('Advanced parameters automatically optimized for your image.', '为您的图像自动优化的高级参数。')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -575,6 +596,16 @@ const StereoscopeProcessor: React.FC = () => {
                       />
                     </div>
 
+                    {processing && (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>{progressText}</span>
+                          <span>{progress}%</span>
+                        </div>
+                        <Progress value={progress} className="w-full" />
+                      </div>
+                    )}
+
                     <Button
                       onClick={processImage}
                       disabled={!selectedImage || processing}
@@ -602,7 +633,7 @@ const StereoscopeProcessor: React.FC = () => {
                     {t('Starless & Stars Images', '无星和恒星图像')}
                   </CardTitle>
                   <CardDescription>
-                    {t('Upload separate starless nebula and stars-only images for professional-quality 3D processing based on photographingspace.com methodology.', '上传分离的无星星云和纯星图像，基于photographingspace.com方法进行专业品质3D处理。')}
+                    {t('Upload separate starless nebula and stars-only images for professional-quality 3D processing.', '上传分离的无星星云和纯星图像进行专业品质3D处理。')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -676,7 +707,7 @@ const StereoscopeProcessor: React.FC = () => {
                     {t('Traditional Morph Parameters', '传统变形参数')}
                   </CardTitle>
                   <CardDescription>
-                    {t('Professional parameters based on J-P Metsavainio\'s methodology for authentic 3D astrophotography.', '基于J-P Metsavainio方法的专业参数，用于真实的3D天体摄影。')}
+                    {t('Professional parameters for authentic 3D astrophotography.', '用于真实3D天体摄影的专业参数。')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -719,6 +750,16 @@ const StereoscopeProcessor: React.FC = () => {
                         onCheckedChange={setAddBorders}
                       />
                     </div>
+
+                    {processing && (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>{progressText}</span>
+                          <span>{progress}%</span>
+                        </div>
+                        <Progress value={progress} className="w-full" />
+                      </div>
+                    )}
 
                     <Button
                       onClick={processImage}
