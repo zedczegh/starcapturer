@@ -8,12 +8,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Wrench, Music, Calculator, Satellite, Eye, Video } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 const UtilitiesButton: React.FC = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Only render the utilities button for authenticated users
+  if (!user) {
+    return null;
+  }
 
   const utilityItems = [
     { icon: Satellite, label: t('Space Station Tracker', '空间站追踪'), path: '/space-tracker' },
