@@ -528,9 +528,16 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Detect individual stars for repositioning (optimized for performance)
+   * ENHANCED: Detect full star patterns including diffraction spikes (Newtonian, JWST, etc.)
    */
-  detectStarCenters(starsImg: HTMLImageElement): Array<{ x: number; y: number; brightness: number }> {
+  detectStarPatterns(starsImg: HTMLImageElement): Array<{ 
+    centerX: number; 
+    centerY: number; 
+    brightness: number;
+    pattern: 'point' | 'newtonian' | 'jwst' | 'complex';
+    boundingBox: { x: number; y: number; width: number; height: number };
+    spikes?: Array<{ angle: number; length: number }>;
+  }> {
     this.canvas.width = starsImg.width;
     this.canvas.height = starsImg.height;
     this.ctx.drawImage(starsImg, 0, 0);
@@ -540,23 +547,35 @@ export class TraditionalMorphProcessor {
     const width = this.canvas.width;
     const height = this.canvas.height;
     
-    const stars: Array<{ x: number; y: number; brightness: number }> = [];
-    const threshold = 80; // Higher threshold for performance - focus on prominent stars
-    const minDistance = 5; // Larger minimum distance to reduce star count
-    const stepSize = 2; // Skip pixels for faster processing
+    const stars: Array<{ 
+      centerX: number; 
+      centerY: number; 
+      brightness: number;
+      pattern: 'point' | 'newtonian' | 'jwst' | 'complex';
+      boundingBox: { x: number; y: number; width: number; height: number };
+      spikes?: Array<{ angle: number; length: number }>;
+    }> = [];
     
-    // Find local maxima that represent star centers with optimized scanning
-    for (let y = 3; y < height - 3; y += stepSize) {
-      for (let x = 3; x < width - 3; x += stepSize) {
+    const threshold = 60; // Lower threshold to catch fainter spike components
+    const minDistance = 15; // Larger distance to avoid detecting same star multiple times
+    const stepSize = 2;
+    
+    // Find star centers first
+    const starCenters: Array<{ x: number; y: number; brightness: number }> = [];
+    
+    for (let y = 5; y < height - 5; y += stepSize) {
+      for (let x = 5; x < width - 5; x += stepSize) {
         const idx = (y * width + x) * 4;
         const luminance = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
         
         if (luminance < threshold) continue;
         
-        // Quick local maximum check with smaller neighborhood for performance
+        // Check if it's a local maximum
         let isLocalMax = true;
-        for (let dy = -1; dy <= 1 && isLocalMax; dy++) {
-          for (let dx = -1; dx <= 1; dx++) {
+        let maxLuminance = luminance;
+        
+        for (let dy = -2; dy <= 2 && isLocalMax; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
             if (dx === 0 && dy === 0) continue;
             
             const nIdx = ((y + dy) * width + (x + dx)) * 4;
@@ -565,36 +584,160 @@ export class TraditionalMorphProcessor {
             if (nLuminance > luminance) {
               isLocalMax = false;
             }
+            maxLuminance = Math.max(maxLuminance, nLuminance);
           }
         }
         
-        if (isLocalMax) {
-          // Check minimum distance with early termination
+        if (isLocalMax && luminance > threshold * 1.5) {
+          // Check minimum distance
           let tooClose = false;
-          for (let i = 0; i < stars.length && !tooClose; i++) {
-            const existingStar = stars[i];
-            const dx = x - existingStar.x;
-            const dy = y - existingStar.y;
-            const distanceSquared = dx * dx + dy * dy; // Avoid expensive sqrt
+          for (const existing of starCenters) {
+            const dx = x - existing.x;
+            const dy = y - existing.y;
+            const distanceSquared = dx * dx + dy * dy;
             
             if (distanceSquared < minDistance * minDistance) {
               tooClose = true;
-              // Keep the brighter star
-              if (luminance > existingStar.brightness) {
-                stars[i] = { x, y, brightness: luminance };
+              if (luminance > existing.brightness) {
+                existing.x = x;
+                existing.y = y;
+                existing.brightness = luminance;
               }
+              break;
             }
           }
           
           if (!tooClose) {
-            stars.push({ x, y, brightness: luminance });
+            starCenters.push({ x, y, brightness: luminance });
           }
         }
       }
     }
     
-    // Limit to top 100 brightest stars for performance
-    return stars.sort((a, b) => b.brightness - a.brightness).slice(0, 100);
+    // Analyze each star center to detect diffraction patterns
+    for (const center of starCenters.slice(0, 50)) { // Limit to 50 brightest for performance
+      const pattern = this.analyzeStarPattern(data, center.x, center.y, width, height);
+      stars.push({
+        centerX: center.x,
+        centerY: center.y,
+        brightness: center.brightness,
+        pattern: pattern.type,
+        boundingBox: pattern.boundingBox,
+        spikes: pattern.spikes
+      });
+    }
+    
+    return stars.sort((a, b) => b.brightness - a.brightness);
+  }
+
+  /**
+   * Analyze individual star to detect diffraction pattern type and extent
+   */
+  private analyzeStarPattern(
+    data: Uint8ClampedArray, 
+    centerX: number, 
+    centerY: number, 
+    width: number, 
+    height: number
+  ): {
+    type: 'point' | 'newtonian' | 'jwst' | 'complex';
+    boundingBox: { x: number; y: number; width: number; height: number };
+    spikes?: Array<{ angle: number; length: number }>;
+  } {
+    const maxRadius = 25; // Maximum search radius for spikes
+    const spikeThreshold = 40; // Minimum brightness for spike detection
+    
+    // Sample in 8 directions to detect spikes
+    const directions = [
+      { angle: 0, dx: 1, dy: 0 },      // Right
+      { angle: 45, dx: 1, dy: 1 },     // Bottom-right
+      { angle: 90, dx: 0, dy: 1 },     // Down
+      { angle: 135, dx: -1, dy: 1 },   // Bottom-left
+      { angle: 180, dx: -1, dy: 0 },   // Left
+      { angle: 225, dx: -1, dy: -1 },  // Top-left
+      { angle: 270, dx: 0, dy: -1 },   // Up
+      { angle: 315, dx: 1, dy: -1 }    // Top-right
+    ];
+    
+    const detectedSpikes: Array<{ angle: number; length: number }> = [];
+    let minX = centerX, maxX = centerX, minY = centerY, maxY = centerY;
+    
+    // Check each direction for spikes
+    for (const dir of directions) {
+      let spikeLength = 0;
+      let consecutiveBright = 0;
+      
+      for (let r = 3; r <= maxRadius; r++) {
+        const x = Math.round(centerX + dir.dx * r);
+        const y = Math.round(centerY + dir.dy * r);
+        
+        if (x < 0 || x >= width || y < 0 || y >= height) break;
+        
+        const idx = (y * width + x) * 4;
+        const luminance = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+        
+        if (luminance > spikeThreshold) {
+          consecutiveBright++;
+          spikeLength = r;
+          
+          // Expand bounding box
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        } else {
+          if (consecutiveBright < 2) {
+            consecutiveBright = 0;
+          } else {
+            break; // End of spike
+          }
+        }
+      }
+      
+      // Consider it a spike if it extends at least 4 pixels
+      if (spikeLength >= 4 && consecutiveBright >= 3) {
+        detectedSpikes.push({ angle: dir.angle, length: spikeLength });
+      }
+    }
+    
+    // Add padding to bounding box
+    const padding = 3;
+    minX = Math.max(0, minX - padding);
+    minY = Math.max(0, minY - padding);
+    maxX = Math.min(width - 1, maxX + padding);
+    maxY = Math.min(height - 1, maxY + padding);
+    
+    // Determine pattern type based on spike configuration
+    let patternType: 'point' | 'newtonian' | 'jwst' | 'complex' = 'point';
+    
+    if (detectedSpikes.length === 0) {
+      patternType = 'point';
+    } else if (detectedSpikes.length === 4) {
+      // Check if spikes form cross pattern (Newtonian)
+      const angles = detectedSpikes.map(s => s.angle).sort((a, b) => a - b);
+      if (Math.abs(angles[0] - 0) < 20 && Math.abs(angles[1] - 90) < 20 && 
+          Math.abs(angles[2] - 180) < 20 && Math.abs(angles[3] - 270) < 20) {
+        patternType = 'newtonian';
+      } else {
+        patternType = 'complex';
+      }
+    } else if (detectedSpikes.length === 6) {
+      // JWST-like hexagonal pattern
+      patternType = 'jwst';
+    } else if (detectedSpikes.length > 0) {
+      patternType = 'complex';
+    }
+    
+    return {
+      type: patternType,
+      boundingBox: {
+        x: minX,
+        y: minY,
+        width: maxX - minX + 1,
+        height: maxY - minY + 1
+      },
+      spikes: detectedSpikes.length > 0 ? detectedSpikes : undefined
+    };
   }
 
   /**
@@ -615,9 +758,16 @@ export class TraditionalMorphProcessor {
     onProgress?.('Creating advanced multi-layer depth analysis...', 20);
     const depthMaps = this.createAdvancedDepthMap(starlessImg, params.luminanceBlur);
     
-    onProgress?.('Detecting individual stars for proper 3D positioning...', 35);
-    const starCenters = this.detectStarCenters(starsImg);
-    console.log(`Detected ${starCenters.length} stars for traditional 3D positioning`);
+    onProgress?.('Detecting star patterns including diffraction spikes...', 35);
+    const starPatterns = this.detectStarPatterns(starsImg);
+    console.log(`Detected ${starPatterns.length} star patterns: ${starPatterns.filter(s => s.pattern !== 'point').length} with diffraction spikes`);
+    
+    // Log pattern distribution
+    const patternCounts = starPatterns.reduce((acc, star) => {
+      acc[star.pattern] = (acc[star.pattern] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log('Pattern distribution:', patternCounts);
     
     onProgress?.('Creating left view (original complete image)...', 50);
     // LEFT VIEW: Original complete image (starless + stars)
@@ -660,13 +810,13 @@ export class TraditionalMorphProcessor {
     rightCtx.globalCompositeOperation = 'screen';
     rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
     
-    onProgress?.('Positioning individual bright stars forward (COMPLETELY NO DOUBLING)...', 75);
-    // Step 3: COMPLETELY ELIMINATE DUPLICATES with proper star masking
+    onProgress?.('Moving complete star patterns (including spikes) - NO BLACK BOXES...', 75);
+    // Step 3: ENHANCED pattern-aware star repositioning with full spike support
     
     let repositionedStars = 0;
-    const brightStars = starCenters.filter(star => star.brightness / 255 > 0.4).slice(0, 20); // Limit to brightest 20 stars
+    const brightStars = starPatterns.filter(star => star.brightness / 255 > 0.35).slice(0, 15); // Brightest stars with patterns
     
-    // Create a mask to remove bright stars from their original positions
+    // Create removal mask for original star positions
     const starRemovalMaskCanvas = document.createElement('canvas');
     const starRemovalMaskCtx = starRemovalMaskCanvas.getContext('2d')!;
     starRemovalMaskCanvas.width = width;
@@ -674,68 +824,62 @@ export class TraditionalMorphProcessor {
     starRemovalMaskCtx.fillStyle = 'white';
     starRemovalMaskCtx.fillRect(0, 0, width, height);
     
-    // Create clean repositioned stars canvas
+    // Create repositioned stars canvas
     const repositionedStarsCanvas = document.createElement('canvas');
     const repositionedStarsCtx = repositionedStarsCanvas.getContext('2d')!;
     repositionedStarsCanvas.width = width;
     repositionedStarsCanvas.height = height;
     
-    // Track processed areas to prevent overlap
+    // Track processed areas
     const processedAreas: Array<{x: number, y: number, w: number, h: number}> = [];
     
-    // Process each bright star: REMOVE from original position and ADD to new position
+    // Process each star pattern (center + spikes as complete unit)
     for (const star of brightStars) {
       const brightnessFactor = star.brightness / 255;
       let forwardShift = params.starShiftAmount * (1 + brightnessFactor);
       
-      // Fixed radius for consistency
-      const radius = 5;
-      const x1 = Math.max(0, star.x - radius);
-      const y1 = Math.max(0, star.y - radius);
-      const w = Math.min(radius * 2, width - x1);
-      const h = Math.min(radius * 2, height - y1);
+      // Use the full bounding box of the star pattern (includes spikes)
+      const bbox = star.boundingBox;
+      const originalShiftedX = Math.max(0, Math.min(width - bbox.width, bbox.x + initialLeftShift));
+      const finalX = Math.max(0, Math.min(width - bbox.width, bbox.x + initialLeftShift + forwardShift));
       
-      if (w > 0 && h > 0 && forwardShift > 0) {
-        // Calculate original position in shifted star layer
-        const originalShiftedX = Math.max(0, Math.min(width - w, x1 + initialLeftShift));
-        
-        // Calculate final repositioned position
-        const finalX = Math.max(0, Math.min(width - w, x1 + initialLeftShift + forwardShift));
-        
-        // Check for overlap with already processed areas
-        let hasOverlap = false;
-        for (const area of processedAreas) {
-          if (!(finalX >= area.x + area.w || finalX + w <= area.x || 
-                y1 >= area.y + area.h || y1 + h <= area.y)) {
-            hasOverlap = true;
-            break;
-          }
+      // Check for overlap with already processed areas
+      let hasOverlap = false;
+      for (const area of processedAreas) {
+        if (!(finalX >= area.x + area.w || finalX + bbox.width <= area.x || 
+              bbox.y >= area.y + area.h || bbox.y + bbox.height <= area.y)) {
+          hasOverlap = true;
+          break;
         }
+      }
+      
+      if (!hasOverlap && finalX + bbox.width < width) {
+        // STEP 1: Mark original star pattern position for complete removal
+        starRemovalMaskCtx.fillStyle = 'black';
+        starRemovalMaskCtx.fillRect(originalShiftedX, bbox.y, bbox.width, bbox.height);
         
-        if (!hasOverlap && finalX + w < width) {
-          // STEP 1: Mark original star position for removal (black = remove)
-          starRemovalMaskCtx.fillStyle = 'black';
-          starRemovalMaskCtx.fillRect(originalShiftedX, y1, w, h);
-          
-          // STEP 2: Draw star to repositioned layer
-          repositionedStarsCtx.drawImage(starsImg, x1, y1, w, h, finalX, y1, w, h);
-          
-          // Track this area
-          processedAreas.push({x: finalX, y: y1, w: w, h: h});
-          repositionedStars++;
-          
-          if (repositionedStars <= 3) {
-            console.log(`Star removed from pos ${originalShiftedX} and repositioned to ${finalX}: brightness=${(brightnessFactor * 100).toFixed(1)}%`);
-          }
+        // STEP 2: Move complete star pattern (center + all spikes) to new position
+        repositionedStarsCtx.drawImage(
+          starsImg, 
+          bbox.x, bbox.y, bbox.width, bbox.height,  // Source: full pattern
+          finalX, bbox.y, bbox.width, bbox.height   // Dest: repositioned
+        );
+        
+        // Track this area
+        processedAreas.push({x: finalX, y: bbox.y, w: bbox.width, h: bbox.height});
+        repositionedStars++;
+        
+        if (repositionedStars <= 3) {
+          console.log(`${star.pattern.toUpperCase()} pattern moved: ${bbox.width}x${bbox.height} from ${originalShiftedX} to ${finalX}, spikes: ${star.spikes?.length || 0}`);
         }
       }
     }
     
-    // STEP 3: Apply mask to remove original bright star positions
+    // STEP 3: Apply removal mask to eliminate original star patterns completely
     rightCtx.globalCompositeOperation = 'multiply';
     rightCtx.drawImage(starRemovalMaskCanvas, 0, 0);
     
-    // STEP 4: Add repositioned stars with screen blending
+    // STEP 4: Add repositioned complete star patterns
     rightCtx.globalCompositeOperation = 'screen';
     rightCtx.drawImage(repositionedStarsCanvas, 0, 0);
     rightCtx.globalCompositeOperation = 'source-over';
