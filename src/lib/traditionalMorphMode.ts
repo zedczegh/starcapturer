@@ -7,6 +7,7 @@
  */
 // @ts-ignore
 import * as UTIF from 'utif';
+import { OptimizedDisplacementProcessor } from './optimizedDisplacement';
 
 export interface TraditionalMorphParams {
   horizontalDisplace: number; // 10-30 range for displacement filter
@@ -75,11 +76,13 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Load and process input images (automatically resize to match dimensions)
+   * OPTIMIZED: Load and process input images with smart scaling for performance
    */
   async loadImages(inputs: TraditionalInputs): Promise<{
     starlessImg: HTMLImageElement;
     starsImg: HTMLImageElement;
+    scaleFactor: number;
+    originalSize: { width: number; height: number };
   }> {
     const starlessImg = new Image();
     const starsImg = new Image();
@@ -101,30 +104,42 @@ export class TraditionalMorphProcessor {
       })
     ]);
 
-    // Auto-resize images to match dimensions if they don't match
-    if (starlessImg.width !== starsImg.width || starlessImg.height !== starsImg.height) {
-      console.log(`Auto-resizing images: starless(${starlessImg.width}x${starlessImg.height}) stars(${starsImg.width}x${starsImg.height})`);
+    // Get original dimensions
+    const originalWidth = Math.max(starlessImg.width, starsImg.width);
+    const originalHeight = Math.max(starlessImg.height, starsImg.height);
+    
+    // PERFORMANCE OPTIMIZATION: Scale down large images for processing
+    const MAX_PROCESSING_DIMENSION = 2048; // Max dimension for processing
+    let scaleFactor = 1;
+    let targetWidth = originalWidth;
+    let targetHeight = originalHeight;
+    
+    if (originalWidth > MAX_PROCESSING_DIMENSION || originalHeight > MAX_PROCESSING_DIMENSION) {
+      scaleFactor = MAX_PROCESSING_DIMENSION / Math.max(originalWidth, originalHeight);
+      targetWidth = Math.round(originalWidth * scaleFactor);
+      targetHeight = Math.round(originalHeight * scaleFactor);
+      console.log(`Scaling large images for performance: ${originalWidth}x${originalHeight} -> ${targetWidth}x${targetHeight} (factor: ${scaleFactor.toFixed(3)})`);
+    }
+    
+    // Resize both images to target dimensions
+    if (starlessImg.width !== targetWidth || starlessImg.height !== targetHeight || 
+        starsImg.width !== targetWidth || starsImg.height !== targetHeight) {
       
-      // Use the larger dimensions as target
-      const targetWidth = Math.max(starlessImg.width, starsImg.width);
-      const targetHeight = Math.max(starlessImg.height, starsImg.height);
+      const resizedStarless = await this.resizeImage(starlessImg, targetWidth, targetHeight);
+      starlessImg.src = resizedStarless.toDataURL();
+      await new Promise(resolve => { starlessImg.onload = resolve; });
       
-      // Resize starless image if needed
-      if (starlessImg.width !== targetWidth || starlessImg.height !== targetHeight) {
-        const resizedStarless = await this.resizeImage(starlessImg, targetWidth, targetHeight);
-        starlessImg.src = resizedStarless.toDataURL();
-        await new Promise(resolve => { starlessImg.onload = resolve; });
-      }
-      
-      // Resize stars image if needed
-      if (starsImg.width !== targetWidth || starsImg.height !== targetHeight) {
-        const resizedStars = await this.resizeImage(starsImg, targetWidth, targetHeight);
-        starsImg.src = resizedStars.toDataURL();
-        await new Promise(resolve => { starsImg.onload = resolve; });
-      }
+      const resizedStars = await this.resizeImage(starsImg, targetWidth, targetHeight);
+      starsImg.src = resizedStars.toDataURL();
+      await new Promise(resolve => { starsImg.onload = resolve; });
     }
 
-    return { starlessImg, starsImg };
+    return { 
+      starlessImg, 
+      starsImg, 
+      scaleFactor,
+      originalSize: { width: originalWidth, height: originalHeight }
+    };
   }
 
   /**
@@ -499,6 +514,23 @@ export class TraditionalMorphProcessor {
   }
 
   /**
+   * OPTIMIZED: Chunked displacement processing for better performance
+   */
+  async applyOptimizedDisplacement(
+    source: HTMLImageElement | HTMLCanvasElement,
+    depthMaps: { primaryDepth: HTMLCanvasElement; structureDepth: HTMLCanvasElement; edgeDepth: HTMLCanvasElement; combinedDepth: HTMLCanvasElement },
+    horizontalAmount: number,
+    onProgress?: (step: string, progress?: number) => void
+  ): Promise<HTMLCanvasElement> {
+    return OptimizedDisplacementProcessor.applyOptimizedDisplacement(
+      source, 
+      depthMaps, 
+      horizontalAmount, 
+      onProgress
+    );
+  }
+
+  /**
    * Legacy method for backward compatibility
    */
   applyDisplacementFilter(
@@ -595,8 +627,8 @@ export class TraditionalMorphProcessor {
     onProgress?: (step: string, progress?: number) => void
   ): Promise<{ leftCanvas: HTMLCanvasElement; rightCanvas: HTMLCanvasElement; depthMap: HTMLCanvasElement }> {
     
-    onProgress?.('Loading and validating images...', 10);
-    const { starlessImg, starsImg } = await this.loadImages(inputs);
+    onProgress?.('Loading and optimizing images for processing...', 10);
+    const { starlessImg, starsImg, scaleFactor, originalSize } = await this.loadImages(inputs);
     
     const width = starlessImg.width;
     const height = starlessImg.height;
@@ -649,43 +681,61 @@ export class TraditionalMorphProcessor {
     rightCtx.globalCompositeOperation = 'screen';
     rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
     
-    onProgress?.('Positioning individual bright stars forward...', 75);
-    // Step 3: Selectively move individual bright stars RIGHT to bring them forward
-    // This is the KEY difference - we're bringing specific stars FORWARD from their background position
+    onProgress?.('Positioning individual bright stars forward (FIXED doubling)...', 75);
+    // Step 3: FIXED star repositioning to prevent doubling
     
     let repositionedStars = 0;
-    const brightStars = starCenters.filter(star => star.brightness / 255 > 0.4); // Lower threshold for more stars
+    const brightStars = starCenters.filter(star => star.brightness / 255 > 0.35);
     
-    // Process stars in batches for better performance
-    const batchSize = 10;
-    for (let i = 0; i < brightStars.length; i += batchSize) {
-      const batch = brightStars.slice(i, i + batchSize);
+    // Create a mask to prevent star doubling
+    const starMaskCanvas = document.createElement('canvas');
+    const starMaskCtx = starMaskCanvas.getContext('2d')!;
+    starMaskCanvas.width = width;
+    starMaskCanvas.height = height;
+    
+    // Process each star individually to prevent overlaps
+    for (const star of brightStars) {
+      const brightnessFactor = star.brightness / 255;
+      let forwardShift = params.starShiftAmount * (1 + brightnessFactor * 2.5);
       
-      for (const star of batch) {
-        const brightnessFactor = star.brightness / 255;
+      // Adaptive radius based on brightness
+      const radius = Math.max(3, Math.min(8, Math.round(brightnessFactor * 8)));
+      const x1 = Math.max(0, star.x - radius);
+      const y1 = Math.max(0, star.y - radius);
+      const w = Math.min(radius * 2, width - x1);
+      const h = Math.min(radius * 2, height - y1);
+      
+      if (w > 0 && h > 0 && forwardShift > 0) {
+        const finalX = Math.max(0, Math.min(width - w, x1 + initialLeftShift + forwardShift));
         
-        // Simplified shift calculation for performance
-        let forwardShift = params.starShiftAmount * (1 + brightnessFactor * 3);
+        // Check if this area was already processed (prevent doubling)
+        const maskData = starMaskCtx.getImageData(finalX, y1, w, h);
+        let hasOverlap = false;
+        for (let i = 0; i < maskData.data.length; i += 4) {
+          if (maskData.data[i] > 0) {
+            hasOverlap = true;
+            break;
+          }
+        }
         
-        // Simplified star extraction - just use a fixed radius
-        const radius = 4;
-        const x1 = Math.max(0, star.x - radius);
-        const y1 = Math.max(0, star.y - radius);
-        const w = Math.min(radius * 2, width - x1);
-        const h = Math.min(radius * 2, height - y1);
-        
-        if (w > 0 && h > 0 && forwardShift > 0) {
-          // Position this star forward from its initial left-shifted position
-          const finalX = Math.max(0, Math.min(width - w, x1 + initialLeftShift + forwardShift));
+        if (!hasOverlap) {
+          // FIRST: Clear the destination area to prevent doubling
+          rightCtx.globalCompositeOperation = 'destination-out';
+          rightCtx.fillStyle = 'rgba(255,255,255,1)';
+          rightCtx.fillRect(finalX, y1, w, h);
           
-          // Draw the repositioned star region directly without complex filtering
+          // THEN: Draw the repositioned star
+          rightCtx.globalCompositeOperation = 'source-over';
           rightCtx.drawImage(starsImg, x1, y1, w, h, finalX, y1, w, h);
+          
+          // Mark this area as processed in the mask
+          starMaskCtx.fillStyle = 'white';
+          starMaskCtx.fillRect(finalX, y1, w, h);
           
           repositionedStars++;
           
-          if (repositionedStars <= 5) {
-            const brightnessFactor = star.brightness / 255;
-            console.log(`Star repositioned: brightness=${(brightnessFactor * 100).toFixed(1)}%, initial_shift=${initialLeftShift}, forward_shift=${forwardShift}, final_pos=${finalX}`);
+          if (repositionedStars <= 3) {
+            console.log(`Star repositioned (no doubling): brightness=${(brightnessFactor * 100).toFixed(1)}%, forward_shift=${forwardShift.toFixed(1)}, final_pos=${finalX}`);
           }
         }
       }
@@ -694,12 +744,11 @@ export class TraditionalMorphProcessor {
     
     console.log(`Repositioned ${repositionedStars} bright stars forward from background position`);
     
-    onProgress?.('Applying advanced edge-aware displacement for superior depth...', 90);
-    // Step 4: Apply ADVANCED displacement with multi-layer depth analysis
-    // This creates much more sophisticated 3D depth than traditional methods
-    const displacedCanvas = this.applyAdvancedDisplacement(rightCanvas, depthMaps, params.horizontalDisplace);
+    onProgress?.('Applying optimized displacement with chunked processing...', 90);
+    // Step 4: OPTIMIZED displacement processing
+    const displacedCanvas = await this.applyOptimizedDisplacement(rightCanvas, depthMaps, params.horizontalDisplace, onProgress);
     
-    // Replace right canvas content with advanced displacement result
+    // Replace right canvas content with displacement result
     rightCtx.clearRect(0, 0, width, height);
     rightCtx.drawImage(displacedCanvas, 0, 0);
     
@@ -720,6 +769,37 @@ export class TraditionalMorphProcessor {
       });
     }
     
+    // Scale back to original size if we downscaled for processing
+    if (scaleFactor < 1) {
+      onProgress?.('Upscaling to original resolution...', 98);
+      
+      const finalLeftCanvas = document.createElement('canvas');
+      const finalRightCanvas = document.createElement('canvas');
+      
+      finalLeftCanvas.width = originalSize.width;
+      finalLeftCanvas.height = originalSize.height;
+      finalRightCanvas.width = originalSize.width;
+      finalRightCanvas.height = originalSize.height;
+      
+      const finalLeftCtx = finalLeftCanvas.getContext('2d')!;
+      const finalRightCtx = finalRightCanvas.getContext('2d')!;
+      
+      // High-quality upscaling
+      finalLeftCtx.imageSmoothingEnabled = true;
+      finalLeftCtx.imageSmoothingQuality = 'high';
+      finalRightCtx.imageSmoothingEnabled = true;
+      finalRightCtx.imageSmoothingQuality = 'high';
+      
+      finalLeftCtx.drawImage(leftCanvas, 0, 0, originalSize.width, originalSize.height);
+      finalRightCtx.drawImage(rightCanvas, 0, 0, originalSize.width, originalSize.height);
+      
+      return { 
+        leftCanvas: finalLeftCanvas, 
+        rightCanvas: finalRightCanvas, 
+        depthMap: depthMaps.combinedDepth 
+      };
+    }
+
     return { 
       leftCanvas, 
       rightCanvas, 
