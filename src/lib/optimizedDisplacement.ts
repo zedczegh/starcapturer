@@ -11,6 +11,7 @@ export interface DisplacementChunk {
 
 export class OptimizedDisplacementProcessor {
   private static readonly CHUNK_SIZE = 128; // Process in 128px high chunks
+  private static readonly OVERLAP_SIZE = 4; // Overlap between chunks for seamless blending
   
   /**
    * Apply displacement processing in chunks to prevent UI freezing
@@ -59,7 +60,7 @@ export class OptimizedDisplacementProcessor {
       
       onProgress?.(`Processing displacement chunk ${i + 1}/${chunks.length}...`, chunkProgress);
       
-      // Process this chunk
+      // Process this chunk with overlap handling
       const chunkData = this.processChunk(
         chunk, 
         originalData, 
@@ -67,11 +68,18 @@ export class OptimizedDisplacementProcessor {
         structureDepthData, 
         edgeDepthData, 
         horizontalAmount, 
-        width
+        width,
+        i > 0 // Has previous chunk for blending
       );
       
-      // Apply chunk to result canvas
-      resultCtx.putImageData(chunkData, 0, chunk.startY);
+      // Apply chunk to result canvas with seamless blending
+      if (i === 0) {
+        // First chunk - direct placement
+        resultCtx.putImageData(chunkData, 0, chunk.startY);
+      } else {
+        // Subsequent chunks - blend overlap region
+        this.blendChunkOverlap(resultCtx, chunkData, chunk, width);
+      }
       
       // Yield control every few chunks to prevent freezing
       if (i % 4 === 0) {
@@ -83,18 +91,22 @@ export class OptimizedDisplacementProcessor {
   }
   
   /**
-   * Calculate processing chunks
+   * Calculate processing chunks with overlap for seamless blending
    */
   private static calculateChunks(width: number, height: number): DisplacementChunk[] {
     const chunks: DisplacementChunk[] = [];
     
     for (let y = 0; y < height; y += this.CHUNK_SIZE) {
       const endY = Math.min(y + this.CHUNK_SIZE, height);
+      // Add overlap to all chunks except the first one
+      const actualStartY = y === 0 ? y : Math.max(0, y - this.OVERLAP_SIZE);
+      const actualHeight = endY - actualStartY;
+      
       chunks.push({
-        startY: y,
+        startY: actualStartY,
         endY: endY,
         width: width,
-        height: endY - y
+        height: actualHeight
       });
     }
     
@@ -102,7 +114,7 @@ export class OptimizedDisplacementProcessor {
   }
   
   /**
-   * Process a single chunk of the displacement
+   * Process a single chunk of the displacement with overlap handling
    */
   private static processChunk(
     chunk: DisplacementChunk,
@@ -111,7 +123,8 @@ export class OptimizedDisplacementProcessor {
     structureDepthData: ImageData,
     edgeDepthData: ImageData,
     horizontalAmount: number,
-    width: number
+    width: number,
+    hasPrevious: boolean = false
   ): ImageData {
     const chunkData = new ImageData(width, chunk.height);
     
@@ -122,7 +135,7 @@ export class OptimizedDisplacementProcessor {
         const globalIdx = (globalY * width + x) * 4;
         const chunkIdx = (y * width + x) * 4;
         
-        // Multi-layer displacement calculation
+        // Multi-layer displacement calculation with consistent rounding
         const primaryDepth = primaryDepthData.data[globalIdx] / 255;
         const structureDepth = structureDepthData.data[globalIdx] / 255;
         const edgeDepth = edgeDepthData.data[globalIdx] / 255;
@@ -131,19 +144,19 @@ export class OptimizedDisplacementProcessor {
         const structureInfluence = Math.min(1, structureDepth * 1.5);
         const edgeInfluence = Math.min(1, (1 - edgeDepth) * 1.2);
         
-        // Combined displacement with optimized calculation
+        // Combined displacement with consistent calculation
         const baseDisplacement = (primaryDepth - 0.5) * horizontalAmount;
         const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.25 * structureInfluence;
         const edgeAdjustment = (edgeDepth - 0.5) * horizontalAmount * 0.15 * edgeInfluence;
         
-        const totalDisplacement = Math.round(baseDisplacement + structureAdjustment + edgeAdjustment);
+        // Consistent rounding to prevent seams
+        const totalDisplacement = Math.floor(baseDisplacement + structureAdjustment + edgeAdjustment + 0.5);
         
         // Apply displacement with bounds checking
         const srcX = x - totalDisplacement;
         
         if (srcX >= 0 && srcX < width) {
-          // Direct pixel copy without interpolation for better performance and no artifacts
-          const clampedSrcX = Math.max(0, Math.min(width - 1, Math.round(srcX)));
+          const clampedSrcX = Math.max(0, Math.min(width - 1, srcX));
           const srcIdx = (globalY * width + clampedSrcX) * 4;
           
           chunkData.data[chunkIdx] = originalData.data[srcIdx];
@@ -161,5 +174,41 @@ export class OptimizedDisplacementProcessor {
     }
     
     return chunkData;
+  }
+  
+  /**
+   * Blend chunk overlap region for seamless transitions
+   */
+  private static blendChunkOverlap(
+    resultCtx: CanvasRenderingContext2D,
+    chunkData: ImageData,
+    chunk: DisplacementChunk,
+    width: number
+  ): void {
+    // Get current canvas data for blending
+    const existingData = resultCtx.getImageData(0, chunk.startY, width, chunk.height);
+    
+    for (let y = 0; y < this.OVERLAP_SIZE && y < chunk.height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        
+        // Blend factor: 0 at top (keep existing), 1 at bottom (use new)
+        const blendFactor = y / (this.OVERLAP_SIZE - 1);
+        
+        // Linear blend between existing and new pixels
+        chunkData.data[idx] = Math.round(
+          existingData.data[idx] * (1 - blendFactor) + chunkData.data[idx] * blendFactor
+        );
+        chunkData.data[idx + 1] = Math.round(
+          existingData.data[idx + 1] * (1 - blendFactor) + chunkData.data[idx + 1] * blendFactor
+        );
+        chunkData.data[idx + 2] = Math.round(
+          existingData.data[idx + 2] * (1 - blendFactor) + chunkData.data[idx + 2] * blendFactor
+        );
+      }
+    }
+    
+    // Apply the blended chunk
+    resultCtx.putImageData(chunkData, 0, chunk.startY);
   }
 }
