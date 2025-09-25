@@ -304,7 +304,6 @@ const StereoscopeProcessor: React.FC = () => {
   const processFastMode = async () => {
     if (!selectedImage) return;
     
-    console.log('Starting fast mode processing...');
     setProcessing(true);
     setProgress(0);
     
@@ -312,30 +311,20 @@ const StereoscopeProcessor: React.FC = () => {
       setProgressText(t('Starting image processing...', '开始图像处理...'));
       setProgress(10);
       
-      console.log('Creating canvas and context...');
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
       if (!ctx) {
-        console.error('Could not get canvas context');
         throw new Error('Could not get canvas context');
       }
 
-      console.log('Loading image...');
       const img = new Image();
       await new Promise((resolve, reject) => {
-        img.onload = () => {
-          console.log('Image loaded successfully');
-          resolve(null);
-        };
-        img.onerror = (error) => {
-          console.error('Image load error:', error);
-          reject(error);
-        };
+        img.onload = () => resolve(null);
+        img.onerror = reject;
         img.src = previewUrl!;
       });
 
-      console.log('Setting up canvas dimensions...');
       canvas.width = img.width;
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
@@ -343,14 +332,12 @@ const StereoscopeProcessor: React.FC = () => {
       setProgressText(t('Analyzing image structure...', '分析图像结构...'));
       setProgress(30);
 
-      console.log('Generating depth map...');
       const { width, height } = canvas;
       const { depthMap, starMask } = generateScientificAstroDepthMap(canvas, ctx, width, height, params);
       
       setProgressText(t('Creating depth map...', '创建深度图...'));
       setProgress(50);
       
-      console.log('Creating depth map canvas...');
       const depthCanvas = document.createElement('canvas');
       const depthCtx = depthCanvas.getContext('2d')!;
       depthCanvas.width = width;
@@ -361,7 +348,6 @@ const StereoscopeProcessor: React.FC = () => {
       setProgressText(t('Generating stereo views...', '生成立体视图...'));
       setProgress(70);
 
-      console.log('Creating stereo views...');
       const { left, right } = createStereoViews(canvas, ctx, depthMap, width, height, params, starMask);
       
       // Create debug star mask visualization
@@ -386,7 +372,6 @@ const StereoscopeProcessor: React.FC = () => {
       setProgressText(t('Compositing final stereo pair...', '合成最终立体对...'));
       setProgress(90);
 
-      console.log('Creating final result canvas...');
       const resultCanvas = document.createElement('canvas');
       const resultCtx = resultCanvas.getContext('2d')!;
       
@@ -418,23 +403,18 @@ const StereoscopeProcessor: React.FC = () => {
         resultCtx.putImageData(right, width + stereoSpacing, 0);
       }
 
-      console.log('Setting result URL...');
       setResultUrl(resultCanvas.toDataURL());
       setProgress(100);
       setProgressText(t('Processing complete!', '处理完成！'));
-      console.log('Fast mode processing completed successfully');
     } catch (error) {
       console.error('Error processing image:', error);
       setProgressText(t('Error processing image', '处理图像时出错'));
     } finally {
-      console.log('Fast mode processing finished');
       setProcessing(false);
-      if (!processing) {
-        setTimeout(() => {
-          setProgress(0);
-          setProgressText('');
-        }, 3000);
-      }
+      setTimeout(() => {
+        setProgress(0);
+        setProgressText('');
+      }, 3000);
     }
   };
 
@@ -475,12 +455,10 @@ const StereoscopeProcessor: React.FC = () => {
       setProgressText(t('Error processing images in traditional mode', '传统模式处理图像时出错'));
     } finally {
       setProcessing(false);
-      if (!processing) {
-        setTimeout(() => {
-          setProgress(0);
-          setProgressText('');
-        }, 3000);
-      }
+      setTimeout(() => {
+        setProgress(0);
+        setProgressText('');
+      }, 3000);
     }
   };
 
