@@ -401,33 +401,38 @@ export class TraditionalMorphProcessor {
     starCanvas.height = height;
     starCtx.drawImage(starsImg, 0, 0);
     
-    // Position bright stars based on brightness for 3D depth effect
+    // Position stars using traditional Photoshop stereoscopic method:
+    // 1. ALL stars start shifted LEFT 2-3 pixels (behind nebula)
+    // 2. Bright stars get additional RIGHT shift to bring them forward
     // Use proper blending instead of putImageData to avoid black boxes
     let processedStars = 0;
+    const baseLeftShift = -3; // All stars start 3 pixels left (behind nebula)
+    
     for (const star of starCenters) {
       const brightnessFactor = star.brightness / 255;
       
-      // Only reposition significantly bright stars (leave dim stars in original position)
-      if (brightnessFactor > 0.7) {
-        // Calculate shift based on brightness and user parameter
-        // Brighter stars get more shift (appear closer)
-        // Following article: right shift = closer to viewer
-        let starShift = 0;
+      // Process all visible stars (not just bright ones)
+      if (brightnessFactor > 0.1) {
+        // Calculate final shift: base left shift + brightness-based right adjustment
+        let finalShift = baseLeftShift;
         
-        if (brightnessFactor > 0.85) {
-          // Very bright stars - bring forward
-          starShift = params.starShiftAmount * 1.0;
-        } else if (brightnessFactor > 0.75) {
-          // Bright stars - mid-ground
-          starShift = params.starShiftAmount * 0.6;
+        if (brightnessFactor > 0.8) {
+          // Very bright stars - bring far forward (net positive shift)
+          finalShift = baseLeftShift + (params.starShiftAmount * 1.5);
+        } else if (brightnessFactor > 0.6) {
+          // Bright stars - bring moderately forward  
+          finalShift = baseLeftShift + (params.starShiftAmount * 1.0);
+        } else if (brightnessFactor > 0.4) {
+          // Medium stars - bring slightly forward
+          finalShift = baseLeftShift + (params.starShiftAmount * 0.5);
         } else {
-          // Medium bright stars - minimal shift
-          starShift = params.starShiftAmount * 0.3;
+          // Dim stars - stay behind nebula (just base left shift)
+          finalShift = baseLeftShift;
         }
         
         // Debug star shifting
         if (processedStars < 3) {
-          console.log(`Processing star at (${star.x}, ${star.y}): brightness=${(brightnessFactor * 100).toFixed(1)}%, shift=${starShift}px, starShiftAmount=${params.starShiftAmount}`);
+          console.log(`Processing star at (${star.x}, ${star.y}): brightness=${(brightnessFactor * 100).toFixed(1)}%, finalShift=${finalShift}px, starShiftAmount=${params.starShiftAmount}`);
         }
         processedStars++;
         
@@ -438,7 +443,7 @@ export class TraditionalMorphProcessor {
         const w = Math.min(radius * 2, width - x1);
         const h = Math.min(radius * 2, height - y1);
         
-        if (w > 0 && h > 0 && starShift > 0) {
+        if (w > 0 && h > 0 && Math.abs(finalShift) > 0) {
           // Create temporary canvas for the star region
           const tempCanvas = document.createElement('canvas');
           const tempCtx = tempCanvas.getContext('2d')!;
@@ -462,12 +467,12 @@ export class TraditionalMorphProcessor {
           
           // Draw the shifted star using screen blending (this respects globalCompositeOperation)
           rightCtx.globalCompositeOperation = 'screen';
-          const newX = Math.max(0, Math.min(width - w, x1 + starShift));
+          const newX = Math.max(0, Math.min(width - w, x1 + finalShift));
           rightCtx.drawImage(tempCanvas, newX, y1);
           
           // Debug first few star shifts
           if (processedStars <= 3) {
-            console.log(`Star shifted from x=${x1} to x=${newX} (shift=${starShift}, actual movement=${newX - x1})`);
+            console.log(`Star shifted from x=${x1} to x=${newX} (shift=${finalShift}, actual movement=${newX - x1})`);
           }
         }
       }
