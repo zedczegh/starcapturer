@@ -255,7 +255,7 @@ export class TraditionalMorphProcessor {
     const imageData = this.ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
     
-    // 1. PRIMARY DEPTH: Enhanced luminance with perceptual weighting
+    // 1. PRIMARY DEPTH: SMOOTH luminance-based depth with gradual transitions
     const primaryCanvas = document.createElement('canvas');
     const primaryCtx = primaryCanvas.getContext('2d')!;
     primaryCanvas.width = width;
@@ -263,19 +263,22 @@ export class TraditionalMorphProcessor {
     
     const primaryData = new ImageData(width, height);
     for (let i = 0; i < data.length; i += 4) {
-      // Enhanced luminance with blue bias for nebula depth perception
-      const luminance = 0.2 * data[i] + 0.5 * data[i + 1] + 0.8 * data[i + 2];
-      const enhancedLum = Math.pow(luminance / 255, 0.8) * 255; // Gamma correction for depth
-      primaryData.data[i] = primaryData.data[i + 1] = primaryData.data[i + 2] = enhancedLum;
+      // SMOOTH: Gentle luminance calculation without harsh gamma correction
+      const luminance = 0.3 * data[i] + 0.59 * data[i + 1] + 0.11 * data[i + 2];
+      // GRADUAL: Much gentler curve to avoid "layering" effect
+      const smoothLum = Math.pow(luminance / 255, 0.95) * 255; // Very gentle curve
+      primaryData.data[i] = primaryData.data[i + 1] = primaryData.data[i + 2] = smoothLum;
       primaryData.data[i + 3] = 255;
     }
     primaryCtx.putImageData(primaryData, 0, 0);
     
-    if (blur > 0) {
-      primaryCtx.filter = `blur(${blur}px)`;
+    // ENHANCED SMOOTHING: Multiple blur passes for ultra-smooth depth transitions
+    const smoothingPasses = Math.max(1, blur);
+    for (let pass = 0; pass < smoothingPasses; pass++) {
+      primaryCtx.filter = `blur(${2 + pass}px)`;
       primaryCtx.drawImage(primaryCanvas, 0, 0);
-      primaryCtx.filter = 'none';
     }
+    primaryCtx.filter = 'none';
     
     // 2. STRUCTURE DEPTH: Edge-aware depth mapping
     const structureCanvas = this.createStructureDepthMap(imageData, width, height);
@@ -388,20 +391,20 @@ export class TraditionalMorphProcessor {
       const structureVal = structureData.data[i] / 255;
       const edgeVal = edgeData.data[i] / 255;
       
-      // MORE NATURAL: Gentle fusion with smooth transitions
-      // Reduce weights significantly for more natural depth
-      const structureInfluence = structureVal * 0.15; // Much gentler structure influence
-      const edgeInfluence = (1 - edgeVal) * 0.1; // Subtle edge preservation
+      // ULTRA-SMOOTH: Extremely gentle fusion to prevent "floating block" artifacts
+      // Drastically reduce all non-primary influences
+      const structureInfluence = structureVal * 0.05; // Minimal structure influence
+      const edgeInfluence = (1 - edgeVal) * 0.02; // Barely any edge influence
       
-      // Natural depth fusion - primarily based on luminance
+      // NATURAL depth fusion - almost entirely luminance-based for smooth flow
       const fusedVal = (
-        primaryVal * 0.85 +  // Dominant luminance-based depth
-        structureInfluence * 0.1 + // Gentle structure enhancement
-        edgeInfluence * 0.05  // Subtle edge preservation
+        primaryVal * 0.95 +  // Almost entirely luminance-based
+        structureInfluence * 0.03 + // Tiny structure enhancement  
+        edgeInfluence * 0.02  // Minimal edge preservation
       );
       
-      // Clamp to reasonable range and smooth transitions
-      const clampedVal = Math.max(0.1, Math.min(0.9, fusedVal)) * 255;
+      // TIGHTER clamping and more gradual range for ultra-smooth transitions
+      const clampedVal = Math.max(0.2, Math.min(0.8, fusedVal)) * 255;
       
       fusedData.data[i] = fusedData.data[i + 1] = fusedData.data[i + 2] = clampedVal;
       fusedData.data[i + 3] = 255;
@@ -409,9 +412,12 @@ export class TraditionalMorphProcessor {
     
     ctx.putImageData(fusedData, 0, 0);
     
-    // Final smoothing for natural depth transitions
-    ctx.filter = 'blur(2px)';
-    ctx.drawImage(canvas, 0, 0);
+    // ULTRA-AGGRESSIVE smoothing for seamless depth flow - eliminate all harsh boundaries
+    const smoothingFilters = ['blur(3px)', 'blur(2px)', 'blur(1px)'];
+    for (const filter of smoothingFilters) {
+      ctx.filter = filter;
+      ctx.drawImage(canvas, 0, 0);
+    }
     ctx.filter = 'none';
     
     return canvas;

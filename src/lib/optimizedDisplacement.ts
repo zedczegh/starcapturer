@@ -147,39 +147,46 @@ export class OptimizedDisplacementProcessor {
          
          // STAR PROTECTION: Check if this pixel is part of a star
          let isStarPixel = false;
+         let starBlendFactor = 0;
          if (starMaskData) {
            const starLuminance = (starMaskData.data[globalIdx] + starMaskData.data[globalIdx + 1] + starMaskData.data[globalIdx + 2]) / 3;
-           isStarPixel = starLuminance > 30; // Stars are bright pixels in mask
+           isStarPixel = starLuminance > 25; // Slightly lower threshold
+           starBlendFactor = Math.min(1, Math.max(0, (starLuminance - 15) / 40)); // Gradual blend factor
          }
          
-         if (isStarPixel) {
-           // PROTECTED: Copy star pixels without displacement to preserve precise positioning
+         if (isStarPixel && starBlendFactor > 0.8) {
+           // STRONG PROTECTION: Copy star pixels without displacement for bright stars
            chunkData.data[chunkIdx] = originalData.data[globalIdx];
            chunkData.data[chunkIdx + 1] = originalData.data[globalIdx + 1];
            chunkData.data[chunkIdx + 2] = originalData.data[globalIdx + 2];
            chunkData.data[chunkIdx + 3] = 255;
          } else {
-           // NEBULA DISPLACEMENT: Apply gentle displacement only to nebula regions
+           // NEBULA DISPLACEMENT: Apply ultra-gentle displacement for smooth depth flow
            const primaryDepth = primaryDepthData.data[globalIdx] / 255;
            
-           // NEBULA-FOCUSED: More aggressive displacement for nebulae, protected for stars
-           const naturalDisplacement = (primaryDepth - 0.5) * horizontalAmount * 0.4; // Higher for nebulae
+           // ULTRA-GENTLE: Drastically reduced displacement to prevent "floating block" effect
+           const naturalDisplacement = (primaryDepth - 0.5) * horizontalAmount * 0.15; // Much lower
            
-           // Minimal secondary effects for smooth nebula flow
+           // Minimal secondary effects for ultra-smooth result
            const structureDepth = structureDepthData.data[globalIdx] / 255;
            const edgeDepth = edgeDepthData.data[globalIdx] / 255;
            
-           const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.08;
-           const edgeAdjustment = (1 - edgeDepth - 0.5) * horizontalAmount * 0.05;
+           const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.02; // Tiny
+           const edgeAdjustment = (1 - edgeDepth - 0.5) * horizontalAmount * 0.01; // Minimal
            
-           // Combined displacement for nebula regions
-           const totalDisplacement = naturalDisplacement + structureAdjustment + edgeAdjustment;
+           // Combined displacement with ultra-conservative values
+           let totalDisplacement = naturalDisplacement + structureAdjustment + edgeAdjustment;
            
-           // Reasonable clamping for nebula displacement  
-           const clampedDisplacement = Math.max(-horizontalAmount * 0.6, Math.min(horizontalAmount * 0.6, totalDisplacement));
+           // BLEND with stars: Reduce displacement near star regions for smooth transitions
+           if (starBlendFactor > 0) {
+             totalDisplacement *= (1 - starBlendFactor * 0.7); // Smooth blend around stars
+           }
+           
+           // Ultra-conservative clamping to prevent any "layer" artifacts
+           const clampedDisplacement = Math.max(-horizontalAmount * 0.25, Math.min(horizontalAmount * 0.25, totalDisplacement));
            const finalDisplacement = Math.round(clampedDisplacement);
            
-           // Apply displacement to nebula pixels
+           // Apply ultra-gentle displacement
            const srcX = x - finalDisplacement;
            
            if (srcX >= 0 && srcX < width) {
