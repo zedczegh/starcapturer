@@ -9,6 +9,7 @@
 import * as UTIF from 'utif';
 import { OptimizedDisplacementProcessor } from './optimizedDisplacement';
 import { ScientificProcessor } from './scientificProcessor';
+import { DualDepthProcessor } from './dualDepthProcessor';
 
 export interface TraditionalMorphParams {
   horizontalDisplace: number; // 10-30 range for displacement filter
@@ -25,6 +26,7 @@ export interface TraditionalInputs {
 export class TraditionalMorphProcessor {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+  private dualDepthProcessor: DualDepthProcessor;
   
   constructor() {
     this.canvas = document.createElement('canvas');
@@ -33,6 +35,7 @@ export class TraditionalMorphProcessor {
       throw new Error('Could not create canvas context');
     }
     this.ctx = ctx;
+    this.dualDepthProcessor = new DualDepthProcessor();
   }
 
   private isTiffFile(file: File): boolean {
@@ -894,24 +897,28 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Create stereo pair using CORRECT traditional morphing method from photographingspace.com
+   * DUAL-DEPTH: Revolutionary dual processing approach
    */
   async createTraditionalStereoPair(
     inputs: TraditionalInputs, 
     params: TraditionalMorphParams,
     onProgress?: (step: string, progress?: number) => void
-  ): Promise<{ leftCanvas: HTMLCanvasElement; rightCanvas: HTMLCanvasElement; depthMap: HTMLCanvasElement }> {
+  ): Promise<{ 
+    leftCanvas: HTMLCanvasElement; 
+    rightCanvas: HTMLCanvasElement; 
+    depthMap: HTMLCanvasElement;
+    stellarDepthMap: HTMLCanvasElement;
+    nebulaDepthMap: HTMLCanvasElement;
+    unifiedDepthMap: HTMLCanvasElement;
+  }> {
     
-    onProgress?.('Loading and AI-analyzing images...', 10);
+    onProgress?.('Loading and AI-analyzing images...', 5);
     const { starlessImg, starsImg, scaleFactor, originalSize, metadata, profile } = await this.loadImages(inputs);
     
     const width = starlessImg.width;
     const height = starlessImg.height;
     
-    onProgress?.('Creating advanced multi-layer depth analysis...', 20);
-    const depthMaps = this.createAdvancedDepthMap(starlessImg, params.luminanceBlur);
-    
-    onProgress?.('AI-powered star pattern analysis...', 35);
+    onProgress?.('AI-powered star pattern analysis...', 15);
     const starPatterns = this.detectStarPatterns(starsImg, profile);
     console.log(`🤖 AI detected ${starPatterns.length} patterns: ${starPatterns.filter(s => s.pattern !== 'point').length} with diffraction spikes`);
     
@@ -922,7 +929,32 @@ export class TraditionalMorphProcessor {
     }, {} as Record<string, number>);
     console.log('🔬 Scientific pattern analysis:', patternCounts, `| Profile: ${metadata.complexity}`);
     
-    onProgress?.('Creating left view (original complete image)...', 50);
+    // DUAL PROCESSING UNITS
+    onProgress?.('STELLAR DEPTH UNIT: Processing star distances...', 25);
+    const stellarResult = await this.dualDepthProcessor.processStellarDepth(
+      starsImg, 
+      starPatterns, 
+      (stage, prog) => onProgress?.(`Stellar: ${stage}`, 25 + prog * 0.15)
+    );
+    
+    onProgress?.('NEBULA DEPTH UNIT: Processing nebular structure...', 40);
+    const nebulaResult = await this.dualDepthProcessor.processNebulaDepth(
+      starlessImg, 
+      params.luminanceBlur,
+      (stage, prog) => onProgress?.(`Nebular: ${stage}`, 40 + prog * 0.15)
+    );
+    
+    onProgress?.('UNIFIED PROCESSOR: Combining depth maps...', 55);
+    const unifiedResult = await this.dualDepthProcessor.createUnifiedDepthMap(
+      stellarResult.depthMap,
+      nebulaResult.combinedDepthMap,
+      stellarResult.stellarData,
+      (stage, prog) => onProgress?.(`Unified: ${stage}`, 55 + prog * 0.1)
+    );
+    
+    console.log(`🎯 Dual-Depth Analysis Complete: ${unifiedResult.metadata.starCount} stars + nebular complexity ${unifiedResult.metadata.nebulaComplexity.toFixed(2)}`);
+    
+    onProgress?.('Creating left view (original complete image)...', 70);
     // LEFT VIEW: Original complete image (starless + stars)
     const leftCanvas = document.createElement('canvas');
     const leftCtx = leftCanvas.getContext('2d')!;
@@ -937,8 +969,8 @@ export class TraditionalMorphProcessor {
     leftCtx.drawImage(starsImg, 0, 0);
     leftCtx.globalCompositeOperation = 'source-over';
     
-    onProgress?.('Creating right view using correct JP methodology...', 65);
-    // RIGHT VIEW: Following exact JP methodology from photographingspace.com
+    onProgress?.('Creating right view with DUAL-DEPTH processing...', 75);
+    // RIGHT VIEW: Using unified depth map for displacement
     const rightCanvas = document.createElement('canvas');
     const rightCtx = rightCanvas.getContext('2d')!;
     rightCanvas.width = width;
@@ -947,88 +979,66 @@ export class TraditionalMorphProcessor {
     // Step 1: Draw starless nebula as base layer
     rightCtx.drawImage(starlessImg, 0, 0);
     
-    // Step 2: Add star layer with initial LEFT shift (2-3 pixels behind nebula)
-    const initialLeftShift = -3; // ALL stars start 2-3 pixels left (behind nebula)
-    
-    // Create canvas for shifted star layer
+    // Step 2: Add star layer with initial LEFT shift (behind nebula)
+    const initialLeftShift = -3;
     const shiftedStarsCanvas = document.createElement('canvas');
     const shiftedStarsCtx = shiftedStarsCanvas.getContext('2d')!;
     shiftedStarsCanvas.width = width;
     shiftedStarsCanvas.height = height;
-    
-    // Draw all stars shifted left initially (behind nebula)
     shiftedStarsCtx.drawImage(starsImg, initialLeftShift, 0);
     
-    // Add this shifted star layer with screen blending
     rightCtx.globalCompositeOperation = 'screen';
     rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
+    rightCtx.globalCompositeOperation = 'source-over';
     
-    onProgress?.('Moving star patterns seamlessly (PERFECT MATCHING)...', 75);
-    // Step 3: PERFECT star pattern matching with seamless blending
+    onProgress?.('Moving star patterns with unified depth intelligence...', 80);
     
+    // Step 3: SMART star repositioning using stellar depth data
     let repositionedStars = 0;
     const brightStars = starPatterns.filter(star => star.brightness / 255 > 0.35).slice(0, 15);
     
-    // Create a copy of the current right canvas for reference
-    const rightCanvasCopy = document.createElement('canvas');
-    const rightCopyCtx = rightCanvasCopy.getContext('2d')!;
-    rightCanvasCopy.width = width;
-    rightCanvasCopy.height = height;
-    rightCopyCtx.drawImage(rightCanvas, 0, 0);
-    
-    // Process each star pattern individually with perfect blending
     for (const star of brightStars) {
-      const brightnessFactor = star.brightness / 255;
-      let forwardShift = params.starShiftAmount * (1 + brightnessFactor);
+      // Find corresponding stellar depth data
+      const stellarData = stellarResult.stellarData.find(s => 
+        Math.sqrt((s.x - star.centerX) ** 2 + (s.y - star.centerY) ** 2) < 5
+      );
       
-      // Expand bounding box slightly for better coverage
-      const padding = 2;
-      const expandedBbox = {
-        x: Math.max(0, star.boundingBox.x - padding),
-        y: Math.max(0, star.boundingBox.y - padding),
-        width: Math.min(width - star.boundingBox.x + padding, star.boundingBox.width + padding * 2),
-        height: Math.min(height - star.boundingBox.y + padding, star.boundingBox.height + padding * 2)
-      };
+      let forwardShift = params.starShiftAmount;
       
-      // Calculate positions
-      const originalShiftedX = Math.max(0, Math.min(width - expandedBbox.width, expandedBbox.x + initialLeftShift));
-      const finalX = Math.max(0, Math.min(width - expandedBbox.width, expandedBbox.x + initialLeftShift + forwardShift));
-      
-      // Skip if repositioning would go out of bounds
-      if (finalX + expandedBbox.width >= width) continue;
-      
-      // Check for overlap with already processed areas
-      let hasOverlap = false;
-      for (let i = 0; i < repositionedStars; i++) {
-        // Simple overlap check - could be improved with actual tracking
-        if (Math.abs(finalX - (expandedBbox.x + initialLeftShift + forwardShift)) < expandedBbox.width) {
-          hasOverlap = true;
-          break;
+      if (stellarData) {
+        // Use stellar distance estimation for accurate positioning
+        const distanceFactor = 1 - stellarData.estimatedDistance;
+        forwardShift *= (1 + distanceFactor * 2); // Closer stars move more forward
+        
+        // Adjust for stellar class (brighter intrinsic stars are actually farther)
+        switch (stellarData.stellarClass) {
+          case 'O': 
+          case 'B': forwardShift *= 0.7; break; // Massive stars farther away
+          case 'M': 
+          case 'K': forwardShift *= 1.3; break; // Dwarf stars closer
         }
       }
       
-      if (!hasOverlap) {
-        // STEP 1: Get the background from starless image at destination
-        const backgroundCanvas = document.createElement('canvas');
-        const backgroundCtx = backgroundCanvas.getContext('2d')!;
-        backgroundCanvas.width = expandedBbox.width;
-        backgroundCanvas.height = expandedBbox.height;
-        
-        // Extract background from starless nebula at the destination position
-        backgroundCtx.drawImage(
-          starlessImg,
-          finalX, expandedBbox.y, expandedBbox.width, expandedBbox.height,
-          0, 0, expandedBbox.width, expandedBbox.height
-        );
-        
-        // STEP 2: Fill original position with seamless background
+      const brightness = star.brightness / 255;
+      const expandedBbox = {
+        x: Math.max(0, star.boundingBox.x - 2),
+        y: Math.max(0, star.boundingBox.y - 2),
+        width: Math.min(width, star.boundingBox.width + 4),
+        height: Math.min(height, star.boundingBox.height + 4)
+      };
+      
+      const originalShiftedX = Math.max(0, Math.min(width - expandedBbox.width, expandedBbox.x + initialLeftShift));
+      const finalX = Math.max(0, Math.min(width - expandedBbox.width, expandedBbox.x + initialLeftShift + forwardShift));
+      
+      if (finalX + expandedBbox.width < width) {
+        // Fill original position with nebula background
         rightCtx.drawImage(
           starlessImg,
           originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height,
           originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height
         );
         
-        // STEP 3: Add the repositioned star pattern at new position
+        // Add repositioned star
         rightCtx.globalCompositeOperation = 'screen';
         rightCtx.drawImage(
           starsImg,
@@ -1039,25 +1049,38 @@ export class TraditionalMorphProcessor {
         
         repositionedStars++;
         
-        if (repositionedStars <= 3) {
-          console.log(`${star.pattern.toUpperCase()} pattern seamlessly moved: ${expandedBbox.width}x${expandedBbox.height}, shift=${forwardShift.toFixed(1)}`);
+        if (repositionedStars <= 3 && stellarData) {
+          console.log(`⭐ ${stellarData.stellarClass}-class star moved: distance=${stellarData.estimatedDistance.toFixed(2)}, shift=${forwardShift.toFixed(1)}px`);
         }
       }
     }
-    rightCtx.globalCompositeOperation = 'source-over';
     
-    console.log(`Repositioned ${repositionedStars} bright stars forward from background position`);
+    console.log(`🌟 Repositioned ${repositionedStars} stars using stellar distance estimates`);
     
-    onProgress?.('Applying optimized displacement with chunked processing...', 90);
-    // Step 4: OPTIMIZED displacement processing
-    const displacedCanvas = await this.applyOptimizedDisplacement(rightCanvas, depthMaps, params.horizontalDisplace, onProgress);
+    onProgress?.('Applying unified depth displacement...', 85);
     
-    // Replace right canvas content with displacement result
+    // Step 4: Apply unified depth map displacement
+    const depthMaps = {
+      primaryDepth: unifiedResult.unifiedDepthMap,
+      structureDepth: unifiedResult.unifiedDepthMap,
+      edgeDepth: unifiedResult.unifiedDepthMap,
+      combinedDepth: unifiedResult.unifiedDepthMap
+    };
+    
+    const displacedCanvas = await this.applyOptimizedDisplacement(
+      rightCanvas, 
+      depthMaps, 
+      params.horizontalDisplace, 
+      (stage, prog) => onProgress?.(stage, 85 + prog * 0.1)
+    );
+    
+    // Replace right canvas content
     rightCtx.clearRect(0, 0, width, height);
     rightCtx.drawImage(displacedCanvas, 0, 0);
     
-    onProgress?.('Applying final contrast adjustments...', 95);
-    // Apply contrast boost to both views if specified
+    onProgress?.('Applying final enhancements...', 95);
+    
+    // Apply contrast boost if specified
     if (params.contrastBoost !== 1.0) {
       [leftCtx, rightCtx].forEach(ctx => {
         const imageData = ctx.getImageData(0, 0, width, height);
@@ -1073,7 +1096,7 @@ export class TraditionalMorphProcessor {
       });
     }
     
-    // Scale back to original size if we downscaled for processing
+    // Scale back to original size if needed
     if (scaleFactor < 1) {
       onProgress?.('Upscaling to original resolution...', 98);
       
@@ -1088,7 +1111,6 @@ export class TraditionalMorphProcessor {
       const finalLeftCtx = finalLeftCanvas.getContext('2d')!;
       const finalRightCtx = finalRightCanvas.getContext('2d')!;
       
-      // High-quality upscaling
       finalLeftCtx.imageSmoothingEnabled = true;
       finalLeftCtx.imageSmoothingQuality = 'high';
       finalRightCtx.imageSmoothingEnabled = true;
@@ -1100,14 +1122,20 @@ export class TraditionalMorphProcessor {
       return { 
         leftCanvas: finalLeftCanvas, 
         rightCanvas: finalRightCanvas, 
-        depthMap: depthMaps.combinedDepth 
+        depthMap: unifiedResult.unifiedDepthMap,
+        stellarDepthMap: unifiedResult.stellarDepthMap,
+        nebulaDepthMap: unifiedResult.nebulaDepthMap,
+        unifiedDepthMap: unifiedResult.unifiedDepthMap
       };
     }
 
     return { 
       leftCanvas, 
       rightCanvas, 
-      depthMap: depthMaps.combinedDepth 
+      depthMap: unifiedResult.unifiedDepthMap,
+      stellarDepthMap: unifiedResult.stellarDepthMap,
+      nebulaDepthMap: unifiedResult.nebulaDepthMap,
+      unifiedDepthMap: unifiedResult.unifiedDepthMap
     };
   }
 
