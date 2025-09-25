@@ -388,25 +388,29 @@ export class TraditionalMorphProcessor {
       const structureVal = structureData.data[i] / 255;
       const edgeVal = edgeData.data[i] / 255;
       
-      // Intelligent fusion with adaptive weights
-      const structureWeight = Math.min(1, structureVal * 2); // More weight for high-structure areas
-      const edgeWeight = Math.min(1, (1 - edgeVal) * 1.5); // More weight for edge areas
+      // MORE NATURAL: Gentle fusion with smooth transitions
+      // Reduce weights significantly for more natural depth
+      const structureInfluence = structureVal * 0.15; // Much gentler structure influence
+      const edgeInfluence = (1 - edgeVal) * 0.1; // Subtle edge preservation
       
-      // Combine with adaptive weighting
+      // Natural depth fusion - primarily based on luminance
       const fusedVal = (
-        primaryVal * 0.5 +
-        structureVal * structureWeight * 0.3 +
-        edgeVal * edgeWeight * 0.2
-      ) * 255;
+        primaryVal * 0.85 +  // Dominant luminance-based depth
+        structureInfluence * 0.1 + // Gentle structure enhancement
+        edgeInfluence * 0.05  // Subtle edge preservation
+      );
       
-      fusedData.data[i] = fusedData.data[i + 1] = fusedData.data[i + 2] = Math.min(255, fusedVal);
+      // Clamp to reasonable range and smooth transitions
+      const clampedVal = Math.max(0.1, Math.min(0.9, fusedVal)) * 255;
+      
+      fusedData.data[i] = fusedData.data[i + 1] = fusedData.data[i + 2] = clampedVal;
       fusedData.data[i + 3] = 255;
     }
     
     ctx.putImageData(fusedData, 0, 0);
     
-    // Final smoothing
-    ctx.filter = 'blur(0.5px)';
+    // Final smoothing for natural depth transitions
+    ctx.filter = 'blur(2px)';
     ctx.drawImage(canvas, 0, 0);
     ctx.filter = 'none';
     

@@ -135,25 +135,29 @@ export class OptimizedDisplacementProcessor {
         const globalIdx = (globalY * width + x) * 4;
         const chunkIdx = (y * width + x) * 4;
         
-        // Multi-layer displacement calculation with consistent rounding
+        // NATURAL displacement calculation - simplified and realistic
         const primaryDepth = primaryDepthData.data[globalIdx] / 255;
+        
+        // Gentle, natural displacement based primarily on luminance
+        // Reduced multipliers for more realistic depth perception
+        const naturalDisplacement = (primaryDepth - 0.5) * horizontalAmount * 0.6; // Reduced intensity
+        
+        // Subtle structure and edge influence for realism
         const structureDepth = structureDepthData.data[globalIdx] / 255;
         const edgeDepth = edgeDepthData.data[globalIdx] / 255;
         
-        // Calculate adaptive displacement
-        const structureInfluence = Math.min(1, structureDepth * 1.5);
-        const edgeInfluence = Math.min(1, (1 - edgeDepth) * 1.2);
+        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.08; // Much gentler
+        const edgeAdjustment = (1 - edgeDepth - 0.5) * horizontalAmount * 0.05; // Subtle edge preservation
         
-        // Combined displacement with consistent calculation
-        const baseDisplacement = (primaryDepth - 0.5) * horizontalAmount;
-        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.25 * structureInfluence;
-        const edgeAdjustment = (edgeDepth - 0.5) * horizontalAmount * 0.15 * edgeInfluence;
+        // Combined displacement with natural limits
+        const totalDisplacement = naturalDisplacement + structureAdjustment + edgeAdjustment;
         
-        // Consistent rounding to prevent seams
-        const totalDisplacement = Math.floor(baseDisplacement + structureAdjustment + edgeAdjustment + 0.5);
+        // Clamp displacement to prevent extreme artifacts
+        const clampedDisplacement = Math.max(-horizontalAmount * 0.8, Math.min(horizontalAmount * 0.8, totalDisplacement));
+        const finalDisplacement = Math.floor(clampedDisplacement + 0.5);
         
-        // Apply displacement with bounds checking
-        const srcX = x - totalDisplacement;
+        // Apply natural displacement with bounds checking
+        const srcX = x - finalDisplacement;
         
         if (srcX >= 0 && srcX < width) {
           const clampedSrcX = Math.max(0, Math.min(width - 1, srcX));
