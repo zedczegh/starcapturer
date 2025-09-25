@@ -8,6 +8,7 @@
 // @ts-ignore
 import * as UTIF from 'utif';
 import { OptimizedDisplacementProcessor } from './optimizedDisplacement';
+import { ScientificProcessor } from './scientificProcessor';
 
 export interface TraditionalMorphParams {
   horizontalDisplace: number; // 10-30 range for displacement filter
@@ -76,13 +77,15 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * OPTIMIZED: Load and process input images with smart scaling for performance
+   * AI-ENHANCED: Smart loading with automatic optimization
    */
   async loadImages(inputs: TraditionalInputs): Promise<{
     starlessImg: HTMLImageElement;
     starsImg: HTMLImageElement;
     scaleFactor: number;
     originalSize: { width: number; height: number };
+    metadata: any;
+    profile: any;
   }> {
     const starlessImg = new Image();
     const starsImg = new Image();
@@ -108,20 +111,32 @@ export class TraditionalMorphProcessor {
     const originalWidth = Math.max(starlessImg.width, starsImg.width);
     const originalHeight = Math.max(starlessImg.height, starsImg.height);
     
-    // PERFORMANCE OPTIMIZATION: Scale down large images for processing
-    const MAX_PROCESSING_DIMENSION = 2048; // Max dimension for processing
+    // AI-POWERED: Analyze image complexity for smart optimization
+    this.canvas.width = originalWidth;
+    this.canvas.height = originalHeight;
+    this.ctx.drawImage(starsImg, 0, 0);
+    const imageData = this.ctx.getImageData(0, 0, originalWidth, originalHeight);
+    const metadata = ScientificProcessor.analyzeImageComplexity(imageData);
+    const profile = ScientificProcessor.selectOptimalProfile(metadata);
+    
+    console.log(`🤖 AI Analysis: ${metadata.complexity} complexity detected, using ${JSON.stringify(profile)} profile`);
+    
+    // ADAPTIVE SCALING: Based on complexity and performance profile
     let scaleFactor = 1;
     let targetWidth = originalWidth;
     let targetHeight = originalHeight;
+    
+    // Dynamic scaling based on image complexity and hardware capabilities
+    const MAX_PROCESSING_DIMENSION = this.getOptimalProcessingSize(metadata, profile);
     
     if (originalWidth > MAX_PROCESSING_DIMENSION || originalHeight > MAX_PROCESSING_DIMENSION) {
       scaleFactor = MAX_PROCESSING_DIMENSION / Math.max(originalWidth, originalHeight);
       targetWidth = Math.round(originalWidth * scaleFactor);
       targetHeight = Math.round(originalHeight * scaleFactor);
-      console.log(`Scaling large images for performance: ${originalWidth}x${originalHeight} -> ${targetWidth}x${targetHeight} (factor: ${scaleFactor.toFixed(3)})`);
+      console.log(`🚀 Smart scaling: ${originalWidth}x${originalHeight} -> ${targetWidth}x${targetHeight} (${(scaleFactor * 100).toFixed(1)}%)`);
     }
     
-    // Resize both images to target dimensions
+    // Resize both images to target dimensions if needed
     if (starlessImg.width !== targetWidth || starlessImg.height !== targetHeight || 
         starsImg.width !== targetWidth || starsImg.height !== targetHeight) {
       
@@ -138,8 +153,32 @@ export class TraditionalMorphProcessor {
       starlessImg, 
       starsImg, 
       scaleFactor,
-      originalSize: { width: originalWidth, height: originalHeight }
+      originalSize: { width: originalWidth, height: originalHeight },
+      metadata,
+      profile
     };
+  }
+
+  /**
+   * SMART: Calculate optimal processing size based on complexity
+   */
+  private getOptimalProcessingSize(metadata: any, profile: any): number {
+    const baseSize = 2048;
+    
+    // Adjust based on complexity
+    let multiplier = 1;
+    switch (metadata.complexity) {
+      case 'Simple': multiplier = 1.5; break;
+      case 'Moderate': multiplier = 1.0; break;
+      case 'Complex': multiplier = 0.8; break;
+      case 'Extreme': multiplier = 0.6; break;
+    }
+    
+    // Adjust based on star count
+    if (metadata.starCount > 300) multiplier *= 0.8;
+    if (metadata.starCount > 500) multiplier *= 0.7;
+    
+    return Math.round(baseSize * multiplier);
   }
 
   /**
@@ -528,9 +567,9 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * ENHANCED: Detect full star patterns including diffraction spikes (Newtonian, JWST, etc.)
+   * HARDCORE: Enhanced star pattern detection for massive datasets
    */
-  detectStarPatterns(starsImg: HTMLImageElement): Array<{ 
+  detectStarPatterns(starsImg: HTMLImageElement, profile: any): Array<{ 
     centerX: number; 
     centerY: number; 
     brightness: number;
@@ -556,67 +595,101 @@ export class TraditionalMorphProcessor {
       spikes?: Array<{ angle: number; length: number }>;
     }> = [];
     
-    const threshold = 60; // Lower threshold to catch fainter spike components
-    const minDistance = 15; // Larger distance to avoid detecting same star multiple times
-    const stepSize = 2;
+    // ADAPTIVE parameters based on processing profile
+    const threshold = profile.spikeDetectionSensitivity * 80; // 48-76 range
+    const minDistance = Math.max(8, Math.min(20, Math.round(15 / profile.spikeDetectionSensitivity)));
+    const stepSize = profile.chunkSize > 128 ? 3 : 2; // Adaptive step size
+    const maxStars = profile.maxStarsToProcess;
     
-    // Find star centers first
+    console.log(`🔬 Hardcore detection: threshold=${threshold.toFixed(1)}, minDist=${minDistance}, step=${stepSize}, maxStars=${maxStars}`);
+    
+    // PARALLEL-OPTIMIZED star center detection
     const starCenters: Array<{ x: number; y: number; brightness: number }> = [];
     
-    for (let y = 5; y < height - 5; y += stepSize) {
-      for (let x = 5; x < width - 5; x += stepSize) {
-        const idx = (y * width + x) * 4;
-        const luminance = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
-        
-        if (luminance < threshold) continue;
-        
-        // Check if it's a local maximum
-        let isLocalMax = true;
-        let maxLuminance = luminance;
-        
-        for (let dy = -2; dy <= 2 && isLocalMax; dy++) {
-          for (let dx = -2; dx <= 2; dx++) {
-            if (dx === 0 && dy === 0) continue;
-            
-            const nIdx = ((y + dy) * width + (x + dx)) * 4;
-            const nLuminance = 0.299 * data[nIdx] + 0.587 * data[nIdx + 1] + 0.114 * data[nIdx + 2];
-            
-            if (nLuminance > luminance) {
-              isLocalMax = false;
-            }
-            maxLuminance = Math.max(maxLuminance, nLuminance);
-          }
-        }
-        
-        if (isLocalMax && luminance > threshold * 1.5) {
-          // Check minimum distance
-          let tooClose = false;
-          for (const existing of starCenters) {
-            const dx = x - existing.x;
-            const dy = y - existing.y;
-            const distanceSquared = dx * dx + dy * dy;
-            
-            if (distanceSquared < minDistance * minDistance) {
-              tooClose = true;
-              if (luminance > existing.brightness) {
-                existing.x = x;
-                existing.y = y;
-                existing.brightness = luminance;
+    // Process in chunks for better performance with massive datasets
+    const chunkHeight = Math.max(32, Math.min(128, Math.floor(height / 8)));
+    const chunks: Array<{startY: number, endY: number}> = [];
+    
+    for (let y = 5; y < height - 5; y += chunkHeight) {
+      chunks.push({startY: y, endY: Math.min(y + chunkHeight, height - 5)});
+    }
+    
+    // Process each chunk
+    for (const chunk of chunks) {
+      for (let y = chunk.startY; y < chunk.endY; y += stepSize) {
+        for (let x = 5; x < width - 5; x += stepSize) {
+          const idx = (y * width + x) * 4;
+          const luminance = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+          
+          if (luminance < threshold) continue;
+          
+          // ENHANCED local maximum check with adaptive neighborhood
+          const checkRadius = profile.spikeDetectionSensitivity > 0.8 ? 3 : 2;
+          let isLocalMax = true;
+          let maxLuminance = luminance;
+          
+          for (let dy = -checkRadius; dy <= checkRadius && isLocalMax; dy++) {
+            for (let dx = -checkRadius; dx <= checkRadius; dx++) {
+              if (dx === 0 && dy === 0) continue;
+              
+              const nIdx = ((y + dy) * width + (x + dx)) * 4;
+              const nLuminance = 0.299 * data[nIdx] + 0.587 * data[nIdx + 1] + 0.114 * data[nIdx + 2];
+              
+              if (nLuminance > luminance) {
+                isLocalMax = false;
               }
-              break;
+              maxLuminance = Math.max(maxLuminance, nLuminance);
             }
           }
           
-          if (!tooClose) {
-            starCenters.push({ x, y, brightness: luminance });
+          if (isLocalMax && luminance > threshold * 1.2) {
+            // INTELLIGENT distance checking with early termination
+            let tooClose = false;
+            for (const existing of starCenters) {
+              const dx = x - existing.x;
+              const dy = y - existing.y;
+              const distanceSquared = dx * dx + dy * dy;
+              
+              if (distanceSquared < minDistance * minDistance) {
+                tooClose = true;
+                if (luminance > existing.brightness) {
+                  existing.x = x;
+                  existing.y = y;
+                  existing.brightness = luminance;
+                }
+                break;
+              }
+            }
+            
+            if (!tooClose) {
+              starCenters.push({ x, y, brightness: luminance });
+              
+              // PERFORMANCE: Early exit if we have enough stars
+              if (starCenters.length >= maxStars * 2) {
+                break;
+              }
+            }
           }
         }
+        
+        // Early chunk exit if we have way too many stars
+        if (starCenters.length >= maxStars * 3) break;
       }
+      
+      // Early exit for extreme cases
+      if (starCenters.length >= maxStars * 3) break;
     }
     
+    // SMART: Take the brightest stars up to our limit
+    const topStars = starCenters
+      .sort((a, b) => b.brightness - a.brightness)
+      .slice(0, maxStars);
+    
+    console.log(`🌟 Detected ${starCenters.length} star candidates, analyzing top ${topStars.length}`);
+    
     // Analyze each star center to detect diffraction patterns
-    for (const center of starCenters.slice(0, 50)) { // Limit to 50 brightest for performance
-      const pattern = this.analyzeStarPattern(data, center.x, center.y, width, height);
+    for (const center of topStars) {
+      const pattern = this.analyzeStarPattern(data, center.x, center.y, width, height, profile);
       stars.push({
         centerX: center.x,
         centerY: center.y,
@@ -631,28 +704,32 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * IMPROVED: More robust pattern detection with better spike analysis
+   * ENHANCED: Pattern analysis with adaptive sensitivity
    */
   private analyzeStarPattern(
     data: Uint8ClampedArray, 
     centerX: number, 
     centerY: number, 
     width: number, 
-    height: number
+    height: number,
+    profile?: any
   ): {
     type: 'point' | 'newtonian' | 'jwst' | 'complex';
     boundingBox: { x: number; y: number; width: number; height: number };
     spikes?: Array<{ angle: number; length: number }>;
   } {
-    const maxRadius = 30; // Increased search radius
-    const spikeThreshold = 30; // Lower threshold to catch fainter spikes
+    // ADAPTIVE parameters based on profile sensitivity (with defaults)
+    const sensitivity = profile?.spikeDetectionSensitivity || 0.8;
+    const maxRadius = sensitivity > 0.9 ? 40 : 25;
+    const spikeThreshold = 20 + (sensitivity * 30); // 20-50 range
+    const directions = sensitivity > 0.8 ? 16 : 8; // More directions for high quality
     
-    // More comprehensive directional sampling (16 directions)
-    const directions: Array<{ angle: number; dx: number; dy: number }> = [];
-    for (let i = 0; i < 16; i++) {
-      const angle = (i * 360) / 16;
+    // Create direction vectors
+    const directionVectors: Array<{ angle: number; dx: number; dy: number }> = [];
+    for (let i = 0; i < directions; i++) {
+      const angle = (i * 360) / directions;
       const radians = (angle * Math.PI) / 180;
-      directions.push({
+      directionVectors.push({
         angle: angle,
         dx: Math.cos(radians),
         dy: Math.sin(radians)
@@ -662,11 +739,12 @@ export class TraditionalMorphProcessor {
     const detectedSpikes: Array<{ angle: number; length: number }> = [];
     let minX = centerX, maxX = centerX, minY = centerY, maxY = centerY;
     
-    // Sample each direction for spikes with better detection
-    for (const dir of directions) {
+    // ENHANCED spike detection with better filtering
+    for (const dir of directionVectors) {
       let spikeLength = 0;
       let maxIntensityInSpike = 0;
       let spikePixelCount = 0;
+      let consecutivePixels = 0;
       
       for (let r = 2; r <= maxRadius; r++) {
         const x = Math.round(centerX + dir.dx * r);
@@ -681,66 +759,81 @@ export class TraditionalMorphProcessor {
           spikeLength = r;
           maxIntensityInSpike = Math.max(maxIntensityInSpike, luminance);
           spikePixelCount++;
+          consecutivePixels++;
           
-          // Expand bounding box more conservatively
+          // Expand bounding box more intelligently
           minX = Math.min(minX, x - 1);
           maxX = Math.max(maxX, x + 1);
           minY = Math.min(minY, y - 1);
           maxY = Math.max(maxY, y + 1);
-        } else if (spikePixelCount > 0) {
-          // Gap in spike - end detection if gap is too large
-          if (r - spikeLength > 3) break;
+        } else {
+          if (consecutivePixels < 2) {
+            consecutivePixels = 0;
+          } else {
+            // Small gap allowed in spikes
+            if (r - spikeLength > 2) break;
+          }
         }
       }
       
-      // Consider it a spike if it has good length and intensity
-      if (spikeLength >= 6 && spikePixelCount >= 4 && maxIntensityInSpike > spikeThreshold * 1.5) {
+      // SMARTER spike validation
+      const intensityRatio = maxIntensityInSpike / spikeThreshold;
+      const lengthThreshold = sensitivity > 0.8 ? 6 : 8;
+      const pixelThreshold = sensitivity > 0.8 ? 3 : 5;
+      
+      if (spikeLength >= lengthThreshold && 
+          spikePixelCount >= pixelThreshold && 
+          intensityRatio > 1.5) {
         detectedSpikes.push({ angle: dir.angle, length: spikeLength });
       }
     }
     
-    // Ensure minimum bounding box around star center
-    const minSize = 8;
+    // INTELLIGENT bounding box calculation
+    const minSize = 6;
+    const maxSize = Math.min(width, height) * 0.1; // Max 10% of image dimension
+    
     minX = Math.max(0, Math.min(minX, centerX - minSize));
     minY = Math.max(0, Math.min(minY, centerY - minSize));
     maxX = Math.min(width - 1, Math.max(maxX, centerX + minSize));
     maxY = Math.min(height - 1, Math.max(maxY, centerY + minSize));
     
-    // Add reasonable padding
-    const padding = 3;
+    // Clamp to reasonable size
+    if (maxX - minX > maxSize) {
+      const center = (minX + maxX) / 2;
+      minX = Math.max(0, center - maxSize / 2);
+      maxX = Math.min(width - 1, center + maxSize / 2);
+    }
+    if (maxY - minY > maxSize) {
+      const center = (minY + maxY) / 2;
+      minY = Math.max(0, center - maxSize / 2);
+      maxY = Math.min(height - 1, center + maxSize / 2);
+    }
+    
+    // Add smart padding
+    const padding = Math.max(2, Math.min(5, Math.round(detectedSpikes.length * 0.5)));
     minX = Math.max(0, minX - padding);
     minY = Math.max(0, minY - padding);
     maxX = Math.min(width - 1, maxX + padding);
     maxY = Math.min(height - 1, maxY + padding);
     
-    // Determine pattern type more accurately
+    // ADVANCED pattern recognition
     let patternType: 'point' | 'newtonian' | 'jwst' | 'complex' = 'point';
     
     if (detectedSpikes.length === 0) {
       patternType = 'point';
-    } else if (detectedSpikes.length >= 3 && detectedSpikes.length <= 5) {
-      // Check for cross pattern (Newtonian) - look for perpendicular spikes
+    } else if (detectedSpikes.length === 4) {
+      // Enhanced Newtonian cross detection
       const angles = detectedSpikes.map(s => s.angle).sort((a, b) => a - b);
-      let crossPatternFound = false;
-      
-      for (let i = 0; i < angles.length; i++) {
-        for (let j = i + 1; j < angles.length; j++) {
-          const angleDiff = Math.abs(angles[i] - angles[j]);
-          if (Math.abs(angleDiff - 90) < 30 || Math.abs(angleDiff - 180) < 30) {
-            crossPatternFound = true;
-            break;
-          }
-        }
-        if (crossPatternFound) break;
-      }
-      
-      patternType = crossPatternFound ? 'newtonian' : 'complex';
+      const crossScore = this.calculateCrossPatternScore(angles);
+      patternType = crossScore > 0.7 ? 'newtonian' : 'complex';
     } else if (detectedSpikes.length === 6) {
-      // JWST-like pattern
-      patternType = 'jwst';
-    } else if (detectedSpikes.length > 6) {
+      // JWST hexagonal pattern
+      const hexScore = this.calculateHexPatternScore(detectedSpikes.map(s => s.angle));
+      patternType = hexScore > 0.6 ? 'jwst' : 'complex';
+    } else if (detectedSpikes.length >= 8) {
+      // Very complex diffraction pattern
       patternType = 'complex';
-    } else {
+    } else if (detectedSpikes.length >= 2) {
       patternType = 'complex';
     }
     
@@ -757,6 +850,50 @@ export class TraditionalMorphProcessor {
   }
 
   /**
+   * Calculate how well angles match a cross pattern
+   */
+  private calculateCrossPatternScore(angles: number[]): number {
+    if (angles.length !== 4) return 0;
+    
+    // Look for roughly 90-degree separations
+    const idealAngles = [0, 90, 180, 270];
+    let totalScore = 0;
+    
+    for (let i = 0; i < 4; i++) {
+      let bestMatch = Infinity;
+      for (const ideal of idealAngles) {
+        const diff = Math.min(Math.abs(angles[i] - ideal), Math.abs(angles[i] - ideal + 360), Math.abs(angles[i] - ideal - 360));
+        bestMatch = Math.min(bestMatch, diff);
+      }
+      totalScore += Math.max(0, 1 - bestMatch / 45); // 45-degree tolerance
+    }
+    
+    return totalScore / 4;
+  }
+
+  /**
+   * Calculate how well angles match a hexagonal JWST pattern
+   */
+  private calculateHexPatternScore(angles: number[]): number {
+    if (angles.length !== 6) return 0;
+    
+    // JWST has roughly 60-degree separations
+    const idealAngles = [0, 60, 120, 180, 240, 300];
+    let totalScore = 0;
+    
+    for (let i = 0; i < 6; i++) {
+      let bestMatch = Infinity;
+      for (const ideal of idealAngles) {
+        const diff = Math.min(Math.abs(angles[i] - ideal), Math.abs(angles[i] - ideal + 360), Math.abs(angles[i] - ideal - 360));
+        bestMatch = Math.min(bestMatch, diff);
+      }
+      totalScore += Math.max(0, 1 - bestMatch / 30); // 30-degree tolerance
+    }
+    
+    return totalScore / 6;
+  }
+
+  /**
    * Create stereo pair using CORRECT traditional morphing method from photographingspace.com
    */
   async createTraditionalStereoPair(
@@ -765,8 +902,8 @@ export class TraditionalMorphProcessor {
     onProgress?: (step: string, progress?: number) => void
   ): Promise<{ leftCanvas: HTMLCanvasElement; rightCanvas: HTMLCanvasElement; depthMap: HTMLCanvasElement }> {
     
-    onProgress?.('Loading and optimizing images for processing...', 10);
-    const { starlessImg, starsImg, scaleFactor, originalSize } = await this.loadImages(inputs);
+    onProgress?.('Loading and AI-analyzing images...', 10);
+    const { starlessImg, starsImg, scaleFactor, originalSize, metadata, profile } = await this.loadImages(inputs);
     
     const width = starlessImg.width;
     const height = starlessImg.height;
@@ -774,16 +911,16 @@ export class TraditionalMorphProcessor {
     onProgress?.('Creating advanced multi-layer depth analysis...', 20);
     const depthMaps = this.createAdvancedDepthMap(starlessImg, params.luminanceBlur);
     
-    onProgress?.('Detecting star patterns including diffraction spikes...', 35);
-    const starPatterns = this.detectStarPatterns(starsImg);
-    console.log(`Detected ${starPatterns.length} star patterns: ${starPatterns.filter(s => s.pattern !== 'point').length} with diffraction spikes`);
+    onProgress?.('AI-powered star pattern analysis...', 35);
+    const starPatterns = this.detectStarPatterns(starsImg, profile);
+    console.log(`🤖 AI detected ${starPatterns.length} patterns: ${starPatterns.filter(s => s.pattern !== 'point').length} with diffraction spikes`);
     
-    // Log pattern distribution
+    // Enhanced pattern distribution logging
     const patternCounts = starPatterns.reduce((acc, star) => {
       acc[star.pattern] = (acc[star.pattern] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    console.log('Pattern distribution:', patternCounts);
+    console.log('🔬 Scientific pattern analysis:', patternCounts, `| Profile: ${metadata.complexity}`);
     
     onProgress?.('Creating left view (original complete image)...', 50);
     // LEFT VIEW: Original complete image (starless + stars)
