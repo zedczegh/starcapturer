@@ -29,8 +29,8 @@ export interface TraditionalMorphParams {
 }
 
 export interface TraditionalInputs {
-  starlessImage: File;
-  starsOnlyImage: File;
+  starlessImage?: File;
+  starsOnlyImage?: File;
 }
 
 export class TraditionalMorphProcessor {
@@ -109,9 +109,10 @@ export class TraditionalMorphProcessor {
     const starlessImg = new Image();
     const starsImg = new Image();
     
-    // Load both images with TIFF support
-    const starlessUrl = await this.createImageUrl(inputs.starlessImage);
-    const starsUrl = await this.createImageUrl(inputs.starsOnlyImage);
+    // Handle single image input - use it for both starless and stars
+    const singleImage = inputs.starlessImage || inputs.starsOnlyImage;
+    const starlessUrl = await this.createImageUrl(inputs.starlessImage || singleImage!);
+    const starsUrl = await this.createImageUrl(inputs.starsOnlyImage || singleImage!);
     
     await Promise.all([
       new Promise((resolve, reject) => {

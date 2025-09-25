@@ -418,8 +418,8 @@ const StereoscopeProcessor: React.FC = () => {
   };
 
   const processTraditionalMode = async () => {
-    if (!starlessImage || !starsImage) {
-      console.error('Please select both starless and stars-only images');
+    if (!starlessImage && !starsImage) {
+      console.error('Please select at least one image');
       return;
     }
 
@@ -430,8 +430,8 @@ const StereoscopeProcessor: React.FC = () => {
     try {
       const processor = new TraditionalMorphProcessor();
       const inputs: TraditionalInputs = {
-        starlessImage,
-        starsOnlyImage: starsImage
+        starlessImage: starlessImage || undefined,
+        starsOnlyImage: starsImage || undefined
       };
 
       console.log('Creating traditional stereo pair...');
@@ -825,7 +825,7 @@ const StereoscopeProcessor: React.FC = () => {
 
                     <Button
                       onClick={processImage}
-                      disabled={!starlessImage || !starsImage || processing}
+                      disabled={(!starlessImage && !starsImage) || processing}
                       className="w-full"
                     >
                       {processing ? (
