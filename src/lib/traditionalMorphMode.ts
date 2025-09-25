@@ -1,14 +1,25 @@
 /**
- * Traditional Morph Mode - Based on photographingspace.com methodology
+ * Traditional Morph Mode - PERFORMANCE OPTIMIZED
  * 
  * This implementation follows the traditional workflow described by J-P Metsavainio
  * and Dylan O'Donnell for creating 3D stereoscopic pairs from separate starless
  * and stars-only astronomical images.
+ * 
+ * OPTIMIZATIONS:
+ * - Canvas pooling for memory efficiency
+ * - Chunked processing for large images  
+ * - Star pattern caching
+ * - Memory monitoring and management
+ * - Improved resource cleanup
  */
 // @ts-ignore
 import * as UTIF from 'utif';
 import { OptimizedDisplacementProcessor } from './optimizedDisplacement';
 import { ScientificProcessor } from './scientificProcessor';
+import { CanvasPool } from './performance/CanvasPool';
+import { ChunkedProcessor } from './performance/ChunkedProcessor';
+import { StarPatternCache } from './performance/StarPatternCache';
+import { MemoryManager } from './performance/MemoryManager';
 
 export interface TraditionalMorphParams {
   horizontalDisplace: number; // 10-30 range for displacement filter
@@ -25,6 +36,8 @@ export interface TraditionalInputs {
 export class TraditionalMorphProcessor {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+  private canvasPool: CanvasPool;
+  private starPatternCache: StarPatternCache;
   
   constructor() {
     this.canvas = document.createElement('canvas');
@@ -33,6 +46,11 @@ export class TraditionalMorphProcessor {
       throw new Error('Could not create canvas context');
     }
     this.ctx = ctx;
+    this.canvasPool = CanvasPool.getInstance();
+    this.starPatternCache = StarPatternCache.getInstance();
+    
+    // Track memory usage
+    MemoryManager.trackResource(this);
   }
 
   private isTiffFile(file: File): boolean {
@@ -77,7 +95,7 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * AI-ENHANCED: Smart loading with automatic optimization
+   * PERFORMANCE OPTIMIZED: Smart loading with memory monitoring
    */
   async loadImages(inputs: TraditionalInputs): Promise<{
     starlessImg: HTMLImageElement;
@@ -87,6 +105,7 @@ export class TraditionalMorphProcessor {
     metadata: any;
     profile: any;
   }> {
+    return await MemoryManager.monitorOperation(async () => {
     const starlessImg = new Image();
     const starsImg = new Image();
     
@@ -157,13 +176,18 @@ export class TraditionalMorphProcessor {
       metadata,
       profile
     };
+    }, 'Image Loading').then(result => result.result);
   }
 
   /**
-   * SMART: Calculate optimal processing size based on complexity
+   * PERFORMANCE OPTIMIZED: Calculate optimal size considering memory constraints
    */
   private getOptimalProcessingSize(metadata: any, profile: any): number {
     const baseSize = 2048;
+    
+    // Get memory-aware recommendations
+    const memoryParams = MemoryManager.getOptimalProcessingParams(baseSize, baseSize);
+    let memorySizeLimit = Math.sqrt(memoryParams.chunkSize);
     
     // Adjust based on complexity
     let multiplier = 1;
@@ -178,18 +202,21 @@ export class TraditionalMorphProcessor {
     if (metadata.starCount > 300) multiplier *= 0.8;
     if (metadata.starCount > 500) multiplier *= 0.7;
     
-    return Math.round(baseSize * multiplier);
+    // Consider memory constraints
+    const idealSize = Math.round(baseSize * multiplier);
+    const memoryConstrainedSize = Math.min(idealSize, memorySizeLimit);
+    
+    console.log(`🧠 Memory-aware sizing: ideal=${idealSize}, memory-limited=${memorySizeLimit}, chosen=${memoryConstrainedSize}`);
+    
+    return memoryConstrainedSize;
   }
 
   /**
-   * Resize image to target dimensions
+   * OPTIMIZED: Resize image using canvas pool
    */
   private async resizeImage(img: HTMLImageElement, targetWidth: number, targetHeight: number): Promise<HTMLCanvasElement> {
-    const canvas = document.createElement('canvas');
+    const canvas = this.canvasPool.acquire(targetWidth, targetHeight);
     const ctx = canvas.getContext('2d')!;
-    
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
     
     // Draw image centered and scaled to fit while maintaining aspect ratio
     const scale = Math.min(targetWidth / img.width, targetHeight / img.height);
@@ -268,13 +295,11 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Create structure-aware depth map using gradient analysis
+   * OPTIMIZED: Create structure-aware depth map using canvas pool
    */
   private createStructureDepthMap(imageData: ImageData, width: number, height: number): HTMLCanvasElement {
-    const canvas = document.createElement('canvas');
+    const canvas = this.canvasPool.acquire(width, height);
     const ctx = canvas.getContext('2d')!;
-    canvas.width = width;
-    canvas.height = height;
     
     const data = imageData.data;
     const structureData = new ImageData(width, height);
@@ -310,13 +335,11 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Create edge-preserving depth map
+   * OPTIMIZED: Create edge-preserving depth map using canvas pool
    */
   private createEdgeDepthMap(imageData: ImageData, width: number, height: number): HTMLCanvasElement {
-    const canvas = document.createElement('canvas');
+    const canvas = this.canvasPool.acquire(width, height);
     const ctx = canvas.getContext('2d')!;
-    canvas.width = width;
-    canvas.height = height;
     
     const data = imageData.data;
     const edgeData = new ImageData(width, height);
@@ -344,13 +367,11 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Intelligently fuse multiple depth maps
+   * OPTIMIZED: Intelligently fuse multiple depth maps using canvas pool
    */
   private fuseDepthMaps(primary: HTMLCanvasElement, structure: HTMLCanvasElement, edge: HTMLCanvasElement): HTMLCanvasElement {
-    const canvas = document.createElement('canvas');
+    const canvas = this.canvasPool.acquire(primary.width, primary.height);
     const ctx = canvas.getContext('2d')!;
-    canvas.width = primary.width;
-    canvas.height = primary.height;
     
     const width = primary.width;
     const height = primary.height;
@@ -924,10 +945,8 @@ export class TraditionalMorphProcessor {
     
     onProgress?.('Creating left view (original complete image)...', 50);
     // LEFT VIEW: Original complete image (starless + stars)
-    const leftCanvas = document.createElement('canvas');
+    const leftCanvas = this.canvasPool.acquire(width, height);
     const leftCtx = leftCanvas.getContext('2d')!;
-    leftCanvas.width = width;
-    leftCanvas.height = height;
     
     // Draw starless background
     leftCtx.drawImage(starlessImg, 0, 0);
@@ -939,10 +958,8 @@ export class TraditionalMorphProcessor {
     
     onProgress?.('Creating right view using correct JP methodology...', 65);
     // RIGHT VIEW: Following exact JP methodology from photographingspace.com
-    const rightCanvas = document.createElement('canvas');
+    const rightCanvas = this.canvasPool.acquire(width, height);
     const rightCtx = rightCanvas.getContext('2d')!;
-    rightCanvas.width = width;
-    rightCanvas.height = height;
     
     // Step 1: Draw starless nebula as base layer
     rightCtx.drawImage(starlessImg, 0, 0);
@@ -951,10 +968,8 @@ export class TraditionalMorphProcessor {
     const initialLeftShift = -3; // ALL stars start 2-3 pixels left (behind nebula)
     
     // Create canvas for shifted star layer
-    const shiftedStarsCanvas = document.createElement('canvas');
-    const shiftedStarsCtx = shiftedStarsCanvas.getContext('2d')!;
-    shiftedStarsCanvas.width = width;
-    shiftedStarsCanvas.height = height;
+    const shiftedStarsCanvas = this.canvasPool.acquire(width, height);
+    const shiftedStarsCtx = shiftedStarsCanvas.getContext('2d')!
     
     // Draw all stars shifted left initially (behind nebula)
     shiftedStarsCtx.drawImage(starsImg, initialLeftShift, 0);
@@ -970,10 +985,8 @@ export class TraditionalMorphProcessor {
     const brightStars = starPatterns.filter(star => star.brightness / 255 > 0.35).slice(0, 15);
     
     // Create a copy of the current right canvas for reference
-    const rightCanvasCopy = document.createElement('canvas');
+    const rightCanvasCopy = this.canvasPool.acquire(width, height);
     const rightCopyCtx = rightCanvasCopy.getContext('2d')!;
-    rightCanvasCopy.width = width;
-    rightCanvasCopy.height = height;
     rightCopyCtx.drawImage(rightCanvas, 0, 0);
     
     // Process each star pattern individually with perfect blending
@@ -1012,10 +1025,8 @@ export class TraditionalMorphProcessor {
         
         // ENHANCED STEP 1: Complete star removal from original shifted position
         // Create a precise mask for the star region
-        const starMaskCanvas = document.createElement('canvas');
+        const starMaskCanvas = this.canvasPool.acquire(expandedBbox.width, expandedBbox.height);
         const starMaskCtx = starMaskCanvas.getContext('2d')!;
-        starMaskCanvas.width = expandedBbox.width;
-        starMaskCanvas.height = expandedBbox.height;
         
         // Extract star pattern for masking
         starMaskCtx.drawImage(
@@ -1028,10 +1039,8 @@ export class TraditionalMorphProcessor {
         const starMaskData = starMaskCtx.getImageData(0, 0, expandedBbox.width, expandedBbox.height);
         
         // Create clean background replacement
-        const cleanBackgroundCanvas = document.createElement('canvas');
+        const cleanBackgroundCanvas = this.canvasPool.acquire(expandedBbox.width, expandedBbox.height);
         const cleanBackgroundCtx = cleanBackgroundCanvas.getContext('2d')!;
-        cleanBackgroundCanvas.width = expandedBbox.width;
-        cleanBackgroundCanvas.height = expandedBbox.height;
         
         // Get pure starless background for the original position
         cleanBackgroundCtx.drawImage(
@@ -1060,11 +1069,19 @@ export class TraditionalMorphProcessor {
         repositionedStars++;
         
         console.log(`✨ ${star.pattern.toUpperCase()} pattern cleanly moved: ${expandedBbox.width}x${expandedBbox.height}, shift=${forwardShift.toFixed(1)}, from x=${originalShiftedX} to x=${finalX}`);
+        
+        // Clean up temporary canvases
+        this.canvasPool.release(starMaskCanvas);
+        this.canvasPool.release(cleanBackgroundCanvas);
       }
     }
     rightCtx.globalCompositeOperation = 'source-over';
     
     console.log(`Repositioned ${repositionedStars} bright stars forward from background position`);
+    
+    // Clean up temporary canvases
+    this.canvasPool.release(shiftedStarsCanvas);
+    this.canvasPool.release(rightCanvasCopy);
     
     onProgress?.('Applying optimized displacement with chunked processing...', 90);
     // Step 4: OPTIMIZED displacement processing
@@ -1095,13 +1112,8 @@ export class TraditionalMorphProcessor {
     if (scaleFactor < 1) {
       onProgress?.('Upscaling to original resolution...', 98);
       
-      const finalLeftCanvas = document.createElement('canvas');
-      const finalRightCanvas = document.createElement('canvas');
-      
-      finalLeftCanvas.width = originalSize.width;
-      finalLeftCanvas.height = originalSize.height;
-      finalRightCanvas.width = originalSize.width;
-      finalRightCanvas.height = originalSize.height;
+      const finalLeftCanvas = this.canvasPool.acquire(originalSize.width, originalSize.height);
+      const finalRightCanvas = this.canvasPool.acquire(originalSize.width, originalSize.height);
       
       const finalLeftCtx = finalLeftCanvas.getContext('2d')!;
       const finalRightCtx = finalRightCanvas.getContext('2d')!;
@@ -1178,9 +1190,23 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Cleanup resources
+   * ENHANCED: Cleanup resources and memory
    */
   dispose() {
-    // Canvas cleanup happens automatically when references are lost
+    // Clean up canvas pools and caches
+    this.canvasPool.clear();
+    this.starPatternCache.clear();
+    
+    // Clean up main canvas
+    MemoryManager.cleanupImageResources(this.canvas);
+    MemoryManager.untrackResource(this);
+    
+    // Force garbage collection if memory usage is high
+    const memStats = MemoryManager.getMemoryStats();
+    if (memStats.warning) {
+      MemoryManager.forceGarbageCollection();
+    }
+    
+    console.log('🗑️ TraditionalMorphProcessor disposed and cleaned up');
   }
 }
