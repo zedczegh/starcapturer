@@ -1007,9 +1007,13 @@ export class TraditionalMorphProcessor {
       const originalShiftedX = expandedBbox.x + initialLeftShift;
       const finalX = expandedBbox.x + initialLeftShift + forwardShift;
       
-      // Skip if repositioning would go out of bounds with buffer
-      if (finalX < 0 || finalX + expandedBbox.width >= width - 2 || originalShiftedX < 0) {
-        console.log(`⚠️ Skipping star repositioning: would go out of bounds (${finalX}, ${originalShiftedX})`);
+      // Skip if repositioning would go out of bounds with stricter edge buffer
+      const edgeBuffer = 5; // Increased buffer for clean edges
+      if (finalX < edgeBuffer || 
+          finalX + expandedBbox.width >= width - edgeBuffer || 
+          originalShiftedX < edgeBuffer ||
+          expandedBbox.x + expandedBbox.width >= width - edgeBuffer) {
+        console.log(`⚠️ Skipping star repositioning: would go too close to edges (${finalX}, ${originalShiftedX})`);
         continue;
       }
       
@@ -1142,7 +1146,7 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Combine left and right views into final stereo pair with spacing
+   * Combine left and right views into final stereo pair with spacing and clean edge cutting
    */
   createFinalStereoPair(
     leftCanvas: HTMLCanvasElement, 
@@ -1153,8 +1157,67 @@ export class TraditionalMorphProcessor {
     const width = leftCanvas.width;
     const height = leftCanvas.height;
     
+    // Create clean-edged versions of both canvases
+    const cleanLeftCanvas = this.canvasPool.acquire(width, height);
+    const cleanRightCanvas = this.canvasPool.acquire(width, height);
+    const cleanLeftCtx = cleanLeftCanvas.getContext('2d')!;
+    const cleanRightCtx = cleanRightCanvas.getContext('2d')!;
+    
+    // Enable high-quality rendering and sharp edges
+    [cleanLeftCtx, cleanRightCtx].forEach(ctx => {
+      ctx.imageSmoothingEnabled = false; // Disable smoothing for sharp edges
+      ctx.lineCap = 'butt';
+      ctx.lineJoin = 'miter';
+    });
+    
+    // Clean left canvas - ensure straight edges
+    cleanLeftCtx.save();
+    cleanLeftCtx.beginPath();
+    cleanLeftCtx.rect(0, 0, width, height);
+    cleanLeftCtx.clip();
+    cleanLeftCtx.drawImage(leftCanvas, 0, 0);
+    cleanLeftCtx.restore();
+    
+    // Clean right canvas with precise edge cutting
+    cleanRightCtx.save();
+    cleanRightCtx.beginPath();
+    cleanRightCtx.rect(0, 0, width, height);
+    cleanRightCtx.clip();
+    cleanRightCtx.drawImage(rightCanvas, 0, 0);
+    cleanRightCtx.restore();
+    
+    // Additional edge cleanup for right canvas - ensure perfectly straight right edge
+    const rightImageData = cleanRightCtx.getImageData(0, 0, width, height);
+    const rightData = rightImageData.data;
+    
+    // Clean the rightmost 2 pixels to ensure straight edge
+    for (let y = 0; y < height; y++) {
+      for (let x = width - 2; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        // Check if this pixel has rough/jagged content by comparing with neighbors
+        if (x < width - 1) {
+          const leftIdx = (y * width + (x - 1)) * 4;
+          const currentBrightness = (rightData[idx] + rightData[idx + 1] + rightData[idx + 2]) / 3;
+          const leftBrightness = (rightData[leftIdx] + rightData[leftIdx + 1] + rightData[leftIdx + 2]) / 3;
+          
+          // If there's a sharp brightness change, smooth it
+          if (Math.abs(currentBrightness - leftBrightness) > 30) {
+            rightData[idx] = rightData[leftIdx];
+            rightData[idx + 1] = rightData[leftIdx + 1];
+            rightData[idx + 2] = rightData[leftIdx + 2];
+            rightData[idx + 3] = rightData[leftIdx + 3];
+          }
+        }
+      }
+    }
+    
+    cleanRightCtx.putImageData(rightImageData, 0, 0);
+    
     const finalCanvas = document.createElement('canvas');
     const finalCtx = finalCanvas.getContext('2d')!;
+    
+    // Disable smoothing for final composition to maintain sharp edges
+    finalCtx.imageSmoothingEnabled = false;
     
     if (addBorders) {
       // Add 600px borders around the entire image
@@ -1169,9 +1232,9 @@ export class TraditionalMorphProcessor {
       finalCtx.fillStyle = '#000000';
       finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
       
-      // Draw left and right views with border offset
-      finalCtx.drawImage(leftCanvas, borderSize, borderSize);
-      finalCtx.drawImage(rightCanvas, borderSize + width + spacing, borderSize);
+      // Draw clean left and right views with border offset
+      finalCtx.drawImage(cleanLeftCanvas, borderSize, borderSize);
+      finalCtx.drawImage(cleanRightCanvas, borderSize + width + spacing, borderSize);
     } else {
       // No borders - standard layout
       finalCanvas.width = width * 2 + spacing;
@@ -1181,10 +1244,14 @@ export class TraditionalMorphProcessor {
       finalCtx.fillStyle = '#000000';
       finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
       
-      // Draw left and right views with spacing
-      finalCtx.drawImage(leftCanvas, 0, 0);
-      finalCtx.drawImage(rightCanvas, width + spacing, 0);
+      // Draw clean left and right views with spacing
+      finalCtx.drawImage(cleanLeftCanvas, 0, 0);
+      finalCtx.drawImage(cleanRightCanvas, width + spacing, 0);
     }
+    
+    // Clean up temporary canvases
+    this.canvasPool.release(cleanLeftCanvas);
+    this.canvasPool.release(cleanRightCanvas);
     
     return finalCanvas;
   }
