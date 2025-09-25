@@ -660,13 +660,21 @@ export class TraditionalMorphProcessor {
     rightCtx.globalCompositeOperation = 'screen';
     rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
     
-    onProgress?.('Positioning individual bright stars forward (FIXED doubling)...', 75);
-    // Step 3: SIMPLE star repositioning without complex blending to prevent doubling
+    onProgress?.('Positioning individual bright stars forward (COMPLETELY NO DOUBLING)...', 75);
+    // Step 3: COMPLETELY ELIMINATE DUPLICATES with proper star masking
     
     let repositionedStars = 0;
     const brightStars = starCenters.filter(star => star.brightness / 255 > 0.4).slice(0, 20); // Limit to brightest 20 stars
     
-    // Create a clean star layer for repositioning
+    // Create a mask to remove bright stars from their original positions
+    const starRemovalMaskCanvas = document.createElement('canvas');
+    const starRemovalMaskCtx = starRemovalMaskCanvas.getContext('2d')!;
+    starRemovalMaskCanvas.width = width;
+    starRemovalMaskCanvas.height = height;
+    starRemovalMaskCtx.fillStyle = 'white';
+    starRemovalMaskCtx.fillRect(0, 0, width, height);
+    
+    // Create clean repositioned stars canvas
     const repositionedStarsCanvas = document.createElement('canvas');
     const repositionedStarsCtx = repositionedStarsCanvas.getContext('2d')!;
     repositionedStarsCanvas.width = width;
@@ -675,19 +683,23 @@ export class TraditionalMorphProcessor {
     // Track processed areas to prevent overlap
     const processedAreas: Array<{x: number, y: number, w: number, h: number}> = [];
     
-    // Process each star individually
+    // Process each bright star: REMOVE from original position and ADD to new position
     for (const star of brightStars) {
       const brightnessFactor = star.brightness / 255;
       let forwardShift = params.starShiftAmount * (1 + brightnessFactor);
       
       // Fixed radius for consistency
-      const radius = 4;
+      const radius = 5;
       const x1 = Math.max(0, star.x - radius);
       const y1 = Math.max(0, star.y - radius);
       const w = Math.min(radius * 2, width - x1);
       const h = Math.min(radius * 2, height - y1);
       
       if (w > 0 && h > 0 && forwardShift > 0) {
+        // Calculate original position in shifted star layer
+        const originalShiftedX = Math.max(0, Math.min(width - w, x1 + initialLeftShift));
+        
+        // Calculate final repositioned position
         const finalX = Math.max(0, Math.min(width - w, x1 + initialLeftShift + forwardShift));
         
         // Check for overlap with already processed areas
@@ -701,7 +713,11 @@ export class TraditionalMorphProcessor {
         }
         
         if (!hasOverlap && finalX + w < width) {
-          // Draw star to repositioned layer
+          // STEP 1: Mark original star position for removal (black = remove)
+          starRemovalMaskCtx.fillStyle = 'black';
+          starRemovalMaskCtx.fillRect(originalShiftedX, y1, w, h);
+          
+          // STEP 2: Draw star to repositioned layer
           repositionedStarsCtx.drawImage(starsImg, x1, y1, w, h, finalX, y1, w, h);
           
           // Track this area
@@ -709,13 +725,17 @@ export class TraditionalMorphProcessor {
           repositionedStars++;
           
           if (repositionedStars <= 3) {
-            console.log(`Star repositioned cleanly: brightness=${(brightnessFactor * 100).toFixed(1)}%, shift=${forwardShift.toFixed(1)}`);
+            console.log(`Star removed from pos ${originalShiftedX} and repositioned to ${finalX}: brightness=${(brightnessFactor * 100).toFixed(1)}%`);
           }
         }
       }
     }
     
-    // Add repositioned stars with simple screen blending
+    // STEP 3: Apply mask to remove original bright star positions
+    rightCtx.globalCompositeOperation = 'multiply';
+    rightCtx.drawImage(starRemovalMaskCanvas, 0, 0);
+    
+    // STEP 4: Add repositioned stars with screen blending
     rightCtx.globalCompositeOperation = 'screen';
     rightCtx.drawImage(repositionedStarsCanvas, 0, 0);
     rightCtx.globalCompositeOperation = 'source-over';
