@@ -259,6 +259,47 @@ export class TraditionalMorphProcessor {
   }
 
   /**
+   * Calculate star extent (diffuseness) to help distinguish stars of similar brightness
+   */
+  private calculateStarExtent(starsImg: HTMLImageElement, centerX: number, centerY: number, radius: number): number {
+    this.canvas.width = starsImg.width;
+    this.canvas.height = starsImg.height;
+    this.ctx.drawImage(starsImg, 0, 0);
+    
+    const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    const data = imageData.data;
+    const width = this.canvas.width;
+    
+    let totalPixels = 0;
+    let brightPixels = 0;
+    const threshold = 50; // Brightness threshold for "bright" pixels
+    
+    // Sample pixels in a circle around the star center
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance <= radius) {
+          const x = centerX + dx;
+          const y = centerY + dy;
+          
+          if (x >= 0 && x < width && y >= 0 && y < this.canvas.height) {
+            const idx = (y * width + x) * 4;
+            const luminance = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+            
+            totalPixels++;
+            if (luminance > threshold) {
+              brightPixels++;
+            }
+          }
+        }
+      }
+    }
+    
+    // Return ratio of bright pixels to total pixels (0 = very diffuse, 1 = very compact)
+    return totalPixels > 0 ? brightPixels / totalPixels : 0;
+  }
+
+  /**
    * Detect individual stars for repositioning (enhanced star detection)
    */
   detectStarCenters(starsImg: HTMLImageElement): Array<{ x: number; y: number; brightness: number }> {
@@ -397,40 +438,56 @@ export class TraditionalMorphProcessor {
     
     onProgress?.('Positioning individual bright stars forward...', 75);
     // Step 3: Selectively move individual bright stars RIGHT to bring them forward
-    // This is the KEY difference - we're bringing specific stars FORWARD from their background position
+    // Following JP's exact method: "Use different amounts of nudging to the right so they appear different distances from each other"
     
     let repositionedStars = 0;
     const brightStars = starCenters.filter(star => star.brightness / 255 > 0.6); // Only reposition bright stars
     
-    for (const star of brightStars) {
+    for (let i = 0; i < brightStars.length; i++) {
+      const star = brightStars[i];
       const brightnessFactor = star.brightness / 255;
       
-      // Calculate how much to bring this star FORWARD (positive right shift)
-      let forwardShift = 0;
+      // Calculate star size/extent to differentiate stars of similar brightness
+      const starRadius = Math.max(3, Math.min(8, Math.ceil(brightnessFactor * 6)));
+      const starExtent = this.calculateStarExtent(starsImg, star.x, star.y, starRadius);
+      
+      // JP's key insight: Each star gets a DIFFERENT forward shift amount for proper depth layering
+      // Base forward shift on brightness, then add individual variation based on star characteristics
+      let baseForwardShift = 0;
       
       if (brightnessFactor > 0.95) {
-        // Extremely bright stars - bring very close to viewer
-        forwardShift = params.starShiftAmount * 4.0;
+        baseForwardShift = params.starShiftAmount * 4.5; // Closest to viewer
       } else if (brightnessFactor > 0.9) {
-        // Very bright stars - bring close to viewer  
-        forwardShift = params.starShiftAmount * 3.5;
+        baseForwardShift = params.starShiftAmount * 4.0;
+      } else if (brightnessFactor > 0.85) {
+        baseForwardShift = params.starShiftAmount * 3.5;
       } else if (brightnessFactor > 0.8) {
-        // Bright stars - bring moderately forward
-        forwardShift = params.starShiftAmount * 3.0;
+        baseForwardShift = params.starShiftAmount * 3.0;
+      } else if (brightnessFactor > 0.75) {
+        baseForwardShift = params.starShiftAmount * 2.5;
       } else if (brightnessFactor > 0.7) {
-        // Medium bright stars - bring slightly forward
-        forwardShift = params.starShiftAmount * 2.0;
+        baseForwardShift = params.starShiftAmount * 2.0;
+      } else if (brightnessFactor > 0.65) {
+        baseForwardShift = params.starShiftAmount * 1.5;
       } else {
-        // Dimmer bright stars - minimal forward movement
-        forwardShift = params.starShiftAmount * 1.0;
+        baseForwardShift = params.starShiftAmount * 1.0;
       }
       
+      // Individual variation: More compact stars appear closer, more diffuse stars further back
+      const sizeVariation = (1.0 - starExtent) * params.starShiftAmount * 0.5;
+      
+      // Position variation: Add slight randomness based on star index to avoid same-plane grouping
+      const positionVariation = (Math.sin(i * 2.7182) + Math.cos(i * 1.618)) * params.starShiftAmount * 0.3;
+      
+      // Final forward shift with all factors combined
+      const forwardShift = Math.max(0, baseForwardShift + sizeVariation + positionVariation);
+      
       // Extract individual star and reposition it
-      const radius = Math.max(3, Math.min(8, Math.ceil(brightnessFactor * 6)));
-      const x1 = Math.max(0, star.x - radius);
-      const y1 = Math.max(0, star.y - radius);
-      const w = Math.min(radius * 2, width - x1);
-      const h = Math.min(radius * 2, height - y1);
+      const extractRadius = Math.max(3, Math.min(8, Math.ceil(brightnessFactor * 6)));
+      const x1 = Math.max(0, star.x - extractRadius);
+      const y1 = Math.max(0, star.y - extractRadius);
+      const w = Math.min(extractRadius * 2, width - x1);
+      const h = Math.min(extractRadius * 2, height - y1);
       
       if (w > 0 && h > 0 && forwardShift > 0) {
         // Create temporary canvas for this individual star
