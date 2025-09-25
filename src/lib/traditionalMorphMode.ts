@@ -272,8 +272,8 @@ export class TraditionalMorphProcessor {
     const height = this.canvas.height;
     
     const stars: Array<{ x: number; y: number; brightness: number }> = [];
-    const threshold = 100; // Adjust based on star brightness
-    const minDistance = 5; // Minimum distance between star centers
+    const threshold = 50; // Lower threshold to detect more stars for better 3D layering
+    const minDistance = 3; // Reduced distance to allow more stars
     
     // Find local maxima that represent star centers
     for (let y = 2; y < height - 2; y++) {
@@ -413,20 +413,31 @@ export class TraditionalMorphProcessor {
       
       // Process all visible stars (not just bright ones)
       if (brightnessFactor > 0.1) {
-        // Calculate final shift: base left shift + brightness-based right adjustment
-        let finalShift = baseLeftShift;
+        // Calculate layered shifts for dramatic 3D depth effect
+        // Based on photographingspace.com methodology
+        let finalShift = baseLeftShift; // Start behind nebula
         
-        if (brightnessFactor > 0.8) {
-          // Very bright stars - bring far forward (net positive shift)
-          finalShift = baseLeftShift + (params.starShiftAmount * 1.5);
+        // Create distinct depth layers - brighter stars come progressively forward
+        if (brightnessFactor > 0.9) {
+          // Extremely bright stars - very close to viewer (large positive shift)
+          finalShift = baseLeftShift + (params.starShiftAmount * 3.0);
+        } else if (brightnessFactor > 0.8) {
+          // Very bright stars - close to viewer
+          finalShift = baseLeftShift + (params.starShiftAmount * 2.5);
+        } else if (brightnessFactor > 0.7) {
+          // Bright stars - moderately close
+          finalShift = baseLeftShift + (params.starShiftAmount * 2.0);
         } else if (brightnessFactor > 0.6) {
-          // Bright stars - bring moderately forward  
-          finalShift = baseLeftShift + (params.starShiftAmount * 1.0);
+          // Medium bright stars - slightly forward
+          finalShift = baseLeftShift + (params.starShiftAmount * 1.5);
         } else if (brightnessFactor > 0.4) {
-          // Medium stars - bring slightly forward
+          // Dim bright stars - barely forward
+          finalShift = baseLeftShift + (params.starShiftAmount * 1.0);
+        } else if (brightnessFactor > 0.3) {
+          // Faint stars - just ahead of background
           finalShift = baseLeftShift + (params.starShiftAmount * 0.5);
         } else {
-          // Dim stars - stay behind nebula (just base left shift)
+          // Very dim stars - stay behind nebula (just base left shift)
           finalShift = baseLeftShift;
         }
         

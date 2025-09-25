@@ -768,20 +768,35 @@ const StereoscopeProcessor: React.FC = () => {
                       </p>
                     </div>
 
-                    <div>
-                      <Label>{t('Star Shift Amount', '恒星位移量')} ({traditionalParams.starShiftAmount}px)</Label>
-                      <Slider
-                        value={[traditionalParams.starShiftAmount]}
-                        onValueChange={([value]) => setTraditionalParams(prev => ({ ...prev, starShiftAmount: value }))}
-                        min={1}
-                        max={10}
-                        step={1}
-                        className="mt-2"
-                      />
-                      <p className="text-xs text-cosmic-400 mt-1">
-                        {t('Distance to shift individual stars for 3D positioning', '移动单个恒星进行3D定位的距离')}
-                      </p>
-                    </div>
+                     <div>
+                       <Label>{t('Star Shift Amount', '恒星位移量')} ({traditionalParams.starShiftAmount}px)</Label>
+                       <Slider
+                         value={[traditionalParams.starShiftAmount]}
+                         onValueChange={([value]) => setTraditionalParams(prev => ({ ...prev, starShiftAmount: value }))}
+                         min={1}
+                         max={10}
+                         step={1}
+                         className="mt-2"
+                       />
+                       <p className="text-xs text-cosmic-400 mt-1">
+                         {t('Distance to shift individual stars for 3D positioning', '移动单个恒星进行3D定位的距离')}
+                       </p>
+                     </div>
+
+                     <div>
+                       <Label>{t('Stereo Spacing', '立体间距')} ({stereoSpacing}px)</Label>
+                       <Slider
+                         value={[stereoSpacing]}
+                         onValueChange={([value]) => setStereoSpacing(value)}
+                         min={0}
+                         max={600}
+                         step={10}
+                         className="mt-2"
+                       />
+                       <p className="text-xs text-cosmic-400 mt-1">
+                         {t('Gap between left and right stereo images for easier viewing', '左右立体图像之间的间隔，便于观看')}
+                       </p>
+                     </div>
 
                     <div>
                       <Label>{t('Border Size', '边框大小')} ({borderSize}px)</Label>
