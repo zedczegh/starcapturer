@@ -75,7 +75,7 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Load and validate input images
+   * Load and process input images (automatically resize to match dimensions)
    */
   async loadImages(inputs: TraditionalInputs): Promise<{
     starlessImg: HTMLImageElement;
@@ -101,12 +101,57 @@ export class TraditionalMorphProcessor {
       })
     ]);
 
-    // Validate dimensions match
+    // Auto-resize images to match dimensions if they don't match
     if (starlessImg.width !== starsImg.width || starlessImg.height !== starsImg.height) {
-      throw new Error('Starless and stars-only images must have the same dimensions');
+      console.log(`Auto-resizing images: starless(${starlessImg.width}x${starlessImg.height}) stars(${starsImg.width}x${starsImg.height})`);
+      
+      // Use the larger dimensions as target
+      const targetWidth = Math.max(starlessImg.width, starsImg.width);
+      const targetHeight = Math.max(starlessImg.height, starsImg.height);
+      
+      // Resize starless image if needed
+      if (starlessImg.width !== targetWidth || starlessImg.height !== targetHeight) {
+        const resizedStarless = await this.resizeImage(starlessImg, targetWidth, targetHeight);
+        starlessImg.src = resizedStarless.toDataURL();
+        await new Promise(resolve => { starlessImg.onload = resolve; });
+      }
+      
+      // Resize stars image if needed
+      if (starsImg.width !== targetWidth || starsImg.height !== targetHeight) {
+        const resizedStars = await this.resizeImage(starsImg, targetWidth, targetHeight);
+        starsImg.src = resizedStars.toDataURL();
+        await new Promise(resolve => { starsImg.onload = resolve; });
+      }
     }
 
     return { starlessImg, starsImg };
+  }
+
+  /**
+   * Resize image to target dimensions
+   */
+  private async resizeImage(img: HTMLImageElement, targetWidth: number, targetHeight: number): Promise<HTMLCanvasElement> {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    
+    // Draw image centered and scaled to fit while maintaining aspect ratio
+    const scale = Math.min(targetWidth / img.width, targetHeight / img.height);
+    const scaledWidth = img.width * scale;
+    const scaledHeight = img.height * scale;
+    const offsetX = (targetWidth - scaledWidth) / 2;
+    const offsetY = (targetHeight - scaledHeight) / 2;
+    
+    // Fill with black background
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, targetWidth, targetHeight);
+    
+    // Draw resized image
+    ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
+    
+    return canvas;
   }
 
   /**

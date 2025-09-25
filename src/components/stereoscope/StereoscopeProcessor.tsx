@@ -424,6 +424,7 @@ const StereoscopeProcessor: React.FC = () => {
       return;
     }
 
+    console.log('Starting traditional mode processing...');
     setProcessing(true);
     setProgress(0);
     
@@ -434,22 +435,31 @@ const StereoscopeProcessor: React.FC = () => {
         starsOnlyImage: starsImage
       };
 
+      console.log('Creating traditional stereo pair...');
       const { leftCanvas, rightCanvas, depthMap } = await processor.createTraditionalStereoPair(
         inputs,
         traditionalParams,
         (step, progressValue) => {
+          console.log('Traditional processing step:', step, progressValue);
           setProgressText(t(step, step));
           if (progressValue) setProgress(progressValue);
         }
       );
 
+      console.log('Setting depth map URL...');
       setDepthMapUrl(depthMap.toDataURL());
+      
+      console.log('Creating final stereo pair...');
       const finalPair = processor.createFinalStereoPair(leftCanvas, rightCanvas, stereoSpacing, addBorders);
+      
+      console.log('Setting result URL...');
       setResultUrl(finalPair.toDataURL());
+      
       processor.dispose();
       
       setProgress(100);
       setProgressText(t('Processing complete!', '处理完成！'));
+      console.log('Traditional mode processing completed successfully');
     } catch (error) {
       console.error('Error processing traditional mode:', error);
       setProgressText(t('Error processing images in traditional mode', '传统模式处理图像时出错'));
