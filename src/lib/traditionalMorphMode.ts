@@ -357,6 +357,13 @@ export class TraditionalMorphProcessor {
     const starCenters = this.detectStarCenters(starsImg);
     console.log(`Detected ${starCenters.length} stars for 3D positioning`);
     
+    // Debug star detection and brightness
+    const brightStars = starCenters.filter(star => star.brightness / 255 > 0.7);
+    console.log(`Found ${brightStars.length} bright stars (>70% brightness) for repositioning`);
+    brightStars.slice(0, 5).forEach((star, i) => {
+      console.log(`Star ${i}: pos(${star.x}, ${star.y}), brightness: ${(star.brightness / 255 * 100).toFixed(1)}%`);
+    });
+    
     onProgress?.('Creating left view (original)...', 70);
     // Left view: original starless + original stars
     const leftCanvas = document.createElement('canvas');
@@ -396,6 +403,7 @@ export class TraditionalMorphProcessor {
     
     // Position bright stars based on brightness for 3D depth effect
     // Use proper blending instead of putImageData to avoid black boxes
+    let processedStars = 0;
     for (const star of starCenters) {
       const brightnessFactor = star.brightness / 255;
       
@@ -416,6 +424,12 @@ export class TraditionalMorphProcessor {
           // Medium bright stars - minimal shift
           starShift = params.starShiftAmount * 0.3;
         }
+        
+        // Debug star shifting
+        if (processedStars < 3) {
+          console.log(`Processing star at (${star.x}, ${star.y}): brightness=${(brightnessFactor * 100).toFixed(1)}%, shift=${starShift}px, starShiftAmount=${params.starShiftAmount}`);
+        }
+        processedStars++;
         
         // Extract and reposition star using proper canvas blending
         const radius = Math.max(2, Math.min(5, Math.ceil(brightnessFactor * 3)));
@@ -450,11 +464,18 @@ export class TraditionalMorphProcessor {
           rightCtx.globalCompositeOperation = 'screen';
           const newX = Math.max(0, Math.min(width - w, x1 + starShift));
           rightCtx.drawImage(tempCanvas, newX, y1);
+          
+          // Debug first few star shifts
+          if (processedStars <= 3) {
+            console.log(`Star shifted from x=${x1} to x=${newX} (shift=${starShift}, actual movement=${newX - x1})`);
+          }
         }
       }
     }
     
     rightCtx.globalCompositeOperation = 'source-over';
+    
+    console.log(`Star processing complete: ${processedStars} bright stars repositioned out of ${starCenters.length} detected stars`);
     
     onProgress?.('Applying final contrast adjustments...', 95);
     // Apply contrast boost to both views if specified
