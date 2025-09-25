@@ -155,100 +155,340 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Create luminance map from starless image (Step 3 from article)
+   * ENHANCED: Multi-scale depth analysis for superior 3D representation
    */
-  createLuminanceMap(starlessImg: HTMLImageElement, blur: number): HTMLCanvasElement {
-    // Set up canvas for luminance processing
-    this.canvas.width = starlessImg.width;
-    this.canvas.height = starlessImg.height;
-    
-    // Draw starless image
-    this.ctx.drawImage(starlessImg, 0, 0);
-    
-    // Convert to grayscale
-    const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-    const data = imageData.data;
-    
-    for (let i = 0; i < data.length; i += 4) {
-      // Convert to luminance using standard weights
-      const luminance = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-      data[i] = data[i + 1] = data[i + 2] = luminance;
-    }
-    
-    this.ctx.putImageData(imageData, 0, 0);
-    
-    // Apply Gaussian blur for smooth 3D transitions
-    if (blur > 0) {
-      this.ctx.filter = `blur(${blur}px)`;
-      this.ctx.drawImage(this.canvas, 0, 0);
-      this.ctx.filter = 'none';
-    }
-    
-    // Create separate canvas for luminance map
-    const lumCanvas = document.createElement('canvas');
-    const lumCtx = lumCanvas.getContext('2d')!;
-    lumCanvas.width = this.canvas.width;
-    lumCanvas.height = this.canvas.height;
-    lumCtx.drawImage(this.canvas, 0, 0);
-    
-    return lumCanvas;
-  }
-
-  /**
-   * Apply displacement filter to create depth effect (Step 5 from article)
-   */
-  applyDisplacementFilter(
-    starlessImg: HTMLImageElement, 
-    luminanceMap: HTMLCanvasElement, 
-    horizontalAmount: number
-  ): HTMLCanvasElement {
+  createAdvancedDepthMap(starlessImg: HTMLImageElement, blur: number): {
+    primaryDepth: HTMLCanvasElement;
+    structureDepth: HTMLCanvasElement;
+    edgeDepth: HTMLCanvasElement;
+    combinedDepth: HTMLCanvasElement;
+  } {
     const width = starlessImg.width;
     const height = starlessImg.height;
     
-    // Set up canvas
+    // Set up processing canvas
     this.canvas.width = width;
     this.canvas.height = height;
     this.ctx.drawImage(starlessImg, 0, 0);
     
-    // Get original image data
+    const imageData = this.ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    
+    // 1. PRIMARY DEPTH: Enhanced luminance with perceptual weighting
+    const primaryCanvas = document.createElement('canvas');
+    const primaryCtx = primaryCanvas.getContext('2d')!;
+    primaryCanvas.width = width;
+    primaryCanvas.height = height;
+    
+    const primaryData = new ImageData(width, height);
+    for (let i = 0; i < data.length; i += 4) {
+      // Enhanced luminance with blue bias for nebula depth perception
+      const luminance = 0.2 * data[i] + 0.5 * data[i + 1] + 0.8 * data[i + 2];
+      const enhancedLum = Math.pow(luminance / 255, 0.8) * 255; // Gamma correction for depth
+      primaryData.data[i] = primaryData.data[i + 1] = primaryData.data[i + 2] = enhancedLum;
+      primaryData.data[i + 3] = 255;
+    }
+    primaryCtx.putImageData(primaryData, 0, 0);
+    
+    if (blur > 0) {
+      primaryCtx.filter = `blur(${blur}px)`;
+      primaryCtx.drawImage(primaryCanvas, 0, 0);
+      primaryCtx.filter = 'none';
+    }
+    
+    // 2. STRUCTURE DEPTH: Edge-aware depth mapping
+    const structureCanvas = this.createStructureDepthMap(imageData, width, height);
+    
+    // 3. EDGE DEPTH: Preserve sharp boundaries
+    const edgeCanvas = this.createEdgeDepthMap(imageData, width, height);
+    
+    // 4. COMBINED DEPTH: Intelligent fusion of all depth layers
+    const combinedCanvas = this.fuseDepthMaps(primaryCanvas, structureCanvas, edgeCanvas);
+    
+    return {
+      primaryDepth: primaryCanvas,
+      structureDepth: structureCanvas,
+      edgeDepth: edgeCanvas,
+      combinedDepth: combinedCanvas
+    };
+  }
+
+  /**
+   * Create structure-aware depth map using gradient analysis
+   */
+  private createStructureDepthMap(imageData: ImageData, width: number, height: number): HTMLCanvasElement {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    canvas.width = width;
+    canvas.height = height;
+    
+    const data = imageData.data;
+    const structureData = new ImageData(width, height);
+    
+    // Analyze local gradients and structures
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = (y * width + x) * 4;
+        
+        // Calculate gradients in all directions
+        const gradients = this.calculateGradients(data, x, y, width);
+        const gradientMagnitude = Math.sqrt(gradients.gx * gradients.gx + gradients.gy * gradients.gy);
+        
+        // Local contrast analysis for structure detection
+        const localContrast = this.calculateLocalContrast(data, x, y, width, height, 3);
+        
+        // Combine gradient and contrast for structure depth
+        const structureDepth = Math.min(255, gradientMagnitude * 0.5 + localContrast * 0.8);
+        
+        structureData.data[idx] = structureData.data[idx + 1] = structureData.data[idx + 2] = structureDepth;
+        structureData.data[idx + 3] = 255;
+      }
+    }
+    
+    ctx.putImageData(structureData, 0, 0);
+    
+    // Smooth structure map
+    ctx.filter = 'blur(1px)';
+    ctx.drawImage(canvas, 0, 0);
+    ctx.filter = 'none';
+    
+    return canvas;
+  }
+
+  /**
+   * Create edge-preserving depth map
+   */
+  private createEdgeDepthMap(imageData: ImageData, width: number, height: number): HTMLCanvasElement {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    canvas.width = width;
+    canvas.height = height;
+    
+    const data = imageData.data;
+    const edgeData = new ImageData(width, height);
+    
+    // Sobel edge detection with depth assignment
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = (y * width + x) * 4;
+        
+        // Sobel operators
+        const sobelX = this.applySobelX(data, x, y, width);
+        const sobelY = this.applySobelY(data, x, y, width);
+        const edgeStrength = Math.sqrt(sobelX * sobelX + sobelY * sobelY);
+        
+        // Edge-based depth: stronger edges = more forward
+        const edgeDepth = Math.min(255, edgeStrength * 2);
+        
+        edgeData.data[idx] = edgeData.data[idx + 1] = edgeData.data[idx + 2] = 255 - edgeDepth; // Invert for depth
+        edgeData.data[idx + 3] = 255;
+      }
+    }
+    
+    ctx.putImageData(edgeData, 0, 0);
+    return canvas;
+  }
+
+  /**
+   * Intelligently fuse multiple depth maps
+   */
+  private fuseDepthMaps(primary: HTMLCanvasElement, structure: HTMLCanvasElement, edge: HTMLCanvasElement): HTMLCanvasElement {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    canvas.width = primary.width;
+    canvas.height = primary.height;
+    
+    const width = primary.width;
+    const height = primary.height;
+    
+    // Get data from all depth maps
+    const primaryData = primary.getContext('2d')!.getImageData(0, 0, width, height);
+    const structureData = structure.getContext('2d')!.getImageData(0, 0, width, height);
+    const edgeData = edge.getContext('2d')!.getImageData(0, 0, width, height);
+    
+    const fusedData = new ImageData(width, height);
+    
+    for (let i = 0; i < primaryData.data.length; i += 4) {
+      const primaryVal = primaryData.data[i] / 255;
+      const structureVal = structureData.data[i] / 255;
+      const edgeVal = edgeData.data[i] / 255;
+      
+      // Intelligent fusion with adaptive weights
+      const structureWeight = Math.min(1, structureVal * 2); // More weight for high-structure areas
+      const edgeWeight = Math.min(1, (1 - edgeVal) * 1.5); // More weight for edge areas
+      
+      // Combine with adaptive weighting
+      const fusedVal = (
+        primaryVal * 0.5 +
+        structureVal * structureWeight * 0.3 +
+        edgeVal * edgeWeight * 0.2
+      ) * 255;
+      
+      fusedData.data[i] = fusedData.data[i + 1] = fusedData.data[i + 2] = Math.min(255, fusedVal);
+      fusedData.data[i + 3] = 255;
+    }
+    
+    ctx.putImageData(fusedData, 0, 0);
+    
+    // Final smoothing
+    ctx.filter = 'blur(0.5px)';
+    ctx.drawImage(canvas, 0, 0);
+    ctx.filter = 'none';
+    
+    return canvas;
+  }
+
+  /**
+   * Calculate gradients at a point
+   */
+  private calculateGradients(data: Uint8ClampedArray, x: number, y: number, width: number) {
+    const getPixel = (px: number, py: number) => {
+      const idx = (py * width + px) * 4;
+      return 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+    };
+    
+    const gx = (getPixel(x + 1, y) - getPixel(x - 1, y)) / 2;
+    const gy = (getPixel(x, y + 1) - getPixel(x, y - 1)) / 2;
+    
+    return { gx, gy };
+  }
+
+  /**
+   * Calculate local contrast in a neighborhood
+   */
+  private calculateLocalContrast(data: Uint8ClampedArray, x: number, y: number, width: number, height: number, radius: number): number {
+    let min = 255, max = 0;
+    
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const px = Math.max(0, Math.min(width - 1, x + dx));
+        const py = Math.max(0, Math.min(height - 1, y + dy));
+        const idx = (py * width + px) * 4;
+        const luminance = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+        
+        min = Math.min(min, luminance);
+        max = Math.max(max, luminance);
+      }
+    }
+    
+    return max - min;
+  }
+
+  /**
+   * Apply Sobel X operator
+   */
+  private applySobelX(data: Uint8ClampedArray, x: number, y: number, width: number): number {
+    const getPixel = (px: number, py: number) => {
+      const idx = (py * width + px) * 4;
+      return 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+    };
+    
+    return (
+      -1 * getPixel(x - 1, y - 1) + 1 * getPixel(x + 1, y - 1) +
+      -2 * getPixel(x - 1, y) + 2 * getPixel(x + 1, y) +
+      -1 * getPixel(x - 1, y + 1) + 1 * getPixel(x + 1, y + 1)
+    );
+  }
+
+  /**
+   * Apply Sobel Y operator
+   */
+  private applySobelY(data: Uint8ClampedArray, x: number, y: number, width: number): number {
+    const getPixel = (px: number, py: number) => {
+      const idx = (py * width + px) * 4;
+      return 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+    };
+    
+    return (
+      -1 * getPixel(x - 1, y - 1) + -2 * getPixel(x, y - 1) + -1 * getPixel(x + 1, y - 1) +
+      1 * getPixel(x - 1, y + 1) + 2 * getPixel(x, y + 1) + 1 * getPixel(x + 1, y + 1)
+    );
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   */
+  createLuminanceMap(starlessImg: HTMLImageElement, blur: number): HTMLCanvasElement {
+    const depthMaps = this.createAdvancedDepthMap(starlessImg, blur);
+    return depthMaps.combinedDepth;
+  }
+
+  /**
+   * ENHANCED: Advanced displacement with edge-aware processing
+   */
+  applyAdvancedDisplacement(
+    source: HTMLImageElement | HTMLCanvasElement, 
+    depthMaps: { primaryDepth: HTMLCanvasElement; structureDepth: HTMLCanvasElement; edgeDepth: HTMLCanvasElement; combinedDepth: HTMLCanvasElement },
+    horizontalAmount: number
+  ): HTMLCanvasElement {
+    const width = source.width;
+    const height = source.height;
+    
+    // Set up canvas
+    this.canvas.width = width;
+    this.canvas.height = height;
+    this.ctx.drawImage(source, 0, 0);
+    
     const originalData = this.ctx.getImageData(0, 0, width, height);
     
-    // Get luminance map data for displacement
-    const lumCtx = luminanceMap.getContext('2d')!;
-    const lumData = lumCtx.getImageData(0, 0, width, height);
+    // Get depth data from all maps
+    const primaryDepthData = depthMaps.primaryDepth.getContext('2d')!.getImageData(0, 0, width, height);
+    const structureDepthData = depthMaps.structureDepth.getContext('2d')!.getImageData(0, 0, width, height);
+    const edgeDepthData = depthMaps.edgeDepth.getContext('2d')!.getImageData(0, 0, width, height);
     
-    // Create displaced image with proper interpolation
     const displacedData = this.ctx.createImageData(width, height);
     
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = (y * width + x) * 4;
         
-        // Get displacement amount from luminance (0-255 mapped to displacement range)
-        const lumValue = lumData.data[idx] / 255; // Normalize to 0-1
-        const displacement = Math.round((lumValue - 0.5) * horizontalAmount);
+        // Multi-layer displacement calculation
+        const primaryDepth = primaryDepthData.data[idx] / 255;
+        const structureDepth = structureDepthData.data[idx] / 255;
+        const edgeDepth = edgeDepthData.data[idx] / 255;
         
-        // Calculate source position with bounds checking
-        const srcX = Math.max(0, Math.min(width - 1, x - displacement));
-        const srcIdx = (y * width + srcX) * 4;
+        // Calculate adaptive displacement
+        const structureInfluence = Math.min(1, structureDepth * 2);
+        const edgeInfluence = Math.min(1, (1 - edgeDepth) * 1.5);
         
-        // Only copy valid pixels from starless image
-        if (srcX >= 0 && srcX < width) {
+        // Combined displacement with structure and edge awareness
+        const baseDisplacement = (primaryDepth - 0.5) * horizontalAmount;
+        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.3 * structureInfluence;
+        const edgeAdjustment = (edgeDepth - 0.5) * horizontalAmount * 0.2 * edgeInfluence;
+        
+        const totalDisplacement = Math.round(baseDisplacement + structureAdjustment + edgeAdjustment);
+        
+        // Apply displacement with subpixel interpolation for smoother results
+        const srcX = x - totalDisplacement;
+        
+        if (srcX >= 0 && srcX < width - 1) {
+          // Bilinear interpolation for smoother displacement
+          const x1 = Math.floor(srcX);
+          const x2 = Math.ceil(srcX);
+          const wx = srcX - x1;
+          
+          const idx1 = (y * width + x1) * 4;
+          const idx2 = (y * width + x2) * 4;
+          
+          for (let c = 0; c < 3; c++) {
+            const val1 = originalData.data[idx1 + c];
+            const val2 = originalData.data[idx2 + c];
+            displacedData.data[idx + c] = Math.round(val1 * (1 - wx) + val2 * wx);
+          }
+          displacedData.data[idx + 3] = 255;
+        } else {
+          // Fill with edge pixel for out-of-bounds
+          const clampedX = Math.max(0, Math.min(width - 1, srcX));
+          const srcIdx = (y * width + Math.round(clampedX)) * 4;
+          
           displacedData.data[idx] = originalData.data[srcIdx];
           displacedData.data[idx + 1] = originalData.data[srcIdx + 1];
           displacedData.data[idx + 2] = originalData.data[srcIdx + 2];
-          displacedData.data[idx + 3] = originalData.data[srcIdx + 3];
-        } else {
-          // Fill with black for out-of-bounds areas
-          displacedData.data[idx] = 0;
-          displacedData.data[idx + 1] = 0;
-          displacedData.data[idx + 2] = 0;
           displacedData.data[idx + 3] = 255;
         }
       }
     }
     
-    // Create result canvas
     const resultCanvas = document.createElement('canvas');
     const resultCtx = resultCanvas.getContext('2d')!;
     resultCanvas.width = width;
@@ -256,6 +496,24 @@ export class TraditionalMorphProcessor {
     resultCtx.putImageData(displacedData, 0, 0);
     
     return resultCanvas;
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   */
+  applyDisplacementFilter(
+    starlessImg: HTMLImageElement, 
+    luminanceMap: HTMLCanvasElement, 
+    horizontalAmount: number
+  ): HTMLCanvasElement {
+    // Use advanced displacement with simplified depth map structure
+    const depthMaps = {
+      primaryDepth: luminanceMap,
+      structureDepth: luminanceMap,
+      edgeDepth: luminanceMap,
+      combinedDepth: luminanceMap
+    };
+    return this.applyAdvancedDisplacement(starlessImg, depthMaps, horizontalAmount);
   }
 
   /**
@@ -343,8 +601,8 @@ export class TraditionalMorphProcessor {
     const width = starlessImg.width;
     const height = starlessImg.height;
     
-    onProgress?.('Creating luminance map for displacement filter...', 20);
-    const luminanceMap = this.createLuminanceMap(starlessImg, params.luminanceBlur);
+    onProgress?.('Creating advanced multi-layer depth analysis...', 20);
+    const depthMaps = this.createAdvancedDepthMap(starlessImg, params.luminanceBlur);
     
     onProgress?.('Detecting individual stars for proper 3D positioning...', 35);
     const starCenters = this.detectStarCenters(starsImg);
@@ -436,37 +694,14 @@ export class TraditionalMorphProcessor {
     
     console.log(`Repositioned ${repositionedStars} bright stars forward from background position`);
     
-    onProgress?.('Applying displacement filter to create nebula depth...', 90);
-    // Step 4: Apply displacement filter to the NEBULA layer (not the stars!)
-    // This is applied to the composite right image to give the nebula 3D depth
-    const imageData = rightCtx.getImageData(0, 0, width, height);
-    const lumCtx = luminanceMap.getContext('2d')!;
-    const lumData = lumCtx.getImageData(0, 0, width, height);
-    const displacedData = rightCtx.createImageData(width, height);
+    onProgress?.('Applying advanced edge-aware displacement for superior depth...', 90);
+    // Step 4: Apply ADVANCED displacement with multi-layer depth analysis
+    // This creates much more sophisticated 3D depth than traditional methods
+    const displacedCanvas = this.applyAdvancedDisplacement(rightCanvas, depthMaps, params.horizontalDisplace);
     
-    // Apply horizontal displacement based on luminance
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const idx = (y * width + x) * 4;
-        
-        // Get displacement from luminance (brighter = more displacement)
-        const lumValue = lumData.data[idx] / 255;
-        const displacement = Math.round((lumValue - 0.5) * params.horizontalDisplace);
-        
-        // Calculate source position
-        const srcX = Math.max(0, Math.min(width - 1, x - displacement));
-        const srcIdx = (y * width + srcX) * 4;
-        
-        // Copy pixel data
-        displacedData.data[idx] = imageData.data[srcIdx];
-        displacedData.data[idx + 1] = imageData.data[srcIdx + 1];
-        displacedData.data[idx + 2] = imageData.data[srcIdx + 2];
-        displacedData.data[idx + 3] = imageData.data[srcIdx + 3];
-      }
-    }
-    
-    // Apply the displacement
-    rightCtx.putImageData(displacedData, 0, 0);
+    // Replace right canvas content with advanced displacement result
+    rightCtx.clearRect(0, 0, width, height);
+    rightCtx.drawImage(displacedCanvas, 0, 0);
     
     onProgress?.('Applying final contrast adjustments...', 95);
     // Apply contrast boost to both views if specified
@@ -488,7 +723,7 @@ export class TraditionalMorphProcessor {
     return { 
       leftCanvas, 
       rightCanvas, 
-      depthMap: luminanceMap 
+      depthMap: depthMaps.combinedDepth 
     };
   }
 
