@@ -991,69 +991,73 @@ export class TraditionalMorphProcessor {
     rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
     rightCtx.globalCompositeOperation = 'source-over';
     
-    onProgress?.('Moving star patterns with unified depth intelligence...', 80);
+    onProgress?.('Processing stars with smart deduplication...', 80);
     
-    // Step 3: SMART star repositioning using stellar depth data
+    // Step 3: SMART star processing with deduplication and proper masking
+    const processedStars = new Set<string>();
+    const starCanvas = document.createElement('canvas');
+    const starCtx = starCanvas.getContext('2d')!;
+    starCanvas.width = width;
+    starCanvas.height = height;
+    
+    // Get original stars data for pixel-perfect processing
+    starCtx.drawImage(starsImg, 0, 0);
+    const starsData = starCtx.getImageData(0, 0, width, height);
+    
+    // Clear the star canvas for processing
+    starCtx.clearRect(0, 0, width, height);
+    
+    // Process each unique star only once
+    const uniqueStars = this.deduplicateStars(starPatterns);
+    console.log(`🔄 Deduplicated: ${starPatterns.length} → ${uniqueStars.length} unique stars`);
+    
     let repositionedStars = 0;
-    const brightStars = starPatterns.filter(star => star.brightness / 255 > 0.35).slice(0, 15);
+    const brightStars = uniqueStars.filter(star => star.brightness / 255 > 0.3).slice(0, 20);
     
     for (const star of brightStars) {
+      const starKey = `${Math.round(star.centerX)},${Math.round(star.centerY)}`;
+      if (processedStars.has(starKey)) continue;
+      processedStars.add(starKey);
+      
       // Find corresponding stellar depth data
       const stellarData = stellarResult.stellarData.find(s => 
-        Math.sqrt((s.x - star.centerX) ** 2 + (s.y - star.centerY) ** 2) < 5
+        Math.sqrt((s.x - star.centerX) ** 2 + (s.y - star.centerY) ** 2) < 8
       );
       
-      let forwardShift = params.starShiftAmount;
+      let horizontalShift = params.starShiftAmount;
       
       if (stellarData) {
         // Use stellar distance estimation for accurate positioning
         const distanceFactor = 1 - stellarData.estimatedDistance;
-        forwardShift *= (1 + distanceFactor * 2); // Closer stars move more forward
+        horizontalShift *= (0.8 + distanceFactor * 1.5); // Closer stars move more
         
-        // Adjust for stellar class (brighter intrinsic stars are actually farther)
+        // Adjust for stellar class
         switch (stellarData.stellarClass) {
           case 'O': 
-          case 'B': forwardShift *= 0.7; break; // Massive stars farther away
+          case 'B': horizontalShift *= 0.6; break; // Massive stars farther
           case 'M': 
-          case 'K': forwardShift *= 1.3; break; // Dwarf stars closer
+          case 'K': horizontalShift *= 1.2; break; // Dwarf stars closer
         }
       }
       
-      const brightness = star.brightness / 255;
-      const expandedBbox = {
-        x: Math.max(0, star.boundingBox.x - 2),
-        y: Math.max(0, star.boundingBox.y - 2),
-        width: Math.min(width, star.boundingBox.width + 4),
-        height: Math.min(height, star.boundingBox.height + 4)
-      };
+      // Create precise star mask and extract star pixels
+      const starMask = this.createStarMask(starsData, star, width, height);
+      const newX = Math.round(star.centerX + horizontalShift);
       
-      const originalShiftedX = Math.max(0, Math.min(width - expandedBbox.width, expandedBbox.x + initialLeftShift));
-      const finalX = Math.max(0, Math.min(width - expandedBbox.width, expandedBbox.x + initialLeftShift + forwardShift));
-      
-      if (finalX + expandedBbox.width < width) {
-        // Fill original position with nebula background
-        rightCtx.drawImage(
-          starlessImg,
-          originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height,
-          originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height
-        );
-        
-        // Add repositioned star
-        rightCtx.globalCompositeOperation = 'screen';
-        rightCtx.drawImage(
-          starsImg,
-          expandedBbox.x, expandedBbox.y, expandedBbox.width, expandedBbox.height,
-          finalX, expandedBbox.y, expandedBbox.width, expandedBbox.height
-        );
-        rightCtx.globalCompositeOperation = 'source-over';
-        
+      if (newX >= 0 && newX < width - star.boundingBox.width) {
+        this.placeStarWithMask(starCtx, starMask, star, newX, star.centerY);
         repositionedStars++;
         
         if (repositionedStars <= 3 && stellarData) {
-          console.log(`⭐ ${stellarData.stellarClass}-class star moved: distance=${stellarData.estimatedDistance.toFixed(2)}, shift=${forwardShift.toFixed(1)}px`);
+          console.log(`⭐ ${stellarData.stellarClass}-class star repositioned: distance=${stellarData.estimatedDistance.toFixed(2)}, shift=${horizontalShift.toFixed(1)}px`);
         }
       }
     }
+    
+    // Blend processed stars onto the right canvas
+    rightCtx.globalCompositeOperation = 'screen';
+    rightCtx.drawImage(starCanvas, 0, 0);
+    rightCtx.globalCompositeOperation = 'source-over';
     
     console.log(`🌟 Repositioned ${repositionedStars} stars using stellar distance estimates`);
     
@@ -1185,6 +1189,128 @@ export class TraditionalMorphProcessor {
     }
     
     return finalCanvas;
+  }
+
+  /**
+   * Deduplicate stars to prevent processing the same star multiple times
+   */
+  private deduplicateStars(stars: Array<any>): Array<any> {
+    const uniqueStars: Array<any> = [];
+    const minDistance = 15; // Minimum distance between star centers
+    
+    // Sort by brightness (brightest first)
+    const sortedStars = [...stars].sort((a, b) => b.brightness - a.brightness);
+    
+    for (const star of sortedStars) {
+      let isDuplicate = false;
+      
+      // Check if this star is too close to any already processed star
+      for (const existing of uniqueStars) {
+        const dx = star.centerX - existing.centerX;
+        const dy = star.centerY - existing.centerY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < minDistance) {
+          isDuplicate = true;
+          break;
+        }
+      }
+      
+      if (!isDuplicate) {
+        uniqueStars.push(star);
+      }
+    }
+    
+    return uniqueStars;
+  }
+
+  /**
+   * Create precise star mask for pixel-perfect extraction
+   */
+  private createStarMask(starsData: ImageData, star: any, width: number, height: number): {
+    pixels: Uint8ClampedArray;
+    mask: Uint8ClampedArray;
+    bounds: { x: number; y: number; width: number; height: number };
+  } {
+    const expandedBounds = {
+      x: Math.max(0, star.boundingBox.x - 3),
+      y: Math.max(0, star.boundingBox.y - 3),
+      width: Math.min(width - star.boundingBox.x + 3, star.boundingBox.width + 6),
+      height: Math.min(height - star.boundingBox.y + 3, star.boundingBox.height + 6)
+    };
+    
+    const pixelCount = expandedBounds.width * expandedBounds.height;
+    const pixels = new Uint8ClampedArray(pixelCount * 4);
+    const mask = new Uint8ClampedArray(pixelCount);
+    
+    // Extract star pixels and create mask
+    for (let y = 0; y < expandedBounds.height; y++) {
+      for (let x = 0; x < expandedBounds.width; x++) {
+        const srcX = expandedBounds.x + x;
+        const srcY = expandedBounds.y + y;
+        
+        if (srcX < width && srcY < height) {
+          const srcIdx = (srcY * width + srcX) * 4;
+          const destIdx = (y * expandedBounds.width + x) * 4;
+          const maskIdx = y * expandedBounds.width + x;
+          
+          const r = starsData.data[srcIdx];
+          const g = starsData.data[srcIdx + 1];
+          const b = starsData.data[srcIdx + 2];
+          const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+          
+          pixels[destIdx] = r;
+          pixels[destIdx + 1] = g;
+          pixels[destIdx + 2] = b;
+          pixels[destIdx + 3] = starsData.data[srcIdx + 3];
+          
+          // Create mask based on luminance threshold
+          mask[maskIdx] = luminance > 10 ? 255 : 0;
+        }
+      }
+    }
+    
+    return { pixels, mask, bounds: expandedBounds };
+  }
+
+  /**
+   * Place star with precise masking to avoid artifacts
+   */
+  private placeStarWithMask(
+    ctx: CanvasRenderingContext2D,
+    starMask: { pixels: Uint8ClampedArray; mask: Uint8ClampedArray; bounds: any },
+    star: any,
+    newX: number,
+    newY: number
+  ): void {
+    const { pixels, mask, bounds } = starMask;
+    
+    // Create temporary canvas for the star
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d')!;
+    tempCanvas.width = bounds.width;
+    tempCanvas.height = bounds.height;
+    
+    // Create ImageData for the star
+    const imageData = new ImageData(bounds.width, bounds.height);
+    
+    for (let i = 0; i < pixels.length; i += 4) {
+      const maskIdx = Math.floor(i / 4);
+      if (mask[maskIdx] > 0) {
+        imageData.data[i] = pixels[i];
+        imageData.data[i + 1] = pixels[i + 1];
+        imageData.data[i + 2] = pixels[i + 2];
+        imageData.data[i + 3] = pixels[i + 3];
+      } else {
+        // Transparent for non-star pixels
+        imageData.data[i + 3] = 0;
+      }
+    }
+    
+    tempCtx.putImageData(imageData, 0, 0);
+    
+    // Draw the masked star at new position
+    ctx.drawImage(tempCanvas, newX - Math.floor(bounds.width / 2), newY - Math.floor(bounds.height / 2));
   }
 
   /**
