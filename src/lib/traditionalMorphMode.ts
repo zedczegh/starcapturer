@@ -991,33 +991,20 @@ export class TraditionalMorphProcessor {
     rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
     rightCtx.globalCompositeOperation = 'source-over';
     
-    onProgress?.('Processing stars with clean repositioning...', 80);
+    onProgress?.('Creating artifact-free star repositioning...', 80);
     
-    // Step 3: Clean star repositioning without artifacts
+    // Step 3: Advanced star repositioning with complete artifact elimination
     let repositionedStars = 0;
     const uniqueStars = this.deduplicateStars(starPatterns);
     console.log(`🔄 Deduplicated: ${starPatterns.length} → ${uniqueStars.length} unique stars`);
     
     const brightStars = uniqueStars.filter(star => star.brightness / 255 > 0.3).slice(0, 20);
     
-    // First pass: Remove original star positions by filling with starless background
-    for (const star of brightStars) {
-      const expandedBounds = {
-        x: Math.max(0, star.boundingBox.x - 4),
-        y: Math.max(0, star.boundingBox.y - 4),
-        width: Math.min(width - star.boundingBox.x + 4, star.boundingBox.width + 8),
-        height: Math.min(height - star.boundingBox.y + 4, star.boundingBox.height + 8)
-      };
-      
-      // Remove star by filling with starless nebula background
-      rightCtx.drawImage(
-        starlessImg,
-        expandedBounds.x, expandedBounds.y, expandedBounds.width, expandedBounds.height,
-        expandedBounds.x, expandedBounds.y, expandedBounds.width, expandedBounds.height
-      );
-    }
+    // Create a completely clean starless base for the right image
+    rightCtx.clearRect(0, 0, width, height);
+    rightCtx.drawImage(starlessImg, 0, 0);
     
-    // Second pass: Add stars at new positions
+    // Extract and reposition each star with pixel-perfect precision
     for (const star of brightStars) {
       // Find corresponding stellar depth data
       const stellarData = stellarResult.stellarData.find(s => 
@@ -1043,20 +1030,25 @@ export class TraditionalMorphProcessor {
       const newX = Math.round(star.centerX + horizontalShift);
       
       // Only reposition if within bounds
-      if (newX >= 0 && newX + star.boundingBox.width < width) {
-        // Extract clean star from original stars image
-        rightCtx.globalCompositeOperation = 'screen';
-        rightCtx.drawImage(
-          starsImg,
-          star.boundingBox.x, star.boundingBox.y, star.boundingBox.width, star.boundingBox.height,
-          newX, star.centerY - Math.floor(star.boundingBox.height / 2), star.boundingBox.width, star.boundingBox.height
-        );
-        rightCtx.globalCompositeOperation = 'source-over';
+      if (newX >= 5 && newX + star.boundingBox.width < width - 5) {
+        // Extract star with precise thresholding to avoid background pixels
+        const starRegion = this.extractCleanStar(starsImg, star, width, height);
         
-        repositionedStars++;
-        
-        if (repositionedStars <= 3 && stellarData) {
-          console.log(`⭐ ${stellarData.stellarClass}-class star repositioned: distance=${stellarData.estimatedDistance.toFixed(2)}, shift=${horizontalShift.toFixed(1)}px`);
+        if (starRegion) {
+          // Place the clean star at new position
+          rightCtx.globalCompositeOperation = 'lighter'; // Better blending for stars
+          rightCtx.drawImage(
+            starRegion.canvas,
+            newX - Math.floor(starRegion.width / 2),
+            star.centerY - Math.floor(starRegion.height / 2)
+          );
+          rightCtx.globalCompositeOperation = 'source-over';
+          
+          repositionedStars++;
+          
+          if (repositionedStars <= 3 && stellarData) {
+            console.log(`⭐ ${stellarData.stellarClass}-class star repositioned: distance=${stellarData.estimatedDistance.toFixed(2)}, shift=${horizontalShift.toFixed(1)}px`);
+          }
         }
       }
     }
@@ -1313,6 +1305,77 @@ export class TraditionalMorphProcessor {
     
     // Draw the masked star at new position
     ctx.drawImage(tempCanvas, newX - Math.floor(bounds.width / 2), newY - Math.floor(bounds.height / 2));
+  }
+
+  /**
+   * Extract a clean star region with precise thresholding
+   */
+  private extractCleanStar(starsImg: HTMLImageElement, star: any, imgWidth: number, imgHeight: number): {
+    canvas: HTMLCanvasElement;
+    width: number;
+    height: number;
+  } | null {
+    // Create extraction bounds with padding
+    const padding = 6;
+    const bounds = {
+      x: Math.max(0, star.boundingBox.x - padding),
+      y: Math.max(0, star.boundingBox.y - padding),
+      width: Math.min(imgWidth - star.boundingBox.x + padding, star.boundingBox.width + padding * 2),
+      height: Math.min(imgHeight - star.boundingBox.y + padding, star.boundingBox.height + padding * 2)
+    };
+    
+    // Extract the region
+    const extractCanvas = document.createElement('canvas');
+    const extractCtx = extractCanvas.getContext('2d')!;
+    extractCanvas.width = bounds.width;
+    extractCanvas.height = bounds.height;
+    
+    extractCtx.drawImage(
+      starsImg,
+      bounds.x, bounds.y, bounds.width, bounds.height,
+      0, 0, bounds.width, bounds.height
+    );
+    
+    // Get pixel data for thresholding
+    const imageData = extractCtx.getImageData(0, 0, bounds.width, bounds.height);
+    const data = imageData.data;
+    
+    // Calculate adaptive threshold based on star brightness
+    const starBrightness = star.brightness / 255;
+    const threshold = Math.max(15, starBrightness * 40);
+    
+    // Apply threshold to create clean star mask
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+      
+      if (luminance < threshold) {
+        // Make background pixels transparent
+        data[i + 3] = 0;
+      } else {
+        // Keep star pixels with enhanced brightness
+        const enhanceFactor = Math.min(1.5, 1 + (luminance - threshold) / 100);
+        data[i] = Math.min(255, r * enhanceFactor);
+        data[i + 1] = Math.min(255, g * enhanceFactor);
+        data[i + 2] = Math.min(255, b * enhanceFactor);
+      }
+    }
+    
+    // Create clean star canvas
+    const cleanCanvas = document.createElement('canvas');
+    const cleanCtx = cleanCanvas.getContext('2d')!;
+    cleanCanvas.width = bounds.width;
+    cleanCanvas.height = bounds.height;
+    
+    cleanCtx.putImageData(imageData, 0, 0);
+    
+    return {
+      canvas: cleanCanvas,
+      width: bounds.width,
+      height: bounds.height
+    };
   }
 
   /**
