@@ -141,29 +141,20 @@ export class OptimizedDisplacementProcessor {
         // Apply displacement with bounds checking
         const srcX = x - totalDisplacement;
         
-        if (srcX >= 0 && srcX < width - 1) {
-          // Simple interpolation for performance
-          const x1 = Math.floor(srcX);
-          const x2 = Math.min(x1 + 1, width - 1);
-          const wx = srcX - x1;
-          
-          const idx1 = (globalY * width + x1) * 4;
-          const idx2 = (globalY * width + x2) * 4;
-          
-          for (let c = 0; c < 3; c++) {
-            const val1 = originalData.data[idx1 + c];
-            const val2 = originalData.data[idx2 + c];
-            chunkData.data[chunkIdx + c] = Math.round(val1 * (1 - wx) + val2 * wx);
-          }
-          chunkData.data[chunkIdx + 3] = 255;
-        } else {
-          // Edge handling
-          const clampedX = Math.max(0, Math.min(width - 1, srcX));
-          const srcIdx = (globalY * width + Math.round(clampedX)) * 4;
+        if (srcX >= 0 && srcX < width) {
+          // Direct pixel copy without interpolation for better performance and no artifacts
+          const clampedSrcX = Math.max(0, Math.min(width - 1, Math.round(srcX)));
+          const srcIdx = (globalY * width + clampedSrcX) * 4;
           
           chunkData.data[chunkIdx] = originalData.data[srcIdx];
           chunkData.data[chunkIdx + 1] = originalData.data[srcIdx + 1];
           chunkData.data[chunkIdx + 2] = originalData.data[srcIdx + 2];
+          chunkData.data[chunkIdx + 3] = 255;
+        } else {
+          // Black fill for out-of-bounds pixels
+          chunkData.data[chunkIdx] = 0;
+          chunkData.data[chunkIdx + 1] = 0;
+          chunkData.data[chunkIdx + 2] = 0;
           chunkData.data[chunkIdx + 3] = 255;
         }
       }

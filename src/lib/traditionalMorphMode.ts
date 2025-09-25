@@ -429,7 +429,7 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * ENHANCED: Advanced displacement with edge-aware processing
+   * FIXED: Simple and reliable displacement without black boxes or doubling
    */
   applyAdvancedDisplacement(
     source: HTMLImageElement | HTMLCanvasElement, 
@@ -439,68 +439,47 @@ export class TraditionalMorphProcessor {
     const width = source.width;
     const height = source.height;
     
+    // Use only the primary depth for reliable displacement
+    const depthData = depthMaps.primaryDepth.getContext('2d')!.getImageData(0, 0, width, height);
+    
     // Set up canvas
     this.canvas.width = width;
     this.canvas.height = height;
     this.ctx.drawImage(source, 0, 0);
-    
     const originalData = this.ctx.getImageData(0, 0, width, height);
     
-    // Get depth data from all maps
-    const primaryDepthData = depthMaps.primaryDepth.getContext('2d')!.getImageData(0, 0, width, height);
-    const structureDepthData = depthMaps.structureDepth.getContext('2d')!.getImageData(0, 0, width, height);
-    const edgeDepthData = depthMaps.edgeDepth.getContext('2d')!.getImageData(0, 0, width, height);
-    
     const displacedData = this.ctx.createImageData(width, height);
+    
+    // Initialize with black background
+    for (let i = 0; i < displacedData.data.length; i += 4) {
+      displacedData.data[i] = 0;     // R
+      displacedData.data[i + 1] = 0; // G
+      displacedData.data[i + 2] = 0; // B
+      displacedData.data[i + 3] = 255; // A
+    }
     
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = (y * width + x) * 4;
         
-        // Multi-layer displacement calculation
-        const primaryDepth = primaryDepthData.data[idx] / 255;
-        const structureDepth = structureDepthData.data[idx] / 255;
-        const edgeDepth = edgeDepthData.data[idx] / 255;
+        // Simple depth-based displacement
+        const depth = depthData.data[idx] / 255;
+        const displacement = Math.round((depth - 0.5) * horizontalAmount);
         
-        // Calculate adaptive displacement
-        const structureInfluence = Math.min(1, structureDepth * 2);
-        const edgeInfluence = Math.min(1, (1 - edgeDepth) * 1.5);
+        // Source position
+        const srcX = x - displacement;
         
-        // Combined displacement with structure and edge awareness
-        const baseDisplacement = (primaryDepth - 0.5) * horizontalAmount;
-        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.3 * structureInfluence;
-        const edgeAdjustment = (edgeDepth - 0.5) * horizontalAmount * 0.2 * edgeInfluence;
-        
-        const totalDisplacement = Math.round(baseDisplacement + structureAdjustment + edgeAdjustment);
-        
-        // Apply displacement with subpixel interpolation for smoother results
-        const srcX = x - totalDisplacement;
-        
-        if (srcX >= 0 && srcX < width - 1) {
-          // Bilinear interpolation for smoother displacement
-          const x1 = Math.floor(srcX);
-          const x2 = Math.ceil(srcX);
-          const wx = srcX - x1;
+        // Only process pixels within bounds
+        if (srcX >= 0 && srcX < width) {
+          const srcIdx = (y * width + srcX) * 4;
           
-          const idx1 = (y * width + x1) * 4;
-          const idx2 = (y * width + x2) * 4;
-          
-          for (let c = 0; c < 3; c++) {
-            const val1 = originalData.data[idx1 + c];
-            const val2 = originalData.data[idx2 + c];
-            displacedData.data[idx + c] = Math.round(val1 * (1 - wx) + val2 * wx);
-          }
-          displacedData.data[idx + 3] = 255;
-        } else {
-          // Fill with edge pixel for out-of-bounds
-          const clampedX = Math.max(0, Math.min(width - 1, srcX));
-          const srcIdx = (y * width + Math.round(clampedX)) * 4;
-          
+          // Direct pixel copy - no interpolation to avoid artifacts
           displacedData.data[idx] = originalData.data[srcIdx];
           displacedData.data[idx + 1] = originalData.data[srcIdx + 1];
           displacedData.data[idx + 2] = originalData.data[srcIdx + 2];
           displacedData.data[idx + 3] = 255;
         }
+        // Out-of-bounds pixels remain black (already initialized)
       }
     }
     
@@ -682,24 +661,27 @@ export class TraditionalMorphProcessor {
     rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
     
     onProgress?.('Positioning individual bright stars forward (FIXED doubling)...', 75);
-    // Step 3: FIXED star repositioning to prevent doubling
+    // Step 3: SIMPLE star repositioning without complex blending to prevent doubling
     
     let repositionedStars = 0;
-    const brightStars = starCenters.filter(star => star.brightness / 255 > 0.35);
+    const brightStars = starCenters.filter(star => star.brightness / 255 > 0.4).slice(0, 20); // Limit to brightest 20 stars
     
-    // Create a mask to prevent star doubling
-    const starMaskCanvas = document.createElement('canvas');
-    const starMaskCtx = starMaskCanvas.getContext('2d')!;
-    starMaskCanvas.width = width;
-    starMaskCanvas.height = height;
+    // Create a clean star layer for repositioning
+    const repositionedStarsCanvas = document.createElement('canvas');
+    const repositionedStarsCtx = repositionedStarsCanvas.getContext('2d')!;
+    repositionedStarsCanvas.width = width;
+    repositionedStarsCanvas.height = height;
     
-    // Process each star individually to prevent overlaps
+    // Track processed areas to prevent overlap
+    const processedAreas: Array<{x: number, y: number, w: number, h: number}> = [];
+    
+    // Process each star individually
     for (const star of brightStars) {
       const brightnessFactor = star.brightness / 255;
-      let forwardShift = params.starShiftAmount * (1 + brightnessFactor * 2.5);
+      let forwardShift = params.starShiftAmount * (1 + brightnessFactor);
       
-      // Adaptive radius based on brightness
-      const radius = Math.max(3, Math.min(8, Math.round(brightnessFactor * 8)));
+      // Fixed radius for consistency
+      const radius = 4;
       const x1 = Math.max(0, star.x - radius);
       const y1 = Math.max(0, star.y - radius);
       const w = Math.min(radius * 2, width - x1);
@@ -708,38 +690,34 @@ export class TraditionalMorphProcessor {
       if (w > 0 && h > 0 && forwardShift > 0) {
         const finalX = Math.max(0, Math.min(width - w, x1 + initialLeftShift + forwardShift));
         
-        // Check if this area was already processed (prevent doubling)
-        const maskData = starMaskCtx.getImageData(finalX, y1, w, h);
+        // Check for overlap with already processed areas
         let hasOverlap = false;
-        for (let i = 0; i < maskData.data.length; i += 4) {
-          if (maskData.data[i] > 0) {
+        for (const area of processedAreas) {
+          if (!(finalX >= area.x + area.w || finalX + w <= area.x || 
+                y1 >= area.y + area.h || y1 + h <= area.y)) {
             hasOverlap = true;
             break;
           }
         }
         
-        if (!hasOverlap) {
-          // FIRST: Clear the destination area to prevent doubling
-          rightCtx.globalCompositeOperation = 'destination-out';
-          rightCtx.fillStyle = 'rgba(255,255,255,1)';
-          rightCtx.fillRect(finalX, y1, w, h);
+        if (!hasOverlap && finalX + w < width) {
+          // Draw star to repositioned layer
+          repositionedStarsCtx.drawImage(starsImg, x1, y1, w, h, finalX, y1, w, h);
           
-          // THEN: Draw the repositioned star
-          rightCtx.globalCompositeOperation = 'source-over';
-          rightCtx.drawImage(starsImg, x1, y1, w, h, finalX, y1, w, h);
-          
-          // Mark this area as processed in the mask
-          starMaskCtx.fillStyle = 'white';
-          starMaskCtx.fillRect(finalX, y1, w, h);
-          
+          // Track this area
+          processedAreas.push({x: finalX, y: y1, w: w, h: h});
           repositionedStars++;
           
           if (repositionedStars <= 3) {
-            console.log(`Star repositioned (no doubling): brightness=${(brightnessFactor * 100).toFixed(1)}%, forward_shift=${forwardShift.toFixed(1)}, final_pos=${finalX}`);
+            console.log(`Star repositioned cleanly: brightness=${(brightnessFactor * 100).toFixed(1)}%, shift=${forwardShift.toFixed(1)}`);
           }
         }
       }
     }
+    
+    // Add repositioned stars with simple screen blending
+    rightCtx.globalCompositeOperation = 'screen';
+    rightCtx.drawImage(repositionedStarsCanvas, 0, 0);
     rightCtx.globalCompositeOperation = 'source-over';
     
     console.log(`Repositioned ${repositionedStars} bright stars forward from background position`);
