@@ -75,15 +75,15 @@ const StereoscopeProcessor: React.FC = () => {
   });
 
   // Add stereo spacing parameter
-  const [stereoSpacing, setStereoSpacing] = useState<number>(300);
+  const [stereoSpacing, setStereoSpacing] = useState<number>(600);
   
   // Add border size parameter (0-600px)
-  const [borderSize, setBorderSize] = useState<number>(600);
+  const [borderSize, setBorderSize] = useState<number>(300);
   
-  // Traditional mode parameters
+  // Traditional mode parameters - enhanced for better 3D effect
   const [traditionalParams, setTraditionalParams] = useState<TraditionalMorphParams>({
-    horizontalDisplace: 20,
-    starShiftAmount: 3,
+    horizontalDisplace: 25, // Increased for more nebula depth
+    starShiftAmount: 6, // Increased for more dramatic star 3D effect
     luminanceBlur: 1.5,
     contrastBoost: 1.2
   });

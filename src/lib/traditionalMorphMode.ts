@@ -272,8 +272,8 @@ export class TraditionalMorphProcessor {
     const height = this.canvas.height;
     
     const stars: Array<{ x: number; y: number; brightness: number }> = [];
-    const threshold = 50; // Lower threshold to detect more stars for better 3D layering
-    const minDistance = 3; // Reduced distance to allow more stars
+    const threshold = 30; // Much lower threshold to detect many more stars for rich 3D layering
+    const minDistance = 2; // Allow even closer stars for dense layering
     
     // Find local maxima that represent star centers
     for (let y = 2; y < height - 2; y++) {
@@ -401,12 +401,10 @@ export class TraditionalMorphProcessor {
     starCanvas.height = height;
     starCtx.drawImage(starsImg, 0, 0);
     
-    // Position stars using traditional Photoshop stereoscopic method:
-    // 1. ALL stars start shifted LEFT 2-3 pixels (behind nebula)
-    // 2. Bright stars get additional RIGHT shift to bring them forward
-    // Use proper blending instead of putImageData to avoid black boxes
+    // Position stars using enhanced 3D layering for dramatic stereoscopic effect
+    // Based on photographingspace.com but with much more aggressive shifts
     let processedStars = 0;
-    const baseLeftShift = -3; // All stars start 3 pixels left (behind nebula)
+    const baseLeftShift = -5; // Increased base shift - all stars start further behind nebula
     
     for (const star of starCenters) {
       const brightnessFactor = star.brightness / 255;
@@ -418,24 +416,31 @@ export class TraditionalMorphProcessor {
         let finalShift = baseLeftShift; // Start behind nebula
         
         // Create distinct depth layers - brighter stars come progressively forward
+        // MUCH MORE AGGRESSIVE shifts for dramatic 3D effect
         if (brightnessFactor > 0.9) {
           // Extremely bright stars - very close to viewer (large positive shift)
-          finalShift = baseLeftShift + (params.starShiftAmount * 3.0);
+          finalShift = baseLeftShift + (params.starShiftAmount * 5.0);
         } else if (brightnessFactor > 0.8) {
           // Very bright stars - close to viewer
-          finalShift = baseLeftShift + (params.starShiftAmount * 2.5);
+          finalShift = baseLeftShift + (params.starShiftAmount * 4.0);
         } else if (brightnessFactor > 0.7) {
           // Bright stars - moderately close
-          finalShift = baseLeftShift + (params.starShiftAmount * 2.0);
+          finalShift = baseLeftShift + (params.starShiftAmount * 3.5);
         } else if (brightnessFactor > 0.6) {
           // Medium bright stars - slightly forward
-          finalShift = baseLeftShift + (params.starShiftAmount * 1.5);
-        } else if (brightnessFactor > 0.4) {
+          finalShift = baseLeftShift + (params.starShiftAmount * 3.0);
+        } else if (brightnessFactor > 0.5) {
           // Dim bright stars - barely forward
-          finalShift = baseLeftShift + (params.starShiftAmount * 1.0);
-        } else if (brightnessFactor > 0.3) {
+          finalShift = baseLeftShift + (params.starShiftAmount * 2.5);
+        } else if (brightnessFactor > 0.4) {
           // Faint stars - just ahead of background
-          finalShift = baseLeftShift + (params.starShiftAmount * 0.5);
+          finalShift = baseLeftShift + (params.starShiftAmount * 2.0);
+        } else if (brightnessFactor > 0.3) {
+          // Very faint stars - slightly ahead
+          finalShift = baseLeftShift + (params.starShiftAmount * 1.5);
+        } else if (brightnessFactor > 0.2) {
+          // Background stars - minimally forward
+          finalShift = baseLeftShift + (params.starShiftAmount * 1.0);
         } else {
           // Very dim stars - stay behind nebula (just base left shift)
           finalShift = baseLeftShift;
