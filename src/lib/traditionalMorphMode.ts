@@ -991,34 +991,34 @@ export class TraditionalMorphProcessor {
     rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
     rightCtx.globalCompositeOperation = 'source-over';
     
-    onProgress?.('Processing stars with smart deduplication...', 80);
+    onProgress?.('Processing stars with clean repositioning...', 80);
     
-    // Step 3: SMART star processing with deduplication and proper masking
-    const processedStars = new Set<string>();
-    const starCanvas = document.createElement('canvas');
-    const starCtx = starCanvas.getContext('2d')!;
-    starCanvas.width = width;
-    starCanvas.height = height;
-    
-    // Get original stars data for pixel-perfect processing
-    starCtx.drawImage(starsImg, 0, 0);
-    const starsData = starCtx.getImageData(0, 0, width, height);
-    
-    // Clear the star canvas for processing
-    starCtx.clearRect(0, 0, width, height);
-    
-    // Process each unique star only once
+    // Step 3: Clean star repositioning without artifacts
+    let repositionedStars = 0;
     const uniqueStars = this.deduplicateStars(starPatterns);
     console.log(`🔄 Deduplicated: ${starPatterns.length} → ${uniqueStars.length} unique stars`);
     
-    let repositionedStars = 0;
     const brightStars = uniqueStars.filter(star => star.brightness / 255 > 0.3).slice(0, 20);
     
+    // First pass: Remove original star positions by filling with starless background
     for (const star of brightStars) {
-      const starKey = `${Math.round(star.centerX)},${Math.round(star.centerY)}`;
-      if (processedStars.has(starKey)) continue;
-      processedStars.add(starKey);
+      const expandedBounds = {
+        x: Math.max(0, star.boundingBox.x - 4),
+        y: Math.max(0, star.boundingBox.y - 4),
+        width: Math.min(width - star.boundingBox.x + 4, star.boundingBox.width + 8),
+        height: Math.min(height - star.boundingBox.y + 4, star.boundingBox.height + 8)
+      };
       
+      // Remove star by filling with starless nebula background
+      rightCtx.drawImage(
+        starlessImg,
+        expandedBounds.x, expandedBounds.y, expandedBounds.width, expandedBounds.height,
+        expandedBounds.x, expandedBounds.y, expandedBounds.width, expandedBounds.height
+      );
+    }
+    
+    // Second pass: Add stars at new positions
+    for (const star of brightStars) {
       // Find corresponding stellar depth data
       const stellarData = stellarResult.stellarData.find(s => 
         Math.sqrt((s.x - star.centerX) ** 2 + (s.y - star.centerY) ** 2) < 8
@@ -1040,12 +1040,19 @@ export class TraditionalMorphProcessor {
         }
       }
       
-      // Create precise star mask and extract star pixels
-      const starMask = this.createStarMask(starsData, star, width, height);
       const newX = Math.round(star.centerX + horizontalShift);
       
-      if (newX >= 0 && newX < width - star.boundingBox.width) {
-        this.placeStarWithMask(starCtx, starMask, star, newX, star.centerY);
+      // Only reposition if within bounds
+      if (newX >= 0 && newX + star.boundingBox.width < width) {
+        // Extract clean star from original stars image
+        rightCtx.globalCompositeOperation = 'screen';
+        rightCtx.drawImage(
+          starsImg,
+          star.boundingBox.x, star.boundingBox.y, star.boundingBox.width, star.boundingBox.height,
+          newX, star.centerY - Math.floor(star.boundingBox.height / 2), star.boundingBox.width, star.boundingBox.height
+        );
+        rightCtx.globalCompositeOperation = 'source-over';
+        
         repositionedStars++;
         
         if (repositionedStars <= 3 && stellarData) {
@@ -1053,11 +1060,6 @@ export class TraditionalMorphProcessor {
         }
       }
     }
-    
-    // Blend processed stars onto the right canvas
-    rightCtx.globalCompositeOperation = 'screen';
-    rightCtx.drawImage(starCanvas, 0, 0);
-    rightCtx.globalCompositeOperation = 'source-over';
     
     console.log(`🌟 Repositioned ${repositionedStars} stars using stellar distance estimates`);
     
