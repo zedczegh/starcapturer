@@ -259,7 +259,7 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * Detect individual stars for repositioning (enhanced star detection)
+   * Detect individual stars for repositioning (optimized for performance)
    */
   detectStarCenters(starsImg: HTMLImageElement): Array<{ x: number; y: number; brightness: number }> {
     this.canvas.width = starsImg.width;
@@ -272,23 +272,22 @@ export class TraditionalMorphProcessor {
     const height = this.canvas.height;
     
     const stars: Array<{ x: number; y: number; brightness: number }> = [];
-    const threshold = 30; // Much lower threshold to detect many more stars for rich 3D layering
-    const minDistance = 2; // Allow even closer stars for dense layering
+    const threshold = 80; // Higher threshold for performance - focus on prominent stars
+    const minDistance = 5; // Larger minimum distance to reduce star count
+    const stepSize = 2; // Skip pixels for faster processing
     
-    // Find local maxima that represent star centers
-    for (let y = 2; y < height - 2; y++) {
-      for (let x = 2; x < width - 2; x++) {
+    // Find local maxima that represent star centers with optimized scanning
+    for (let y = 3; y < height - 3; y += stepSize) {
+      for (let x = 3; x < width - 3; x += stepSize) {
         const idx = (y * width + x) * 4;
         const luminance = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
         
         if (luminance < threshold) continue;
         
-        // Check if it's a local maximum
+        // Quick local maximum check with smaller neighborhood for performance
         let isLocalMax = true;
-        let maxNeighborBrightness = 0;
-        
-        for (let dy = -2; dy <= 2 && isLocalMax; dy++) {
-          for (let dx = -2; dx <= 2; dx++) {
+        for (let dy = -1; dy <= 1 && isLocalMax; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
             if (dx === 0 && dy === 0) continue;
             
             const nIdx = ((y + dy) * width + (x + dx)) * 4;
@@ -297,28 +296,24 @@ export class TraditionalMorphProcessor {
             if (nLuminance > luminance) {
               isLocalMax = false;
             }
-            maxNeighborBrightness = Math.max(maxNeighborBrightness, nLuminance);
           }
         }
         
-        // Additional check: must be significantly brighter than neighbors
-        if (isLocalMax && luminance > maxNeighborBrightness * 1.2) {
-          // Check minimum distance from existing stars
+        if (isLocalMax) {
+          // Check minimum distance with early termination
           let tooClose = false;
-          for (const existingStar of stars) {
-            const distance = Math.sqrt(
-              Math.pow(x - existingStar.x, 2) + Math.pow(y - existingStar.y, 2)
-            );
-            if (distance < minDistance) {
+          for (let i = 0; i < stars.length && !tooClose; i++) {
+            const existingStar = stars[i];
+            const dx = x - existingStar.x;
+            const dy = y - existingStar.y;
+            const distanceSquared = dx * dx + dy * dy; // Avoid expensive sqrt
+            
+            if (distanceSquared < minDistance * minDistance) {
               tooClose = true;
               // Keep the brighter star
               if (luminance > existingStar.brightness) {
-                // Remove the dimmer star and add this one
-                const index = stars.indexOf(existingStar);
-                stars.splice(index, 1);
-                tooClose = false;
+                stars[i] = { x, y, brightness: luminance };
               }
-              break;
             }
           }
           
@@ -329,7 +324,8 @@ export class TraditionalMorphProcessor {
       }
     }
     
-    return stars.sort((a, b) => b.brightness - a.brightness); // Sort by brightness
+    // Limit to top 100 brightest stars for performance
+    return stars.sort((a, b) => b.brightness - a.brightness).slice(0, 100);
   }
 
   /**
@@ -400,69 +396,39 @@ export class TraditionalMorphProcessor {
     // This is the KEY difference - we're bringing specific stars FORWARD from their background position
     
     let repositionedStars = 0;
-    const brightStars = starCenters.filter(star => star.brightness / 255 > 0.6); // Only reposition bright stars
+    const brightStars = starCenters.filter(star => star.brightness / 255 > 0.4); // Lower threshold for more stars
     
-    for (const star of brightStars) {
-      const brightnessFactor = star.brightness / 255;
+    // Process stars in batches for better performance
+    const batchSize = 10;
+    for (let i = 0; i < brightStars.length; i += batchSize) {
+      const batch = brightStars.slice(i, i + batchSize);
       
-      // Calculate how much to bring this star FORWARD (positive right shift)
-      let forwardShift = 0;
-      
-      if (brightnessFactor > 0.95) {
-        // Extremely bright stars - bring very close to viewer
-        forwardShift = params.starShiftAmount * 4.0;
-      } else if (brightnessFactor > 0.9) {
-        // Very bright stars - bring close to viewer  
-        forwardShift = params.starShiftAmount * 3.5;
-      } else if (brightnessFactor > 0.8) {
-        // Bright stars - bring moderately forward
-        forwardShift = params.starShiftAmount * 3.0;
-      } else if (brightnessFactor > 0.7) {
-        // Medium bright stars - bring slightly forward
-        forwardShift = params.starShiftAmount * 2.0;
-      } else {
-        // Dimmer bright stars - minimal forward movement
-        forwardShift = params.starShiftAmount * 1.0;
-      }
-      
-      // Extract individual star and reposition it
-      const radius = Math.max(3, Math.min(8, Math.ceil(brightnessFactor * 6)));
-      const x1 = Math.max(0, star.x - radius);
-      const y1 = Math.max(0, star.y - radius);
-      const w = Math.min(radius * 2, width - x1);
-      const h = Math.min(radius * 2, height - y1);
-      
-      if (w > 0 && h > 0 && forwardShift > 0) {
-        // Create temporary canvas for this individual star
-        const starCanvas = document.createElement('canvas');
-        const starCtx = starCanvas.getContext('2d')!;
-        starCanvas.width = w;
-        starCanvas.height = h;
+      for (const star of batch) {
+        const brightnessFactor = star.brightness / 255;
         
-        // Extract the star region from original stars image
-        starCtx.drawImage(starsImg, x1, y1, w, h, 0, 0, w, h);
+        // Simplified shift calculation for performance
+        let forwardShift = params.starShiftAmount * (1 + brightnessFactor * 3);
         
-        // Filter to keep only bright pixels (the actual star)
-        const starData = starCtx.getImageData(0, 0, w, h);
-        for (let i = 0; i < starData.data.length; i += 4) {
-          const luminance = 0.299 * starData.data[i] + 0.587 * starData.data[i + 1] + 0.114 * starData.data[i + 2];
-          if (luminance < brightnessFactor * 200) { // Keep only the brightest parts
-            starData.data[i + 3] = 0; // Make dimmer parts transparent
+        // Simplified star extraction - just use a fixed radius
+        const radius = 4;
+        const x1 = Math.max(0, star.x - radius);
+        const y1 = Math.max(0, star.y - radius);
+        const w = Math.min(radius * 2, width - x1);
+        const h = Math.min(radius * 2, height - y1);
+        
+        if (w > 0 && h > 0 && forwardShift > 0) {
+          // Position this star forward from its initial left-shifted position
+          const finalX = Math.max(0, Math.min(width - w, x1 + initialLeftShift + forwardShift));
+          
+          // Draw the repositioned star region directly without complex filtering
+          rightCtx.drawImage(starsImg, x1, y1, w, h, finalX, y1, w, h);
+          
+          repositionedStars++;
+          
+          if (repositionedStars <= 5) {
+            const brightnessFactor = star.brightness / 255;
+            console.log(`Star repositioned: brightness=${(brightnessFactor * 100).toFixed(1)}%, initial_shift=${initialLeftShift}, forward_shift=${forwardShift}, final_pos=${finalX}`);
           }
-        }
-        starCtx.putImageData(starData, 0, 0);
-        
-        // Position this star forward from its initial left-shifted position
-        const finalX = Math.max(0, Math.min(width - w, x1 + initialLeftShift + forwardShift));
-        
-        // Draw the repositioned star with screen blending
-        rightCtx.globalCompositeOperation = 'screen';
-        rightCtx.drawImage(starCanvas, finalX, y1);
-        
-        repositionedStars++;
-        
-        if (repositionedStars <= 5) {
-          console.log(`Star repositioned: brightness=${(brightnessFactor * 100).toFixed(1)}%, initial_shift=${initialLeftShift}, forward_shift=${forwardShift}, final_pos=${finalX}`);
         }
       }
     }
