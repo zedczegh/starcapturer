@@ -991,71 +991,145 @@ export class TraditionalMorphProcessor {
     rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
     rightCtx.globalCompositeOperation = 'source-over';
     
-    onProgress?.('Moving star patterns with unified depth intelligence...', 80);
+    onProgress?.('Moving star patterns with PERFECT depth intelligence (NO DUPLICATES)...', 80);
     
-    // Step 3: SMART star repositioning using stellar depth data
+    // Step 3: BULLETPROOF star repositioning with comprehensive cleanup
     let repositionedStars = 0;
     const brightStars = starPatterns.filter(star => star.brightness / 255 > 0.35).slice(0, 15);
     
+    // Create comprehensive removal mask for ALL star positions
+    const starRemovalMask = document.createElement('canvas');
+    const starRemovalCtx = starRemovalMask.getContext('2d')!;
+    starRemovalMask.width = width;
+    starRemovalMask.height = height;
+    starRemovalCtx.fillStyle = 'white';
+    starRemovalCtx.fillRect(0, 0, width, height);
+    
+    // Create clean repositioned stars layer
+    const repositionedStarsLayer = document.createElement('canvas');
+    const repositionedStarsCtx = repositionedStarsLayer.getContext('2d')!;
+    repositionedStarsLayer.width = width;
+    repositionedStarsLayer.height = height;
+    
+    // Track all processed areas to prevent any overlaps
+    const processedAreas: Array<{x: number, y: number, w: number, h: number, originalX: number}> = [];
+    
+    console.log(`🎯 Processing ${brightStars.length} bright stars with stellar depth intelligence...`);
+    
     for (const star of brightStars) {
-      // Find corresponding stellar depth data
+      // Find corresponding stellar depth data with improved matching
       const stellarData = stellarResult.stellarData.find(s => 
-        Math.sqrt((s.x - star.centerX) ** 2 + (s.y - star.centerY) ** 2) < 5
+        Math.sqrt((s.x - star.centerX) ** 2 + (s.y - star.centerY) ** 2) < 8
       );
       
       let forwardShift = params.starShiftAmount;
+      let stellarClass = 'Unknown';
       
       if (stellarData) {
-        // Use stellar distance estimation for accurate positioning
+        stellarClass = stellarData.stellarClass;
+        // ENHANCED: More sophisticated distance-based positioning
         const distanceFactor = 1 - stellarData.estimatedDistance;
-        forwardShift *= (1 + distanceFactor * 2); // Closer stars move more forward
+        const brightnessFactor = stellarData.brightness / 255;
         
-        // Adjust for stellar class (brighter intrinsic stars are actually farther)
+        // Base shift calculation with stellar physics
+        forwardShift *= (0.8 + distanceFactor * 1.5); // Closer stars move more forward
+        
+        // Spectral class corrections based on astrophysics
         switch (stellarData.stellarClass) {
-          case 'O': 
-          case 'B': forwardShift *= 0.7; break; // Massive stars farther away
-          case 'M': 
-          case 'K': forwardShift *= 1.3; break; // Dwarf stars closer
+          case 'O': forwardShift *= 0.6; break; // Blue supergiants - very distant despite brightness
+          case 'B': forwardShift *= 0.7; break; // Blue giants - distant  
+          case 'A': forwardShift *= 0.9; break; // White stars - moderate distance
+          case 'F': forwardShift *= 1.0; break; // Yellow-white - baseline
+          case 'G': forwardShift *= 1.1; break; // Sun-like - slightly closer
+          case 'K': forwardShift *= 1.3; break; // Orange dwarfs - closer
+          case 'M': forwardShift *= 1.5; break; // Red dwarfs - very close
         }
+        
+        // Color temperature fine-tuning
+        const colorTemp = this.estimateColorTemperature(stellarData.color);
+        if (colorTemp > 10000) forwardShift *= 0.8; // Very hot = distant
+        if (colorTemp < 4000) forwardShift *= 1.2;  // Cool = nearby
+      } else {
+        // Fallback: brightness-based estimation
+        const brightnessFactor = star.brightness / 255;
+        forwardShift *= (1 + brightnessFactor);
       }
       
-      const brightness = star.brightness / 255;
+      // Enhanced bounding box with pattern-aware sizing
+      const patternPadding = star.pattern === 'newtonian' ? 4 : (star.pattern === 'jwst' ? 6 : 3);
       const expandedBbox = {
-        x: Math.max(0, star.boundingBox.x - 2),
-        y: Math.max(0, star.boundingBox.y - 2),
-        width: Math.min(width, star.boundingBox.width + 4),
-        height: Math.min(height, star.boundingBox.height + 4)
+        x: Math.max(0, star.boundingBox.x - patternPadding),
+        y: Math.max(0, star.boundingBox.y - patternPadding),
+        width: Math.min(width, star.boundingBox.width + patternPadding * 2),
+        height: Math.min(height, star.boundingBox.height + patternPadding * 2)
       };
       
       const originalShiftedX = Math.max(0, Math.min(width - expandedBbox.width, expandedBbox.x + initialLeftShift));
       const finalX = Math.max(0, Math.min(width - expandedBbox.width, expandedBbox.x + initialLeftShift + forwardShift));
       
-      if (finalX + expandedBbox.width < width) {
-        // Fill original position with nebula background
-        rightCtx.drawImage(
-          starlessImg,
-          originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height,
-          originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height
-        );
+      // ENHANCED: Comprehensive overlap prevention
+      let hasOverlap = false;
+      for (const area of processedAreas) {
+        // Check both original and final positions for overlaps
+        if (!(finalX >= area.x + area.w || finalX + expandedBbox.width <= area.x || 
+              expandedBbox.y >= area.y + area.h || expandedBbox.y + expandedBbox.height <= area.y)) {
+          hasOverlap = true;
+          break;
+        }
+        if (!(originalShiftedX >= area.originalX + area.w || originalShiftedX + expandedBbox.width <= area.originalX || 
+              expandedBbox.y >= area.y + area.h || expandedBbox.y + expandedBbox.height <= area.y)) {
+          hasOverlap = true;
+          break;
+        }
+      }
+      
+      if (!hasOverlap && finalX + expandedBbox.width < width && forwardShift > 1) {
+        // STEP 1: Mark original position for COMPLETE removal (black = remove everything)
+        starRemovalCtx.fillStyle = 'black';
+        starRemovalCtx.fillRect(originalShiftedX, expandedBbox.y, expandedBbox.width, expandedBbox.height);
         
-        // Add repositioned star
-        rightCtx.globalCompositeOperation = 'screen';
-        rightCtx.drawImage(
+        // STEP 2: Add star to clean repositioned layer
+        repositionedStarsCtx.drawImage(
           starsImg,
           expandedBbox.x, expandedBbox.y, expandedBbox.width, expandedBbox.height,
           finalX, expandedBbox.y, expandedBbox.width, expandedBbox.height
         );
-        rightCtx.globalCompositeOperation = 'source-over';
+        
+        // Track processed areas
+        processedAreas.push({
+          x: finalX, 
+          y: expandedBbox.y, 
+          w: expandedBbox.width, 
+          h: expandedBbox.height,
+          originalX: originalShiftedX
+        });
         
         repositionedStars++;
         
-        if (repositionedStars <= 3 && stellarData) {
-          console.log(`⭐ ${stellarData.stellarClass}-class star moved: distance=${stellarData.estimatedDistance.toFixed(2)}, shift=${forwardShift.toFixed(1)}px`);
+        if (repositionedStars <= 5) {
+          const distStr = stellarData ? stellarData.estimatedDistance.toFixed(2) : 'est';
+          console.log(`⭐ ${stellarClass}-class star moved: d=${distStr}, shift=${forwardShift.toFixed(1)}px, bbox=${expandedBbox.width}x${expandedBbox.height}`);
         }
       }
     }
     
-    console.log(`🌟 Repositioned ${repositionedStars} stars using stellar distance estimates`);
+    // STEP 3: Apply COMPLETE star removal using multiply blend (removes everything)
+    rightCtx.globalCompositeOperation = 'multiply';
+    rightCtx.drawImage(starRemovalMask, 0, 0);
+    
+    // STEP 4: Add repositioned stars cleanly with screen blend
+    rightCtx.globalCompositeOperation = 'screen';  
+    rightCtx.drawImage(repositionedStarsLayer, 0, 0);
+    rightCtx.globalCompositeOperation = 'source-over';
+    
+    console.log(`🌟 Successfully repositioned ${repositionedStars} stars using stellar depth analysis (${processedAreas.length} areas processed)`);
+    
+    // Log stellar classification distribution
+    const classCount = stellarResult.stellarData.reduce((acc, s) => {
+      acc[s.stellarClass] = (acc[s.stellarClass] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log('🔬 Stellar classification:', classCount);
     
     onProgress?.('Applying unified depth displacement...', 85);
     
@@ -1185,6 +1259,27 @@ export class TraditionalMorphProcessor {
     }
     
     return finalCanvas;
+  }
+
+  /**
+  /**
+   * Enhanced stellar photometry with smarter color temperature estimation
+   */
+  private estimateColorTemperature(color: { r: number; g: number; b: number }): number {
+    const { r, g, b } = color;
+    
+    // Avoid division by zero
+    if (r + g + b < 10) return 5000; // Default sun-like temperature
+    
+    // B-V color index approximation (simplified)
+    const bv = (b - g) / Math.max(1, (b + g + r) / 3);
+    
+    // Convert B-V to temperature (very simplified relationship)
+    // Real astronomy uses more complex calibrations
+    let temp = 4600 * (1/(0.92 * bv + 1.7) + 1/(0.92 * bv + 0.62));
+    
+    // Clamp to reasonable stellar temperature range
+    return Math.max(2000, Math.min(50000, temp));
   }
 
   /**
