@@ -343,7 +343,7 @@ const StereoscopeProcessor: React.FC = () => {
       depthCanvas.width = width;
       depthCanvas.height = height;
       depthCtx.putImageData(depthMap, 0, 0);
-      setDepthMapUrl(depthCanvas.toDataURL());
+      setDepthMapUrl(depthCanvas.toDataURL('image/png'));
 
       setProgressText(t('Generating stereo views...', '生成立体视图...'));
       setProgress(70);
@@ -402,7 +402,7 @@ const StereoscopeProcessor: React.FC = () => {
         resultCtx.putImageData(right, width + stereoSpacing, 0);
       }
 
-      setResultUrl(resultCanvas.toDataURL());
+      setResultUrl(resultCanvas.toDataURL('image/png'));
       setProgress(100);
       setProgressText(t('Processing complete!', '处理完成！'));
     } catch (error) {
@@ -446,7 +446,7 @@ const StereoscopeProcessor: React.FC = () => {
       );
 
       console.log('Setting depth map URL...');
-      setDepthMapUrl(depthMap.toDataURL());
+      setDepthMapUrl(depthMap.toDataURL('image/png'));
       
       console.log('Creating final stereo pair...');
       
@@ -482,7 +482,7 @@ const StereoscopeProcessor: React.FC = () => {
       }
       
       console.log('Setting result URL...');
-      setResultUrl(finalCanvas.toDataURL());
+      setResultUrl(finalCanvas.toDataURL('image/png'));
       
       processor.dispose();
       

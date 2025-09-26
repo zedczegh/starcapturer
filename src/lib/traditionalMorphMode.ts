@@ -186,30 +186,32 @@ export class TraditionalMorphProcessor {
   private getOptimalProcessingSize(metadata: any, profile: any): number {
     const baseSize = 2048;
     
-    // Get memory-aware recommendations
+    // Less aggressive memory constraints to preserve quality
     const memoryParams = MemoryManager.getOptimalProcessingParams(baseSize, baseSize);
-    let memorySizeLimit = Math.sqrt(memoryParams.chunkSize);
+    let memorySizeLimit = Math.sqrt(memoryParams.chunkSize * 1.5); // Increase memory allowance
     
-    // Adjust based on complexity
+    // Be more conservative with complexity-based reduction
     let multiplier = 1;
     switch (metadata.complexity) {
-      case 'Simple': multiplier = 1.5; break;
-      case 'Moderate': multiplier = 1.0; break;
-      case 'Complex': multiplier = 0.8; break;
-      case 'Extreme': multiplier = 0.6; break;
+      case 'Simple': multiplier = 1.2; break;    // Allow higher quality for simple images
+      case 'Moderate': multiplier = 1.0; break; // Keep full resolution
+      case 'Complex': multiplier = 0.9; break;  // Minor reduction only
+      case 'Extreme': multiplier = 0.8; break;  // Less aggressive reduction
     }
     
-    // Adjust based on star count
-    if (metadata.starCount > 300) multiplier *= 0.8;
-    if (metadata.starCount > 500) multiplier *= 0.7;
+    // Be less aggressive with star count reduction - preserve nebula detail
+    if (metadata.starCount > 500) multiplier *= 0.95; // Very minor reduction
+    if (metadata.starCount > 1000) multiplier *= 0.9; // Still preserve most quality
     
-    // Consider memory constraints
     const idealSize = Math.round(baseSize * multiplier);
     const memoryConstrainedSize = Math.min(idealSize, memorySizeLimit);
     
-    console.log(`🧠 Memory-aware sizing: ideal=${idealSize}, memory-limited=${memorySizeLimit}, chosen=${memoryConstrainedSize}`);
+    // Ensure minimum quality preservation - never go below 75% of base size
+    const qualityPreservedSize = Math.max(memoryConstrainedSize, Math.round(baseSize * 0.75));
     
-    return memoryConstrainedSize;
+    console.log(`🧠 Quality-preserving sizing: base=${baseSize}, ideal=${idealSize}, memory-limited=${memorySizeLimit}, final=${qualityPreservedSize}`);
+    
+    return qualityPreservedSize;
   }
 
   /**
@@ -218,6 +220,10 @@ export class TraditionalMorphProcessor {
   private async resizeImage(img: HTMLImageElement, targetWidth: number, targetHeight: number): Promise<HTMLCanvasElement> {
     const canvas = this.canvasPool.acquire(targetWidth, targetHeight);
     const ctx = canvas.getContext('2d')!;
+    
+    // Enable high-quality rendering for better detail preservation
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     
     // Draw image centered and scaled to fit while maintaining aspect ratio
     const scale = Math.min(targetWidth / img.width, targetHeight / img.height);
@@ -230,7 +236,7 @@ export class TraditionalMorphProcessor {
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, targetWidth, targetHeight);
     
-    // Draw resized image
+    // Draw resized image with high quality settings
     ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
     
     return canvas;
