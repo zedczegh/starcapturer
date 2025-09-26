@@ -11,6 +11,7 @@ import { Upload, Eye, Download, Loader2, Layers } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateScientificAstroDepthMap } from '@/lib/scientificAstroDepth';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
+import { NobelPrizeStereoscopeEngine } from '@/lib/advanced/NobelPrizeStereoscopeEngine';
 // @ts-ignore
 import * as UTIF from 'utif';
 
