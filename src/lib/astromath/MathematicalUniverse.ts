@@ -556,4 +556,165 @@ export class MathematicalUniverse {
     if (equations.length === 0) return 0;
     return equations.reduce((sum, eq) => sum + eq.accuracy, 0) / equations.length;
   }
+
+  /**
+   * Generate interpretive prompts from mathematical equations
+   * Translates abstract math into relatable phenomena and everyday concepts
+   */
+  async generatePromptsFromEquations(equations: MathEquation[]): Promise<string[]> {
+    const prompts: string[] = [];
+
+    for (const eq of equations) {
+      let prompt = '';
+
+      switch (eq.type) {
+        case 'fourier':
+          const freqRange = this.interpretFrequencyRange(eq.parameters);
+          prompt = `A ${freqRange} pattern resembling ${this.getWaveAnalogy(eq.parameters)}, like ${this.getEarthlyExample('wave', eq.parameters)}. The oscillation frequency suggests ${this.getPhysicalInterpretation('periodic', eq.parameters)}.`;
+          break;
+
+        case 'parametric':
+          const curvature = eq.parameters.curvature || eq.parameters.eccentricity || 0;
+          const shape = this.interpretCurvature(curvature);
+          prompt = `A ${shape} trajectory similar to ${this.getEarthlyExample('curve', eq.parameters)}, exhibiting ${this.getMotionDescription(eq.parameters)}. This pattern mirrors ${this.getCelestialAnalogy('orbit', eq.parameters)}.`;
+          break;
+
+        case 'fractal':
+          const dimension = eq.parameters.dimension || 2;
+          const complexity = this.interpretComplexity(dimension);
+          prompt = `A ${complexity} fractal structure reminiscent of ${this.getEarthlyExample('fractal', eq.parameters)}, displaying self-similarity across scales like ${this.getNatureAnalogy('fractal')}. Complexity level: ${this.getComplexityDescription(dimension)}.`;
+          break;
+
+        case 'wavelet':
+          const scale = eq.parameters.scale || eq.parameters.dominantScale || 1;
+          prompt = `Multi-scale ripple patterns similar to ${this.getEarthlyExample('ripple', eq.parameters)}, with ${this.getTextureDescription(scale)}. These wavelets resemble ${this.getNatureAnalogy('ripple')} in their distribution.`;
+          break;
+
+        case 'celestial':
+          const velocity = eq.parameters.velocity || 0;
+          const motion = this.interpretVelocity(velocity);
+          prompt = `${motion} motion comparable to ${this.getCelestialAnalogy('motion', eq.parameters)}, following paths like ${this.getEarthlyExample('motion', eq.parameters)}. The dynamics suggest ${this.getPhysicalInterpretation('gravitational', eq.parameters)}.`;
+          break;
+
+        case 'statistical':
+          const distribution = eq.parameters.distribution || 'normal';
+          prompt = `A ${distribution} distribution pattern similar to ${this.getEarthlyExample('distribution', eq.parameters)}, exhibiting ${this.getStatisticalDescription(eq.parameters)}. This clustering resembles ${this.getNatureAnalogy('cluster')}.`;
+          break;
+
+        default:
+          prompt = `Mathematical pattern showing ${eq.description}, with characteristics suggesting ${this.getGeneralAnalogy(eq.parameters)}.`;
+      }
+
+      prompts.push(prompt);
+    }
+
+    return prompts;
+  }
+
+  private interpretFrequencyRange(params: any): string {
+    const freq = params.dominantFrequencies?.[0] || params.fundamentalFreq || 0;
+    if (freq < 0.1) return 'ultra-slow wave';
+    if (freq < 1) return 'slow oscillating';
+    if (freq < 10) return 'moderate frequency';
+    return 'high-frequency vibrating';
+  }
+
+  private getWaveAnalogy(params: any): string {
+    const analogies = [
+      'ocean tides under moonlight',
+      'sound waves in a concert hall',
+      'electromagnetic pulses through space',
+      'seismic waves from distant quakes',
+      'heartbeat rhythms in living systems'
+    ];
+    return analogies[Math.floor(Math.random() * analogies.length)];
+  }
+
+  private interpretCurvature(curvature: number): string {
+    if (Math.abs(curvature) < 0.1) return 'nearly linear';
+    if (Math.abs(curvature) < 0.5) return 'gently curved';
+    if (Math.abs(curvature) < 1) return 'highly curved';
+    return 'extremely curved';
+  }
+
+  private interpretComplexity(dimension: number): string {
+    if (dimension < 1.5) return 'simple';
+    if (dimension < 2) return 'moderately complex';
+    if (dimension < 2.5) return 'highly intricate';
+    return 'extremely complex';
+  }
+
+  private interpretVelocity(velocity: number): string {
+    if (velocity < 1) return 'Slow drift';
+    if (velocity < 10) return 'Steady streaming';
+    if (velocity < 100) return 'Rapid flow';
+    return 'Supersonic';
+  }
+
+  private getEarthlyExample(type: string, params: any): string {
+    const examples: Record<string, string[]> = {
+      wave: ['ripples on a pond', 'sand dunes in a desert', 'aurora borealis curtains', 'piano string vibrations'],
+      curve: ['a meandering river', 'a roller coaster track', 'a vine growing around a tree', 'smoke rising from incense'],
+      fractal: ['tree branches', 'coastline patterns', 'snowflake crystals', 'broccoli florets', 'lightning bolts'],
+      ripple: ['raindrops on water', 'sound from a bell', 'spreading gossip in a crowd', 'wifi signal propagation'],
+      motion: ['a thrown baseball', 'a satellite orbit', 'a pendulum swing', 'a spinning top'],
+      distribution: ['stars in the night sky', 'grains of sand on a beach', 'people in a city', 'molecules in a gas']
+    };
+    
+    const list = examples[type] || ['natural phenomena'];
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  private getCelestialAnalogy(type: string, params: any): string {
+    const analogies: Record<string, string[]> = {
+      orbit: ['planetary motion around the sun', 'binary star systems', 'moons circling gas giants', 'comets in elliptical paths'],
+      motion: ['stellar drift through the galaxy', 'pulsar rotation', 'galaxy rotation curves', 'interstellar cloud movement']
+    };
+    
+    const list = analogies[type] || ['cosmic phenomena'];
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  private getNatureAnalogy(type: string): string {
+    const analogies: Record<string, string[]> = {
+      fractal: ['fern leaves', 'river deltas', 'blood vessel networks', 'neural pathways'],
+      ripple: ['earthquake aftershocks', 'domino effects', 'chemical chain reactions'],
+      cluster: ['bee swarms', 'bird flocking patterns', 'fish schooling', 'ant colonies']
+    };
+    
+    const list = analogies[type] || ['natural systems'];
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  private getPhysicalInterpretation(type: string, params: any): string {
+    const interpretations: Record<string, string[]> = {
+      periodic: ['resonance phenomena', 'harmonic oscillation', 'cyclic energy transfer', 'wave interference patterns'],
+      gravitational: ['inverse square law behavior', 'orbital mechanics', 'tidal forces', 'gravitational lensing effects']
+    };
+    
+    const list = interpretations[type] || ['physical principles'];
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  private getMotionDescription(params: any): string {
+    return 'smooth continuous transformation with elegant mathematical flow';
+  }
+
+  private getTextureDescription(scale: number): string {
+    if (scale < 1) return 'fine-grained texture like silk fabric';
+    if (scale < 5) return 'medium texture like tree bark';
+    return 'coarse texture like mountain terrain';
+  }
+
+  private getComplexityDescription(dimension: number): string {
+    return `fractal dimension ${dimension.toFixed(2)}, indicating ${dimension < 2 ? 'sparse' : 'dense'} structural complexity`;
+  }
+
+  private getStatisticalDescription(params: any): string {
+    return 'clustering with statistical coherence and variance typical of natural systems';
+  }
+
+  private getGeneralAnalogy(params: any): string {
+    return 'emergent patterns found in complex adaptive systems throughout nature and the cosmos';
+  }
 }

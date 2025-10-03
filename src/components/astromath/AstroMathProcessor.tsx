@@ -14,16 +14,12 @@ const AstroMathProcessor: React.FC = () => {
   const [imageUrl, setImageUrl] = useState<string>('');
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [generatingPrompts, setGeneratingPrompts] = useState(false);
+  const [prompts, setPrompts] = useState<string[]>([]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate file size (max 50MB)
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error(t('File too large. Maximum size is 50MB.', '文件过大。最大为50MB。'));
-      return;
-    }
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -67,6 +63,26 @@ const AstroMathProcessor: React.FC = () => {
     }
   };
 
+  const generatePrompts = async () => {
+    if (!result) return;
+
+    setGeneratingPrompts(true);
+    toast.info(t('Generating interpretive prompts...', '生成解释性提示...'));
+
+    try {
+      const engine = new MathematicalUniverse();
+      const generatedPrompts = await engine.generatePromptsFromEquations(result.equations);
+      
+      setPrompts(generatedPrompts);
+      toast.success(t('Prompts generated successfully!', '提示生成成功！'));
+    } catch (error) {
+      console.error('Prompt generation error:', error);
+      toast.error(t('Prompt generation failed. Please try again.', '提示生成失败。请重试。'));
+    } finally {
+      setGeneratingPrompts(false);
+    }
+  };
+
   const exportResults = () => {
     if (!result) return;
 
@@ -76,6 +92,7 @@ const AstroMathProcessor: React.FC = () => {
       equations: result.equations,
       structures: result.structures,
       insights: result.insights,
+      prompts: prompts.length > 0 ? prompts : undefined,
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -186,17 +203,34 @@ const AstroMathProcessor: React.FC = () => {
                     {t('Accuracy:', '准确度：')} {(result.accuracy * 100).toFixed(1)}%
                   </p>
                 </div>
-                <Button onClick={exportResults} variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  {t('Export', '导出')}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={generatePrompts} 
+                    disabled={generatingPrompts}
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                  >
+                    {generatingPrompts ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {t('Generating...', '生成中...')}
+                      </>
+                    ) : (
+                      t('Generate Prompts', '生成提示')
+                    )}
+                  </Button>
+                  <Button onClick={exportResults} variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    {t('Export', '导出')}
+                  </Button>
+                </div>
               </div>
 
               <Tabs defaultValue="equations" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="equations">{t('Equations', '方程')}</TabsTrigger>
                   <TabsTrigger value="structures">{t('Structures', '结构')}</TabsTrigger>
                   <TabsTrigger value="insights">{t('Insights', '洞察')}</TabsTrigger>
+                  <TabsTrigger value="prompts">{t('Prompts', '提示')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="equations">
@@ -280,6 +314,34 @@ const AstroMathProcessor: React.FC = () => {
                         </div>
                       ))}
                     </div>
+                  </ScrollArea>
+                </TabsContent>
+
+                <TabsContent value="prompts">
+                  <ScrollArea className="h-[600px] w-full rounded-lg border border-cosmic-700 p-4">
+                    {prompts.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
+                        <p className="text-cosmic-300 text-lg">
+                          {t('Click "Generate Prompts" to create interpretive descriptions', '点击"生成提示"创建解释性描述')}
+                        </p>
+                        <p className="text-cosmic-400 text-sm max-w-md">
+                          {t('Transform mathematical equations into relatable phenomena and everyday concepts', '将数学方程转化为可关联的现象和日常概念')}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {prompts.map((prompt, idx) => (
+                          <Card key={idx} className="p-4 bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-500/20">
+                            <div className="space-y-2">
+                              <div className="flex items-start gap-3">
+                                <span className="text-pink-400 font-bold text-lg">#{idx + 1}</span>
+                                <p className="text-white flex-1 leading-relaxed">{prompt}</p>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
                   </ScrollArea>
                 </TabsContent>
               </Tabs>
