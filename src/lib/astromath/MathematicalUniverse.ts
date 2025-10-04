@@ -179,22 +179,23 @@ export class MathematicalUniverse {
 
     const { width, height, data } = this.imageData;
 
-    // Detect bright regions (stars, galaxies, nebulae)
+    // Detect bright regions (stars, galaxies, nebulae) - limit to prevent stack overflow
     const brightPoints: { x: number; y: number; intensity: number }[] = [];
     
-    for (let y = 0; y < height; y += 2) {
-      for (let x = 0; x < width; x += 2) {
+    for (let y = 0; y < height; y += 5) {
+      for (let x = 0; x < width; x += 5) {
         const idx = (y * width + x) * 4;
         const intensity = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
         
-        if (intensity > 150) {
+        if (intensity > 150 && brightPoints.length < 500) {
           brightPoints.push({ x, y, intensity });
         }
       }
     }
 
     // Fit parametric curves to bright regions using celestial mechanics
-    const clusters = this.clusterPoints(brightPoints, 10);
+    const maxClusters = Math.min(5, Math.floor(brightPoints.length / 10));
+    const clusters = this.clusterPoints(brightPoints, maxClusters);
 
     clusters.forEach((cluster, idx) => {
       if (cluster.length < 3) return;
@@ -376,51 +377,41 @@ export class MathematicalUniverse {
 
     if (!this.imageData) return { equations, structures };
 
-    // Apply physics-based models (gravitational lensing, orbital mechanics)
-    const { width, height } = this.imageData;
-
-    // Model gravitational potential
-    const G = 1.0; // Normalized gravitational constant
     const massPoints = this.detectMassiveObjects();
 
     if (massPoints.length > 0) {
-      // Generate gravitational potential equation
-      const potentialTerms = massPoints.map((m, i) => 
-        `(-${m.mass.toFixed(2)}/√((x-${m.x.toFixed(1)})²+(y-${m.y.toFixed(1)})²))`
-      );
+      // Calculate aggregate properties
+      const totalMass = massPoints.reduce((sum, m) => sum + m.mass, 0);
+      const avgRadius = massPoints.reduce((sum, m) => sum + m.radius, 0) / massPoints.length;
+      const centerX = massPoints.reduce((sum, m) => sum + m.x * m.mass, 0) / totalMass;
+      const centerY = massPoints.reduce((sum, m) => sum + m.y * m.mass, 0) / totalMass;
 
+      // Single summarized celestial equation
       equations.push({
         type: 'celestial',
-        equation: `Φ(x,y) = G·[${potentialTerms.join(' + ')}]`,
+        equation: `Gravitational system with ${massPoints.length} objects\nΦ(x,y) = -GM/r [Simplified potential]\nT² ∝ a³ [Kepler's third law]`,
         parameters: {
-          G,
-          numMasses: massPoints.length,
+          numObjects: massPoints.length,
+          totalMass: totalMass,
+          centerX,
+          centerY,
+          avgRadius,
         },
-        complexity: massPoints.length,
-        accuracy: 0.91,
-        description: 'Gravitational potential field from massive cosmic objects',
-      });
-
-      // Keplerian orbital equations for each massive object
-      massPoints.forEach((m, idx) => {
-        equations.push({
-          type: 'celestial',
-          equation: `r(θ) = a(1-e²)/(1+e·cos(θ)) [Kepler's orbit]\nT² = (4π²/GM)·a³ [Period law]`,
-          parameters: {
-            semiMajorAxis: m.radius,
-            mass: m.mass,
-          },
-          complexity: 2,
-          accuracy: 0.87,
-          description: `Keplerian mechanics for object ${idx + 1}`,
-        });
+        complexity: 3,
+        accuracy: 0.89,
+        description: `Gravitational system: ${massPoints.length} massive objects`,
       });
 
       structures.push({
         name: 'Gravitational System',
         equations,
-        coordinates: massPoints.map(m => ({ x: m.x, y: m.y })),
-        characteristics: massPoints.map(m => `Mass: ${m.mass.toFixed(2)}, Radius: ${m.radius.toFixed(1)}`),
+        coordinates: massPoints.slice(0, 10).map(m => ({ x: m.x, y: m.y })),
+        characteristics: [
+          `Total objects: ${massPoints.length}`,
+          `Total mass: ${totalMass.toFixed(2)}`,
+          `Center: (${centerX.toFixed(0)}, ${centerY.toFixed(0)})`,
+          `Avg radius: ${avgRadius.toFixed(1)}`
+        ],
       });
     }
 
@@ -558,163 +549,83 @@ export class MathematicalUniverse {
   }
 
   /**
-   * Generate interpretive prompts from mathematical equations
-   * Translates abstract math into relatable phenomena and everyday concepts
+   * Generate ONE comprehensive, poetic prompt from all mathematical equations
+   * Synthesizes the entire cosmic imagery into a single idyllic description
    */
   async generatePromptsFromEquations(equations: MathEquation[]): Promise<string[]> {
-    const prompts: string[] = [];
+    if (equations.length === 0) return ['No mathematical patterns detected in this cosmic vista.'];
 
-    for (const eq of equations) {
-      let prompt = '';
+    // Analyze equation types and characteristics
+    const fourierEqs = equations.filter(e => e.type === 'fourier');
+    const parametricEqs = equations.filter(e => e.type === 'parametric');
+    const fractalEqs = equations.filter(e => e.type === 'fractal');
+    const waveletEqs = equations.filter(e => e.type === 'wavelet');
+    const celestialEqs = equations.filter(e => e.type === 'celestial');
+    const statisticalEqs = equations.filter(e => e.type === 'statistical');
 
-      switch (eq.type) {
-        case 'fourier':
-          const freqRange = this.interpretFrequencyRange(eq.parameters);
-          prompt = `A ${freqRange} pattern resembling ${this.getWaveAnalogy(eq.parameters)}, like ${this.getEarthlyExample('wave', eq.parameters)}. The oscillation frequency suggests ${this.getPhysicalInterpretation('periodic', eq.parameters)}.`;
-          break;
+    // Build poetic narrative
+    let narrative = '';
 
-        case 'parametric':
-          const curvature = eq.parameters.curvature || eq.parameters.eccentricity || 0;
-          const shape = this.interpretCurvature(curvature);
-          prompt = `A ${shape} trajectory similar to ${this.getEarthlyExample('curve', eq.parameters)}, exhibiting ${this.getMotionDescription(eq.parameters)}. This pattern mirrors ${this.getCelestialAnalogy('orbit', eq.parameters)}.`;
-          break;
-
-        case 'fractal':
-          const dimension = eq.parameters.dimension || 2;
-          const complexity = this.interpretComplexity(dimension);
-          prompt = `A ${complexity} fractal structure reminiscent of ${this.getEarthlyExample('fractal', eq.parameters)}, displaying self-similarity across scales like ${this.getNatureAnalogy('fractal')}. Complexity level: ${this.getComplexityDescription(dimension)}.`;
-          break;
-
-        case 'wavelet':
-          const scale = eq.parameters.scale || eq.parameters.dominantScale || 1;
-          prompt = `Multi-scale ripple patterns similar to ${this.getEarthlyExample('ripple', eq.parameters)}, with ${this.getTextureDescription(scale)}. These wavelets resemble ${this.getNatureAnalogy('ripple')} in their distribution.`;
-          break;
-
-        case 'celestial':
-          const velocity = eq.parameters.velocity || 0;
-          const motion = this.interpretVelocity(velocity);
-          prompt = `${motion} motion comparable to ${this.getCelestialAnalogy('motion', eq.parameters)}, following paths like ${this.getEarthlyExample('motion', eq.parameters)}. The dynamics suggest ${this.getPhysicalInterpretation('gravitational', eq.parameters)}.`;
-          break;
-
-        case 'statistical':
-          const distribution = eq.parameters.distribution || 'normal';
-          prompt = `A ${distribution} distribution pattern similar to ${this.getEarthlyExample('distribution', eq.parameters)}, exhibiting ${this.getStatisticalDescription(eq.parameters)}. This clustering resembles ${this.getNatureAnalogy('cluster')}.`;
-          break;
-
-        default:
-          prompt = `Mathematical pattern showing ${eq.description}, with characteristics suggesting ${this.getGeneralAnalogy(eq.parameters)}.`;
-      }
-
-      prompts.push(prompt);
+    // Opening - set the cosmic scene
+    narrative += 'Within this celestial tapestry lies ';
+    
+    // Describe the cosmic structures
+    if (celestialEqs.length > 0) {
+      const numObjects = celestialEqs[0].parameters.numObjects || 0;
+      narrative += `a gravitational symphony of ${numObjects} luminous sentinels, `;
+      narrative += `their masses choreographed by Newton's invisible hand, tracing elliptical arabesques `;
+      narrative += `through the cosmic void like dancers in an eternal waltz. `;
     }
 
-    return prompts;
-  }
+    // Describe the patterns and rhythms
+    if (fourierEqs.length > 0) {
+      const freq = fourierEqs[0].parameters.fundamentalFreq || 0;
+      const tempo = freq < 1 ? 'languid, primordial rhythms' : freq < 10 ? 'steady harmonic pulses' : 'vibrant oscillations';
+      narrative += `These celestial bodies breathe with ${tempo}, their luminescence `;
+      narrative += `ebbing and flowing like phosphorescent tides caressing ancient shores. `;
+    }
 
-  private interpretFrequencyRange(params: any): string {
-    const freq = params.dominantFrequencies?.[0] || params.fundamentalFreq || 0;
-    if (freq < 0.1) return 'ultra-slow wave';
-    if (freq < 1) return 'slow oscillating';
-    if (freq < 10) return 'moderate frequency';
-    return 'high-frequency vibrating';
-  }
+    // Describe the geometry and curves
+    if (parametricEqs.length > 0) {
+      const ecc = parametricEqs[0].parameters.eccentricity || 0;
+      const curvature = ecc < 0.3 ? 'gracefully circular' : ecc < 0.7 ? 'elegantly elliptical' : 'dramatically hyperbolic';
+      narrative += `Their trajectories inscribe ${curvature} poems across the firmament, `;
+      narrative += `each curve a testament to the mathematical elegance underlying cosmic motion. `;
+    }
 
-  private getWaveAnalogy(params: any): string {
-    const analogies = [
-      'ocean tides under moonlight',
-      'sound waves in a concert hall',
-      'electromagnetic pulses through space',
-      'seismic waves from distant quakes',
-      'heartbeat rhythms in living systems'
-    ];
-    return analogies[Math.floor(Math.random() * analogies.length)];
-  }
+    // Describe the complexity and self-similarity
+    if (fractalEqs.length > 0) {
+      const dim = fractalEqs[0].parameters.dimension || 2;
+      const complexity = dim < 2 ? 'delicate filigree' : dim < 2.5 ? 'intricate lacework' : 'labyrinthine complexity';
+      narrative += `Upon closer examination, ${complexity} emerges—self-similar patterns `;
+      narrative += `cascading across scales like nature's recursive mantras, from the infinitesimal to the infinite. `;
+    }
 
-  private interpretCurvature(curvature: number): string {
-    if (Math.abs(curvature) < 0.1) return 'nearly linear';
-    if (Math.abs(curvature) < 0.5) return 'gently curved';
-    if (Math.abs(curvature) < 1) return 'highly curved';
-    return 'extremely curved';
-  }
+    // Describe the textures and scales
+    if (waveletEqs.length > 0) {
+      narrative += `Multiple scales interweave: gossamer threads of light at fine resolutions `;
+      narrative += `dissolving into grand sweeping structures, each wavelength contributing `;
+      narrative += `its verse to this polyphonic cosmic ode. `;
+    }
 
-  private interpretComplexity(dimension: number): string {
-    if (dimension < 1.5) return 'simple';
-    if (dimension < 2) return 'moderately complex';
-    if (dimension < 2.5) return 'highly intricate';
-    return 'extremely complex';
-  }
+    // Describe the distribution and statistics
+    if (statisticalEqs.length > 0) {
+      const mean = statisticalEqs[0].parameters.mean || 0;
+      const spread = mean < 100 ? 'subtle gradations' : mean < 200 ? 'bold contrasts' : 'dramatic chiaroscuro';
+      narrative += `The luminous architecture exhibits ${spread}, `;
+      narrative += `a statistical poetry where probability and beauty converge, `;
+      narrative += `following distributions that echo the hidden order of the universe. `;
+    }
 
-  private interpretVelocity(velocity: number): string {
-    if (velocity < 1) return 'Slow drift';
-    if (velocity < 10) return 'Steady streaming';
-    if (velocity < 100) return 'Rapid flow';
-    return 'Supersonic';
-  }
+    // Closing - philosophical synthesis
+    narrative += `In these mathematical bones of creation, we glimpse the cosmos as it truly is: `;
+    narrative += `not mere random scatter, but an exquisite confluence of geometry, physics, and chance—`;
+    narrative += `a masterwork painted with the brushstrokes of fundamental forces, `;
+    narrative += `revealing that mathematics is not merely our language for describing the universe, `;
+    narrative += `but perhaps the universe's own mother tongue, spoken in wavelengths and gravitational whispers, `;
+    narrative += `in parametric curves and fractal dreams, `;
+    narrative += `in every photon that traversed the cosmic ocean to kiss this lens.`;
 
-  private getEarthlyExample(type: string, params: any): string {
-    const examples: Record<string, string[]> = {
-      wave: ['ripples on a pond', 'sand dunes in a desert', 'aurora borealis curtains', 'piano string vibrations'],
-      curve: ['a meandering river', 'a roller coaster track', 'a vine growing around a tree', 'smoke rising from incense'],
-      fractal: ['tree branches', 'coastline patterns', 'snowflake crystals', 'broccoli florets', 'lightning bolts'],
-      ripple: ['raindrops on water', 'sound from a bell', 'spreading gossip in a crowd', 'wifi signal propagation'],
-      motion: ['a thrown baseball', 'a satellite orbit', 'a pendulum swing', 'a spinning top'],
-      distribution: ['stars in the night sky', 'grains of sand on a beach', 'people in a city', 'molecules in a gas']
-    };
-    
-    const list = examples[type] || ['natural phenomena'];
-    return list[Math.floor(Math.random() * list.length)];
-  }
-
-  private getCelestialAnalogy(type: string, params: any): string {
-    const analogies: Record<string, string[]> = {
-      orbit: ['planetary motion around the sun', 'binary star systems', 'moons circling gas giants', 'comets in elliptical paths'],
-      motion: ['stellar drift through the galaxy', 'pulsar rotation', 'galaxy rotation curves', 'interstellar cloud movement']
-    };
-    
-    const list = analogies[type] || ['cosmic phenomena'];
-    return list[Math.floor(Math.random() * list.length)];
-  }
-
-  private getNatureAnalogy(type: string): string {
-    const analogies: Record<string, string[]> = {
-      fractal: ['fern leaves', 'river deltas', 'blood vessel networks', 'neural pathways'],
-      ripple: ['earthquake aftershocks', 'domino effects', 'chemical chain reactions'],
-      cluster: ['bee swarms', 'bird flocking patterns', 'fish schooling', 'ant colonies']
-    };
-    
-    const list = analogies[type] || ['natural systems'];
-    return list[Math.floor(Math.random() * list.length)];
-  }
-
-  private getPhysicalInterpretation(type: string, params: any): string {
-    const interpretations: Record<string, string[]> = {
-      periodic: ['resonance phenomena', 'harmonic oscillation', 'cyclic energy transfer', 'wave interference patterns'],
-      gravitational: ['inverse square law behavior', 'orbital mechanics', 'tidal forces', 'gravitational lensing effects']
-    };
-    
-    const list = interpretations[type] || ['physical principles'];
-    return list[Math.floor(Math.random() * list.length)];
-  }
-
-  private getMotionDescription(params: any): string {
-    return 'smooth continuous transformation with elegant mathematical flow';
-  }
-
-  private getTextureDescription(scale: number): string {
-    if (scale < 1) return 'fine-grained texture like silk fabric';
-    if (scale < 5) return 'medium texture like tree bark';
-    return 'coarse texture like mountain terrain';
-  }
-
-  private getComplexityDescription(dimension: number): string {
-    return `fractal dimension ${dimension.toFixed(2)}, indicating ${dimension < 2 ? 'sparse' : 'dense'} structural complexity`;
-  }
-
-  private getStatisticalDescription(params: any): string {
-    return 'clustering with statistical coherence and variance typical of natural systems';
-  }
-
-  private getGeneralAnalogy(params: any): string {
-    return 'emergent patterns found in complex adaptive systems throughout nature and the cosmos';
+    return [narrative];
   }
 }
