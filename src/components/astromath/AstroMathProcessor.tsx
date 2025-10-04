@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Upload, Loader2, Download, TrendingUp } from 'lucide-react';
+import { Upload, Loader2, Download, TrendingUp, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { MathematicalUniverse, AnalysisResult } from '@/lib/astromath/MathematicalUniverse';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,8 +14,8 @@ const AstroMathProcessor: React.FC = () => {
   const [imageUrl, setImageUrl] = useState<string>('');
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [generatingPrompts, setGeneratingPrompts] = useState(false);
-  const [prompts, setPrompts] = useState<string[]>([]);
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -63,23 +63,23 @@ const AstroMathProcessor: React.FC = () => {
     }
   };
 
-  const generatePrompts = async () => {
+  const generateImage = async () => {
     if (!result) return;
 
-    setGeneratingPrompts(true);
-    toast.info(t('Generating interpretive prompts...', '生成解释性提示...'));
+    setGeneratingImage(true);
+    toast.info(t('Generating mathematical imagery...', '生成数学图像...'));
 
     try {
       const engine = new MathematicalUniverse();
-      const generatedPrompts = await engine.generatePromptsFromEquations(result.equations);
+      const imageDataUrl = await engine.generateImageFromEquations(result.equations, 1200, 1200);
       
-      setPrompts(generatedPrompts);
-      toast.success(t('Prompts generated successfully!', '提示生成成功！'));
+      setGeneratedImage(imageDataUrl);
+      toast.success(t('Mathematical imagery generated!', '数学图像生成成功！'));
     } catch (error) {
-      console.error('Prompt generation error:', error);
-      toast.error(t('Prompt generation failed. Please try again.', '提示生成失败。请重试。'));
+      console.error('Image generation error:', error);
+      toast.error(t('Image generation failed. Please try again.', '图像生成失败。请重试。'));
     } finally {
-      setGeneratingPrompts(false);
+      setGeneratingImage(false);
     }
   };
 
@@ -92,7 +92,7 @@ const AstroMathProcessor: React.FC = () => {
       equations: result.equations,
       structures: result.structures,
       insights: result.insights,
-      prompts: prompts.length > 0 ? prompts : undefined,
+      generatedImage: generatedImage || undefined,
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -205,17 +205,20 @@ const AstroMathProcessor: React.FC = () => {
                 </div>
                 <div className="flex gap-2">
                   <Button 
-                    onClick={generatePrompts} 
-                    disabled={generatingPrompts}
+                    onClick={generateImage} 
+                    disabled={generatingImage}
                     className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                   >
-                    {generatingPrompts ? (
+                    {generatingImage ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         {t('Generating...', '生成中...')}
                       </>
                     ) : (
-                      t('Generate Prompts', '生成提示')
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        {t('Generate Imagery', '生成图像')}
+                      </>
                     )}
                   </Button>
                   <Button onClick={exportResults} variant="outline">
@@ -230,7 +233,7 @@ const AstroMathProcessor: React.FC = () => {
                   <TabsTrigger value="equations">{t('Equations', '方程')}</TabsTrigger>
                   <TabsTrigger value="structures">{t('Structures', '结构')}</TabsTrigger>
                   <TabsTrigger value="insights">{t('Insights', '洞察')}</TabsTrigger>
-                  <TabsTrigger value="prompts">{t('Prompts', '提示')}</TabsTrigger>
+                  <TabsTrigger value="imagery">{t('Mathematical Imagery', '数学图像')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="equations">
@@ -317,29 +320,31 @@ const AstroMathProcessor: React.FC = () => {
                   </ScrollArea>
                 </TabsContent>
 
-                <TabsContent value="prompts">
+                <TabsContent value="imagery">
                   <ScrollArea className="h-[600px] w-full rounded-lg border border-cosmic-700 p-4">
-                    {prompts.length === 0 ? (
+                    {!generatedImage ? (
                       <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
                         <p className="text-cosmic-300 text-lg">
-                          {t('Click "Generate Prompts" to create interpretive descriptions', '点击"生成提示"创建解释性描述')}
+                          {t('Click "Generate Imagery" to visualize the equations as parametric art', '点击"生成图像"将方程可视化为参数艺术')}
                         </p>
                         <p className="text-cosmic-400 text-sm max-w-md">
-                          {t('Transform mathematical equations into relatable phenomena and everyday concepts', '将数学方程转化为可关联的现象和日常概念')}
+                          {t('Inspired by Hamid Naderi Yeganeh\'s mathematical art approach', '受 Hamid Naderi Yeganeh 数学艺术方法启发')}
                         </p>
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {prompts.map((prompt, idx) => (
-                          <Card key={idx} className="p-4 bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-500/20">
-                            <div className="space-y-2">
-                              <div className="flex items-start gap-3">
-                                <span className="text-pink-400 font-bold text-lg">#{idx + 1}</span>
-                                <p className="text-white flex-1 leading-relaxed">{prompt}</p>
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
+                        <Card className="p-4 bg-cosmic-800/30 overflow-hidden">
+                          <img 
+                            src={generatedImage} 
+                            alt="Generated mathematical imagery" 
+                            className="w-full rounded-lg"
+                          />
+                        </Card>
+                        <div className="text-center">
+                          <p className="text-cosmic-300 text-sm">
+                            {t('Parametric visualization of extracted mathematical equations', '提取的数学方程的参数可视化')}
+                          </p>
+                        </div>
                       </div>
                     )}
                   </ScrollArea>

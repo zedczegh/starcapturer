@@ -549,83 +549,169 @@ export class MathematicalUniverse {
   }
 
   /**
-   * Generate ONE comprehensive, poetic prompt from all mathematical equations
-   * Synthesizes the entire cosmic imagery into a single idyllic description
+   * Generate mathematical imagery directly from equations
+   * Inspired by Hamid Naderi Yeganeh's parametric art approach
    */
-  async generatePromptsFromEquations(equations: MathEquation[]): Promise<string[]> {
-    if (equations.length === 0) return ['No mathematical patterns detected in this cosmic vista.'];
+  async generateImageFromEquations(equations: MathEquation[], width: number = 1200, height: number = 1200): Promise<string> {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d')!;
 
-    // Analyze equation types and characteristics
-    const fourierEqs = equations.filter(e => e.type === 'fourier');
-    const parametricEqs = equations.filter(e => e.type === 'parametric');
-    const fractalEqs = equations.filter(e => e.type === 'fractal');
-    const waveletEqs = equations.filter(e => e.type === 'wavelet');
-    const celestialEqs = equations.filter(e => e.type === 'celestial');
-    const statisticalEqs = equations.filter(e => e.type === 'statistical');
+    // Dark cosmic background
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, width, height);
 
-    // Build poetic narrative
-    let narrative = '';
+    // Center coordinates
+    const cx = width / 2;
+    const cy = height / 2;
+    const scale = Math.min(width, height) / 4;
 
-    // Opening - set the cosmic scene
-    narrative += 'Within this celestial tapestry lies ';
+    // Render each equation type
+    equations.forEach(eq => {
+      switch (eq.type) {
+        case 'parametric':
+          this.renderParametricCurve(ctx, eq, cx, cy, scale);
+          break;
+        case 'fourier':
+          this.renderFourierPattern(ctx, eq, cx, cy, scale);
+          break;
+        case 'fractal':
+          this.renderFractalPattern(ctx, eq, cx, cy, scale);
+          break;
+        case 'celestial':
+          this.renderCelestialBodies(ctx, eq, cx, cy, scale);
+          break;
+        case 'wavelet':
+          this.renderWaveletPattern(ctx, eq, cx, cy, scale);
+          break;
+      }
+    });
+
+    return canvas.toDataURL('image/png');
+  }
+
+  private renderParametricCurve(ctx: CanvasRenderingContext2D, eq: MathEquation, cx: number, cy: number, scale: number) {
+    const centerX = eq.parameters.centerX || 0;
+    const centerY = eq.parameters.centerY || 0;
+    const radius = (eq.parameters.radius || 50) * (scale / 200);
+    const ecc = eq.parameters.eccentricity || 0.3;
+
+    ctx.strokeStyle = `hsl(${Math.random() * 60 + 180}, 70%, 60%)`;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+
+    for (let t = 0; t <= Math.PI * 2; t += 0.01) {
+      const x = cx + radius * (1 - ecc) * Math.cos(t);
+      const y = cy + radius * (1 - ecc) * Math.sin(t);
+      if (t === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  private renderFourierPattern(ctx: CanvasRenderingContext2D, eq: MathEquation, cx: number, cy: number, scale: number) {
+    const harmonics = eq.parameters.harmonics || 5;
+    const freq = eq.parameters.fundamentalFreq || 1;
+
+    ctx.strokeStyle = `hsl(${Math.random() * 60 + 280}, 80%, 65%)`;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.4;
+
+    for (let i = 0; i < harmonics && i < 10; i++) {
+      ctx.beginPath();
+      for (let t = 0; t < Math.PI * 4; t += 0.02) {
+        const r = scale * 0.5 * Math.sin((i + 1) * freq * t) * 0.5;
+        const x = cx + r * Math.cos(t);
+        const y = cy + r * Math.sin(t);
+        if (t === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  private renderFractalPattern(ctx: CanvasRenderingContext2D, eq: MathEquation, cx: number, cy: number, scale: number) {
+    const dimension = eq.parameters.dimension || 2;
+    const iterations = Math.floor(dimension * 5);
+
+    ctx.strokeStyle = `hsl(${Math.random() * 60 + 30}, 75%, 60%)`;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.3;
+
+    const drawBranch = (x: number, y: number, angle: number, length: number, depth: number) => {
+      if (depth === 0 || length < 1) return;
+
+      const x2 = x + length * Math.cos(angle);
+      const y2 = y + length * Math.sin(angle);
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      const newLength = length * 0.7;
+      drawBranch(x2, y2, angle - 0.5, newLength, depth - 1);
+      drawBranch(x2, y2, angle + 0.5, newLength, depth - 1);
+    };
+
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 * i) / 8;
+      drawBranch(cx, cy, angle, scale * 0.4, Math.min(iterations, 6));
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  private renderCelestialBodies(ctx: CanvasRenderingContext2D, eq: MathEquation, cx: number, cy: number, scale: number) {
+    const numObjects = eq.parameters.numObjects || 10;
     
-    // Describe the cosmic structures
-    if (celestialEqs.length > 0) {
-      const numObjects = celestialEqs[0].parameters.numObjects || 0;
-      narrative += `a gravitational symphony of ${numObjects} luminous sentinels, `;
-      narrative += `their masses choreographed by Newton's invisible hand, tracing elliptical arabesques `;
-      narrative += `through the cosmic void like dancers in an eternal waltz. `;
+    ctx.globalAlpha = 0.8;
+    for (let i = 0; i < Math.min(numObjects, 50); i++) {
+      const angle = (Math.PI * 2 * i) / numObjects;
+      const distance = scale * (0.5 + Math.random() * 0.5);
+      const x = cx + distance * Math.cos(angle);
+      const y = cy + distance * Math.sin(angle);
+      const size = 2 + Math.random() * 4;
+
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, size * 2);
+      gradient.addColorStop(0, `hsl(${Math.random() * 60 + 40}, 90%, 70%)`);
+      gradient.addColorStop(1, 'transparent');
+
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(x, y, size * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
     }
+    ctx.globalAlpha = 1;
+  }
 
-    // Describe the patterns and rhythms
-    if (fourierEqs.length > 0) {
-      const freq = fourierEqs[0].parameters.fundamentalFreq || 0;
-      const tempo = freq < 1 ? 'languid, primordial rhythms' : freq < 10 ? 'steady harmonic pulses' : 'vibrant oscillations';
-      narrative += `These celestial bodies breathe with ${tempo}, their luminescence `;
-      narrative += `ebbing and flowing like phosphorescent tides caressing ancient shores. `;
+  private renderWaveletPattern(ctx: CanvasRenderingContext2D, eq: MathEquation, cx: number, cy: number, scale: number) {
+    const levels = eq.parameters.levels || 5;
+
+    ctx.globalAlpha = 0.2;
+    for (let level = 0; level < Math.min(levels, 8); level++) {
+      const wavelength = scale * Math.pow(2, -level) * 0.5;
+      ctx.strokeStyle = `hsl(${level * 40 + 120}, 70%, 60%)`;
+      ctx.lineWidth = 1;
+      
+      ctx.beginPath();
+      for (let t = 0; t < Math.PI * 4; t += 0.05) {
+        const r = scale * 0.3 + wavelength * Math.sin(t * Math.pow(2, level));
+        const x = cx + r * Math.cos(t);
+        const y = cy + r * Math.sin(t);
+        if (t === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
     }
-
-    // Describe the geometry and curves
-    if (parametricEqs.length > 0) {
-      const ecc = parametricEqs[0].parameters.eccentricity || 0;
-      const curvature = ecc < 0.3 ? 'gracefully circular' : ecc < 0.7 ? 'elegantly elliptical' : 'dramatically hyperbolic';
-      narrative += `Their trajectories inscribe ${curvature} poems across the firmament, `;
-      narrative += `each curve a testament to the mathematical elegance underlying cosmic motion. `;
-    }
-
-    // Describe the complexity and self-similarity
-    if (fractalEqs.length > 0) {
-      const dim = fractalEqs[0].parameters.dimension || 2;
-      const complexity = dim < 2 ? 'delicate filigree' : dim < 2.5 ? 'intricate lacework' : 'labyrinthine complexity';
-      narrative += `Upon closer examination, ${complexity} emerges—self-similar patterns `;
-      narrative += `cascading across scales like nature's recursive mantras, from the infinitesimal to the infinite. `;
-    }
-
-    // Describe the textures and scales
-    if (waveletEqs.length > 0) {
-      narrative += `Multiple scales interweave: gossamer threads of light at fine resolutions `;
-      narrative += `dissolving into grand sweeping structures, each wavelength contributing `;
-      narrative += `its verse to this polyphonic cosmic ode. `;
-    }
-
-    // Describe the distribution and statistics
-    if (statisticalEqs.length > 0) {
-      const mean = statisticalEqs[0].parameters.mean || 0;
-      const spread = mean < 100 ? 'subtle gradations' : mean < 200 ? 'bold contrasts' : 'dramatic chiaroscuro';
-      narrative += `The luminous architecture exhibits ${spread}, `;
-      narrative += `a statistical poetry where probability and beauty converge, `;
-      narrative += `following distributions that echo the hidden order of the universe. `;
-    }
-
-    // Closing - philosophical synthesis
-    narrative += `In these mathematical bones of creation, we glimpse the cosmos as it truly is: `;
-    narrative += `not mere random scatter, but an exquisite confluence of geometry, physics, and chance—`;
-    narrative += `a masterwork painted with the brushstrokes of fundamental forces, `;
-    narrative += `revealing that mathematics is not merely our language for describing the universe, `;
-    narrative += `but perhaps the universe's own mother tongue, spoken in wavelengths and gravitational whispers, `;
-    narrative += `in parametric curves and fractal dreams, `;
-    narrative += `in every photon that traversed the cosmic ocean to kiss this lens.`;
-
-    return [narrative];
+    ctx.globalAlpha = 1;
   }
 }
