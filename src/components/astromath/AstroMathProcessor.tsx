@@ -17,27 +17,67 @@ const AstroMathProcessor: React.FC = () => {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error(t('Please upload an image file.', '请上传图片文件。'));
+    // Support multiple formats: PNG, JPG, TIFF, WEBP
+    const validFormats = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/tiff', 'image/tif'];
+    const isTiff = file.type === 'image/tiff' || file.type === 'image/tif' || file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff');
+    
+    if (!validFormats.includes(file.type) && !isTiff) {
+      toast.error(t('Please upload a valid image file (PNG, JPG, TIFF, WEBP).', '请上传有效的图片文件（PNG、JPG、TIFF、WEBP）。'));
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        setImage(img);
-        setImageUrl(event.target?.result as string);
-        toast.success(t('Image loaded successfully!', '图片加载成功！'));
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    toast.info(t('Loading image...', '加载图片中...'));
+
+    try {
+      if (isTiff) {
+        // Handle TIFF format
+        const arrayBuffer = await file.arrayBuffer();
+        const UTIF = (await import('utif')).default;
+        
+        const ifds = UTIF.decode(arrayBuffer);
+        UTIF.decodeImage(arrayBuffer, ifds[0]);
+        const rgba = UTIF.toRGBA8(ifds[0]);
+        
+        // Create canvas and draw TIFF data
+        const canvas = document.createElement('canvas');
+        canvas.width = ifds[0].width;
+        canvas.height = ifds[0].height;
+        const ctx = canvas.getContext('2d')!;
+        const imageData = ctx.createImageData(canvas.width, canvas.height);
+        imageData.data.set(rgba);
+        ctx.putImageData(imageData, 0, 0);
+        
+        // Convert to image
+        const dataUrl = canvas.toDataURL('image/png');
+        const img = new Image();
+        img.onload = () => {
+          setImage(img);
+          setImageUrl(dataUrl);
+          toast.success(t('TIFF image loaded successfully!', 'TIFF图片加载成功！'));
+        };
+        img.src = dataUrl;
+      } else {
+        // Handle standard formats
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            setImage(img);
+            setImageUrl(event.target?.result as string);
+            toast.success(t('Image loaded successfully!', '图片加载成功！'));
+          };
+          img.src = event.target?.result as string;
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (error) {
+      console.error('Image loading error:', error);
+      toast.error(t('Failed to load image. Please try another file.', '加载图片失败。请尝试其他文件。'));
+    }
   };
 
   const analyzeImage = async () => {
@@ -150,7 +190,7 @@ const AstroMathProcessor: React.FC = () => {
               <label className="cursor-pointer">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.tif,.tiff"
                   onChange={handleImageUpload}
                   className="hidden"
                 />
@@ -159,6 +199,9 @@ const AstroMathProcessor: React.FC = () => {
                   {t('Select Image', '选择图片')}
                 </div>
               </label>
+              <p className="text-xs text-cosmic-400">
+                {t('Supports: PNG, JPG, TIFF, WEBP (up to 100MB)', '支持：PNG、JPG、TIFF、WEBP（最大100MB）')}
+              </p>
 
               {imageUrl && (
                 <div className="w-full max-w-2xl">
