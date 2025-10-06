@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, ImagePlus, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
+import { UploadProgress } from '@/components/ui/upload-progress';
 
 interface CommentInputProps {
   onSubmit: (content: string, imageFile?: File | null) => Promise<void>;
@@ -18,6 +19,8 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,11 +59,19 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
         }
         
         setImageFile(file);
+        setUploading(true);
+        setUploadProgress(0);
         
         // Create image preview
         const reader = new FileReader();
+        reader.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
         reader.onload = (e) => {
           setImagePreview(e.target?.result as string);
+          setUploading(false);
         };
         reader.readAsDataURL(file);
       } else {
@@ -80,6 +91,11 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <UploadProgress 
+        progress={uploadProgress} 
+        fileName={imageFile?.name || ''}
+        show={uploading} 
+      />
       <div className="relative">
         <Textarea
           value={commentText}

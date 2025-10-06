@@ -4,6 +4,7 @@ import { Image, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { UploadProgress } from "@/components/ui/upload-progress";
 
 interface ImageUploaderProps {
   images: File[];
@@ -25,6 +26,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
   const { t } = useLanguage();
   const totalImagesCount = images.length + (existingImages?.length || 0);
   const [isCreatingBucket, setIsCreatingBucket] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentFileName, setCurrentFileName] = useState('');
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -77,8 +80,11 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     
     const uploadResults = [];
     
-    for (const file of images) {
+    for (let i = 0; i < images.length; i++) {
+      const file = images[i];
       const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
+      setCurrentFileName(file.name);
+      setUploadProgress(Math.round(((i) / images.length) * 100));
       
       const { error } = await supabase.storage
         .from('astro_spot_images')
@@ -94,6 +100,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         uploadResults.push({ success: true, fileName });
       }
     }
+    
+    setUploadProgress(100);
     
     const failures = uploadResults.filter(r => !r.success);
     
@@ -115,6 +123,13 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         </span>
       </label>
       <div className="grid gap-4">
+        {uploading && (
+          <UploadProgress 
+            progress={uploadProgress} 
+            fileName={currentFileName}
+            show={uploading} 
+          />
+        )}
         <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-accent/50 transition-colors">
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
             <Image className="h-8 w-8 text-muted-foreground mb-2" />

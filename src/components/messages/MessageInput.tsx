@@ -8,6 +8,7 @@ import EmojiRenderer from './EmojiRenderer';
 import { siqsEmojis } from './SiqsEmojiData';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useLocationSharing } from '@/hooks/location/useLocationSharing';
+import { UploadProgress } from '@/components/ui/upload-progress';
 
 interface MessageInputProps {
   onSend: (text: string, imageFile?: File | null, locationData?: any) => void;
@@ -25,6 +26,8 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   const [showOptions, setShowOptions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const { gettingLocation, shareCurrentLocation } = useLocationSharing();
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
   
   const handleSend = () => {
     if ((!message.trim() && !imageFile) || sending) return;
@@ -66,11 +69,19 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
         }
         
         setImageFile(file);
+        setUploading(true);
+        setUploadProgress(0);
         
         // Create image preview
         const reader = new FileReader();
+        reader.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
         reader.onload = (e) => {
           setImagePreview(e.target?.result as string);
+          setUploading(false);
         };
         reader.readAsDataURL(file);
       } else {
@@ -142,6 +153,11 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
 
   return (
     <div className="border-t border-cosmic-700/40 p-4 bg-gradient-to-t from-cosmic-900/95 via-cosmic-900/85 to-cosmic-900/70 space-y-3 sticky bottom-0 backdrop-blur-xl z-20 shadow-[0_-8px_24px_-12px_rgba(124,58,237,0.15)]">
+      <UploadProgress 
+        progress={uploadProgress} 
+        fileName={imageFile?.name || ''}
+        show={uploading} 
+      />
       {imagePreview && (
         <div className="relative inline-block">
           <img 

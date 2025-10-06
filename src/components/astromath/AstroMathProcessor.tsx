@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { MathematicalUniverse, AnalysisResult } from '@/lib/astromath/MathematicalUniverse';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { UploadProgress } from '@/components/ui/upload-progress';
 
 const AstroMathProcessor: React.FC = () => {
   const { t } = useLanguage();
@@ -16,10 +17,19 @@ const AstroMathProcessor: React.FC = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [uploadFileName, setUploadFileName] = useState<string>('');
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Check file size (500MB limit for TIFF support)
+    if (file.size > 500 * 1024 * 1024) {
+      toast.error(t('Image must be less than 500MB', '图片必须小于500MB'));
+      return;
+    }
 
     // Support multiple formats: PNG, JPG, TIFF, WEBP
     const validFormats = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/tiff', 'image/tif'];
@@ -30,6 +40,9 @@ const AstroMathProcessor: React.FC = () => {
       return;
     }
 
+    setUploading(true);
+    setUploadProgress(0);
+    setUploadFileName(file.name);
     toast.info(t('Loading image...', '加载图片中...'));
 
     try {
@@ -57,17 +70,26 @@ const AstroMathProcessor: React.FC = () => {
         img.onload = () => {
           setImage(img);
           setImageUrl(dataUrl);
+          setUploading(false);
+          setUploadProgress(100);
           toast.success(t('TIFF image loaded successfully!', 'TIFF图片加载成功！'));
         };
         img.src = dataUrl;
       } else {
         // Handle standard formats
         const reader = new FileReader();
+        reader.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
         reader.onload = (event) => {
           const img = new Image();
           img.onload = () => {
             setImage(img);
             setImageUrl(event.target?.result as string);
+            setUploading(false);
+            setUploadProgress(100);
             toast.success(t('Image loaded successfully!', '图片加载成功！'));
           };
           img.src = event.target?.result as string;
@@ -77,6 +99,7 @@ const AstroMathProcessor: React.FC = () => {
     } catch (error) {
       console.error('Image loading error:', error);
       toast.error(t('Failed to load image. Please try another file.', '加载图片失败。请尝试其他文件。'));
+      setUploading(false);
     }
   };
 
@@ -187,20 +210,26 @@ const AstroMathProcessor: React.FC = () => {
             </div>
 
             <div className="flex flex-col items-center gap-4">
+              <UploadProgress 
+                progress={uploadProgress} 
+                fileName={uploadFileName}
+                show={uploading} 
+              />
               <label className="cursor-pointer">
                 <input
                   type="file"
                   accept="image/*,.tif,.tiff"
                   onChange={handleImageUpload}
+                  disabled={uploading}
                   className="hidden"
                 />
-                <div className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 rounded-lg text-white font-semibold flex items-center gap-2 transition-all">
+                <div className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 rounded-lg text-white font-semibold flex items-center gap-2 transition-all disabled:opacity-50">
                   <Upload className="h-5 w-5" />
                   {t('Select Image', '选择图片')}
                 </div>
               </label>
               <p className="text-xs text-cosmic-400">
-                {t('Supports: PNG, JPG, TIFF, WEBP (up to 100MB)', '支持：PNG、JPG、TIFF、WEBP（最大100MB）')}
+                {t('Supports: PNG, JPG, TIFF, WEBP (up to 500MB)', '支持：PNG、JPG、TIFF、WEBP（最大500MB）')}
               </p>
 
               {imageUrl && (
