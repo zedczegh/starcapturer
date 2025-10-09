@@ -654,7 +654,6 @@ where x₀=${centerX.toFixed(2)}, y₀=${centerY.toFixed(2)}, a=${semiMajor.toFi
     const waveletEqs = equations.filter(eq => eq.type === 'wavelet');
     const fractalEqs = equations.filter(eq => eq.type === 'fractal');
     const parametricEqs = equations.filter(eq => eq.type === 'parametric');
-    const celestialEqs = equations.filter(eq => eq.type === 'celestial');
 
     // Background: frequency domain representations
     fourierEqs.forEach(eq => this.renderFourierPattern(ctx, eq, cx, cy, scale));
@@ -665,13 +664,13 @@ where x₀=${centerX.toFixed(2)}, y₀=${centerY.toFixed(2)}, a=${semiMajor.toFi
 
     // Foreground: spatial domain structures
     parametricEqs.forEach(eq => this.renderParametricCurve(ctx, eq, cx, cy, scale));
-    celestialEqs.forEach(eq => this.renderCelestialBodies(ctx, eq, cx, cy, scale));
 
     return canvas.toDataURL('image/png');
   }
 
   /**
    * Generate SVG representation of mathematical equations
+   * Adobe Illustrator compatible with RGB colors
    */
   generateSVGFromEquations(equations: MathEquation[], width: number = 1200, height: number = 1200): string {
     const cx = width / 2;
@@ -680,83 +679,168 @@ where x₀=${centerX.toFixed(2)}, y₀=${centerY.toFixed(2)}, a=${semiMajor.toFi
 
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
     
-    // Background
+    // Collect all gradients in defs section first
     svg += `<defs>
       <radialGradient id="bg" cx="50%" cy="50%" r="70%">
-        <stop offset="0%" style="stop-color:#0f0f23;stop-opacity:1" />
-        <stop offset="50%" style="stop-color:#080812;stop-opacity:1" />
-        <stop offset="100%" style="stop-color:#000000;stop-opacity:1" />
+        <stop offset="0%" style="stop-color:rgb(15,15,35);stop-opacity:1" />
+        <stop offset="50%" style="stop-color:rgb(8,8,18);stop-opacity:1" />
+        <stop offset="100%" style="stop-color:rgb(0,0,0);stop-opacity:1" />
       </radialGradient>
     </defs>`;
+    
+    // Background
     svg += `<rect width="${width}" height="${height}" fill="url(#bg)"/>`;
 
     // Render parametric curves as vector paths
-    equations.filter(eq => eq.type === 'parametric').forEach((eq, idx) => {
+    const parametricEqs = equations.filter(eq => eq.type === 'parametric');
+    parametricEqs.forEach((eq, idx) => {
       const a = eq.parameters.semiMajor || eq.parameters.radius || 50;
       const b = eq.parameters.semiMinor || a * 0.8;
       const rotation = eq.parameters.rotation || 0;
       const hue = (idx * 60 + 180) % 360;
+      const rgb = this.hslToRgb(hue, 80, 60);
       
-      let path = '';
-      for (let t = 0; t <= Math.PI * 2; t += 0.02) {
-        const harmonic = 0.05 * Math.sin(5 * t) + 0.03 * Math.cos(7 * t);
-        const r = (a + harmonic * a) * (scale / 200);
-        const x = cx + r * Math.cos(t) * Math.cos(rotation) - (b * scale / 200) * Math.sin(t) * Math.sin(rotation);
-        const y = cy + r * Math.cos(t) * Math.sin(rotation) + (b * scale / 200) * Math.sin(t) * Math.cos(rotation);
-        path += (t === 0 ? 'M' : 'L') + `${x.toFixed(2)},${y.toFixed(2)} `;
+      // Multi-layer rendering for depth
+      for (let layer = 0; layer < 4; layer++) {
+        const layerScale = 1 - layer * 0.12;
+        const alpha = 0.5 - layer * 0.1;
+        const harmonicOrder = 3 + layer * 2;
+        const layerRgb = this.hslToRgb(hue + layer * 10, 85 - layer * 5, 55 + layer * 8);
+        
+        let path = '';
+        for (let t = 0; t <= Math.PI * 2; t += 0.02) {
+          const harmonic = 0.08 * Math.sin(harmonicOrder * t) + 0.04 * Math.cos((harmonicOrder + 2) * t);
+          const rScale = layerScale * (1 + harmonic);
+          const r = (a * rScale) * (scale / 200);
+          const bScaled = (b * rScale) * (scale / 200);
+          
+          const cosT = Math.cos(t);
+          const sinT = Math.sin(t);
+          const cosR = Math.cos(rotation);
+          const sinR = Math.sin(rotation);
+          
+          const x = cx + (r * cosT * cosR - bScaled * sinT * sinR);
+          const y = cy + (r * cosT * sinR + bScaled * sinT * cosR);
+          path += (t === 0 ? 'M' : 'L') + `${x.toFixed(2)},${y.toFixed(2)} `;
+        }
+        path += 'Z';
+        
+        svg += `<path d="${path}" fill="none" stroke="rgb(${layerRgb.r},${layerRgb.g},${layerRgb.b})" stroke-width="${2.5 - layer * 0.5}" opacity="${alpha}"/>`;
       }
-      path += 'Z';
-      
-      svg += `<path d="${path}" fill="none" stroke="hsl(${hue}, 80%, 60%)" stroke-width="1.5" opacity="0.7"/>`;
     });
 
     // Render Fourier patterns
-    equations.filter(eq => eq.type === 'fourier').forEach((eq, idx) => {
+    const fourierEqs = equations.filter(eq => eq.type === 'fourier');
+    fourierEqs.forEach((eq, idx) => {
       const harmonics = Math.min(eq.parameters.harmonics || 5, 8);
-      const freq = eq.parameters.fundamentalFreq || 1;
-      const baseHue = (idx * 60 + 280) % 360;
+      const fundamentalFreq = eq.parameters.fundamentalFreq || 1;
+      const dominantAmp = eq.parameters.dominantAmplitude || 0.5;
+      const baseHue = 260 + (fundamentalFreq * 20) % 80;
 
-      for (let i = 0; i < harmonics; i++) {
-        const hue = (baseHue + i * 15) % 360;
-        const opacity = 0.3 / (i + 1);
-        let path = '';
+      for (let n = 0; n < harmonics; n++) {
+        const harmonic = n + 1;
+        const amplitude = dominantAmp / Math.sqrt(harmonic);
+        const alpha = Math.min(0.4, amplitude * 2);
+        const hue = (baseHue + n * 12) % 360;
+        const rgb = this.hslToRgb(hue, 92 - n * 3, 65 - n * 3);
         
-        const points = 500;
-        for (let j = 0; j < points; j++) {
-          const t = (j / points) * Math.PI * 6;
-          const r = scale * 0.6 * (Math.sin((i + 1) * freq * t) * 0.4 + Math.cos((i + 2) * freq * t * 0.7) * 0.3);
+        let path = '';
+        const points = 1000;
+        for (let j = 0; j <= points; j++) {
+          const t = (j / points) * Math.PI * 8;
+          const r = scale * 0.7 * amplitude * (
+            Math.sin(harmonic * fundamentalFreq * t / 10) * 0.5 +
+            Math.cos(harmonic * fundamentalFreq * t / 10 * 0.8) * 0.35 +
+            Math.sin(harmonic * fundamentalFreq * t / 10 * 1.5) * 0.15
+          );
+          
           const x = cx + r * Math.cos(t);
           const y = cy + r * Math.sin(t);
           path += (j === 0 ? 'M' : 'L') + `${x.toFixed(2)},${y.toFixed(2)} `;
         }
         
-        svg += `<path d="${path}" fill="none" stroke="hsl(${hue}, 90%, 70%)" stroke-width="1" opacity="${opacity}"/>`;
+        svg += `<path d="${path}" fill="none" stroke="rgb(${rgb.r},${rgb.g},${rgb.b})" stroke-width="${2.2 - n * 0.12}" opacity="${alpha}"/>`;
       }
     });
 
-    // Render celestial bodies
-    equations.filter(eq => eq.type === 'celestial').forEach(eq => {
-      const numObjects = Math.min(eq.parameters.numObjects || 10, 60);
+    // Render fractal patterns
+    const fractalEqs = equations.filter(eq => eq.type === 'fractal');
+    fractalEqs.forEach((eq) => {
+      const dimension = eq.parameters.dimension || 2;
+      const iterations = Math.floor(dimension * 5);
+      const rgb = this.hslToRgb(Math.random() * 60 + 30, 75, 60);
       
-      for (let i = 0; i < numObjects; i++) {
-        const t = (i / numObjects) * Math.PI * 2;
-        const spiralFactor = i / numObjects;
-        const distance = scale * (0.4 + spiralFactor * 0.6) * (1 + 0.1 * Math.sin(t * 3));
-        const x = cx + distance * Math.cos(t);
-        const y = cy + distance * Math.sin(t);
-        const size = (1.5 + spiralFactor * 3) * (1 + 0.3 * Math.sin(i * 0.5));
-        const hue = (30 + i * 8) % 60 + 20;
-        
-        // Glow effect with radial gradient
-        svg += `<defs><radialGradient id="glow${i}"><stop offset="0%" style="stop-color:hsl(${hue},100%,80%);stop-opacity:0.8"/><stop offset="100%" style="stop-color:hsl(${hue},100%,60%);stop-opacity:0"/></radialGradient></defs>`;
-        svg += `<circle cx="${x}" cy="${y}" r="${size * 3}" fill="url(#glow${i})" opacity="0.4"/>`;
-        svg += `<circle cx="${x}" cy="${y}" r="${size}" fill="hsl(${hue}, 100%, 90%)"/>`;
-        svg += `<circle cx="${x - size * 0.3}" cy="${y - size * 0.3}" r="${size * 0.4}" fill="rgba(255,255,255,0.8)"/>`;
-      }
+      const branches = this.generateFractalBranches(cx, cy, scale * 0.4, Math.min(iterations, 6));
+      branches.forEach(branch => {
+        svg += `<line x1="${branch.x1}" y1="${branch.y1}" x2="${branch.x2}" y2="${branch.y2}" stroke="rgb(${rgb.r},${rgb.g},${rgb.b})" stroke-width="1" opacity="0.3"/>`;
+      });
     });
 
     svg += '</svg>';
     return svg;
+  }
+
+  /**
+   * Convert HSL to RGB for better Adobe Illustrator compatibility
+   */
+  private hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
+    h = h / 360;
+    s = s / 100;
+    l = l / 100;
+    
+    let r, g, b;
+    
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p: number, q: number, t: number) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+    
+    return {
+      r: Math.round(r * 255),
+      g: Math.round(g * 255),
+      b: Math.round(b * 255)
+    };
+  }
+
+  /**
+   * Generate fractal branches for SVG
+   */
+  private generateFractalBranches(x: number, y: number, length: number, depth: number): Array<{x1: number, y1: number, x2: number, y2: number}> {
+    const branches: Array<{x1: number, y1: number, x2: number, y2: number}> = [];
+    
+    const drawBranch = (x1: number, y1: number, angle: number, len: number, d: number) => {
+      if (d === 0 || len < 1) return;
+      
+      const x2 = x1 + len * Math.cos(angle);
+      const y2 = y1 + len * Math.sin(angle);
+      
+      branches.push({ x1, y1, x2, y2 });
+      
+      const newLength = len * 0.7;
+      drawBranch(x2, y2, angle - 0.5, newLength, d - 1);
+      drawBranch(x2, y2, angle + 0.5, newLength, d - 1);
+    };
+    
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 * i) / 8;
+      drawBranch(x, y, angle, length, depth);
+    }
+    
+    return branches;
   }
 
   private renderParametricCurve(ctx: CanvasRenderingContext2D, eq: MathEquation, cx: number, cy: number, scale: number) {
@@ -878,56 +962,7 @@ where x₀=${centerX.toFixed(2)}, y₀=${centerY.toFixed(2)}, a=${semiMajor.toFi
     ctx.globalAlpha = 1;
   }
 
-  private renderCelestialBodies(ctx: CanvasRenderingContext2D, eq: MathEquation, cx: number, cy: number, scale: number) {
-    const numObjects = Math.min(eq.parameters.numObjects || 10, 60);
-    
-    // Render celestial bodies with proper depth and glow
-    for (let i = 0; i < numObjects; i++) {
-      const t = (i / numObjects) * Math.PI * 2;
-      const spiralFactor = i / numObjects;
-      const distance = scale * (0.4 + spiralFactor * 0.6) * (1 + 0.1 * Math.sin(t * 3));
-      const x = cx + distance * Math.cos(t);
-      const y = cy + distance * Math.sin(t);
-      const size = (1.5 + spiralFactor * 3) * (1 + 0.3 * Math.sin(i * 0.5));
-      const hue = (30 + i * 8) % 60 + 20;
-
-      // Outer glow
-      ctx.globalAlpha = 0.3;
-      const outerGlow = ctx.createRadialGradient(x, y, 0, x, y, size * 4);
-      outerGlow.addColorStop(0, `hsl(${hue}, 100%, 70%)`);
-      outerGlow.addColorStop(0.5, `hsla(${hue}, 90%, 60%, 0.3)`);
-      outerGlow.addColorStop(1, 'transparent');
-      ctx.fillStyle = outerGlow;
-      ctx.beginPath();
-      ctx.arc(x, y, size * 4, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Inner glow
-      ctx.globalAlpha = 0.6;
-      const innerGlow = ctx.createRadialGradient(x, y, 0, x, y, size * 2);
-      innerGlow.addColorStop(0, `hsl(${hue}, 100%, 80%)`);
-      innerGlow.addColorStop(1, 'transparent');
-      ctx.fillStyle = innerGlow;
-      ctx.beginPath();
-      ctx.arc(x, y, size * 2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Core
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = `hsl(${hue}, 100%, 90%)`;
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Highlight
-      ctx.globalAlpha = 0.8;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.beginPath();
-      ctx.arc(x - size * 0.3, y - size * 0.3, size * 0.4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
+  // Celestial bodies rendering removed - cleaner scientific visualization
 
   private renderWaveletPattern(ctx: CanvasRenderingContext2D, eq: MathEquation, cx: number, cy: number, scale: number) {
     const levels = eq.parameters.levels || 5;
