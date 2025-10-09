@@ -146,27 +146,43 @@ const AstroMathProcessor: React.FC = () => {
     }
   };
 
-  const exportResults = () => {
-    if (!result) return;
+  const exportAsPNG = () => {
+    if (!generatedImage) {
+      toast.error(t('Please generate imagery first.', '请先生成图像。'));
+      return;
+    }
 
-    const exportData = {
-      timestamp: new Date().toISOString(),
-      accuracy: result.accuracy,
-      equations: result.equations,
-      structures: result.structures,
-      insights: result.insights,
-      generatedImage: generatedImage || undefined,
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `astro-math-analysis-${Date.now()}.json`;
+    a.href = generatedImage;
+    a.download = `astro-math-${Date.now()}.png`;
     a.click();
-    URL.revokeObjectURL(url);
 
-    toast.success(t('Results exported successfully!', '结果导出成功！'));
+    toast.success(t('PNG exported successfully!', 'PNG导出成功！'));
+  };
+
+  const exportAsSVG = async () => {
+    if (!result) {
+      toast.error(t('No analysis results to export.', '没有可导出的分析结果。'));
+      return;
+    }
+
+    try {
+      const engine = new MathematicalUniverse();
+      const svgContent = engine.generateSVGFromEquations(result.equations, 1200, 1200);
+      
+      const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `astro-math-${Date.now()}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(t('SVG exported successfully!', 'SVG导出成功！'));
+    } catch (error) {
+      console.error('SVG export error:', error);
+      toast.error(t('SVG export failed.', 'SVG导出失败。'));
+    }
   };
 
   return (
@@ -293,10 +309,18 @@ const AstroMathProcessor: React.FC = () => {
                       </>
                     )}
                   </Button>
-                  <Button onClick={exportResults} variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    {t('Export', '导出')}
-                  </Button>
+                  {generatedImage && (
+                    <>
+                      <Button onClick={exportAsPNG} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        {t('Export PNG', '导出PNG')}
+                      </Button>
+                      <Button onClick={exportAsSVG} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        {t('Export SVG', '导出SVG')}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
 

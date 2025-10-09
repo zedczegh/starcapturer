@@ -268,7 +268,7 @@ function morphologicalTopHat(imageData: ImageData, kernel: boolean[][]): Uint8Cl
  */
 function morphologicalOpening(imageData: ImageData, kernel: boolean[][]): Uint8ClampedArray {
   const eroded = morphologicalErosion(imageData, kernel);
-  const erodedImageData = new ImageData(eroded, imageData.width, imageData.height);
+  const erodedImageData = new ImageData(new Uint8ClampedArray(eroded), imageData.width, imageData.height);
   return morphologicalDilation(erodedImageData, kernel);
 }
 
