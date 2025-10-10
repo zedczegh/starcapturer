@@ -232,69 +232,99 @@ const StereoscopeProcessor: React.FC = () => {
     console.log(`Detected ${starCount} star pixels`);
     console.log(`Star parallax: ${params.starParallaxPx}px, Max shift: ${params.maxShift}px`);
 
-    // Process each source pixel and place it correctly in left/right views
+    // INVERSE MAPPING: For each destination pixel, find the source pixel
+    // This prevents gaps and skewing in the output
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const srcIdx = y * width + x;
-        const srcPixelIdx = srcIdx * 4;
+        const destIdx = y * width + x;
+        const destPixelIdx = destIdx * 4;
         
-        // Get source pixel data
-        const r = originalData.data[srcPixelIdx];
-        const g = originalData.data[srcPixelIdx + 1];
-        const b = originalData.data[srcPixelIdx + 2];
+        // Calculate source X position for LEFT view (inverse of leftDestX = x - baseShift)
+        // We need to find srcX such that: x = srcX - shift(srcX)
+        // Approximate: srcX ≈ x + shift(x) 
+        let leftSrcX = x;
+        let rightSrcX = x;
         
-        // Skip black pixels
-        if (r === 0 && g === 0 && b === 0) continue;
-        
-        let leftDestX = x;   // Left image - no shift for stars
-        let rightDestX = x;  // Right image - will be shifted for stars
-        
-        if (params.preserveStarShapes && starMask[srcIdx] === 255) {
-          // Star pixel - only process if it's a genuine bright star (not hot pixels/noise)
-          const starBrightness = Math.max(r, g, b);
+        // For left view: need to find source that would shift HERE
+        // Try the current position first, then refine
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const testIdx = y * width + leftSrcX;
+          const testPixelIdx = testIdx * 4;
           
-          // Much higher threshold to avoid hot pixels - only process very bright stars
-          if (starBrightness > params.starThreshold + 50) {
-            // Very bright stars appear closer - shift RIGHT on right image
-            rightDestX = x + Math.round(params.starParallaxPx);
-          } else if (starBrightness > params.starThreshold) {
-            // Medium bright stars appear further - shift LEFT on right image  
-            rightDestX = x - Math.round(params.starParallaxPx * 0.3);
-          } else {
-            // Too dim - treat as nebula, not a star
-            const depthValue = depthMap.data[srcPixelIdx] / 255.0;
-            const baseShift = Math.round(depthValue * params.maxShift);
-            leftDestX = x - baseShift;
-            rightDestX = x + baseShift;
+          if (leftSrcX >= 0 && leftSrcX < width) {
+            const isStar = params.preserveStarShapes && starMask[testIdx] === 255;
+            const starBrightness = Math.max(
+              originalData.data[testPixelIdx],
+              originalData.data[testPixelIdx + 1],
+              originalData.data[testPixelIdx + 2]
+            );
+            
+            let expectedShift = 0;
+            if (isStar && starBrightness > params.starThreshold + 50) {
+              expectedShift = 0; // Stars don't shift in left view
+            } else if (isStar && starBrightness > params.starThreshold) {
+              expectedShift = 0; // Medium stars don't shift in left view
+            } else {
+              const depthValue = depthMap.data[testPixelIdx] / 255.0;
+              expectedShift = -Math.round(depthValue * params.maxShift);
+            }
+            
+            const predictedDestX = leftSrcX + expectedShift;
+            const error = x - predictedDestX;
+            
+            if (Math.abs(error) <= 1) break; // Close enough
+            leftSrcX += error; // Refine estimate
+            leftSrcX = Math.max(0, Math.min(width - 1, leftSrcX));
           }
-          
-          if (x < 5 && y < 5) {
-            console.log(`Star at (${x},${y}) brightness=${starBrightness}, threshold=${params.starThreshold}, moving to rightX=${rightDestX}`);
-          }
-        } else {
-          // Non-star pixel - use depth map for subtle parallax
-          const depthValue = depthMap.data[srcPixelIdx] / 255.0;
-          const baseShift = Math.round(depthValue * params.maxShift);
-          leftDestX = x - baseShift;  // Left view shifts opposite
-          rightDestX = x + baseShift; // Right view normal shift
         }
         
-        // Place original pixel in left view
-        if (leftDestX >= 0 && leftDestX < width) {
-          const leftDestIdx = (y * width + leftDestX) * 4;
-          leftData.data[leftDestIdx] = r;
-          leftData.data[leftDestIdx + 1] = g;
-          leftData.data[leftDestIdx + 2] = b;
-          leftData.data[leftDestIdx + 3] = 255;
+        // For right view: similar process
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const testIdx = y * width + rightSrcX;
+          const testPixelIdx = testIdx * 4;
+          
+          if (rightSrcX >= 0 && rightSrcX < width) {
+            const isStar = params.preserveStarShapes && starMask[testIdx] === 255;
+            const starBrightness = Math.max(
+              originalData.data[testPixelIdx],
+              originalData.data[testPixelIdx + 1],
+              originalData.data[testPixelIdx + 2]
+            );
+            
+            let expectedShift = 0;
+            if (isStar && starBrightness > params.starThreshold + 50) {
+              expectedShift = Math.round(params.starParallaxPx); // Very bright stars shift right
+            } else if (isStar && starBrightness > params.starThreshold) {
+              expectedShift = -Math.round(params.starParallaxPx * 0.3); // Medium stars shift left
+            } else {
+              const depthValue = depthMap.data[testPixelIdx] / 255.0;
+              expectedShift = Math.round(depthValue * params.maxShift);
+            }
+            
+            const predictedDestX = rightSrcX + expectedShift;
+            const error = x - predictedDestX;
+            
+            if (Math.abs(error) <= 1) break; // Close enough
+            rightSrcX += error; // Refine estimate
+            rightSrcX = Math.max(0, Math.min(width - 1, rightSrcX));
+          }
         }
         
-        // Place original pixel in right view
-        if (rightDestX >= 0 && rightDestX < width) {
-          const rightDestIdx = (y * width + rightDestX) * 4;
-          rightData.data[rightDestIdx] = r;
-          rightData.data[rightDestIdx + 1] = g;
-          rightData.data[rightDestIdx + 2] = b;
-          rightData.data[rightDestIdx + 3] = 255;
+        // Copy pixels from source to destination
+        if (leftSrcX >= 0 && leftSrcX < width) {
+          const srcIdx = (y * width + leftSrcX) * 4;
+          leftData.data[destPixelIdx] = originalData.data[srcIdx];
+          leftData.data[destPixelIdx + 1] = originalData.data[srcIdx + 1];
+          leftData.data[destPixelIdx + 2] = originalData.data[srcIdx + 2];
+          leftData.data[destPixelIdx + 3] = 255;
+        }
+        
+        if (rightSrcX >= 0 && rightSrcX < width) {
+          const srcIdx = (y * width + rightSrcX) * 4;
+          rightData.data[destPixelIdx] = originalData.data[srcIdx];
+          rightData.data[destPixelIdx + 1] = originalData.data[srcIdx + 1];
+          rightData.data[destPixelIdx + 2] = originalData.data[srcIdx + 2];
+          rightData.data[destPixelIdx + 3] = 255;
         }
       }
     }

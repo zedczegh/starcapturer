@@ -963,10 +963,11 @@ Spatial autocorr: ρ = ${spatialCorr.toFixed(4)}`,
     }
     ctx.putImageData(imageData, 0, 0);
 
-    // Center coordinates and adaptive scaling
+    // Center coordinates with 20% padding to prevent cropping
+    const padding = 0.20;
     const cx = width / 2;
     const cy = height / 2;
-    const scale = Math.min(width, height) / 2.5;
+    const scale = Math.min(width, height) / 2.5 * (1 - padding);
 
     // Use additive blending for luminous astronomical effect
     ctx.globalCompositeOperation = 'lighter';
@@ -995,9 +996,11 @@ Spatial autocorr: ρ = ${spatialCorr.toFixed(4)}`,
    * Adobe Illustrator compatible with RGB colors
    */
   generateSVGFromEquations(equations: MathEquation[], width: number = 1200, height: number = 1200): string {
+    // 20% padding to prevent cropping
+    const padding = 0.20;
     const cx = width / 2;
     const cy = height / 2;
-    const scale = Math.min(width, height) / 2.5;
+    const scale = Math.min(width, height) / 2.5 * (1 - padding);
 
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
     
