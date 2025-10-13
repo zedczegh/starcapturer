@@ -87,12 +87,18 @@ async function processAdvancedImageData(imageData: ImageData, filename: string, 
   const { data, width, height } = imageData;
   const pixels = data.length / 4;
   
-  console.log(`Processing ${pixels} pixels...`);
+  console.log(`Processing ${pixels} pixels with enhanced spectral analysis...`);
   
   let totalRed = 0, totalGreen = 0, totalBlue = 0;
   let brightness = 0, minBrightness = 255, maxBrightness = 0;
   let brightPixels = 0, darkRegions = 0, colorfulRegions = 0;
   let circularFeatures = 0, linearFeatures = 0;
+  
+  // Enhanced analysis for better musical mapping
+  let edgePixels = 0;
+  let smoothRegions = 0;
+  let brightnessVariance = 0;
+  const brightnessValues: number[] = [];
 
   onProgress?.(50);
 
@@ -108,6 +114,7 @@ async function processAdvancedImageData(imageData: ImageData, filename: string, 
     
     const pixelBrightness = (r + g + b) / 3;
     brightness += pixelBrightness;
+    brightnessValues.push(pixelBrightness);
     minBrightness = Math.min(minBrightness, pixelBrightness);
     maxBrightness = Math.max(maxBrightness, pixelBrightness);
     
@@ -116,7 +123,32 @@ async function processAdvancedImageData(imageData: ImageData, filename: string, 
     
     const colorVariance = Math.abs(r - g) + Math.abs(g - b) + Math.abs(r - b);
     if (colorVariance > 60) colorfulRegions++;
+    
+    // Detect edges (areas with high contrast)
+    const x = Math.floor((i / 4) % width);
+    const y = Math.floor((i / 4) / width);
+    if (x > 0 && y > 0 && x < width - 1 && y < height - 1) {
+      const rightIdx = i + 4;
+      const downIdx = i + width * 4;
+      if (rightIdx < data.length && downIdx < data.length) {
+        const rightBrightness = (data[rightIdx] + data[rightIdx + 1] + data[rightIdx + 2]) / 3;
+        const downBrightness = (data[downIdx] + data[downIdx + 1] + data[downIdx + 2]) / 3;
+        const gradientMagnitude = Math.sqrt(
+          Math.pow(rightBrightness - pixelBrightness, 2) + 
+          Math.pow(downBrightness - pixelBrightness, 2)
+        );
+        if (gradientMagnitude > 30) edgePixels++;
+        if (gradientMagnitude < 10) smoothRegions++;
+      }
+    }
   }
+
+  // Calculate brightness variance for texture analysis
+  const avgBrightness = brightness / sampledPixels / 255;
+  for (const bVal of brightnessValues) {
+    brightnessVariance += Math.pow((bVal / 255) - avgBrightness, 2);
+  }
+  brightnessVariance = Math.sqrt(brightnessVariance / brightnessValues.length);
 
   onProgress?.(65);
 
@@ -124,9 +156,12 @@ async function processAdvancedImageData(imageData: ImageData, filename: string, 
   const avgRed = totalRed / sampledPixels / 255;
   const avgGreen = totalGreen / sampledPixels / 255;
   const avgBlue = totalBlue / sampledPixels / 255;
-  const avgBrightness = brightness / sampledPixels / 255;
   const contrast = (maxBrightness - minBrightness) / 255;
   const saturation = Math.max(avgRed, avgGreen, avgBlue) - Math.min(avgRed, avgGreen, avgBlue);
+  
+  // New metrics for better sonification
+  const textureComplexity = edgePixels / sampledPixels;
+  const smoothness = smoothRegions / sampledPixels;
 
   const imageType = expectedType as any || determineImageType(filename, avgBrightness, contrast, circularFeatures, linearFeatures);
   console.log(`Detected image type: ${imageType}`);
@@ -335,31 +370,35 @@ function getDefaultAnalysis(): AnalysisResult {
 export async function generateAudioFromAnalysis(analysis: AnalysisResult): Promise<AudioBuffer> {
   const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
   const sampleRate = audioContext.sampleRate;
-  const duration = 60; // Longer to allow gradual evolution
+  const duration = 60;
   const length = sampleRate * duration;
   
   const buffer = audioContext.createBuffer(2, length, sampleRate);
   const leftChannel = buffer.getChannelData(0);
   const rightChannel = buffer.getChannelData(1);
 
-  // Base frequencies derived from image characteristics
-  // Using just intonation ratios for more organic harmony
+  // Base frequencies using musical tuning
   const fundamentalFreq = 55 + (analysis.brightness * 110); // 55-165 Hz
   
-  // Phasing rates inspired by Steve Reich (slowly evolving relationships)
+  // Phasing rates - very subtle for smooth evolution
   const phaseRate1 = 1.0;
-  const phaseRate2 = 1.0 + (analysis.contrast * 0.003); // Subtle phase drift
-  const phaseRate3 = 1.0 - (analysis.saturation * 0.002);
+  const phaseRate2 = 1.0 + (analysis.contrast * 0.002);
+  const phaseRate3 = 1.0 - (analysis.saturation * 0.001);
   
-  // Microtonal detuning for Aphex Twin-like character
-  const detune = analysis.colorProfile.red * 0.05; // Max 5% detune
+  // Reduced detune for cleaner sound
+  const detune = analysis.colorProfile.red * 0.02; // Max 2% detune
   
-  console.log('Generating experimental composition:', {
+  console.log('Generating enhanced composition:', {
     fundamental: fundamentalFreq,
     phaseRates: [phaseRate1, phaseRate2, phaseRate3],
     detune,
     imageType: analysis.imageType
   });
+
+  // Simple low-pass filter state variables (one-pole filter)
+  let leftFilterState = 0;
+  let rightFilterState = 0;
+  const filterCutoff = 0.3; // Lower = more filtering
 
   for (let i = 0; i < length; i++) {
     const time = i / sampleRate;
@@ -367,48 +406,57 @@ export async function generateAudioFromAnalysis(analysis: AnalysisResult): Promi
     
     let leftSample = 0, rightSample = 0;
 
-    // Overall envelope with slow fade in/out
+    // Overall envelope with slow fade
     const envelope = createSlowEnvelope(time, duration);
     
-    // 1. Deep Listening Drone Layers (Pauline Oliveros)
+    // 1. Deep Listening Drone Layers (core foundation)
     const drones = generateDeepDrones(time, fundamentalFreq, analysis, progress);
-    leftSample += drones.left * 0.18;
-    rightSample += drones.right * 0.18;
+    leftSample += drones.left * 0.25;
+    rightSample += drones.right * 0.25;
     
-    // 2. Phasing Patterns (Steve Reich)
+    // 2. Phasing Patterns (Reich-inspired evolution)
     const phasing = generatePhasingPatterns(time, fundamentalFreq, 
       [phaseRate1, phaseRate2, phaseRate3], analysis, progress);
-    leftSample += phasing.left * 0.12;
-    rightSample += phasing.right * 0.12;
+    leftSample += phasing.left * 0.15;
+    rightSample += phasing.right * 0.15;
     
-    // 3. Granular Textures (Aphex Twin)
-    const granular = generateGranularTexture(time, i, sampleRate, analysis, detune, progress);
-    leftSample += granular.left * 0.08;
-    rightSample += granular.right * 0.08;
-    
-    // 4. Evolving Harmonic Field
-    const harmonics = generateEvolvingHarmonics(time, fundamentalFreq, analysis, progress);
-    leftSample += harmonics.left * 0.10;
-    rightSample += harmonics.right * 0.10;
-    
-    // 5. Sparse Glitch Events (for stars/flares)
-    if (analysis.stars > 0 || analysis.solarFlares > 0) {
-      const glitch = generateSparseGlitches(time, i, sampleRate, analysis, progress);
-      leftSample += glitch.left * 0.06;
-      rightSample += glitch.right * 0.06;
+    // 3. Filtered Granular Textures (much reduced, only for texture)
+    if (progress > 0.15 && progress < 0.85) { // Only in middle section
+      const granular = generateFilteredGranularTexture(time, i, sampleRate, analysis, detune, progress);
+      leftSample += granular.left * 0.03; // Greatly reduced
+      rightSample += granular.right * 0.03;
     }
     
-    // 6. Spatial Movement (nebulae/galaxies create spatial depth)
+    // 4. Evolving Harmonic Field (more prominent for musicality)
+    const harmonics = generateEvolvingHarmonics(time, fundamentalFreq, analysis, progress);
+    leftSample += harmonics.left * 0.18;
+    rightSample += harmonics.right * 0.18;
+    
+    // 5. Musical Glitches (very sparse, only for bright stars)
+    if ((analysis.stars > 50 || analysis.solarFlares > 5) && progress > 0.2) {
+      const glitch = generateMusicalGlitches(time, i, sampleRate, analysis, fundamentalFreq, progress);
+      leftSample += glitch.left * 0.02; // Very quiet
+      rightSample += glitch.right * 0.02;
+    }
+    
+    // 6. Spatial Movement (nebulae/galaxies)
     if (analysis.nebulae > 0 || analysis.galaxies > 0) {
       const spatial = generateSpatialMovement(time, fundamentalFreq, analysis, progress);
-      leftSample += spatial.left * 0.08;
-      rightSample += spatial.right * 0.08;
+      leftSample += spatial.left * 0.12;
+      rightSample += spatial.right * 0.12;
     }
 
-    // Apply overall envelope and gentle limiting
-    const mixed = envelope * 0.35;
-    leftChannel[i] = Math.tanh(leftSample * mixed);
-    rightChannel[i] = Math.tanh(rightSample * mixed);
+    // Apply envelope
+    leftSample *= envelope * 0.4;
+    rightSample *= envelope * 0.4;
+    
+    // Apply one-pole low-pass filter to remove harshness
+    leftFilterState = leftFilterState + filterCutoff * (leftSample - leftFilterState);
+    rightFilterState = rightFilterState + filterCutoff * (rightSample - rightFilterState);
+    
+    // Soft clipping for warmth
+    leftChannel[i] = Math.tanh(leftFilterState * 1.2);
+    rightChannel[i] = Math.tanh(rightFilterState * 1.2);
   }
 
   return buffer;
@@ -523,8 +571,8 @@ function generatePhasingPatterns(
   return { left, right };
 }
 
-// Aphex Twin inspired: Granular synthesis and glitchy textures
-function generateGranularTexture(
+// Filtered granular synthesis - much cleaner and more musical
+function generateFilteredGranularTexture(
   time: number,
   sample: number,
   sampleRate: number,
@@ -534,38 +582,43 @@ function generateGranularTexture(
 ): { left: number, right: number } {
   let left = 0, right = 0;
   
-  // Grain parameters
-  const grainDensity = 20 + analysis.stars * 0.1; // Grains per second
-  const grainDuration = 0.02 + Math.sin(time * 0.1) * 0.01; // 20-30ms grains
+  // Much sparser grain density
+  const grainDensity = 5 + analysis.stars * 0.02; // Fewer grains
+  const grainDuration = 0.04 + Math.sin(time * 0.08) * 0.02; // 40-60ms grains
   
-  // Check if we should trigger a grain
   const grainProbability = grainDensity / sampleRate;
-  const randomValue = (Math.sin(sample * 12.9898 + time * 78.233) * 43758.5453) % 1;
+  const randomValue = Math.abs((Math.sin(sample * 12.9898 + time * 78.233) * 43758.5453) % 1);
   
   if (randomValue < grainProbability) {
     const grainSamples = grainDuration * sampleRate;
     const grainProgress = (sample % grainSamples) / grainSamples;
     
     if (grainProgress < 1) {
-      // Gaussian envelope for grain
-      const envelope = Math.exp(-Math.pow(grainProgress * 2 - 1, 2) * 4);
+      // Smooth Hann window envelope
+      const envelope = Math.sin(grainProgress * Math.PI);
       
-      // Frequency varies based on analysis
-      const grainFreq = 200 + randomValue * analysis.brightness * 800;
-      const detuneFreq = grainFreq * (1 + detune * (randomValue * 2 - 1));
+      // Use musical frequencies based on fundamental
+      const fundamental = 110 + randomValue * 220;
+      const harmonic = Math.floor(1 + randomValue * 8); // 1-8 harmonic
+      const grainFreq = fundamental * harmonic;
+      const detuneFreq = grainFreq * (1 + detune * (randomValue * 2 - 1) * 0.5);
       
       const phase = 2 * Math.PI * detuneFreq * grainProgress;
       
-      // Mix of sine and noise for texture
-      const tone = Math.sin(phase) * 0.7;
-      const noise = (randomValue * 2 - 1) * 0.3;
+      // Pure sine tone, no noise
+      const tone = Math.sin(phase);
       
-      const grain = (tone + noise) * envelope * 0.3;
+      // Add subtle vibrato
+      const vibrato = Math.sin(2 * Math.PI * 5 * grainProgress) * 0.02;
+      const vibratoPhase = phase * (1 + vibrato);
+      const vibratoTone = Math.sin(vibratoPhase);
       
-      // Random panning for spatial texture
-      const grainPan = randomValue * 2 - 1;
-      left += grain * (1 - Math.abs(Math.min(0, grainPan)));
-      right += grain * (1 - Math.abs(Math.max(0, grainPan)));
+      const grain = (tone * 0.7 + vibratoTone * 0.3) * envelope * 0.5;
+      
+      // Subtle stereo spread
+      const grainPan = (randomValue - 0.5) * 0.6; // Less extreme panning
+      left += grain * (1 - Math.max(0, grainPan));
+      right += grain * (1 + Math.min(0, grainPan));
     }
   }
   
@@ -608,41 +661,46 @@ function generateEvolvingHarmonics(
   return { left, right };
 }
 
-// Sparse glitch events for stars and flares
-function generateSparseGlitches(
+// Musical glitches - clean harmonic events instead of noise
+function generateMusicalGlitches(
   time: number,
   sample: number,
   sampleRate: number,
   analysis: AnalysisResult,
+  fundamentalFreq: number,
   progress: number
 ): { left: number, right: number } {
   let left = 0, right = 0;
   
-  // Random glitch triggers based on object count
-  const glitchDensity = (analysis.stars + analysis.solarFlares) * 0.0001;
-  const random = (Math.sin(sample * 43.758 + time * 91.343) * 19283.5453) % 1;
+  // Very sparse musical events
+  const glitchDensity = (analysis.stars + analysis.solarFlares) * 0.00003;
+  const random = Math.abs((Math.sin(sample * 43.758 + time * 91.343) * 19283.5453) % 1);
   
   if (random < glitchDensity) {
-    const glitchDuration = 0.01 + random * 0.05; // 10-60ms
+    const glitchDuration = 0.08 + random * 0.12; // 80-200ms for more musical timing
     const glitchSamples = glitchDuration * sampleRate;
     const glitchProgress = (sample % glitchSamples) / glitchSamples;
     
     if (glitchProgress < 1) {
-      // Sharp attack, exponential decay
-      const envelope = Math.exp(-glitchProgress * 15);
+      // Smooth bell-shaped envelope
+      const envelope = Math.exp(-Math.pow(glitchProgress * 2 - 1, 2) * 8);
       
-      // High frequency glitches
-      const glitchFreq = 800 + random * 3000;
+      // Use harmonic frequencies instead of random
+      const harmonics = [2, 3, 4, 5, 6, 8, 9, 12, 16];
+      const selectedHarmonic = harmonics[Math.floor(random * harmonics.length)];
+      const glitchFreq = fundamentalFreq * selectedHarmonic;
       const phase = 2 * Math.PI * glitchFreq * glitchProgress;
       
-      // Bit-crushing effect
-      const steps = 4 + Math.floor(random * 8);
-      const crushed = Math.round(Math.sin(phase) * steps) / steps;
+      // Clean sine with slight FM modulation
+      const modulation = Math.sin(phase * 2) * 0.15;
+      const cleanTone = Math.sin(phase + modulation);
       
-      const glitch = crushed * envelope * 0.4;
+      const glitch = cleanTone * envelope * 0.6;
       
-      left += glitch * (random > 0.5 ? 1 : 0.3);
-      right += glitch * (random <= 0.5 ? 1 : 0.3);
+      // Subtle stereo placement
+      const pan = (random - 0.5) * 0.4;
+      left += glitch * (1 - Math.max(0, pan));
+      right += glitch * (1 + Math.min(0, pan));
     }
   }
   
