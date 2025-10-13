@@ -335,268 +335,352 @@ function getDefaultAnalysis(): AnalysisResult {
 export async function generateAudioFromAnalysis(analysis: AnalysisResult): Promise<AudioBuffer> {
   const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
   const sampleRate = audioContext.sampleRate;
-  const duration = 45;
+  const duration = 60; // Longer to allow gradual evolution
   const length = sampleRate * duration;
   
   const buffer = audioContext.createBuffer(2, length, sampleRate);
   const leftChannel = buffer.getChannelData(0);
   const rightChannel = buffer.getChannelData(1);
 
-  // Enhanced musical parameters
-  const baseFreq = 220; // A3
-  const beatsPerMinute = 80 + (analysis.brightness * 40); // 80-120 BPM based on brightness
-  const beatLength = (60 / beatsPerMinute) * sampleRate;
+  // Base frequencies derived from image characteristics
+  // Using just intonation ratios for more organic harmony
+  const fundamentalFreq = 55 + (analysis.brightness * 110); // 55-165 Hz
   
-  // Musical scales based on image type
-  const scales = {
-    'deep-sky': [0, 2, 4, 7, 9], // Pentatonic scale (ethereal)
-    'solar': [0, 2, 4, 5, 7, 9, 11], // Major scale (bright)
-    'planetary': [0, 2, 3, 5, 7, 8, 10], // Natural minor (mysterious)
-    'lunar': [0, 1, 3, 5, 6, 8, 10], // Phrygian mode (haunting)
-    'mixed': [0, 2, 4, 6, 7, 9, 11] // Lydian mode (dreamy)
-  };
+  // Phasing rates inspired by Steve Reich (slowly evolving relationships)
+  const phaseRate1 = 1.0;
+  const phaseRate2 = 1.0 + (analysis.contrast * 0.003); // Subtle phase drift
+  const phaseRate3 = 1.0 - (analysis.saturation * 0.002);
   
-  const currentScale = scales[analysis.imageType] || scales['deep-sky'];
+  // Microtonal detuning for Aphex Twin-like character
+  const detune = analysis.colorProfile.red * 0.05; // Max 5% detune
   
-  // Create chord progressions based on detected objects
-  const chordProgression = generateChordProgression(analysis, currentScale);
-  const melodyNotes = generateMelody(analysis, currentScale);
-  const rhythmPattern = generateRhythmPattern(analysis);
-  
-  console.log('Generating musical composition with:', {
-    bpm: beatsPerMinute,
-    scale: currentScale,
-    chords: chordProgression.length,
-    melodyNotes: melodyNotes.length
+  console.log('Generating experimental composition:', {
+    fundamental: fundamentalFreq,
+    phaseRates: [phaseRate1, phaseRate2, phaseRate3],
+    detune,
+    imageType: analysis.imageType
   });
 
   for (let i = 0; i < length; i++) {
     const time = i / sampleRate;
-    const beatPosition = (time * beatsPerMinute / 60) % 1;
-    const measurePosition = (time * beatsPerMinute / 60 / 4) % 1;
+    const progress = time / duration;
     
     let leftSample = 0, rightSample = 0;
 
-    // Dynamic volume envelope
-    const overallEnvelope = createOverallEnvelope(time, duration);
-    const rhythmEnvelope = createRhythmEnvelope(beatPosition, rhythmPattern);
+    // Overall envelope with slow fade in/out
+    const envelope = createSlowEnvelope(time, duration);
     
-    // Bass line (chord roots)
-    const bassNote = generateBassLine(time, chordProgression, baseFreq, analysis);
-    leftSample += bassNote * 0.15;
-    rightSample += bassNote * 0.15;
+    // 1. Deep Listening Drone Layers (Pauline Oliveros)
+    const drones = generateDeepDrones(time, fundamentalFreq, analysis, progress);
+    leftSample += drones.left * 0.18;
+    rightSample += drones.right * 0.18;
     
-    // Harmony (chord tones)
-    const harmony = generateHarmony(time, chordProgression, baseFreq, analysis, beatPosition);
-    leftSample += harmony.left * 0.12;
-    rightSample += harmony.right * 0.12;
+    // 2. Phasing Patterns (Steve Reich)
+    const phasing = generatePhasingPatterns(time, fundamentalFreq, 
+      [phaseRate1, phaseRate2, phaseRate3], analysis, progress);
+    leftSample += phasing.left * 0.12;
+    rightSample += phasing.right * 0.12;
     
-    // Melody
-    const melody = generateMelodyLine(time, melodyNotes, baseFreq * 2, analysis, beatPosition);
-    leftSample += melody.left * 0.08;
-    rightSample += melody.right * 0.08;
+    // 3. Granular Textures (Aphex Twin)
+    const granular = generateGranularTexture(time, i, sampleRate, analysis, detune, progress);
+    leftSample += granular.left * 0.08;
+    rightSample += granular.right * 0.08;
     
-    // Atmospheric pad (for nebulae/galaxies)
+    // 4. Evolving Harmonic Field
+    const harmonics = generateEvolvingHarmonics(time, fundamentalFreq, analysis, progress);
+    leftSample += harmonics.left * 0.10;
+    rightSample += harmonics.right * 0.10;
+    
+    // 5. Sparse Glitch Events (for stars/flares)
+    if (analysis.stars > 0 || analysis.solarFlares > 0) {
+      const glitch = generateSparseGlitches(time, i, sampleRate, analysis, progress);
+      leftSample += glitch.left * 0.06;
+      rightSample += glitch.right * 0.06;
+    }
+    
+    // 6. Spatial Movement (nebulae/galaxies create spatial depth)
     if (analysis.nebulae > 0 || analysis.galaxies > 0) {
-      const pad = generateAtmosphericPad(time, currentScale, baseFreq * 0.5, analysis);
-      leftSample += pad.left * 0.05;
-      rightSample += pad.right * 0.05;
-    }
-    
-    // Percussive elements for stars
-    if (analysis.stars > 0) {
-      const percussion = generatePercussion(time, beatPosition, analysis);
-      leftSample += percussion * 0.03;
-      rightSample += percussion * 0.03;
-    }
-    
-    // Solar flares create bright arpeggios
-    if (analysis.solarFlares > 0) {
-      const arpeggio = generateArpeggio(time, currentScale, baseFreq * 4, analysis);
-      leftSample += arpeggio.left * 0.06;
-      rightSample += arpeggio.right * 0.06;
+      const spatial = generateSpatialMovement(time, fundamentalFreq, analysis, progress);
+      leftSample += spatial.left * 0.08;
+      rightSample += spatial.right * 0.08;
     }
 
-    // Apply envelopes and dynamics
-    const finalVolume = overallEnvelope * rhythmEnvelope * analysis.brightness * 0.3;
-    leftChannel[i] = leftSample * finalVolume;
-    rightChannel[i] = rightSample * finalVolume;
+    // Apply overall envelope and gentle limiting
+    const mixed = envelope * 0.35;
+    leftChannel[i] = Math.tanh(leftSample * mixed);
+    rightChannel[i] = Math.tanh(rightSample * mixed);
   }
 
   return buffer;
 }
 
-// Musical generation functions
-function generateChordProgression(analysis: AnalysisResult, scale: number[]): number[][] {
-  const progressions = {
-    'deep-sky': [[0, 2, 4], [3, 5, 0], [1, 3, 5], [4, 0, 2]], // vi-IV-ii-V
-    'solar': [[0, 2, 4], [1, 3, 5], [2, 4, 0], [3, 5, 1]], // I-ii-iii-IV
-    'planetary': [[0, 2, 4], [5, 0, 2], [3, 5, 0], [1, 3, 5]], // i-VI-IV-ii
-    'lunar': [[0, 2, 4], [6, 1, 3], [5, 0, 2], [4, 6, 1]], // i-bVII-bVI-V
-    'mixed': [[0, 2, 4], [1, 3, 5], [4, 6, 1], [0, 2, 4]] // I-ii-V-I
-  };
-  
-  return progressions[analysis.imageType] || progressions['deep-sky'];
-}
+// Experimental generation functions inspired by Oliveros, Reich, and Aphex Twin
 
-function generateMelody(analysis: AnalysisResult, scale: number[]): number[] {
-  const melody: number[] = [];
-  const noteCount = Math.min(16, Math.max(8, Math.floor(analysis.stars / 20)));
-  
-  for (let i = 0; i < noteCount; i++) {
-    // Create melodic motion based on image characteristics
-    const direction = analysis.contrast > 0.5 ? 1 : -1;
-    const interval = Math.floor(analysis.saturation * scale.length);
-    const noteIndex = (i * direction + interval) % scale.length;
-    melody.push(scale[Math.abs(noteIndex)]);
-  }
-  
-  return melody;
-}
-
-function generateRhythmPattern(analysis: AnalysisResult): number[] {
-  // Create rhythm based on image characteristics
-  if (analysis.imageType === 'solar') {
-    return [1, 0.7, 0.8, 0.6, 1, 0.5, 0.9, 0.4]; // Energetic
-  } else if (analysis.imageType === 'lunar') {
-    return [1, 0.3, 0.6, 0.2, 0.8, 0.4, 0.5, 0.3]; // Gentle
-  } else if (analysis.imageType === 'planetary') {
-    return [1, 0.6, 0.7, 0.5, 0.9, 0.4, 0.8, 0.3]; // Steady
-  } else {
-    return [1, 0.4, 0.6, 0.3, 0.8, 0.5, 0.7, 0.2]; // Ethereal
-  }
-}
-
-function createOverallEnvelope(time: number, duration: number): number {
-  const fadeInTime = 2;
-  const fadeOutTime = 3;
+function createSlowEnvelope(time: number, duration: number): number {
+  const fadeInTime = 8; // Slow fade in
+  const fadeOutTime = 12; // Even slower fade out
   
   if (time < fadeInTime) {
-    return Math.sin((time / fadeInTime) * Math.PI * 0.5);
+    return Math.pow(time / fadeInTime, 2); // Exponential fade in
   } else if (time > duration - fadeOutTime) {
-    return Math.sin(((duration - time) / fadeOutTime) * Math.PI * 0.5);
+    return Math.pow((duration - time) / fadeOutTime, 2);
   }
   
   return 1;
 }
 
-function createRhythmEnvelope(beatPosition: number, rhythmPattern: number[]): number {
-  const patternIndex = Math.floor(beatPosition * rhythmPattern.length);
-  const currentLevel = rhythmPattern[patternIndex];
-  const nextLevel = rhythmPattern[(patternIndex + 1) % rhythmPattern.length];
-  const interpolation = (beatPosition * rhythmPattern.length) % 1;
-  
-  return currentLevel + (nextLevel - currentLevel) * interpolation;
-}
-
-function generateBassLine(time: number, chordProgression: number[][], baseFreq: number, analysis: AnalysisResult): number {
-  const chordDuration = 8; // 8 beats per chord
-  const chordIndex = Math.floor((time * 2) % chordProgression.length);
-  const chord = chordProgression[chordIndex];
-  const rootNote = chord[0];
-  
-  const freq = baseFreq * Math.pow(2, rootNote / 12);
-  const phase = 2 * Math.PI * freq * time;
-  
-  // Add some movement with octave jumps
-  const octaveJump = Math.sin(time * 0.5) > 0.7 ? 2 : 1;
-  
-  return Math.sin(phase) * 0.8 + Math.sin(phase * 2) * 0.2 * octaveJump;
-}
-
-function generateHarmony(time: number, chordProgression: number[][], baseFreq: number, analysis: AnalysisResult, beatPosition: number): { left: number, right: number } {
-  const chordDuration = 8;
-  const chordIndex = Math.floor((time * 2) % chordProgression.length);
-  const chord = chordProgression[chordIndex];
-  
+// Pauline Oliveros inspired: Deep, meditative drones with slow evolution
+function generateDeepDrones(
+  time: number, 
+  fundamental: number, 
+  analysis: AnalysisResult,
+  progress: number
+): { left: number, right: number } {
   let left = 0, right = 0;
   
-  chord.forEach((note, index) => {
-    const freq = baseFreq * 2 * Math.pow(2, note / 12);
+  // Multiple drone layers with just intonation ratios
+  const ratios = [1, 3/2, 4/3, 5/4, 8/5, 7/4]; // Natural harmonics
+  
+  ratios.forEach((ratio, index) => {
+    const freq = fundamental * ratio;
     const phase = 2 * Math.PI * freq * time;
-    const amplitude = 0.3 / chord.length;
     
-    // Stereo positioning
-    const pan = (index - 1) * 0.3;
-    const wave = Math.sin(phase) + Math.sin(phase * 2) * 0.1;
+    // Very slow LFO for breath-like evolution
+    const lfo = Math.sin(time * (0.05 + index * 0.01)) * 0.3 + 0.7;
     
-    left += wave * amplitude * (1 - Math.max(0, pan));
-    right += wave * amplitude * (1 + Math.min(0, pan));
+    // Add slight detuning for organic quality
+    const detune = Math.sin(time * 0.02 + index) * 0.01;
+    const detunePhase = 2 * Math.PI * freq * (1 + detune) * time;
+    
+    // Mix sine with slight triangle wave for warmth
+    const wave = Math.sin(phase) * 0.7 + 
+                 (Math.asin(Math.sin(phase)) / (Math.PI/2)) * 0.3;
+    const detuneWave = Math.sin(detunePhase) * 0.3;
+    
+    const amplitude = (1 / (index + 1)) * lfo * 0.15;
+    
+    // Stereo spread based on harmonic
+    const panAmount = (index / ratios.length) * 2 - 1;
+    const leftPan = Math.max(0, 1 - panAmount) + 0.5;
+    const rightPan = Math.max(0, 1 + panAmount) + 0.5;
+    
+    left += (wave + detuneWave) * amplitude * leftPan;
+    right += (wave + detuneWave) * amplitude * rightPan;
   });
   
   return { left, right };
 }
 
-function generateMelodyLine(time: number, melodyNotes: number[], baseFreq: number, analysis: AnalysisResult, beatPosition: number): { left: number, right: number } {
-  const noteIndex = Math.floor((time * 4) % melodyNotes.length);
-  const note = melodyNotes[noteIndex];
-  const freq = baseFreq * Math.pow(2, note / 12);
-  
-  // Add vibrato and expression
-  const vibrato = Math.sin(time * 6) * 0.02;
-  const actualFreq = freq * (1 + vibrato);
-  
-  const phase = 2 * Math.PI * actualFreq * time;
-  const wave = Math.sin(phase) + Math.sin(phase * 3) * 0.1 + Math.sin(phase * 5) * 0.05;
-  
-  // Stereo delay effect
-  const delay = 0.1;
-  const delayedPhase = 2 * Math.PI * actualFreq * (time - delay);
-  const delayedWave = Math.sin(delayedPhase) * 0.3;
-  
-  return {
-    left: wave * 0.7 + delayedWave,
-    right: wave * 0.7 - delayedWave
-  };
-}
-
-function generateAtmosphericPad(time: number, scale: number[], baseFreq: number, analysis: AnalysisResult): { left: number, right: number } {
+// Steve Reich inspired: Phasing patterns with gradual process
+function generatePhasingPatterns(
+  time: number,
+  fundamental: number,
+  phaseRates: number[],
+  analysis: AnalysisResult,
+  progress: number
+): { left: number, right: number } {
   let left = 0, right = 0;
   
-  // Slow-moving atmospheric chords
-  scale.forEach((note, index) => {
-    const freq = baseFreq * Math.pow(2, note / 12);
-    const phase = 2 * Math.PI * freq * time;
-    const lfoFreq = 0.1 + index * 0.05;
-    const amplitude = (Math.sin(time * lfoFreq) + 1) * 0.01;
+  // Use frequency based on image type
+  const baseFreq = fundamental * (analysis.imageType === 'solar' ? 2 : 1);
+  
+  // Create multiple phasing voices
+  phaseRates.forEach((rate, voiceIndex) => {
+    // Pattern repeats at different rates creating phase relationships
+    const patternLength = 16; // Pattern in "beats"
+    const beatDuration = 0.4; // Each beat is 0.4 seconds
+    const position = (time * rate / beatDuration) % patternLength;
     
-    const wave = Math.sin(phase) * amplitude;
-    left += wave * (1 - index * 0.1);
-    right += wave * (1 + index * 0.1);
+    // Create a melodic pattern that phases
+    const notePattern = [0, 7, 5, 7, 3, 7, 5, 0, 7, 5, 7, 5, 3, 5, 7, 0];
+    const currentNoteIndex = Math.floor(position);
+    const nextNoteIndex = (currentNoteIndex + 1) % patternLength;
+    const interpolation = position - currentNoteIndex;
+    
+    const currentNote = notePattern[currentNoteIndex];
+    const nextNote = notePattern[nextNoteIndex];
+    
+    // Smooth note transitions
+    const semitones = currentNote + (nextNote - currentNote) * Math.pow(interpolation, 3);
+    const freq = baseFreq * Math.pow(2, semitones / 12);
+    
+    const phase = 2 * Math.PI * freq * time;
+    
+    // Envelope for each note with organic decay
+    const noteEnvelope = Math.exp(-((position % 1) * 3)) * 0.5 + 0.5;
+    
+    // Slight chorus effect
+    const chorus = Math.sin(phase + Math.sin(time * 0.3) * 0.1) * noteEnvelope;
+    
+    const amplitude = 0.25 / phaseRates.length;
+    
+    // Pan each voice differently
+    const pan = (voiceIndex / (phaseRates.length - 1)) * 2 - 1;
+    left += chorus * amplitude * (1 - Math.abs(Math.min(0, pan)));
+    right += chorus * amplitude * (1 - Math.abs(Math.max(0, pan)));
   });
   
   return { left, right };
 }
 
-function generatePercussion(time: number, beatPosition: number, analysis: AnalysisResult): number {
-  // Simple kick and snare pattern
-  const kickTrigger = beatPosition < 0.1 && (Math.floor(time * 2) % 4 === 0 || Math.floor(time * 2) % 4 === 2);
-  const snareTrigger = beatPosition < 0.05 && (Math.floor(time * 2) % 4 === 1 || Math.floor(time * 2) % 4 === 3);
+// Aphex Twin inspired: Granular synthesis and glitchy textures
+function generateGranularTexture(
+  time: number,
+  sample: number,
+  sampleRate: number,
+  analysis: AnalysisResult,
+  detune: number,
+  progress: number
+): { left: number, right: number } {
+  let left = 0, right = 0;
   
-  if (kickTrigger) {
-    const envelope = Math.exp(-beatPosition * 20);
-    return Math.sin(60 * 2 * Math.PI * time) * envelope * 0.5;
-  } else if (snareTrigger) {
-    const envelope = Math.exp(-beatPosition * 30);
-    return (Math.random() - 0.5) * envelope * 0.3;
+  // Grain parameters
+  const grainDensity = 20 + analysis.stars * 0.1; // Grains per second
+  const grainDuration = 0.02 + Math.sin(time * 0.1) * 0.01; // 20-30ms grains
+  
+  // Check if we should trigger a grain
+  const grainProbability = grainDensity / sampleRate;
+  const randomValue = (Math.sin(sample * 12.9898 + time * 78.233) * 43758.5453) % 1;
+  
+  if (randomValue < grainProbability) {
+    const grainSamples = grainDuration * sampleRate;
+    const grainProgress = (sample % grainSamples) / grainSamples;
+    
+    if (grainProgress < 1) {
+      // Gaussian envelope for grain
+      const envelope = Math.exp(-Math.pow(grainProgress * 2 - 1, 2) * 4);
+      
+      // Frequency varies based on analysis
+      const grainFreq = 200 + randomValue * analysis.brightness * 800;
+      const detuneFreq = grainFreq * (1 + detune * (randomValue * 2 - 1));
+      
+      const phase = 2 * Math.PI * detuneFreq * grainProgress;
+      
+      // Mix of sine and noise for texture
+      const tone = Math.sin(phase) * 0.7;
+      const noise = (randomValue * 2 - 1) * 0.3;
+      
+      const grain = (tone + noise) * envelope * 0.3;
+      
+      // Random panning for spatial texture
+      const grainPan = randomValue * 2 - 1;
+      left += grain * (1 - Math.abs(Math.min(0, grainPan)));
+      right += grain * (1 - Math.abs(Math.max(0, grainPan)));
+    }
   }
   
-  return 0;
+  return { left, right };
 }
 
-function generateArpeggio(time: number, scale: number[], baseFreq: number, analysis: AnalysisResult): { left: number, right: number } {
-  const noteIndex = Math.floor((time * 8) % scale.length);
-  const note = scale[noteIndex];
-  const freq = baseFreq * Math.pow(2, note / 12);
+// Evolving harmonic field with slow, organic changes
+function generateEvolvingHarmonics(
+  time: number,
+  fundamental: number,
+  analysis: AnalysisResult,
+  progress: number
+): { left: number, right: number } {
+  let left = 0, right = 0;
   
-  const phase = 2 * Math.PI * freq * time;
-  const envelope = Math.exp(-((time * 8) % 1) * 5);
-  const wave = Math.sin(phase) * envelope;
+  // Harmonic series with slow evolution
+  const harmonicCount = 8;
   
-  return {
-    left: wave * 0.7,
-    right: wave * 0.3
-  };
+  for (let h = 1; h <= harmonicCount; h++) {
+    const freq = fundamental * h;
+    
+    // Each harmonic has its own slow evolution
+    const evolutionRate = 0.03 + h * 0.005;
+    const amplitude = (1 / Math.pow(h, 1.5)) * 
+                     (Math.sin(time * evolutionRate + h) * 0.5 + 0.5);
+    
+    const phase = 2 * Math.PI * freq * time;
+    
+    // Add subtle FM modulation
+    const modIndex = Math.sin(time * 0.07 + h) * 0.2;
+    const modulator = Math.sin(2 * Math.PI * freq * 0.5 * time);
+    const wave = Math.sin(phase + modIndex * modulator);
+    
+    // Spatial distribution
+    const pan = Math.sin(time * 0.02 + h * 0.5);
+    left += wave * amplitude * 0.1 * (1 - Math.max(0, pan));
+    right += wave * amplitude * 0.1 * (1 + Math.min(0, pan));
+  }
+  
+  return { left, right };
+}
+
+// Sparse glitch events for stars and flares
+function generateSparseGlitches(
+  time: number,
+  sample: number,
+  sampleRate: number,
+  analysis: AnalysisResult,
+  progress: number
+): { left: number, right: number } {
+  let left = 0, right = 0;
+  
+  // Random glitch triggers based on object count
+  const glitchDensity = (analysis.stars + analysis.solarFlares) * 0.0001;
+  const random = (Math.sin(sample * 43.758 + time * 91.343) * 19283.5453) % 1;
+  
+  if (random < glitchDensity) {
+    const glitchDuration = 0.01 + random * 0.05; // 10-60ms
+    const glitchSamples = glitchDuration * sampleRate;
+    const glitchProgress = (sample % glitchSamples) / glitchSamples;
+    
+    if (glitchProgress < 1) {
+      // Sharp attack, exponential decay
+      const envelope = Math.exp(-glitchProgress * 15);
+      
+      // High frequency glitches
+      const glitchFreq = 800 + random * 3000;
+      const phase = 2 * Math.PI * glitchFreq * glitchProgress;
+      
+      // Bit-crushing effect
+      const steps = 4 + Math.floor(random * 8);
+      const crushed = Math.round(Math.sin(phase) * steps) / steps;
+      
+      const glitch = crushed * envelope * 0.4;
+      
+      left += glitch * (random > 0.5 ? 1 : 0.3);
+      right += glitch * (random <= 0.5 ? 1 : 0.3);
+    }
+  }
+  
+  return { left, right };
+}
+
+// Spatial movement for nebulae and galaxies
+function generateSpatialMovement(
+  time: number,
+  fundamental: number,
+  analysis: AnalysisResult,
+  progress: number
+): { left: number, right: number } {
+  // Create a slowly moving harmonic cloud
+  const cloudFreq = fundamental * 0.5;
+  
+  // Multiple layers moving at different rates
+  const layers = 5;
+  let left = 0, right = 0;
+  
+  for (let l = 0; l < layers; l++) {
+    const layerFreq = cloudFreq * (1 + l * 0.25);
+    const phase = 2 * Math.PI * layerFreq * time;
+    
+    // Very slow spatial movement
+    const spatialRate = 0.04 + l * 0.01;
+    const position = Math.sin(time * spatialRate + l);
+    
+    // Amplitude modulation for depth
+    const depth = Math.sin(time * 0.03 + l * 0.7) * 0.5 + 0.5;
+    
+    const wave = Math.sin(phase) * depth * 0.15;
+    
+    left += wave * (1 - Math.max(0, position)) / layers;
+    right += wave * (1 + Math.min(0, position)) / layers;
+  }
+  
+  return { left, right };
 }
 
 export async function exportToMp3(audioBuffer: AudioBuffer): Promise<Blob> {
