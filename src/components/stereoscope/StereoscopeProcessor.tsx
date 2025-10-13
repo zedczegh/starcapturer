@@ -232,99 +232,79 @@ const StereoscopeProcessor: React.FC = () => {
     console.log(`Detected ${starCount} star pixels`);
     console.log(`Star parallax: ${params.starParallaxPx}px, Max shift: ${params.maxShift}px`);
 
-    // INVERSE MAPPING: For each destination pixel, find the source pixel
-    // This prevents gaps and skewing in the output
+    // IMPROVED FORWARD MAPPING with bilinear splatting to prevent gaps
+    // Process each source pixel and splat it to destination with subpixel accuracy
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const destIdx = y * width + x;
-        const destPixelIdx = destIdx * 4;
+        const srcIdx = y * width + x;
+        const srcPixelIdx = srcIdx * 4;
         
-        // Calculate source X position for LEFT view (inverse of leftDestX = x - baseShift)
-        // We need to find srcX such that: x = srcX - shift(srcX)
-        // Approximate: srcX ≈ x + shift(x) 
-        let leftSrcX = x;
-        let rightSrcX = x;
+        const isStar = params.preserveStarShapes && starMask[srcIdx] === 255;
+        const starBrightness = Math.max(
+          originalData.data[srcPixelIdx],
+          originalData.data[srcPixelIdx + 1],
+          originalData.data[srcPixelIdx + 2]
+        );
         
-        // For left view: need to find source that would shift HERE
-        // Try the current position first, then refine
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const testIdx = y * width + leftSrcX;
-          const testPixelIdx = testIdx * 4;
-          
-          if (leftSrcX >= 0 && leftSrcX < width) {
-            const isStar = params.preserveStarShapes && starMask[testIdx] === 255;
-            const starBrightness = Math.max(
-              originalData.data[testPixelIdx],
-              originalData.data[testPixelIdx + 1],
-              originalData.data[testPixelIdx + 2]
-            );
-            
-            let expectedShift = 0;
-            if (isStar && starBrightness > params.starThreshold + 50) {
-              expectedShift = 0; // Stars don't shift in left view
-            } else if (isStar && starBrightness > params.starThreshold) {
-              expectedShift = 0; // Medium stars don't shift in left view
-            } else {
-              const depthValue = depthMap.data[testPixelIdx] / 255.0;
-              expectedShift = -Math.round(depthValue * params.maxShift);
+        // Calculate shifts based on depth and star status
+        let leftShift = 0;
+        let rightShift = 0;
+        
+        if (isStar && starBrightness > params.starThreshold + 50) {
+          // Very bright stars: significant parallax
+          leftShift = 0; // No shift in left
+          rightShift = params.starParallaxPx;
+        } else if (isStar && starBrightness > params.starThreshold) {
+          // Medium stars: moderate parallax  
+          leftShift = 0;
+          rightShift = params.starParallaxPx * 0.3;
+        } else {
+          // Nebula/background: depth-based shift
+          const depthValue = depthMap.data[srcPixelIdx] / 255.0;
+          leftShift = -depthValue * params.maxShift;
+          rightShift = depthValue * params.maxShift;
+        }
+        
+        // Left view splatting with bilinear interpolation
+        const leftDestX = x + leftShift;
+        const leftFloorX = Math.floor(leftDestX);
+        const leftFracX = leftDestX - leftFloorX;
+        
+        // Splat to two adjacent pixels for smooth results
+        for (let dx = 0; dx <= 1; dx++) {
+          const destX = leftFloorX + dx;
+          if (destX >= 0 && destX < width) {
+            const weight = dx === 0 ? (1 - leftFracX) : leftFracX;
+            if (weight > 0.01) { // Only splat if significant weight
+              const destIdx = (y * width + destX) * 4;
+              
+              // Additive blending with weight
+              leftData.data[destIdx] = Math.min(255, leftData.data[destIdx] + originalData.data[srcPixelIdx] * weight);
+              leftData.data[destIdx + 1] = Math.min(255, leftData.data[destIdx + 1] + originalData.data[srcPixelIdx + 1] * weight);
+              leftData.data[destIdx + 2] = Math.min(255, leftData.data[destIdx + 2] + originalData.data[srcPixelIdx + 2] * weight);
+              leftData.data[destIdx + 3] = 255;
             }
-            
-            const predictedDestX = leftSrcX + expectedShift;
-            const error = x - predictedDestX;
-            
-            if (Math.abs(error) <= 1) break; // Close enough
-            leftSrcX += error; // Refine estimate
-            leftSrcX = Math.max(0, Math.min(width - 1, leftSrcX));
           }
         }
         
-        // For right view: similar process
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const testIdx = y * width + rightSrcX;
-          const testPixelIdx = testIdx * 4;
-          
-          if (rightSrcX >= 0 && rightSrcX < width) {
-            const isStar = params.preserveStarShapes && starMask[testIdx] === 255;
-            const starBrightness = Math.max(
-              originalData.data[testPixelIdx],
-              originalData.data[testPixelIdx + 1],
-              originalData.data[testPixelIdx + 2]
-            );
-            
-            let expectedShift = 0;
-            if (isStar && starBrightness > params.starThreshold + 50) {
-              expectedShift = Math.round(params.starParallaxPx); // Very bright stars shift right
-            } else if (isStar && starBrightness > params.starThreshold) {
-              expectedShift = -Math.round(params.starParallaxPx * 0.3); // Medium stars shift left
-            } else {
-              const depthValue = depthMap.data[testPixelIdx] / 255.0;
-              expectedShift = Math.round(depthValue * params.maxShift);
+        // Right view splatting with bilinear interpolation
+        const rightDestX = x + rightShift;
+        const rightFloorX = Math.floor(rightDestX);
+        const rightFracX = rightDestX - rightFloorX;
+        
+        for (let dx = 0; dx <= 1; dx++) {
+          const destX = rightFloorX + dx;
+          if (destX >= 0 && destX < width) {
+            const weight = dx === 0 ? (1 - rightFracX) : rightFracX;
+            if (weight > 0.01) {
+              const destIdx = (y * width + destX) * 4;
+              
+              rightData.data[destIdx] = Math.min(255, rightData.data[destIdx] + originalData.data[srcPixelIdx] * weight);
+              rightData.data[destIdx + 1] = Math.min(255, rightData.data[destIdx + 1] + originalData.data[srcPixelIdx + 1] * weight);
+              rightData.data[destIdx + 2] = Math.min(255, rightData.data[destIdx + 2] + originalData.data[srcPixelIdx + 2] * weight);
+              rightData.data[destIdx + 3] = 255;
             }
-            
-            const predictedDestX = rightSrcX + expectedShift;
-            const error = x - predictedDestX;
-            
-            if (Math.abs(error) <= 1) break; // Close enough
-            rightSrcX += error; // Refine estimate
-            rightSrcX = Math.max(0, Math.min(width - 1, rightSrcX));
           }
-        }
-        
-        // Copy pixels from source to destination
-        if (leftSrcX >= 0 && leftSrcX < width) {
-          const srcIdx = (y * width + leftSrcX) * 4;
-          leftData.data[destPixelIdx] = originalData.data[srcIdx];
-          leftData.data[destPixelIdx + 1] = originalData.data[srcIdx + 1];
-          leftData.data[destPixelIdx + 2] = originalData.data[srcIdx + 2];
-          leftData.data[destPixelIdx + 3] = 255;
-        }
-        
-        if (rightSrcX >= 0 && rightSrcX < width) {
-          const srcIdx = (y * width + rightSrcX) * 4;
-          rightData.data[destPixelIdx] = originalData.data[srcIdx];
-          rightData.data[destPixelIdx + 1] = originalData.data[srcIdx + 1];
-          rightData.data[destPixelIdx + 2] = originalData.data[srcIdx + 2];
-          rightData.data[destPixelIdx + 3] = 255;
         }
       }
     }

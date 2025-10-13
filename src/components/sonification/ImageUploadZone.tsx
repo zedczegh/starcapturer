@@ -19,7 +19,7 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
 
   const handleFileSelect = useCallback((file: File) => {
     const validTypes = ['image/jpeg', 'image/png', 'image/fits', 'application/fits', 'image/tiff'];
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    const maxSize = 500 * 1024 * 1024; // 500MB
 
     if (!validTypes.some(type => file.type.includes(type.split('/')[1]) || file.name.toLowerCase().includes(type.split('/')[1]))) {
       toast.error(t('Please upload a valid image file (JPG, PNG, FITS, TIFF)', '请上传有效的图像文件 (JPG, PNG, FITS, TIFF)'));
@@ -27,7 +27,7 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
     }
 
     if (file.size > maxSize) {
-      toast.error(t('File size must be less than 50MB', '文件大小必须小于50MB'));
+      toast.error(t('File size must be less than 500MB', '文件大小必须小于500MB'));
       return;
     }
 
@@ -66,7 +66,7 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
             {t('Drag and drop or click to select', '拖放或点击选择')}
           </p>
           <p className="text-xs text-cosmic-500 mb-2">
-            {t('Supports JPG, PNG, FITS, TIFF formats (max 50MB)', '支持 JPG, PNG, FITS, TIFF 格式 (最大50MB)')}
+            {t('Supports JPG, PNG, FITS, TIFF formats (max 500MB)', '支持 JPG, PNG, FITS, TIFF 格式 (最大500MB)')}
           </p>
           <p className="text-xs text-cosmic-400">
             {t('Supports deep sky, planetary, and solar imaging', '支持深空、行星和太阳成像')}
