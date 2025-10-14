@@ -216,19 +216,23 @@ const StereoscopeProcessor: React.FC = () => {
     const leftData = new ImageData(width, height);
     const rightData = new ImageData(width, height);
 
+    // Edge margin to prevent dragging artifacts
+    const edgeMargin = params.maxShift + 5;
+
     // INVERSE MAPPING - Pull pixels from source
-    // Stars are preserved exactly without any transformation
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const destIdx = (y * width + x) * 4;
         const currentIdx = y * width + x;
         
-        // Check if this pixel is part of a star (including diffraction spikes)
+        // Check if this pixel is part of a star
         const isStar = params.preserveStarShapes && starMask[currentIdx] === 255;
+        
+        // Check if we're near edges - reduce shift near edges to prevent dragging
+        const isNearEdge = x < edgeMargin || x >= width - edgeMargin;
         
         if (isStar) {
           // Stars: Copy exactly as-is to both views (NO transformation)
-          // This preserves diffraction spikes and star shapes perfectly
           leftData.data[destIdx] = originalData.data[destIdx];
           leftData.data[destIdx + 1] = originalData.data[destIdx + 1];
           leftData.data[destIdx + 2] = originalData.data[destIdx + 2];
@@ -241,7 +245,14 @@ const StereoscopeProcessor: React.FC = () => {
         } else {
           // Nebula/background: Apply depth-based shift
           const depthValue = depthMap.data[destIdx] / 255.0;
-          const shift = depthValue * params.maxShift;
+          let shift = depthValue * params.maxShift;
+          
+          // Reduce shift near edges to prevent out-of-bounds dragging
+          if (isNearEdge) {
+            const distToEdge = Math.min(x, width - x - 1);
+            const edgeFactor = Math.min(1, distToEdge / edgeMargin);
+            shift *= edgeFactor;
+          }
           
           // LEFT VIEW: Pull from right
           const leftSourceX = Math.round(x + shift);
@@ -252,9 +263,12 @@ const StereoscopeProcessor: React.FC = () => {
             leftData.data[destIdx + 2] = originalData.data[leftSrcIdx + 2];
             leftData.data[destIdx + 3] = 255;
           } else {
-            leftData.data[destIdx] = 0;
-            leftData.data[destIdx + 1] = 0;
-            leftData.data[destIdx + 2] = 0;
+            // Fill with nearest edge pixel instead of black
+            const safeX = Math.max(0, Math.min(width - 1, leftSourceX));
+            const safeSrcIdx = (y * width + safeX) * 4;
+            leftData.data[destIdx] = originalData.data[safeSrcIdx];
+            leftData.data[destIdx + 1] = originalData.data[safeSrcIdx + 1];
+            leftData.data[destIdx + 2] = originalData.data[safeSrcIdx + 2];
             leftData.data[destIdx + 3] = 255;
           }
           
@@ -267,9 +281,12 @@ const StereoscopeProcessor: React.FC = () => {
             rightData.data[destIdx + 2] = originalData.data[rightSrcIdx + 2];
             rightData.data[destIdx + 3] = 255;
           } else {
-            rightData.data[destIdx] = 0;
-            rightData.data[destIdx + 1] = 0;
-            rightData.data[destIdx + 2] = 0;
+            // Fill with nearest edge pixel instead of black
+            const safeX = Math.max(0, Math.min(width - 1, rightSourceX));
+            const safeSrcIdx = (y * width + safeX) * 4;
+            rightData.data[destIdx] = originalData.data[safeSrcIdx];
+            rightData.data[destIdx + 1] = originalData.data[safeSrcIdx + 1];
+            rightData.data[destIdx + 2] = originalData.data[safeSrcIdx + 2];
             rightData.data[destIdx + 3] = 255;
           }
         }

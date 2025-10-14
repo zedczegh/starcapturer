@@ -181,7 +181,7 @@ export function generateSimpleDepthMap(
 }
 
 /**
- * Detect bright stars and their diffraction spikes
+ * Detect bright stars and their diffraction spikes (precise detection)
  */
 export function detectStars(
   data: Uint8ClampedArray,
@@ -190,89 +190,58 @@ export function detectStars(
   threshold: number = 200
 ): Uint8ClampedArray {
   const starMask = new Uint8ClampedArray(width * height);
+  const starCores: Array<{x: number, y: number}> = [];
   
-  // Step 1: Detect bright star cores
-  for (let i = 0; i < width * height; i++) {
-    const idx = i * 4;
-    const brightness = Math.max(data[idx], data[idx + 1], data[idx + 2]);
+  // Step 1: Detect very bright star cores only
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const brightness = Math.max(data[idx], data[idx + 1], data[idx + 2]);
+      
+      // High threshold - only detect actual bright stars
+      if (brightness > threshold) {
+        starMask[y * width + x] = 255;
+        starCores.push({x, y});
+      }
+    }
+  }
+  
+  // Step 2: For each star core, extend ONLY along cardinal directions (diffraction spikes)
+  // This is much more conservative than morphological dilation
+  for (const core of starCores) {
+    // Check 4 cardinal directions: up, down, left, right
+    const directions = [
+      {dx: 1, dy: 0},   // right
+      {dx: -1, dy: 0},  // left
+      {dx: 0, dy: 1},   // down
+      {dx: 0, dy: -1}   // up
+    ];
     
-    if (brightness > threshold) {
-      starMask[i] = 255;
-    }
-  }
-  
-  // Step 2: Expand mask to capture diffraction spikes
-  // Use morphological dilation to grow star regions
-  const expandedMask = new Uint8ClampedArray(width * height);
-  const expandRadius = 8; // Expand by 8 pixels to capture spike extent
-  
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = y * width + x;
+    for (const dir of directions) {
+      let continuousSpike = true;
       
-      if (starMask[idx] === 255) {
-        // This is a star core - expand in cross pattern for diffraction spikes
-        for (let dy = -expandRadius; dy <= expandRadius; dy++) {
-          for (let dx = -expandRadius; dx <= expandRadius; dx++) {
-            const ny = y + dy;
-            const nx = x + dx;
-            
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-              const nIdx = ny * width + nx;
-              const pixelIdx = nIdx * 4;
-              
-              // Check if this pixel is bright enough to be part of the spike
-              const brightness = Math.max(data[pixelIdx], data[pixelIdx + 1], data[pixelIdx + 2]);
-              
-              // Include pixels that are reasonably bright and within the expansion radius
-              // This captures the gradual falloff of diffraction spikes
-              if (brightness > threshold * 0.3) { // 30% of threshold for spike detection
-                expandedMask[nIdx] = 255;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  
-  // Step 3: Additional pass to capture linear spike patterns (cross shape)
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = y * width + x;
-      const pixelIdx = idx * 4;
-      const brightness = Math.max(data[pixelIdx], data[pixelIdx + 1], data[pixelIdx + 2]);
-      
-      if (expandedMask[idx] === 255) {
-        // Already marked as star - check for linear extensions (spikes)
-        // Look for bright pixels in cardinal directions
-        const spikeLength = 15;
+      // Extend up to 12 pixels in this direction
+      for (let dist = 1; dist <= 12 && continuousSpike; dist++) {
+        const nx = core.x + dir.dx * dist;
+        const ny = core.y + dir.dy * dist;
         
-        for (let dir = 0; dir < 4; dir++) {
-          const dx = dir === 0 ? 1 : dir === 1 ? -1 : 0;
-          const dy = dir === 2 ? 1 : dir === 3 ? -1 : 0;
+        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+          const nIdx = (ny * width + nx) * 4;
+          const nBrightness = Math.max(data[nIdx], data[nIdx + 1], data[nIdx + 2]);
           
-          for (let dist = 1; dist <= spikeLength; dist++) {
-            const nx = x + dx * dist;
-            const ny = y + dy * dist;
-            
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-              const nIdx = ny * width + nx;
-              const nPixelIdx = nIdx * 4;
-              const nBrightness = Math.max(data[nPixelIdx], data[nPixelIdx + 1], data[nPixelIdx + 2]);
-              
-              // If pixel is bright enough, include it in spike
-              if (nBrightness > threshold * 0.25) {
-                expandedMask[nIdx] = 255;
-              } else {
-                break; // Stop extending in this direction if we hit dark pixels
-              }
-            }
+          // Must be bright AND decreasing gradually from core
+          // Use strict threshold to avoid capturing nebula
+          if (nBrightness > threshold * 0.5) { // 50% of star threshold
+            starMask[ny * width + nx] = 255;
+          } else {
+            continuousSpike = false; // Stop if we hit dim pixels
           }
+        } else {
+          break;
         }
       }
     }
   }
   
-  return expandedMask;
+  return starMask;
 }
