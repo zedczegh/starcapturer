@@ -216,95 +216,56 @@ const StereoscopeProcessor: React.FC = () => {
     const leftData = new ImageData(width, height);
     const rightData = new ImageData(width, height);
 
-    // Initialize with black
-    leftData.data.fill(0);
-    rightData.data.fill(0);
-    for (let i = 3; i < leftData.data.length; i += 4) {
-      leftData.data[i] = 255; // Alpha
-      rightData.data[i] = 255; // Alpha
-    }
-
-    // Count stars for debugging
-    let starCount = 0;
-    for (let i = 0; i < starMask.length; i++) {
-      if (starMask[i] === 255) starCount++;
-    }
-    console.log(`Detected ${starCount} star pixels`);
-    console.log(`Star parallax: ${params.starParallaxPx}px, Max shift: ${params.maxShift}px`);
-
-    // IMPROVED FORWARD MAPPING with bilinear splatting to prevent gaps
-    // Process each source pixel and splat it to destination with subpixel accuracy
+    // SIMPLE INVERSE MAPPING - Pull pixels from source (prevents gaps and black lines)
+    // For each destination pixel, look back to the source and copy the pixel
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const srcIdx = y * width + x;
-        const srcPixelIdx = srcIdx * 4;
+        const destIdx = (y * width + x) * 4;
         
-        const isStar = params.preserveStarShapes && starMask[srcIdx] === 255;
-        const starBrightness = Math.max(
-          originalData.data[srcPixelIdx],
-          originalData.data[srcPixelIdx + 1],
-          originalData.data[srcPixelIdx + 2]
-        );
+        // Get depth value at current position
+        const depthValue = depthMap.data[destIdx] / 255.0;
         
-        // Calculate shifts based on depth and star status
-        let leftShift = 0;
-        let rightShift = 0;
+        // Check if this is a star
+        const isStar = params.preserveStarShapes && starMask[y * width + x] === 255;
         
-        if (isStar && starBrightness > params.starThreshold + 50) {
-          // Very bright stars: significant parallax
-          leftShift = 0; // No shift in left
-          rightShift = params.starParallaxPx;
-        } else if (isStar && starBrightness > params.starThreshold) {
-          // Medium stars: moderate parallax  
-          leftShift = 0;
-          rightShift = params.starParallaxPx * 0.3;
+        // Calculate shift amount based on depth
+        // Simple approach: deeper objects shift less, closer objects shift more
+        const shift = depthValue * params.maxShift;
+        
+        // LEFT VIEW: Pull from right (shift source to left)
+        // When looking at left eye, objects shift left based on depth
+        const leftSourceX = Math.round(x + shift);
+        
+        if (leftSourceX >= 0 && leftSourceX < width) {
+          const leftSrcIdx = (y * width + leftSourceX) * 4;
+          leftData.data[destIdx] = originalData.data[leftSrcIdx];
+          leftData.data[destIdx + 1] = originalData.data[leftSrcIdx + 1];
+          leftData.data[destIdx + 2] = originalData.data[leftSrcIdx + 2];
+          leftData.data[destIdx + 3] = 255;
         } else {
-          // Nebula/background: depth-based shift
-          const depthValue = depthMap.data[srcPixelIdx] / 255.0;
-          leftShift = -depthValue * params.maxShift;
-          rightShift = depthValue * params.maxShift;
+          // Fill with black if out of bounds
+          leftData.data[destIdx] = 0;
+          leftData.data[destIdx + 1] = 0;
+          leftData.data[destIdx + 2] = 0;
+          leftData.data[destIdx + 3] = 255;
         }
         
-        // Left view splatting with bilinear interpolation
-        const leftDestX = x + leftShift;
-        const leftFloorX = Math.floor(leftDestX);
-        const leftFracX = leftDestX - leftFloorX;
+        // RIGHT VIEW: Pull from left (shift source to right)
+        // When looking at right eye, objects shift right based on depth
+        const rightSourceX = Math.round(x - shift);
         
-        // Splat to two adjacent pixels for smooth results
-        for (let dx = 0; dx <= 1; dx++) {
-          const destX = leftFloorX + dx;
-          if (destX >= 0 && destX < width) {
-            const weight = dx === 0 ? (1 - leftFracX) : leftFracX;
-            if (weight > 0.01) { // Only splat if significant weight
-              const destIdx = (y * width + destX) * 4;
-              
-              // Additive blending with weight
-              leftData.data[destIdx] = Math.min(255, leftData.data[destIdx] + originalData.data[srcPixelIdx] * weight);
-              leftData.data[destIdx + 1] = Math.min(255, leftData.data[destIdx + 1] + originalData.data[srcPixelIdx + 1] * weight);
-              leftData.data[destIdx + 2] = Math.min(255, leftData.data[destIdx + 2] + originalData.data[srcPixelIdx + 2] * weight);
-              leftData.data[destIdx + 3] = 255;
-            }
-          }
-        }
-        
-        // Right view splatting with bilinear interpolation
-        const rightDestX = x + rightShift;
-        const rightFloorX = Math.floor(rightDestX);
-        const rightFracX = rightDestX - rightFloorX;
-        
-        for (let dx = 0; dx <= 1; dx++) {
-          const destX = rightFloorX + dx;
-          if (destX >= 0 && destX < width) {
-            const weight = dx === 0 ? (1 - rightFracX) : rightFracX;
-            if (weight > 0.01) {
-              const destIdx = (y * width + destX) * 4;
-              
-              rightData.data[destIdx] = Math.min(255, rightData.data[destIdx] + originalData.data[srcPixelIdx] * weight);
-              rightData.data[destIdx + 1] = Math.min(255, rightData.data[destIdx + 1] + originalData.data[srcPixelIdx + 1] * weight);
-              rightData.data[destIdx + 2] = Math.min(255, rightData.data[destIdx + 2] + originalData.data[srcPixelIdx + 2] * weight);
-              rightData.data[destIdx + 3] = 255;
-            }
-          }
+        if (rightSourceX >= 0 && rightSourceX < width) {
+          const rightSrcIdx = (y * width + rightSourceX) * 4;
+          rightData.data[destIdx] = originalData.data[rightSrcIdx];
+          rightData.data[destIdx + 1] = originalData.data[rightSrcIdx + 1];
+          rightData.data[destIdx + 2] = originalData.data[rightSrcIdx + 2];
+          rightData.data[destIdx + 3] = 255;
+        } else {
+          // Fill with black if out of bounds
+          rightData.data[destIdx] = 0;
+          rightData.data[destIdx + 1] = 0;
+          rightData.data[destIdx + 2] = 0;
+          rightData.data[destIdx + 3] = 255;
         }
       }
     }
