@@ -216,62 +216,56 @@ const StereoscopeProcessor: React.FC = () => {
     const leftData = new ImageData(width, height);
     const rightData = new ImageData(width, height);
 
-    // INVERSE MAPPING - Pull pixels from source
-    // Stars are preserved exactly without any transformation
+    // SIMPLE INVERSE MAPPING - Pull pixels from source (prevents gaps and black lines)
+    // For each destination pixel, look back to the source and copy the pixel
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const destIdx = (y * width + x) * 4;
-        const currentIdx = y * width + x;
         
-        // Check if this pixel is part of a star (including diffraction spikes)
-        const isStar = params.preserveStarShapes && starMask[currentIdx] === 255;
+        // Get depth value at current position
+        const depthValue = depthMap.data[destIdx] / 255.0;
         
-        if (isStar) {
-          // Stars: Copy exactly as-is to both views (NO transformation)
-          // This preserves diffraction spikes and star shapes perfectly
-          leftData.data[destIdx] = originalData.data[destIdx];
-          leftData.data[destIdx + 1] = originalData.data[destIdx + 1];
-          leftData.data[destIdx + 2] = originalData.data[destIdx + 2];
+        // Check if this is a star
+        const isStar = params.preserveStarShapes && starMask[y * width + x] === 255;
+        
+        // Calculate shift amount based on depth
+        // Simple approach: deeper objects shift less, closer objects shift more
+        const shift = depthValue * params.maxShift;
+        
+        // LEFT VIEW: Pull from right (shift source to left)
+        // When looking at left eye, objects shift left based on depth
+        const leftSourceX = Math.round(x + shift);
+        
+        if (leftSourceX >= 0 && leftSourceX < width) {
+          const leftSrcIdx = (y * width + leftSourceX) * 4;
+          leftData.data[destIdx] = originalData.data[leftSrcIdx];
+          leftData.data[destIdx + 1] = originalData.data[leftSrcIdx + 1];
+          leftData.data[destIdx + 2] = originalData.data[leftSrcIdx + 2];
           leftData.data[destIdx + 3] = 255;
-          
-          rightData.data[destIdx] = originalData.data[destIdx];
-          rightData.data[destIdx + 1] = originalData.data[destIdx + 1];
-          rightData.data[destIdx + 2] = originalData.data[destIdx + 2];
+        } else {
+          // Fill with black if out of bounds
+          leftData.data[destIdx] = 0;
+          leftData.data[destIdx + 1] = 0;
+          leftData.data[destIdx + 2] = 0;
+          leftData.data[destIdx + 3] = 255;
+        }
+        
+        // RIGHT VIEW: Pull from left (shift source to right)
+        // When looking at right eye, objects shift right based on depth
+        const rightSourceX = Math.round(x - shift);
+        
+        if (rightSourceX >= 0 && rightSourceX < width) {
+          const rightSrcIdx = (y * width + rightSourceX) * 4;
+          rightData.data[destIdx] = originalData.data[rightSrcIdx];
+          rightData.data[destIdx + 1] = originalData.data[rightSrcIdx + 1];
+          rightData.data[destIdx + 2] = originalData.data[rightSrcIdx + 2];
           rightData.data[destIdx + 3] = 255;
         } else {
-          // Nebula/background: Apply depth-based shift
-          const depthValue = depthMap.data[destIdx] / 255.0;
-          const shift = depthValue * params.maxShift;
-          
-          // LEFT VIEW: Pull from right
-          const leftSourceX = Math.round(x + shift);
-          if (leftSourceX >= 0 && leftSourceX < width) {
-            const leftSrcIdx = (y * width + leftSourceX) * 4;
-            leftData.data[destIdx] = originalData.data[leftSrcIdx];
-            leftData.data[destIdx + 1] = originalData.data[leftSrcIdx + 1];
-            leftData.data[destIdx + 2] = originalData.data[leftSrcIdx + 2];
-            leftData.data[destIdx + 3] = 255;
-          } else {
-            leftData.data[destIdx] = 0;
-            leftData.data[destIdx + 1] = 0;
-            leftData.data[destIdx + 2] = 0;
-            leftData.data[destIdx + 3] = 255;
-          }
-          
-          // RIGHT VIEW: Pull from left
-          const rightSourceX = Math.round(x - shift);
-          if (rightSourceX >= 0 && rightSourceX < width) {
-            const rightSrcIdx = (y * width + rightSourceX) * 4;
-            rightData.data[destIdx] = originalData.data[rightSrcIdx];
-            rightData.data[destIdx + 1] = originalData.data[rightSrcIdx + 1];
-            rightData.data[destIdx + 2] = originalData.data[rightSrcIdx + 2];
-            rightData.data[destIdx + 3] = 255;
-          } else {
-            rightData.data[destIdx] = 0;
-            rightData.data[destIdx + 1] = 0;
-            rightData.data[destIdx + 2] = 0;
-            rightData.data[destIdx + 3] = 255;
-          }
+          // Fill with black if out of bounds
+          rightData.data[destIdx] = 0;
+          rightData.data[destIdx + 1] = 0;
+          rightData.data[destIdx + 2] = 0;
+          rightData.data[destIdx + 3] = 255;
         }
       }
     }
