@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Upload, Eye, Download, Loader2, Layers } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { generateScientificAstroDepthMap } from '@/lib/scientificAstroDepth';
+import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 import { NobelPrizeStereoscopeEngine } from '@/lib/advanced/NobelPrizeStereoscopeEngine';
 // @ts-ignore
@@ -344,7 +344,17 @@ const StereoscopeProcessor: React.FC = () => {
       setProgress(30);
 
       const { width, height } = canvas;
-      const { depthMap, starMask } = generateScientificAstroDepthMap(canvas, ctx, width, height, params);
+      const imageData = ctx.getImageData(0, 0, width, height);
+      
+      // Use simple depth map generation
+      const simpleParams: SimpleDepthParams = {
+        depth: params.maxShift,
+        edgeWeight: params.edgeWeight,
+        brightnessWeight: 1 - params.edgeWeight
+      };
+      
+      const depthMap = generateSimpleDepthMap(imageData, simpleParams);
+      const starMask = detectStars(imageData.data, width, height, params.starThreshold);
       
       setProgressText(t('Creating depth map...', '创建深度图...'));
       setProgress(50);
