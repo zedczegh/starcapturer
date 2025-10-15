@@ -1,4 +1,10 @@
 import { detectStars, detectNebulae, detectGalaxies } from './imageAnalysis';
+import { 
+  performSpectralAnalysis, 
+  detectCosmicStructures, 
+  calculateFractalDimension,
+  type EnhancedAnalysisResult 
+} from './enhancedAnalysis';
 
 interface AnalysisResult {
   // Deep sky objects
@@ -28,6 +34,9 @@ interface AnalysisResult {
   dominantFrequencies: number[];
   harmonicStructure: number[];
   rhythmPattern: number[];
+  
+  // Advanced mathematical analysis
+  enhancedAnalysis?: EnhancedAnalysisResult;
 }
 
 export async function analyzeAstronomyImage(file: File, expectedType?: string, onProgress?: (progress: number) => void): Promise<AnalysisResult> {
@@ -200,10 +209,28 @@ async function processAdvancedImageData(imageData: ImageData, filename: string, 
     ({ stars, nebulae, galaxies, planets, moons, sunspots, solarFlares } = basicDetection);
   }
 
-  onProgress?.(90);
+  onProgress?.(85);
 
-  const frequencies = generateEnhancedFrequencies({ stars, nebulae, galaxies, planets, moons, sunspots, solarFlares }, 
-                                                 avgRed, avgGreen, avgBlue, avgBrightness, contrast, saturation, imageType);
+  // Perform advanced mathematical analysis
+  console.log('Running advanced mathematical analysis...');
+  let enhancedAnalysis: EnhancedAnalysisResult | undefined;
+  try {
+    const spectral = performSpectralAnalysis(imageData);
+    const structures = detectCosmicStructures(imageData);
+    const fractal = calculateFractalDimension(imageData);
+    enhancedAnalysis = { spectral, structures, fractal };
+    console.log('Enhanced analysis:', enhancedAnalysis);
+  } catch (error) {
+    console.error('Enhanced analysis failed, continuing with basic:', error);
+  }
+
+  onProgress?.(92);
+
+  const frequencies = generateEnhancedFrequencies(
+    { stars, nebulae, galaxies, planets, moons, sunspots, solarFlares }, 
+    avgRed, avgGreen, avgBlue, avgBrightness, contrast, saturation, imageType,
+    enhancedAnalysis
+  );
 
   const result = {
     stars, nebulae, galaxies, planets, moons, sunspots, solarFlares,
@@ -212,7 +239,8 @@ async function processAdvancedImageData(imageData: ImageData, filename: string, 
     saturation,
     imageType,
     colorProfile: { red: avgRed, green: avgGreen, blue: avgBlue },
-    ...frequencies
+    ...frequencies,
+    enhancedAnalysis
   };
 
   console.log('Final analysis result:', result);
@@ -281,49 +309,99 @@ function detectBasicAstronomicalObjects(imageType: string, brightPixels: number,
   return { stars, nebulae, galaxies, planets, moons, sunspots, solarFlares };
 }
 
-function generateEnhancedFrequencies(detection: any, red: number, green: number, blue: number,
-                                   brightness: number, contrast: number, saturation: number, imageType: string) {
+function generateEnhancedFrequencies(
+  detection: any, 
+  red: number, 
+  green: number, 
+  blue: number,
+  brightness: number, 
+  contrast: number, 
+  saturation: number, 
+  imageType: string,
+  enhancedAnalysis?: EnhancedAnalysisResult
+) {
   const baseFreq = 220;
   const frequencies: number[] = [];
   const harmonics: number[] = [];
   const rhythm: number[] = [];
 
-  // Base frequencies from color channels
-  frequencies.push(baseFreq * (0.5 + red));
-  frequencies.push(baseFreq * (1 + green));
-  frequencies.push(baseFreq * (2 + blue));
+  // If we have enhanced analysis, use it for more accurate frequency mapping
+  if (enhancedAnalysis) {
+    const { spectral, structures, fractal } = enhancedAnalysis;
+    
+    // Use actual spectral peaks for dominant frequencies
+    spectral.dominantHarmonics.slice(0, 8).forEach((freq, idx) => {
+      // Map image frequencies to musical frequencies (A2 = 110 Hz to A6 = 1760 Hz)
+      const musicalFreq = 110 + (freq / spectral.fundamentalFreq) * 220;
+      frequencies.push(musicalFreq);
+    });
+    
+    // Use structure eccentricity for rhythmic patterns
+    if (structures.rhythmicPattern.length > 0) {
+      rhythm.push(...structures.rhythmicPattern);
+    }
+    
+    // Use fractal complexity for harmonic richness
+    const harmonicCount = Math.floor(3 + fractal.complexity * 5); // 3-8 harmonics
+    for (let h = 2; h <= harmonicCount; h++) {
+      harmonics.push(h);
+    }
+    
+    // Add frequencies based on spectral centroid
+    const centroidFreq = 55 + (spectral.spectralCentroid / 100) * 440;
+    frequencies.push(centroidFreq);
+    
+    // Use phase coherence to determine harmonic clarity
+    if (spectral.phaseCoherence > 0.5) {
+      // High coherence = clear harmonics
+      harmonics.push(...[3, 5, 7, 9].slice(0, Math.floor(spectral.phaseCoherence * 4)));
+    }
+    
+    console.log('Using enhanced spectral analysis:', {
+      spectralPeaks: spectral.dominantHarmonics.length,
+      structures: structures.structures.length,
+      fractalDim: fractal.dimension.toFixed(3),
+      coherence: spectral.phaseCoherence.toFixed(3)
+    });
+  } else {
+    // Fallback to basic frequency generation
+    frequencies.push(baseFreq * (0.5 + red));
+    frequencies.push(baseFreq * (1 + green));
+    frequencies.push(baseFreq * (2 + blue));
+  }
 
-  // Object-specific frequencies
+  // Object-specific frequencies (supplement the spectral analysis)
   if (detection.stars > 0) {
     frequencies.push(baseFreq * 4 * (1 + brightness));
-    rhythm.push(0.5, 0.25, 0.25);
+    if (rhythm.length === 0) rhythm.push(0.5, 0.25, 0.25);
   }
   
   if (detection.nebulae > 0) {
     frequencies.push(baseFreq * 0.75 * (1 + saturation));
-    harmonics.push(2, 3, 5);
+    if (harmonics.length === 0) harmonics.push(2, 3, 5);
   }
   
   if (detection.galaxies > 0) {
     frequencies.push(baseFreq * 1.5 * (1 + contrast));
-    harmonics.push(4, 6, 8);
+    if (harmonics.length === 0) harmonics.push(4, 6, 8);
   }
 
   if (detection.planets > 0) {
     frequencies.push(baseFreq * 3 * (1 + detection.planets / 10));
-    rhythm.push(1, 0.5, 1);
+    if (rhythm.length === 0) rhythm.push(1, 0.5, 1);
   }
   
   if (detection.sunspots > 0) {
     frequencies.push(baseFreq * 0.25 * (1 + detection.sunspots / 20));
-    rhythm.push(0.25, 0.125, 0.125, 0.25);
+    if (rhythm.length === 0) rhythm.push(0.25, 0.125, 0.125, 0.25);
   }
   
   if (detection.solarFlares > 0) {
     frequencies.push(baseFreq * 8 * (1 + brightness));
-    rhythm.push(0.1, 0.9);
+    if (rhythm.length === 0) rhythm.push(0.1, 0.9);
   }
 
+  // Image type specific enhancements
   switch (imageType) {
     case 'solar':
       frequencies.push(baseFreq * 6, baseFreq * 12);
@@ -377,22 +455,35 @@ export async function generateAudioFromAnalysis(analysis: AnalysisResult): Promi
   const leftChannel = buffer.getChannelData(0);
   const rightChannel = buffer.getChannelData(1);
 
-  // Base frequencies using musical tuning
-  const fundamentalFreq = 55 + (analysis.brightness * 110); // 55-165 Hz
+  // Use enhanced analysis if available for better frequency selection
+  let fundamentalFreq = 55 + (analysis.brightness * 110); // 55-165 Hz default
+  if (analysis.enhancedAnalysis?.spectral) {
+    // Use spectral centroid for more accurate fundamental
+    fundamentalFreq = 40 + (analysis.enhancedAnalysis.spectral.spectralCentroid / 50) * 100;
+  }
   
-  // Phasing rates - very subtle for smooth evolution
+  // Phasing rates - modulated by fractal complexity if available
+  let complexityFactor = 1.0;
+  if (analysis.enhancedAnalysis?.fractal) {
+    complexityFactor = 0.5 + analysis.enhancedAnalysis.fractal.complexity * 0.5;
+  }
+  
   const phaseRate1 = 1.0;
-  const phaseRate2 = 1.0 + (analysis.contrast * 0.002);
-  const phaseRate3 = 1.0 - (analysis.saturation * 0.001);
+  const phaseRate2 = 1.0 + (analysis.contrast * 0.002 * complexityFactor);
+  const phaseRate3 = 1.0 - (analysis.saturation * 0.001 * complexityFactor);
   
-  // Reduced detune for cleaner sound
-  const detune = analysis.colorProfile.red * 0.02; // Max 2% detune
+  // Detune based on spectral spread if available
+  let detune = analysis.colorProfile.red * 0.02;
+  if (analysis.enhancedAnalysis?.spectral) {
+    detune = (analysis.enhancedAnalysis.spectral.spectralSpread / 1000) * 0.05;
+  }
   
   console.log('Generating enhanced composition:', {
     fundamental: fundamentalFreq,
     phaseRates: [phaseRate1, phaseRate2, phaseRate3],
     detune,
-    imageType: analysis.imageType
+    imageType: analysis.imageType,
+    enhancedAnalysis: analysis.enhancedAnalysis ? 'enabled' : 'disabled'
   });
 
   // Simple low-pass filter state variables (one-pole filter)
@@ -420,17 +511,21 @@ export async function generateAudioFromAnalysis(analysis: AnalysisResult): Promi
     leftSample += phasing.left * 0.15;
     rightSample += phasing.right * 0.15;
     
-    // 3. Filtered Granular Textures (much reduced, only for texture)
+    // 3. Filtered Granular Textures (controlled by fractal complexity)
     if (progress > 0.15 && progress < 0.85) { // Only in middle section
+      const fractalLevel = analysis.enhancedAnalysis?.fractal.textureLevel || 0.3;
+      const granularLevel = 0.02 + fractalLevel * 0.03; // 0.02-0.05 range
       const granular = generateFilteredGranularTexture(time, i, sampleRate, analysis, detune, progress);
-      leftSample += granular.left * 0.03; // Greatly reduced
-      rightSample += granular.right * 0.03;
+      leftSample += granular.left * granularLevel;
+      rightSample += granular.right * granularLevel;
     }
     
-    // 4. Evolving Harmonic Field (more prominent for musicality)
+    // 4. Evolving Harmonic Field (intensity based on phase coherence)
+    const coherence = analysis.enhancedAnalysis?.spectral.phaseCoherence || 0.5;
+    const harmonicLevel = 0.12 + coherence * 0.1; // 0.12-0.22 range
     const harmonics = generateEvolvingHarmonics(time, fundamentalFreq, analysis, progress);
-    leftSample += harmonics.left * 0.18;
-    rightSample += harmonics.right * 0.18;
+    leftSample += harmonics.left * harmonicLevel;
+    rightSample += harmonics.right * harmonicLevel;
     
     // 5. Musical Glitches (very sparse, only for bright stars)
     if ((analysis.stars > 50 || analysis.solarFlares > 5) && progress > 0.2) {
@@ -439,11 +534,13 @@ export async function generateAudioFromAnalysis(analysis: AnalysisResult): Promi
       rightSample += glitch.right * 0.02;
     }
     
-    // 6. Spatial Movement (nebulae/galaxies)
+    // 6. Spatial Movement (nebulae/galaxies) - use detected structures
     if (analysis.nebulae > 0 || analysis.galaxies > 0) {
+      const structureCount = analysis.enhancedAnalysis?.structures.structures.length || 1;
+      const spatialLevel = 0.08 + Math.min(structureCount * 0.02, 0.08); // 0.08-0.16
       const spatial = generateSpatialMovement(time, fundamentalFreq, analysis, progress);
-      leftSample += spatial.left * 0.12;
-      rightSample += spatial.right * 0.12;
+      leftSample += spatial.left * spatialLevel;
+      rightSample += spatial.right * spatialLevel;
     }
 
     // Apply envelope
