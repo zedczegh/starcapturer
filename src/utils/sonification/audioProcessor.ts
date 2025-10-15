@@ -486,10 +486,10 @@ export async function generateAudioFromAnalysis(analysis: AnalysisResult): Promi
     enhancedAnalysis: analysis.enhancedAnalysis ? 'enabled' : 'disabled'
   });
 
-  // Simple low-pass filter state variables (one-pole filter)
+  // Simple low-pass filter state variables (one-pole filter) - less filtering for brighter sound
   let leftFilterState = 0;
   let rightFilterState = 0;
-  const filterCutoff = 0.3; // Lower = more filtering
+  const filterCutoff = 0.5; // Increased for brighter, more open sound
 
   for (let i = 0; i < length; i++) {
     const time = i / sampleRate;
@@ -500,60 +500,60 @@ export async function generateAudioFromAnalysis(analysis: AnalysisResult): Promi
     // Overall envelope with slow fade
     const envelope = createSlowEnvelope(time, duration);
     
-    // 1. Deep Listening Drone Layers (core foundation)
+    // 1. Deep Listening Drone Layers (core foundation) - brighter and more prominent
     const drones = generateDeepDrones(time, fundamentalFreq, analysis, progress);
-    leftSample += drones.left * 0.25;
-    rightSample += drones.right * 0.25;
+    leftSample += drones.left * 0.35;
+    rightSample += drones.right * 0.35;
     
-    // 2. Phasing Patterns (Reich-inspired evolution)
+    // 2. Phasing Patterns (Reich-inspired evolution) - much more prominent for melody
     const phasing = generatePhasingPatterns(time, fundamentalFreq, 
       [phaseRate1, phaseRate2, phaseRate3], analysis, progress);
-    leftSample += phasing.left * 0.15;
-    rightSample += phasing.right * 0.15;
+    leftSample += phasing.left * 0.28;
+    rightSample += phasing.right * 0.28;
     
-    // 3. Filtered Granular Textures (controlled by fractal complexity)
-    if (progress > 0.15 && progress < 0.85) { // Only in middle section
+    // 3. Filtered Granular Textures (greatly reduced noise)
+    if (progress > 0.2 && progress < 0.8) { // Shorter duration
       const fractalLevel = analysis.enhancedAnalysis?.fractal.textureLevel || 0.3;
-      const granularLevel = 0.02 + fractalLevel * 0.03; // 0.02-0.05 range
+      const granularLevel = 0.005 + fractalLevel * 0.01; // Much quieter: 0.005-0.015
       const granular = generateFilteredGranularTexture(time, i, sampleRate, analysis, detune, progress);
       leftSample += granular.left * granularLevel;
       rightSample += granular.right * granularLevel;
     }
     
-    // 4. Evolving Harmonic Field (intensity based on phase coherence)
+    // 4. Evolving Harmonic Field (much more prominent for joyful sound)
     const coherence = analysis.enhancedAnalysis?.spectral.phaseCoherence || 0.5;
-    const harmonicLevel = 0.12 + coherence * 0.1; // 0.12-0.22 range
+    const harmonicLevel = 0.22 + coherence * 0.15; // Increased: 0.22-0.37 range
     const harmonics = generateEvolvingHarmonics(time, fundamentalFreq, analysis, progress);
     leftSample += harmonics.left * harmonicLevel;
     rightSample += harmonics.right * harmonicLevel;
     
-    // 5. Musical Glitches (very sparse, only for bright stars)
-    if ((analysis.stars > 50 || analysis.solarFlares > 5) && progress > 0.2) {
+    // 5. Musical Glitches (sparse and very quiet, only as accents)
+    if ((analysis.stars > 100 || analysis.solarFlares > 8) && progress > 0.25) {
       const glitch = generateMusicalGlitches(time, i, sampleRate, analysis, fundamentalFreq, progress);
-      leftSample += glitch.left * 0.02; // Very quiet
-      rightSample += glitch.right * 0.02;
+      leftSample += glitch.left * 0.008; // Much quieter
+      rightSample += glitch.right * 0.008;
     }
     
-    // 6. Spatial Movement (nebulae/galaxies) - use detected structures
+    // 6. Spatial Movement (nebulae/galaxies) - increased for more presence
     if (analysis.nebulae > 0 || analysis.galaxies > 0) {
       const structureCount = analysis.enhancedAnalysis?.structures.structures.length || 1;
-      const spatialLevel = 0.08 + Math.min(structureCount * 0.02, 0.08); // 0.08-0.16
+      const spatialLevel = 0.12 + Math.min(structureCount * 0.03, 0.12); // 0.12-0.24
       const spatial = generateSpatialMovement(time, fundamentalFreq, analysis, progress);
       leftSample += spatial.left * spatialLevel;
       rightSample += spatial.right * spatialLevel;
     }
 
     // Apply envelope
-    leftSample *= envelope * 0.4;
-    rightSample *= envelope * 0.4;
+    leftSample *= envelope * 0.5; // Slightly louder for more presence
+    rightSample *= envelope * 0.5;
     
     // Apply one-pole low-pass filter to remove harshness
     leftFilterState = leftFilterState + filterCutoff * (leftSample - leftFilterState);
     rightFilterState = rightFilterState + filterCutoff * (rightSample - rightFilterState);
     
-    // Soft clipping for warmth
-    leftChannel[i] = Math.tanh(leftFilterState * 1.2);
-    rightChannel[i] = Math.tanh(rightFilterState * 1.2);
+    // Gentle soft clipping for warmth without muddiness
+    leftChannel[i] = Math.tanh(leftFilterState * 1.0);
+    rightChannel[i] = Math.tanh(rightFilterState * 1.0);
   }
 
   return buffer;
@@ -616,7 +616,7 @@ function generateDeepDrones(
   return { left, right };
 }
 
-// Steve Reich inspired: Phasing patterns with gradual process
+// Steve Reich inspired: Phasing patterns with gradual process - brighter and more joyful
 function generatePhasingPatterns(
   time: number,
   fundamental: number,
@@ -626,18 +626,18 @@ function generatePhasingPatterns(
 ): { left: number, right: number } {
   let left = 0, right = 0;
   
-  // Use frequency based on image type
-  const baseFreq = fundamental * (analysis.imageType === 'solar' ? 2 : 1);
+  // Use higher frequency for brighter sound
+  const baseFreq = fundamental * (analysis.imageType === 'solar' ? 2.5 : 1.5);
   
   // Create multiple phasing voices
   phaseRates.forEach((rate, voiceIndex) => {
     // Pattern repeats at different rates creating phase relationships
     const patternLength = 16; // Pattern in "beats"
-    const beatDuration = 0.4; // Each beat is 0.4 seconds
+    const beatDuration = 0.35; // Slightly faster for more energy
     const position = (time * rate / beatDuration) % patternLength;
     
-    // Create a melodic pattern that phases
-    const notePattern = [0, 7, 5, 7, 3, 7, 5, 0, 7, 5, 7, 5, 3, 5, 7, 0];
+    // More joyful melodic pattern (major scale feel)
+    const notePattern = [0, 4, 7, 4, 9, 7, 5, 0, 4, 7, 9, 7, 5, 4, 7, 0];
     const currentNoteIndex = Math.floor(position);
     const nextNoteIndex = (currentNoteIndex + 1) % patternLength;
     const interpolation = position - currentNoteIndex;
@@ -651,13 +651,13 @@ function generatePhasingPatterns(
     
     const phase = 2 * Math.PI * freq * time;
     
-    // Envelope for each note with organic decay
-    const noteEnvelope = Math.exp(-((position % 1) * 3)) * 0.5 + 0.5;
+    // Brighter envelope for each note
+    const noteEnvelope = Math.exp(-((position % 1) * 2.5)) * 0.4 + 0.6;
     
-    // Slight chorus effect
-    const chorus = Math.sin(phase + Math.sin(time * 0.3) * 0.1) * noteEnvelope;
+    // Enhanced chorus effect for shimmer
+    const chorus = Math.sin(phase + Math.sin(time * 0.3) * 0.12) * noteEnvelope;
     
-    const amplitude = 0.25 / phaseRates.length;
+    const amplitude = 0.35 / phaseRates.length; // Louder for more presence
     
     // Pan each voice differently
     const pan = (voiceIndex / (phaseRates.length - 1)) * 2 - 1;
@@ -722,7 +722,7 @@ function generateFilteredGranularTexture(
   return { left, right };
 }
 
-// Evolving harmonic field with slow, organic changes
+// Evolving harmonic field with slow, organic changes - brighter and more prominent
 function generateEvolvingHarmonics(
   time: number,
   fundamental: number,
@@ -731,28 +731,28 @@ function generateEvolvingHarmonics(
 ): { left: number, right: number } {
   let left = 0, right = 0;
   
-  // Harmonic series with slow evolution
-  const harmonicCount = 8;
+  // More harmonics for richer sound
+  const harmonicCount = 10;
   
   for (let h = 1; h <= harmonicCount; h++) {
-    const freq = fundamental * h;
+    const freq = fundamental * h * 1.2; // Slightly higher for brightness
     
-    // Each harmonic has its own slow evolution
-    const evolutionRate = 0.03 + h * 0.005;
-    const amplitude = (1 / Math.pow(h, 1.5)) * 
-                     (Math.sin(time * evolutionRate + h) * 0.5 + 0.5);
+    // Each harmonic has its own slow evolution with more energy
+    const evolutionRate = 0.04 + h * 0.006;
+    const amplitude = (1 / Math.pow(h, 1.3)) * // Less attenuation for brightness
+                     (Math.sin(time * evolutionRate + h) * 0.4 + 0.6);
     
     const phase = 2 * Math.PI * freq * time;
     
-    // Add subtle FM modulation
-    const modIndex = Math.sin(time * 0.07 + h) * 0.2;
+    // Enhanced FM modulation for sparkle
+    const modIndex = Math.sin(time * 0.08 + h) * 0.25;
     const modulator = Math.sin(2 * Math.PI * freq * 0.5 * time);
     const wave = Math.sin(phase + modIndex * modulator);
     
-    // Spatial distribution
-    const pan = Math.sin(time * 0.02 + h * 0.5);
-    left += wave * amplitude * 0.1 * (1 - Math.max(0, pan));
-    right += wave * amplitude * 0.1 * (1 + Math.min(0, pan));
+    // Spatial distribution with more movement
+    const pan = Math.sin(time * 0.025 + h * 0.6);
+    left += wave * amplitude * 0.15 * (1 - Math.max(0, pan)); // Louder
+    right += wave * amplitude * 0.15 * (1 + Math.min(0, pan));
   }
   
   return { left, right };
