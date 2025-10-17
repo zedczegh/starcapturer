@@ -1,4 +1,3 @@
-// Star Field Generator - FFmpeg integration for MP4 export
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,12 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import StarField3D from './StarField3D';
 import UTIF from 'utif';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 interface ProcessedStarData {
   x: number;
@@ -53,6 +54,8 @@ const StarFieldGenerator: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'ready' | 'generating'>('upload');
   const [animationProgress, setAnimationProgress] = useState(0);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [showFormatDialog, setShowFormatDialog] = useState(false);
+  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +75,30 @@ const StarFieldGenerator: React.FC = () => {
   });
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
+  
+  // Load FFmpeg on component mount
+  useEffect(() => {
+    const loadFFmpeg = async () => {
+      if (!ffmpegRef.current) {
+        const ffmpeg = new FFmpeg();
+        ffmpegRef.current = ffmpeg;
+        
+        try {
+          const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+          await ffmpeg.load({
+            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+          });
+          setFfmpegLoaded(true);
+          console.log('FFmpeg loaded successfully');
+        } catch (error) {
+          console.error('Failed to load FFmpeg:', error);
+        }
+      }
+    };
+    
+    loadFFmpeg();
+  }, []);
   
   
   // Format time in MM:SS format
@@ -517,7 +544,11 @@ const StarFieldGenerator: React.FC = () => {
     }, 100);
   }, []);
 
-  const downloadVideo = useCallback(async () => {
+  const initiateDownload = useCallback(() => {
+    setShowFormatDialog(true);
+  }, []);
+
+  const downloadVideoWebM = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas || processedStars.length === 0) {
       toast.error(t('Please process images first', '请先处理图像'));
@@ -652,6 +683,131 @@ const StarFieldGenerator: React.FC = () => {
       setIsAnimating(false);
     }
   }, [animationSettings.duration, processedStars.length, t]);
+
+  const downloadVideoMP4 = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas || processedStars.length === 0) {
+      toast.error(t('Please process images first', '请先处理图像'));
+      return;
+    }
+    
+    if (!ffmpegLoaded || !ffmpegRef.current) {
+      toast.error(t('Video encoder not ready. Please try again.', '视频编码器未就绪。请重试。'));
+      return;
+    }
+    
+    setIsGeneratingVideo(true);
+    setIsAnimating(false);
+    
+    toast.info(t('Preparing to record...', '准备录制...'));
+    
+    // Wait for any ongoing animation to stop
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Reset and start animation to warm up canvas
+    setAnimationProgress(0);
+    setIsAnimating(true);
+    
+    // Give canvas time to render several frames before recording
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    try {
+      const fps = 60;
+      const duration = animationSettings.duration;
+      const ffmpeg = ffmpegRef.current;
+      
+      // Capture frames as images
+      toast.info(t('Capturing frames...', '捕获帧中...'));
+      
+      const frameCount = Math.ceil(duration * fps);
+      const frameInterval = 1000 / fps; // milliseconds per frame
+      
+      const capturedFrames: Blob[] = [];
+      
+      // Capture frames
+      for (let i = 0; i < frameCount; i++) {
+        await new Promise(resolve => setTimeout(resolve, frameInterval));
+        
+        // Capture current frame
+        const blob = await new Promise<Blob>((resolve) => {
+          canvas.toBlob((blob) => {
+            resolve(blob!);
+          }, 'image/jpeg', 0.95);
+        });
+        
+        capturedFrames.push(blob);
+        
+        // Update progress
+        if (i % 30 === 0) {
+          console.log(`Captured ${i + 1}/${frameCount} frames`);
+        }
+      }
+      
+      console.log(`Captured ${capturedFrames.length} frames, encoding to MP4...`);
+      toast.info(t('Encoding video...', '编码视频中...'));
+      
+      // Write frames to FFmpeg virtual filesystem
+      for (let i = 0; i < capturedFrames.length; i++) {
+        const frameData = await fetchFile(capturedFrames[i]);
+        await ffmpeg.writeFile(`frame${i.toString().padStart(5, '0')}.jpg`, frameData);
+      }
+      
+      // Run FFmpeg to create MP4
+      await ffmpeg.exec([
+        '-framerate', fps.toString(),
+        '-i', 'frame%05d.jpg',
+        '-c:v', 'libx264',
+        '-preset', 'medium',
+        '-crf', '23',
+        '-pix_fmt', 'yuv420p',
+        '-movflags', '+faststart',
+        'output.mp4'
+      ]);
+      
+      // Read the output file
+      const data = await ffmpeg.readFile('output.mp4') as Uint8Array;
+      // Convert to regular ArrayBuffer for Blob compatibility
+      const buffer = new Uint8Array(data).buffer;
+      const blob = new Blob([buffer], { type: 'video/mp4' });
+      
+      console.log(`MP4 encoded, size: ${blob.size} bytes`);
+      
+      // Clean up FFmpeg filesystem
+      for (let i = 0; i < capturedFrames.length; i++) {
+        try {
+          await ffmpeg.deleteFile(`frame${i.toString().padStart(5, '0')}.jpg`);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+      try {
+        await ffmpeg.deleteFile('output.mp4');
+      } catch (e) {
+        // Ignore
+      }
+      
+      // Download the video
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `starfield-${Date.now()}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      setIsGeneratingVideo(false);
+      setIsAnimating(false);
+      setAnimationProgress(0);
+      toast.success(t('MP4 video downloaded successfully!', 'MP4视频下载成功！'));
+      
+    } catch (error) {
+      console.error('MP4 encoding error:', error);
+      toast.error(t('Failed to encode MP4 video', 'MP4视频编码失败'));
+      setIsGeneratingVideo(false);
+      setIsAnimating(false);
+    }
+  }, [animationSettings.duration, processedStars.length, ffmpegLoaded, t]);
 
   const resetAll = useCallback(() => {
     setStarsOnlyImage(null);
@@ -958,7 +1114,7 @@ const StarFieldGenerator: React.FC = () => {
             
             {currentStep === 'ready' && (
               <Button
-                onClick={downloadVideo}
+                onClick={initiateDownload}
                 disabled={isGeneratingVideo || processedStars.length === 0}
                 className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
               >
@@ -971,6 +1127,49 @@ const StarFieldGenerator: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Format Selection Dialog */}
+        <Dialog open={showFormatDialog} onOpenChange={setShowFormatDialog}>
+          <DialogContent className="bg-cosmic-900 border-cosmic-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">
+                {t('Choose Video Format', '选择视频格式')}
+              </DialogTitle>
+              <DialogDescription className="text-cosmic-300">
+                {t('Select the format for your downloaded video', '选择下载视频的格式')}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <Button
+                onClick={() => {
+                  setShowFormatDialog(false);
+                  downloadVideoWebM();
+                }}
+                disabled={isGeneratingVideo}
+                className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
+              >
+                <Video className="h-4 w-4 mr-2" />
+                {t('WebM (Fast, Browser Native)', 'WebM（快速，浏览器原生）')}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowFormatDialog(false);
+                  downloadVideoMP4();
+                }}
+                disabled={isGeneratingVideo || !ffmpegLoaded}
+                className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white disabled:opacity-50"
+              >
+                <Video className="h-4 w-4 mr-2" />
+                {t('MP4 (Universal Compatibility)', 'MP4（通用兼容性）')}
+              </Button>
+              {!ffmpegLoaded && (
+                <p className="text-xs text-cosmic-400 text-center">
+                  {t('MP4 encoder is loading...', 'MP4编码器加载中...')}
+                </p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Right Panel - 3D Preview */}
         <div className="lg:col-span-2">
