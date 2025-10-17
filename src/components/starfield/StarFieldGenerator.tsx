@@ -1,5 +1,4 @@
-// Star Field Generator - FFmpeg integration for MP4 export
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,8 +11,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import StarField3D from './StarField3D';
 import UTIF from 'utif';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile } from '@ffmpeg/util';
 
 interface ProcessedStarData {
   x: number;
@@ -53,15 +50,12 @@ const StarFieldGenerator: React.FC = () => {
   const [isCanvasReady, setIsCanvasReady] = useState(false);
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'ready' | 'generating'>('upload');
   const [animationProgress, setAnimationProgress] = useState(0); // 0-100%
-  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
-  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
-  const ffmpegRef = useRef<FFmpeg | null>(null);
 
   // Animation settings with motion controls
   const [animationSettings, setAnimationSettings] = useState({
@@ -76,7 +70,6 @@ const StarFieldGenerator: React.FC = () => {
   });
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
-  
   
   // Format time in MM:SS format
   const formatTime = (seconds: number) => {
@@ -519,40 +512,71 @@ const StarFieldGenerator: React.FC = () => {
     setIsAnimating(true);
   }, []);
 
-  const generateVideo = useCallback(async () => {
-    if (processedStars.length === 0 || !canvasRef.current) {
+  const generateVideo = useCallback(() => {
+    if (processedStars.length === 0) {
       toast.error(t('Please process stars first', '请先处理星体'));
       return;
     }
-    
-    setIsGeneratingVideo(true);
-    setIsRecording(true);
-    setIsAnimating(true);
-    setCurrentStep('generating');
-    recordedChunksRef.current = [];
-    
-    toast.info(t('Recording animation...', '录制动画中...'));
+
+    if (!canvasRef.current) {
+      toast.error(t('Preview not ready. Please wait a moment and try again.', '预览未准备好，请稍等片刻后重试。'));
+      return;
+    }
+
+    // Check canvas has valid dimensions
+    if (canvasRef.current.width === 0 || canvasRef.current.height === 0) {
+      toast.error(t('Canvas dimensions invalid. Please try reprocessing the images.', '画布尺寸无效，请重新处理图像。'));
+      return;
+    }
     
     try {
-      const canvas = canvasRef.current;
-      const stream = canvas.captureStream(60); // 60 FPS
+      console.log('Starting video recording...', {
+        canvasWidth: canvasRef.current.width,
+        canvasHeight: canvasRef.current.height,
+        duration: animationSettings.duration
+      });
+
+      recordedChunksRef.current = [];
+      setIsRecording(true);
+      setIsAnimating(true);
+      setCurrentStep('generating');
+      
+      toast.success(t('Recording started! The animation will play and download automatically.', '录制开始！动画将播放并自动下载。'));
+      
+      // Get the canvas stream at full resolution (60 FPS)
+      const stream = canvasRef.current.captureStream(60);
       
       if (!stream) {
         throw new Error('Failed to capture canvas stream');
       }
 
+      console.log('Canvas stream captured successfully');
+      
+      // Use VP9 codec for better quality
       let options: MediaRecorderOptions = { 
         mimeType: 'video/webm;codecs=vp9',
-        videoBitsPerSecond: 10000000
+        videoBitsPerSecond: 10000000 // 10 Mbps for high quality
       };
       
+      // Fallback to vp8 if vp9 not supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 10000000 };
+        console.log('VP9 not supported, using VP8');
+        options = { 
+          mimeType: 'video/webm;codecs=vp8',
+          videoBitsPerSecond: 10000000
+        };
       }
       
+      // Fallback to default WebM
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options = { mimeType: 'video/webm', videoBitsPerSecond: 10000000 };
+        console.log('VP8 not supported, using default WebM');
+        options = { 
+          mimeType: 'video/webm',
+          videoBitsPerSecond: 10000000
+        };
       }
+      
+      console.log('Using MediaRecorder with:', options.mimeType);
       
       const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
@@ -560,114 +584,61 @@ const StarFieldGenerator: React.FC = () => {
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           recordedChunksRef.current.push(event.data);
+          console.log('Chunk recorded:', event.data.size, 'bytes');
         }
       };
       
-      mediaRecorder.onstop = async () => {
-        console.log('Recording stopped, processing video...');
-        const webmBlob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-        console.log('WebM blob size:', (webmBlob.size / 1024 / 1024).toFixed(2), 'MB');
+      mediaRecorder.onstop = () => {
+        console.log('Recording complete. Total chunks:', recordedChunksRef.current.length);
+        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        console.log('Video size:', (blob.size / 1024 / 1024).toFixed(2), 'MB');
         
-        toast.info(t('Converting to MP4...', '转换为MP4中...'));
+        const url = URL.createObjectURL(blob);
         
-        try {
-          // Load FFmpeg on demand
-          console.log('Checking FFmpeg...');
-          if (!ffmpegRef.current) {
-            console.log('Loading FFmpeg for the first time...');
-            const ffmpeg = new FFmpeg();
-            ffmpeg.on('log', ({ message }) => {
-              console.log('FFmpeg:', message);
-            });
-            
-            console.log('Loading FFmpeg core...');
-            await ffmpeg.load({
-              coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-              wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
-            });
-            console.log('FFmpeg loaded successfully');
-            ffmpegRef.current = ffmpeg;
-          }
-          
-          const ffmpeg = ffmpegRef.current;
-          console.log('Writing WebM file to FFmpeg...');
-          await ffmpeg.writeFile('input.webm', await fetchFile(webmBlob));
-          console.log('WebM file written, starting conversion...');
-          
-          await ffmpeg.exec([
-            '-i', 'input.webm',
-            '-c:v', 'libx264',
-            '-preset', 'medium',
-            '-crf', '18',
-            '-pix_fmt', 'yuv420p',
-            '-movflags', '+faststart',
-            'output.mp4'
-          ]);
-          
-          console.log('Conversion complete, reading MP4...');
-          const data = await ffmpeg.readFile('output.mp4');
-          const mp4Blob = new Blob([new Uint8Array(data as Uint8Array)], { type: 'video/mp4' });
-          console.log('MP4 blob size:', (mp4Blob.size / 1024 / 1024).toFixed(2), 'MB');
-          
-          setVideoBlob(mp4Blob);
-          
-          console.log('Cleaning up temporary files...');
-          await ffmpeg.deleteFile('input.webm');
-          await ffmpeg.deleteFile('output.mp4');
-          
-          toast.success(t('Video ready! Click Download to save.', '视频已就绪！点击下载保存。'));
-        } catch (error) {
-          console.error('MP4 conversion error:', error);
-          toast.error(t('Conversion failed: ' + (error as Error).message, '转换失败: ' + (error as Error).message));
-        }
+        // Download as WebM (browsers don't support MP4 encoding from canvas)
+        const a = document.createElement('a');
+        a.href = url;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        a.download = `starfield-animation-${timestamp}.webm`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
         
-        setIsGeneratingVideo(false);
+        toast.success(t('Video downloaded! (WebM format - compatible with most video players)', '视频已下载！（WebM格式 - 兼容大多数视频播放器）'));
         setIsRecording(false);
         setIsAnimating(false);
         setCurrentStep('ready');
       };
 
-      mediaRecorder.onerror = () => {
+      mediaRecorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
         toast.error(t('Recording error occurred', '录制时发生错误'));
-        setIsGeneratingVideo(false);
         setIsRecording(false);
         setIsAnimating(false);
         setCurrentStep('ready');
       };
       
-      mediaRecorder.start(100);
+      // Start recording
+      mediaRecorder.start(100); // Collect data every 100ms
+      console.log('Recording started');
       
+      // Stop recording after duration + buffer
       setTimeout(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          console.log('Stopping recording');
           mediaRecorderRef.current.stop();
         }
       }, (animationSettings.duration * 1000) + 300);
       
     } catch (error) {
-      console.error('Video generation error:', error);
-      setIsGeneratingVideo(false);
+      console.error('Recording error:', error);
       setIsRecording(false);
       setIsAnimating(false);
       setCurrentStep('ready');
-      toast.error(t('Failed to generate video', '视频生成失败'));
+      toast.error(t('Failed to record video. Please try again.', '录制视频失败，请重试。'));
     }
   }, [processedStars, animationSettings.duration, t]);
-
-  const downloadVideo = useCallback(() => {
-    if (!videoBlob) return;
-    
-    const url = URL.createObjectURL(videoBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-    a.download = `starfield-animation-${timestamp}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success(t('MP4 video downloaded!', 'MP4视频已下载！'));
-  }, [videoBlob, t]);
 
   const resetAll = useCallback(() => {
     setStarsOnlyImage(null);
@@ -973,27 +944,14 @@ const StarFieldGenerator: React.FC = () => {
               {t('Reset', '重置')}
             </Button>
             
-            {currentStep === 'ready' && !videoBlob && (
+            {currentStep === 'ready' && (
               <Button
                 onClick={generateVideo}
-                disabled={isGeneratingVideo || processedStars.length === 0}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50"
-              >
-                <Video className="h-4 w-4 mr-2" />
-                {isGeneratingVideo 
-                  ? t('Generating...', '生成中...') 
-                  : t('Generate Video', '生成视频')
-                }
-              </Button>
-            )}
-            
-            {currentStep === 'ready' && videoBlob && (
-              <Button
-                onClick={downloadVideo}
-                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                disabled={isRecording || processedStars.length === 0}
+                className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 disabled:opacity-50"
               >
                 <Download className="h-4 w-4 mr-2" />
-                {t('Download MP4', '下载MP4')}
+                {isRecording ? t('Recording...', '录制中...') : t('Download Video', '下载视频')}
               </Button>
             )}
           </div>
