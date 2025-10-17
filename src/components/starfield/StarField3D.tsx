@@ -191,23 +191,23 @@ const StarField3D: React.FC<StarField3DProps> = ({
       offsetsRef.current.layer2.scale += speedFactor * 0.002;
       offsetsRef.current.layer1.scale += speedFactor * 0.003;
     } else if (motionType === 'zoom_out') {
-      // Zoom out - decrease scale continuously
+      // Zoom out - reverse of zoom in (decrease scale from larger to 1)
       offsetsRef.current.background.scale -= speedFactor * 0.0005;
       offsetsRef.current.layer3.scale -= speedFactor * 0.001;
       offsetsRef.current.layer2.scale -= speedFactor * 0.002;
       offsetsRef.current.layer1.scale -= speedFactor * 0.003;
     } else if (motionType === 'pan_left') {
-      // Pan left - parallax movement continuously
-      offsetsRef.current.background.x -= speedFactor * 0.2;
-      offsetsRef.current.layer3.x -= speedFactor * 0.5;
-      offsetsRef.current.layer2.x -= speedFactor * 1.0;
-      offsetsRef.current.layer1.x -= speedFactor * 1.5;
+      // Pan left - parallax movement with larger scale to avoid gaps
+      offsetsRef.current.background.x -= speedFactor * 0.3;
+      offsetsRef.current.layer3.x -= speedFactor * 0.7;
+      offsetsRef.current.layer2.x -= speedFactor * 1.2;
+      offsetsRef.current.layer1.x -= speedFactor * 1.8;
     } else if (motionType === 'pan_right') {
-      // Pan right - parallax movement continuously
-      offsetsRef.current.background.x += speedFactor * 0.2;
-      offsetsRef.current.layer3.x += speedFactor * 0.5;
-      offsetsRef.current.layer2.x += speedFactor * 1.0;
-      offsetsRef.current.layer1.x += speedFactor * 1.5;
+      // Pan right - parallax movement with larger scale to avoid gaps
+      offsetsRef.current.background.x += speedFactor * 0.3;
+      offsetsRef.current.layer3.x += speedFactor * 0.7;
+      offsetsRef.current.layer2.x += speedFactor * 1.2;
+      offsetsRef.current.layer1.x += speedFactor * 1.8;
     }
     
     // Draw background layer (nebula) - maintain aspect ratio
@@ -258,12 +258,36 @@ const StarField3D: React.FC<StarField3DProps> = ({
     if (isAnimating) {
       // Reset offsets and timer when animation starts
       animationStartTimeRef.current = 0;
-      offsetsRef.current = { 
-        layer1: { x: 0, y: 0, scale: 1 },
-        layer2: { x: 0, y: 0, scale: 1 },
-        layer3: { x: 0, y: 0, scale: 1 },
-        background: { x: 0, y: 0, scale: 1 }
-      };
+      
+      // Set initial scale based on motion type
+      const { motionType = 'zoom_in' } = settings;
+      
+      if (motionType === 'zoom_out') {
+        // Start zoomed in, then zoom out to 1
+        offsetsRef.current = { 
+          layer1: { x: 0, y: 0, scale: 1.6 },
+          layer2: { x: 0, y: 0, scale: 1.4 },
+          layer3: { x: 0, y: 0, scale: 1.2 },
+          background: { x: 0, y: 0, scale: 1.1 }
+        };
+      } else if (motionType === 'pan_left' || motionType === 'pan_right') {
+        // Start with larger scale to avoid gaps during panning
+        offsetsRef.current = { 
+          layer1: { x: 0, y: 0, scale: 2.0 },
+          layer2: { x: 0, y: 0, scale: 1.8 },
+          layer3: { x: 0, y: 0, scale: 1.6 },
+          background: { x: 0, y: 0, scale: 1.5 }
+        };
+      } else {
+        // Default (zoom_in and others)
+        offsetsRef.current = { 
+          layer1: { x: 0, y: 0, scale: 1 },
+          layer2: { x: 0, y: 0, scale: 1 },
+          layer3: { x: 0, y: 0, scale: 1 },
+          background: { x: 0, y: 0, scale: 1 }
+        };
+      }
+      
       animate();
     } else {
       if (animationFrameRef.current) {
