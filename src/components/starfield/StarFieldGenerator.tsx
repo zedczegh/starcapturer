@@ -528,9 +528,8 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const downloadVideoWebM = useCallback(async () => {
-    const canvas = canvasRef.current;
-    if (!canvas || processedStars.length === 0 || !starsOnlyImage || !starlessImage) {
-      toast.error(t('Please process images first', '请先处理图像'));
+    if (!canvasRef.current) {
+      toast.error(t('Please generate the animation first', '请先生成动画'));
       return;
     }
     
@@ -660,24 +659,24 @@ const StarFieldGenerator: React.FC = () => {
       setIsGeneratingVideo(false);
       setIsAnimating(false);
     }
-  }, [animationSettings.duration, processedStars.length, starsOnlyImage, starlessImage, t]);
+  }, [animationSettings.duration, t]);
 
   const downloadVideoMP4 = useCallback(async () => {
-    const canvas = canvasRef.current;
-    if (!canvas || processedStars.length === 0 || !starsOnlyImage || !starlessImage) {
-      toast.error(t('Please process images first', '请先处理图像'));
+  const downloadVideoMP4 = useCallback(async () => {
+    if (!canvasRef.current) {
+      toast.error(t('Please generate the animation first', '请先生成动画'));
       return;
     }
-    
-    setIsEncodingMP4(true);
-    setIsGeneratingVideo(true);
-    setMp4Progress(0);
-    setMp4Blob(null);
-    
-    console.log('=== Starting MP4 Generation ===');
-    toast.info(t('Preparing recording...', '准备录制...'));
-    
+
     try {
+      setIsEncodingMP4(true);
+      setIsGeneratingVideo(true);
+      setMp4Progress(0);
+      setMp4Blob(null);
+      
+      console.log('=== Starting MP4 Generation ===');
+      toast.info(t('Preparing recording...', '准备录制...'));
+      
       const fps = 60;
       const duration = animationSettings.duration;
       
