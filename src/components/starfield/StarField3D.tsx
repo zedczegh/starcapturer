@@ -421,14 +421,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
   useEffect(() => {
     if (isAnimating) {
-      // Check if we should resume from pause or start fresh
-      const shouldResume = pausedTimeRef.current > 0 && pausedTimeRef.current < 999999;
-      
-      if (shouldResume) {
-        // Resuming from pause
+      // Check if we should resume from pause
+      if (pausedTimeRef.current > 100) {
+        // Resuming from pause - continue from where we left off
         animationStartTimeRef.current = Date.now() - pausedTimeRef.current;
+        pausedTimeRef.current = 0;
       } else {
-        // Starting fresh - always reset pausedTime
+        // Starting fresh - reset everything
         pausedTimeRef.current = 0;
         animationStartTimeRef.current = 0;
         if (onProgressUpdate) {
@@ -448,11 +447,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      if (animationStartTimeRef.current > 0 && animationStartTimeRef.current !== Date.now()) {
-        pausedTimeRef.current = Date.now() - animationStartTimeRef.current;
-      } else {
-        // If stopping completely (like for replay), clear paused time
-        pausedTimeRef.current = 0;
+      if (animationStartTimeRef.current > 0) {
+        const elapsed = Date.now() - animationStartTimeRef.current;
+        pausedTimeRef.current = elapsed;
       }
     }
     
