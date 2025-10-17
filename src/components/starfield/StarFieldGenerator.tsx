@@ -818,44 +818,45 @@ const StarFieldGenerator: React.FC = () => {
           console.log('Starting MediaRecorder...');
           mediaRecorder.start(100); // Collect data every 100ms
           
-          // Optimized frame capture using setInterval for consistent timing
+          // Simple non-blocking frame update loop
+          let lastUpdateTime = performance.now();
           const updateInterval = 1000 / recordFps;
           const totalFrames = Math.ceil(duration * recordFps);
           
-          const captureInterval = setInterval(() => {
-            if (!recordingActive) {
-              clearInterval(captureInterval);
-              return;
-            }
+          const updateRecordingCanvas = () => {
+            if (!recordingActive) return;
             
-            try {
+            const now = performance.now();
+            const elapsed = now - lastUpdateTime;
+            
+            // Update recording canvas when it's time for next frame
+            if (elapsed >= updateInterval) {
               // Copy current frame from display to recording canvas
               recordCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
+              
               frameCount++;
+              lastUpdateTime = now - (elapsed % updateInterval);
               
               // Progress logging
               if (frameCount % 60 === 0 || frameCount === totalFrames) {
                 const progress = Math.min((frameCount / totalFrames) * 100, 100);
                 console.log(`Recording: ${frameCount}/${totalFrames} frames (${progress.toFixed(0)}%)`);
               }
-              
-              // Check if we've reached the target frame count
-              if (frameCount >= totalFrames) {
-                clearInterval(captureInterval);
-                stopRecordingNow();
-              }
-            } catch (err) {
-              console.error('Frame capture error:', err);
             }
-          }, updateInterval);
-          
-          // Auto-stop after duration as fallback
-          setTimeout(() => {
-            clearInterval(captureInterval);
+            
+            // Continue updating
             if (recordingActive) {
-              stopRecordingNow();
+              requestAnimationFrame(updateRecordingCanvas);
             }
-          }, (duration * 1000) + 2500);
+          };
+          
+          // Start update loop
+          requestAnimationFrame(updateRecordingCanvas);
+          
+          // Auto-stop after duration
+          setTimeout(() => {
+            stopRecordingNow();
+          }, (duration * 1000) + 2000);
         
         } catch (recordError) {
           console.error('Recording error:', recordError);
@@ -1732,58 +1733,39 @@ const StarFieldGenerator: React.FC = () => {
                 {/* Progress Bar and Controls */}
                 {processedStars.length > 0 && (
                   <div className="space-y-2 px-4 pb-3">
-                    {/* Recording Status or Play/Pause and Replay Buttons */}
-                    {isRecording ? (
-                      <div className="flex items-center justify-center gap-3">
-                        <div className="flex items-center gap-2 text-red-500 animate-pulse">
-                          <div className="w-3 h-3 bg-red-500 rounded-full" />
-                          <span className="text-sm font-semibold">
-                            {t('Recording', '录制中')}
-                          </span>
-                        </div>
-                        <Button
-                          onClick={stopRecording}
-                          size="sm"
-                          className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
-                        >
-                          <Pause className="h-4 w-4 mr-2" />
-                          {t('Stop & Download', '停止并下载')}
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2">
-                        <Button
-                          onClick={toggleAnimation}
-                          disabled={isGeneratingVideo}
-                          variant="outline"
-                          size="sm"
-                          className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50 disabled:opacity-50"
-                        >
-                          {isAnimating ? (
-                            <>
-                              <Pause className="h-4 w-4 mr-2" />
-                              {t('Pause', '暂停')}
-                            </>
-                          ) : (
-                            <>
-                              <Play className="h-4 w-4 mr-2" />
-                              {t('Play', '播放')}
-                            </>
-                          )}
-                        </Button>
-                        
-                        <Button
-                          onClick={handleReplay}
-                          disabled={isGeneratingVideo || (isAnimating && animationProgress < 10)}
-                          variant="outline"
-                          size="sm"
-                          className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50 disabled:opacity-50"
-                        >
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          {t('Replay', '重播')}
-                        </Button>
-                      </div>
-                    )}
+                    {/* Play/Pause and Replay Buttons */}
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        onClick={toggleAnimation}
+                        disabled={isGeneratingVideo}
+                        variant="outline"
+                        size="sm"
+                        className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50 disabled:opacity-50"
+                      >
+                        {isAnimating ? (
+                          <>
+                            <Pause className="h-4 w-4 mr-2" />
+                            {t('Pause', '暂停')}
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 mr-2" />
+                            {t('Play', '播放')}
+                          </>
+                        )}
+                      </Button>
+                      
+                      <Button
+                        onClick={handleReplay}
+                        disabled={isGeneratingVideo || (isAnimating && animationProgress < 10)}
+                        variant="outline"
+                        size="sm"
+                        className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50 disabled:opacity-50"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        {t('Replay', '重播')}
+                      </Button>
+                    </div>
                     
                     {/* Progress bar with moving slider dot - YouTube style */}
                     <div className="relative w-full h-1 bg-cosmic-800/50 rounded-full overflow-visible">
