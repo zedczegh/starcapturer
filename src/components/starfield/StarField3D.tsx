@@ -57,7 +57,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const [backgroundImg, setBackgroundImg] = useState<HTMLImageElement | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
 
-  // Load stars-only image and create 3 copies for parallax layers
+  // Load stars-only image as a single layer (no copies/duplicates)
   useEffect(() => {
     if (!starsOnlyImage || stars.length === 0) return;
 
@@ -66,29 +66,25 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Set canvas dimensions to match image
       setImageDimensions({ width: img.width, height: img.height });
       
-      console.log(`Creating 3 star layers from stars-only image (${stars.length} stars detected)`);
+      console.log(`Loading stars-only image as single layer (${stars.length} stars detected)`);
       
-      // Create 3 separate layers - each will have all stars but render at different depths
-      // We'll use the full stars-only image for each layer
-      const createStarLayer = (layerName: string) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d')!;
-        
-        // Simply draw the full stars-only image
-        // The parallax effect will come from drawing each layer at different scales/speeds
-        ctx.drawImage(img, 0, 0);
-        
-        console.log(`${layerName}: Full stars-only image loaded (${canvas.width}x${canvas.height})`);
-        return canvas;
-      };
+      // Create just ONE layer with all stars - no duplicates
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
       
-      // Create 3 identical layers - parallax will be created during rendering
+      // Draw the full stars-only image once
+      ctx.drawImage(img, 0, 0);
+      
+      console.log(`Stars layer created: ${canvas.width}x${canvas.height}`);
+      
+      // Use the same layer for all three positions to avoid null checks
+      // but we'll only draw layer1 in the render loop
       setStarLayers({
-        layer1: createStarLayer('Layer1(closest)'),
-        layer2: createStarLayer('Layer2(middle)'),
-        layer3: createStarLayer('Layer3(farthest)')
+        layer1: canvas,
+        layer2: null,
+        layer3: null
       });
     };
     
@@ -202,31 +198,21 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.restore();
     }
     
-    // Draw star layers on top with different parallax speeds and reduced opacity for depth
-    const drawLayer = (layer: HTMLCanvasElement | null, offset: { x: number, y: number, scale: number }, alpha: number, layerName: string) => {
-      if (!layer) {
-        console.log(`${layerName}: layer is null`);
-        return;
-      }
-      
+    // Draw stars layer on top - single layer, no duplicates
+    if (starLayers.layer1) {
       ctx.save();
-      ctx.globalCompositeOperation = 'screen'; // Screen blending mode for stars
-      ctx.globalAlpha = alpha; // Different opacity for depth perception
+      ctx.globalCompositeOperation = 'screen'; // Screen blending for stars
+      ctx.globalAlpha = 1.0; // Full opacity
       
-      const scale = offset.scale;
-      const scaledWidth = layer.width * scale;
-      const scaledHeight = layer.height * scale;
-      const drawX = (canvas.width - scaledWidth) / 2 + offset.x;
-      const drawY = (canvas.height - scaledHeight) / 2 + offset.y;
+      const scale = offsetsRef.current.layer1.scale;
+      const scaledWidth = starLayers.layer1.width * scale;
+      const scaledHeight = starLayers.layer1.height * scale;
+      const drawX = (canvas.width - scaledWidth) / 2 + offsetsRef.current.layer1.x;
+      const drawY = (canvas.height - scaledHeight) / 2 + offsetsRef.current.layer1.y;
       
-      ctx.drawImage(layer, drawX, drawY, scaledWidth, scaledHeight);
+      ctx.drawImage(starLayers.layer1, drawX, drawY, scaledWidth, scaledHeight);
       ctx.restore();
-    };
-    
-    // Draw layers with reduced opacity for distant stars (creates depth)
-    drawLayer(starLayers.layer3, offsetsRef.current.layer3, 0.4, 'Layer3'); // Farthest - dimmest
-    drawLayer(starLayers.layer2, offsetsRef.current.layer2, 0.7, 'Layer2'); // Middle
-    drawLayer(starLayers.layer1, offsetsRef.current.layer1, 1.0, 'Layer1'); // Closest - brightest
+    }
     
     animationFrameRef.current = requestAnimationFrame(animate);
   }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
