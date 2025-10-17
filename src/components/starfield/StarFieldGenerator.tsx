@@ -968,18 +968,18 @@ const StarFieldGenerator: React.FC = () => {
   }, [mp4Blob, t]);
 
   const resetAll = useCallback(() => {
-    // Stop any ongoing video generation
+    // Force stop any ongoing video generation immediately
     setIsGeneratingVideo(false);
     setIsEncodingMP4(false);
     setMp4Progress(0);
     setMp4Blob(null);
     setShowFormatDialog(false);
     
-    // Reset animation
+    // Stop animation immediately
     setIsAnimating(false);
     setAnimationProgress(0);
     
-    // Reset images and processing
+    // Reset all images and processing data
     setStarsOnlyImage(null);
     setStarlessImage(null);
     setStarsOnlyElement(null);
@@ -988,6 +988,7 @@ const StarFieldGenerator: React.FC = () => {
     setProcessedStars([]);
     setDepthMapCanvas(null);
     setIsCanvasReady(false);
+    setIsProcessing(false);
     setCurrentStep('upload');
     
     // Clear file inputs
@@ -1368,8 +1369,8 @@ const StarFieldGenerator: React.FC = () => {
                 </Button>
               )}
               
-              {/* Progress Bar during encoding */}
-              {isEncodingMP4 && !mp4Blob && (
+              {/* Progress Bar during encoding - hide if dialog closed or reset */}
+              {isEncodingMP4 && !mp4Blob && showFormatDialog && (
                 <div className="w-full space-y-2">
                   <div className="flex items-center justify-between text-sm text-cosmic-300">
                     <span>{t('Encoding MP4...', '编码MP4...')}</span>
@@ -1385,7 +1386,7 @@ const StarFieldGenerator: React.FC = () => {
               )}
               
               {/* Download Button after encoding */}
-              {mp4Blob && (
+              {mp4Blob && showFormatDialog && (
                 <Button
                   onClick={() => {
                     setShowFormatDialog(false);
