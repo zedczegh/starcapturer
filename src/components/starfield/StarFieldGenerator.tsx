@@ -695,6 +695,7 @@ const StarFieldGenerator: React.FC = () => {
     
     // Load FFmpeg if not loaded yet
     if (!ffmpegLoaded && ffmpegRef.current) {
+      setMp4Progress(5);
       toast.info(t('Loading video encoder...', '加载视频编码器...'));
       try {
         const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
@@ -703,9 +704,11 @@ const StarFieldGenerator: React.FC = () => {
           wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
         });
         setFfmpegLoaded(true);
+        setMp4Progress(10);
       } catch (error) {
         console.error('Failed to load FFmpeg:', error);
         toast.error(t('Failed to load video encoder', '视频编码器加载失败'));
+        setMp4Progress(0);
         return;
       }
     }
@@ -718,17 +721,19 @@ const StarFieldGenerator: React.FC = () => {
     setIsEncodingMP4(true);
     setIsGeneratingVideo(true);
     setIsAnimating(false);
-    setMp4Progress(0);
+    setMp4Progress(10);
     setMp4Blob(null);
+    
+    toast.info(t('Recording WebM...', '录制WebM...'));
     
     // Wait for any ongoing animation to stop
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    // Reset and start animation to warm up canvas
+    // Reset and start animation
     setAnimationProgress(0);
     setIsAnimating(true);
     
-    // Give canvas time to render several frames before recording
+    // Give canvas time to render frames
     await new Promise(resolve => setTimeout(resolve, 500));
     
     try {
@@ -736,47 +741,88 @@ const StarFieldGenerator: React.FC = () => {
       const duration = animationSettings.duration;
       const ffmpeg = ffmpegRef.current;
       
-      const frameCount = Math.ceil(duration * fps);
-      const frameInterval = 1000 / fps;
+      // Step 1: Record WebM (10-60%)
+      setMp4Progress(15);
+      const stream = canvas.captureStream(fps);
       
-      const capturedFrames: Blob[] = [];
-      
-      // Capture frames with progress
-      for (let i = 0; i < frameCount; i++) {
-        await new Promise(resolve => setTimeout(resolve, frameInterval));
-        
-        const blob = await new Promise<Blob>((resolve) => {
-          canvas.toBlob((blob) => {
-            resolve(blob!);
-          }, 'image/jpeg', 0.95);
-        });
-        
-        capturedFrames.push(blob);
-        
-        // Update progress (capturing is 0-50%)
-        const captureProgress = ((i + 1) / frameCount) * 50;
-        setMp4Progress(captureProgress);
+      const videoTracks = stream.getVideoTracks();
+      if (videoTracks.length === 0) {
+        throw new Error('No video tracks available');
       }
       
-      console.log(`Captured ${capturedFrames.length} frames, encoding to MP4...`);
-      
-      // Write frames to FFmpeg (50-70%)
-      setMp4Progress(50);
-      for (let i = 0; i < capturedFrames.length; i++) {
-        const frameData = await fetchFile(capturedFrames[i]);
-        await ffmpeg.writeFile(`frame${i.toString().padStart(5, '0')}.jpg`, frameData);
-        
-        if (i % 50 === 0) {
-          const writeProgress = 50 + ((i / capturedFrames.length) * 20);
-          setMp4Progress(writeProgress);
+      let mimeType = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm;codecs=vp8';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/webm';
         }
       }
       
-      // Encode video (70-100%)
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 10000000
+      });
+      
+      const chunks: Blob[] = [];
+      
+      const webmBlob = await new Promise<Blob>((resolve, reject) => {
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            chunks.push(e.data);
+            // Update progress during recording (15-50%)
+            const recordProgress = 15 + (chunks.length / (duration * 60)) * 35;
+            setMp4Progress(Math.min(recordProgress, 50));
+          }
+        };
+        
+        mediaRecorder.onstop = () => {
+          if (chunks.length === 0) {
+            reject(new Error('No data recorded'));
+            return;
+          }
+          const blob = new Blob(chunks, { type: mimeType });
+          setMp4Progress(50);
+          resolve(blob);
+        };
+        
+        mediaRecorder.onerror = (e) => {
+          reject(e);
+        };
+        
+        // Ensure animation is running
+        setIsAnimating(true);
+        
+        // Start recording
+        setTimeout(() => {
+          mediaRecorder.start(100);
+          console.log('WebM recording started for MP4 conversion');
+        }, 200);
+        
+        // Stop after duration + buffer
+        setTimeout(() => {
+          if (mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+            stream.getTracks().forEach(track => track.stop());
+          }
+        }, (duration * 1000) + 2000);
+      });
+      
+      console.log(`WebM recorded: ${webmBlob.size} bytes`);
+      setMp4Progress(55);
+      
+      // Step 2: Convert WebM to MP4 using FFmpeg (50-100%)
+      toast.info(t('Converting to MP4...', '转换为MP4...'));
+      
+      // Write WebM to FFmpeg filesystem
+      setMp4Progress(60);
+      const webmData = await fetchFile(webmBlob);
+      await ffmpeg.writeFile('input.webm', webmData);
+      
       setMp4Progress(70);
+      
+      // Convert WebM to MP4
       await ffmpeg.exec([
-        '-framerate', fps.toString(),
-        '-i', 'frame%05d.jpg',
+        '-i', 'input.webm',
         '-c:v', 'libx264',
         '-preset', 'medium',
         '-crf', '23',
@@ -787,29 +833,23 @@ const StarFieldGenerator: React.FC = () => {
       
       setMp4Progress(90);
       
-      // Read the output file
+      // Read the output MP4
       const data = await ffmpeg.readFile('output.mp4') as Uint8Array;
       const buffer = new Uint8Array(data).buffer;
-      const blob = new Blob([buffer], { type: 'video/mp4' });
+      const mp4Blob = new Blob([buffer], { type: 'video/mp4' });
       
-      console.log(`MP4 encoded, size: ${blob.size} bytes`);
+      console.log(`MP4 encoded: ${mp4Blob.size} bytes`);
       
       // Clean up FFmpeg filesystem
-      for (let i = 0; i < capturedFrames.length; i++) {
-        try {
-          await ffmpeg.deleteFile(`frame${i.toString().padStart(5, '0')}.jpg`);
-        } catch (e) {
-          // Ignore cleanup errors
-        }
-      }
       try {
+        await ffmpeg.deleteFile('input.webm');
         await ffmpeg.deleteFile('output.mp4');
       } catch (e) {
-        // Ignore
+        // Ignore cleanup errors
       }
       
       setMp4Progress(100);
-      setMp4Blob(blob);
+      setMp4Blob(mp4Blob);
       setIsGeneratingVideo(false);
       setIsAnimating(false);
       setAnimationProgress(0);
