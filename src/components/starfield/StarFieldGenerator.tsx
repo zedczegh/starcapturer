@@ -543,60 +543,45 @@ const StarFieldGenerator: React.FC = () => {
     setIsAnimating(true);
   }, []);
 
-  const generateVideo = useCallback(() => {
+  const generateVideo = useCallback(async () => {
     if (processedStars.length === 0 || !canvasRef.current) {
       toast.error(t('Please process stars first', '请先处理星体'));
       return;
     }
+
+    if (!ffmpegRef.current || !ffmpegLoaded) {
+      toast.error(t('Video encoder not ready. Please wait a moment.', '视频编码器未就绪，请稍等。'));
+      return;
+    }
+    
+    setIsRecording(true);
+    setIsAnimating(true);
+    setCurrentStep('generating');
+    recordedChunksRef.current = [];
+    
+    toast.info(t('Generating video...', '生成视频中...'));
     
     try {
-      console.log('Starting video recording...', {
-        canvasWidth: canvasRef.current.width,
-        canvasHeight: canvasRef.current.height,
-        duration: animationSettings.duration
-      });
-
-      recordedChunksRef.current = [];
-      setIsRecording(true);
-      setIsAnimating(true);
-      setCurrentStep('generating');
-      
-      toast.success(t('Recording started! The animation will play and download automatically.', '录制开始！动画将播放并自动下载。'));
-      
-      // Get the canvas stream at full resolution (60 FPS)
-      const stream = canvasRef.current.captureStream(60);
+      const canvas = canvasRef.current;
+      const stream = canvas.captureStream(60); // 60 FPS
       
       if (!stream) {
         throw new Error('Failed to capture canvas stream');
       }
 
-      console.log('Canvas stream captured successfully');
-      
       // Use VP9 codec for better quality
       let options: MediaRecorderOptions = { 
         mimeType: 'video/webm;codecs=vp9',
-        videoBitsPerSecond: 10000000 // 10 Mbps for high quality
+        videoBitsPerSecond: 10000000
       };
       
-      // Fallback to vp8 if vp9 not supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        console.log('VP9 not supported, using VP8');
-        options = { 
-          mimeType: 'video/webm;codecs=vp8',
-          videoBitsPerSecond: 10000000
-        };
+        options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 10000000 };
       }
       
-      // Fallback to default WebM
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        console.log('VP8 not supported, using default WebM');
-        options = { 
-          mimeType: 'video/webm',
-          videoBitsPerSecond: 10000000
-        };
+        options = { mimeType: 'video/webm', videoBitsPerSecond: 10000000 };
       }
-      
-      console.log('Using MediaRecorder with:', options.mimeType);
       
       const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
@@ -604,28 +589,20 @@ const StarFieldGenerator: React.FC = () => {
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           recordedChunksRef.current.push(event.data);
-          console.log('Chunk recorded:', event.data.size, 'bytes');
         }
       };
       
       mediaRecorder.onstop = async () => {
-        console.log('Recording complete. Total chunks:', recordedChunksRef.current.length);
         const webmBlob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-        console.log('WebM size:', (webmBlob.size / 1024 / 1024).toFixed(2), 'MB');
         
         try {
-          if (!ffmpegRef.current || !ffmpegLoaded) {
-            throw new Error('FFmpeg not loaded');
-          }
-
           toast.info(t('Converting to MP4...', '转换为MP4中...'));
           
           const ffmpeg = ffmpegRef.current;
+          if (!ffmpeg) throw new Error('FFmpeg not available');
           
-          // Write WebM file to FFmpeg filesystem
           await ffmpeg.writeFile('input.webm', await fetchFile(webmBlob));
           
-          // Convert WebM to MP4 with high quality settings
           await ffmpeg.exec([
             '-i', 'input.webm',
             '-c:v', 'libx264',
@@ -636,13 +613,10 @@ const StarFieldGenerator: React.FC = () => {
             'output.mp4'
           ]);
           
-          // Read the output MP4 file
           const data = await ffmpeg.readFile('output.mp4');
-          // Convert Uint8Array to Blob
           const mp4Blob = new Blob([new Uint8Array(data as Uint8Array)], { type: 'video/mp4' });
-          console.log('MP4 size:', (mp4Blob.size / 1024 / 1024).toFixed(2), 'MB');
           
-          // Download MP4
+          // Download immediately
           const url = URL.createObjectURL(mp4Blob);
           const a = document.createElement('a');
           a.href = url;
@@ -653,26 +627,13 @@ const StarFieldGenerator: React.FC = () => {
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
           
-          // Clean up FFmpeg files
           await ffmpeg.deleteFile('input.webm');
           await ffmpeg.deleteFile('output.mp4');
           
           toast.success(t('MP4 video downloaded successfully!', 'MP4视频下载成功！'));
         } catch (error) {
           console.error('MP4 conversion error:', error);
-          
-          // Fallback: download WebM if conversion fails
-          const url = URL.createObjectURL(webmBlob);
-          const a = document.createElement('a');
-          a.href = url;
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-          a.download = `starfield-animation-${timestamp}.webm`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          
-          toast.warning(t('Conversion failed. Downloaded as WebM format.', '转换失败，已下载为WebM格式。'));
+          toast.error(t('Failed to convert video', '视频转换失败'));
         }
         
         setIsRecording(false);
@@ -680,34 +641,30 @@ const StarFieldGenerator: React.FC = () => {
         setCurrentStep('ready');
       };
 
-      mediaRecorder.onerror = (event) => {
-        console.error('MediaRecorder error:', event);
+      mediaRecorder.onerror = () => {
         toast.error(t('Recording error occurred', '录制时发生错误'));
         setIsRecording(false);
         setIsAnimating(false);
         setCurrentStep('ready');
       };
       
-      // Start recording
-      mediaRecorder.start(100); // Collect data every 100ms
-      console.log('Recording started');
+      mediaRecorder.start(100);
       
-      // Stop recording after duration + buffer
+      // Auto-stop after duration
       setTimeout(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          console.log('Stopping recording');
           mediaRecorderRef.current.stop();
         }
       }, (animationSettings.duration * 1000) + 300);
       
     } catch (error) {
-      console.error('Recording error:', error);
+      console.error('Video generation error:', error);
       setIsRecording(false);
       setIsAnimating(false);
       setCurrentStep('ready');
-      toast.error(t('Failed to record video. Please try again.', '录制视频失败，请重试。'));
+      toast.error(t('Failed to generate video', '视频生成失败'));
     }
-  }, [processedStars, animationSettings.duration, t]);
+  }, [processedStars, animationSettings.duration, ffmpegLoaded, t]);
 
   const resetAll = useCallback(() => {
     setStarsOnlyImage(null);
