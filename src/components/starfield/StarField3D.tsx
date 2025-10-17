@@ -51,11 +51,12 @@ const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: bool
       colors[i * 3 + 1] = color.g;
       colors[i * 3 + 2] = color.b;
 
-      const distanceScale = Math.max(0.3, 1 - (star.z / 150));
-      const brightnessScale = Math.pow(star.brightness, 0.7);
-      const sizeScale = Math.max(0.5, Math.min(3, star.size * 0.3));
+      // Enhanced star sizing for better visibility
+      const distanceScale = Math.max(0.5, 1.5 - (Math.abs(star.z) / 100));
+      const brightnessScale = Math.pow(star.brightness, 0.5); // Less aggressive brightness scaling
+      const sizeScale = Math.max(1.5, Math.min(6, star.size)); // Larger base sizes
       
-      sizes[i] = sizeScale * distanceScale * brightnessScale * 2;
+      sizes[i] = sizeScale * distanceScale * brightnessScale * 3; // Increased multiplier
     });
 
     return [positions, colors, sizes];
@@ -146,13 +147,14 @@ const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: bool
         />
       </bufferGeometry>
       <pointsMaterial
-        size={3}
+        size={5}
         sizeAttenuation={true}
         vertexColors={true}
         transparent={true}
-        opacity={0.9}
+        opacity={1.0}
         blending={THREE.AdditiveBlending}
         depthWrite={false}
+        depthTest={true}
       />
     </points>
   );
@@ -208,8 +210,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
           <img 
             src={backgroundImage} 
             alt="Background nebula"
-            className="w-full h-full object-cover opacity-60"
-            style={{ mixBlendMode: 'lighten' }}
+            className="w-full h-full object-cover"
+            style={{ 
+              mixBlendMode: 'screen',
+              filter: 'brightness(0.8) contrast(1.2)'
+            }}
           />
         </div>
       )}
