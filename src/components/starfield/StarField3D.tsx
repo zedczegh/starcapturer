@@ -129,39 +129,29 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const progressRatio = progress / 100;
     
     if (motionType === 'zoom_in') {
-      // 100% amplification - stars match background exactly
-      offsetsRef.current.background.scale = 1.0 + (progressRatio * 1.0);  // 100% zoom
-      offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 1.0);
-      offsetsRef.current.layer2.scale = 1.0 + (progressRatio * 1.0);
-      offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 1.0);      // Stars match background
+      // Stars match background amplification speed
+      const amplification = progressRatio * 0.2;
+      offsetsRef.current.background.scale = 1.0 + amplification;
+      offsetsRef.current.layer1.scale = 1.0 + amplification;
     } else if (motionType === 'zoom_out') {
-      // 100% amplification zoom out - stars match background
-      offsetsRef.current.background.scale = 2.0 - (progressRatio * 1.0);  // 100% zoom out
-      offsetsRef.current.layer3.scale = 2.0 - (progressRatio * 1.0);
-      offsetsRef.current.layer2.scale = 2.0 - (progressRatio * 1.0);
-      offsetsRef.current.layer1.scale = 2.0 - (progressRatio * 1.0);
+      // Zoom out - stars match background
+      const amplification = progressRatio * 0.2;
+      offsetsRef.current.background.scale = 1.2 - amplification;
+      offsetsRef.current.layer1.scale = 1.2 - amplification;
     } else if (motionType === 'pan_left') {
-      // 100% amplification pan - stars match background
-      const panAmount = progressRatio * speed * 250;
-      offsetsRef.current.background.scale = 1.5; // Zoomed to avoid gaps
-      offsetsRef.current.layer3.scale = 1.5;
-      offsetsRef.current.layer2.scale = 1.5;
-      offsetsRef.current.layer1.scale = 1.5;
-      offsetsRef.current.background.x = -panAmount * 1.0;  // 100% pan speed
-      offsetsRef.current.layer3.x = -panAmount * 1.0;
-      offsetsRef.current.layer2.x = -panAmount * 1.0;
-      offsetsRef.current.layer1.x = -panAmount * 1.0;      // Stars match background
+      // Pan with stars matching background movement
+      const panAmount = progressRatio * speed * 100;
+      offsetsRef.current.background.scale = 1.2;
+      offsetsRef.current.layer1.scale = 1.2;
+      offsetsRef.current.background.x = -panAmount;
+      offsetsRef.current.layer1.x = -panAmount;
     } else if (motionType === 'pan_right') {
-      // 100% amplification pan right - stars match background
-      const panAmount = progressRatio * speed * 250;
-      offsetsRef.current.background.scale = 1.5;
-      offsetsRef.current.layer3.scale = 1.5;
-      offsetsRef.current.layer2.scale = 1.5;
-      offsetsRef.current.layer1.scale = 1.5;
-      offsetsRef.current.background.x = panAmount * 1.0;  // 100% pan speed
-      offsetsRef.current.layer3.x = panAmount * 1.0;
-      offsetsRef.current.layer2.x = panAmount * 1.0;
-      offsetsRef.current.layer1.x = panAmount * 1.0;
+      // Pan right with stars matching background
+      const panAmount = progressRatio * speed * 100;
+      offsetsRef.current.background.scale = 1.2;
+      offsetsRef.current.layer1.scale = 1.2;
+      offsetsRef.current.background.x = panAmount;
+      offsetsRef.current.layer1.x = panAmount;
     }
     
     // Draw background layer (nebula) first

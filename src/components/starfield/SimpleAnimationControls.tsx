@@ -102,9 +102,9 @@ const SimpleAnimationControls: React.FC<SimpleAnimationControlsProps> = ({
           <Slider
             value={[settings.duration]}
             onValueChange={(value) => updateSetting('duration', value[0])}
-            min={3}
-            max={10}
-            step={1}
+            min={10}
+            max={60}
+            step={5}
             disabled={disabled}
             className="w-full"
           />
