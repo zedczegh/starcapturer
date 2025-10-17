@@ -676,7 +676,6 @@ const StarFieldGenerator: React.FC = () => {
         const sourceWidth = sourceCanvas.width;
         const sourceHeight = sourceCanvas.height;
         const aspectRatio = sourceWidth / sourceHeight;
-        const duration = animationSettings.duration;
         
         console.log('Source canvas:', sourceWidth, 'x', sourceHeight);
         
@@ -687,43 +686,30 @@ const StarFieldGenerator: React.FC = () => {
         let recordWidth = sourceWidth;
         let recordHeight = sourceHeight;
         let recordFps = 60;
-        let bitrate = 20000000; // Default 20 Mbps
+        let bitrate = 10000000; // Default 10 Mbps
         
-        // Scale down very large canvases for smooth recording with MUCH higher bitrates
-        if (megapixels > 12) { // > 12MP (very large)
-          // Scale to ~8MP max for recording
+        // Scale down very large canvases for smooth recording
+        if (megapixels > 8) { // > 8MP (e.g., 4K)
+          // Scale to ~4K max (3840x2160 = 8.3MP)
           const targetMP = 8;
           const scale = Math.sqrt(targetMP / megapixels);
           recordWidth = Math.round(sourceWidth * scale);
           recordHeight = Math.round(sourceHeight * scale);
-          recordFps = 60; // Keep 60fps for smoothness
-          bitrate = 150000000; // 150 Mbps for ultra-high quality
-          toast.info(t(`Recording at 4K+ quality: ${recordWidth}x${recordHeight}`, `以4K+质量录制：${recordWidth}x${recordHeight}`));
-        } else if (megapixels > 8) { // 8-12MP (4K range)
-          const targetMP = 8;
-          const scale = Math.sqrt(targetMP / megapixels);
-          recordWidth = Math.round(sourceWidth * scale);
-          recordHeight = Math.round(sourceHeight * scale);
-          recordFps = 60;
-          bitrate = 120000000; // 120 Mbps
-          toast.info(t(`Recording at 4K quality: ${recordWidth}x${recordHeight}`, `以4K质量录制：${recordWidth}x${recordHeight}`));
-        } else if (megapixels > 4) { // 4-8MP (2K-4K)
-          bitrate = 80000000; // 80 Mbps
-          recordFps = 60;
-        } else if (megapixels > 2) { // 2-4MP (1080p range)
+          recordFps = 30; // Reduce fps for very large resolutions
           bitrate = 50000000; // 50 Mbps
+          toast.info(t(`Recording at optimized resolution: ${recordWidth}x${recordHeight}`, `优化录制分辨率：${recordWidth}x${recordHeight}`));
+        } else if (megapixels > 2) { // 2-8MP (e.g., 1080p-4K)
+          bitrate = 25000000; // 25 Mbps
           recordFps = 60;
-        } else { // < 2MP (720p)
-          bitrate = 30000000; // 30 Mbps
+        } else { // < 2MP (e.g., 720p)
+          bitrate = 15000000; // 15 Mbps
           recordFps = 60;
         }
         
-        console.log('High-Quality Recording settings:', {
+        console.log('Recording settings:', {
           resolution: `${recordWidth}x${recordHeight}`,
-          megapixels: ((recordWidth * recordHeight) / 1000000).toFixed(2) + 'MP',
           fps: recordFps,
-          bitrate: `${(bitrate / 1000000).toFixed(0)} Mbps`,
-          estimatedSize: `~${((bitrate / 8 * duration) / 1024 / 1024).toFixed(0)} MB for ${duration}s`
+          bitrate: `${(bitrate / 1000000).toFixed(0)} Mbps`
         });
         
         // Create recording canvas (scaled if needed)
@@ -740,6 +726,8 @@ const StarFieldGenerator: React.FC = () => {
         recordCtx.imageSmoothingQuality = 'high';
         
         try {
+          const duration = animationSettings.duration;
+          
           // Create stream from recording canvas with controlled frame rate
           const stream = recordCanvas.captureStream(0); // Manual frame capture
           const videoTracks = stream.getVideoTracks();
@@ -839,56 +827,43 @@ const StarFieldGenerator: React.FC = () => {
           
           toast.success(t(`Recording at ${recordFps}fps...`, `以${recordFps}fps录制...`));
           
-          // Manual frame capture loop for smooth recording with consistent timing
+          // Manual frame capture loop for smooth recording
           const frameInterval = 1000 / recordFps;
           let lastFrameTime = performance.now();
-          let startTime = performance.now();
           const totalFrames = Math.ceil(duration * recordFps);
-          let nextFrameNumber = 0;
           
-          const captureFrame = (timestamp: number) => {
+          const captureFrame = () => {
             if (!recordingActive) return;
             
-            // Calculate which frame we should be at based on elapsed time
-            const elapsed = timestamp - startTime;
-            const targetFrameNumber = Math.floor((elapsed / 1000) * recordFps);
+            const now = performance.now();
+            const elapsed = now - lastFrameTime;
             
-            // Capture all frames we've missed (handles any timing drift)
-            while (nextFrameNumber <= targetFrameNumber && nextFrameNumber < totalFrames && recordingActive) {
-              // Draw current frame from source canvas with high quality
-              recordCtx.clearRect(0, 0, recordWidth, recordHeight);
+            if (elapsed >= frameInterval) {
+              // Draw current frame from source canvas
               recordCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
               
-              // Request frame capture from track
+              // Request frame capture
               const track = stream.getVideoTracks()[0];
               if (track && track.readyState === 'live') {
-                // @ts-ignore - requestFrame is supported in modern browsers
+                // @ts-ignore - requestFrame may not be in types but is supported
                 if (track.requestFrame) {
                   // @ts-ignore
                   track.requestFrame();
                 }
               }
               
-              nextFrameNumber++;
               frameCount++;
+              lastFrameTime = now;
               
-              // Progress update every 30 frames
+              // Progress update
               if (frameCount % 30 === 0) {
                 const progress = Math.min((frameCount / totalFrames) * 100, 100);
-                console.log(`Recording: ${frameCount}/${totalFrames} frames (${progress.toFixed(1)}%) at ${recordFps}fps`);
+                console.log(`Recording: ${frameCount}/${totalFrames} frames (${progress.toFixed(0)}%)`);
               }
             }
             
-            if (nextFrameNumber < totalFrames && recordingActive) {
+            if (frameCount < totalFrames && recordingActive) {
               requestAnimationFrame(captureFrame);
-            } else if (nextFrameNumber >= totalFrames) {
-              // Recording complete
-              console.log('All frames captured, stopping recording...');
-              recordingActive = false;
-              if (mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-                stream.getTracks().forEach(track => track.stop());
-              }
             }
           };
           
