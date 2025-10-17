@@ -42,8 +42,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
-  const startTimeRef = useRef<number>(0);
-  const pausedAtRef = useRef<number>(0);
+  const animationStartTimeRef = useRef<number>(0);
+  const pausedTimeRef = useRef<number>(0);
   const offsetsRef = useRef({
     layer1: { x: 0, y: 0, scale: 1 }, // Largest/brightest stars (closest)
     layer2: { x: 0, y: 0, scale: 1 }, // Medium stars
@@ -266,21 +266,19 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const ctx = canvas.getContext('2d')!;
     const { motionType = 'zoom_in', speed = 1, duration = 10, spin = 0, spinDirection = 'clockwise' } = settings;
     
-    // Initialize start time on first frame
-    if (startTimeRef.current === 0) {
-      startTimeRef.current = Date.now() - (pausedAtRef.current * 1000);
+    // Calculate progress
+    if (animationStartTimeRef.current === 0) {
+      animationStartTimeRef.current = Date.now();
     }
     
-    // Calculate elapsed seconds from start
-    const elapsedSeconds = (Date.now() - startTimeRef.current) / 1000;
-    const progress = Math.min((elapsedSeconds / duration) * 100, 100);
+    const elapsed = (Date.now() - animationStartTimeRef.current - pausedTimeRef.current) / 1000;
+    const progress = Math.min((elapsed / duration) * 100, 100);
     
-    // Update progress
     if (onProgressUpdate) {
       onProgressUpdate(progress);
     }
     
-    // Stop when complete
+    // Stop animation when duration is reached
     if (progress >= 100) {
       if (onProgressUpdate) {
         onProgressUpdate(100);
@@ -288,7 +286,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       if (onAnimationComplete) {
         onAnimationComplete();
       }
-      return;
+      return; // Stop the animation loop
     }
     
     // Clear canvas
@@ -421,26 +419,24 @@ const StarField3D: React.FC<StarField3DProps> = ({
     animationFrameRef.current = requestAnimationFrame(animate);
   }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
 
-
-  // Reset animation state on component mount
-  useEffect(() => {
-    startTimeRef.current = 0;
-    pausedAtRef.current = 0;
-  }, []);
-
   useEffect(() => {
     if (isAnimating) {
-      // Start or resume animation
+      // Reset everything when starting fresh
+      animationStartTimeRef.current = 0;
+      pausedTimeRef.current = 0;
+      offsetsRef.current = { 
+        layer1: { x: 0, y: 0, scale: 1 },
+        layer2: { x: 0, y: 0, scale: 1 },
+        layer3: { x: 0, y: 0, scale: 1 },
+        background: { x: 0, y: 0, scale: 1 }
+      };
+      if (onProgressUpdate) {
+        onProgressUpdate(0);
+      }
       animate();
     } else {
-      // Pause: save current progress
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (startTimeRef.current > 0) {
-        // Calculate elapsed time and save it
-        const elapsedSeconds = (Date.now() - startTimeRef.current) / 1000;
-        pausedAtRef.current = elapsedSeconds;
       }
     }
     
@@ -449,7 +445,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isAnimating, animate]);
+  }, [isAnimating, animate, onProgressUpdate]);
 
   // Notify parent when canvas and layers are ready
   useEffect(() => {
