@@ -49,6 +49,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   }>({ layer1: null, layer2: null, layer3: null });
   
   const [backgroundImg, setBackgroundImg] = useState<HTMLImageElement | null>(null);
+  const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
 
   // Load and separate stars into layers based on size
   useEffect(() => {
@@ -56,6 +57,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
     const img = new Image();
     img.onload = () => {
+      // Set canvas dimensions to match image
+      setImageDimensions({ width: img.width, height: img.height });
+      
       // Sort stars by size (bigger = closer)
       const sortedStars = [...stars].sort((a, b) => b.size - a.size);
       const third = Math.floor(sortedStars.length / 3);
@@ -63,6 +67,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const layer1Stars = sortedStars.slice(0, third); // Biggest/closest
       const layer2Stars = sortedStars.slice(third, third * 2); // Medium
       const layer3Stars = sortedStars.slice(third * 2); // Smallest/farthest
+      
+      console.log(`Creating star layers: L1=${layer1Stars.length}, L2=${layer2Stars.length}, L3=${layer3Stars.length}`);
       
       // Create canvas for each layer
       const createLayerCanvas = (layerStars: StarData[]) => {
@@ -80,7 +86,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
         const newData = ctx.createImageData(canvas.width, canvas.height);
         
         layerStars.forEach(star => {
-          const radius = Math.ceil(star.size * 2); // Capture area around star
+          // Use larger radius to capture full star including glow
+          const radius = Math.ceil(Math.max(star.size * 4, 8));
           
           for (let dy = -radius; dy <= radius; dy++) {
             for (let dx = -radius; dx <= radius; dx++) {
@@ -91,8 +98,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
                 const idx = (py * canvas.width + px) * 4;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 
-                // Only copy if within star radius
-                if (dist <= radius) {
+                // Copy all pixels within radius that have brightness
+                if (dist <= radius && data[idx + 3] > 0) {
                   newData.data[idx] = data[idx];
                   newData.data[idx + 1] = data[idx + 1];
                   newData.data[idx + 2] = data[idx + 2];
@@ -123,9 +130,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
     if (!backgroundImage) return;
     
     const img = new Image();
-    img.onload = () => setBackgroundImg(img);
+    img.onload = () => {
+      setBackgroundImg(img);
+      // Set dimensions if not already set
+      if (imageDimensions.width === 1920 && imageDimensions.height === 1080) {
+        setImageDimensions({ width: img.width, height: img.height });
+      }
+    };
     img.src = backgroundImage;
-  }, [backgroundImage]);
+  }, [backgroundImage, imageDimensions]);
 
   // Animation loop
   const animate = useCallback(() => {
@@ -196,17 +209,18 @@ const StarField3D: React.FC<StarField3DProps> = ({
       }
     }
     
-    // Draw background layer (nebula)
+    // Draw background layer (nebula) - maintain aspect ratio
     if (backgroundImg) {
       ctx.save();
-      ctx.globalAlpha = 0.8;
+      ctx.globalAlpha = 0.85;
       
       const bgScale = offsetsRef.current.background.scale;
       const bgX = offsetsRef.current.background.x;
       const bgY = offsetsRef.current.background.y;
       
-      const scaledWidth = canvas.width * bgScale;
-      const scaledHeight = canvas.height * bgScale;
+      // Use actual image dimensions, no stretching
+      const scaledWidth = backgroundImg.width * bgScale;
+      const scaledHeight = backgroundImg.height * bgScale;
       const drawX = (canvas.width - scaledWidth) / 2 + bgX;
       const drawY = (canvas.height - scaledHeight) / 2 + bgY;
       
@@ -214,7 +228,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.restore();
     }
     
-    // Draw star layers (farthest to closest)
+    // Draw star layers (farthest to closest) - maintain aspect ratio
     const drawLayer = (layer: HTMLCanvasElement | null, offset: { x: number, y: number, scale: number }, alpha: number = 1.0) => {
       if (!layer) return;
       
@@ -222,8 +236,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.globalAlpha = alpha;
       
       const scale = offset.scale;
-      const scaledWidth = canvas.width * scale;
-      const scaledHeight = canvas.height * scale;
+      // Use actual layer dimensions, no stretching
+      const scaledWidth = layer.width * scale;
+      const scaledHeight = layer.height * scale;
       const drawX = (canvas.width - scaledWidth) / 2 + offset.x;
       const drawY = (canvas.height - scaledHeight) / 2 + offset.y;
       
@@ -252,14 +267,29 @@ const StarField3D: React.FC<StarField3DProps> = ({
         ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
         
         if (backgroundImg) {
-          ctx.globalAlpha = 0.8;
-          ctx.drawImage(backgroundImg, 0, 0, canvasRef.current.width, canvasRef.current.height);
+          ctx.globalAlpha = 0.85;
+          // Center image without stretching
+          const drawX = (canvasRef.current.width - backgroundImg.width) / 2;
+          const drawY = (canvasRef.current.height - backgroundImg.height) / 2;
+          ctx.drawImage(backgroundImg, drawX, drawY, backgroundImg.width, backgroundImg.height);
           ctx.globalAlpha = 1.0;
         }
         
-        if (starLayers.layer3) ctx.drawImage(starLayers.layer3, 0, 0);
-        if (starLayers.layer2) ctx.drawImage(starLayers.layer2, 0, 0);
-        if (starLayers.layer1) ctx.drawImage(starLayers.layer1, 0, 0);
+        if (starLayers.layer3) {
+          const drawX = (canvasRef.current.width - starLayers.layer3.width) / 2;
+          const drawY = (canvasRef.current.height - starLayers.layer3.height) / 2;
+          ctx.drawImage(starLayers.layer3, drawX, drawY);
+        }
+        if (starLayers.layer2) {
+          const drawX = (canvasRef.current.width - starLayers.layer2.width) / 2;
+          const drawY = (canvasRef.current.height - starLayers.layer2.height) / 2;
+          ctx.drawImage(starLayers.layer2, drawX, drawY);
+        }
+        if (starLayers.layer1) {
+          const drawX = (canvasRef.current.width - starLayers.layer1.width) / 2;
+          const drawY = (canvasRef.current.height - starLayers.layer1.height) / 2;
+          ctx.drawImage(starLayers.layer1, drawX, drawY);
+        }
       }
     }
     
@@ -291,9 +321,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
     <div className="w-full h-full relative bg-black rounded-b-lg overflow-hidden">
       <canvas
         ref={canvasRef}
-        width={1920}
-        height={1080}
-        className="w-full h-full object-contain"
+        width={imageDimensions.width}
+        height={imageDimensions.height}
+        className="w-full h-full object-contain bg-black"
       />
       
       {/* Recording indicator */}
