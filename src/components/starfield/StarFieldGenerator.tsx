@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
@@ -63,7 +64,8 @@ const StarFieldGenerator: React.FC = () => {
     fieldOfView: 75,
     depthMultiplier: 1.0,
     amplification: 150, // 100-300%
-    spin: 0 // 0-90 degrees
+    spin: 0, // 0-90 degrees
+    spinDirection: 'clockwise' as 'clockwise' | 'counterclockwise'
   });
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
@@ -819,6 +821,29 @@ const StarFieldGenerator: React.FC = () => {
                     step={5}
                     className="w-full"
                   />
+                  <div className="space-y-2">
+                    <Label className="text-cosmic-200 text-xs">{t('Spin Direction', '旋转方向')}</Label>
+                    <RadioGroup
+                      value={animationSettings.spinDirection}
+                      onValueChange={(value: 'clockwise' | 'counterclockwise') => 
+                        setAnimationSettings(prev => ({ ...prev, spinDirection: value }))
+                      }
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="clockwise" id="clockwise" />
+                        <Label htmlFor="clockwise" className="text-cosmic-300 text-sm cursor-pointer">
+                          {t('Clockwise', '顺时针')}
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="counterclockwise" id="counterclockwise" />
+                        <Label htmlFor="counterclockwise" className="text-cosmic-300 text-sm cursor-pointer">
+                          {t('Counter-clockwise', '逆时针')}
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
                   <p className="text-xs text-cosmic-400">
                     {t('Rotation angle during animation (0° = no rotation)', '动画期间的旋转角度（0° = 无旋转）')}
                   </p>
