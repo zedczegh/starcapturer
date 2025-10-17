@@ -24,6 +24,7 @@ interface StarField3DProps {
   starsOnlyImage?: string | null;
   onCanvasReady?: (canvas: HTMLCanvasElement) => void;
   onProgressUpdate?: (progress: number) => void;
+  onAnimationComplete?: () => void;
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -34,7 +35,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
   backgroundImage,
   starsOnlyImage,
   onCanvasReady,
-  onProgressUpdate
+  onProgressUpdate,
+  onAnimationComplete
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
@@ -164,6 +166,17 @@ const StarField3D: React.FC<StarField3DProps> = ({
       onProgressUpdate(progress);
     }
     
+    // Stop animation when duration is reached
+    if (progress >= 100) {
+      if (onProgressUpdate) {
+        onProgressUpdate(100);
+      }
+      if (onAnimationComplete) {
+        onAnimationComplete();
+      }
+      return; // Stop the animation loop
+    }
+    
     // Clear canvas
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -239,7 +252,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     drawLayer(starLayers.layer1, offsetsRef.current.layer1, 1.0); // Closest
     
     animationFrameRef.current = requestAnimationFrame(animate);
-  }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate]);
+  }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
 
   useEffect(() => {
     if (isAnimating) {
@@ -298,7 +311,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isAnimating, animate, backgroundImg, starLayers, onProgressUpdate]);
+  }, [isAnimating, animate, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
 
   // Notify parent when canvas is ready
   useEffect(() => {

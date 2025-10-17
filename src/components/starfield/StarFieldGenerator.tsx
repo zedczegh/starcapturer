@@ -489,9 +489,17 @@ const StarFieldGenerator: React.FC = () => {
     canvasRef.current = canvas;
   }, []);
 
+  const handleAnimationComplete = useCallback(() => {
+    setIsAnimating(false);
+    setAnimationProgress(100);
+  }, []);
+
   const toggleAnimation = useCallback(() => {
     setIsAnimating(prev => !prev);
-  }, []);
+    if (!isAnimating) {
+      setAnimationProgress(0); // Reset progress when starting
+    }
+  }, [isAnimating]);
 
   const generateVideo = useCallback(() => {
     if (processedStars.length === 0) {
@@ -872,11 +880,35 @@ const StarFieldGenerator: React.FC = () => {
                   starsOnlyImage={starsOnlyImage}
                   onCanvasReady={handleCanvasReady}
                   onProgressUpdate={setAnimationProgress}
+                  onAnimationComplete={handleAnimationComplete}
                 />
                 
-                {/* Progress Bar */}
-                {(isAnimating || isRecording) && (
+                {/* Progress Bar and Controls */}
+                {processedStars.length > 0 && (
                   <div className="space-y-2 px-4 pb-3">
+                    {/* Play/Pause Button */}
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        onClick={toggleAnimation}
+                        disabled={isRecording}
+                        variant="outline"
+                        size="sm"
+                        className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50"
+                      >
+                        {isAnimating ? (
+                          <>
+                            <Pause className="h-4 w-4 mr-2" />
+                            {t('Pause', '暂停')}
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 mr-2" />
+                            {t('Play', '播放')}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
                     {/* Progress bar */}
                     <div className="relative w-full h-1.5 bg-cosmic-800/50 rounded-full overflow-hidden">
                       <div 
