@@ -414,7 +414,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     };
     
     img.src = starsOnlyImage;
-  }, [starsOnlyImage, getPooledCanvas, returnToPool]);
+  }, [starsOnlyImage]);
 
   // Load background image as ImageBitmap with optimization
   useEffect(() => {
