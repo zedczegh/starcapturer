@@ -266,15 +266,16 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const ctx = canvas.getContext('2d')!;
     const { motionType = 'zoom_in', speed = 1, duration = 10, spin = 0, spinDirection = 'clockwise' } = settings;
     
-    // Initialize start time
+    // Initialize start time on first frame
     if (startTimeRef.current === 0) {
       startTimeRef.current = Date.now() - (pausedAtRef.current * 1000);
     }
     
-    // Calculate elapsed seconds
+    // Calculate elapsed seconds from start
     const elapsedSeconds = (Date.now() - startTimeRef.current) / 1000;
     const progress = Math.min((elapsedSeconds / duration) * 100, 100);
     
+    // Update progress
     if (onProgressUpdate) {
       onProgressUpdate(progress);
     }
@@ -421,16 +422,23 @@ const StarField3D: React.FC<StarField3DProps> = ({
   }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
 
 
+  // Reset animation state on component mount
+  useEffect(() => {
+    startTimeRef.current = 0;
+    pausedAtRef.current = 0;
+  }, []);
+
   useEffect(() => {
     if (isAnimating) {
+      // Start or resume animation
       animate();
     } else {
-      // When paused, save current progress
+      // Pause: save current progress
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
       if (startTimeRef.current > 0) {
-        // Calculate how far we got
+        // Calculate elapsed time and save it
         const elapsedSeconds = (Date.now() - startTimeRef.current) / 1000;
         pausedAtRef.current = elapsedSeconds;
       }
