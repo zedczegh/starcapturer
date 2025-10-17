@@ -941,17 +941,19 @@ const StarFieldGenerator: React.FC = () => {
               {t('Reset', '重置')}
             </Button>
             
-            <Button
-              onClick={downloadVideo}
-              disabled={isGeneratingVideo || processedStars.length === 0}
-              className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              {isGeneratingVideo 
-                ? t('Recording...', '录制中...') 
-                : t('Download Video', '下载视频')
-              }
-            </Button>
+            {currentStep === 'ready' && (
+              <Button
+                onClick={downloadVideo}
+                disabled={isGeneratingVideo || processedStars.length === 0}
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {isGeneratingVideo 
+                  ? t('Recording...', '录制中...') 
+                  : t('Download Video', '下载视频')
+                }
+              </Button>
+            )}
           </div>
         </div>
 
