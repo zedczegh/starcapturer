@@ -532,6 +532,13 @@ const StarFieldGenerator: React.FC = () => {
     // Wait for any ongoing animation to stop
     await new Promise(resolve => setTimeout(resolve, 300));
     
+    // Reset and start animation to warm up canvas
+    setAnimationProgress(0);
+    setIsAnimating(true);
+    
+    // Give canvas time to render several frames before recording
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     try {
       const fps = 60;
       const duration = animationSettings.duration;
@@ -543,6 +550,8 @@ const StarFieldGenerator: React.FC = () => {
         throw new Error('No video tracks available');
       }
       
+      console.log('Video track settings:', videoTracks[0].getSettings());
+      
       // Try different codecs based on browser support
       let mimeType = 'video/webm;codecs=vp9';
       if (!MediaRecorder.isTypeSupported(mimeType)) {
@@ -551,6 +560,8 @@ const StarFieldGenerator: React.FC = () => {
           mimeType = 'video/webm';
         }
       }
+      
+      console.log('Using mimeType:', mimeType);
       
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
@@ -572,7 +583,7 @@ const StarFieldGenerator: React.FC = () => {
         console.log(`Recording stopped. Total chunks: ${chunks.length}`);
         
         if (!hasReceivedData || chunks.length === 0) {
-          toast.error(t('Recording failed - no data captured', '录制失败 - 未捕获数据'));
+          toast.error(t('Recording failed - no data captured. Please try again.', '录制失败 - 未捕获数据。请重试。'));
           setIsGeneratingVideo(false);
           setIsAnimating(false);
           return;
@@ -611,17 +622,21 @@ const StarFieldGenerator: React.FC = () => {
         setIsAnimating(false);
       };
       
-      // Start recording
-      mediaRecorder.start(100); // Collect data every 100ms
-      console.log('MediaRecorder started');
-      
-      // Small delay then start animation so recorder captures from frame 0
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Ensure animation is running before we start recording
       setIsAnimating(true);
+      
+      // Wait a bit more to ensure frames are being generated
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Start recording - request data every 100ms
+      console.log('Starting MediaRecorder...');
+      mediaRecorder.start(100);
+      console.log('MediaRecorder started, state:', mediaRecorder.state);
+      
       toast.success(t('Recording started...', '开始录制...'));
       
       // Stop recording after full duration + buffer
-      const recordingDuration = (duration * 1000) + 1500; // Extra 1.5s buffer
+      const recordingDuration = (duration * 1000) + 2000; // Extra 2s buffer
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           console.log('Stopping MediaRecorder');
