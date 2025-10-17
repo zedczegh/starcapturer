@@ -968,6 +968,18 @@ const StarFieldGenerator: React.FC = () => {
   }, [mp4Blob, t]);
 
   const resetAll = useCallback(() => {
+    // Stop any ongoing video generation
+    setIsGeneratingVideo(false);
+    setIsEncodingMP4(false);
+    setMp4Progress(0);
+    setMp4Blob(null);
+    setShowFormatDialog(false);
+    
+    // Reset animation
+    setIsAnimating(false);
+    setAnimationProgress(0);
+    
+    // Reset images and processing
     setStarsOnlyImage(null);
     setStarlessImage(null);
     setStarsOnlyElement(null);
@@ -975,15 +987,17 @@ const StarFieldGenerator: React.FC = () => {
     setDetectedStars([]);
     setProcessedStars([]);
     setDepthMapCanvas(null);
-    setIsAnimating(false);
     setIsCanvasReady(false);
     setCurrentStep('upload');
+    
+    // Clear file inputs
     if (starsFileInputRef.current) {
       starsFileInputRef.current.value = '';
     }
     if (starlessFileInputRef.current) {
       starlessFileInputRef.current.value = '';
     }
+    
     toast.success(t('Reset complete', '重置完成'));
   }, [t]);
 
@@ -1286,8 +1300,8 @@ const StarFieldGenerator: React.FC = () => {
               )}
             </div>
             
-            {/* MP4 Encoding Progress Bar */}
-            {isEncodingMP4 && mp4Progress > 0 && (
+            {/* MP4 Encoding Progress Bar - Only show when ready */}
+            {currentStep === 'ready' && isEncodingMP4 && mp4Progress > 0 && (
               <Card className="bg-cosmic-900/50 border-cosmic-700/50">
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between text-sm">
