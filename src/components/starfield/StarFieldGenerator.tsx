@@ -649,142 +649,246 @@ const StarFieldGenerator: React.FC = () => {
     setIsAnimating(true);
     
     // Give canvas time to render several frames before recording
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     return MemoryManager.monitorOperation(async () => {
       try {
-        console.log('Starting WebM recording...');
+        console.log('=== Starting High-Quality WebM Recording ===');
         
-        let canvas = canvasRef.current;
+        let sourceCanvas = canvasRef.current;
         
         // If canvas ref is null, try to find the canvas element directly
-        if (!canvas) {
+        if (!sourceCanvas) {
           const canvasElements = document.querySelectorAll('canvas');
-          
-          // Look for Three.js canvas
           for (const canvasEl of canvasElements) {
             if (canvasEl instanceof HTMLCanvasElement && canvasEl.width > 0 && canvasEl.height > 0) {
-              canvas = canvasEl;
-              canvasRef.current = canvas;
+              sourceCanvas = canvasEl;
+              canvasRef.current = sourceCanvas;
               break;
             }
           }
         }
         
-        if (!canvas) {
+        if (!sourceCanvas) {
           throw new Error('Canvas not available');
         }
         
-        console.log('Canvas found:', canvas.width, 'x', canvas.height);
+        const sourceWidth = sourceCanvas.width;
+        const sourceHeight = sourceCanvas.height;
+        const aspectRatio = sourceWidth / sourceHeight;
         
-        const fps = 60;
-        const duration = animationSettings.duration;
-        const stream = canvas.captureStream(fps);
+        console.log('Source canvas:', sourceWidth, 'x', sourceHeight);
         
-        // Check if stream has video tracks
-        const videoTracks = stream.getVideoTracks();
-        if (videoTracks.length === 0) {
-          throw new Error('No video tracks available');
+        // Intelligent resolution and quality settings based on source size
+        const megapixels = (sourceWidth * sourceHeight) / 1000000;
+        console.log('Source megapixels:', megapixels.toFixed(2));
+        
+        let recordWidth = sourceWidth;
+        let recordHeight = sourceHeight;
+        let recordFps = 60;
+        let bitrate = 10000000; // Default 10 Mbps
+        
+        // Scale down very large canvases for smooth recording
+        if (megapixels > 8) { // > 8MP (e.g., 4K)
+          // Scale to ~4K max (3840x2160 = 8.3MP)
+          const targetMP = 8;
+          const scale = Math.sqrt(targetMP / megapixels);
+          recordWidth = Math.round(sourceWidth * scale);
+          recordHeight = Math.round(sourceHeight * scale);
+          recordFps = 30; // Reduce fps for very large resolutions
+          bitrate = 50000000; // 50 Mbps
+          toast.info(t(`Recording at optimized resolution: ${recordWidth}x${recordHeight}`, `优化录制分辨率：${recordWidth}x${recordHeight}`));
+        } else if (megapixels > 2) { // 2-8MP (e.g., 1080p-4K)
+          bitrate = 25000000; // 25 Mbps
+          recordFps = 60;
+        } else { // < 2MP (e.g., 720p)
+          bitrate = 15000000; // 15 Mbps
+          recordFps = 60;
         }
         
-        console.log('Video track settings:', videoTracks[0].getSettings());
-        
-        // Try different codecs based on browser support
-        let mimeType = 'video/webm;codecs=vp9';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'video/webm;codecs=vp8';
-          if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = 'video/webm';
-          }
-        }
-        
-        console.log('Using mimeType:', mimeType);
-        
-        const mediaRecorder = new MediaRecorder(stream, {
-          mimeType,
-          videoBitsPerSecond: 10000000 // 10 Mbps
+        console.log('Recording settings:', {
+          resolution: `${recordWidth}x${recordHeight}`,
+          fps: recordFps,
+          bitrate: `${(bitrate / 1000000).toFixed(0)} Mbps`
         });
         
-        const chunks: Blob[] = [];
-        let hasReceivedData = false;
+        // Create recording canvas (scaled if needed)
+        const canvasPool = CanvasPool.getInstance();
+        const recordCanvas = canvasPool.acquire(recordWidth, recordHeight);
+        const recordCtx = recordCanvas.getContext('2d', {
+          alpha: false,
+          desynchronized: true,
+          willReadFrequently: false
+        })!;
         
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) {
-            chunks.push(e.data);
-            hasReceivedData = true;
-            console.log(`Recorded chunk: ${e.data.size} bytes`);
-          }
-        };
+        // Set high-quality scaling
+        recordCtx.imageSmoothingEnabled = true;
+        recordCtx.imageSmoothingQuality = 'high';
         
-        mediaRecorder.onstop = () => {
-          console.log(`Recording stopped. Total chunks: ${chunks.length}`);
+        try {
+          const duration = animationSettings.duration;
           
-          if (!hasReceivedData || chunks.length === 0) {
-            toast.error(t('Recording failed - no data captured. Please try again.', '录制失败 - 未捕获数据。请重试。'));
+          // Create stream from recording canvas with controlled frame rate
+          const stream = recordCanvas.captureStream(0); // Manual frame capture
+          const videoTracks = stream.getVideoTracks();
+          
+          if (videoTracks.length === 0) {
+            throw new Error('No video tracks available');
+          }
+          
+          console.log('Video track created for', recordWidth, 'x', recordHeight);
+          
+          // Select best codec
+          let mimeType = 'video/webm;codecs=vp9';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            console.log('VP9 not supported, trying VP8');
+            mimeType = 'video/webm;codecs=vp8';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+              console.log('VP8 not supported, using default');
+              mimeType = 'video/webm';
+            }
+          }
+          
+          console.log('Using codec:', mimeType, 'at', (bitrate / 1000000).toFixed(0), 'Mbps');
+          
+          const mediaRecorder = new MediaRecorder(stream, {
+            mimeType,
+            videoBitsPerSecond: bitrate
+          });
+          
+          const chunks: Blob[] = [];
+          let frameCount = 0;
+          let recordingActive = true;
+          
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+              chunks.push(e.data);
+            }
+          };
+          
+          mediaRecorder.onstop = () => {
+            recordingActive = false;
+            console.log(`Recording stopped. Captured ${frameCount} frames, ${chunks.length} chunks`);
+            
+            if (chunks.length === 0) {
+              toast.error(t('Recording failed - no data captured', '录制失败 - 未捕获数据'));
+              setIsGeneratingVideo(false);
+              setIsAnimating(false);
+              canvasPool.release(recordCanvas);
+              return;
+            }
+            
+            const blob = new Blob(chunks, { type: mimeType });
+            const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
+            console.log(`Final video: ${sizeMB} MB (${frameCount} frames at ${recordFps}fps)`);
+            
+            if (blob.size < 10000) {
+              toast.error(t('Recording too small - likely failed', '录制文件过小 - 可能失败'));
+              setIsGeneratingVideo(false);
+              setIsAnimating(false);
+              canvasPool.release(recordCanvas);
+              return;
+            }
+            
+            // Download
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `starfield-${recordWidth}x${recordHeight}-${Date.now()}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
             setIsGeneratingVideo(false);
             setIsAnimating(false);
-            return;
-          }
+            canvasPool.release(recordCanvas);
+            toast.success(t(`Video ready! ${sizeMB} MB`, `视频完成！${sizeMB} MB`));
+            
+            MemoryManager.forceGarbageCollection();
+          };
           
-          const blob = new Blob(chunks, { type: mimeType });
-          console.log(`Final video blob size: ${blob.size} bytes`);
-          
-          if (blob.size === 0) {
-            toast.error(t('Recording failed - empty video', '录制失败 - 视频为空'));
+          mediaRecorder.onerror = (e) => {
+            console.error('MediaRecorder error:', e);
+            recordingActive = false;
+            toast.error(t('Recording error', '录制错误'));
             setIsGeneratingVideo(false);
             setIsAnimating(false);
-            return;
-          }
+            canvasPool.release(recordCanvas);
+          };
           
-          // Download the video
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `starfield-${Date.now()}.webm`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+          // Ensure animation is running
+          setIsAnimating(true);
+          await new Promise(resolve => setTimeout(resolve, 500));
           
-          setIsGeneratingVideo(false);
-          setIsAnimating(false);
-          toast.success(t('Video downloaded successfully!', '视频下载成功！'));
+          // Start recording
+          console.log('Starting MediaRecorder...');
+          mediaRecorder.start(100); // Collect data every 100ms
           
-          MemoryManager.forceGarbageCollection();
-        };
+          toast.success(t(`Recording at ${recordFps}fps...`, `以${recordFps}fps录制...`));
+          
+          // Manual frame capture loop for smooth recording
+          const frameInterval = 1000 / recordFps;
+          let lastFrameTime = performance.now();
+          const totalFrames = Math.ceil(duration * recordFps);
+          
+          const captureFrame = () => {
+            if (!recordingActive) return;
+            
+            const now = performance.now();
+            const elapsed = now - lastFrameTime;
+            
+            if (elapsed >= frameInterval) {
+              // Draw current frame from source canvas
+              recordCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
+              
+              // Request frame capture
+              const track = stream.getVideoTracks()[0];
+              if (track && track.readyState === 'live') {
+                // @ts-ignore - requestFrame may not be in types but is supported
+                if (track.requestFrame) {
+                  // @ts-ignore
+                  track.requestFrame();
+                }
+              }
+              
+              frameCount++;
+              lastFrameTime = now;
+              
+              // Progress update
+              if (frameCount % 30 === 0) {
+                const progress = Math.min((frameCount / totalFrames) * 100, 100);
+                console.log(`Recording: ${frameCount}/${totalFrames} frames (${progress.toFixed(0)}%)`);
+              }
+            }
+            
+            if (frameCount < totalFrames && recordingActive) {
+              requestAnimationFrame(captureFrame);
+            }
+          };
+          
+          // Start capture loop
+          requestAnimationFrame(captureFrame);
+          
+          // Stop after duration + buffer
+          const recordingDuration = (duration * 1000) + 2000;
+          setTimeout(() => {
+            if (mediaRecorder.state === 'recording') {
+              console.log('Stopping MediaRecorder after', (recordingDuration / 1000).toFixed(1), 'seconds');
+              recordingActive = false;
+              mediaRecorder.stop();
+              stream.getTracks().forEach(track => track.stop());
+            }
+          }, recordingDuration);
         
-        mediaRecorder.onerror = (e) => {
-          console.error('MediaRecorder error:', e);
-          toast.error(t('Recording error occurred', '录制出错'));
-          setIsGeneratingVideo(false);
-          setIsAnimating(false);
-        };
-        
-        // Ensure animation is running
-        setIsAnimating(true);
-        
-        // Wait for more frames to ensure recording captures content
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        // Start recording - request data every 100ms
-        console.log('Starting MediaRecorder...');
-        mediaRecorder.start(100);
-        console.log('MediaRecorder started, state:', mediaRecorder.state);
-        
-        toast.success(t('Recording started...', '开始录制...'));
-        
-        // Stop recording after full duration + buffer
-        const recordingDuration = (duration * 1000) + 2000; // Extra 2s buffer
-        setTimeout(() => {
-          if (mediaRecorder.state === 'recording') {
-            console.log('Stopping MediaRecorder');
-            mediaRecorder.stop();
-            stream.getTracks().forEach(track => track.stop());
-          }
-        }, recordingDuration);
+        } catch (recordError) {
+          console.error('Recording error:', recordError);
+          canvasPool.release(recordCanvas);
+          throw recordError;
+        }
         
       } catch (error) {
-        console.error('Download video error:', error);
+        console.error('WebM recording failed:', error);
         toast.error(t('Failed to record video', '视频录制失败'));
         setIsGeneratingVideo(false);
         setIsAnimating(false);
