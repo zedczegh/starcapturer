@@ -52,13 +52,23 @@ const StarField3D: React.FC<StarField3DProps> = ({
   });
   
   const [starLayers, setStarLayers] = useState<{
-    bright: HTMLCanvasElement | null;
-    medium: HTMLCanvasElement | null;
-    dim: HTMLCanvasElement | null;
+    bright: ImageBitmap | null;
+    medium: ImageBitmap | null;
+    dim: ImageBitmap | null;
   }>({ bright: null, medium: null, dim: null });
   
-  const [backgroundImg, setBackgroundImg] = useState<HTMLImageElement | null>(null);
+  const [backgroundImg, setBackgroundImg] = useState<ImageBitmap | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
+  
+  // Cache for rendered frames to avoid redundant calculations
+  const lastRenderState = useRef<{
+    progress: number;
+    motionType: string;
+    scale1: number;
+    scale2: number;
+    scale3: number;
+    scaleBg: number;
+  } | null>(null);
 
   // Create star layers by detecting complete stars first, then assigning whole stars to layers
   useEffect(() => {
@@ -331,29 +341,39 @@ const StarField3D: React.FC<StarField3DProps> = ({
       mediumCtx.putImageData(mediumData, 0, 0);
       smallCtx.putImageData(smallData, 0, 0);
       
-      setStarLayers({
-        bright: largeCanvas,
-        medium: mediumCanvas,
-        dim: smallCanvas
+      // Convert canvases to ImageBitmaps for faster GPU-accelerated rendering
+      Promise.all([
+        createImageBitmap(largeCanvas),
+        createImageBitmap(mediumCanvas),
+        createImageBitmap(smallCanvas)
+      ]).then(([brightBitmap, mediumBitmap, dimBitmap]) => {
+        setStarLayers({
+          bright: brightBitmap,
+          medium: mediumBitmap,
+          dim: dimBitmap
+        });
+        
+        console.log(`Star layers created: ${largeCount} large, ${mediumCount} medium, ${smallCount} small stars`);
       });
-      
-      console.log(`Star layers created: ${largeCount} large, ${mediumCount} medium, ${smallCount} small stars`);
     };
     
     img.src = starsOnlyImage;
   }, [starsOnlyImage]);
 
-  // Load background image
+  // Load background image as ImageBitmap for faster rendering
   useEffect(() => {
     if (!backgroundImage) return;
     
     const img = new Image();
     img.onload = () => {
-      setBackgroundImg(img);
-      // Set dimensions if not already set
-      if (imageDimensions.width === 1920 && imageDimensions.height === 1080) {
-        setImageDimensions({ width: img.width, height: img.height });
-      }
+      // Convert to ImageBitmap for GPU-accelerated rendering
+      createImageBitmap(img).then(bitmap => {
+        setBackgroundImg(bitmap);
+        // Set dimensions if not already set
+        if (imageDimensions.width === 1920 && imageDimensions.height === 1080) {
+          setImageDimensions({ width: img.width, height: img.height });
+        }
+      });
     };
     img.src = backgroundImage;
   }, [backgroundImage, imageDimensions]);
@@ -391,12 +411,20 @@ const StarField3D: React.FC<StarField3DProps> = ({
       return; // Stop the animation loop
     }
     
-    // Clear canvas
+    // Clear canvas with fast fill
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
+    // Disable image smoothing for crisp rendering (faster)
+    ctx.imageSmoothingEnabled = false;
+    
     // Calculate zoom/pan with DRAMATIC parallax differences for 3D depth
     const progressRatio = progress / 100;
+    
+    // Check if we can skip recalculation (performance optimization)
+    const stateChanged = !lastRenderState.current || 
+      lastRenderState.current.progress !== progress ||
+      lastRenderState.current.motionType !== motionType;
     
     // Calculate rotation angle based on progress, spin setting, and direction
     const rotationMultiplier = spinDirection === 'counterclockwise' ? -1 : 1;
@@ -412,6 +440,62 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const canvasCenterX = canvas.width * 0.5;
     const canvasCenterY = canvas.height * 0.5;
     
+    // Only recalculate offsets if state changed
+    if (stateChanged) {
+      if (motionType === 'zoom_in') {
+        // Dramatic 3D depth: large stars zoom MUCH faster than small stars
+        offsetsRef.current.background.scale = 1.0 + (progressRatio * 0.3 * ampFactor);
+        offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 0.5 * ampFactor);
+        offsetsRef.current.layer2.scale = 1.0 + (progressRatio * 1.0 * ampFactor);
+        offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 2.0 * ampFactor);
+      } else if (motionType === 'zoom_out') {
+        // Dramatic zoom out with depth
+        const bgMax = 1.0 + (0.3 * ampFactor);
+        const smallMax = 1.0 + (0.5 * ampFactor);
+        const medMax = 1.0 + (1.0 * ampFactor);
+        const largeMax = 1.0 + (2.0 * ampFactor);
+        
+        offsetsRef.current.background.scale = bgMax - (progressRatio * 0.3 * ampFactor);
+        offsetsRef.current.layer3.scale = smallMax - (progressRatio * 0.5 * ampFactor);
+        offsetsRef.current.layer2.scale = medMax - (progressRatio * 1.0 * ampFactor);
+        offsetsRef.current.layer1.scale = largeMax - (progressRatio * 2.0 * ampFactor);
+      } else if (motionType === 'pan_left') {
+        // Dramatic pan with strong 3D parallax: large stars pan MUCH faster
+        const panAmount = progressRatio * speed * 250 * ampFactor;
+        offsetsRef.current.background.scale = 1.0 + (0.2 * ampFactor);
+        offsetsRef.current.layer3.scale = 1.0 + (0.2 * ampFactor);
+        offsetsRef.current.layer2.scale = 1.0 + (0.2 * ampFactor);
+        offsetsRef.current.layer1.scale = 1.0 + (0.2 * ampFactor);
+        
+        offsetsRef.current.background.x = -panAmount * 0.3;
+        offsetsRef.current.layer3.x = -panAmount * 0.5;
+        offsetsRef.current.layer2.x = -panAmount * 1.0;
+        offsetsRef.current.layer1.x = -panAmount * 2.0;
+      } else if (motionType === 'pan_right') {
+        // Dramatic pan right with strong 3D parallax
+        const panAmount = progressRatio * speed * 250 * ampFactor;
+        offsetsRef.current.background.scale = 1.0 + (0.2 * ampFactor);
+        offsetsRef.current.layer3.scale = 1.0 + (0.2 * ampFactor);
+        offsetsRef.current.layer2.scale = 1.0 + (0.2 * ampFactor);
+        offsetsRef.current.layer1.scale = 1.0 + (0.2 * ampFactor);
+        
+        offsetsRef.current.background.x = panAmount * 0.3;
+        offsetsRef.current.layer3.x = panAmount * 0.5;
+        offsetsRef.current.layer2.x = panAmount * 1.0;
+        offsetsRef.current.layer1.x = panAmount * 2.0;
+      }
+      
+      // Cache the state
+      lastRenderState.current = {
+        progress,
+        motionType,
+        scale1: offsetsRef.current.layer1.scale,
+        scale2: offsetsRef.current.layer2.scale,
+        scale3: offsetsRef.current.layer3.scale,
+        scaleBg: offsetsRef.current.background.scale
+      };
+    }
+    
     // Save context and apply rotation at center
     ctx.save();
     ctx.translate(canvasCenterX, canvasCenterY);
@@ -419,53 +503,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
     ctx.scale(rotationScale, rotationScale);
     ctx.translate(-canvasCenterX, -canvasCenterY);
     
-    if (motionType === 'zoom_in') {
-      // Dramatic 3D depth: large stars zoom MUCH faster than small stars
-      offsetsRef.current.background.scale = 1.0 + (progressRatio * 0.3 * ampFactor);  // Background barely moves
-      offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 0.5 * ampFactor);      // Small stars (far) - slow
-      offsetsRef.current.layer2.scale = 1.0 + (progressRatio * 1.0 * ampFactor);      // Medium stars - moderate
-      offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 2.0 * ampFactor);      // Large stars (close) - FAST
-    } else if (motionType === 'zoom_out') {
-      // Dramatic zoom out with depth
-      const bgMax = 1.0 + (0.3 * ampFactor);
-      const smallMax = 1.0 + (0.5 * ampFactor);
-      const medMax = 1.0 + (1.0 * ampFactor);
-      const largeMax = 1.0 + (2.0 * ampFactor);
-      
-      offsetsRef.current.background.scale = bgMax - (progressRatio * 0.3 * ampFactor);
-      offsetsRef.current.layer3.scale = smallMax - (progressRatio * 0.5 * ampFactor);
-      offsetsRef.current.layer2.scale = medMax - (progressRatio * 1.0 * ampFactor);
-      offsetsRef.current.layer1.scale = largeMax - (progressRatio * 2.0 * ampFactor);
-    } else if (motionType === 'pan_left') {
-      // Dramatic pan with strong 3D parallax: large stars pan MUCH faster
-      const panAmount = progressRatio * speed * 250 * ampFactor;
-      offsetsRef.current.background.scale = 1.0 + (0.2 * ampFactor);
-      offsetsRef.current.layer3.scale = 1.0 + (0.2 * ampFactor);
-      offsetsRef.current.layer2.scale = 1.0 + (0.2 * ampFactor);
-      offsetsRef.current.layer1.scale = 1.0 + (0.2 * ampFactor);
-      
-      offsetsRef.current.background.x = -panAmount * 0.3;   // Background slowest
-      offsetsRef.current.layer3.x = -panAmount * 0.5;       // Small stars - slow
-      offsetsRef.current.layer2.x = -panAmount * 1.0;       // Medium stars - moderate
-      offsetsRef.current.layer1.x = -panAmount * 2.0;       // Large stars - FAST
-    } else if (motionType === 'pan_right') {
-      // Dramatic pan right with strong 3D parallax
-      const panAmount = progressRatio * speed * 250 * ampFactor;
-      offsetsRef.current.background.scale = 1.0 + (0.2 * ampFactor);
-      offsetsRef.current.layer3.scale = 1.0 + (0.2 * ampFactor);
-      offsetsRef.current.layer2.scale = 1.0 + (0.2 * ampFactor);
-      offsetsRef.current.layer1.scale = 1.0 + (0.2 * ampFactor);
-      
-      offsetsRef.current.background.x = panAmount * 0.3;
-      offsetsRef.current.layer3.x = panAmount * 0.5;
-      offsetsRef.current.layer2.x = panAmount * 1.0;
-      offsetsRef.current.layer1.x = panAmount * 2.0;
-    }
-    
     // Draw background layer (nebula) first
     if (backgroundImg) {
       ctx.save();
       ctx.globalAlpha = 0.85;
+      ctx.globalCompositeOperation = 'source-over';
       
       const bgScale = offsetsRef.current.background.scale;
       const bgX = offsetsRef.current.background.x;
@@ -473,8 +515,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       const scaledWidth = backgroundImg.width * bgScale;
       const scaledHeight = backgroundImg.height * bgScale;
-      const drawX = (canvas.width - scaledWidth) / 2 + bgX;
-      const drawY = (canvas.height - scaledHeight) / 2 + bgY;
+      const drawX = (canvas.width - scaledWidth) * 0.5 + bgX;
+      const drawY = (canvas.height - scaledHeight) * 0.5 + bgY;
       
       ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
       ctx.restore();
@@ -484,14 +526,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
     if (starLayers.dim || starLayers.medium || starLayers.bright) {
       ctx.save();
       ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = 1.0;
       
       // Layer 3: Small stars (farthest, slowest movement)
       if (starLayers.dim) {
         const scale = offsetsRef.current.layer3.scale;
         const scaledWidth = starLayers.dim.width * scale;
         const scaledHeight = starLayers.dim.height * scale;
-        const drawX = (canvas.width - scaledWidth) / 2 + offsetsRef.current.layer3.x;
-        const drawY = (canvas.height - scaledHeight) / 2 + offsetsRef.current.layer3.y;
+        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer3.x;
+        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer3.y;
         ctx.drawImage(starLayers.dim, drawX, drawY, scaledWidth, scaledHeight);
       }
       
@@ -500,8 +543,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
         const scale = offsetsRef.current.layer2.scale;
         const scaledWidth = starLayers.medium.width * scale;
         const scaledHeight = starLayers.medium.height * scale;
-        const drawX = (canvas.width - scaledWidth) / 2 + offsetsRef.current.layer2.x;
-        const drawY = (canvas.height - scaledHeight) / 2 + offsetsRef.current.layer2.y;
+        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer2.x;
+        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer2.y;
         ctx.drawImage(starLayers.medium, drawX, drawY, scaledWidth, scaledHeight);
       }
       
@@ -510,8 +553,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
         const scale = offsetsRef.current.layer1.scale;
         const scaledWidth = starLayers.bright.width * scale;
         const scaledHeight = starLayers.bright.height * scale;
-        const drawX = (canvas.width - scaledWidth) / 2 + offsetsRef.current.layer1.x;
-        const drawY = (canvas.height - scaledHeight) / 2 + offsetsRef.current.layer1.y;
+        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer1.x;
+        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer1.y;
         ctx.drawImage(starLayers.bright, drawX, drawY, scaledWidth, scaledHeight);
       }
       
@@ -535,6 +578,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         layer3: { x: 0, y: 0, scale: 1 },
         background: { x: 0, y: 0, scale: 1 }
       };
+      lastRenderState.current = null;
       // Ensure progress starts at 0
       if (onProgressUpdate) {
         onProgressUpdate(0);
@@ -556,6 +600,16 @@ const StarField3D: React.FC<StarField3DProps> = ({
       }
     };
   }, [isAnimating, animate, onProgressUpdate]);
+  
+  // Cleanup ImageBitmaps on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (starLayers.bright) starLayers.bright.close();
+      if (starLayers.medium) starLayers.medium.close();
+      if (starLayers.dim) starLayers.dim.close();
+      if (backgroundImg) backgroundImg.close();
+    };
+  }, []);
 
   // Notify parent when canvas and layers are ready
   useEffect(() => {
