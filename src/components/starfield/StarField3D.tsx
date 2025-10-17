@@ -57,7 +57,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const [backgroundImg, setBackgroundImg] = useState<HTMLImageElement | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
 
-  // Load and separate stars into layers - keep original appearance
+  // Load stars-only image and create 3 copies for parallax layers
   useEffect(() => {
     if (!starsOnlyImage || stars.length === 0) return;
 
@@ -66,105 +66,29 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Set canvas dimensions to match image
       setImageDimensions({ width: img.width, height: img.height });
       
-      // Sort stars by combined size and brightness for depth perception
-      const sortedStars = [...stars].sort((a, b) => {
-        const depthA = a.size * a.brightness;
-        const depthB = b.size * b.brightness;
-        return depthB - depthA;
-      });
+      console.log(`Creating 3 star layers from stars-only image (${stars.length} stars detected)`);
       
-      // Distribute: 25% closest, 35% middle, 40% farthest
-      const layer1Count = Math.floor(sortedStars.length * 0.25);
-      const layer2Count = Math.floor(sortedStars.length * 0.35);
-      
-      const layer1Stars = sortedStars.slice(0, layer1Count);
-      const layer2Stars = sortedStars.slice(layer1Count, layer1Count + layer2Count);
-      const layer3Stars = sortedStars.slice(layer1Count + layer2Count);
-      
-      console.log(`Star layers: L1=${layer1Stars.length}, L2=${layer2Stars.length}, L3=${layer3Stars.length}`);
-      
-      // Load source image data
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = img.width;
-      tempCanvas.height = img.height;
-      const tempCtx = tempCanvas.getContext('2d')!;
-      tempCtx.drawImage(img, 0, 0);
-      const sourceImageData = tempCtx.getImageData(0, 0, img.width, img.height);
-      const sourceData = sourceImageData.data;
-      
-      // Create canvas for each layer - preserve exact star appearance from original
-      const createLayerCanvas = (layerStars: StarData[], layerName: string) => {
+      // Create 3 separate layers - each will have all stars but render at different depths
+      // We'll use the full stars-only image for each layer
+      const createStarLayer = (layerName: string) => {
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext('2d')!;
         
-        // Create transparent canvas
-        const newData = ctx.createImageData(canvas.width, canvas.height);
+        // Simply draw the full stars-only image
+        // The parallax effect will come from drawing each layer at different scales/speeds
+        ctx.drawImage(img, 0, 0);
         
-        let pixelsCopied = 0;
-        
-        // Extract each star with generous radius to capture full glow
-        layerStars.forEach(star => {
-          // Generous radius to capture full star and glow
-          const radius = Math.ceil(Math.max(star.size * 5, 10));
-          
-          for (let dy = -radius; dy <= radius; dy++) {
-            for (let dx = -radius; dx <= radius; dx++) {
-              const px = Math.round(star.x) + dx;
-              const py = Math.round(star.y) + dy;
-              
-              if (px >= 0 && px < canvas.width && py >= 0 && py < canvas.height) {
-                const idx = (py * canvas.width + px) * 4;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                
-                if (dist <= radius) {
-                  const r = sourceData[idx];
-                  const g = sourceData[idx + 1];
-                  const b = sourceData[idx + 2];
-                  
-                  // Copy any non-black pixel (stars and their glow)
-                  if (r > 5 || g > 5 || b > 5) {
-                    // Use brightest value to preserve star appearance
-                    const currentR = newData.data[idx];
-                    const currentG = newData.data[idx + 1];
-                    const currentB = newData.data[idx + 2];
-                    
-                    if (r + g + b > currentR + currentG + currentB) {
-                      newData.data[idx] = r;
-                      newData.data[idx + 1] = g;
-                      newData.data[idx + 2] = b;
-                      newData.data[idx + 3] = 255;
-                      pixelsCopied++;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        });
-        
-        ctx.putImageData(newData, 0, 0);
-        console.log(`${layerName}: ${layerStars.length} stars, ${pixelsCopied} pixels copied`);
-        
-        // Debug: Check if canvas has content
-        const testData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        let hasContent = false;
-        for (let i = 3; i < testData.data.length; i += 4) {
-          if (testData.data[i] > 0) {
-            hasContent = true;
-            break;
-          }
-        }
-        console.log(`${layerName} has visible content: ${hasContent}`);
-        
+        console.log(`${layerName}: Full stars-only image loaded (${canvas.width}x${canvas.height})`);
         return canvas;
       };
       
+      // Create 3 identical layers - parallax will be created during rendering
       setStarLayers({
-        layer1: createLayerCanvas(layer1Stars, 'Layer1(closest)'),
-        layer2: createLayerCanvas(layer2Stars, 'Layer2(middle)'),
-        layer3: createLayerCanvas(layer3Stars, 'Layer3(farthest)')
+        layer1: createStarLayer('Layer1(closest)'),
+        layer2: createStarLayer('Layer2(middle)'),
+        layer3: createStarLayer('Layer3(farthest)')
       });
     };
     
@@ -278,16 +202,16 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.restore();
     }
     
-    // Draw star layers on top (farthest to closest) with proper blending
-    const drawLayer = (layer: HTMLCanvasElement | null, offset: { x: number, y: number, scale: number }, layerName: string) => {
+    // Draw star layers on top with different parallax speeds and reduced opacity for depth
+    const drawLayer = (layer: HTMLCanvasElement | null, offset: { x: number, y: number, scale: number }, alpha: number, layerName: string) => {
       if (!layer) {
         console.log(`${layerName}: layer is null`);
         return;
       }
       
       ctx.save();
-      ctx.globalCompositeOperation = 'lighter'; // Additive blending for stars
-      ctx.globalAlpha = 1.0; // Full opacity for stars
+      ctx.globalCompositeOperation = 'screen'; // Screen blending mode for stars
+      ctx.globalAlpha = alpha; // Different opacity for depth perception
       
       const scale = offset.scale;
       const scaledWidth = layer.width * scale;
@@ -299,9 +223,10 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.restore();
     };
     
-    drawLayer(starLayers.layer3, offsetsRef.current.layer3, 'Layer3'); // Farthest stars
-    drawLayer(starLayers.layer2, offsetsRef.current.layer2, 'Layer2'); // Medium stars
-    drawLayer(starLayers.layer1, offsetsRef.current.layer1, 'Layer1'); // Closest stars
+    // Draw layers with reduced opacity for distant stars (creates depth)
+    drawLayer(starLayers.layer3, offsetsRef.current.layer3, 0.4, 'Layer3'); // Farthest - dimmest
+    drawLayer(starLayers.layer2, offsetsRef.current.layer2, 0.7, 'Layer2'); // Middle
+    drawLayer(starLayers.layer1, offsetsRef.current.layer1, 1.0, 'Layer1'); // Closest - brightest
     
     animationFrameRef.current = requestAnimationFrame(animate);
   }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
