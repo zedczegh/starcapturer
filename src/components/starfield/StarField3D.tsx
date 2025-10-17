@@ -57,34 +57,90 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const [backgroundImg, setBackgroundImg] = useState<HTMLImageElement | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
 
-  // Load stars-only image as a single layer (no copies/duplicates)
+  // Create 3 distinct star layers for dramatic 3D depth
   useEffect(() => {
     if (!starsOnlyImage || stars.length === 0) return;
 
     const img = new Image();
     img.onload = () => {
-      // Set canvas dimensions to match image
       setImageDimensions({ width: img.width, height: img.height });
       
-      console.log(`Loading stars-only image as single layer (${stars.length} stars detected)`);
+      // Sort stars by size and brightness for depth - bigger/brighter = closer
+      const sortedStars = [...stars].sort((a, b) => {
+        const depthA = (a.size * 1.5) + (a.brightness * 0.5);
+        const depthB = (b.size * 1.5) + (b.brightness * 0.5);
+        return depthB - depthA;
+      });
       
-      // Create just ONE layer with all stars - no duplicates
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d')!;
+      // Distribute: 20% closest (big/bright), 30% middle, 50% farthest (small/dim)
+      const layer1Count = Math.floor(sortedStars.length * 0.20);
+      const layer2Count = Math.floor(sortedStars.length * 0.30);
       
-      // Draw the full stars-only image once
-      ctx.drawImage(img, 0, 0);
+      const layer1Stars = sortedStars.slice(0, layer1Count); // Closest - large bright stars
+      const layer2Stars = sortedStars.slice(layer1Count, layer1Count + layer2Count); // Middle depth
+      const layer3Stars = sortedStars.slice(layer1Count + layer2Count); // Farthest - small dim stars
       
-      console.log(`Stars layer created: ${canvas.width}x${canvas.height}`);
+      console.log(`3D Depth layers: Close=${layer1Stars.length}, Mid=${layer2Stars.length}, Far=${layer3Stars.length}`);
       
-      // Use the same layer for all three positions to avoid null checks
-      // but we'll only draw layer1 in the render loop
+      // Load source
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = img.width;
+      tempCanvas.height = img.height;
+      const tempCtx = tempCanvas.getContext('2d')!;
+      tempCtx.drawImage(img, 0, 0);
+      const srcData = tempCtx.getImageData(0, 0, img.width, img.height).data;
+      
+      // Extract stars for each layer with generous radius
+      const createDepthLayer = (layerStars: StarData[], layerName: string) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d')!;
+        const newData = ctx.createImageData(canvas.width, canvas.height);
+        
+        layerStars.forEach(star => {
+          const radius = Math.ceil(Math.max(star.size * 6, 12)); // Large radius for full glow
+          
+          for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+              const px = Math.round(star.x) + dx;
+              const py = Math.round(star.y) + dy;
+              
+              if (px >= 0 && px < canvas.width && py >= 0 && py < canvas.height) {
+                const idx = (py * canvas.width + px) * 4;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist <= radius) {
+                  const r = srcData[idx];
+                  const g = srcData[idx + 1];
+                  const b = srcData[idx + 2];
+                  
+                  if (r > 3 || g > 3 || b > 3) { // Very low threshold
+                    const brightness = r + g + b;
+                    const currentBrightness = newData.data[idx] + newData.data[idx + 1] + newData.data[idx + 2];
+                    
+                    if (brightness > currentBrightness) {
+                      newData.data[idx] = r;
+                      newData.data[idx + 1] = g;
+                      newData.data[idx + 2] = b;
+                      newData.data[idx + 3] = 255;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+        
+        ctx.putImageData(newData, 0, 0);
+        console.log(`${layerName}: ${layerStars.length} stars extracted`);
+        return canvas;
+      };
+      
       setStarLayers({
-        layer1: canvas,
-        layer2: null,
-        layer3: null
+        layer1: createDepthLayer(layer1Stars, 'Closest'),
+        layer2: createDepthLayer(layer2Stars, 'Middle'),
+        layer3: createDepthLayer(layer3Stars, 'Farthest')
       });
     };
     
@@ -141,43 +197,43 @@ const StarField3D: React.FC<StarField3DProps> = ({
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Calculate zoom/pan based on progress for consistent animation
+    // Calculate zoom/pan with DRAMATIC parallax differences for 3D depth
     const progressRatio = progress / 100;
     
     if (motionType === 'zoom_in') {
-      // Zoom in from 1.0 - reduced motion intensity
-      offsetsRef.current.background.scale = 1.0 + (progressRatio * 0.3);
-      offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 0.4);
-      offsetsRef.current.layer2.scale = 1.0 + (progressRatio * 0.5);
-      offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 0.6);
+      // Dramatic zoom - close stars grow MUCH faster than far stars
+      offsetsRef.current.background.scale = 1.0 + (progressRatio * 0.2);  // Background barely moves
+      offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 0.5);      // Far stars - slow
+      offsetsRef.current.layer2.scale = 1.0 + (progressRatio * 1.2);      // Middle stars - medium
+      offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 2.5);      // Close stars - FAST dramatic zoom
     } else if (motionType === 'zoom_out') {
-      // Zoom out - exact reverse of zoom in
-      offsetsRef.current.background.scale = 1.3 - (progressRatio * 0.3);
-      offsetsRef.current.layer3.scale = 1.4 - (progressRatio * 0.4);
-      offsetsRef.current.layer2.scale = 1.5 - (progressRatio * 0.5);
-      offsetsRef.current.layer1.scale = 1.6 - (progressRatio * 0.6);
+      // Dramatic zoom out - reverse effect
+      offsetsRef.current.background.scale = 1.2 - (progressRatio * 0.2);
+      offsetsRef.current.layer3.scale = 1.5 - (progressRatio * 0.5);
+      offsetsRef.current.layer2.scale = 2.2 - (progressRatio * 1.2);
+      offsetsRef.current.layer1.scale = 3.5 - (progressRatio * 2.5);
     } else if (motionType === 'pan_left') {
-      // Pan left with reduced speed
-      const panAmount = progressRatio * speed * 200;
-      offsetsRef.current.background.scale = 1.5; // Fixed scale to avoid gaps
-      offsetsRef.current.layer3.scale = 1.5;
+      // Dramatic pan with strong parallax
+      const panAmount = progressRatio * speed * 250;
+      offsetsRef.current.background.scale = 1.3; // Zoomed to avoid gaps
+      offsetsRef.current.layer3.scale = 1.4;
       offsetsRef.current.layer2.scale = 1.5;
-      offsetsRef.current.layer1.scale = 1.5;
-      offsetsRef.current.background.x = -panAmount * 0.3;
-      offsetsRef.current.layer3.x = -panAmount * 0.5;
-      offsetsRef.current.layer2.x = -panAmount * 0.8;
-      offsetsRef.current.layer1.x = -panAmount * 1.2;
+      offsetsRef.current.layer1.scale = 1.8;
+      offsetsRef.current.background.x = -panAmount * 0.2;  // Background moves slowly
+      offsetsRef.current.layer3.x = -panAmount * 0.6;      // Far stars
+      offsetsRef.current.layer2.x = -panAmount * 1.3;      // Middle stars
+      offsetsRef.current.layer1.x = -panAmount * 2.5;      // Close stars move FAST
     } else if (motionType === 'pan_right') {
-      // Pan right with reduced speed
-      const panAmount = progressRatio * speed * 200;
-      offsetsRef.current.background.scale = 1.5; // Fixed scale to avoid gaps
-      offsetsRef.current.layer3.scale = 1.5;
+      // Dramatic pan right with strong parallax
+      const panAmount = progressRatio * speed * 250;
+      offsetsRef.current.background.scale = 1.3;
+      offsetsRef.current.layer3.scale = 1.4;
       offsetsRef.current.layer2.scale = 1.5;
-      offsetsRef.current.layer1.scale = 1.5;
-      offsetsRef.current.background.x = panAmount * 0.3;
-      offsetsRef.current.layer3.x = panAmount * 0.5;
-      offsetsRef.current.layer2.x = panAmount * 0.8;
-      offsetsRef.current.layer1.x = panAmount * 1.2;
+      offsetsRef.current.layer1.scale = 1.8;
+      offsetsRef.current.background.x = panAmount * 0.2;
+      offsetsRef.current.layer3.x = panAmount * 0.6;
+      offsetsRef.current.layer2.x = panAmount * 1.3;
+      offsetsRef.current.layer1.x = panAmount * 2.5;
     }
     
     // Draw background layer (nebula) first
@@ -198,21 +254,28 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.restore();
     }
     
-    // Draw stars layer on top - single layer, no duplicates
-    if (starLayers.layer1) {
+    // Draw star layers with dramatic depth separation
+    const drawStarLayer = (layer: HTMLCanvasElement | null, offset: { x: number, y: number, scale: number }, alpha: number) => {
+      if (!layer) return;
+      
       ctx.save();
       ctx.globalCompositeOperation = 'screen'; // Screen blending for stars
-      ctx.globalAlpha = 1.0; // Full opacity
+      ctx.globalAlpha = alpha;
       
-      const scale = offsetsRef.current.layer1.scale;
-      const scaledWidth = starLayers.layer1.width * scale;
-      const scaledHeight = starLayers.layer1.height * scale;
-      const drawX = (canvas.width - scaledWidth) / 2 + offsetsRef.current.layer1.x;
-      const drawY = (canvas.height - scaledHeight) / 2 + offsetsRef.current.layer1.y;
+      const scale = offset.scale;
+      const scaledWidth = layer.width * scale;
+      const scaledHeight = layer.height * scale;
+      const drawX = (canvas.width - scaledWidth) / 2 + offset.x;
+      const drawY = (canvas.height - scaledHeight) / 2 + offset.y;
       
-      ctx.drawImage(starLayers.layer1, drawX, drawY, scaledWidth, scaledHeight);
+      ctx.drawImage(layer, drawX, drawY, scaledWidth, scaledHeight);
       ctx.restore();
-    }
+    };
+    
+    // Draw from farthest to closest with varying opacity for depth
+    drawStarLayer(starLayers.layer3, offsetsRef.current.layer3, 0.5); // Farthest - dim
+    drawStarLayer(starLayers.layer2, offsetsRef.current.layer2, 0.75); // Middle
+    drawStarLayer(starLayers.layer1, offsetsRef.current.layer1, 1.0); // Closest - bright
     
     animationFrameRef.current = requestAnimationFrame(animate);
   }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
