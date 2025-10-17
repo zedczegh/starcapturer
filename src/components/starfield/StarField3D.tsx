@@ -48,16 +48,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
     background: { x: 0, y: 0, scale: 1 } // Nebula background
   });
   
-  const [starLayers, setStarLayers] = useState<{
-    layer1: HTMLCanvasElement | null;
-    layer2: HTMLCanvasElement | null;
-    layer3: HTMLCanvasElement | null;
-  }>({ layer1: null, layer2: null, layer3: null });
+  const [starLayer, setStarLayer] = useState<HTMLCanvasElement | null>(null);
   
   const [backgroundImg, setBackgroundImg] = useState<HTMLImageElement | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
 
-  // Create 3 identical star layers that will be rendered at different depths
+  // Create single star layer
   useEffect(() => {
     if (!starsOnlyImage) return;
 
@@ -65,24 +61,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
     img.onload = () => {
       setImageDimensions({ width: img.width, height: img.height });
       
-      // Create 3 identical canvases with the full stars image
-      const createStarLayer = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0);
-        return canvas;
-      };
+      // Create single canvas with the full stars image
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
       
-      // All three layers use the same stars, depth is created through scale/speed/opacity
-      setStarLayers({
-        layer1: createStarLayer(), // Closest layer - fastest movement
-        layer2: createStarLayer(), // Middle layer
-        layer3: createStarLayer()  // Farthest layer - slowest movement
-      });
-      
-      console.log('3D star layers created with dramatic depth');
+      setStarLayer(canvas);
+      console.log('Star layer created');
     };
     
     img.src = starsOnlyImage;
@@ -195,31 +182,23 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.restore();
     }
     
-    // Draw star layers with dramatic depth separation
-    const drawStarLayer = (layer: HTMLCanvasElement | null, offset: { x: number, y: number, scale: number }, alpha: number) => {
-      if (!layer) return;
-      
+    // Draw single star layer
+    if (starLayer) {
       ctx.save();
       ctx.globalCompositeOperation = 'screen'; // Screen blending for stars
-      ctx.globalAlpha = alpha;
       
-      const scale = offset.scale;
-      const scaledWidth = layer.width * scale;
-      const scaledHeight = layer.height * scale;
-      const drawX = (canvas.width - scaledWidth) / 2 + offset.x;
-      const drawY = (canvas.height - scaledHeight) / 2 + offset.y;
+      const scale = offsetsRef.current.layer1.scale;
+      const scaledWidth = starLayer.width * scale;
+      const scaledHeight = starLayer.height * scale;
+      const drawX = (canvas.width - scaledWidth) / 2 + offsetsRef.current.layer1.x;
+      const drawY = (canvas.height - scaledHeight) / 2 + offsetsRef.current.layer1.y;
       
-      ctx.drawImage(layer, drawX, drawY, scaledWidth, scaledHeight);
+      ctx.drawImage(starLayer, drawX, drawY, scaledWidth, scaledHeight);
       ctx.restore();
-    };
-    
-    // Draw from farthest to closest with varying opacity for depth
-    drawStarLayer(starLayers.layer3, offsetsRef.current.layer3, 0.5); // Farthest - dim
-    drawStarLayer(starLayers.layer2, offsetsRef.current.layer2, 0.75); // Middle
-    drawStarLayer(starLayers.layer1, offsetsRef.current.layer1, 1.0); // Closest - bright
+    }
     
     animationFrameRef.current = requestAnimationFrame(animate);
-  }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
+  }, [isAnimating, settings, backgroundImg, starLayer, onProgressUpdate, onAnimationComplete]);
 
   useEffect(() => {
     if (isAnimating) {
@@ -264,20 +243,10 @@ const StarField3D: React.FC<StarField3DProps> = ({
           ctx.globalAlpha = 1.0;
         }
         
-        if (starLayers.layer3) {
-          const drawX = (canvasRef.current.width - starLayers.layer3.width) / 2;
-          const drawY = (canvasRef.current.height - starLayers.layer3.height) / 2;
-          ctx.drawImage(starLayers.layer3, drawX, drawY);
-        }
-        if (starLayers.layer2) {
-          const drawX = (canvasRef.current.width - starLayers.layer2.width) / 2;
-          const drawY = (canvasRef.current.height - starLayers.layer2.height) / 2;
-          ctx.drawImage(starLayers.layer2, drawX, drawY);
-        }
-        if (starLayers.layer1) {
-          const drawX = (canvasRef.current.width - starLayers.layer1.width) / 2;
-          const drawY = (canvasRef.current.height - starLayers.layer1.height) / 2;
-          ctx.drawImage(starLayers.layer1, drawX, drawY);
+        if (starLayer) {
+          const drawX = (canvasRef.current.width - starLayer.width) / 2;
+          const drawY = (canvasRef.current.height - starLayer.height) / 2;
+          ctx.drawImage(starLayer, drawX, drawY);
         }
       }
     }
@@ -287,7 +256,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isAnimating, animate, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
+  }, [isAnimating, animate, backgroundImg, starLayer, onProgressUpdate, onAnimationComplete]);
 
   // Notify parent when canvas is ready
   useEffect(() => {
