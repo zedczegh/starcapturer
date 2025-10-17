@@ -965,7 +965,7 @@ const StarFieldGenerator: React.FC = () => {
             {currentStep === 'ready' && !videoBlob && (
               <Button
                 onClick={generateVideo}
-                disabled={isGeneratingVideo || processedStars.length === 0 || !isCanvasReady}
+                disabled={isGeneratingVideo || processedStars.length === 0}
                 className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50"
               >
                 <Video className="h-4 w-4 mr-2" />
