@@ -80,6 +80,7 @@ const StarFieldGenerator: React.FC = () => {
   useEffect(() => {
     const loadFFmpeg = async () => {
       try {
+        console.log('Loading FFmpeg...');
         const ffmpeg = new FFmpeg();
         ffmpegRef.current = ffmpeg;
         
@@ -93,9 +94,11 @@ const StarFieldGenerator: React.FC = () => {
         });
         
         setFFmpegLoaded(true);
-        console.log('FFmpeg loaded successfully');
+        console.log('FFmpeg loaded successfully - MP4 encoding ready');
+        toast.success(t('Video encoder ready', '视频编码器已就绪'));
       } catch (error) {
         console.error('Failed to load FFmpeg:', error);
+        toast.error(t('Failed to load video encoder', '视频编码器加载失败'));
       }
     };
     
@@ -973,11 +976,16 @@ const StarFieldGenerator: React.FC = () => {
             {currentStep === 'ready' && (
               <Button
                 onClick={generateVideo}
-                disabled={isRecording || processedStars.length === 0 || !isCanvasReady}
+                disabled={isRecording || processedStars.length === 0 || !isCanvasReady || !ffmpegLoaded}
                 className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 disabled:opacity-50"
               >
                 <Download className="h-4 w-4 mr-2" />
-                {isRecording ? t('Recording...', '录制中...') : t('Download Video', '下载视频')}
+                {isRecording 
+                  ? t('Recording...', '录制中...') 
+                  : !ffmpegLoaded 
+                    ? t('Loading encoder...', '加载编码器中...') 
+                    : t('Download Video (MP4)', '下载视频 (MP4)')
+                }
               </Button>
             )}
           </div>
