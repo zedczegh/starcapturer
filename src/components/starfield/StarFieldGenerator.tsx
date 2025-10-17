@@ -925,25 +925,23 @@ const StarFieldGenerator: React.FC = () => {
                       </Button>
                     </div>
                     
-                    {/* Progress bar with slider dot */}
-                    <div className="relative w-full h-1.5 bg-cosmic-800/50 rounded-full overflow-visible">
+                    {/* Progress bar with moving slider dot - YouTube style */}
+                    <div className="relative w-full h-1 bg-cosmic-800/50 rounded-full overflow-visible">
+                      {/* Played portion (white) */}
                       <div 
-                        className="absolute left-0 top-0 h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-100 rounded-full"
+                        className="absolute left-0 top-0 h-full bg-white/80 transition-all duration-100 rounded-full"
                         style={{ width: `${animationProgress}%` }}
                       />
-                      {/* Slider dot indicator */}
+                      {/* Moving dot at current position */}
                       <div 
                         className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg transition-all duration-100"
                         style={{ left: `calc(${animationProgress}% - 0.375rem)` }}
                       />
                     </div>
                     
-                    {/* Time display */}
+                    {/* Time display only */}
                     <div className="flex items-center justify-between text-xs text-cosmic-300">
                       <span>{formatTime((animationProgress / 100) * animationSettings.duration)}</span>
-                      <span className="text-cosmic-400">
-                        {Math.round(animationProgress)}%
-                      </span>
                       <span>{formatTime(animationSettings.duration)}</span>
                     </div>
                   </div>
