@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import StarField3D from './StarField3D';
 import UTIF from 'utif';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile } from '@ffmpeg/util';
 
 interface ProcessedStarData {
   x: number;
@@ -56,6 +58,8 @@ const StarFieldGenerator: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
+  const ffmpegRef = useRef<FFmpeg | null>(null);
+  const [ffmpegLoaded, setFFmpegLoaded] = useState(false);
 
   // Animation settings with motion controls
   const [animationSettings, setAnimationSettings] = useState({
@@ -70,6 +74,32 @@ const StarFieldGenerator: React.FC = () => {
   });
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
+  
+  // Initialize FFmpeg
+  useEffect(() => {
+    const loadFFmpeg = async () => {
+      try {
+        const ffmpeg = new FFmpeg();
+        ffmpegRef.current = ffmpeg;
+        
+        ffmpeg.on('log', ({ message }) => {
+          console.log('FFmpeg:', message);
+        });
+        
+        await ffmpeg.load({
+          coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+          wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
+        });
+        
+        setFFmpegLoaded(true);
+        console.log('FFmpeg loaded successfully');
+      } catch (error) {
+        console.error('Failed to load FFmpeg:', error);
+      }
+    };
+    
+    loadFFmpeg();
+  }, []);
   
   // Format time in MM:SS format
   const formatTime = (seconds: number) => {
@@ -588,24 +618,73 @@ const StarFieldGenerator: React.FC = () => {
         }
       };
       
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         console.log('Recording complete. Total chunks:', recordedChunksRef.current.length);
-        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-        console.log('Video size:', (blob.size / 1024 / 1024).toFixed(2), 'MB');
+        const webmBlob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        console.log('WebM size:', (webmBlob.size / 1024 / 1024).toFixed(2), 'MB');
         
-        const url = URL.createObjectURL(blob);
+        try {
+          if (!ffmpegRef.current || !ffmpegLoaded) {
+            throw new Error('FFmpeg not loaded');
+          }
+
+          toast.info(t('Converting to MP4...', '转换为MP4中...'));
+          
+          const ffmpeg = ffmpegRef.current;
+          
+          // Write WebM file to FFmpeg filesystem
+          await ffmpeg.writeFile('input.webm', await fetchFile(webmBlob));
+          
+          // Convert WebM to MP4 with high quality settings
+          await ffmpeg.exec([
+            '-i', 'input.webm',
+            '-c:v', 'libx264',
+            '-preset', 'medium',
+            '-crf', '18',
+            '-pix_fmt', 'yuv420p',
+            '-movflags', '+faststart',
+            'output.mp4'
+          ]);
+          
+          // Read the output MP4 file
+          const data = await ffmpeg.readFile('output.mp4');
+          // Convert Uint8Array to Blob
+          const mp4Blob = new Blob([new Uint8Array(data as Uint8Array)], { type: 'video/mp4' });
+          console.log('MP4 size:', (mp4Blob.size / 1024 / 1024).toFixed(2), 'MB');
+          
+          // Download MP4
+          const url = URL.createObjectURL(mp4Blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+          a.download = `starfield-animation-${timestamp}.mp4`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          // Clean up FFmpeg files
+          await ffmpeg.deleteFile('input.webm');
+          await ffmpeg.deleteFile('output.mp4');
+          
+          toast.success(t('MP4 video downloaded successfully!', 'MP4视频下载成功！'));
+        } catch (error) {
+          console.error('MP4 conversion error:', error);
+          
+          // Fallback: download WebM if conversion fails
+          const url = URL.createObjectURL(webmBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+          a.download = `starfield-animation-${timestamp}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          toast.warning(t('Conversion failed. Downloaded as WebM format.', '转换失败，已下载为WebM格式。'));
+        }
         
-        // Download as WebM (browsers don't support MP4 encoding from canvas)
-        const a = document.createElement('a');
-        a.href = url;
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-        a.download = `starfield-animation-${timestamp}.webm`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        toast.success(t('Video downloaded! (WebM format - compatible with most video players)', '视频已下载！（WebM格式 - 兼容大多数视频播放器）'));
         setIsRecording(false);
         setIsAnimating(false);
         setCurrentStep('ready');
