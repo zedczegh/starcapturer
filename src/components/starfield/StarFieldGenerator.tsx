@@ -773,7 +773,6 @@ const StarFieldGenerator: React.FC = () => {
             if (chunks.length === 0) {
               toast.error(t('Recording failed - no data captured', '录制失败 - 未捕获数据'));
               setIsGeneratingVideo(false);
-              setIsAnimating(false);
               canvasPool.release(recordCanvas);
               return;
             }
@@ -785,7 +784,6 @@ const StarFieldGenerator: React.FC = () => {
             if (blob.size < 10000) {
               toast.error(t('Recording too small - likely failed', '录制文件过小 - 可能失败'));
               setIsGeneratingVideo(false);
-              setIsAnimating(false);
               canvasPool.release(recordCanvas);
               return;
             }
@@ -801,7 +799,7 @@ const StarFieldGenerator: React.FC = () => {
             URL.revokeObjectURL(url);
             
             setIsGeneratingVideo(false);
-            setIsAnimating(false);
+            // Keep animation running after recording
             canvasPool.release(recordCanvas);
             toast.success(t(`Video ready! ${sizeMB} MB`, `视频完成！${sizeMB} MB`));
             
@@ -813,13 +811,14 @@ const StarFieldGenerator: React.FC = () => {
             recordingActive = false;
             toast.error(t('Recording error', '录制错误'));
             setIsGeneratingVideo(false);
-            setIsAnimating(false);
             canvasPool.release(recordCanvas);
           };
           
-          // Ensure animation is running
-          setIsAnimating(true);
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Ensure animation is running (don't stop it during recording!)
+          if (!isAnimating) {
+            setIsAnimating(true);
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
           
           // Start recording
           console.log('Starting MediaRecorder...');
@@ -827,25 +826,27 @@ const StarFieldGenerator: React.FC = () => {
           
           toast.success(t(`Recording at ${recordFps}fps...`, `以${recordFps}fps录制...`));
           
-          // Manual frame capture loop for smooth recording
-          const frameInterval = 1000 / recordFps;
-          let lastFrameTime = performance.now();
+          // Non-blocking frame capture loop - samples frames without interfering with display
           const totalFrames = Math.ceil(duration * recordFps);
+          const frameInterval = 1000 / recordFps;
+          const startTime = performance.now();
           
           const captureFrame = () => {
             if (!recordingActive) return;
             
-            const now = performance.now();
-            const elapsed = now - lastFrameTime;
+            const elapsed = performance.now() - startTime;
+            const targetFrame = Math.floor(elapsed / frameInterval);
             
-            if (elapsed >= frameInterval) {
-              // Draw current frame from source canvas
+            // Capture frames as needed to maintain target FPS
+            while (frameCount < targetFrame && frameCount < totalFrames && recordingActive) {
+              // Copy frame from display canvas to recording canvas
+              recordCtx.clearRect(0, 0, recordWidth, recordHeight);
               recordCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
               
-              // Request frame capture
+              // Request frame from stream
               const track = stream.getVideoTracks()[0];
               if (track && track.readyState === 'live') {
-                // @ts-ignore - requestFrame may not be in types but is supported
+                // @ts-ignore - requestFrame is not in types but supported in modern browsers
                 if (track.requestFrame) {
                   // @ts-ignore
                   track.requestFrame();
@@ -853,15 +854,15 @@ const StarFieldGenerator: React.FC = () => {
               }
               
               frameCount++;
-              lastFrameTime = now;
               
-              // Progress update
-              if (frameCount % 30 === 0) {
+              // Progress logging
+              if (frameCount % 60 === 0 || frameCount === totalFrames) {
                 const progress = Math.min((frameCount / totalFrames) * 100, 100);
                 console.log(`Recording: ${frameCount}/${totalFrames} frames (${progress.toFixed(0)}%)`);
               }
             }
             
+            // Continue capturing
             if (frameCount < totalFrames && recordingActive) {
               requestAnimationFrame(captureFrame);
             }
@@ -870,16 +871,15 @@ const StarFieldGenerator: React.FC = () => {
           // Start capture loop
           requestAnimationFrame(captureFrame);
           
-          // Stop after duration + buffer
-          const recordingDuration = (duration * 1000) + 2000;
+          // Auto-stop after duration
           setTimeout(() => {
             if (mediaRecorder.state === 'recording') {
-              console.log('Stopping MediaRecorder after', (recordingDuration / 1000).toFixed(1), 'seconds');
+              console.log('Stopping recording after', ((duration * 1000 + 2000) / 1000).toFixed(1), 'seconds');
               recordingActive = false;
               mediaRecorder.stop();
               stream.getTracks().forEach(track => track.stop());
             }
-          }, recordingDuration);
+          }, (duration * 1000) + 2000);
         
         } catch (recordError) {
           console.error('Recording error:', recordError);
@@ -891,13 +891,11 @@ const StarFieldGenerator: React.FC = () => {
         console.error('WebM recording failed:', error);
         toast.error(t('Failed to record video', '视频录制失败'));
         setIsGeneratingVideo(false);
-        setIsAnimating(false);
         MemoryManager.forceGarbageCollection();
         throw error;
       }
     }, 'WebM Recording').catch(() => {
       setIsGeneratingVideo(false);
-      setIsAnimating(false);
     });
   }, [animationSettings.duration, currentStep, t]);
 
