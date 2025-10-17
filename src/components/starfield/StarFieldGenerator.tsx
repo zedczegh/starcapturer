@@ -533,12 +533,6 @@ const StarFieldGenerator: React.FC = () => {
     // Wait for any ongoing animation to stop
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    // Reset progress and prepare for recording
-    setAnimationProgress(0);
-    
-    // Wait for reset to take effect
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
     try {
       const fps = 60;
       const duration = animationSettings.duration;
@@ -622,7 +616,8 @@ const StarFieldGenerator: React.FC = () => {
       mediaRecorder.start(100); // Collect data every 100ms
       console.log('MediaRecorder started');
       
-      // Start animation immediately after starting recorder
+      // Small delay then start animation so recorder captures from frame 0
+      await new Promise(resolve => setTimeout(resolve, 200));
       setIsAnimating(true);
       toast.success(t('Recording started...', '开始录制...'));
       
