@@ -511,8 +511,11 @@ const StarFieldGenerator: React.FC = () => {
   }, [isAnimating, animationProgress]);
 
   const handleReplay = useCallback(() => {
-    setAnimationProgress(0);
-    setIsAnimating(true);
+    setIsAnimating(false); // Stop first
+    setTimeout(() => {
+      setAnimationProgress(0);
+      setIsAnimating(true); // Then restart
+    }, 50);
   }, []);
 
   const downloadVideo = useCallback(async () => {
