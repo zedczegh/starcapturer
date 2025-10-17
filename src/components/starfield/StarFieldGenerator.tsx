@@ -548,8 +548,8 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const downloadVideoWebM = useCallback(async () => {
-    if (!canvasRef.current || !isCanvasReady) {
-      toast.error(t('Please generate the animation first', '请先生成动画'));
+    if (currentStep !== 'ready') {
+      toast.error(t('Please process images first', '请先处理图像'));
       return;
     }
     
@@ -680,11 +680,11 @@ const StarFieldGenerator: React.FC = () => {
       setIsGeneratingVideo(false);
       setIsAnimating(false);
     }
-  }, [animationSettings.duration, isCanvasReady, t]);
+  }, [animationSettings.duration, currentStep, t]);
 
   const downloadVideoMP4 = useCallback(async () => {
-    if (!canvasRef.current || !isCanvasReady) {
-      toast.error(t('Please generate the animation first', '请先生成动画'));
+    if (currentStep !== 'ready') {
+      toast.error(t('Please process images first', '请先处理图像'));
       return;
     }
 
@@ -1018,7 +1018,7 @@ const StarFieldGenerator: React.FC = () => {
       setIsAnimating(false);
       setMp4Progress(0);
     }
-  }, [animationSettings.duration, ffmpegLoaded, isAnimating, isCanvasReady, t]);
+  }, [animationSettings.duration, ffmpegLoaded, isAnimating, currentStep, t]);
 
   const downloadMP4File = useCallback(() => {
     if (!mp4Blob) return;
