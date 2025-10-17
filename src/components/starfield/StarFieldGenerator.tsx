@@ -63,6 +63,25 @@ const StarFieldGenerator: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate file format
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.fits', '.fit', '.tiff', '.tif', '.bmp', '.webp'];
+    const fileName = file.name.toLowerCase();
+    const isValidFormat = validExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!isValidFormat) {
+      toast.error(t('Please upload a valid image file (JPG, PNG, FITS, TIFF, BMP, WEBP)', '请上传有效的图像文件 (JPG, PNG, FITS, TIFF, BMP, WEBP)'));
+      if (starsFileInputRef.current) starsFileInputRef.current.value = '';
+      return;
+    }
+
+    // Validate file size (500MB)
+    const maxSize = 500 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error(t('File size must be less than 500MB', '文件大小必须小于500MB'));
+      if (starsFileInputRef.current) starsFileInputRef.current.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
@@ -73,6 +92,11 @@ const StarFieldGenerator: React.FC = () => {
         setStarsOnlyElement(img);
         toast.success(t('Stars only image uploaded', '星体图像已上传'));
       };
+      img.onerror = () => {
+        toast.error(t('Failed to load image', '图像加载失败'));
+        setStarsOnlyImage(null);
+        if (starsFileInputRef.current) starsFileInputRef.current.value = '';
+      };
       img.src = result;
     };
     reader.readAsDataURL(file);
@@ -81,6 +105,25 @@ const StarFieldGenerator: React.FC = () => {
   const handleStarlessUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // Validate file format
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.fits', '.fit', '.tiff', '.tif', '.bmp', '.webp'];
+    const fileName = file.name.toLowerCase();
+    const isValidFormat = validExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!isValidFormat) {
+      toast.error(t('Please upload a valid image file (JPG, PNG, FITS, TIFF, BMP, WEBP)', '请上传有效的图像文件 (JPG, PNG, FITS, TIFF, BMP, WEBP)'));
+      if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
+      return;
+    }
+
+    // Validate file size (500MB)
+    const maxSize = 500 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error(t('File size must be less than 500MB', '文件大小必须小于500MB'));
+      if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -91,6 +134,11 @@ const StarFieldGenerator: React.FC = () => {
       img.onload = () => {
         setStarlessElement(img);
         toast.success(t('Starless image uploaded', '无星图像已上传'));
+      };
+      img.onerror = () => {
+        toast.error(t('Failed to load image', '图像加载失败'));
+        setStarlessImage(null);
+        if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
       };
       img.src = result;
     };
@@ -370,7 +418,7 @@ const StarFieldGenerator: React.FC = () => {
                   ref={starsFileInputRef}
                   id="stars-upload"
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.fits,.fit,.tiff,.tif"
                   onChange={handleStarsOnlyUpload}
                   className="bg-cosmic-800/50 border-cosmic-700/50 text-white file:bg-cosmic-700 file:text-white file:border-0"
                 />
@@ -393,7 +441,7 @@ const StarFieldGenerator: React.FC = () => {
                   ref={starlessFileInputRef}
                   id="starless-upload"
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.fits,.fit,.tiff,.tif"
                   onChange={handleStarlessUpload}
                   className="bg-cosmic-800/50 border-cosmic-700/50 text-white file:bg-cosmic-700 file:text-white file:border-0"
                 />
@@ -408,7 +456,7 @@ const StarFieldGenerator: React.FC = () => {
                 )}
               </div>
               
-              {starsOnlyImage && starlessImage && (
+              {starsOnlyElement && starlessElement && (
                 <Button
                   onClick={processImages}
                   disabled={isProcessing}
