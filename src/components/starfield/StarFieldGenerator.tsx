@@ -79,47 +79,23 @@ const StarFieldGenerator: React.FC = () => {
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
   
-  // Load FFmpeg on component mount
+  // Initialize FFmpeg instance (but don't load it yet - load on demand)
   useEffect(() => {
-    const loadFFmpeg = async () => {
-      if (!ffmpegRef.current) {
-        const ffmpeg = new FFmpeg();
-        ffmpegRef.current = ffmpeg;
-        
-        // Add logging callbacks
-        ffmpeg.on('log', ({ message }) => {
-          console.log('[FFmpeg Log]:', message);
-        });
-        
-        ffmpeg.on('progress', ({ progress, time }) => {
-          console.log('[FFmpeg Progress]:', `${Math.round(progress * 100)}% - Time: ${time}`);
-        });
-        
-        try {
-          console.log('Starting FFmpeg load...');
-          const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-          
-          const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-          console.log('Core URL loaded');
-          
-          const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-          console.log('WASM URL loaded');
-          
-          await ffmpeg.load({
-            coreURL,
-            wasmURL,
-          });
-          
-          setFfmpegLoaded(true);
-          console.log('✓ FFmpeg loaded successfully and ready');
-        } catch (error) {
-          console.error('✗ Failed to load FFmpeg:', error);
-          console.error('Error details:', JSON.stringify(error, null, 2));
-        }
-      }
-    };
-    
-    loadFFmpeg();
+    if (!ffmpegRef.current) {
+      const ffmpeg = new FFmpeg();
+      
+      // Add logging callbacks
+      ffmpeg.on('log', ({ message }) => {
+        console.log('[FFmpeg]:', message);
+      });
+      
+      ffmpeg.on('progress', ({ progress, time }) => {
+        console.log('[FFmpeg Progress]:', `${Math.round(progress * 100)}%`, time);
+      });
+      
+      ffmpegRef.current = ffmpeg;
+      console.log('FFmpeg instance created (not loaded yet)');
+    }
   }, []);
   
   
@@ -816,31 +792,73 @@ const StarFieldGenerator: React.FC = () => {
       
       // Step 2: Load FFmpeg if needed (40-50%)
       setMp4Progress(40);
+      console.log('=== Starting FFmpeg Load Phase ===');
       console.log('FFmpeg loaded status:', ffmpegLoaded);
+      console.log('FFmpeg ref exists:', !!ffmpegRef.current);
       
-      if (!ffmpegLoaded && ffmpegRef.current) {
+      if (!ffmpegRef.current) {
+        console.error('✗ FFmpeg instance not created');
+        toast.error(t('Video encoder not available', '视频编码器不可用'));
+        setIsEncodingMP4(false);
+        setIsGeneratingVideo(false);
+        setMp4Progress(0);
+        return;
+      }
+      
+      if (!ffmpegLoaded) {
         toast.info(t('Loading video encoder...', '加载视频编码器...'));
-        console.log('Loading FFmpeg for conversion...');
+        console.log('Loading FFmpeg (downloading ~32MB)...');
         
         try {
           const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
           
-          console.log('Fetching core and wasm files...');
-          const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-          const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-          console.log('Core and WASM URLs ready');
+          // Add timeout for loading
+          const loadWithTimeout = async () => {
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('FFmpeg loading timeout (60s)')), 60000);
+            });
+            
+            const loadPromise = (async () => {
+              console.log('Fetching core JS...');
+              const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
+              console.log('✓ Core JS ready');
+              
+              setMp4Progress(43);
+              
+              console.log('Fetching WASM (~32MB)...');
+              const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+              console.log('✓ WASM ready');
+              
+              setMp4Progress(46);
+              
+              console.log('Initializing FFmpeg...');
+              await ffmpegRef.current!.load({
+                coreURL,
+                wasmURL,
+              });
+              console.log('✓ FFmpeg initialized');
+            })();
+            
+            return Promise.race([loadPromise, timeoutPromise]);
+          };
           
-          await ffmpegRef.current.load({
-            coreURL,
-            wasmURL,
-          });
+          await loadWithTimeout();
           
           setFfmpegLoaded(true);
           setMp4Progress(50);
-          console.log('✓ FFmpeg loaded for conversion');
+          console.log('✓✓✓ FFmpeg loaded successfully ✓✓✓');
         } catch (error) {
-          console.error('✗ Failed to load FFmpeg for conversion:', error);
-          toast.error(t('Failed to load video encoder', '视频编码器加载失败'));
+          console.error('✗✗✗ Failed to load FFmpeg ✗✗✗');
+          console.error('Error:', error);
+          console.error('Error type:', typeof error);
+          console.error('Error message:', error instanceof Error ? error.message : String(error));
+          
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          toast.error(t(
+            `Failed to load video encoder: ${errorMsg}`, 
+            `视频编码器加载失败: ${errorMsg}`
+          ));
+          
           setIsEncodingMP4(false);
           setIsGeneratingVideo(false);
           setMp4Progress(0);
@@ -848,16 +866,7 @@ const StarFieldGenerator: React.FC = () => {
         }
       } else {
         setMp4Progress(50);
-        console.log('FFmpeg already loaded, skipping load step');
-      }
-      
-      if (!ffmpegRef.current) {
-        console.error('✗ FFmpeg reference not available');
-        toast.error(t('Video encoder not available', '视频编码器不可用'));
-        setIsEncodingMP4(false);
-        setIsGeneratingVideo(false);
-        setMp4Progress(0);
-        return;
+        console.log('FFmpeg already loaded, skipping');
       }
       
       // Step 3: Convert WebM to MP4 (50-100%)
