@@ -801,7 +801,7 @@ const StarFieldGenerator: React.FC = () => {
             setIsGeneratingVideo(false);
             // Keep animation running after recording
             canvasPool.release(recordCanvas);
-            toast.success(t(`Video ready! ${sizeMB} MB`, `视频完成！${sizeMB} MB`));
+            // toast.success(t(`Video ready! ${sizeMB} MB`, `视频完成！${sizeMB} MB`));
             
             MemoryManager.forceGarbageCollection();
           };
@@ -809,7 +809,7 @@ const StarFieldGenerator: React.FC = () => {
           mediaRecorder.onerror = (e) => {
             console.error('MediaRecorder error:', e);
             recordingActive = false;
-            toast.error(t('Recording error', '录制错误'));
+            // toast.error(t('Recording error', '录制错误'));
             setIsGeneratingVideo(false);
             canvasPool.release(recordCanvas);
           };
@@ -824,7 +824,7 @@ const StarFieldGenerator: React.FC = () => {
           console.log('Starting MediaRecorder...');
           mediaRecorder.start(100); // Collect data every 100ms
           
-          toast.success(t(`Recording at ${recordFps}fps...`, `以${recordFps}fps录制...`));
+          // toast.success(t(`Recording at ${recordFps}fps...`, `以${recordFps}fps录制...`));
           
           // Simple non-blocking frame update loop
           // The stream automatically captures frames at the specified FPS
@@ -880,7 +880,7 @@ const StarFieldGenerator: React.FC = () => {
         
       } catch (error) {
         console.error('WebM recording failed:', error);
-        toast.error(t('Failed to record video', '视频录制失败'));
+        // toast.error(t('Failed to record video', '视频录制失败'));
         setIsGeneratingVideo(false);
         MemoryManager.forceGarbageCollection();
         throw error;
@@ -892,7 +892,7 @@ const StarFieldGenerator: React.FC = () => {
 
   const downloadVideoMP4 = useCallback(async () => {
     if (currentStep !== 'ready') {
-      toast.error(t('Please process images first', '请先处理图像'));
+      // toast.error(t('Please process images first', '请先处理图像'));
       return;
     }
     
@@ -904,7 +904,7 @@ const StarFieldGenerator: React.FC = () => {
         setMp4Blob(null);
         
         console.log('=== Starting MP4 Generation ===');
-        toast.info(t('Preparing recording...', '准备录制...'));
+        // toast.info(t('Preparing recording...', '准备录制...'));
       
       const fps = 60;
       const duration = animationSettings.duration;
@@ -928,7 +928,7 @@ const StarFieldGenerator: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setMp4Progress(5);
-      toast.info(t('Recording video...', '录制视频...'));
+      // toast.info(t('Recording video...', '录制视频...'));
       
       // Step 2: Record WebM (5-40%)
       let canvas = canvasRef.current;
@@ -1081,7 +1081,7 @@ const StarFieldGenerator: React.FC = () => {
       }
       
       if (!ffmpegLoaded) {
-        toast.info(t('Loading video encoder (this may take 30s)...', '加载视频编码器（可能需要30秒）...'));
+        // toast.info(t('Loading video encoder (this may take 30s)...', '加载视频编码器（可能需要30秒）...'));
         console.log('=== Loading FFmpeg (~32MB download) ===');
         
         const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
@@ -1139,7 +1139,7 @@ const StarFieldGenerator: React.FC = () => {
             console.log('✓ FFmpeg initialized successfully!');
             setFfmpegLoaded(true);
             setMp4Progress(50);
-            toast.success(t('Encoder ready!', '编码器就绪！'));
+            // toast.success(t('Encoder ready!', '编码器就绪！'));
           }
         } catch (error) {
           console.error('=== FFmpeg Loading Failed ===');
@@ -1148,10 +1148,10 @@ const StarFieldGenerator: React.FC = () => {
           const errorMsg = error instanceof Error ? error.message : String(error);
           
           // User-friendly error message
-          toast.error(t(
-            'MP4 encoder unavailable. Please download as WebM instead.', 
-            'MP4编码器不可用。请改用WebM格式下载。'
-          ));
+          // toast.error(t(
+          //   'MP4 encoder unavailable. Please download as WebM instead.', 
+          //   'MP4编码器不可用。请改用WebM格式下载。'
+          // ));
           
           throw new Error(`FFmpeg initialization failed: ${errorMsg}`);
         }
@@ -1162,7 +1162,7 @@ const StarFieldGenerator: React.FC = () => {
       
       // Step 3: Convert WebM to MP4 (50-100%)
       console.log('=== MP4 Conversion Phase ===');
-      toast.info(t('Converting to MP4...', '转换为MP4...'));
+      // toast.info(t('Converting to MP4...', '转换为MP4...'));
       const ffmpeg = ffmpegRef.current;
       
       try {
@@ -1220,7 +1220,7 @@ const StarFieldGenerator: React.FC = () => {
         setAnimationProgress(0);
         
         console.log('=== MP4 Generation Complete ===');
-        toast.success(t('MP4 ready to download!', 'MP4准备下载！'));
+        // toast.success(t('MP4 ready to download!', 'MP4准备下载！'));
         
       } catch (conversionError) {
         console.error('✗ Conversion failed:', conversionError);
@@ -1234,10 +1234,10 @@ const StarFieldGenerator: React.FC = () => {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error('Error message:', errorMessage);
         
-        toast.error(t(
-          `Failed to encode MP4: ${errorMessage}`, 
-          `MP4编码失败: ${errorMessage}`
-        ));
+        // toast.error(t(
+        //   `Failed to encode MP4: ${errorMessage}`, 
+        //   `MP4编码失败: ${errorMessage}`
+        // ));
         
         setIsEncodingMP4(false);
         setIsGeneratingVideo(false);
@@ -1266,7 +1266,7 @@ const StarFieldGenerator: React.FC = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    toast.success(t('MP4 video downloaded!', 'MP4视频已下载！'));
+    // toast.success(t('MP4 video downloaded!', 'MP4视频已下载！'));
     
     // Reset
     setMp4Blob(null);
