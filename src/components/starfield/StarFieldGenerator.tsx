@@ -520,8 +520,8 @@ const StarFieldGenerator: React.FC = () => {
 
   const downloadVideo = useCallback(async () => {
     const canvas = canvasRef.current;
-    if (!canvas || !isCanvasReady) {
-      toast.error(t('Preview not ready. Please process images first.', '预览未就绪。请先处理图像。'));
+    if (!canvas || processedStars.length === 0) {
+      toast.error(t('Please process images first', '请先处理图像'));
       return;
     }
     
@@ -530,14 +530,14 @@ const StarFieldGenerator: React.FC = () => {
     
     toast.info(t('Preparing to record...', '准备录制...'));
     
-    // Wait a moment for any ongoing animation to stop
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Wait for any ongoing animation to stop
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     // Reset progress and prepare for recording
     setAnimationProgress(0);
     
     // Wait for reset to take effect
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     try {
       const fps = 60;
@@ -642,7 +642,7 @@ const StarFieldGenerator: React.FC = () => {
       setIsGeneratingVideo(false);
       setIsAnimating(false);
     }
-  }, [animationSettings.duration, isCanvasReady, t]);
+  }, [animationSettings.duration, processedStars.length, t]);
 
   const resetAll = useCallback(() => {
     setStarsOnlyImage(null);
@@ -949,12 +949,12 @@ const StarFieldGenerator: React.FC = () => {
             
             <Button
               onClick={downloadVideo}
-              disabled={isGeneratingVideo}
+              disabled={isGeneratingVideo || processedStars.length === 0}
               className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
             >
               <Download className="h-4 w-4 mr-2" />
               {isGeneratingVideo 
-                ? t('Downloading...', '下载中...') 
+                ? t('Recording...', '录制中...') 
                 : t('Download Video', '下载视频')
               }
             </Button>
