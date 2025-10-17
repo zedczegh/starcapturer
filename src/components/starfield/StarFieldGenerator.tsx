@@ -489,6 +489,10 @@ const StarFieldGenerator: React.FC = () => {
     canvasRef.current = canvas;
   }, []);
 
+  const handleProgressUpdate = useCallback((progress: number) => {
+    setAnimationProgress(progress);
+  }, []);
+
   const handleAnimationComplete = useCallback(() => {
     setIsAnimating(false);
     setAnimationProgress(100);
@@ -884,7 +888,7 @@ const StarFieldGenerator: React.FC = () => {
                   backgroundImage={starlessImage}
                   starsOnlyImage={starsOnlyImage}
                   onCanvasReady={handleCanvasReady}
-                  onProgressUpdate={setAnimationProgress}
+                  onProgressUpdate={handleProgressUpdate}
                   onAnimationComplete={handleAnimationComplete}
                 />
                 
