@@ -56,6 +56,9 @@ const StarFieldGenerator: React.FC = () => {
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [showFormatDialog, setShowFormatDialog] = useState(false);
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
+  const [mp4Progress, setMp4Progress] = useState(0);
+  const [mp4Blob, setMp4Blob] = useState<Blob | null>(null);
+  const [isEncodingMP4, setIsEncodingMP4] = useState(false);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
@@ -691,15 +694,33 @@ const StarFieldGenerator: React.FC = () => {
       return;
     }
     
-    if (!ffmpegLoaded || !ffmpegRef.current) {
-      toast.error(t('Video encoder not ready. Please try again.', '视频编码器未就绪。请重试。'));
+    // Load FFmpeg if not loaded yet
+    if (!ffmpegLoaded && ffmpegRef.current) {
+      toast.info(t('Loading video encoder...', '加载视频编码器...'));
+      try {
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+        await ffmpegRef.current.load({
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+        });
+        setFfmpegLoaded(true);
+      } catch (error) {
+        console.error('Failed to load FFmpeg:', error);
+        toast.error(t('Failed to load video encoder', '视频编码器加载失败'));
+        return;
+      }
+    }
+    
+    if (!ffmpegRef.current) {
+      toast.error(t('Video encoder not available', '视频编码器不可用'));
       return;
     }
     
+    setIsEncodingMP4(true);
     setIsGeneratingVideo(true);
     setIsAnimating(false);
-    
-    toast.info(t('Preparing to record...', '准备录制...'));
+    setMp4Progress(0);
+    setMp4Blob(null);
     
     // Wait for any ongoing animation to stop
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -716,19 +737,15 @@ const StarFieldGenerator: React.FC = () => {
       const duration = animationSettings.duration;
       const ffmpeg = ffmpegRef.current;
       
-      // Capture frames as images
-      toast.info(t('Capturing frames...', '捕获帧中...'));
-      
       const frameCount = Math.ceil(duration * fps);
-      const frameInterval = 1000 / fps; // milliseconds per frame
+      const frameInterval = 1000 / fps;
       
       const capturedFrames: Blob[] = [];
       
-      // Capture frames
+      // Capture frames with progress
       for (let i = 0; i < frameCount; i++) {
         await new Promise(resolve => setTimeout(resolve, frameInterval));
         
-        // Capture current frame
         const blob = await new Promise<Blob>((resolve) => {
           canvas.toBlob((blob) => {
             resolve(blob!);
@@ -737,22 +754,27 @@ const StarFieldGenerator: React.FC = () => {
         
         capturedFrames.push(blob);
         
-        // Update progress
-        if (i % 30 === 0) {
-          console.log(`Captured ${i + 1}/${frameCount} frames`);
-        }
+        // Update progress (capturing is 0-50%)
+        const captureProgress = ((i + 1) / frameCount) * 50;
+        setMp4Progress(captureProgress);
       }
       
       console.log(`Captured ${capturedFrames.length} frames, encoding to MP4...`);
-      toast.info(t('Encoding video...', '编码视频中...'));
       
-      // Write frames to FFmpeg virtual filesystem
+      // Write frames to FFmpeg (50-70%)
+      setMp4Progress(50);
       for (let i = 0; i < capturedFrames.length; i++) {
         const frameData = await fetchFile(capturedFrames[i]);
         await ffmpeg.writeFile(`frame${i.toString().padStart(5, '0')}.jpg`, frameData);
+        
+        if (i % 50 === 0) {
+          const writeProgress = 50 + ((i / capturedFrames.length) * 20);
+          setMp4Progress(writeProgress);
+        }
       }
       
-      // Run FFmpeg to create MP4
+      // Encode video (70-100%)
+      setMp4Progress(70);
       await ffmpeg.exec([
         '-framerate', fps.toString(),
         '-i', 'frame%05d.jpg',
@@ -764,9 +786,10 @@ const StarFieldGenerator: React.FC = () => {
         'output.mp4'
       ]);
       
+      setMp4Progress(90);
+      
       // Read the output file
       const data = await ffmpeg.readFile('output.mp4') as Uint8Array;
-      // Convert to regular ArrayBuffer for Blob compatibility
       const buffer = new Uint8Array(data).buffer;
       const blob = new Blob([buffer], { type: 'video/mp4' });
       
@@ -786,28 +809,42 @@ const StarFieldGenerator: React.FC = () => {
         // Ignore
       }
       
-      // Download the video
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `starfield-${Date.now()}.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
+      setMp4Progress(100);
+      setMp4Blob(blob);
       setIsGeneratingVideo(false);
       setIsAnimating(false);
       setAnimationProgress(0);
-      toast.success(t('MP4 video downloaded successfully!', 'MP4视频下载成功！'));
+      toast.success(t('MP4 ready for download!', 'MP4准备下载！'));
       
     } catch (error) {
       console.error('MP4 encoding error:', error);
       toast.error(t('Failed to encode MP4 video', 'MP4视频编码失败'));
+      setIsEncodingMP4(false);
       setIsGeneratingVideo(false);
       setIsAnimating(false);
+      setMp4Progress(0);
     }
   }, [animationSettings.duration, processedStars.length, ffmpegLoaded, t]);
+
+  const downloadMP4File = useCallback(() => {
+    if (!mp4Blob) return;
+    
+    const url = URL.createObjectURL(mp4Blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `starfield-${Date.now()}.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success(t('MP4 video downloaded!', 'MP4视频已下载！'));
+    
+    // Reset
+    setMp4Blob(null);
+    setMp4Progress(0);
+    setIsEncodingMP4(false);
+  }, [mp4Blob, t]);
 
   const resetAll = useCallback(() => {
     setStarsOnlyImage(null);
@@ -1151,21 +1188,50 @@ const StarFieldGenerator: React.FC = () => {
                 <Video className="h-4 w-4 mr-2" />
                 {t('WebM (Fast, Browser Native)', 'WebM（快速，浏览器原生）')}
               </Button>
-              <Button
-                onClick={() => {
-                  setShowFormatDialog(false);
-                  downloadVideoMP4();
-                }}
-                disabled={isGeneratingVideo || !ffmpegLoaded}
-                className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white disabled:opacity-50"
-              >
-                <Video className="h-4 w-4 mr-2" />
-                {t('MP4 (Universal Compatibility)', 'MP4（通用兼容性）')}
-              </Button>
-              {!ffmpegLoaded && (
-                <p className="text-xs text-cosmic-400 text-center">
-                  {t('MP4 encoder is loading...', 'MP4编码器加载中...')}
-                </p>
+              
+              {/* MP4 Button with Progress */}
+              {!isEncodingMP4 && !mp4Blob && (
+                <Button
+                  onClick={() => {
+                    setShowFormatDialog(false);
+                    downloadVideoMP4();
+                  }}
+                  disabled={isGeneratingVideo}
+                  className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  {t('MP4 (Universal Compatibility)', 'MP4（通用兼容性）')}
+                </Button>
+              )}
+              
+              {/* Progress Bar during encoding */}
+              {isEncodingMP4 && !mp4Blob && (
+                <div className="w-full space-y-2">
+                  <div className="flex items-center justify-between text-sm text-cosmic-300">
+                    <span>{t('Encoding MP4...', '编码MP4...')}</span>
+                    <span>{Math.round(mp4Progress)}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-cosmic-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-green-600 to-emerald-600 transition-all duration-300"
+                      style={{ width: `${mp4Progress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* Download Button after encoding */}
+              {mp4Blob && (
+                <Button
+                  onClick={() => {
+                    setShowFormatDialog(false);
+                    downloadMP4File();
+                  }}
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {t('Download MP4', '下载MP4')}
+                </Button>
               )}
             </div>
           </DialogContent>
