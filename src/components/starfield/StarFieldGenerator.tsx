@@ -503,11 +503,11 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const toggleAnimation = useCallback(() => {
-    setIsAnimating(prev => !prev);
     if (!isAnimating && animationProgress >= 100) {
-      // If at end, restart from beginning
+      // If at end and pressing play, restart from beginning
       setAnimationProgress(0);
     }
+    setIsAnimating(prev => !prev);
   }, [isAnimating, animationProgress]);
 
   const handleReplay = useCallback(() => {
