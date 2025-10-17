@@ -494,6 +494,9 @@ const StarFieldGenerator: React.FC = () => {
 
   const handleProgressUpdate = useCallback((progress: number) => {
     setAnimationProgress(progress);
+    if (progress >= 100) {
+      setIsAnimating(false);
+    }
   }, []);
 
   const handleAnimationComplete = useCallback(() => {
@@ -503,19 +506,16 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const toggleAnimation = useCallback(() => {
-    if (animationProgress >= 100) {
-      // If finished, don't do anything - user should use replay
-      return;
-    }
     setIsAnimating(prev => !prev);
-  }, [animationProgress]);
+  }, []);
 
   const handleReplay = useCallback(() => {
     setIsAnimating(false);
     setAnimationProgress(0);
+    // Force a reset by toggling with a delay
     setTimeout(() => {
       setIsAnimating(true);
-    }, 100);
+    }, 50);
   }, []);
 
   const downloadVideo = useCallback(async () => {
@@ -928,7 +928,6 @@ const StarFieldGenerator: React.FC = () => {
                     <div className="flex items-center justify-center gap-2">
                       <Button
                         onClick={toggleAnimation}
-                        disabled={animationProgress >= 100}
                         variant="outline"
                         size="sm"
                         className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50"

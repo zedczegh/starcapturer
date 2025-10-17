@@ -271,7 +271,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       animationStartTimeRef.current = Date.now();
     }
     
-    const elapsed = (Date.now() - animationStartTimeRef.current) / 1000;
+    const elapsed = (Date.now() - animationStartTimeRef.current - pausedTimeRef.current) / 1000;
     const progress = Math.min((elapsed / duration) * 100, 100);
     
     if (onProgressUpdate) {
@@ -421,35 +421,22 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
   useEffect(() => {
     if (isAnimating) {
-      // Check if we should resume from pause
-      if (pausedTimeRef.current > 100) {
-        // Resuming from pause - continue from where we left off
-        animationStartTimeRef.current = Date.now() - pausedTimeRef.current;
-        pausedTimeRef.current = 0;
-      } else {
-        // Starting fresh - reset everything
-        pausedTimeRef.current = 0;
-        animationStartTimeRef.current = 0;
-        if (onProgressUpdate) {
-          onProgressUpdate(0);
-        }
-        offsetsRef.current = { 
-          layer1: { x: 0, y: 0, scale: 1 },
-          layer2: { x: 0, y: 0, scale: 1 },
-          layer3: { x: 0, y: 0, scale: 1 },
-          background: { x: 0, y: 0, scale: 1 }
-        };
+      // Reset everything when starting fresh
+      animationStartTimeRef.current = 0;
+      pausedTimeRef.current = 0;
+      offsetsRef.current = { 
+        layer1: { x: 0, y: 0, scale: 1 },
+        layer2: { x: 0, y: 0, scale: 1 },
+        layer3: { x: 0, y: 0, scale: 1 },
+        background: { x: 0, y: 0, scale: 1 }
+      };
+      if (onProgressUpdate) {
+        onProgressUpdate(0);
       }
-      
       animate();
     } else {
-      // Pausing - save current elapsed time
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (animationStartTimeRef.current > 0) {
-        const elapsed = Date.now() - animationStartTimeRef.current;
-        pausedTimeRef.current = elapsed;
       }
     }
     
