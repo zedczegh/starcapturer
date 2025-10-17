@@ -553,7 +553,7 @@ const StarFieldGenerator: React.FC = () => {
 
   const downloadVideoWebM = useCallback(async () => {
     const canvas = canvasRef.current;
-    if (!canvas || processedStars.length === 0) {
+    if (!canvas || processedStars.length === 0 || !starsOnlyImage || !starlessImage) {
       toast.error(t('Please process images first', '请先处理图像'));
       return;
     }
@@ -566,7 +566,7 @@ const StarFieldGenerator: React.FC = () => {
     // Wait for any ongoing animation to stop
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    // Reset and start animation to warm up canvas
+    // Reset and start animation to ensure canvas is rendering
     setAnimationProgress(0);
     setIsAnimating(true);
     
@@ -645,7 +645,6 @@ const StarFieldGenerator: React.FC = () => {
         
         setIsGeneratingVideo(false);
         setIsAnimating(false);
-        setAnimationProgress(0);
         toast.success(t('Video downloaded successfully!', '视频下载成功！'));
       };
       
@@ -656,11 +655,11 @@ const StarFieldGenerator: React.FC = () => {
         setIsAnimating(false);
       };
       
-      // Ensure animation is running before we start recording
+      // Ensure animation is running
       setIsAnimating(true);
       
-      // Wait a bit more to ensure frames are being generated
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait for more frames to ensure recording captures content
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       // Start recording - request data every 100ms
       console.log('Starting MediaRecorder...');
@@ -685,11 +684,11 @@ const StarFieldGenerator: React.FC = () => {
       setIsGeneratingVideo(false);
       setIsAnimating(false);
     }
-  }, [animationSettings.duration, processedStars.length, t]);
+  }, [animationSettings.duration, processedStars.length, starsOnlyImage, starlessImage, t]);
 
   const downloadVideoMP4 = useCallback(async () => {
     const canvas = canvasRef.current;
-    if (!canvas || processedStars.length === 0) {
+    if (!canvas || processedStars.length === 0 || !starsOnlyImage || !starlessImage) {
       toast.error(t('Please process images first', '请先处理图像'));
       return;
     }
@@ -824,7 +823,7 @@ const StarFieldGenerator: React.FC = () => {
       setIsAnimating(false);
       setMp4Progress(0);
     }
-  }, [animationSettings.duration, processedStars.length, ffmpegLoaded, t]);
+  }, [animationSettings.duration, processedStars.length, starsOnlyImage, starlessImage, ffmpegLoaded, t]);
 
   const downloadMP4File = useCallback(() => {
     if (!mp4Blob) return;
