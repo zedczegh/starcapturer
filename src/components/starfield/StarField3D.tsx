@@ -185,31 +185,39 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const progressRatio = progress / 100;
     
     if (motionType === 'zoom_in') {
-      // Zoom in from 1.0 to 2.0
-      offsetsRef.current.background.scale = 1.0 + (progressRatio * 0.5);
-      offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 0.7);
-      offsetsRef.current.layer2.scale = 1.0 + (progressRatio * 0.9);
-      offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 1.2);
+      // Zoom in from 1.0 - reduced motion intensity
+      offsetsRef.current.background.scale = 1.0 + (progressRatio * 0.3);
+      offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 0.4);
+      offsetsRef.current.layer2.scale = 1.0 + (progressRatio * 0.5);
+      offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 0.6);
     } else if (motionType === 'zoom_out') {
-      // Zoom out from 2.0 to 1.0 (exact reverse of zoom in)
-      offsetsRef.current.background.scale = 1.5 - (progressRatio * 0.5);
-      offsetsRef.current.layer3.scale = 1.7 - (progressRatio * 0.7);
-      offsetsRef.current.layer2.scale = 1.9 - (progressRatio * 0.9);
-      offsetsRef.current.layer1.scale = 2.2 - (progressRatio * 1.2);
+      // Zoom out - exact reverse of zoom in
+      offsetsRef.current.background.scale = 1.3 - (progressRatio * 0.3);
+      offsetsRef.current.layer3.scale = 1.4 - (progressRatio * 0.4);
+      offsetsRef.current.layer2.scale = 1.5 - (progressRatio * 0.5);
+      offsetsRef.current.layer1.scale = 1.6 - (progressRatio * 0.6);
     } else if (motionType === 'pan_left') {
-      // Pan left with speed factor
-      const panAmount = progressRatio * speed * 300;
+      // Pan left with reduced speed
+      const panAmount = progressRatio * speed * 200;
+      offsetsRef.current.background.scale = 1.5; // Fixed scale to avoid gaps
+      offsetsRef.current.layer3.scale = 1.5;
+      offsetsRef.current.layer2.scale = 1.5;
+      offsetsRef.current.layer1.scale = 1.5;
       offsetsRef.current.background.x = -panAmount * 0.3;
-      offsetsRef.current.layer3.x = -panAmount * 0.7;
-      offsetsRef.current.layer2.x = -panAmount * 1.2;
-      offsetsRef.current.layer1.x = -panAmount * 1.8;
+      offsetsRef.current.layer3.x = -panAmount * 0.5;
+      offsetsRef.current.layer2.x = -panAmount * 0.8;
+      offsetsRef.current.layer1.x = -panAmount * 1.2;
     } else if (motionType === 'pan_right') {
-      // Pan right with speed factor
-      const panAmount = progressRatio * speed * 300;
+      // Pan right with reduced speed
+      const panAmount = progressRatio * speed * 200;
+      offsetsRef.current.background.scale = 1.5; // Fixed scale to avoid gaps
+      offsetsRef.current.layer3.scale = 1.5;
+      offsetsRef.current.layer2.scale = 1.5;
+      offsetsRef.current.layer1.scale = 1.5;
       offsetsRef.current.background.x = panAmount * 0.3;
-      offsetsRef.current.layer3.x = panAmount * 0.7;
-      offsetsRef.current.layer2.x = panAmount * 1.2;
-      offsetsRef.current.layer1.x = panAmount * 1.8;
+      offsetsRef.current.layer3.x = panAmount * 0.5;
+      offsetsRef.current.layer2.x = panAmount * 0.8;
+      offsetsRef.current.layer1.x = panAmount * 1.2;
     }
     
     // Draw background layer (nebula) - maintain aspect ratio
@@ -258,8 +266,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
   useEffect(() => {
     if (isAnimating) {
-      // Reset timer when animation starts
+      // Reset timer and progress when animation starts
       animationStartTimeRef.current = 0;
+      
+      // Immediately set progress to 0 to ensure the dot starts at beginning
+      if (onProgressUpdate) {
+        onProgressUpdate(0);
+      }
       
       // Initialize all scales and positions to their starting values
       // They will be calculated based on progress in the animate function
