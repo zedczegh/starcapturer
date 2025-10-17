@@ -51,8 +51,7 @@ const StarFieldGenerator: React.FC = () => {
   
   const [isCanvasReady, setIsCanvasReady] = useState(false);
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'ready' | 'generating'>('upload');
-  const [animationProgress, setAnimationProgress] = useState(0); // 0-100%
-  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [animationProgress, setAnimationProgress] = useState(0);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
@@ -516,7 +515,7 @@ const StarFieldGenerator: React.FC = () => {
     setIsAnimating(true);
   }, []);
 
-  const generateVideo = useCallback(async () => {
+  const downloadVideo = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) {
       toast.error(t('Preview not ready', '预览未就绪'));
@@ -527,7 +526,7 @@ const StarFieldGenerator: React.FC = () => {
     setIsAnimating(true);
     setAnimationProgress(0);
     
-    toast.info(t('Recording animation...', '录制动画中...'));
+    toast.info(t('Preparing download...', '准备下载中...'));
     
     const stream = canvas.captureStream(60);
     const mediaRecorder = new MediaRecorder(stream, {
@@ -543,10 +542,20 @@ const StarFieldGenerator: React.FC = () => {
     
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunks, { type: 'video/webm' });
-      setVideoBlob(blob);
+      
+      // Download immediately
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `starfield-${Date.now()}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
       setIsGeneratingVideo(false);
       setIsAnimating(false);
-      toast.success(t('Video ready!', '视频已就绪！'));
+      toast.success(t('Video downloaded!', '视频已下载！'));
     };
     
     mediaRecorder.start(100);
@@ -557,22 +566,6 @@ const StarFieldGenerator: React.FC = () => {
       }
     }, animationSettings.duration * 1000 + 500);
   }, [animationSettings.duration, t]);
-
-  const downloadVideo = useCallback(() => {
-    if (!videoBlob) return;
-    
-    const url = URL.createObjectURL(videoBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-    a.download = `starfield-${timestamp}.webm`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success(t('Video downloaded!', '视频已下载！'));
-  }, [videoBlob, t]);
 
   const resetAll = useCallback(() => {
     setStarsOnlyImage(null);
@@ -585,7 +578,6 @@ const StarFieldGenerator: React.FC = () => {
     setIsAnimating(false);
     setIsCanvasReady(false);
     setCurrentStep('upload');
-    setVideoBlob(null);
     if (starsFileInputRef.current) {
       starsFileInputRef.current.value = '';
     }
@@ -878,29 +870,17 @@ const StarFieldGenerator: React.FC = () => {
               {t('Reset', '重置')}
             </Button>
             
-            {!videoBlob && (
-              <Button
-                onClick={generateVideo}
-                disabled={isGeneratingVideo}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50"
-              >
-                <Video className="h-4 w-4 mr-2" />
-                {isGeneratingVideo 
-                  ? t('Recording...', '录制中...') 
-                  : t('Generate Video', '生成视频')
-                }
-              </Button>
-            )}
-            
-            {videoBlob && (
-              <Button
-                onClick={downloadVideo}
-                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {t('Download Video', '下载视频')}
-              </Button>
-            )}
+            <Button
+              onClick={downloadVideo}
+              disabled={isGeneratingVideo}
+              className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isGeneratingVideo 
+                ? t('Downloading...', '下载中...') 
+                : t('Download Video', '下载视频')
+              }
+            </Button>
           </div>
         </div>
 
