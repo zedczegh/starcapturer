@@ -53,6 +53,8 @@ const StarFieldGenerator: React.FC = () => {
   const [isCanvasReady, setIsCanvasReady] = useState(false);
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'ready' | 'generating'>('upload');
   const [animationProgress, setAnimationProgress] = useState(0); // 0-100%
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
@@ -60,7 +62,6 @@ const StarFieldGenerator: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const ffmpegRef = useRef<FFmpeg | null>(null);
-  const [ffmpegLoaded, setFFmpegLoaded] = useState(false);
 
   // Animation settings with motion controls
   const [animationSettings, setAnimationSettings] = useState({
@@ -76,34 +77,6 @@ const StarFieldGenerator: React.FC = () => {
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
   
-  // Initialize FFmpeg
-  useEffect(() => {
-    const loadFFmpeg = async () => {
-      try {
-        console.log('Loading FFmpeg...');
-        const ffmpeg = new FFmpeg();
-        ffmpegRef.current = ffmpeg;
-        
-        ffmpeg.on('log', ({ message }) => {
-          console.log('FFmpeg:', message);
-        });
-        
-        await ffmpeg.load({
-          coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-          wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
-        });
-        
-        setFFmpegLoaded(true);
-        console.log('FFmpeg loaded successfully - MP4 encoding ready');
-        toast.success(t('Video encoder ready', '视频编码器已就绪'));
-      } catch (error) {
-        console.error('Failed to load FFmpeg:', error);
-        toast.error(t('Failed to load video encoder', '视频编码器加载失败'));
-      }
-    };
-    
-    loadFFmpeg();
-  }, []);
   
   // Format time in MM:SS format
   const formatTime = (seconds: number) => {
@@ -551,18 +524,14 @@ const StarFieldGenerator: React.FC = () => {
       toast.error(t('Please process stars first', '请先处理星体'));
       return;
     }
-
-    if (!ffmpegRef.current || !ffmpegLoaded) {
-      toast.error(t('Video encoder not ready. Please wait a moment.', '视频编码器未就绪，请稍等。'));
-      return;
-    }
     
+    setIsGeneratingVideo(true);
     setIsRecording(true);
     setIsAnimating(true);
     setCurrentStep('generating');
     recordedChunksRef.current = [];
     
-    toast.info(t('Generating video...', '生成视频中...'));
+    toast.info(t('Recording animation...', '录制动画中...'));
     
     try {
       const canvas = canvasRef.current;
@@ -572,7 +541,6 @@ const StarFieldGenerator: React.FC = () => {
         throw new Error('Failed to capture canvas stream');
       }
 
-      // Use VP9 codec for better quality
       let options: MediaRecorderOptions = { 
         mimeType: 'video/webm;codecs=vp9',
         videoBitsPerSecond: 10000000
@@ -598,11 +566,23 @@ const StarFieldGenerator: React.FC = () => {
       mediaRecorder.onstop = async () => {
         const webmBlob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
         
+        toast.info(t('Converting to MP4...', '转换为MP4中...'));
+        
         try {
-          toast.info(t('Converting to MP4...', '转换为MP4中...'));
+          // Load FFmpeg on demand
+          if (!ffmpegRef.current) {
+            const ffmpeg = new FFmpeg();
+            ffmpeg.on('log', ({ message }) => {
+              console.log('FFmpeg:', message);
+            });
+            await ffmpeg.load({
+              coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+              wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
+            });
+            ffmpegRef.current = ffmpeg;
+          }
           
           const ffmpeg = ffmpegRef.current;
-          if (!ffmpeg) throw new Error('FFmpeg not available');
           
           await ffmpeg.writeFile('input.webm', await fetchFile(webmBlob));
           
@@ -619,26 +599,18 @@ const StarFieldGenerator: React.FC = () => {
           const data = await ffmpeg.readFile('output.mp4');
           const mp4Blob = new Blob([new Uint8Array(data as Uint8Array)], { type: 'video/mp4' });
           
-          // Download immediately
-          const url = URL.createObjectURL(mp4Blob);
-          const a = document.createElement('a');
-          a.href = url;
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-          a.download = `starfield-animation-${timestamp}.mp4`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+          setVideoBlob(mp4Blob);
           
           await ffmpeg.deleteFile('input.webm');
           await ffmpeg.deleteFile('output.mp4');
           
-          toast.success(t('MP4 video downloaded successfully!', 'MP4视频下载成功！'));
+          toast.success(t('Video ready! Click Download to save.', '视频已就绪！点击下载保存。'));
         } catch (error) {
           console.error('MP4 conversion error:', error);
           toast.error(t('Failed to convert video', '视频转换失败'));
         }
         
+        setIsGeneratingVideo(false);
         setIsRecording(false);
         setIsAnimating(false);
         setCurrentStep('ready');
@@ -646,6 +618,7 @@ const StarFieldGenerator: React.FC = () => {
 
       mediaRecorder.onerror = () => {
         toast.error(t('Recording error occurred', '录制时发生错误'));
+        setIsGeneratingVideo(false);
         setIsRecording(false);
         setIsAnimating(false);
         setCurrentStep('ready');
@@ -653,7 +626,6 @@ const StarFieldGenerator: React.FC = () => {
       
       mediaRecorder.start(100);
       
-      // Auto-stop after duration
       setTimeout(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
@@ -662,12 +634,29 @@ const StarFieldGenerator: React.FC = () => {
       
     } catch (error) {
       console.error('Video generation error:', error);
+      setIsGeneratingVideo(false);
       setIsRecording(false);
       setIsAnimating(false);
       setCurrentStep('ready');
       toast.error(t('Failed to generate video', '视频生成失败'));
     }
-  }, [processedStars, animationSettings.duration, ffmpegLoaded, t]);
+  }, [processedStars, animationSettings.duration, t]);
+
+  const downloadVideo = useCallback(() => {
+    if (!videoBlob) return;
+    
+    const url = URL.createObjectURL(videoBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    a.download = `starfield-animation-${timestamp}.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success(t('MP4 video downloaded!', 'MP4视频已下载！'));
+  }, [videoBlob, t]);
 
   const resetAll = useCallback(() => {
     setStarsOnlyImage(null);
@@ -973,19 +962,27 @@ const StarFieldGenerator: React.FC = () => {
               {t('Reset', '重置')}
             </Button>
             
-            {currentStep === 'ready' && (
+            {currentStep === 'ready' && !videoBlob && (
               <Button
                 onClick={generateVideo}
-                disabled={isRecording || processedStars.length === 0 || !isCanvasReady || !ffmpegLoaded}
-                className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 disabled:opacity-50"
+                disabled={isGeneratingVideo || processedStars.length === 0 || !isCanvasReady}
+                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50"
+              >
+                <Video className="h-4 w-4 mr-2" />
+                {isGeneratingVideo 
+                  ? t('Generating...', '生成中...') 
+                  : t('Generate Video', '生成视频')
+                }
+              </Button>
+            )}
+            
+            {currentStep === 'ready' && videoBlob && (
+              <Button
+                onClick={downloadVideo}
+                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               >
                 <Download className="h-4 w-4 mr-2" />
-                {isRecording 
-                  ? t('Recording...', '录制中...') 
-                  : !ffmpegLoaded 
-                    ? t('Loading encoder...', '加载编码器中...') 
-                    : t('Download Video (MP4)', '下载视频 (MP4)')
-                }
+                {t('Download MP4', '下载MP4')}
               </Button>
             )}
           </div>
