@@ -728,8 +728,8 @@ const StarFieldGenerator: React.FC = () => {
         try {
           const duration = animationSettings.duration;
           
-          // Create stream from recording canvas with controlled frame rate
-          const stream = recordCanvas.captureStream(0); // Manual frame capture
+          // Create stream with automatic frame capture at target FPS
+          const stream = recordCanvas.captureStream(recordFps);
           const videoTracks = stream.getVideoTracks();
           
           if (videoTracks.length === 0) {
@@ -826,34 +826,25 @@ const StarFieldGenerator: React.FC = () => {
           
           toast.success(t(`Recording at ${recordFps}fps...`, `以${recordFps}fps录制...`));
           
-          // Non-blocking frame capture loop - samples frames without interfering with display
+          // Simple non-blocking frame update loop
+          // The stream automatically captures frames at the specified FPS
+          let lastUpdateTime = performance.now();
+          const updateInterval = 1000 / recordFps; // Update recording canvas at target FPS
           const totalFrames = Math.ceil(duration * recordFps);
-          const frameInterval = 1000 / recordFps;
-          const startTime = performance.now();
           
-          const captureFrame = () => {
+          const updateRecordingCanvas = () => {
             if (!recordingActive) return;
             
-            const elapsed = performance.now() - startTime;
-            const targetFrame = Math.floor(elapsed / frameInterval);
+            const now = performance.now();
+            const elapsed = now - lastUpdateTime;
             
-            // Capture frames as needed to maintain target FPS
-            while (frameCount < targetFrame && frameCount < totalFrames && recordingActive) {
-              // Copy frame from display canvas to recording canvas
-              recordCtx.clearRect(0, 0, recordWidth, recordHeight);
+            // Update recording canvas when it's time for next frame
+            if (elapsed >= updateInterval) {
+              // Copy current frame from display to recording canvas
               recordCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
               
-              // Request frame from stream
-              const track = stream.getVideoTracks()[0];
-              if (track && track.readyState === 'live') {
-                // @ts-ignore - requestFrame is not in types but supported in modern browsers
-                if (track.requestFrame) {
-                  // @ts-ignore
-                  track.requestFrame();
-                }
-              }
-              
               frameCount++;
+              lastUpdateTime = now - (elapsed % updateInterval); // Account for drift
               
               // Progress logging
               if (frameCount % 60 === 0 || frameCount === totalFrames) {
@@ -862,14 +853,14 @@ const StarFieldGenerator: React.FC = () => {
               }
             }
             
-            // Continue capturing
-            if (frameCount < totalFrames && recordingActive) {
-              requestAnimationFrame(captureFrame);
+            // Continue updating
+            if (recordingActive) {
+              requestAnimationFrame(updateRecordingCanvas);
             }
           };
           
-          // Start capture loop
-          requestAnimationFrame(captureFrame);
+          // Start update loop
+          requestAnimationFrame(updateRecordingCanvas);
           
           // Auto-stop after duration
           setTimeout(() => {
