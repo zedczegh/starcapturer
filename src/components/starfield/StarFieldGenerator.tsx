@@ -855,44 +855,58 @@ const StarFieldGenerator: React.FC = () => {
       
       if (!ffmpegLoaded) {
         toast.info(t('Loading video encoder...', '加载视频编码器...'));
-        console.log('Loading FFmpeg (~32MB download)...');
+        console.log('=== Loading FFmpeg (~32MB download) ===');
         
         const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
         
-        // Timeout after 60 seconds
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('FFmpeg loading timeout after 60s')), 60000);
-        });
-        
-        const loadPromise = (async () => {
-          console.log('Fetching core JS...');
+        try {
+          // Step 1: Fetch core JS
+          console.log('[1/3] Fetching core JS...');
           const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-          console.log('✓ Core JS loaded');
-          
+          console.log('✓ Core JS URL created:', coreURL.substring(0, 50) + '...');
           setMp4Progress(43);
           
-          console.log('Fetching WASM file (~32MB)...');
+          // Step 2: Fetch WASM
+          console.log('[2/3] Fetching WASM file (~32MB)...');
           const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-          console.log('✓ WASM loaded');
-          
+          console.log('✓ WASM URL created:', wasmURL.substring(0, 50) + '...');
           setMp4Progress(46);
           
-          console.log('Initializing FFmpeg...');
-          await ffmpegRef.current!.load({
+          // Step 3: Initialize FFmpeg with timeout
+          console.log('[3/3] Initializing FFmpeg instance...');
+          console.log('FFmpeg instance exists:', !!ffmpegRef.current);
+          
+          const initPromise = ffmpegRef.current!.load({
             coreURL,
             wasmURL,
           });
+          
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+              console.error('✗ FFmpeg initialization timeout after 30s');
+              reject(new Error('FFmpeg initialization timeout (30s)'));
+            }, 30000); // 30 second timeout for initialization
+          });
+          
+          await Promise.race([initPromise, timeoutPromise]);
+          
           console.log('✓ FFmpeg initialized successfully');
-        })();
-        
-        try {
-          await Promise.race([loadPromise, timeoutPromise]);
           setFfmpegLoaded(true);
           setMp4Progress(50);
-          console.log('✓✓✓ FFmpeg ready for conversion ✓✓✓');
+          console.log('=== FFmpeg Ready ===');
         } catch (error) {
-          console.error('✗ FFmpeg loading failed:', error);
-          throw new Error(`Failed to load encoder: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          console.error('=== FFmpeg Loading Failed ===');
+          console.error('Error type:', error?.constructor?.name);
+          console.error('Error message:', error instanceof Error ? error.message : String(error));
+          console.error('Error stack:', error instanceof Error ? error.stack : 'N/A');
+          
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          toast.error(t(
+            `Encoder failed: ${errorMsg}`, 
+            `编码器失败: ${errorMsg}`
+          ));
+          
+          throw new Error(`FFmpeg load failed: ${errorMsg}`);
         }
       } else {
         setMp4Progress(50);
