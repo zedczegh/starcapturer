@@ -57,20 +57,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const [backgroundImg, setBackgroundImg] = useState<HTMLImageElement | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
 
-  // Create SIZE-based star layers - each star (including spikes) in only ONE layer
+  // Create star layers based on pixel brightness directly from image
   useEffect(() => {
-    if (!starsOnlyImage || stars.length === 0) return;
+    if (!starsOnlyImage) return;
 
     const img = new Image();
     img.onload = () => {
       setImageDimensions({ width: img.width, height: img.height });
       
-      // Sort stars by size to determine layer thresholds
-      const sortedBySizes = [...stars].sort((a, b) => b.size - a.size);
-      const largeThreshold = sortedBySizes[Math.floor(stars.length * 0.3)]?.size || 10; // Top 30%
-      const mediumThreshold = sortedBySizes[Math.floor(stars.length * 0.65)]?.size || 5; // Middle 35%
-      
-      console.log(`Size thresholds - Large: ${largeThreshold}, Medium: ${mediumThreshold}`);
+      console.log('Creating star layers from image...');
       
       // Create three separate canvases
       const largeCanvas = document.createElement('canvas');
@@ -98,67 +93,43 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const mediumData = mediumCtx.createImageData(img.width, img.height);
       const smallData = smallCtx.createImageData(img.width, img.height);
       
-      // Create a map of which layer each pixel belongs to based on nearest star
-      const pixelLayerMap = new Uint8Array(img.width * img.height); // 0=none, 1=large, 2=medium, 3=small
+      let largeCount = 0, mediumCount = 0, smallCount = 0;
       
-      // For each star, assign all its pixels to appropriate layer
-      for (const star of stars) {
-        const starLayer = star.size >= largeThreshold ? 1 : 
-                         star.size >= mediumThreshold ? 2 : 3;
-        
-        // Mark all pixels within star's bounding box
-        const radius = Math.ceil(star.size / 2) + 5; // Extra padding for spikes
-        
-        for (let dy = -radius; dy <= radius; dy++) {
-          for (let dx = -radius; dx <= radius; dx++) {
-            const px = Math.floor(star.x) + dx;
-            const py = Math.floor(star.y) + dy;
-            
-            if (px >= 0 && px < img.width && py >= 0 && py < img.height) {
-              const idx = py * img.width + px;
-              const pixelIdx = idx * 4;
-              
-              // Only assign if pixel has some brightness
-              const luminance = 0.299 * sourceData.data[pixelIdx] + 
-                              0.587 * sourceData.data[pixelIdx + 1] + 
-                              0.114 * sourceData.data[pixelIdx + 2];
-              
-              if (luminance > 30 && pixelLayerMap[idx] === 0) {
-                pixelLayerMap[idx] = starLayer;
-              }
-            }
-          }
-        }
-      }
-      
-      // Split pixels into layers based on the map
+      // Split pixels into layers based on brightness
+      // Brightest pixels = large stars (closest, fastest)
+      // Medium brightness = medium stars
+      // Dimmer pixels = small stars (farthest, slowest)
       for (let i = 0; i < sourceData.data.length; i += 4) {
-        const pixelIndex = i / 4;
-        const layer = pixelLayerMap[pixelIndex];
-        
         const r = sourceData.data[i];
         const g = sourceData.data[i + 1];
         const b = sourceData.data[i + 2];
         const a = sourceData.data[i + 3];
         
-        if (layer === 1) {
-          // Large stars (closest, fastest)
+        // Calculate luminance
+        const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+        
+        // Split by brightness thresholds
+        if (luminance > 200 && a > 0) {
+          // Bright pixels = large stars (closest)
           largeData.data[i] = r;
           largeData.data[i + 1] = g;
           largeData.data[i + 2] = b;
           largeData.data[i + 3] = a;
-        } else if (layer === 2) {
-          // Medium stars
+          largeCount++;
+        } else if (luminance > 100 && a > 0) {
+          // Medium brightness = medium stars
           mediumData.data[i] = r;
           mediumData.data[i + 1] = g;
           mediumData.data[i + 2] = b;
           mediumData.data[i + 3] = a;
-        } else if (layer === 3) {
-          // Small stars (farthest, slowest)
+          mediumCount++;
+        } else if (luminance > 30 && a > 0) {
+          // Dimmer pixels = small stars (farthest)
           smallData.data[i] = r;
           smallData.data[i + 1] = g;
           smallData.data[i + 2] = b;
           smallData.data[i + 3] = a;
+          smallCount++;
         }
       }
       
@@ -168,19 +139,16 @@ const StarField3D: React.FC<StarField3DProps> = ({
       smallCtx.putImageData(smallData, 0, 0);
       
       setStarLayers({
-        bright: largeCanvas,   // Large stars (closest)
+        bright: largeCanvas,   // Large/bright stars (closest)
         medium: mediumCanvas,  // Medium stars
-        dim: smallCanvas       // Small stars (farthest)
+        dim: smallCanvas       // Small/dim stars (farthest)
       });
       
-      const largeCount = stars.filter(s => s.size >= largeThreshold).length;
-      const mediumCount = stars.filter(s => s.size >= mediumThreshold && s.size < largeThreshold).length;
-      const smallCount = stars.filter(s => s.size < mediumThreshold).length;
-      console.log(`Star layers by size: ${largeCount} large, ${mediumCount} medium, ${smallCount} small`);
+      console.log(`Star layers created: ${largeCount} large, ${mediumCount} medium, ${smallCount} small pixels`);
     };
     
     img.src = starsOnlyImage;
-  }, [starsOnlyImage, stars]);
+  }, [starsOnlyImage]);
 
   // Load background image
   useEffect(() => {
