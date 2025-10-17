@@ -639,7 +639,7 @@ const StarFieldGenerator: React.FC = () => {
     setIsGeneratingVideo(true);
     setIsAnimating(false);
     
-    toast.info(t('Preparing to record...', '准备录制...'));
+    // toast.info(t('Preparing to record...', '准备录制...'));
     
     // Wait for any ongoing animation to stop
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -697,7 +697,7 @@ const StarFieldGenerator: React.FC = () => {
           recordHeight = Math.round(sourceHeight * scale);
           recordFps = 30; // Reduce fps for very large resolutions
           bitrate = 50000000; // 50 Mbps
-          toast.info(t(`Recording at optimized resolution: ${recordWidth}x${recordHeight}`, `优化录制分辨率：${recordWidth}x${recordHeight}`));
+          // toast.info(t(`Recording at optimized resolution: ${recordWidth}x${recordHeight}`, `优化录制分辨率：${recordWidth}x${recordHeight}`));
         } else if (megapixels > 2) { // 2-8MP (e.g., 1080p-4K)
           bitrate = 25000000; // 25 Mbps
           recordFps = 60;
@@ -771,7 +771,7 @@ const StarFieldGenerator: React.FC = () => {
             console.log(`Recording stopped. Captured ${frameCount} frames, ${chunks.length} chunks`);
             
             if (chunks.length === 0) {
-              toast.error(t('Recording failed - no data captured', '录制失败 - 未捕获数据'));
+              // toast.error(t('Recording failed - no data captured', '录制失败 - 未捕获数据'));
               setIsGeneratingVideo(false);
               canvasPool.release(recordCanvas);
               return;
@@ -782,7 +782,7 @@ const StarFieldGenerator: React.FC = () => {
             console.log(`Final video: ${sizeMB} MB (${frameCount} frames at ${recordFps}fps)`);
             
             if (blob.size < 10000) {
-              toast.error(t('Recording too small - likely failed', '录制文件过小 - 可能失败'));
+              // toast.error(t('Recording too small - likely failed', '录制文件过小 - 可能失败'));
               setIsGeneratingVideo(false);
               canvasPool.release(recordCanvas);
               return;
