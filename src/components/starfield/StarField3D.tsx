@@ -152,61 +152,33 @@ const StarField3D: React.FC<StarField3DProps> = ({
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Update offsets based on motion type
+    // Update offsets based on motion type - NO RESET, continuous motion
     const speedFactor = speed * 0.5;
     
     if (motionType === 'zoom_in') {
-      // Zoom in - increase scale
+      // Zoom in - increase scale continuously
       offsetsRef.current.background.scale += speedFactor * 0.0005;
       offsetsRef.current.layer3.scale += speedFactor * 0.001;
       offsetsRef.current.layer2.scale += speedFactor * 0.002;
       offsetsRef.current.layer1.scale += speedFactor * 0.003;
-      
-      // Reset if too zoomed
-      if (offsetsRef.current.layer1.scale > 1.8) {
-        Object.keys(offsetsRef.current).forEach(key => {
-          offsetsRef.current[key as keyof typeof offsetsRef.current].scale = 1;
-        });
-      }
     } else if (motionType === 'zoom_out') {
-      // Zoom out - decrease scale
+      // Zoom out - decrease scale continuously
       offsetsRef.current.background.scale -= speedFactor * 0.0005;
       offsetsRef.current.layer3.scale -= speedFactor * 0.001;
       offsetsRef.current.layer2.scale -= speedFactor * 0.002;
       offsetsRef.current.layer1.scale -= speedFactor * 0.003;
-      
-      // Reset if too zoomed out
-      if (offsetsRef.current.layer1.scale < 0.5) {
-        Object.keys(offsetsRef.current).forEach(key => {
-          offsetsRef.current[key as keyof typeof offsetsRef.current].scale = 1;
-        });
-      }
     } else if (motionType === 'pan_left') {
-      // Pan left - parallax movement
+      // Pan left - parallax movement continuously
       offsetsRef.current.background.x -= speedFactor * 0.2;
       offsetsRef.current.layer3.x -= speedFactor * 0.5;
       offsetsRef.current.layer2.x -= speedFactor * 1.0;
       offsetsRef.current.layer1.x -= speedFactor * 1.5;
-      
-      // Wrap around
-      if (offsetsRef.current.layer1.x < -canvas.width * 0.3) {
-        Object.keys(offsetsRef.current).forEach(key => {
-          offsetsRef.current[key as keyof typeof offsetsRef.current].x = 0;
-        });
-      }
     } else if (motionType === 'pan_right') {
-      // Pan right - parallax movement
+      // Pan right - parallax movement continuously
       offsetsRef.current.background.x += speedFactor * 0.2;
       offsetsRef.current.layer3.x += speedFactor * 0.5;
       offsetsRef.current.layer2.x += speedFactor * 1.0;
       offsetsRef.current.layer1.x += speedFactor * 1.5;
-      
-      // Wrap around
-      if (offsetsRef.current.layer1.x > canvas.width * 0.3) {
-        Object.keys(offsetsRef.current).forEach(key => {
-          offsetsRef.current[key as keyof typeof offsetsRef.current].x = 0;
-        });
-      }
     }
     
     // Draw background layer (nebula) - maintain aspect ratio
@@ -255,6 +227,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
   useEffect(() => {
     if (isAnimating) {
+      // Reset offsets when animation starts
+      offsetsRef.current = { 
+        layer1: { x: 0, y: 0, scale: 1 },
+        layer2: { x: 0, y: 0, scale: 1 },
+        layer3: { x: 0, y: 0, scale: 1 },
+        background: { x: 0, y: 0, scale: 1 }
+      };
       animate();
     } else {
       if (animationFrameRef.current) {
