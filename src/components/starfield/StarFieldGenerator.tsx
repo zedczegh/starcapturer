@@ -544,19 +544,8 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const generateVideo = useCallback(() => {
-    if (processedStars.length === 0) {
+    if (processedStars.length === 0 || !canvasRef.current) {
       toast.error(t('Please process stars first', '请先处理星体'));
-      return;
-    }
-
-    if (!canvasRef.current) {
-      toast.error(t('Preview not ready. Please wait a moment and try again.', '预览未准备好，请稍等片刻后重试。'));
-      return;
-    }
-
-    // Check canvas has valid dimensions
-    if (canvasRef.current.width === 0 || canvasRef.current.height === 0) {
-      toast.error(t('Canvas dimensions invalid. Please try reprocessing the images.', '画布尺寸无效，请重新处理图像。'));
       return;
     }
     
@@ -1027,7 +1016,7 @@ const StarFieldGenerator: React.FC = () => {
             {currentStep === 'ready' && (
               <Button
                 onClick={generateVideo}
-                disabled={isRecording || processedStars.length === 0}
+                disabled={isRecording || processedStars.length === 0 || !isCanvasReady}
                 className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 disabled:opacity-50"
               >
                 <Download className="h-4 w-4 mr-2" />
