@@ -86,16 +86,35 @@ const StarFieldGenerator: React.FC = () => {
         const ffmpeg = new FFmpeg();
         ffmpegRef.current = ffmpeg;
         
+        // Add logging callbacks
+        ffmpeg.on('log', ({ message }) => {
+          console.log('[FFmpeg Log]:', message);
+        });
+        
+        ffmpeg.on('progress', ({ progress, time }) => {
+          console.log('[FFmpeg Progress]:', `${Math.round(progress * 100)}% - Time: ${time}`);
+        });
+        
         try {
+          console.log('Starting FFmpeg load...');
           const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+          
+          const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
+          console.log('Core URL loaded');
+          
+          const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+          console.log('WASM URL loaded');
+          
           await ffmpeg.load({
-            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+            coreURL,
+            wasmURL,
           });
+          
           setFfmpegLoaded(true);
-          console.log('FFmpeg loaded successfully');
+          console.log('✓ FFmpeg loaded successfully and ready');
         } catch (error) {
-          console.error('Failed to load FFmpeg:', error);
+          console.error('✗ Failed to load FFmpeg:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
         }
       }
     };
@@ -797,18 +816,30 @@ const StarFieldGenerator: React.FC = () => {
       
       // Step 2: Load FFmpeg if needed (40-50%)
       setMp4Progress(40);
+      console.log('FFmpeg loaded status:', ffmpegLoaded);
+      
       if (!ffmpegLoaded && ffmpegRef.current) {
         toast.info(t('Loading video encoder...', '加载视频编码器...'));
+        console.log('Loading FFmpeg for conversion...');
+        
         try {
           const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+          
+          console.log('Fetching core and wasm files...');
+          const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
+          const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+          console.log('Core and WASM URLs ready');
+          
           await ffmpegRef.current.load({
-            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+            coreURL,
+            wasmURL,
           });
+          
           setFfmpegLoaded(true);
           setMp4Progress(50);
+          console.log('✓ FFmpeg loaded for conversion');
         } catch (error) {
-          console.error('Failed to load FFmpeg:', error);
+          console.error('✗ Failed to load FFmpeg for conversion:', error);
           toast.error(t('Failed to load video encoder', '视频编码器加载失败'));
           setIsEncodingMP4(false);
           setIsGeneratingVideo(false);
@@ -817,9 +848,11 @@ const StarFieldGenerator: React.FC = () => {
         }
       } else {
         setMp4Progress(50);
+        console.log('FFmpeg already loaded, skipping load step');
       }
       
       if (!ffmpegRef.current) {
+        console.error('✗ FFmpeg reference not available');
         toast.error(t('Video encoder not available', '视频编码器不可用'));
         setIsEncodingMP4(false);
         setIsGeneratingVideo(false);
@@ -829,49 +862,71 @@ const StarFieldGenerator: React.FC = () => {
       
       // Step 3: Convert WebM to MP4 (50-100%)
       toast.info(t('Converting to MP4...', '转换为MP4...'));
+      console.log('Starting MP4 conversion...');
       const ffmpeg = ffmpegRef.current;
       
-      // Write WebM to FFmpeg filesystem
-      setMp4Progress(60);
-      const webmData = await fetchFile(webmBlob);
-      await ffmpeg.writeFile('input.webm', webmData);
+      // Set up progress tracking for conversion
+      let conversionProgress = 50;
+      const progressInterval = setInterval(() => {
+        if (conversionProgress < 90) {
+          conversionProgress += 2;
+          setMp4Progress(conversionProgress);
+        }
+      }, 500);
       
-      setMp4Progress(70);
-      
-      // Convert WebM to MP4
-      await ffmpeg.exec([
-        '-i', 'input.webm',
-        '-c:v', 'libx264',
-        '-preset', 'medium',
-        '-crf', '23',
-        '-pix_fmt', 'yuv420p',
-        '-movflags', '+faststart',
-        'output.mp4'
-      ]);
-      
-      setMp4Progress(90);
-      
-      // Read the output MP4
-      const data = await ffmpeg.readFile('output.mp4') as Uint8Array;
-      const buffer = new Uint8Array(data).buffer;
-      const mp4Blob = new Blob([buffer], { type: 'video/mp4' });
-      
-      console.log(`MP4 encoded: ${mp4Blob.size} bytes`);
-      
-      // Clean up FFmpeg filesystem
       try {
-        await ffmpeg.deleteFile('input.webm');
-        await ffmpeg.deleteFile('output.mp4');
-      } catch (e) {
-        // Ignore cleanup errors
+        // Write WebM to FFmpeg filesystem
+        console.log('Writing WebM to FFmpeg filesystem...');
+        const webmData = await fetchFile(webmBlob);
+        await ffmpeg.writeFile('input.webm', webmData);
+        console.log('✓ WebM written to FFmpeg filesystem');
+        
+        setMp4Progress(60);
+        
+        // Convert WebM to MP4
+        console.log('Executing FFmpeg conversion command...');
+        await ffmpeg.exec([
+          '-i', 'input.webm',
+          '-c:v', 'libx264',
+          '-preset', 'medium',
+          '-crf', '23',
+          '-pix_fmt', 'yuv420p',
+          '-movflags', '+faststart',
+          'output.mp4'
+        ]);
+        console.log('✓ FFmpeg conversion completed');
+        
+        clearInterval(progressInterval);
+        setMp4Progress(90);
+        
+        // Read the output MP4
+        console.log('Reading converted MP4 file...');
+        const data = await ffmpeg.readFile('output.mp4') as Uint8Array;
+        const buffer = new Uint8Array(data).buffer;
+        const mp4Blob = new Blob([buffer], { type: 'video/mp4' });
+        
+        console.log(`✓ MP4 encoded successfully: ${mp4Blob.size} bytes`);
+        
+        // Clean up FFmpeg filesystem
+        try {
+          console.log('Cleaning up FFmpeg filesystem...');
+          await ffmpeg.deleteFile('input.webm');
+          await ffmpeg.deleteFile('output.mp4');
+          console.log('✓ FFmpeg filesystem cleaned up');
+        } catch (e) {
+          console.warn('Cleanup warning:', e);
+        }
+        
+        setMp4Progress(100);
+        setMp4Blob(mp4Blob);
+        setIsGeneratingVideo(false);
+        setIsAnimating(false);
+        setAnimationProgress(0);
+        toast.success(t('MP4 ready for download!', 'MP4准备下载！'));
+      } catch (conversionError) {
+        clearInterval(progressInterval);
+        throw conversionError;
       }
-      
-      setMp4Progress(100);
-      setMp4Blob(mp4Blob);
-      setIsGeneratingVideo(false);
-      setIsAnimating(false);
-      setAnimationProgress(0);
-      toast.success(t('MP4 ready for download!', 'MP4准备下载！'));
       
     } catch (error) {
       console.error('MP4 encoding error:', error);
@@ -1196,28 +1251,57 @@ const StarFieldGenerator: React.FC = () => {
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-3">
-            <Button
-              onClick={resetAll}
-              variant="outline"
-              className="flex-1 border-cosmic-700/50 hover:bg-cosmic-800/50"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              {t('Reset', '重置')}
-            </Button>
-            
-            {currentStep === 'ready' && (
+          <div className="space-y-3">
+            <div className="flex gap-3">
               <Button
-                onClick={initiateDownload}
-                disabled={isGeneratingVideo || processedStars.length === 0}
-                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
+                onClick={resetAll}
+                variant="outline"
+                className="flex-1 border-cosmic-700/50 hover:bg-cosmic-800/50"
               >
-                <Download className="h-4 w-4 mr-2" />
-                {isGeneratingVideo 
-                  ? t('Recording...', '录制中...') 
-                  : t('Download Video', '下载视频')
-                }
+                <RotateCcw className="h-4 w-4 mr-2" />
+                {t('Reset', '重置')}
               </Button>
+              
+              {currentStep === 'ready' && (
+                <Button
+                  onClick={initiateDownload}
+                  disabled={isGeneratingVideo || processedStars.length === 0}
+                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {isGeneratingVideo 
+                    ? t('Recording...', '录制中...') 
+                    : t('Download Video', '下载视频')
+                  }
+                </Button>
+              )}
+            </div>
+            
+            {/* MP4 Encoding Progress Bar */}
+            {isEncodingMP4 && mp4Progress > 0 && (
+              <Card className="bg-cosmic-900/50 border-cosmic-700/50">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-cosmic-200 font-medium">
+                      {mp4Progress < 40 
+                        ? t('Recording video...', '录制视频...')
+                        : mp4Progress < 50
+                        ? t('Loading encoder...', '加载编码器...')
+                        : t('Converting to MP4...', '转换为MP4...')
+                      }
+                    </span>
+                    <span className="text-cosmic-300 font-semibold">
+                      {Math.round(mp4Progress)}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-cosmic-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-green-600 via-emerald-500 to-green-600 transition-all duration-300 animate-pulse"
+                      style={{ width: `${mp4Progress}%` }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
