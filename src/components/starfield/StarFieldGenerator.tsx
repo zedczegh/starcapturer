@@ -53,7 +53,6 @@ const StarFieldGenerator: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'ready' | 'generating'>('upload');
   const [animationProgress, setAnimationProgress] = useState(0);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
-  const [resetKey, setResetKey] = useState(0);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
@@ -513,7 +512,7 @@ const StarFieldGenerator: React.FC = () => {
   const handleReplay = useCallback(() => {
     setIsAnimating(false);
     setAnimationProgress(0);
-    setResetKey(prev => prev + 1); // Force StarField3D to remount
+    // Force a reset by toggling with a delay
     setTimeout(() => {
       setIsAnimating(true);
     }, 50);
@@ -911,7 +910,6 @@ const StarFieldGenerator: React.FC = () => {
             <CardContent className="h-[500px] p-0">
               <div className="space-y-2">
                 <StarField3D
-                  key={resetKey}
                   stars={processedStars}
                   settings={animationSettings}
                   isAnimating={isAnimating}
