@@ -9,6 +9,7 @@ import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon } f
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import StarField3D from './StarField3D';
+import UTIF from 'utif';
 
 interface ProcessedStarData {
   x: number;
@@ -59,7 +60,35 @@ const StarFieldGenerator: React.FC = () => {
     depthMultiplier: 1.0
   });
 
-  const handleStarsOnlyUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const decodeTiffToDataUrl = useCallback((arrayBuffer: ArrayBuffer): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      try {
+        const ifds = UTIF.decode(arrayBuffer);
+        UTIF.decodeImage(arrayBuffer, ifds[0]);
+        const rgba = UTIF.toRGBA8(ifds[0]);
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = ifds[0].width;
+        canvas.height = ifds[0].height;
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+        
+        const imageData = ctx.createImageData(canvas.width, canvas.height);
+        imageData.data.set(rgba);
+        ctx.putImageData(imageData, 0, 0);
+        
+        resolve(canvas.toDataURL('image/png'));
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }, []);
+
+  const handleStarsOnlyUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -82,27 +111,58 @@ const StarFieldGenerator: React.FC = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setStarsOnlyImage(result);
-      
-      const img = new Image();
-      img.onload = () => {
-        setStarsOnlyElement(img);
-        toast.success(t('Stars only image uploaded', '星体图像已上传'));
+    const isTiff = fileName.endsWith('.tiff') || fileName.endsWith('.tif');
+    
+    if (isTiff) {
+      // Handle TIFF files with UTIF decoder
+      const arrayBufferReader = new FileReader();
+      arrayBufferReader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          const dataUrl = await decodeTiffToDataUrl(arrayBuffer);
+          setStarsOnlyImage(dataUrl);
+          
+          const img = new Image();
+          img.onload = () => {
+            setStarsOnlyElement(img);
+            toast.success(t('Stars only image uploaded', '星体图像已上传'));
+          };
+          img.onerror = () => {
+            toast.error(t('Failed to load image', '图像加载失败'));
+            setStarsOnlyImage(null);
+            if (starsFileInputRef.current) starsFileInputRef.current.value = '';
+          };
+          img.src = dataUrl;
+        } catch (error) {
+          toast.error(t('Failed to decode TIFF image', '无法解码TIFF图像'));
+          if (starsFileInputRef.current) starsFileInputRef.current.value = '';
+        }
       };
-      img.onerror = () => {
-        toast.error(t('Failed to load image', '图像加载失败'));
-        setStarsOnlyImage(null);
-        if (starsFileInputRef.current) starsFileInputRef.current.value = '';
+      arrayBufferReader.readAsArrayBuffer(file);
+    } else {
+      // Handle standard image formats
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setStarsOnlyImage(result);
+        
+        const img = new Image();
+        img.onload = () => {
+          setStarsOnlyElement(img);
+          toast.success(t('Stars only image uploaded', '星体图像已上传'));
+        };
+        img.onerror = () => {
+          toast.error(t('Failed to load image', '图像加载失败'));
+          setStarsOnlyImage(null);
+          if (starsFileInputRef.current) starsFileInputRef.current.value = '';
+        };
+        img.src = result;
       };
-      img.src = result;
-    };
-    reader.readAsDataURL(file);
-  }, [t]);
+      reader.readAsDataURL(file);
+    }
+  }, [t, decodeTiffToDataUrl]);
 
-  const handleStarlessUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStarlessUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -125,25 +185,56 @@ const StarFieldGenerator: React.FC = () => {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setStarlessImage(result);
-      
-      const img = new Image();
-      img.onload = () => {
-        setStarlessElement(img);
-        toast.success(t('Starless image uploaded', '无星图像已上传'));
+    const isTiff = fileName.endsWith('.tiff') || fileName.endsWith('.tif');
+    
+    if (isTiff) {
+      // Handle TIFF files with UTIF decoder
+      const arrayBufferReader = new FileReader();
+      arrayBufferReader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          const dataUrl = await decodeTiffToDataUrl(arrayBuffer);
+          setStarlessImage(dataUrl);
+          
+          const img = new Image();
+          img.onload = () => {
+            setStarlessElement(img);
+            toast.success(t('Starless image uploaded', '无星图像已上传'));
+          };
+          img.onerror = () => {
+            toast.error(t('Failed to load image', '图像加载失败'));
+            setStarlessImage(null);
+            if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
+          };
+          img.src = dataUrl;
+        } catch (error) {
+          toast.error(t('Failed to decode TIFF image', '无法解码TIFF图像'));
+          if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
+        }
       };
-      img.onerror = () => {
-        toast.error(t('Failed to load image', '图像加载失败'));
-        setStarlessImage(null);
-        if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
+      arrayBufferReader.readAsArrayBuffer(file);
+    } else {
+      // Handle standard image formats
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setStarlessImage(result);
+        
+        const img = new Image();
+        img.onload = () => {
+          setStarlessElement(img);
+          toast.success(t('Starless image uploaded', '无星图像已上传'));
+        };
+        img.onerror = () => {
+          toast.error(t('Failed to load image', '图像加载失败'));
+          setStarlessImage(null);
+          if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
+        };
+        img.src = result;
       };
-      img.src = result;
-    };
-    reader.readAsDataURL(file);
-  }, [t]);
+      reader.readAsDataURL(file);
+    }
+  }, [t, decodeTiffToDataUrl]);
 
   // Generate depth map from starless image
   const generateDepthMap = useCallback((img: HTMLImageElement): HTMLCanvasElement => {
