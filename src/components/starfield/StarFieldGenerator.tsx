@@ -519,20 +519,31 @@ const StarFieldGenerator: React.FC = () => {
       setIsAnimating(true);
       setCurrentStep('generating');
       
-      // Get the canvas stream
-      const stream = canvasRef.current.captureStream(60); // 60 FPS
+      toast.success(t('Recording started! Animation will play and download automatically.', '录制开始！动画将播放并自动下载。'));
       
-      // Create MediaRecorder with better codec support
-      let options: MediaRecorderOptions = { mimeType: 'video/webm;codecs=vp9' };
+      // Get the canvas stream at full resolution
+      const stream = canvasRef.current.captureStream(60); // 60 FPS for smooth video
+      
+      // Use VP9 codec for better quality and compression
+      let options: MediaRecorderOptions = { 
+        mimeType: 'video/webm;codecs=vp9',
+        videoBitsPerSecond: 8000000 // 8 Mbps for high quality
+      };
       
       // Fallback to vp8 if vp9 not supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options = { mimeType: 'video/webm;codecs=vp8' };
+        options = { 
+          mimeType: 'video/webm;codecs=vp8',
+          videoBitsPerSecond: 8000000
+        };
       }
       
-      // Fallback to default if neither vp9 nor vp8 supported
+      // Fallback to default if neither supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options = { mimeType: 'video/webm' };
+        options = { 
+          mimeType: 'video/webm',
+          videoBitsPerSecond: 8000000
+        };
       }
       
       const mediaRecorder = new MediaRecorder(stream, options);
@@ -548,36 +559,38 @@ const StarFieldGenerator: React.FC = () => {
         const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         
-        // Create download link
+        // Create download link with descriptive filename
         const a = document.createElement('a');
         a.href = url;
-        a.download = `starfield-3d-${Date.now()}.webm`;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        a.download = `starfield-animation-${timestamp}.webm`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
+        toast.success(t('Video downloaded successfully!', '视频下载成功！'));
         setIsRecording(false);
         setIsAnimating(false);
         setCurrentStep('ready');
       };
       
       // Start recording
-      mediaRecorder.start();
+      mediaRecorder.start(100); // Collect data every 100ms
       
-      // Stop recording after the specified duration
+      // Stop recording after the specified duration (add 200ms buffer)
       setTimeout(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
         }
-      }, animationSettings.duration * 1000);
+      }, (animationSettings.duration * 1000) + 200);
       
     } catch (error) {
-      console.error('Error generating video:', error);
+      console.error('Error recording video:', error);
       setIsRecording(false);
       setIsAnimating(false);
       setCurrentStep('ready');
-      toast.error(t('Failed to generate video. Please try again.', '生成视频失败，请重试。'));
+      toast.error(t('Failed to record video. Please try again.', '录制视频失败，请重试。'));
     }
   }, [processedStars, animationSettings.duration, t]);
 
@@ -868,7 +881,7 @@ const StarFieldGenerator: React.FC = () => {
                 className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700"
               >
                 <Download className="h-4 w-4 mr-2" />
-                {isRecording ? t('Generating...', '生成中...') : t('Generate Video', '生成视频')}
+                {isRecording ? t('Downloading...', '下载中...') : t('Download Video', '下载视频')}
               </Button>
             )}
           </div>

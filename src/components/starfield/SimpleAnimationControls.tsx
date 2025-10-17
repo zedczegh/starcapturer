@@ -135,7 +135,7 @@ const SimpleAnimationControls: React.FC<SimpleAnimationControlsProps> = ({
             disabled={isRecording || disabled}
             className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700"
           >
-            {isRecording ? t('Generating Video...', '生成视频中...') : t('Generate Video', '生成视频')}
+            {isRecording ? t('Downloading Video...', '下载视频中...') : t('Download Video', '下载视频')}
           </Button>
         </div>
       </CardContent>
