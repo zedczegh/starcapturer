@@ -26,6 +26,7 @@ interface StarField3DProps {
   isAnimating: boolean;
   isRecording: boolean;
   backgroundImage?: string | null;
+  onCanvasReady?: (canvas: HTMLCanvasElement) => void;
 }
 
 const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: boolean }> = ({ 
@@ -175,8 +176,20 @@ const StarField3D: React.FC<StarField3DProps> = ({
   settings, 
   isAnimating,
   isRecording,
-  backgroundImage
+  backgroundImage,
+  onCanvasReady
 }) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    // Find the canvas element created by React Three Fiber
+    const canvas = document.querySelector('canvas');
+    if (canvas && onCanvasReady) {
+      canvasRef.current = canvas;
+      onCanvasReady(canvas);
+    }
+  }, [onCanvasReady]);
+
   if (stars.length === 0) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-cosmic-950 rounded-b-lg">
@@ -191,32 +204,38 @@ const StarField3D: React.FC<StarField3DProps> = ({
     <div className="w-full h-full relative bg-cosmic-950 rounded-b-lg overflow-hidden">
       {/* Background layer (starless nebula) */}
       {backgroundImage && (
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden z-0">
           <img 
             src={backgroundImage} 
             alt="Background nebula"
-            className="w-full h-full object-cover opacity-50"
+            className="w-full h-full object-cover opacity-60"
+            style={{ mixBlendMode: 'lighten' }}
           />
         </div>
       )}
 
       {/* 3D Star layer */}
-      <Canvas camera={{ position: [0, 0, 50], fov: settings.fieldOfView || 75 }}>
-        <color attach="background" args={['transparent']} />
-        
-        {/* Camera controls */}
-        <OrbitControls 
-          enableZoom={true}
-          enablePan={false}
-          enableRotate={!isAnimating}
-          autoRotate={false}
-        />
-        
-        {/* Main star field - stars preserved exactly as they are */}
-        <StarPoints stars={stars} settings={settings} isAnimating={isAnimating} />
-        
-        <CameraController fov={settings.fieldOfView || 75} />
-      </Canvas>
+      <div className="absolute inset-0 z-10">
+        <Canvas 
+          camera={{ position: [0, 0, 50], fov: settings.fieldOfView || 75 }}
+          gl={{ preserveDrawingBuffer: true, alpha: true }}
+        >
+          <color attach="background" args={['#000000']} />
+          
+          {/* Camera controls */}
+          <OrbitControls 
+            enableZoom={true}
+            enablePan={false}
+            enableRotate={!isAnimating}
+            autoRotate={false}
+          />
+          
+          {/* Main star field - stars preserved exactly as they are */}
+          <StarPoints stars={stars} settings={settings} isAnimating={isAnimating} />
+          
+          <CameraController fov={settings.fieldOfView || 75} />
+        </Canvas>
+      </div>
       
       {/* Recording indicator */}
       {isRecording && (

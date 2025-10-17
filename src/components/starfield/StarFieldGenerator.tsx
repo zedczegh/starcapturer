@@ -50,6 +50,9 @@ const StarFieldGenerator: React.FC = () => {
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
 
   // Animation settings with motion controls
   const [animationSettings, setAnimationSettings] = useState({
@@ -408,6 +411,10 @@ const StarFieldGenerator: React.FC = () => {
     }
   }, [starsOnlyElement, starlessElement, extractStarPositions, generateDepthMap, t]);
 
+  const handleCanvasReady = useCallback((canvas: HTMLCanvasElement) => {
+    canvasRef.current = canvas;
+  }, []);
+
   const toggleAnimation = useCallback(() => {
     setIsAnimating(prev => !prev);
   }, []);
@@ -417,17 +424,80 @@ const StarFieldGenerator: React.FC = () => {
       toast.error(t('Please process stars first', '请先处理星体'));
       return;
     }
+
+    if (!canvasRef.current) {
+      toast.error(t('Canvas not ready. Please wait and try again.', '画布未准备好，请稍后重试。'));
+      return;
+    }
     
-    setIsRecording(true);
-    setCurrentStep('generating');
-    toast.success(t('Generating combined video...', '生成合成视频...'));
-    
-    // Simulate video generation process
-    setTimeout(() => {
+    try {
+      recordedChunksRef.current = [];
+      setIsRecording(true);
+      setIsAnimating(true);
+      setCurrentStep('generating');
+      toast.success(t('Recording video...', '正在录制视频...'));
+      
+      // Get the canvas stream
+      const stream = canvasRef.current.captureStream(60); // 60 FPS
+      
+      // Create MediaRecorder with better codec support
+      let options: MediaRecorderOptions = { mimeType: 'video/webm;codecs=vp9' };
+      
+      // Fallback to vp8 if vp9 not supported
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options = { mimeType: 'video/webm;codecs=vp8' };
+      }
+      
+      // Fallback to default if neither vp9 nor vp8 supported
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options = { mimeType: 'video/webm' };
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, options);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create download link
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `starfield-3d-${Date.now()}.webm`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        setIsRecording(false);
+        setIsAnimating(false);
+        setCurrentStep('ready');
+        toast.success(t('Video downloaded successfully!', '视频下载成功！'));
+      };
+      
+      // Start recording
+      mediaRecorder.start();
+      
+      // Stop recording after the specified duration
+      setTimeout(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+        }
+      }, animationSettings.duration * 1000);
+      
+    } catch (error) {
+      console.error('Error generating video:', error);
       setIsRecording(false);
+      setIsAnimating(false);
       setCurrentStep('ready');
-      toast.success(t('3D star field video generated successfully!', '3D星场视频生成成功！'));
-    }, animationSettings.duration * 1000);
+      toast.error(t('Failed to generate video. Please try again.', '生成视频失败，请重试。'));
+    }
   }, [processedStars, animationSettings.duration, t]);
 
   const resetAll = useCallback(() => {
@@ -713,6 +783,7 @@ const StarFieldGenerator: React.FC = () => {
                 isAnimating={isAnimating}
                 isRecording={isRecording}
                 backgroundImage={starlessImage}
+                onCanvasReady={handleCanvasReady}
               />
             </CardContent>
           </Card>
