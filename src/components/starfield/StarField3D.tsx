@@ -17,18 +17,15 @@ interface StarData {
 interface StarField3DProps {
   stars: StarData[];
   settings: {
-    type: string;
-    speed: number;
-    direction: string;
-    movement: string;
-    duration: number;
-    depth: number;
-    brightness: number;
-    fieldOfView: number;
+    motionType?: string;
+    speed?: number;
+    duration?: number;
+    fieldOfView?: number;
+    depthMultiplier?: number;
   };
   isAnimating: boolean;
   isRecording: boolean;
-  separatedImages?: { starImage: string; nebulaImage: string } | null;
+  backgroundImage?: string | null;
 }
 
 const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: boolean }> = ({ 
@@ -36,8 +33,7 @@ const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: bool
   settings, 
   isAnimating 
 }) => {
-  const meshRef = useRef<THREE.Points>(null);
-  const { camera } = useThree();
+  const pointsRef = useRef<THREE.Points>(null);
 
   const [positions, colors, sizes] = useMemo(() => {
     const positions = new Float32Array(stars.length * 3);
@@ -49,77 +45,85 @@ const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: bool
       positions[i * 3 + 1] = star.y;
       positions[i * 3 + 2] = star.z;
 
-      // Convert HSL color to RGB
       const color = new THREE.Color(star.color3d);
       colors[i * 3] = color.r;
       colors[i * 3 + 1] = color.g;
       colors[i * 3 + 2] = color.b;
 
-      // Improved size calculation for better visual distribution
       const distanceScale = Math.max(0.3, 1 - (star.z / 150));
-      const brightnessScale = Math.pow(star.brightness, 0.7); // Non-linear brightness scaling
-      const sizeScale = Math.max(0.5, Math.min(3, star.size * 0.3)); // Limit size range
+      const brightnessScale = Math.pow(star.brightness, 0.7);
+      const sizeScale = Math.max(0.5, Math.min(3, star.size * 0.3));
       
-      sizes[i] = sizeScale * settings.brightness * distanceScale * brightnessScale * 2;
+      sizes[i] = sizeScale * distanceScale * brightnessScale * 2;
     });
 
     return [positions, colors, sizes];
-  }, [stars, settings.brightness]);
+  }, [stars]);
 
   useFrame((state) => {
-    if (!meshRef.current || !isAnimating) return;
+    if (!pointsRef.current || !isAnimating) return;
 
-    const time = state.clock.getElapsedTime();
-    const positions = meshRef.current.geometry.attributes.position.array as Float32Array;
-
-    stars.forEach((star, i) => {
-      const baseIndex = i * 3;
-      
-      switch (settings.movement) {
-        case 'zoom':
-          // Improved zoom with natural star distribution
-          const direction = settings.direction === 'forward' ? 1 : -1;
-          const starDepthFactor = star.z / 100; // Normalize depth
-          const speedVariation = 0.8 + (star.brightness * 0.4); // Brighter stars move slightly faster
-          
-          positions[baseIndex + 2] = star.z - (time * settings.speed * 8 * direction * speedVariation) % (settings.depth * 1.5);
-          
-          // Smooth wraparound with staggered reset positions
-          const resetThreshold = -60 - (i % 20); // Stagger reset positions
-          const respawnDistance = settings.depth + 20 + (i % 30);
-          
-          if (positions[baseIndex + 2] < resetThreshold) {
-            positions[baseIndex + 2] = respawnDistance;
-          } else if (positions[baseIndex + 2] > respawnDistance) {
-            positions[baseIndex + 2] = resetThreshold;
-          }
-          break;
-          
-        case 'orbit':
-          // Rotate stars around center
-          const angle = time * settings.speed * 0.1;
-          const radius = Math.sqrt(star.x * star.x + star.y * star.y);
-          const originalAngle = Math.atan2(star.y, star.x);
-          positions[baseIndex] = Math.cos(originalAngle + angle) * radius;
-          positions[baseIndex + 1] = Math.sin(originalAngle + angle) * radius;
-          break;
-          
-        case 'drift':
-          // Slow drift movement
-          positions[baseIndex] = star.x + Math.sin(time * settings.speed * 0.1 + i) * 2;
-          positions[baseIndex + 1] = star.y + Math.cos(time * settings.speed * 0.1 + i) * 2;
-          break;
-          
-        default:
-          break;
+    const { motionType = 'zoom_in', speed = 1 } = settings;
+    const positions = pointsRef.current.geometry.attributes.position;
+    
+    // Apply motion based on type
+    if (motionType === 'zoom_in') {
+      // Fly forward - stars get closer
+      for (let i = 0; i < positions.count; i++) {
+        const z = positions.getZ(i);
+        let newZ = z - speed * 0.5;
+        
+        // Reset stars that pass by
+        if (newZ < -50) newZ = 100;
+        
+        positions.setZ(i, newZ);
       }
-    });
-
-    meshRef.current.geometry.attributes.position.needsUpdate = true;
+    } else if (motionType === 'zoom_out') {
+      // Fly backward - stars get farther
+      for (let i = 0; i < positions.count; i++) {
+        const z = positions.getZ(i);
+        let newZ = z + speed * 0.5;
+        
+        // Reset stars that go too far
+        if (newZ > 100) newZ = -50;
+        
+        positions.setZ(i, newZ);
+      }
+    } else if (motionType === 'pan_left') {
+      // Pan left - move camera right, stars left
+      for (let i = 0; i < positions.count; i++) {
+        const x = positions.getX(i);
+        const z = positions.getZ(i);
+        const depthFactor = (100 - z) / 100;
+        
+        let newX = x - speed * 0.3 * depthFactor;
+        
+        // Wrap around
+        if (newX < -100) newX = 100;
+        
+        positions.setX(i, newX);
+      }
+    } else if (motionType === 'pan_right') {
+      // Pan right - move camera left, stars right
+      for (let i = 0; i < positions.count; i++) {
+        const x = positions.getX(i);
+        const z = positions.getZ(i);
+        const depthFactor = (100 - z) / 100;
+        
+        let newX = x + speed * 0.3 * depthFactor;
+        
+        // Wrap around
+        if (newX > 100) newX = -100;
+        
+        positions.setX(i, newX);
+      }
+    }
+    
+    positions.needsUpdate = true;
   });
 
   return (
-    <points ref={meshRef}>
+    <points ref={pointsRef}>
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
@@ -153,73 +157,80 @@ const StarPoints: React.FC<{ stars: StarData[]; settings: any; isAnimating: bool
   );
 };
 
-const CameraController: React.FC<{ settings: any }> = ({ settings }) => {
+const CameraController: React.FC<{ fov: number }> = ({ fov }) => {
   const { camera } = useThree();
 
   useEffect(() => {
     if ('fov' in camera) {
-      camera.fov = settings.fieldOfView;
+      camera.fov = fov;
       camera.updateProjectionMatrix();
     }
-  }, [camera, settings.fieldOfView]);
+  }, [camera, fov]);
 
   return null;
 };
 
-const StarField3D: React.FC<StarField3DProps> = ({ stars, settings, isAnimating, isRecording, separatedImages }) => {
+const StarField3D: React.FC<StarField3DProps> = ({ 
+  stars, 
+  settings, 
+  isAnimating,
+  isRecording,
+  backgroundImage
+}) => {
   if (stars.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-cosmic-950 to-cosmic-900 rounded-b-lg">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-blue-500/30">
-            <Stars className="h-8 w-8 text-blue-400" />
-          </div>
-          <p className="text-cosmic-400">Upload an image and detect stars to see the 3D preview</p>
-        </div>
+      <div className="w-full h-full flex items-center justify-center bg-cosmic-950 rounded-b-lg">
+        <p className="text-cosmic-400">
+          Upload both images and process to generate 3D star field
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full relative">
-      <Canvas
-        camera={{ position: [0, 0, 50], fov: settings.fieldOfView }}
-        style={{ background: 'radial-gradient(ellipse at center, #0f0f23 0%, #000 100%)' }}
-      >
-        <CameraController settings={settings} />
-        <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
+    <div className="w-full h-full relative bg-cosmic-950 rounded-b-lg overflow-hidden">
+      {/* Background layer (starless nebula) */}
+      {backgroundImage && (
+        <div className="absolute inset-0 overflow-hidden">
+          <img 
+            src={backgroundImage} 
+            alt="Background nebula"
+            className="w-full h-full object-cover opacity-50"
+          />
+        </div>
+      )}
+
+      {/* 3D Star layer */}
+      <Canvas camera={{ position: [0, 0, 50], fov: settings.fieldOfView || 75 }}>
+        <color attach="background" args={['transparent']} />
         
-        {/* Background stars */}
-        <ThreeStars 
-          radius={300} 
-          depth={50} 
-          count={2000} 
-          factor={4} 
-          saturation={0} 
-          fade={true}
-          speed={0.5}
+        {/* Camera controls */}
+        <OrbitControls 
+          enableZoom={true}
+          enablePan={false}
+          enableRotate={!isAnimating}
+          autoRotate={false}
         />
         
-        {/* Detected stars */}
+        {/* Main star field - stars preserved exactly as they are */}
         <StarPoints stars={stars} settings={settings} isAnimating={isAnimating} />
         
-        {/* Ambient light */}
-        <ambientLight intensity={0.1} />
+        <CameraController fov={settings.fieldOfView || 75} />
       </Canvas>
       
       {/* Recording indicator */}
       {isRecording && (
-        <div className="absolute top-4 right-4 flex items-center gap-2 bg-red-600/90 text-white px-3 py-2 rounded-full">
-          <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
-          <span className="text-sm font-medium">Recording</span>
+        <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 bg-red-500/20 border border-red-500/50 rounded-lg">
+          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+          <span className="text-red-300 text-sm font-medium">Recording</span>
         </div>
       )}
       
-      {/* Animation status */}
+      {/* Animation indicator */}
       {isAnimating && !isRecording && (
-        <div className="absolute top-4 left-4 flex items-center gap-2 bg-green-600/90 text-white px-3 py-2 rounded-full">
-          <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
-          <span className="text-sm font-medium">Playing</span>
+        <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 bg-green-500/20 border border-green-500/50 rounded-lg">
+          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+          <span className="text-green-300 text-sm font-medium">Animating</span>
         </div>
       )}
     </div>

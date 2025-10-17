@@ -5,19 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Upload, Play, Pause, Download, RotateCcw, Video, Layers, CheckCircle } from 'lucide-react';
+import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import StarField3D from './StarField3D';
-import { detectStarsFromImage, separateStarsAndNebula, DetectedStar } from '@/utils/starDetection';
-
-interface StarLayer {
-  name: string;
-  stars: DetectedStar[];
-  averageSize: number;
-  depth: number;
-  color: string;
-}
 
 interface ProcessedStarData {
   x: number;
@@ -26,124 +17,191 @@ interface ProcessedStarData {
   brightness: number;
   size: number;
   color3d: string;
-  layer: string;
+  originalX: number;
+  originalY: number;
+}
+
+interface StarPosition {
+  x: number;
+  y: number;
+  brightness: number;
+  size: number;
+  color: { r: number; g: number; b: number };
 }
 
 const StarFieldGenerator: React.FC = () => {
   const { t } = useLanguage();
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null);
-  const [detectedStars, setDetectedStars] = useState<DetectedStar[]>([]);
-  const [starLayers, setStarLayers] = useState<StarLayer[]>([]);
+  
+  // Two separate images
+  const [starsOnlyImage, setStarsOnlyImage] = useState<string | null>(null);
+  const [starlessImage, setStarlessImage] = useState<string | null>(null);
+  const [starsOnlyElement, setStarsOnlyElement] = useState<HTMLImageElement | null>(null);
+  const [starlessElement, setStarlessElement] = useState<HTMLImageElement | null>(null);
+  
+  const [detectedStars, setDetectedStars] = useState<StarPosition[]>([]);
   const [processedStars, setProcessedStars] = useState<ProcessedStarData[]>([]);
-  const [separatedImages, setSeparatedImages] = useState<{ starImage: string; nebulaImage: string } | null>(null);
+  const [depthMapCanvas, setDepthMapCanvas] = useState<HTMLCanvasElement | null>(null);
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'ready' | 'generating'>('upload');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const starsFileInputRef = useRef<HTMLInputElement>(null);
+  const starlessFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Simplified animation settings - only essential controls
+  // Animation settings with motion controls
   const [animationSettings, setAnimationSettings] = useState({
-    type: 'zoom_through',
+    motionType: 'zoom_in', // zoom_in, zoom_out, pan_left, pan_right
     speed: 1.0,
     duration: 15,
-    movement: 'zoom',
-    direction: 'forward',
     fieldOfView: 75,
-    depth: 100,
-    brightness: 1
+    depthMultiplier: 1.0
   });
 
-  const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStarsOnlyUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
-      setUploadedImage(result);
-      setCurrentStep('upload');
+      setStarsOnlyImage(result);
       
-      // Create image element for processing
       const img = new Image();
       img.onload = () => {
-        setImageElement(img);
-        toast.success(t('Image uploaded successfully', '图像上传成功'));
+        setStarsOnlyElement(img);
+        toast.success(t('Stars only image uploaded', '星体图像已上传'));
       };
       img.src = result;
     };
     reader.readAsDataURL(file);
   }, [t]);
 
-  const analyzeStarSizes = (stars: DetectedStar[]): StarLayer[] => {
-    if (stars.length === 0) return [];
+  const handleStarlessUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    // Sort stars by size and brightness for better analysis
-    const sortedStars = [...stars].sort((a, b) => {
-      const aScore = a.size * a.brightness;
-      const bScore = b.size * b.brightness;
-      return bScore - aScore;
-    });
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setStarlessImage(result);
+      
+      const img = new Image();
+      img.onload = () => {
+        setStarlessElement(img);
+        toast.success(t('Starless image uploaded', '无星图像已上传'));
+      };
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
+  }, [t]);
 
-    // Calculate dynamic thresholds based on star distribution
-    const sizes = sortedStars.map(s => s.size);
-    const brightnesses = sortedStars.map(s => s.brightness);
+  // Generate depth map from starless image
+  const generateDepthMap = useCallback((img: HTMLImageElement): HTMLCanvasElement => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    canvas.width = img.width;
+    canvas.height = img.height;
     
-    const sizeP75 = sizes[Math.floor(sizes.length * 0.25)] || 4;
-    const sizeP50 = sizes[Math.floor(sizes.length * 0.5)] || 2.5;
-    const sizeP25 = sizes[Math.floor(sizes.length * 0.75)] || 1.5;
+    // Draw starless image
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
     
-    const brightnessP75 = brightnesses[Math.floor(brightnesses.length * 0.25)] || 0.8;
+    // Create depth map based on luminance with enhanced blue bias for nebula
+    const depthData = new ImageData(canvas.width, canvas.height);
+    for (let i = 0; i < data.length; i += 4) {
+      // Enhanced luminance with blue bias for nebula depth perception
+      const luminance = 0.2 * data[i] + 0.5 * data[i + 1] + 0.8 * data[i + 2];
+      const enhancedLum = Math.pow(luminance / 255, 0.8) * 255; // Gamma correction for depth
+      depthData.data[i] = enhancedLum;
+      depthData.data[i + 1] = enhancedLum;
+      depthData.data[i + 2] = enhancedLum;
+      depthData.data[i + 3] = 255;
+    }
     
-    // Create dynamic layers based on star distribution
-    const layers: StarLayer[] = [
-      {
-        name: 'Bright Foreground Stars',
-        stars: sortedStars.filter(star => star.size >= sizeP75 || star.brightness >= brightnessP75),
-        averageSize: 0,
-        depth: 15, // Closest
-        color: '#ffffff'
-      },
-      {
-        name: 'Large Mid-field Stars',
-        stars: sortedStars.filter(star => 
-          star.size >= sizeP50 && star.size < sizeP75 && star.brightness < brightnessP75
-        ),
-        averageSize: 0,
-        depth: 35,
-        color: '#f0f8ff'
-      },
-      {
-        name: 'Medium Stars',
-        stars: sortedStars.filter(star => 
-          star.size >= sizeP25 && star.size < sizeP50 && star.brightness < brightnessP75
-        ),
-        averageSize: 0,
-        depth: 65,
-        color: '#e6f3ff'
-      },
-      {
-        name: 'Small Background Stars',
-        stars: sortedStars.filter(star => star.size < sizeP25 && star.brightness < brightnessP75),
-        averageSize: 0,
-        depth: 95,
-        color: '#cce7ff'
+    ctx.putImageData(depthData, 0, 0);
+    
+    // Apply slight blur for smoother depth transitions
+    ctx.filter = 'blur(2px)';
+    ctx.drawImage(canvas, 0, 0);
+    ctx.filter = 'none';
+    
+    return canvas;
+  }, []);
+
+  // Extract exact star positions from stars only image
+  const extractStarPositions = useCallback((img: HTMLImageElement): StarPosition[] => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    canvas.width = img.width;
+    canvas.height = img.height;
+    
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    
+    const stars: StarPosition[] = [];
+    const threshold = 60; // Brightness threshold for star detection
+    const minDistance = 3; // Minimum distance between stars
+    
+    // Scan for bright pixels (stars)
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const idx = (y * canvas.width + x) * 4;
+        const luminance = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+        
+        if (luminance > threshold) {
+          // Check if this is a local maximum
+          let isLocalMax = true;
+          for (let dy = -1; dy <= 1 && isLocalMax; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx === 0 && dy === 0) continue;
+              const nx = x + dx;
+              const ny = y + dy;
+              if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
+                const nIdx = (ny * canvas.width + nx) * 4;
+                const nLuminance = 0.299 * data[nIdx] + 0.587 * data[nIdx + 1] + 0.114 * data[nIdx + 2];
+                if (nLuminance > luminance) {
+                  isLocalMax = false;
+                }
+              }
+            }
+          }
+          
+          if (isLocalMax) {
+            // Check distance from existing stars
+            const tooClose = stars.some(s => {
+              const dx = s.x - x;
+              const dy = s.y - y;
+              return Math.sqrt(dx * dx + dy * dy) < minDistance;
+            });
+            
+            if (!tooClose) {
+              stars.push({
+                x,
+                y,
+                brightness: luminance / 255,
+                size: luminance > 200 ? 2 : 1,
+                color: {
+                  r: data[idx],
+                  g: data[idx + 1],
+                  b: data[idx + 2]
+                }
+              });
+            }
+          }
+        }
       }
-    ];
+    }
+    
+    return stars;
+  }, []);
 
-    // Calculate average sizes and ensure no empty layers
-    const validLayers = layers.filter(layer => layer.stars.length > 0);
-    validLayers.forEach(layer => {
-      layer.averageSize = layer.stars.reduce((sum, star) => sum + star.size, 0) / layer.stars.length;
-    });
-
-    return validLayers;
-  };
-
-  const processStarLayers = useCallback(async () => {
-    if (!imageElement) {
-      toast.error(t('Please upload an image first', '请先上传图像'));
+  const processImages = useCallback(async () => {
+    if (!starsOnlyElement || !starlessElement) {
+      toast.error(t('Please upload both images first', '请先上传两张图像'));
       return;
     }
 
@@ -151,18 +209,10 @@ const StarFieldGenerator: React.FC = () => {
     setCurrentStep('processing');
     
     try {
-      // Step 1: Auto-detect stars with optimized settings
-      toast.info(t('Step 1: Detecting stars from image...', '步骤1：从图像中检测星体...'));
-      
-      const optimizedSettings = {
-        threshold: 12,
-        minStarSize: 1,
-        maxStarSize: 50,
-        sigma: 0.6,
-        sensitivity: 0.4
-      };
-      
-      const stars = await detectStarsFromImage(imageElement, optimizedSettings);
+      // Step 1: Extract star positions from stars only image
+      toast.info(t('Step 1: Extracting star positions...', '步骤1：提取星体位置...'));
+      const stars = extractStarPositions(starsOnlyElement);
+      setDetectedStars(stars);
       
       if (stars.length === 0) {
         toast.warning(t('No stars detected in the image', '图像中未检测到星体'));
@@ -170,116 +220,54 @@ const StarFieldGenerator: React.FC = () => {
         return;
       }
       
-      setDetectedStars(stars);
+      // Step 2: Generate depth map from starless image
+      toast.info(t('Step 2: Generating depth map from starless image...', '步骤2：从无星图像生成深度图...'));
+      const depthMap = generateDepthMap(starlessElement);
+      setDepthMapCanvas(depthMap);
       
-      // Step 2: Analyze star sizes and create 3D layers
-      toast.info(t('Step 2: Analyzing star sizes and creating 3D layers...', '步骤2：分析星体大小并创建3D层...'));
+      // Step 3: Assign depth to stars based on depth map
+      toast.info(t('Step 3: Assigning depth to stars...', '步骤3：为星体分配深度...'));
+      const depthCtx = depthMap.getContext('2d')!;
+      const depthData = depthCtx.getImageData(0, 0, depthMap.width, depthMap.height);
       
-      const layers = analyzeStarSizes(stars);
-      setStarLayers(layers);
-      
-      // Step 3: Separate stars from nebulae/background
-      toast.info(t('Step 3: Separating stars from background...', '步骤3：从背景中分离星体...'));
-      
-      const separated = await separateStarsAndNebula(imageElement, stars);
-      setSeparatedImages(separated);
-      
-      // Step 4: Create 3D star data with improved spatial distribution
-      toast.info(t('Step 4: Generating 3D star field...', '步骤4：生成3D星场...'));
-      
-      const processedStarsData: ProcessedStarData[] = [];
-      const occupiedPositions: Array<{x: number, y: number, z: number}> = [];
-      
-      // Helper function to check for collisions and find optimal position
-      const findOptimalPosition = (star: DetectedStar, baseDepth: number, layerIndex: number): {x: number, y: number, z: number} => {
-        const baseX = (star.x - imageElement.width / 2) * 0.8; // Slightly reduced scaling for better distribution
-        const baseY = (star.y - imageElement.height / 2) * 0.8;
+      const processedStarsData: ProcessedStarData[] = stars.map(star => {
+        // Get depth from depth map at star position
+        const depthIdx = (Math.floor(star.y) * depthMap.width + Math.floor(star.x)) * 4;
+        const depth = depthData.data[depthIdx] / 255; // 0-1 range
         
-        // Create continuous depth distribution instead of discrete layers
-        const minDepth = 10 + layerIndex * 20;
-        const maxDepth = minDepth + 25;
+        // Convert to 3D coordinates
+        // Keep X and Y exactly as they are in the image
+        const centerX = depthMap.width / 2;
+        const centerY = depthMap.height / 2;
         
-        // Add size-based depth variation (larger stars closer)
-        const sizeDepthFactor = Math.max(0.3, 1 - (star.size / 10));
-        const depthRange = maxDepth - minDepth;
-        
-        // Use Perlin-like noise for natural depth variation
-        const noiseX = Math.sin(star.x * 0.01) * Math.cos(star.y * 0.01);
-        const noiseY = Math.cos(star.x * 0.01) * Math.sin(star.y * 0.01);
-        const depthNoise = (noiseX + noiseY) * 0.5 + 0.5; // Normalize to 0-1
-        
-        let finalDepth = minDepth + depthRange * sizeDepthFactor + depthNoise * 10;
-        
-        // Add brightness-based positioning (brighter stars more prominent)
-        if (star.brightness > 0.7) {
-          finalDepth *= 0.8; // Bring bright stars closer
-        }
-        
-        // Collision avoidance for dense areas
-        const minDistance = Math.max(3, star.size * 0.5);
-        let attempts = 0;
-        let finalX = baseX;
-        let finalY = baseY;
-        
-        while (attempts < 10) {
-          const hasCollision = occupiedPositions.some(pos => {
-            const distance = Math.sqrt(
-              Math.pow(pos.x - finalX, 2) + 
-              Math.pow(pos.y - finalY, 2) + 
-              Math.pow(pos.z - finalDepth, 2)
-            );
-            return distance < minDistance;
-          });
-          
-          if (!hasCollision) break;
-          
-          // Adjust position slightly to avoid collision
-          const angle = (attempts / 10) * Math.PI * 2;
-          const offset = attempts * 0.5;
-          finalX = baseX + Math.cos(angle) * offset;
-          finalY = baseY + Math.sin(angle) * offset;
-          finalDepth += attempts * 0.5;
-          attempts++;
-        }
-        
-        return { x: finalX, y: finalY, z: finalDepth };
-      };
-      
-      layers.forEach((layer, layerIndex) => {
-        layer.stars.forEach(star => {
-          const position = findOptimalPosition(star, layer.depth, layerIndex);
-          
-          // Add to occupied positions for collision detection
-          occupiedPositions.push(position);
-          
-          processedStarsData.push({
-            x: position.x,
-            y: position.y,
-            z: position.z,
-            brightness: star.brightness,
-            size: star.size,
-            color3d: `rgb(${star.color.r}, ${star.color.g}, ${star.color.b})`,
-            layer: layer.name
-          });
-        });
+        return {
+          x: (star.x - centerX) * 0.1,
+          y: (star.y - centerY) * 0.1,
+          z: depth * 100, // Scale depth
+          brightness: star.brightness,
+          size: star.size,
+          color3d: `rgb(${star.color.r}, ${star.color.g}, ${star.color.b})`,
+          originalX: star.x,
+          originalY: star.y
+        };
       });
       
       setProcessedStars(processedStarsData);
       setCurrentStep('ready');
       
       toast.success(t(
-        `Successfully processed ${stars.length} stars in ${layers.length} layers!`, 
-        `成功处理了${layers.length}层中的${stars.length}颗星体！`
+        `Successfully processed ${stars.length} stars with depth mapping!`, 
+        `成功处理了${stars.length}颗星体并分配了深度！`
       ));
       
     } catch (error) {
-      console.error('Star processing error:', error);
-      toast.error(t('Star processing failed. Please try a different image.', '星体处理失败。请尝试不同的图像。'));
+      console.error('Processing error:', error);
+      toast.error(t('Processing failed. Please try again.', '处理失败。请重试。'));
       setCurrentStep('upload');
     } finally {
       setIsProcessing(false);
     }
-  }, [imageElement, t]);
+  }, [starsOnlyElement, starlessElement, extractStarPositions, generateDepthMap, t]);
 
   const toggleAnimation = useCallback(() => {
     setIsAnimating(prev => !prev);
@@ -304,17 +292,21 @@ const StarFieldGenerator: React.FC = () => {
   }, [processedStars, animationSettings.duration, t]);
 
   const resetAll = useCallback(() => {
-    setUploadedImage(null);
-    setImageElement(null);
+    setStarsOnlyImage(null);
+    setStarlessImage(null);
+    setStarsOnlyElement(null);
+    setStarlessElement(null);
     setDetectedStars([]);
-    setStarLayers([]);
     setProcessedStars([]);
-    setSeparatedImages(null);
+    setDepthMapCanvas(null);
     setIsAnimating(false);
     setIsRecording(false);
     setCurrentStep('upload');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (starsFileInputRef.current) {
+      starsFileInputRef.current.value = '';
+    }
+    if (starlessFileInputRef.current) {
+      starlessFileInputRef.current.value = '';
     }
     toast.success(t('Reset complete', '重置完成'));
   }, [t]);
@@ -331,8 +323,8 @@ const StarFieldGenerator: React.FC = () => {
         </div>
         <p className="text-cosmic-300 text-lg max-w-3xl mx-auto">
           {t(
-            'Transform astronomy images into stunning 3D star field animations. Upload → Auto-Process → Generate Video',
-            '将天文图像转换为令人惊叹的3D星场动画。上传 → 自动处理 → 生成视频'
+            'Upload stars only and starless images to create stunning fly-through animations with preserved star positions',
+            '上传星体图像和无星图像，创建保留星体位置的令人惊叹的飞越动画'
           )}
         </p>
       </div>
@@ -342,11 +334,11 @@ const StarFieldGenerator: React.FC = () => {
         <div className="flex items-center gap-4 bg-cosmic-900/50 border border-cosmic-700/50 rounded-lg p-4">
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${currentStep === 'upload' ? 'bg-blue-500/20 text-blue-300' : (currentStep === 'processing' || currentStep === 'ready' || currentStep === 'generating') ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
             <Upload className="h-4 w-4" />
-            <span className="text-sm">1. Upload</span>
+            <span className="text-sm">1. Upload Images</span>
           </div>
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${currentStep === 'processing' ? 'bg-blue-500/20 text-blue-300' : currentStep === 'ready' || currentStep === 'generating' ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
-            <Layers className="h-4 w-4" />
-            <span className="text-sm">2. Process</span>
+            <ImageIcon className="h-4 w-4" />
+            <span className="text-sm">2. Process & Map</span>
           </div>
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${currentStep === 'generating' ? 'bg-blue-500/20 text-blue-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
             <Video className="h-4 w-4" />
@@ -363,104 +355,124 @@ const StarFieldGenerator: React.FC = () => {
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Upload className="h-5 w-5" />
-                {t('Upload Astronomy Image', '上传天文图像')}
+                {t('Upload Images', '上传图像')}
               </CardTitle>
               <CardDescription className="text-cosmic-400">
-                {t('Select a high-quality astronomy image with visible stars', '选择包含可见星体的高质量天文图像')}
+                {t('Upload stars only and starless images separately', '分别上传星体图像和无星图像')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="image-upload" className="text-cosmic-200">
-                  {t('Select Image File', '选择图像文件')}
+                <Label htmlFor="stars-upload" className="text-cosmic-200">
+                  {t('Stars Only Image', '星体图像')}
                 </Label>
                 <Input
-                  ref={fileInputRef}
-                  id="image-upload"
+                  ref={starsFileInputRef}
+                  id="stars-upload"
                   type="file"
                   accept="image/*"
-                  onChange={handleImageUpload}
+                  onChange={handleStarsOnlyUpload}
                   className="bg-cosmic-800/50 border-cosmic-700/50 text-white file:bg-cosmic-700 file:text-white file:border-0"
                 />
-              </div>
-              
-              {uploadedImage && (
-                <div className="space-y-4">
+                {starsOnlyImage && (
                   <div className="relative">
                     <img
-                      src={uploadedImage}
-                      alt="Uploaded astronomy image"
-                      className="w-full h-32 object-cover rounded-lg border border-cosmic-700/50"
+                      src={starsOnlyImage}
+                      alt="Stars only"
+                      className="w-full h-24 object-cover rounded-lg border border-cosmic-700/50"
                     />
                   </div>
-                  
-                  <Button
-                    onClick={processStarLayers}
-                    disabled={isProcessing}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                  >
-                    {isProcessing ? t('Processing...', '处理中...') : t('Auto-Process Stars', '自动处理星体')}
-                  </Button>
-                </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="starless-upload" className="text-cosmic-200">
+                  {t('Starless Image (Nebula)', '无星图像（星云）')}
+                </Label>
+                <Input
+                  ref={starlessFileInputRef}
+                  id="starless-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleStarlessUpload}
+                  className="bg-cosmic-800/50 border-cosmic-700/50 text-white file:bg-cosmic-700 file:text-white file:border-0"
+                />
+                {starlessImage && (
+                  <div className="relative">
+                    <img
+                      src={starlessImage}
+                      alt="Starless"
+                      className="w-full h-24 object-cover rounded-lg border border-cosmic-700/50"
+                    />
+                  </div>
+                )}
+              </div>
+              
+              {starsOnlyImage && starlessImage && (
+                <Button
+                  onClick={processImages}
+                  disabled={isProcessing}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  {isProcessing ? t('Processing...', '处理中...') : t('Process & Generate Depth Map', '处理并生成深度图')}
+                </Button>
               )}
             </CardContent>
           </Card>
 
-          {/* Star Layers Info */}
-          {starLayers.length > 0 && (
+          {/* Detection Info */}
+          {detectedStars.length > 0 && (
             <Card className="bg-cosmic-900/50 border-cosmic-700/50">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
-                  <Layers className="h-5 w-5" />
-                  {t('Detected Star Layers', '检测到的星体层')}
+                  <ImageIcon className="h-5 w-5" />
+                  {t('Processing Results', '处理结果')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {starLayers.map((layer, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30">
-                    <div>
-                      <div className="text-white text-sm font-medium">{layer.name}</div>
-                      <div className="text-cosmic-400 text-xs">
-                        {layer.stars.length} stars • Avg size: {layer.averageSize.toFixed(1)}px
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-cosmic-300 text-xs">Depth: {layer.depth}</div>
-                    </div>
-                  </div>
-                ))}
+                <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30">
+                  <div className="text-white text-sm font-medium">{t('Detected Stars', '检测到的星体')}</div>
+                  <div className="text-cosmic-300 text-sm">{detectedStars.length}</div>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30">
+                  <div className="text-white text-sm font-medium">{t('Depth Map', '深度图')}</div>
+                  <div className="text-green-400 text-sm">{depthMapCanvas ? '✓ Generated' : 'Pending'}</div>
+                </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Simple Animation Controls */}
+          {/* Motion Controls */}
           {currentStep === 'ready' && (
             <Card className="bg-cosmic-900/50 border-cosmic-700/50">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   <Play className="h-5 w-5" />
-                  {t('Animation Settings', '动画设置')}
+                  {t('Motion Settings', '动作设置')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
-                  <Label className="text-cosmic-200">{t('Animation Type', '动画类型')}</Label>
+                  <Label className="text-cosmic-200">{t('Motion Type', '动作类型')}</Label>
                   <Select
-                    value={animationSettings.type}
-                    onValueChange={(value) => setAnimationSettings(prev => ({...prev, type: value, movement: value === 'zoom_through' ? 'zoom' : 'drift'}))}
+                    value={animationSettings.motionType}
+                    onValueChange={(value) => setAnimationSettings(prev => ({...prev, motionType: value as any}))}
                   >
                     <SelectTrigger className="bg-cosmic-800/50 border-cosmic-700/50 text-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-cosmic-800 border-cosmic-700">
-                      <SelectItem value="zoom_through" className="text-white hover:bg-cosmic-700">
-                        {t('Zoom Through Stars', '缩放穿越星体')}
+                      <SelectItem value="zoom_in" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom In (Fly Forward)', '放大（向前飞行）')}
                       </SelectItem>
-                      <SelectItem value="parallax_drift" className="text-white hover:bg-cosmic-700">
-                        {t('Parallax Drift', '视差漂移')}
+                      <SelectItem value="zoom_out" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom Out (Fly Backward)', '缩小（向后飞行）')}
                       </SelectItem>
-                      <SelectItem value="spiral_zoom" className="text-white hover:bg-cosmic-700">
-                        {t('Spiral Zoom', '螺旋缩放')}
+                      <SelectItem value="pan_left" className="text-white hover:bg-cosmic-700">
+                        {t('Pan Left', '向左平移')}
+                      </SelectItem>
+                      <SelectItem value="pan_right" className="text-white hover:bg-cosmic-700">
+                        {t('Pan Right', '向右平移')}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -468,7 +480,7 @@ const StarFieldGenerator: React.FC = () => {
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-cosmic-200">{t('Speed', '速度')}</Label>
+                    <Label className="text-cosmic-200">{t('Flight Speed', '飞行速度')}</Label>
                     <span className="text-cosmic-300 text-sm">{animationSettings.speed.toFixed(1)}x</span>
                   </div>
                   <Slider
@@ -489,7 +501,7 @@ const StarFieldGenerator: React.FC = () => {
                   <Slider
                     value={[animationSettings.duration]}
                     onValueChange={(value) => setAnimationSettings(prev => ({...prev, duration: value[0]}))}
-                    min={10}
+                    min={5}
                     max={60}
                     step={5}
                     className="w-full"
@@ -550,8 +562,8 @@ const StarFieldGenerator: React.FC = () => {
               </CardTitle>
               <CardDescription className="text-cosmic-400">
                 {processedStars.length > 0 
-                  ? t(`Showing ${processedStars.length} stars in ${starLayers.length} layers`, `显示${starLayers.length}层中的${processedStars.length}颗星体`)
-                  : t('Upload and process an image to see the 3D preview', '上传并处理图像以查看3D预览')
+                  ? t(`Showing ${processedStars.length} stars with depth mapping`, `显示${processedStars.length}颗带深度映射的星体`)
+                  : t('Upload both images and process to see the 3D preview', '上传并处理两张图像以查看3D预览')
                 }
               </CardDescription>
             </CardHeader>
@@ -561,7 +573,7 @@ const StarFieldGenerator: React.FC = () => {
                 settings={animationSettings}
                 isAnimating={isAnimating}
                 isRecording={isRecording}
-                separatedImages={separatedImages}
+                backgroundImage={starlessImage}
               />
             </CardContent>
           </Card>
