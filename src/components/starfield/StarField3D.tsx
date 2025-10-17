@@ -102,6 +102,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
         // Create transparent canvas
         const newData = ctx.createImageData(canvas.width, canvas.height);
         
+        let pixelsCopied = 0;
+        
         // Extract each star with generous radius to capture full glow
         layerStars.forEach(star => {
           // Generous radius to capture full star and glow
@@ -133,6 +135,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
                       newData.data[idx + 1] = g;
                       newData.data[idx + 2] = b;
                       newData.data[idx + 3] = 255;
+                      pixelsCopied++;
                     }
                   }
                 }
@@ -142,7 +145,19 @@ const StarField3D: React.FC<StarField3DProps> = ({
         });
         
         ctx.putImageData(newData, 0, 0);
-        console.log(`${layerName}: ${layerStars.length} stars with original appearance`);
+        console.log(`${layerName}: ${layerStars.length} stars, ${pixelsCopied} pixels copied`);
+        
+        // Debug: Check if canvas has content
+        const testData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        let hasContent = false;
+        for (let i = 3; i < testData.data.length; i += 4) {
+          if (testData.data[i] > 0) {
+            hasContent = true;
+            break;
+          }
+        }
+        console.log(`${layerName} has visible content: ${hasContent}`);
+        
         return canvas;
       };
       
@@ -264,8 +279,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
     }
     
     // Draw star layers on top (farthest to closest) with proper blending
-    const drawLayer = (layer: HTMLCanvasElement | null, offset: { x: number, y: number, scale: number }) => {
-      if (!layer) return;
+    const drawLayer = (layer: HTMLCanvasElement | null, offset: { x: number, y: number, scale: number }, layerName: string) => {
+      if (!layer) {
+        console.log(`${layerName}: layer is null`);
+        return;
+      }
       
       ctx.save();
       ctx.globalCompositeOperation = 'lighter'; // Additive blending for stars
@@ -281,9 +299,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.restore();
     };
     
-    drawLayer(starLayers.layer3, offsetsRef.current.layer3); // Farthest stars
-    drawLayer(starLayers.layer2, offsetsRef.current.layer2); // Medium stars
-    drawLayer(starLayers.layer1, offsetsRef.current.layer1); // Closest stars
+    drawLayer(starLayers.layer3, offsetsRef.current.layer3, 'Layer3'); // Farthest stars
+    drawLayer(starLayers.layer2, offsetsRef.current.layer2, 'Layer2'); // Medium stars
+    drawLayer(starLayers.layer1, offsetsRef.current.layer1, 'Layer1'); // Closest stars
     
     animationFrameRef.current = requestAnimationFrame(animate);
   }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
