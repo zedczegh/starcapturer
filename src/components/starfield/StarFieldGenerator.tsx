@@ -12,7 +12,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import StarField3D from './StarField3D';
 import UTIF from 'utif';
-// Removed FFmpeg imports - using server-side conversion
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 interface ProcessedStarData {
   x: number;
@@ -52,9 +53,9 @@ const StarFieldGenerator: React.FC = () => {
   const [isCanvasReady, setIsCanvasReady] = useState(false);
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'ready' | 'generating'>('upload');
   const [animationProgress, setAnimationProgress] = useState(0);
-  // Remove FFmpeg-related state and refs - no longer needed
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [showFormatDialog, setShowFormatDialog] = useState(false);
+  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [mp4Progress, setMp4Progress] = useState(0);
   const [mp4Blob, setMp4Blob] = useState<Blob | null>(null);
   const [isEncodingMP4, setIsEncodingMP4] = useState(false);
@@ -62,6 +63,7 @@ const StarFieldGenerator: React.FC = () => {
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const ffmpegRef = useRef<FFmpeg | null>(null);
 
   // Animation settings with motion controls
   const [animationSettings, setAnimationSettings] = useState({
@@ -77,7 +79,25 @@ const StarFieldGenerator: React.FC = () => {
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
   
-  // Removed FFmpeg initialization - using server-side conversion
+  // Initialize FFmpeg instance (but don't load it yet - load on demand)
+  useEffect(() => {
+    if (!ffmpegRef.current) {
+      const ffmpeg = new FFmpeg();
+      
+      // Add logging callbacks
+      ffmpeg.on('log', ({ message }) => {
+        console.log('[FFmpeg]:', message);
+      });
+      
+      ffmpeg.on('progress', ({ progress, time }) => {
+        console.log('[FFmpeg Progress]:', `${Math.round(progress * 100)}%`, time);
+        setMp4Progress(50 + (progress * 40)); // FFmpeg progress from 50% to 90%
+      });
+      
+      ffmpegRef.current = ffmpeg;
+      console.log('FFmpeg instance created (not loaded yet)');
+    }
+  }, []);
   
   
   // Format time in MM:SS format
@@ -824,43 +844,162 @@ const StarFieldGenerator: React.FC = () => {
         throw new Error(`WebM recording too small: ${webmBlob.size} bytes - likely no frames captured`);
       }
       
-      // Step 2: Send to server for MP4 conversion (40-90%)
+      // Step 2: Load FFmpeg if needed (40-50%)
       setMp4Progress(40);
-      toast.info(t('Converting to MP4 on server...', '在服务器上转换为MP4...'));
-      console.log('Sending WebM to server for MP4 conversion...');
+      console.log('=== FFmpeg Loading Phase ===');
+      console.log('FFmpeg loaded:', ffmpegLoaded);
+      console.log('FFmpeg ref exists:', !!ffmpegRef.current);
       
-      const formData = new FormData();
-      formData.append('video', webmBlob, 'starfield.webm');
-      
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data, error } = await supabase.functions.invoke('generate-mp4', {
-        body: formData,
-      });
-      
-      if (error) {
-        console.error('Server conversion error:', error);
-        throw new Error(error.message || 'Failed to convert video on server');
+      if (!ffmpegRef.current) {
+        throw new Error('FFmpeg instance not initialized');
       }
       
-      if (!data || !data.url) {
-        throw new Error('Server did not return a valid MP4 URL');
+      if (!ffmpegLoaded) {
+        toast.info(t('Loading video encoder (this may take 30s)...', '加载视频编码器（可能需要30秒）...'));
+        console.log('=== Loading FFmpeg (~32MB download) ===');
+        
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+        
+        try {
+          // Step 1: Fetch core JS
+          console.log('[1/3] Fetching core JS...');
+          const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
+          console.log('✓ Core JS ready');
+          setMp4Progress(43);
+          
+          // Step 2: Fetch WASM
+          console.log('[2/3] Fetching WASM file (~32MB)...');
+          const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+          console.log('✓ WASM ready');
+          setMp4Progress(46);
+          
+          // Step 3: Initialize FFmpeg with proper timeout
+          console.log('[3/3] Initializing FFmpeg (this can take 20-30s)...');
+          console.log('Note: If this hangs, your browser may not support the encoder');
+          
+          let initResolved = false;
+          
+          const initPromise = new Promise(async (resolve, reject) => {
+            try {
+              await ffmpegRef.current!.load({
+                coreURL,
+                wasmURL,
+              });
+              if (!initResolved) {
+                initResolved = true;
+                resolve(true);
+              }
+            } catch (e) {
+              if (!initResolved) {
+                initResolved = true;
+                reject(e);
+              }
+            }
+          });
+          
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+              if (!initResolved) {
+                initResolved = true;
+                console.error('✗ FFmpeg initialization timeout after 30s');
+                reject(new Error('FFmpeg took too long to initialize. Your browser may not support MP4 encoding. Please use WebM format instead.'));
+              }
+            }, 30000);
+          });
+          
+          await Promise.race([initPromise, timeoutPromise]);
+          
+          if (initResolved) {
+            console.log('✓ FFmpeg initialized successfully!');
+            setFfmpegLoaded(true);
+            setMp4Progress(50);
+            toast.success(t('Encoder ready!', '编码器就绪！'));
+          }
+        } catch (error) {
+          console.error('=== FFmpeg Loading Failed ===');
+          console.error('Error:', error);
+          
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          
+          // User-friendly error message
+          toast.error(t(
+            'MP4 encoder unavailable. Please download as WebM instead.', 
+            'MP4编码器不可用。请改用WebM格式下载。'
+          ));
+          
+          throw new Error(`FFmpeg initialization failed: ${errorMsg}`);
+        }
+      } else {
+        setMp4Progress(50);
+        console.log('✓ FFmpeg already loaded');
       }
       
-      console.log('MP4 generated successfully:', data);
-      setMp4Progress(90);
+      // Step 3: Convert WebM to MP4 (50-100%)
+      console.log('=== MP4 Conversion Phase ===');
+      toast.info(t('Converting to MP4...', '转换为MP4...'));
+      const ffmpeg = ffmpegRef.current;
       
-      // Fetch the MP4 blob for storage
-      const mp4Response = await fetch(data.url);
-      const mp4Blob = await mp4Response.blob();
-      
-      setMp4Progress(100);
-      setMp4Blob(mp4Blob);
-      setIsGeneratingVideo(false);
-      setIsAnimating(false);
-      setAnimationProgress(0);
-      
-      console.log('=== MP4 Generation Complete ===');
-      toast.success(t('MP4 ready to download!', 'MP4准备下载！'));
+      try {
+        // Write WebM to FFmpeg virtual filesystem
+        console.log('Writing WebM to FFmpeg filesystem...');
+        const webmData = await fetchFile(webmBlob);
+        console.log(`WebM data size: ${webmData.byteLength} bytes`);
+        await ffmpeg.writeFile('input.webm', webmData);
+        console.log('✓ WebM written to FFmpeg filesystem');
+        
+        setMp4Progress(60);
+        
+        // Convert with settings optimized for compatibility
+        console.log('Executing FFmpeg conversion (this may take a moment)...');
+        await ffmpeg.exec([
+          '-i', 'input.webm',
+          '-c:v', 'libx264',      // H.264 codec for maximum compatibility
+          '-preset', 'fast',       // Faster encoding
+          '-crf', '23',            // Good quality
+          '-pix_fmt', 'yuv420p',   // Required for compatibility
+          '-movflags', '+faststart', // Web streaming optimization
+          '-r', fps.toString(),    // Match source framerate
+          'output.mp4'
+        ]);
+        console.log('✓ FFmpeg conversion completed successfully');
+        
+        setMp4Progress(90);
+        
+        // Read the converted MP4 file
+        console.log('Reading MP4 output...');
+        const mp4Data = await ffmpeg.readFile('output.mp4') as Uint8Array;
+        const mp4ArrayBuffer = new Uint8Array(mp4Data).buffer;
+        const mp4Blob = new Blob([mp4ArrayBuffer], { type: 'video/mp4' });
+        
+        console.log(`✓ MP4 created: ${mp4Blob.size} bytes (${(mp4Blob.size / 1024 / 1024).toFixed(2)} MB)`);
+        
+        if (mp4Blob.size < 1000) {
+          throw new Error(`MP4 file too small: ${mp4Blob.size} bytes`);
+        }
+        
+        // Clean up FFmpeg filesystem
+        console.log('Cleaning up...');
+        try {
+          await ffmpeg.deleteFile('input.webm');
+          await ffmpeg.deleteFile('output.mp4');
+          console.log('✓ Cleanup complete');
+        } catch (cleanupError) {
+          console.warn('Cleanup warning (non-critical):', cleanupError);
+        }
+        
+        setMp4Progress(100);
+        setMp4Blob(mp4Blob);
+        setIsGeneratingVideo(false);
+        setIsAnimating(false);
+        setAnimationProgress(0);
+        
+        console.log('=== MP4 Generation Complete ===');
+        toast.success(t('MP4 ready to download!', 'MP4准备下载！'));
+        
+      } catch (conversionError) {
+        console.error('✗ Conversion failed:', conversionError);
+        throw conversionError;
+      }
       
     } catch (error) {
       console.error('=== MP4 Generation Failed ===');
@@ -879,7 +1018,7 @@ const StarFieldGenerator: React.FC = () => {
       setIsAnimating(false);
       setMp4Progress(0);
     }
-  }, [animationSettings.duration, isAnimating, t]);
+  }, [animationSettings.duration, ffmpegLoaded, isAnimating, t]);
 
   const downloadMP4File = useCallback(() => {
     if (!mp4Blob) return;
