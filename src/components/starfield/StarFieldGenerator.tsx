@@ -273,7 +273,7 @@ const StarFieldGenerator: React.FC = () => {
     return canvas;
   }, []);
 
-  // Extract exact star positions from stars only image
+  // Extract exact star positions from stars only image using improved detection
   const extractStarPositions = useCallback((img: HTMLImageElement): StarPosition[] => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
@@ -285,109 +285,120 @@ const StarFieldGenerator: React.FC = () => {
     const data = imageData.data;
     
     const stars: StarPosition[] = [];
-    const threshold = 120; // Higher threshold to filter noise
-    const minDistance = 5; // Minimum distance between stars to avoid pixel clusters
+    const threshold = 150; // High threshold - only detect actual bright stars
+    const minStarSize = 2; // Minimum pixels for a valid star
+    const maxStarSize = 100; // Maximum pixels to avoid large nebula regions
+    const minDistance = 4; // Minimum distance between star centers
     
-    // First pass: Find all potential star centers using blob detection
-    const visited = new Set<string>();
+    // Create a visited map
+    const visited = new Uint8Array(canvas.width * canvas.height);
     
-    for (let y = 0; y < canvas.height; y++) {
-      for (let x = 0; x < canvas.width; x++) {
-        const key = `${x},${y}`;
-        if (visited.has(key)) continue;
+    // Scan for bright regions
+    for (let y = 1; y < canvas.height - 1; y++) {
+      for (let x = 1; x < canvas.width - 1; x++) {
+        const idx = y * canvas.width + x;
+        if (visited[idx]) continue;
         
-        const idx = (y * canvas.width + x) * 4;
-        const luminance = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+        const pixelIdx = idx * 4;
+        const luminance = 0.299 * data[pixelIdx] + 0.587 * data[pixelIdx + 1] + 0.114 * data[pixelIdx + 2];
         
         if (luminance > threshold) {
-          // Found a bright pixel, now find its connected region (blob)
-          const blob: {x: number, y: number, lum: number}[] = [];
+          // Found a bright pixel - grow the star region
+          const starPixels: {x: number, y: number, lum: number}[] = [];
           const queue: {x: number, y: number}[] = [{x, y}];
-          const blobVisited = new Set<string>();
-          blobVisited.add(key);
+          visited[idx] = 1;
           
-          while (queue.length > 0) {
-            const current = queue.shift()!;
-            const currKey = `${current.x},${current.y}`;
-            visited.add(currKey);
+          let minX = x, maxX = x, minY = y, maxY = y;
+          let totalLum = 0, maxLum = 0;
+          let totalX = 0, totalY = 0;
+          
+          while (queue.length > 0 && starPixels.length < maxStarSize) {
+            const curr = queue.shift()!;
+            const currIdx = curr.y * canvas.width + curr.x;
+            const currPixelIdx = currIdx * 4;
+            const currLum = 0.299 * data[currPixelIdx] + 0.587 * data[currPixelIdx + 1] + 0.114 * data[currPixelIdx + 2];
             
-            const currIdx = (current.y * canvas.width + current.x) * 4;
-            const currLum = 0.299 * data[currIdx] + 0.587 * data[currIdx + 1] + 0.114 * data[currIdx + 2];
-            blob.push({x: current.x, y: current.y, lum: currLum});
+            starPixels.push({x: curr.x, y: curr.y, lum: currLum});
+            totalLum += currLum;
+            if (currLum > maxLum) maxLum = currLum;
+            
+            // Weighted centroid calculation
+            const weight = currLum * currLum; // Square for emphasis
+            totalX += curr.x * weight;
+            totalY += curr.y * weight;
+            
+            minX = Math.min(minX, curr.x);
+            maxX = Math.max(maxX, curr.x);
+            minY = Math.min(minY, curr.y);
+            maxY = Math.max(maxY, curr.y);
             
             // Check 8-connected neighbors
             for (let dy = -1; dy <= 1; dy++) {
               for (let dx = -1; dx <= 1; dx++) {
                 if (dx === 0 && dy === 0) continue;
-                const nx = current.x + dx;
-                const ny = current.y + dy;
-                const nKey = `${nx},${ny}`;
                 
-                if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height && !blobVisited.has(nKey)) {
-                  const nIdx = (ny * canvas.width + nx) * 4;
-                  const nLum = 0.299 * data[nIdx] + 0.587 * data[nIdx + 1] + 0.114 * data[nIdx + 2];
-                  
-                  if (nLum > threshold * 0.7) { // Lower threshold for connected pixels
-                    blobVisited.add(nKey);
-                    queue.push({x: nx, y: ny});
+                const nx = curr.x + dx;
+                const ny = curr.y + dy;
+                
+                if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
+                  const nIdx = ny * canvas.width + nx;
+                  if (!visited[nIdx]) {
+                    const nPixelIdx = nIdx * 4;
+                    const nLum = 0.299 * data[nPixelIdx] + 0.587 * data[nPixelIdx + 1] + 0.114 * data[nPixelIdx + 2];
+                    
+                    // Use adaptive threshold - dimmer pixels near bright ones
+                    if (nLum > threshold * 0.5) {
+                      visited[nIdx] = 1;
+                      queue.push({x: nx, y: ny});
+                    }
                   }
                 }
               }
             }
           }
           
-          // Process blob to find centroid and peak brightness
-          if (blob.length > 0) {
-            // Calculate weighted centroid
-            let totalWeight = 0;
-            let weightedX = 0;
-            let weightedY = 0;
-            let maxLum = 0;
-            let peakIdx = 0;
+          // Validate star region
+          if (starPixels.length >= minStarSize && starPixels.length <= maxStarSize) {
+            const starWidth = maxX - minX + 1;
+            const starHeight = maxY - minY + 1;
+            const aspectRatio = Math.max(starWidth, starHeight) / Math.min(starWidth, starHeight);
             
-            blob.forEach((pixel, i) => {
-              const weight = Math.pow(pixel.lum, 2); // Square for emphasis on brighter pixels
-              weightedX += pixel.x * weight;
-              weightedY += pixel.y * weight;
-              totalWeight += weight;
+            // Reject elongated regions (likely artifacts)
+            if (aspectRatio < 3) {
+              const totalWeight = starPixels.reduce((sum, p) => sum + p.lum * p.lum, 0);
+              const centroidX = Math.round(totalX / totalWeight);
+              const centroidY = Math.round(totalY / totalWeight);
               
-              if (pixel.lum > maxLum) {
-                maxLum = pixel.lum;
-                peakIdx = i;
-              }
-            });
-            
-            const centroidX = Math.round(weightedX / totalWeight);
-            const centroidY = Math.round(weightedY / totalWeight);
-            
-            // Check distance from existing stars
-            const tooClose = stars.some(s => {
-              const dx = s.x - centroidX;
-              const dy = s.y - centroidY;
-              return Math.sqrt(dx * dx + dy * dy) < minDistance;
-            });
-            
-            if (!tooClose) {
-              const centerIdx = (centroidY * canvas.width + centroidX) * 4;
-              const starSize = Math.sqrt(blob.length); // Size based on blob area
-              
-              stars.push({
-                x: centroidX,
-                y: centroidY,
-                brightness: maxLum / 255,
-                size: Math.max(1, Math.min(4, starSize / 2)), // Scale size based on blob
-                color: {
-                  r: data[centerIdx],
-                  g: data[centerIdx + 1],
-                  b: data[centerIdx + 2]
-                }
+              // Check minimum distance from existing stars
+              const tooClose = stars.some(s => {
+                const dx = s.x - centroidX;
+                const dy = s.y - centroidY;
+                return Math.sqrt(dx * dx + dy * dy) < minDistance;
               });
+              
+              if (!tooClose) {
+                const centerIdx = (centroidY * canvas.width + centroidX) * 4;
+                const avgLum = totalLum / starPixels.length;
+                
+                stars.push({
+                  x: centroidX,
+                  y: centroidY,
+                  brightness: maxLum / 255,
+                  size: Math.sqrt(starPixels.length) * 0.5, // Size based on area
+                  color: {
+                    r: data[centerIdx],
+                    g: data[centerIdx + 1],
+                    b: data[centerIdx + 2]
+                  }
+                });
+              }
             }
           }
         }
       }
     }
     
+    console.log(`Detected ${stars.length} stars from image`);
     return stars;
   }, []);
 
@@ -427,18 +438,17 @@ const StarFieldGenerator: React.FC = () => {
         const depthIdx = (Math.floor(star.y) * depthMap.width + Math.floor(star.x)) * 4;
         const depth = depthData.data[depthIdx] / 255; // 0-1 range
         
-        // Convert to 3D coordinates with better scaling
+        // Convert to 3D coordinates
         const centerX = depthMap.width / 2;
         const centerY = depthMap.height / 2;
         
-        // Use aspect ratio aware scaling
-        const aspectRatio = depthMap.width / depthMap.height;
-        const scale = 0.05; // Reduced from 0.1 for better spread
+        // Scale to fit in view frustum with proper aspect ratio
+        const scale = 0.08;
         
         return {
           x: (star.x - centerX) * scale,
           y: -(star.y - centerY) * scale, // Invert Y for correct orientation
-          z: depth * 150 - 75, // Center depth range around 0
+          z: (depth - 0.5) * 200, // Spread depth from -100 to 100
           brightness: star.brightness,
           size: star.size,
           color3d: `rgb(${star.color.r}, ${star.color.g}, ${star.color.b})`,
