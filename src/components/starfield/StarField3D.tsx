@@ -266,14 +266,16 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const ctx = canvas.getContext('2d')!;
     const { motionType = 'zoom_in', speed = 1, duration = 10, spin = 0, spinDirection = 'clockwise' } = settings;
     
-    // Calculate progress
+    // Calculate progress - initialize timing on first frame
     if (animationStartTimeRef.current === 0) {
       animationStartTimeRef.current = Date.now();
+      pausedTimeRef.current = 0;
     }
     
     const elapsed = (Date.now() - animationStartTimeRef.current - pausedTimeRef.current) / 1000;
     const progress = Math.min((elapsed / duration) * 100, 100);
     
+    // Always update progress
     if (onProgressUpdate) {
       onProgressUpdate(progress);
     }
@@ -421,7 +423,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
   useEffect(() => {
     if (isAnimating) {
-      // Reset everything when starting fresh
+      // Always reset timing refs when animation starts
       animationStartTimeRef.current = 0;
       pausedTimeRef.current = 0;
       offsetsRef.current = { 
@@ -430,19 +432,24 @@ const StarField3D: React.FC<StarField3DProps> = ({
         layer3: { x: 0, y: 0, scale: 1 },
         background: { x: 0, y: 0, scale: 1 }
       };
+      // Ensure progress starts at 0
       if (onProgressUpdate) {
         onProgressUpdate(0);
       }
-      animate();
+      // Start animation loop
+      animationFrameRef.current = requestAnimationFrame(animate);
     } else {
+      // Stop animation loop when paused
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = undefined;
       }
     }
     
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = undefined;
       }
     };
   }, [isAnimating, animate, onProgressUpdate]);

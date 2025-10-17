@@ -511,11 +511,10 @@ const StarFieldGenerator: React.FC = () => {
 
   const handleReplay = useCallback(() => {
     setIsAnimating(false);
-    setAnimationProgress(0);
-    // Force a reset by toggling with a delay
     setTimeout(() => {
+      setAnimationProgress(0);
       setIsAnimating(true);
-    }, 50);
+    }, 100);
   }, []);
 
   const downloadVideo = useCallback(async () => {
