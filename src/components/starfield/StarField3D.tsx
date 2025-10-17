@@ -363,34 +363,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
         className="w-full h-full object-contain bg-black"
       />
       
-      {/* Recording indicator - minimalist bar with animated dot */}
+      {/* Recording indicator */}
       {isRecording && (
-        <div className="absolute top-4 right-4 w-32 h-1.5 bg-red-500/20 rounded-full overflow-hidden backdrop-blur-sm">
-          <div className="relative w-full h-full">
-            <div className="absolute inset-0 bg-red-500/40 rounded-full" />
-            <div className="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full shadow-lg shadow-red-500/50 animate-[slide_2s_ease-in-out_infinite]" 
-                 style={{ animation: 'slide 2s ease-in-out infinite' }} />
-          </div>
+        <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-2 bg-red-500/20 border border-red-500/50 rounded-lg backdrop-blur-sm">
+          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+          <span className="text-red-300 text-sm font-medium">Recording</span>
         </div>
       )}
-      
-      {/* Animation indicator - minimalist bar with animated dot */}
-      {isAnimating && !isRecording && (
-        <div className="absolute top-4 right-4 w-32 h-1.5 bg-primary/20 rounded-full overflow-hidden backdrop-blur-sm">
-          <div className="relative w-full h-full">
-            <div className="absolute inset-0 bg-primary/40 rounded-full" />
-            <div className="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-primary rounded-full shadow-lg shadow-primary/50 animate-[slide_2s_ease-in-out_infinite]" 
-                 style={{ animation: 'slide 2s ease-in-out infinite' }} />
-          </div>
-        </div>
-      )}
-      
-      <style>{`
-        @keyframes slide {
-          0%, 100% { left: 0; }
-          50% { left: calc(100% - 0.5rem); }
-        }
-      `}</style>
     </div>
   );
 };
