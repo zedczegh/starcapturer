@@ -524,7 +524,6 @@ const StarFieldGenerator: React.FC = () => {
       setIsRecording(true);
       setIsAnimating(true);
       setCurrentStep('generating');
-      toast.success(t('Recording video...', '正在录制视频...'));
       
       // Get the canvas stream
       const stream = canvasRef.current.captureStream(60); // 60 FPS
@@ -567,7 +566,6 @@ const StarFieldGenerator: React.FC = () => {
         setIsRecording(false);
         setIsAnimating(false);
         setCurrentStep('ready');
-        toast.success(t('Video downloaded successfully!', '视频下载成功！'));
       };
       
       // Start recording
