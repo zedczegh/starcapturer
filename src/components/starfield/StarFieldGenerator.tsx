@@ -846,6 +846,7 @@ const StarFieldGenerator: React.FC = () => {
                 isAnimating={isAnimating}
                 isRecording={isRecording}
                 backgroundImage={starlessImage}
+                starsOnlyImage={starsOnlyImage}
                 onCanvasReady={handleCanvasReady}
               />
             </CardContent>
