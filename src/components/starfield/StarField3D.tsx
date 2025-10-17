@@ -129,39 +129,29 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const progressRatio = progress / 100;
     
     if (motionType === 'zoom_in') {
-      // Dramatic zoom - close stars grow MUCH faster than far stars
-      offsetsRef.current.background.scale = 1.0 + (progressRatio * 0.2);  // Background barely moves
-      offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 0.5);      // Far stars - slow
-      offsetsRef.current.layer2.scale = 1.0 + (progressRatio * 1.2);      // Middle stars - medium
-      offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 2.5);      // Close stars - FAST dramatic zoom
+      // Stars match background amplification speed
+      const amplification = progressRatio * 0.2;
+      offsetsRef.current.background.scale = 1.0 + amplification;
+      offsetsRef.current.layer1.scale = 1.0 + amplification;
     } else if (motionType === 'zoom_out') {
-      // Dramatic zoom out - reverse effect
-      offsetsRef.current.background.scale = 1.2 - (progressRatio * 0.2);
-      offsetsRef.current.layer3.scale = 1.5 - (progressRatio * 0.5);
-      offsetsRef.current.layer2.scale = 2.2 - (progressRatio * 1.2);
-      offsetsRef.current.layer1.scale = 3.5 - (progressRatio * 2.5);
+      // Zoom out - stars match background
+      const amplification = progressRatio * 0.2;
+      offsetsRef.current.background.scale = 1.2 - amplification;
+      offsetsRef.current.layer1.scale = 1.2 - amplification;
     } else if (motionType === 'pan_left') {
-      // Dramatic pan with strong parallax
-      const panAmount = progressRatio * speed * 250;
-      offsetsRef.current.background.scale = 1.3; // Zoomed to avoid gaps
-      offsetsRef.current.layer3.scale = 1.4;
-      offsetsRef.current.layer2.scale = 1.5;
-      offsetsRef.current.layer1.scale = 1.8;
-      offsetsRef.current.background.x = -panAmount * 0.2;  // Background moves slowly
-      offsetsRef.current.layer3.x = -panAmount * 0.6;      // Far stars
-      offsetsRef.current.layer2.x = -panAmount * 1.3;      // Middle stars
-      offsetsRef.current.layer1.x = -panAmount * 2.5;      // Close stars move FAST
+      // Pan with stars matching background movement
+      const panAmount = progressRatio * speed * 100;
+      offsetsRef.current.background.scale = 1.2;
+      offsetsRef.current.layer1.scale = 1.2;
+      offsetsRef.current.background.x = -panAmount;
+      offsetsRef.current.layer1.x = -panAmount;
     } else if (motionType === 'pan_right') {
-      // Dramatic pan right with strong parallax
-      const panAmount = progressRatio * speed * 250;
-      offsetsRef.current.background.scale = 1.3;
-      offsetsRef.current.layer3.scale = 1.4;
-      offsetsRef.current.layer2.scale = 1.5;
-      offsetsRef.current.layer1.scale = 1.8;
-      offsetsRef.current.background.x = panAmount * 0.2;
-      offsetsRef.current.layer3.x = panAmount * 0.6;
-      offsetsRef.current.layer2.x = panAmount * 1.3;
-      offsetsRef.current.layer1.x = panAmount * 2.5;
+      // Pan right with stars matching background
+      const panAmount = progressRatio * speed * 100;
+      offsetsRef.current.background.scale = 1.2;
+      offsetsRef.current.layer1.scale = 1.2;
+      offsetsRef.current.background.x = panAmount;
+      offsetsRef.current.layer1.x = panAmount;
     }
     
     // Draw background layer (nebula) first
