@@ -490,12 +490,18 @@ const StarField3D: React.FC<StarField3DProps> = ({
     };
   }, [isAnimating, animate, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
 
-  // Notify parent when canvas is ready
+  // Notify parent when canvas and layers are ready
   useEffect(() => {
-    if (canvasRef.current && onCanvasReady) {
-      onCanvasReady(canvasRef.current);
+    if (canvasRef.current && onCanvasReady && (starLayers.bright || starLayers.medium || starLayers.dim || backgroundImg)) {
+      // Call after a short delay to ensure canvas is fully rendered
+      const timer = setTimeout(() => {
+        if (canvasRef.current) {
+          onCanvasReady(canvasRef.current);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [onCanvasReady]);
+  }, [onCanvasReady, starLayers, backgroundImg]);
 
   if (stars.length === 0) {
     return (
