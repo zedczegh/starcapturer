@@ -1,3 +1,4 @@
+// Star Field Generator - FFmpeg integration for MP4 export
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
