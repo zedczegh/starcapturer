@@ -524,47 +524,38 @@ const StarFieldGenerator: React.FC = () => {
     }
     
     setIsGeneratingVideo(true);
-    setCurrentStep('generating');
     setIsAnimating(true);
     setAnimationProgress(0);
     
-    try {
-      toast.info(t('Recording animation...', '录制动画中...'));
-      
-      const stream = canvas.captureStream(60);
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm',
-        videoBitsPerSecond: 8000000
-      });
-      
-      const chunks: Blob[] = [];
-      
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
-      
-      mediaRecorder.onstop = () => {
-        const videoBlob = new Blob(chunks, { type: 'video/webm' });
-        setVideoBlob(videoBlob);
-        setIsAnimating(false);
-        setIsGeneratingVideo(false);
-        setCurrentStep('ready');
-        toast.success(t('Video ready! Click Download.', '视频已就绪！点击下载。'));
-      };
-      
-      mediaRecorder.start(100);
-      
-      setTimeout(() => {
-        mediaRecorder.stop();
-      }, animationSettings.duration * 1000 + 500);
-      
-    } catch (error) {
-      console.error('Video generation error:', error);
-      toast.error(t('Failed to generate video', '视频生成失败'));
+    toast.info(t('Recording animation...', '录制动画中...'));
+    
+    const stream = canvas.captureStream(60);
+    const mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'video/webm',
+      videoBitsPerSecond: 8000000
+    });
+    
+    const chunks: Blob[] = [];
+    
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+    
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      setVideoBlob(blob);
       setIsGeneratingVideo(false);
       setIsAnimating(false);
-      setCurrentStep('ready');
-    }
+      toast.success(t('Video ready!', '视频已就绪！'));
+    };
+    
+    mediaRecorder.start(100);
+    
+    setTimeout(() => {
+      if (mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+      }
+    }, animationSettings.duration * 1000 + 500);
   }, [animationSettings.duration, t]);
 
   const downloadVideo = useCallback(() => {
@@ -887,7 +878,7 @@ const StarFieldGenerator: React.FC = () => {
               {t('Reset', '重置')}
             </Button>
             
-            {currentStep === 'ready' && !videoBlob && (
+            {!videoBlob && (
               <Button
                 onClick={generateVideo}
                 disabled={isGeneratingVideo}
@@ -895,13 +886,13 @@ const StarFieldGenerator: React.FC = () => {
               >
                 <Video className="h-4 w-4 mr-2" />
                 {isGeneratingVideo 
-                  ? t('Generating...', '生成中...') 
+                  ? t('Recording...', '录制中...') 
                   : t('Generate Video', '生成视频')
                 }
               </Button>
             )}
             
-            {currentStep === 'ready' && videoBlob && (
+            {videoBlob && (
               <Button
                 onClick={downloadVideo}
                 className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
@@ -949,7 +940,6 @@ const StarFieldGenerator: React.FC = () => {
                     <div className="flex items-center justify-center gap-2">
                       <Button
                         onClick={toggleAnimation}
-                        disabled={isGeneratingVideo}
                         variant="outline"
                         size="sm"
                         className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50"
@@ -969,7 +959,7 @@ const StarFieldGenerator: React.FC = () => {
                       
                       <Button
                         onClick={handleReplay}
-                        disabled={isGeneratingVideo || (isAnimating && animationProgress < 10)}
+                        disabled={isAnimating && animationProgress < 10}
                         variant="outline"
                         size="sm"
                         className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50"
