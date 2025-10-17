@@ -131,7 +131,6 @@ const StarFieldGenerator: React.FC = () => {
         targetWidth = Math.floor(width * params.recommendedScale);
         targetHeight = Math.floor(height * params.recommendedScale);
         console.log(`Downscaling TIFF from ${width}x${height} to ${targetWidth}x${targetHeight} for memory optimization`);
-        toast.info(`Optimizing large image: ${targetWidth}x${targetHeight}`, { duration: 2000 });
       }
       
       // Use canvas pool
@@ -179,7 +178,6 @@ const StarFieldGenerator: React.FC = () => {
     const isValidFormat = validExtensions.some(ext => fileName.endsWith(ext));
     
     if (!isValidFormat) {
-      toast.error(t('Please upload a valid image file (JPG, PNG, FITS, TIFF, BMP, WEBP)', '请上传有效的图像文件 (JPG, PNG, FITS, TIFF, BMP, WEBP)'));
       if (starsFileInputRef.current) starsFileInputRef.current.value = '';
       return;
     }
@@ -187,7 +185,6 @@ const StarFieldGenerator: React.FC = () => {
     // Validate file size (500MB)
     const maxSize = 500 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error(t('File size must be less than 500MB', '文件大小必须小于500MB'));
       if (starsFileInputRef.current) starsFileInputRef.current.value = '';
       return;
     }
@@ -206,16 +203,13 @@ const StarFieldGenerator: React.FC = () => {
           const img = new Image();
           img.onload = () => {
             setStarsOnlyElement(img);
-            toast.success(t('Stars only image uploaded', '星体图像已上传'));
           };
           img.onerror = () => {
-            toast.error(t('Failed to load image', '图像加载失败'));
             setStarsOnlyImage(null);
             if (starsFileInputRef.current) starsFileInputRef.current.value = '';
           };
           img.src = dataUrl;
         } catch (error) {
-          toast.error(t('Failed to decode TIFF image', '无法解码TIFF图像'));
           if (starsFileInputRef.current) starsFileInputRef.current.value = '';
         }
       };
@@ -230,10 +224,8 @@ const StarFieldGenerator: React.FC = () => {
         const img = new Image();
         img.onload = () => {
           setStarsOnlyElement(img);
-          toast.success(t('Stars only image uploaded', '星体图像已上传'));
         };
         img.onerror = () => {
-          toast.error(t('Failed to load image', '图像加载失败'));
           setStarsOnlyImage(null);
           if (starsFileInputRef.current) starsFileInputRef.current.value = '';
         };
@@ -253,7 +245,6 @@ const StarFieldGenerator: React.FC = () => {
     const isValidFormat = validExtensions.some(ext => fileName.endsWith(ext));
     
     if (!isValidFormat) {
-      toast.error(t('Please upload a valid image file (JPG, PNG, FITS, TIFF, BMP, WEBP)', '请上传有效的图像文件 (JPG, PNG, FITS, TIFF, BMP, WEBP)'));
       if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
       return;
     }
@@ -261,7 +252,6 @@ const StarFieldGenerator: React.FC = () => {
     // Validate file size (500MB)
     const maxSize = 500 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error(t('File size must be less than 500MB', '文件大小必须小于500MB'));
       if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
       return;
     }
@@ -280,16 +270,13 @@ const StarFieldGenerator: React.FC = () => {
           const img = new Image();
           img.onload = () => {
             setStarlessElement(img);
-            toast.success(t('Starless image uploaded', '无星图像已上传'));
           };
           img.onerror = () => {
-            toast.error(t('Failed to load image', '图像加载失败'));
             setStarlessImage(null);
             if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
           };
           img.src = dataUrl;
         } catch (error) {
-          toast.error(t('Failed to decode TIFF image', '无法解码TIFF图像'));
           if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
         }
       };
@@ -304,10 +291,8 @@ const StarFieldGenerator: React.FC = () => {
         const img = new Image();
         img.onload = () => {
           setStarlessElement(img);
-          toast.success(t('Starless image uploaded', '无星图像已上传'));
         };
         img.onerror = () => {
-          toast.error(t('Failed to load image', '图像加载失败'));
           setStarlessImage(null);
           if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
         };
@@ -513,7 +498,6 @@ const StarFieldGenerator: React.FC = () => {
 
   const processImages = useCallback(async () => {
     if (!starsOnlyElement || !starlessElement) {
-      toast.error(t('Please upload both images first', '请先上传两张图像'));
       return;
     }
 
@@ -521,25 +505,18 @@ const StarFieldGenerator: React.FC = () => {
     setCurrentStep('processing');
     
     try {
-      toast.info(t('Analyzing images...', '分析图像...'), { duration: 2000 });
-      
       // Extract star positions from stars only image
       const stars = extractStarPositions(starsOnlyElement);
       setDetectedStars(stars);
       
       if (stars.length === 0) {
-        toast.warning(t('No stars detected in the image', '图像中未检测到星体'));
         setCurrentStep('upload');
         return;
       }
       
-      toast.info(t(`Detected ${stars.length} stars, generating depth map...`, `检测到${stars.length}颗星，生成深度图...`), { duration: 2000 });
-      
       // Generate depth map from starless image (now async with chunked processing)
       const depthMap = await generateDepthMap(starlessElement);
       setDepthMapCanvas(depthMap);
-      
-      toast.info(t('Mapping stars to 3D space...', '将星体映射到3D空间...'), { duration: 2000 });
       
       // Assign depth to stars based on depth map
       const depthCtx = depthMap.getContext('2d')!;
@@ -576,11 +553,8 @@ const StarFieldGenerator: React.FC = () => {
       const memStats = MemoryManager.getMemoryStats();
       console.log('Memory after processing:', memStats);
       
-      toast.success(t('Processing complete!', '处理完成！'));
-      
     } catch (error) {
       console.error('Processing error:', error);
-      toast.error(t('Processing failed. Please try again.', '处理失败。请重试。'));
       setCurrentStep('upload');
     } finally {
       setIsProcessing(false);
@@ -632,7 +606,6 @@ const StarFieldGenerator: React.FC = () => {
 
   const downloadVideoWebM = useCallback(async () => {
     if (currentStep !== 'ready') {
-      toast.error(t('Please process images first', '请先处理图像'));
       return;
     }
     
@@ -688,21 +661,22 @@ const StarFieldGenerator: React.FC = () => {
         let recordFps = 60;
         let bitrate = 10000000; // Default 10 Mbps
         
-        // Scale down very large canvases for smooth recording
-        if (megapixels > 8) { // > 8MP (e.g., 4K)
-          // Scale to ~4K max (3840x2160 = 8.3MP)
-          const targetMP = 8;
-          const scale = Math.sqrt(targetMP / megapixels);
-          recordWidth = Math.round(sourceWidth * scale);
-          recordHeight = Math.round(sourceHeight * scale);
-          recordFps = 30; // Reduce fps for very large resolutions
-          bitrate = 50000000; // 50 Mbps
-          // toast.info(t(`Recording at optimized resolution: ${recordWidth}x${recordHeight}`, `优化录制分辨率：${recordWidth}x${recordHeight}`));
-        } else if (megapixels > 2) { // 2-8MP (e.g., 1080p-4K)
-          bitrate = 25000000; // 25 Mbps
+        // Cap at 1920x1080 for smoother playback and smaller file size
+        const maxWidth = 1920;
+        const maxHeight = 1080;
+        
+        if (recordWidth > maxWidth || recordHeight > maxHeight) {
+          const scale = Math.min(maxWidth / recordWidth, maxHeight / recordHeight);
+          recordWidth = Math.round(recordWidth * scale);
+          recordHeight = Math.round(recordHeight * scale);
+          console.log(`Optimizing resolution to ${recordWidth}x${recordHeight} for smooth playback`);
+          bitrate = 15000000; // 15 Mbps for 1080p
+          recordFps = 60;
+        } else if (megapixels > 2) { // 2MP+ (e.g., 1080p)
+          bitrate = 15000000; // 15 Mbps
           recordFps = 60;
         } else { // < 2MP (e.g., 720p)
-          bitrate = 15000000; // 15 Mbps
+          bitrate = 10000000; // 10 Mbps
           recordFps = 60;
         }
         
@@ -771,7 +745,6 @@ const StarFieldGenerator: React.FC = () => {
             console.log(`Recording stopped. Captured ${frameCount} frames, ${chunks.length} chunks`);
             
             if (chunks.length === 0) {
-              // toast.error(t('Recording failed - no data captured', '录制失败 - 未捕获数据'));
               setIsGeneratingVideo(false);
               canvasPool.release(recordCanvas);
               return;
@@ -782,7 +755,6 @@ const StarFieldGenerator: React.FC = () => {
             console.log(`Final video: ${sizeMB} MB (${frameCount} frames at ${recordFps}fps)`);
             
             if (blob.size < 10000) {
-              // toast.error(t('Recording too small - likely failed', '录制文件过小 - 可能失败'));
               setIsGeneratingVideo(false);
               canvasPool.release(recordCanvas);
               return;
@@ -801,7 +773,6 @@ const StarFieldGenerator: React.FC = () => {
             setIsGeneratingVideo(false);
             // Keep animation running after recording
             canvasPool.release(recordCanvas);
-            // toast.success(t(`Video ready! ${sizeMB} MB`, `视频完成！${sizeMB} MB`));
             
             MemoryManager.forceGarbageCollection();
           };
@@ -809,7 +780,6 @@ const StarFieldGenerator: React.FC = () => {
           mediaRecorder.onerror = (e) => {
             console.error('MediaRecorder error:', e);
             recordingActive = false;
-            // toast.error(t('Recording error', '录制错误'));
             setIsGeneratingVideo(false);
             canvasPool.release(recordCanvas);
           };
@@ -823,8 +793,6 @@ const StarFieldGenerator: React.FC = () => {
           // Start recording
           console.log('Starting MediaRecorder...');
           mediaRecorder.start(100); // Collect data every 100ms
-          
-          // toast.success(t(`Recording at ${recordFps}fps...`, `以${recordFps}fps录制...`));
           
           // Simple non-blocking frame update loop
           // The stream automatically captures frames at the specified FPS
@@ -880,7 +848,6 @@ const StarFieldGenerator: React.FC = () => {
         
       } catch (error) {
         console.error('WebM recording failed:', error);
-        // toast.error(t('Failed to record video', '视频录制失败'));
         setIsGeneratingVideo(false);
         MemoryManager.forceGarbageCollection();
         throw error;
@@ -892,7 +859,6 @@ const StarFieldGenerator: React.FC = () => {
 
   const downloadVideoMP4 = useCallback(async () => {
     if (currentStep !== 'ready') {
-      // toast.error(t('Please process images first', '请先处理图像'));
       return;
     }
     
@@ -904,7 +870,6 @@ const StarFieldGenerator: React.FC = () => {
         setMp4Blob(null);
         
         console.log('=== Starting MP4 Generation ===');
-        // toast.info(t('Preparing recording...', '准备录制...'));
       
       const fps = 60;
       const duration = animationSettings.duration;
@@ -928,7 +893,6 @@ const StarFieldGenerator: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setMp4Progress(5);
-      // toast.info(t('Recording video...', '录制视频...'));
       
       // Step 2: Record WebM (5-40%)
       let canvas = canvasRef.current;
@@ -1081,7 +1045,6 @@ const StarFieldGenerator: React.FC = () => {
       }
       
       if (!ffmpegLoaded) {
-        // toast.info(t('Loading video encoder (this may take 30s)...', '加载视频编码器（可能需要30秒）...'));
         console.log('=== Loading FFmpeg (~32MB download) ===');
         
         const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
@@ -1139,19 +1102,12 @@ const StarFieldGenerator: React.FC = () => {
             console.log('✓ FFmpeg initialized successfully!');
             setFfmpegLoaded(true);
             setMp4Progress(50);
-            // toast.success(t('Encoder ready!', '编码器就绪！'));
           }
         } catch (error) {
           console.error('=== FFmpeg Loading Failed ===');
           console.error('Error:', error);
           
           const errorMsg = error instanceof Error ? error.message : String(error);
-          
-          // User-friendly error message
-          // toast.error(t(
-          //   'MP4 encoder unavailable. Please download as WebM instead.', 
-          //   'MP4编码器不可用。请改用WebM格式下载。'
-          // ));
           
           throw new Error(`FFmpeg initialization failed: ${errorMsg}`);
         }
@@ -1162,7 +1118,6 @@ const StarFieldGenerator: React.FC = () => {
       
       // Step 3: Convert WebM to MP4 (50-100%)
       console.log('=== MP4 Conversion Phase ===');
-      // toast.info(t('Converting to MP4...', '转换为MP4...'));
       const ffmpeg = ffmpegRef.current;
       
       try {
@@ -1220,7 +1175,6 @@ const StarFieldGenerator: React.FC = () => {
         setAnimationProgress(0);
         
         console.log('=== MP4 Generation Complete ===');
-        // toast.success(t('MP4 ready to download!', 'MP4准备下载！'));
         
       } catch (conversionError) {
         console.error('✗ Conversion failed:', conversionError);
@@ -1233,11 +1187,6 @@ const StarFieldGenerator: React.FC = () => {
         
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error('Error message:', errorMessage);
-        
-        // toast.error(t(
-        //   `Failed to encode MP4: ${errorMessage}`, 
-        //   `MP4编码失败: ${errorMessage}`
-        // ));
         
         setIsEncodingMP4(false);
         setIsGeneratingVideo(false);
@@ -1265,8 +1214,6 @@ const StarFieldGenerator: React.FC = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
-    // toast.success(t('MP4 video downloaded!', 'MP4视频已下载！'));
     
     // Reset
     setMp4Blob(null);
@@ -1305,8 +1252,6 @@ const StarFieldGenerator: React.FC = () => {
     if (starlessFileInputRef.current) {
       starlessFileInputRef.current.value = '';
     }
-    
-    toast.success(t('Reset complete', '重置完成'));
   }, [t]);
 
   return (
