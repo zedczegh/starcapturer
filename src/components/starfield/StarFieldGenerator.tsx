@@ -492,14 +492,21 @@ const StarFieldGenerator: React.FC = () => {
   const handleAnimationComplete = useCallback(() => {
     setIsAnimating(false);
     setAnimationProgress(100);
+    // Don't reset - keep at 100%
   }, []);
 
   const toggleAnimation = useCallback(() => {
     setIsAnimating(prev => !prev);
-    if (!isAnimating) {
-      setAnimationProgress(0); // Reset progress when starting
+    if (!isAnimating && animationProgress >= 100) {
+      // If at end, restart from beginning
+      setAnimationProgress(0);
     }
-  }, [isAnimating]);
+  }, [isAnimating, animationProgress]);
+
+  const handleReplay = useCallback(() => {
+    setAnimationProgress(0);
+    setIsAnimating(true);
+  }, []);
 
   const generateVideo = useCallback(() => {
     if (processedStars.length === 0) {
@@ -886,7 +893,7 @@ const StarFieldGenerator: React.FC = () => {
                 {/* Progress Bar and Controls */}
                 {processedStars.length > 0 && (
                   <div className="space-y-2 px-4 pb-3">
-                    {/* Play/Pause Button */}
+                    {/* Play/Pause and Replay Buttons */}
                     <div className="flex items-center justify-center gap-2">
                       <Button
                         onClick={toggleAnimation}
@@ -906,6 +913,17 @@ const StarFieldGenerator: React.FC = () => {
                             {t('Play', '播放')}
                           </>
                         )}
+                      </Button>
+                      
+                      <Button
+                        onClick={handleReplay}
+                        disabled={isRecording || (isAnimating && animationProgress < 10)}
+                        variant="outline"
+                        size="sm"
+                        className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        {t('Replay', '重播')}
                       </Button>
                     </div>
                     
