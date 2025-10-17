@@ -511,10 +511,10 @@ const StarFieldGenerator: React.FC = () => {
   }, [isAnimating, animationProgress]);
 
   const handleReplay = useCallback(() => {
-    setIsAnimating(false); // Stop first
+    setAnimationProgress(0);
+    setIsAnimating(false);
     setTimeout(() => {
-      setAnimationProgress(0);
-      setIsAnimating(true); // Then restart
+      setIsAnimating(true);
     }, 50);
   }, []);
 
@@ -526,48 +526,53 @@ const StarFieldGenerator: React.FC = () => {
     }
     
     setIsGeneratingVideo(true);
-    setIsAnimating(true);
-    setAnimationProgress(0);
-    
-    toast.info(t('Preparing download...', '准备下载中...'));
-    
-    const stream = canvas.captureStream(60);
-    const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm',
-      videoBitsPerSecond: 8000000
-    });
-    
-    const chunks: Blob[] = [];
-    
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
-    };
-    
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      
-      // Download immediately
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `starfield-${Date.now()}.webm`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      setIsGeneratingVideo(false);
-      setIsAnimating(false);
-      toast.success(t('Video downloaded!', '视频已下载！'));
-    };
-    
-    mediaRecorder.start(100);
+    setIsAnimating(false); // Stop current animation
     
     setTimeout(() => {
-      if (mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-      }
-    }, animationSettings.duration * 1000 + 500);
+      setAnimationProgress(0);
+      setIsAnimating(true); // Start recording from beginning
+      
+      toast.info(t('Recording animation...', '录制动画中...'));
+      
+      const stream = canvas.captureStream(60);
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm',
+        videoBitsPerSecond: 8000000
+      });
+      
+      const chunks: Blob[] = [];
+      
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        
+        // Download immediately
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `starfield-${Date.now()}.webm`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        setIsGeneratingVideo(false);
+        setIsAnimating(false);
+        toast.success(t('Video downloaded!', '视频已下载！'));
+      };
+      
+      mediaRecorder.start(100);
+      
+      // Ensure we record the FULL duration + extra buffer
+      setTimeout(() => {
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+        }
+      }, (animationSettings.duration * 1000) + 1000);
+    }, 100);
   }, [animationSettings.duration, t]);
 
   const resetAll = useCallback(() => {
