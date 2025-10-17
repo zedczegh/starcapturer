@@ -423,8 +423,7 @@ const StarFieldGenerator: React.FC = () => {
     setCurrentStep('processing');
     
     try {
-      // Step 1: Extract star positions from stars only image
-      toast.info(t('Step 1: Extracting star positions...', '步骤1：提取星体位置...'));
+      // Extract star positions from stars only image
       const stars = extractStarPositions(starsOnlyElement);
       setDetectedStars(stars);
       
@@ -434,13 +433,11 @@ const StarFieldGenerator: React.FC = () => {
         return;
       }
       
-      // Step 2: Generate depth map from starless image
-      toast.info(t('Step 2: Generating depth map from starless image...', '步骤2：从无星图像生成深度图...'));
+      // Generate depth map from starless image
       const depthMap = generateDepthMap(starlessElement);
       setDepthMapCanvas(depthMap);
       
-      // Step 3: Assign depth to stars based on depth map
-      toast.info(t('Step 3: Assigning depth to stars...', '步骤3：为星体分配深度...'));
+      // Assign depth to stars based on depth map
       const depthCtx = depthMap.getContext('2d')!;
       const depthData = depthCtx.getImageData(0, 0, depthMap.width, depthMap.height);
       
@@ -470,11 +467,6 @@ const StarFieldGenerator: React.FC = () => {
       
       setProcessedStars(processedStarsData);
       setCurrentStep('ready');
-      
-      toast.success(t(
-        `Successfully processed ${stars.length} stars with depth mapping!`, 
-        `成功处理了${stars.length}颗星体并分配了深度！`
-      ));
       
     } catch (error) {
       console.error('Processing error:', error);

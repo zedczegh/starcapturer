@@ -245,7 +245,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       offsetsRef.current.layer1.x = panAmount * 1.2;
     }
     
-    // Draw background layer (nebula) - maintain aspect ratio
+    // Draw background layer (nebula) first
     if (backgroundImg) {
       ctx.save();
       ctx.globalAlpha = 0.85;
@@ -254,7 +254,6 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const bgX = offsetsRef.current.background.x;
       const bgY = offsetsRef.current.background.y;
       
-      // Use actual image dimensions, no stretching
       const scaledWidth = backgroundImg.width * bgScale;
       const scaledHeight = backgroundImg.height * bgScale;
       const drawX = (canvas.width - scaledWidth) / 2 + bgX;
@@ -264,15 +263,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.restore();
     }
     
-    // Draw star layers (farthest to closest) - maintain aspect ratio
-    const drawLayer = (layer: HTMLCanvasElement | null, offset: { x: number, y: number, scale: number }, alpha: number = 1.0) => {
+    // Draw star layers on top (farthest to closest) with proper blending
+    const drawLayer = (layer: HTMLCanvasElement | null, offset: { x: number, y: number, scale: number }) => {
       if (!layer) return;
       
       ctx.save();
-      ctx.globalAlpha = alpha;
+      ctx.globalCompositeOperation = 'lighter'; // Additive blending for stars
+      ctx.globalAlpha = 1.0; // Full opacity for stars
       
       const scale = offset.scale;
-      // Use actual layer dimensions, no stretching
       const scaledWidth = layer.width * scale;
       const scaledHeight = layer.height * scale;
       const drawX = (canvas.width - scaledWidth) / 2 + offset.x;
@@ -282,9 +281,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.restore();
     };
     
-    drawLayer(starLayers.layer3, offsetsRef.current.layer3, 1.0); // Farthest
-    drawLayer(starLayers.layer2, offsetsRef.current.layer2, 1.0); // Medium
-    drawLayer(starLayers.layer1, offsetsRef.current.layer1, 1.0); // Closest
+    drawLayer(starLayers.layer3, offsetsRef.current.layer3); // Farthest stars
+    drawLayer(starLayers.layer2, offsetsRef.current.layer2); // Medium stars
+    drawLayer(starLayers.layer1, offsetsRef.current.layer1); // Closest stars
     
     animationFrameRef.current = requestAnimationFrame(animate);
   }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
