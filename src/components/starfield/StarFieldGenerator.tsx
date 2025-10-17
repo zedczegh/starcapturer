@@ -517,104 +517,97 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const generateVideo = useCallback(async () => {
-    if (!canvasRef.current) {
-      toast.error(t('Canvas not ready', '画布未就绪'));
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      toast.error(t('Preview not ready', '预览未就绪'));
       return;
     }
     
     setIsGeneratingVideo(true);
     setCurrentStep('generating');
+    setIsAnimating(true);
+    setAnimationProgress(0);
     
     try {
-      toast.info(t('Generating video frames...', '生成视频帧中...'));
+      toast.info(t('Recording animation...', '录制动画中...'));
       
-      const canvas = canvasRef.current;
-      const fps = 60;
-      const totalFrames = Math.floor(animationSettings.duration * fps);
-      const frames: Uint8Array[] = [];
+      // Capture stream from canvas
+      const stream = canvas.captureStream(60);
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm',
+        videoBitsPerSecond: 8000000
+      });
       
-      // Capture frames by triggering animation progress
-      for (let i = 0; i < totalFrames; i++) {
-        const progress = (i / totalFrames) * 100;
-        setAnimationProgress(progress);
-        setIsAnimating(true);
-        
-        // Wait for frame to render
-        await new Promise(resolve => setTimeout(resolve, 1000 / fps));
-        
-        // Capture frame as PNG
-        const dataUrl = canvas.toDataURL('image/png');
-        const base64Data = dataUrl.split(',')[1];
-        const binaryData = atob(base64Data);
-        const bytes = new Uint8Array(binaryData.length);
-        for (let j = 0; j < binaryData.length; j++) {
-          bytes[j] = binaryData.charCodeAt(j);
+      const chunks: Blob[] = [];
+      
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      
+      mediaRecorder.onstop = async () => {
+        try {
+          setIsAnimating(false);
+          toast.info(t('Converting to MP4...', '转换为MP4中...'));
+          
+          const webmBlob = new Blob(chunks, { type: 'video/webm' });
+          
+          // Load FFmpeg
+          if (!ffmpegRef.current) {
+            const ffmpeg = new FFmpeg();
+            await ffmpeg.load({
+              coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+              wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
+            });
+            ffmpegRef.current = ffmpeg;
+          }
+          
+          const ffmpeg = ffmpegRef.current;
+          
+          // Convert WebM to MP4
+          const webmData = new Uint8Array(await webmBlob.arrayBuffer());
+          await ffmpeg.writeFile('input.webm', webmData);
+          
+          await ffmpeg.exec([
+            '-i', 'input.webm',
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '22',
+            '-pix_fmt', 'yuv420p',
+            'output.mp4'
+          ]);
+          
+          const mp4Data = await ffmpeg.readFile('output.mp4');
+          const mp4Blob = new Blob([new Uint8Array(mp4Data as Uint8Array)], { type: 'video/mp4' });
+          
+          setVideoBlob(mp4Blob);
+          
+          await ffmpeg.deleteFile('input.webm');
+          await ffmpeg.deleteFile('output.mp4');
+          
+          toast.success(t('Video ready!', '视频已就绪！'));
+          setCurrentStep('ready');
+        } catch (error) {
+          console.error('Conversion error:', error);
+          toast.error(t('Conversion failed', '转换失败'));
+          setCurrentStep('ready');
+        } finally {
+          setIsGeneratingVideo(false);
         }
-        frames.push(bytes);
-        
-        if (i % 60 === 0) {
-          toast.info(t(`Processing: ${Math.round(progress)}%`, `处理中: ${Math.round(progress)}%`));
-        }
-      }
+      };
       
-      setIsAnimating(false);
-      toast.info(t('Compiling video with FFmpeg...', '使用FFmpeg编译视频中...'));
+      mediaRecorder.start(100);
       
-      // Load FFmpeg
-      if (!ffmpegRef.current) {
-        const ffmpeg = new FFmpeg();
-        ffmpeg.on('log', ({ message }) => {
-          console.log('FFmpeg:', message);
-        });
-        
-        await ffmpeg.load({
-          coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-          wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
-        });
-        ffmpegRef.current = ffmpeg;
-      }
-      
-      const ffmpeg = ffmpegRef.current;
-      
-      // Write frames to FFmpeg
-      for (let i = 0; i < frames.length; i++) {
-        await ffmpeg.writeFile(`frame${i.toString().padStart(6, '0')}.png`, frames[i]);
-      }
-      
-      // Create video from frames
-      await ffmpeg.exec([
-        '-framerate', fps.toString(),
-        '-i', 'frame%06d.png',
-        '-c:v', 'libx264',
-        '-preset', 'medium',
-        '-crf', '18',
-        '-pix_fmt', 'yuv420p',
-        '-movflags', '+faststart',
-        'output.mp4'
-      ]);
-      
-      // Read output
-      const data = await ffmpeg.readFile('output.mp4');
-      const mp4Blob = new Blob([new Uint8Array(data as Uint8Array)], { type: 'video/mp4' });
-      
-      setVideoBlob(mp4Blob);
-      
-      // Cleanup
-      for (let i = 0; i < frames.length; i++) {
-        await ffmpeg.deleteFile(`frame${i.toString().padStart(6, '0')}.png`);
-      }
-      await ffmpeg.deleteFile('output.mp4');
-      
-      toast.success(t('Video ready! Click Download to save.', '视频已就绪！点击下载保存。'));
-      setCurrentStep('ready');
+      // Stop after duration
+      setTimeout(() => {
+        mediaRecorder.stop();
+      }, animationSettings.duration * 1000);
       
     } catch (error) {
       console.error('Video generation error:', error);
       toast.error(t('Failed to generate video', '视频生成失败'));
-      setCurrentStep('ready');
-    } finally {
       setIsGeneratingVideo(false);
       setIsAnimating(false);
+      setCurrentStep('ready');
     }
   }, [animationSettings.duration, t]);
 
