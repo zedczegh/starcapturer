@@ -549,6 +549,7 @@ const StarFieldGenerator: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     try {
+      const canvas = canvasRef.current;
       const fps = 60;
       const duration = animationSettings.duration;
       const stream = canvas.captureStream(fps);
@@ -662,7 +663,6 @@ const StarFieldGenerator: React.FC = () => {
   }, [animationSettings.duration, t]);
 
   const downloadVideoMP4 = useCallback(async () => {
-  const downloadVideoMP4 = useCallback(async () => {
     if (!canvasRef.current) {
       toast.error(t('Please generate the animation first', '请先生成动画'));
       return;
@@ -703,6 +703,7 @@ const StarFieldGenerator: React.FC = () => {
       
       // Step 2: Record WebM (5-40%)
       console.log('Setting up canvas stream...');
+      const canvas = canvasRef.current!;
       const stream = canvas.captureStream(fps);
       
       const videoTracks = stream.getVideoTracks();
