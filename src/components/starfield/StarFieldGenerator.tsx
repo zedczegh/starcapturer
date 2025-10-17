@@ -826,36 +826,44 @@ const StarFieldGenerator: React.FC = () => {
           
           toast.success(t(`Recording at ${recordFps}fps...`, `以${recordFps}fps录制...`));
           
-          // Use setInterval for precise timing, completely independent from display rendering
-          const updateInterval = 1000 / recordFps;
+          // Simple non-blocking frame update loop
+          // The stream automatically captures frames at the specified FPS
+          let lastUpdateTime = performance.now();
+          const updateInterval = 1000 / recordFps; // Update recording canvas at target FPS
           const totalFrames = Math.ceil(duration * recordFps);
           
-          const intervalId = setInterval(() => {
-            if (!recordingActive) {
-              clearInterval(intervalId);
-              return;
+          const updateRecordingCanvas = () => {
+            if (!recordingActive) return;
+            
+            const now = performance.now();
+            const elapsed = now - lastUpdateTime;
+            
+            // Update recording canvas when it's time for next frame
+            if (elapsed >= updateInterval) {
+              // Copy current frame from display to recording canvas
+              recordCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
+              
+              frameCount++;
+              lastUpdateTime = now - (elapsed % updateInterval); // Account for drift
+              
+              // Progress logging
+              if (frameCount % 60 === 0 || frameCount === totalFrames) {
+                const progress = Math.min((frameCount / totalFrames) * 100, 100);
+                console.log(`Recording: ${frameCount}/${totalFrames} frames (${progress.toFixed(0)}%)`);
+              }
             }
             
-            // Copy current frame from display to recording canvas
-            recordCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
-            
-            frameCount++;
-            
-            // Progress logging
-            if (frameCount % 60 === 0 || frameCount === totalFrames) {
-              const progress = Math.min((frameCount / totalFrames) * 100, 100);
-              console.log(`Recording: ${frameCount}/${totalFrames} frames (${progress.toFixed(0)}%)`);
+            // Continue updating
+            if (recordingActive) {
+              requestAnimationFrame(updateRecordingCanvas);
             }
-            
-            // Stop if we've captured all frames
-            if (frameCount >= totalFrames) {
-              clearInterval(intervalId);
-            }
-          }, updateInterval);
+          };
+          
+          // Start update loop
+          requestAnimationFrame(updateRecordingCanvas);
           
           // Auto-stop after duration
           setTimeout(() => {
-            clearInterval(intervalId);
             if (mediaRecorder.state === 'recording') {
               console.log('Stopping recording after', ((duration * 1000 + 2000) / 1000).toFixed(1), 'seconds');
               recordingActive = false;
