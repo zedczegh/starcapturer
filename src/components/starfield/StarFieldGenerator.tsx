@@ -564,27 +564,35 @@ const StarFieldGenerator: React.FC = () => {
       };
       
       mediaRecorder.onstop = async () => {
+        console.log('Recording stopped, processing video...');
         const webmBlob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        console.log('WebM blob size:', (webmBlob.size / 1024 / 1024).toFixed(2), 'MB');
         
         toast.info(t('Converting to MP4...', '转换为MP4中...'));
         
         try {
           // Load FFmpeg on demand
+          console.log('Checking FFmpeg...');
           if (!ffmpegRef.current) {
+            console.log('Loading FFmpeg for the first time...');
             const ffmpeg = new FFmpeg();
             ffmpeg.on('log', ({ message }) => {
               console.log('FFmpeg:', message);
             });
+            
+            console.log('Loading FFmpeg core...');
             await ffmpeg.load({
               coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
               wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
             });
+            console.log('FFmpeg loaded successfully');
             ffmpegRef.current = ffmpeg;
           }
           
           const ffmpeg = ffmpegRef.current;
-          
+          console.log('Writing WebM file to FFmpeg...');
           await ffmpeg.writeFile('input.webm', await fetchFile(webmBlob));
+          console.log('WebM file written, starting conversion...');
           
           await ffmpeg.exec([
             '-i', 'input.webm',
@@ -596,18 +604,21 @@ const StarFieldGenerator: React.FC = () => {
             'output.mp4'
           ]);
           
+          console.log('Conversion complete, reading MP4...');
           const data = await ffmpeg.readFile('output.mp4');
           const mp4Blob = new Blob([new Uint8Array(data as Uint8Array)], { type: 'video/mp4' });
+          console.log('MP4 blob size:', (mp4Blob.size / 1024 / 1024).toFixed(2), 'MB');
           
           setVideoBlob(mp4Blob);
           
+          console.log('Cleaning up temporary files...');
           await ffmpeg.deleteFile('input.webm');
           await ffmpeg.deleteFile('output.mp4');
           
           toast.success(t('Video ready! Click Download to save.', '视频已就绪！点击下载保存。'));
         } catch (error) {
           console.error('MP4 conversion error:', error);
-          toast.error(t('Failed to convert video', '视频转换失败'));
+          toast.error(t('Conversion failed: ' + (error as Error).message, '转换失败: ' + (error as Error).message));
         }
         
         setIsGeneratingVideo(false);
