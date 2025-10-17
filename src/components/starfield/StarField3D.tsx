@@ -17,6 +17,7 @@ interface StarField3DProps {
     duration?: number;
     fieldOfView?: number;
     amplification?: number;
+    spin?: number;
   };
   isAnimating: boolean;
   isRecording: boolean;
@@ -261,7 +262,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d')!;
-    const { motionType = 'zoom_in', speed = 1, duration = 10 } = settings;
+    const { motionType = 'zoom_in', speed = 1, duration = 10, spin = 0 } = settings;
     
     // Calculate progress
     if (animationStartTimeRef.current === 0) {
@@ -292,6 +293,20 @@ const StarField3D: React.FC<StarField3DProps> = ({
     
     // Calculate zoom/pan with DRAMATIC parallax differences for 3D depth
     const progressRatio = progress / 100;
+    
+    // Calculate rotation angle based on progress and spin setting
+    const currentRotation = (spin * progressRatio * Math.PI) / 180; // Convert to radians
+    
+    // Calculate scale needed to fill frame when rotated
+    // At 45 degrees, we need sqrt(2) ≈ 1.414x scale to avoid corners
+    const rotationScale = spin > 0 ? 1 + (Math.abs(Math.sin(currentRotation)) * 0.414) : 1;
+    
+    // Save context and apply rotation at center
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(currentRotation);
+    ctx.scale(rotationScale, rotationScale);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
     
     // Amplification factor from settings (100-300%)
     const ampFactor = (settings.amplification || 150) / 100;
@@ -394,6 +409,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       ctx.restore();
     }
+    
+    // Restore rotation transform
+    ctx.restore();
     
     animationFrameRef.current = requestAnimationFrame(animate);
   }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);

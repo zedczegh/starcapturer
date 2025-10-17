@@ -62,7 +62,8 @@ const StarFieldGenerator: React.FC = () => {
     duration: 10,
     fieldOfView: 75,
     depthMultiplier: 1.0,
-    amplification: 150 // 120-300%
+    amplification: 150, // 100-300%
+    spin: 0 // 0-90 degrees
   });
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
@@ -786,6 +787,27 @@ const StarFieldGenerator: React.FC = () => {
                   />
                   <p className="text-xs text-cosmic-400">
                     {t('Higher amplification = faster motion through space', '更高的放大倍数 = 更快的空间移动速度')}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-cosmic-200">{t('Spin Angle', '旋转角度')}</Label>
+                    <span className="text-cosmic-300 text-sm font-semibold">{animationSettings.spin}°</span>
+                  </div>
+                  <Slider
+                    value={[animationSettings.spin]}
+                    onValueChange={(value) => setAnimationSettings(prev => ({
+                      ...prev, 
+                      spin: value[0]
+                    }))}
+                    min={0}
+                    max={90}
+                    step={5}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-cosmic-400">
+                    {t('Rotation angle during animation (0° = no rotation)', '动画期间的旋转角度（0° = 无旋转）')}
                   </p>
                 </div>
 
