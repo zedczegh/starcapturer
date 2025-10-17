@@ -527,56 +527,101 @@ const StarFieldGenerator: React.FC = () => {
     setIsGeneratingVideo(true);
     setIsAnimating(false); // Stop current animation
     
-    // Reset and start recording from beginning
+    // Reset animation completely
+    setAnimationProgress(0);
+    setResetKey(prev => prev + 1);
+    
+    // Wait for canvas to be ready and start animation
     setTimeout(() => {
-      setAnimationProgress(0);
-      setResetKey(prev => prev + 1); // Reset the animation completely
+      setIsAnimating(true);
       
+      // Wait longer for the first frame to actually render
       setTimeout(() => {
-        setIsAnimating(true); // Start recording from beginning
+        toast.info(t('Recording animation...', '录制动画中...'));
         
-        toast.info(t('Recording animation with current settings...', '使用当前设置录制动画...'));
-        
-        const stream = canvas.captureStream(60);
-        const mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'video/webm',
-          videoBitsPerSecond: 8000000
-        });
-        
-        const chunks: Blob[] = [];
-        
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunks.push(e.data);
-        };
-        
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(chunks, { type: 'video/webm' });
+        try {
+          const stream = canvas.captureStream(60);
+          const mediaRecorder = new MediaRecorder(stream, {
+            mimeType: 'video/webm;codecs=vp9',
+            videoBitsPerSecond: 10000000
+          });
           
-          // Download immediately
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `starfield-${Date.now()}.webm`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+          const chunks: Blob[] = [];
+          let dataReceived = false;
           
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+              chunks.push(e.data);
+              dataReceived = true;
+              console.log(`Recorded chunk: ${e.data.size} bytes`);
+            }
+          };
+          
+          mediaRecorder.onerror = (e) => {
+            console.error('MediaRecorder error:', e);
+            toast.error(t('Recording failed', '录制失败'));
+            setIsGeneratingVideo(false);
+            setIsAnimating(false);
+          };
+          
+          mediaRecorder.onstop = () => {
+            console.log(`Recording stopped. Total chunks: ${chunks.length}`);
+            
+            if (!dataReceived || chunks.length === 0) {
+              toast.error(t('No data recorded. Please try again.', '未录制到数据，请重试。'));
+              setIsGeneratingVideo(false);
+              setIsAnimating(false);
+              return;
+            }
+            
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            console.log(`Final blob size: ${blob.size} bytes`);
+            
+            if (blob.size === 0) {
+              toast.error(t('Recording failed: empty file', '录制失败：文件为空'));
+              setIsGeneratingVideo(false);
+              setIsAnimating(false);
+              return;
+            }
+            
+            // Download the video
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `starfield-${Date.now()}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            setIsGeneratingVideo(false);
+            setIsAnimating(false);
+            toast.success(t('Video downloaded!', '视频已下载！'));
+          };
+          
+          // Start recording with frequent data intervals
+          mediaRecorder.start(100);
+          console.log('MediaRecorder started');
+          
+          // Record for the full duration + buffer
+          const recordDuration = (animationSettings.duration * 1000) + 1500;
+          console.log(`Will record for ${recordDuration}ms`);
+          
+          setTimeout(() => {
+            if (mediaRecorder.state === 'recording') {
+              console.log('Stopping recorder...');
+              mediaRecorder.stop();
+            }
+          }, recordDuration);
+          
+        } catch (error) {
+          console.error('Failed to start recording:', error);
+          toast.error(t('Failed to start recording', '无法开始录制'));
           setIsGeneratingVideo(false);
           setIsAnimating(false);
-          toast.success(t('Video downloaded!', '视频已下载！'));
-        };
-        
-        mediaRecorder.start(100);
-        
-        // Record the FULL duration + extra buffer for safety
-        setTimeout(() => {
-          if (mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-          }
-        }, (animationSettings.duration * 1000) + 1000);
-      }, 100);
-    }, 100);
+        }
+      }, 500); // Wait 500ms for first frame to render
+    }, 300); // Wait for reset
   }, [isCanvasReady, animationSettings.duration, t]);
 
   const resetAll = useCallback(() => {
