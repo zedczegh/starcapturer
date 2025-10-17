@@ -569,7 +569,41 @@ const StarFieldGenerator: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     try {
-      const canvas = canvasRef.current;
+      console.log('Starting WebM recording...');
+      console.log('Canvas ref:', canvasRef.current);
+      console.log('Is canvas ready:', isCanvasReady);
+      
+      let canvas = canvasRef.current;
+      
+      // If canvas ref is null, try to find the canvas element directly
+      if (!canvas) {
+        console.log('Canvas ref is null, trying to find canvas in DOM...');
+        const canvasElements = document.querySelectorAll('canvas');
+        console.log('Found canvas elements:', canvasElements.length);
+        
+        // Look for Three.js canvas (usually has specific attributes)
+        for (const canvasEl of canvasElements) {
+          if (canvasEl instanceof HTMLCanvasElement && canvasEl.width > 0 && canvasEl.height > 0) {
+            console.log('Found potential canvas:', canvasEl);
+            canvas = canvasEl;
+            // Update our ref for future use
+            canvasRef.current = canvas;
+            break;
+          }
+        }
+      }
+      
+      if (!canvas) {
+        throw new Error('Canvas not available - please make sure the 3D animation is fully loaded and visible');
+      }
+      
+      if (!(canvas instanceof HTMLCanvasElement)) {
+        throw new Error('Invalid canvas element - not an HTMLCanvasElement');
+      }
+      
+      console.log('Canvas validation passed:', canvas);
+      console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+      
       const fps = 60;
       const duration = animationSettings.duration;
       const stream = canvas.captureStream(fps);
@@ -724,6 +758,13 @@ const StarFieldGenerator: React.FC = () => {
       // Step 2: Record WebM (5-40%)
       console.log('Setting up canvas stream...');
       const canvas = canvasRef.current!;
+      if (!canvas) {
+        throw new Error('Canvas not available - please wait for the animation to fully load');
+      }
+      
+      console.log('Canvas found for MP4:', canvas);
+      console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+      
       const stream = canvas.captureStream(fps);
       
       const videoTracks = stream.getVideoTracks();
