@@ -47,6 +47,7 @@ const StarFieldGenerator: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isCanvasReady, setIsCanvasReady] = useState(false);
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'ready' | 'generating'>('upload');
   const [animationProgress, setAnimationProgress] = useState(0); // 0-100%
   
@@ -478,7 +479,14 @@ const StarFieldGenerator: React.FC = () => {
   }, [starsOnlyElement, starlessElement, extractStarPositions, generateDepthMap, t]);
 
   const handleCanvasReady = useCallback((canvas: HTMLCanvasElement) => {
-    canvasRef.current = canvas;
+    console.log('Canvas ready callback triggered', canvas);
+    if (canvas && canvas.getContext('2d')) {
+      canvasRef.current = canvas;
+      setIsCanvasReady(true);
+      console.log('Canvas successfully set and ready');
+    } else {
+      console.error('Canvas is not properly initialized');
+    }
   }, []);
 
   const handleProgressUpdate = useCallback((progress: number) => {
@@ -510,12 +518,26 @@ const StarFieldGenerator: React.FC = () => {
       return;
     }
 
-    if (!canvasRef.current) {
-      toast.error(t('Canvas not ready. Please wait and try again.', '画布未准备好，请稍后重试。'));
+    if (!isCanvasReady || !canvasRef.current) {
+      console.error('Canvas not ready. isCanvasReady:', isCanvasReady, 'canvasRef.current:', canvasRef.current);
+      toast.error(t('Canvas not ready. Please wait for the preview to load first.', '画布未准备好，请等待预览加载完成。'));
+      return;
+    }
+
+    // Double-check canvas has valid dimensions
+    if (canvasRef.current.width === 0 || canvasRef.current.height === 0) {
+      console.error('Canvas has invalid dimensions:', canvasRef.current.width, canvasRef.current.height);
+      toast.error(t('Canvas not properly initialized. Please try processing the images again.', '画布未正确初始化，请重新处理图像。'));
       return;
     }
     
     try {
+      console.log('Starting video recording...', {
+        canvasWidth: canvasRef.current.width,
+        canvasHeight: canvasRef.current.height,
+        duration: animationSettings.duration
+      });
+
       recordedChunksRef.current = [];
       setIsRecording(true);
       setIsAnimating(true);
@@ -526,6 +548,12 @@ const StarFieldGenerator: React.FC = () => {
       // Get the canvas stream at full resolution
       const stream = canvasRef.current.captureStream(60); // 60 FPS for smooth video
       
+      if (!stream) {
+        throw new Error('Failed to capture canvas stream');
+      }
+
+      console.log('Canvas stream captured successfully');
+      
       // Use VP9 codec for better quality and compression
       let options: MediaRecorderOptions = { 
         mimeType: 'video/webm;codecs=vp9',
@@ -534,6 +562,7 @@ const StarFieldGenerator: React.FC = () => {
       
       // Fallback to vp8 if vp9 not supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        console.log('VP9 not supported, falling back to VP8');
         options = { 
           mimeType: 'video/webm;codecs=vp8',
           videoBitsPerSecond: 8000000
@@ -542,11 +571,14 @@ const StarFieldGenerator: React.FC = () => {
       
       // Fallback to default if neither supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        console.log('VP8 not supported, using default WebM');
         options = { 
           mimeType: 'video/webm',
           videoBitsPerSecond: 8000000
         };
       }
+      
+      console.log('Using MediaRecorder with options:', options);
       
       const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
@@ -554,11 +586,14 @@ const StarFieldGenerator: React.FC = () => {
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           recordedChunksRef.current.push(event.data);
+          console.log('Recorded chunk:', event.data.size, 'bytes');
         }
       };
       
       mediaRecorder.onstop = () => {
+        console.log('Recording stopped. Total chunks:', recordedChunksRef.current.length);
         const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        console.log('Video blob created, size:', blob.size, 'bytes');
         const url = URL.createObjectURL(blob);
         
         // Create download link with descriptive filename
@@ -576,13 +611,23 @@ const StarFieldGenerator: React.FC = () => {
         setIsAnimating(false);
         setCurrentStep('ready');
       };
+
+      mediaRecorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+        toast.error(t('Recording error occurred', '录制时发生错误'));
+        setIsRecording(false);
+        setIsAnimating(false);
+        setCurrentStep('ready');
+      };
       
       // Start recording
       mediaRecorder.start(100); // Collect data every 100ms
+      console.log('MediaRecorder started');
       
       // Stop recording after the specified duration (add 200ms buffer)
       setTimeout(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          console.log('Stopping recording after duration');
           mediaRecorderRef.current.stop();
         }
       }, (animationSettings.duration * 1000) + 200);
@@ -594,7 +639,7 @@ const StarFieldGenerator: React.FC = () => {
       setCurrentStep('ready');
       toast.error(t('Failed to record video. Please try again.', '录制视频失败，请重试。'));
     }
-  }, [processedStars, animationSettings.duration, t]);
+  }, [processedStars, animationSettings.duration, isCanvasReady, t]);
 
   const resetAll = useCallback(() => {
     setStarsOnlyImage(null);
@@ -606,6 +651,7 @@ const StarFieldGenerator: React.FC = () => {
     setDepthMapCanvas(null);
     setIsAnimating(false);
     setIsRecording(false);
+    setIsCanvasReady(false);
     setCurrentStep('upload');
     if (starsFileInputRef.current) {
       starsFileInputRef.current.value = '';
@@ -902,11 +948,13 @@ const StarFieldGenerator: React.FC = () => {
             {currentStep === 'ready' && (
               <Button
                 onClick={generateVideo}
-                disabled={isRecording}
-                className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700"
+                disabled={isRecording || !isCanvasReady}
+                className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className="h-4 w-4 mr-2" />
-                {isRecording ? t('Downloading...', '下载中...') : t('Download Video', '下载视频')}
+                {isRecording ? t('Downloading...', '下载中...') : 
+                 !isCanvasReady ? t('Preparing...', '准备中...') : 
+                 t('Download Video', '下载视频')}
               </Button>
             )}
           </div>
