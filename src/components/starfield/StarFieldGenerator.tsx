@@ -520,8 +520,8 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const generateVideo = useCallback(async () => {
-    if (processedStars.length === 0 || !canvasRef.current) {
-      toast.error(t('Please process stars first', '请先处理星体'));
+    if (!canvasRef.current) {
+      toast.error(t('Canvas not ready', '画布未就绪'));
       return;
     }
     
@@ -976,7 +976,7 @@ const StarFieldGenerator: React.FC = () => {
             {currentStep === 'ready' && !videoBlob && (
               <Button
                 onClick={generateVideo}
-                disabled={isGeneratingVideo || processedStars.length === 0}
+                disabled={isGeneratingVideo}
                 className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50"
               >
                 <Video className="h-4 w-4 mr-2" />
