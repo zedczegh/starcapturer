@@ -297,46 +297,46 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const ampFactor = (settings.amplification || 150) / 100;
     
     if (motionType === 'zoom_in') {
-      // Create 3D depth: large stars zoom faster than small stars
-      offsetsRef.current.background.scale = 1.0 + (progressRatio * 0.4 * ampFactor);  // Background moves slowest
-      offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 0.6 * ampFactor);      // Small stars (far)
-      offsetsRef.current.layer2.scale = 1.0 + (progressRatio * 1.0 * ampFactor);      // Medium stars
-      offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 1.5 * ampFactor);      // Large stars (close) - fastest
+      // Dramatic 3D depth: large stars zoom MUCH faster than small stars
+      offsetsRef.current.background.scale = 1.0 + (progressRatio * 0.3 * ampFactor);  // Background barely moves
+      offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 0.5 * ampFactor);      // Small stars (far) - slow
+      offsetsRef.current.layer2.scale = 1.0 + (progressRatio * 1.0 * ampFactor);      // Medium stars - moderate
+      offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 2.0 * ampFactor);      // Large stars (close) - FAST
     } else if (motionType === 'zoom_out') {
-      // Zoom out with depth
-      const bgMax = 1.0 + (0.4 * ampFactor);
-      const smallMax = 1.0 + (0.6 * ampFactor);
+      // Dramatic zoom out with depth
+      const bgMax = 1.0 + (0.3 * ampFactor);
+      const smallMax = 1.0 + (0.5 * ampFactor);
       const medMax = 1.0 + (1.0 * ampFactor);
-      const largeMax = 1.0 + (1.5 * ampFactor);
+      const largeMax = 1.0 + (2.0 * ampFactor);
       
-      offsetsRef.current.background.scale = bgMax - (progressRatio * 0.4 * ampFactor);
-      offsetsRef.current.layer3.scale = smallMax - (progressRatio * 0.6 * ampFactor);
+      offsetsRef.current.background.scale = bgMax - (progressRatio * 0.3 * ampFactor);
+      offsetsRef.current.layer3.scale = smallMax - (progressRatio * 0.5 * ampFactor);
       offsetsRef.current.layer2.scale = medMax - (progressRatio * 1.0 * ampFactor);
-      offsetsRef.current.layer1.scale = largeMax - (progressRatio * 1.5 * ampFactor);
+      offsetsRef.current.layer1.scale = largeMax - (progressRatio * 2.0 * ampFactor);
     } else if (motionType === 'pan_left') {
-      // Pan with 3D parallax: large stars pan faster
+      // Dramatic pan with strong 3D parallax: large stars pan MUCH faster
       const panAmount = progressRatio * speed * 250 * ampFactor;
-      offsetsRef.current.background.scale = 1.0 + (0.3 * ampFactor);
-      offsetsRef.current.layer3.scale = 1.0 + (0.3 * ampFactor);
-      offsetsRef.current.layer2.scale = 1.0 + (0.3 * ampFactor);
-      offsetsRef.current.layer1.scale = 1.0 + (0.3 * ampFactor);
+      offsetsRef.current.background.scale = 1.0 + (0.2 * ampFactor);
+      offsetsRef.current.layer3.scale = 1.0 + (0.2 * ampFactor);
+      offsetsRef.current.layer2.scale = 1.0 + (0.2 * ampFactor);
+      offsetsRef.current.layer1.scale = 1.0 + (0.2 * ampFactor);
       
-      offsetsRef.current.background.x = -panAmount * 0.4;  // Background slowest
-      offsetsRef.current.layer3.x = -panAmount * 0.6;      // Small stars
-      offsetsRef.current.layer2.x = -panAmount * 1.0;      // Medium stars
-      offsetsRef.current.layer1.x = -panAmount * 1.5;      // Large stars fastest
+      offsetsRef.current.background.x = -panAmount * 0.3;   // Background slowest
+      offsetsRef.current.layer3.x = -panAmount * 0.5;       // Small stars - slow
+      offsetsRef.current.layer2.x = -panAmount * 1.0;       // Medium stars - moderate
+      offsetsRef.current.layer1.x = -panAmount * 2.0;       // Large stars - FAST
     } else if (motionType === 'pan_right') {
-      // Pan right with 3D parallax
+      // Dramatic pan right with strong 3D parallax
       const panAmount = progressRatio * speed * 250 * ampFactor;
-      offsetsRef.current.background.scale = 1.0 + (0.3 * ampFactor);
-      offsetsRef.current.layer3.scale = 1.0 + (0.3 * ampFactor);
-      offsetsRef.current.layer2.scale = 1.0 + (0.3 * ampFactor);
-      offsetsRef.current.layer1.scale = 1.0 + (0.3 * ampFactor);
+      offsetsRef.current.background.scale = 1.0 + (0.2 * ampFactor);
+      offsetsRef.current.layer3.scale = 1.0 + (0.2 * ampFactor);
+      offsetsRef.current.layer2.scale = 1.0 + (0.2 * ampFactor);
+      offsetsRef.current.layer1.scale = 1.0 + (0.2 * ampFactor);
       
-      offsetsRef.current.background.x = panAmount * 0.4;
-      offsetsRef.current.layer3.x = panAmount * 0.6;
+      offsetsRef.current.background.x = panAmount * 0.3;
+      offsetsRef.current.layer3.x = panAmount * 0.5;
       offsetsRef.current.layer2.x = panAmount * 1.0;
-      offsetsRef.current.layer1.x = panAmount * 1.5;
+      offsetsRef.current.layer1.x = panAmount * 2.0;
     }
     
     // Draw background layer (nebula) first
