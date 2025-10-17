@@ -57,95 +57,36 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const [backgroundImg, setBackgroundImg] = useState<HTMLImageElement | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
 
-  // Create 3 distinct star layers for dramatic 3D depth
+  // Create 3 identical star layers that will be rendered at different depths
   useEffect(() => {
-    if (!starsOnlyImage || stars.length === 0) return;
+    if (!starsOnlyImage) return;
 
     const img = new Image();
     img.onload = () => {
       setImageDimensions({ width: img.width, height: img.height });
       
-      // Sort stars by size and brightness for depth - bigger/brighter = closer
-      const sortedStars = [...stars].sort((a, b) => {
-        const depthA = (a.size * 1.5) + (a.brightness * 0.5);
-        const depthB = (b.size * 1.5) + (b.brightness * 0.5);
-        return depthB - depthA;
-      });
-      
-      // Distribute: 20% closest (big/bright), 30% middle, 50% farthest (small/dim)
-      const layer1Count = Math.floor(sortedStars.length * 0.20);
-      const layer2Count = Math.floor(sortedStars.length * 0.30);
-      
-      const layer1Stars = sortedStars.slice(0, layer1Count); // Closest - large bright stars
-      const layer2Stars = sortedStars.slice(layer1Count, layer1Count + layer2Count); // Middle depth
-      const layer3Stars = sortedStars.slice(layer1Count + layer2Count); // Farthest - small dim stars
-      
-      console.log(`3D Depth layers: Close=${layer1Stars.length}, Mid=${layer2Stars.length}, Far=${layer3Stars.length}`);
-      
-      // Load source
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = img.width;
-      tempCanvas.height = img.height;
-      const tempCtx = tempCanvas.getContext('2d')!;
-      tempCtx.drawImage(img, 0, 0);
-      const srcData = tempCtx.getImageData(0, 0, img.width, img.height).data;
-      
-      // Extract stars for each layer with generous radius
-      const createDepthLayer = (layerStars: StarData[], layerName: string) => {
+      // Create 3 identical canvases with the full stars image
+      const createStarLayer = () => {
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext('2d')!;
-        const newData = ctx.createImageData(canvas.width, canvas.height);
-        
-        layerStars.forEach(star => {
-          const radius = Math.ceil(Math.max(star.size * 6, 12)); // Large radius for full glow
-          
-          for (let dy = -radius; dy <= radius; dy++) {
-            for (let dx = -radius; dx <= radius; dx++) {
-              const px = Math.round(star.x) + dx;
-              const py = Math.round(star.y) + dy;
-              
-              if (px >= 0 && px < canvas.width && py >= 0 && py < canvas.height) {
-                const idx = (py * canvas.width + px) * 4;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                
-                if (dist <= radius) {
-                  const r = srcData[idx];
-                  const g = srcData[idx + 1];
-                  const b = srcData[idx + 2];
-                  
-                  if (r > 3 || g > 3 || b > 3) { // Very low threshold
-                    const brightness = r + g + b;
-                    const currentBrightness = newData.data[idx] + newData.data[idx + 1] + newData.data[idx + 2];
-                    
-                    if (brightness > currentBrightness) {
-                      newData.data[idx] = r;
-                      newData.data[idx + 1] = g;
-                      newData.data[idx + 2] = b;
-                      newData.data[idx + 3] = 255;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        });
-        
-        ctx.putImageData(newData, 0, 0);
-        console.log(`${layerName}: ${layerStars.length} stars extracted`);
+        ctx.drawImage(img, 0, 0);
         return canvas;
       };
       
+      // All three layers use the same stars, depth is created through scale/speed/opacity
       setStarLayers({
-        layer1: createDepthLayer(layer1Stars, 'Closest'),
-        layer2: createDepthLayer(layer2Stars, 'Middle'),
-        layer3: createDepthLayer(layer3Stars, 'Farthest')
+        layer1: createStarLayer(), // Closest layer - fastest movement
+        layer2: createStarLayer(), // Middle layer
+        layer3: createStarLayer()  // Farthest layer - slowest movement
       });
+      
+      console.log('3D star layers created with dramatic depth');
     };
     
     img.src = starsOnlyImage;
-  }, [starsOnlyImage, stars]);
+  }, [starsOnlyImage]);
 
   // Load background image
   useEffect(() => {
