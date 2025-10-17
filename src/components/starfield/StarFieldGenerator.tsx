@@ -531,7 +531,6 @@ const StarFieldGenerator: React.FC = () => {
     try {
       toast.info(t('Recording animation...', '录制动画中...'));
       
-      // Capture stream from canvas
       const stream = canvas.captureStream(60);
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'video/webm',
@@ -544,63 +543,20 @@ const StarFieldGenerator: React.FC = () => {
         if (e.data.size > 0) chunks.push(e.data);
       };
       
-      mediaRecorder.onstop = async () => {
-        try {
-          setIsAnimating(false);
-          toast.info(t('Converting to MP4...', '转换为MP4中...'));
-          
-          const webmBlob = new Blob(chunks, { type: 'video/webm' });
-          
-          // Load FFmpeg
-          if (!ffmpegRef.current) {
-            const ffmpeg = new FFmpeg();
-            await ffmpeg.load({
-              coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-              wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
-            });
-            ffmpegRef.current = ffmpeg;
-          }
-          
-          const ffmpeg = ffmpegRef.current;
-          
-          // Convert WebM to MP4
-          const webmData = new Uint8Array(await webmBlob.arrayBuffer());
-          await ffmpeg.writeFile('input.webm', webmData);
-          
-          await ffmpeg.exec([
-            '-i', 'input.webm',
-            '-c:v', 'libx264',
-            '-preset', 'fast',
-            '-crf', '22',
-            '-pix_fmt', 'yuv420p',
-            'output.mp4'
-          ]);
-          
-          const mp4Data = await ffmpeg.readFile('output.mp4');
-          const mp4Blob = new Blob([new Uint8Array(mp4Data as Uint8Array)], { type: 'video/mp4' });
-          
-          setVideoBlob(mp4Blob);
-          
-          await ffmpeg.deleteFile('input.webm');
-          await ffmpeg.deleteFile('output.mp4');
-          
-          toast.success(t('Video ready!', '视频已就绪！'));
-          setCurrentStep('ready');
-        } catch (error) {
-          console.error('Conversion error:', error);
-          toast.error(t('Conversion failed', '转换失败'));
-          setCurrentStep('ready');
-        } finally {
-          setIsGeneratingVideo(false);
-        }
+      mediaRecorder.onstop = () => {
+        const videoBlob = new Blob(chunks, { type: 'video/webm' });
+        setVideoBlob(videoBlob);
+        setIsAnimating(false);
+        setIsGeneratingVideo(false);
+        setCurrentStep('ready');
+        toast.success(t('Video ready! Click Download.', '视频已就绪！点击下载。'));
       };
       
       mediaRecorder.start(100);
       
-      // Stop after duration
       setTimeout(() => {
         mediaRecorder.stop();
-      }, animationSettings.duration * 1000);
+      }, animationSettings.duration * 1000 + 500);
       
     } catch (error) {
       console.error('Video generation error:', error);
@@ -618,13 +574,13 @@ const StarFieldGenerator: React.FC = () => {
     const a = document.createElement('a');
     a.href = url;
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-    a.download = `starfield-animation-${timestamp}.mp4`;
+    a.download = `starfield-${timestamp}.webm`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    toast.success(t('MP4 video downloaded!', 'MP4视频已下载！'));
+    toast.success(t('Video downloaded!', '视频已下载！'));
   }, [videoBlob, t]);
 
   const resetAll = useCallback(() => {
@@ -951,7 +907,7 @@ const StarFieldGenerator: React.FC = () => {
                 className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               >
                 <Download className="h-4 w-4 mr-2" />
-                {t('Download MP4', '下载MP4')}
+                {t('Download Video', '下载视频')}
               </Button>
             )}
           </div>
