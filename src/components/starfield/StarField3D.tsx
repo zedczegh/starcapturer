@@ -69,101 +69,199 @@ const StarField3D: React.FC<StarField3DProps> = ({
       setImageDimensions({ width: img.width, height: img.height });
       
       console.log('Detecting complete stars with cores and spikes...');
+      const startTime = performance.now();
       
       // Draw image to canvas
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = img.width;
       tempCanvas.height = img.height;
-      const tempCtx = tempCanvas.getContext('2d')!;
+      const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!;
       tempCtx.drawImage(img, 0, 0);
       
       const sourceData = tempCtx.getImageData(0, 0, img.width, img.height);
       const data = sourceData.data;
       
+      // Pre-calculate luminance for all pixels using Uint8Array for faster access
+      const width = img.width;
+      const height = img.height;
+      const pixelCount = width * height;
+      const luminanceCache = new Float32Array(pixelCount);
+      
+      // Use Uint32Array view for faster pixel processing (RGBA as single 32-bit value)
+      const data32 = new Uint32Array(data.buffer);
+      
+      for (let i = 0; i < pixelCount; i++) {
+        const pixel = data32[i];
+        const r = pixel & 0xFF;
+        const g = (pixel >> 8) & 0xFF;
+        const b = (pixel >> 16) & 0xFF;
+        luminanceCache[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+      }
+      
       // Detect complete star regions (core + glow + spikes together)
-      const visited = new Uint8Array(img.width * img.height);
+      const visited = new Uint8Array(pixelCount);
       const starRegions: {
-        pixels: Set<number>;
+        pixels: Uint32Array;
+        pixelCount: number;
         maxLuminance: number;
         centerX: number;
         centerY: number;
         size: number;
       }[] = [];
       
-      const threshold = 30; // Low threshold to capture full stars including faint spikes
+      const threshold = 30;
+      const lowThreshold = threshold * 0.5;
       
-      for (let y = 0; y < img.height; y++) {
-        for (let x = 0; x < img.width; x++) {
-          const idx = y * img.width + x;
+      // Reusable queue with pre-allocated capacity to avoid array resizing
+      const maxQueueSize = 5000;
+      const queueX = new Uint16Array(maxQueueSize);
+      const queueY = new Uint16Array(maxQueueSize);
+      const pixelBuffer = new Uint32Array(maxQueueSize);
+      
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = y * width + x;
           if (visited[idx]) continue;
           
-          const pixelIdx = idx * 4;
-          const luminance = 0.299 * data[pixelIdx] + 0.587 * data[pixelIdx + 1] + 0.114 * data[pixelIdx + 2];
+          const luminance = luminanceCache[idx];
           
           if (luminance > threshold) {
-            // Found a star pixel - grow the complete star region
-            const starPixels = new Set<number>();
-            const queue: {x: number, y: number}[] = [{x, y}];
+            // Found a star pixel - grow the complete star region using optimized flood fill
+            let queueStart = 0;
+            let queueEnd = 0;
+            let pixelCount = 0;
+            
+            queueX[queueEnd] = x;
+            queueY[queueEnd] = y;
+            queueEnd++;
             visited[idx] = 1;
             
             let maxLum = luminance;
             let totalX = 0, totalY = 0, totalWeight = 0;
             let minX = x, maxX = x, minY = y, maxY = y;
             
-            while (queue.length > 0 && starPixels.size < 5000) {
-              const curr = queue.shift()!;
-              const currIdx = curr.y * img.width + curr.x;
-              starPixels.add(currIdx);
+            while (queueStart < queueEnd && pixelCount < maxQueueSize) {
+              const currX = queueX[queueStart];
+              const currY = queueY[queueStart];
+              queueStart++;
               
-              const currPixelIdx = currIdx * 4;
-              const currLum = 0.299 * data[currPixelIdx] + 0.587 * data[currPixelIdx + 1] + 0.114 * data[currPixelIdx + 2];
+              const currIdx = currY * width + currX;
+              pixelBuffer[pixelCount++] = currIdx;
+              
+              const currLum = luminanceCache[currIdx];
               
               if (currLum > maxLum) maxLum = currLum;
               
               // Weighted centroid
               const weight = currLum * currLum;
-              totalX += curr.x * weight;
-              totalY += curr.y * weight;
+              totalX += currX * weight;
+              totalY += currY * weight;
               totalWeight += weight;
               
-              minX = Math.min(minX, curr.x);
-              maxX = Math.max(maxX, curr.x);
-              minY = Math.min(minY, curr.y);
-              maxY = Math.max(maxY, curr.y);
+              if (currX < minX) minX = currX;
+              if (currX > maxX) maxX = currX;
+              if (currY < minY) minY = currY;
+              if (currY > maxY) maxY = currY;
               
-              // Check 8-connected neighbors
-              for (let dy = -1; dy <= 1; dy++) {
-                for (let dx = -1; dx <= 1; dx++) {
-                  if (dx === 0 && dy === 0) continue;
-                  
-                  const nx = curr.x + dx;
-                  const ny = curr.y + dy;
-                  
-                  if (nx >= 0 && nx < img.width && ny >= 0 && ny < img.height) {
-                    const nIdx = ny * img.width + nx;
-                    if (!visited[nIdx]) {
-                      const nPixelIdx = nIdx * 4;
-                      const nLum = 0.299 * data[nPixelIdx] + 0.587 * data[nPixelIdx + 1] + 0.114 * data[nPixelIdx + 2];
-                      
-                      // Very low threshold to capture faint spikes
-                      if (nLum > threshold * 0.5) {
-                        visited[nIdx] = 1;
-                        queue.push({x: nx, y: ny});
-                      }
-                    }
-                  }
+              // Check 8-connected neighbors (unrolled for performance)
+              const nx1 = currX - 1, nx2 = currX, nx3 = currX + 1;
+              const ny1 = currY - 1, ny2 = currY, ny3 = currY + 1;
+              
+              // Top-left
+              if (nx1 >= 0 && ny1 >= 0) {
+                const nIdx = ny1 * width + nx1;
+                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                  visited[nIdx] = 1;
+                  queueX[queueEnd] = nx1;
+                  queueY[queueEnd] = ny1;
+                  queueEnd++;
+                }
+              }
+              // Top
+              if (ny1 >= 0) {
+                const nIdx = ny1 * width + nx2;
+                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                  visited[nIdx] = 1;
+                  queueX[queueEnd] = nx2;
+                  queueY[queueEnd] = ny1;
+                  queueEnd++;
+                }
+              }
+              // Top-right
+              if (nx3 < width && ny1 >= 0) {
+                const nIdx = ny1 * width + nx3;
+                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                  visited[nIdx] = 1;
+                  queueX[queueEnd] = nx3;
+                  queueY[queueEnd] = ny1;
+                  queueEnd++;
+                }
+              }
+              // Left
+              if (nx1 >= 0) {
+                const nIdx = ny2 * width + nx1;
+                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                  visited[nIdx] = 1;
+                  queueX[queueEnd] = nx1;
+                  queueY[queueEnd] = ny2;
+                  queueEnd++;
+                }
+              }
+              // Right
+              if (nx3 < width) {
+                const nIdx = ny2 * width + nx3;
+                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                  visited[nIdx] = 1;
+                  queueX[queueEnd] = nx3;
+                  queueY[queueEnd] = ny2;
+                  queueEnd++;
+                }
+              }
+              // Bottom-left
+              if (nx1 >= 0 && ny3 < height) {
+                const nIdx = ny3 * width + nx1;
+                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                  visited[nIdx] = 1;
+                  queueX[queueEnd] = nx1;
+                  queueY[queueEnd] = ny3;
+                  queueEnd++;
+                }
+              }
+              // Bottom
+              if (ny3 < height) {
+                const nIdx = ny3 * width + nx2;
+                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                  visited[nIdx] = 1;
+                  queueX[queueEnd] = nx2;
+                  queueY[queueEnd] = ny3;
+                  queueEnd++;
+                }
+              }
+              // Bottom-right
+              if (nx3 < width && ny3 < height) {
+                const nIdx = ny3 * width + nx3;
+                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                  visited[nIdx] = 1;
+                  queueX[queueEnd] = nx3;
+                  queueY[queueEnd] = ny3;
+                  queueEnd++;
                 }
               }
             }
             
             // Only keep significant star regions
-            if (starPixels.size >= 5 && starPixels.size <= 5000) {
+            if (pixelCount >= 5 && pixelCount <= maxQueueSize) {
               const centerX = totalX / totalWeight;
               const centerY = totalY / totalWeight;
               const size = Math.max(maxX - minX, maxY - minY);
               
+              // Copy pixels to permanent storage
+              const pixels = new Uint32Array(pixelCount);
+              pixels.set(pixelBuffer.subarray(0, pixelCount));
+              
               starRegions.push({
-                pixels: starPixels,
+                pixels,
+                pixelCount,
                 maxLuminance: maxLum,
                 centerX,
                 centerY,
@@ -174,12 +272,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
         }
       }
       
-      console.log(`Detected ${starRegions.length} complete stars`);
+      console.log(`Detected ${starRegions.length} complete stars in ${(performance.now() - startTime).toFixed(0)}ms`);
       
       // Sort stars by size to determine layer distribution
-      const sortedBySize = [...starRegions].sort((a, b) => b.size - a.size);
-      const largeThreshold = sortedBySize[Math.floor(starRegions.length * 0.33)]?.size || 15;
-      const mediumThreshold = sortedBySize[Math.floor(starRegions.length * 0.67)]?.size || 7;
+      starRegions.sort((a, b) => b.size - a.size);
+      const largeThreshold = starRegions[Math.floor(starRegions.length * 0.33)]?.size || 15;
+      const mediumThreshold = starRegions[Math.floor(starRegions.length * 0.67)]?.size || 7;
       
       console.log(`Size thresholds - Large: ${largeThreshold}, Medium: ${mediumThreshold}`);
       
@@ -188,41 +286,43 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const mediumCanvas = document.createElement('canvas');
       const smallCanvas = document.createElement('canvas');
       
-      largeCanvas.width = mediumCanvas.width = smallCanvas.width = img.width;
-      largeCanvas.height = mediumCanvas.height = smallCanvas.height = img.height;
+      largeCanvas.width = mediumCanvas.width = smallCanvas.width = width;
+      largeCanvas.height = mediumCanvas.height = smallCanvas.height = height;
       
       const largeCtx = largeCanvas.getContext('2d')!;
       const mediumCtx = mediumCanvas.getContext('2d')!;
       const smallCtx = smallCanvas.getContext('2d')!;
       
       // Create image data for each layer
-      const largeData = largeCtx.createImageData(img.width, img.height);
-      const mediumData = mediumCtx.createImageData(img.width, img.height);
-      const smallData = smallCtx.createImageData(img.width, img.height);
+      const largeData = largeCtx.createImageData(width, height);
+      const mediumData = mediumCtx.createImageData(width, height);
+      const smallData = smallCtx.createImageData(width, height);
+      
+      // Use Uint32Array views for faster pixel copying
+      const largeData32 = new Uint32Array(largeData.data.buffer);
+      const mediumData32 = new Uint32Array(mediumData.data.buffer);
+      const smallData32 = new Uint32Array(smallData.data.buffer);
       
       let largeCount = 0, mediumCount = 0, smallCount = 0;
       
       // Assign each complete star to one layer based on its size
       for (const star of starRegions) {
-        let targetData: ImageData;
+        let targetData32: Uint32Array;
         if (star.size >= largeThreshold) {
-          targetData = largeData;
+          targetData32 = largeData32;
           largeCount++;
         } else if (star.size >= mediumThreshold) {
-          targetData = mediumData;
+          targetData32 = mediumData32;
           mediumCount++;
         } else {
-          targetData = smallData;
+          targetData32 = smallData32;
           smallCount++;
         }
         
-        // Copy all pixels of this complete star to the target layer
-        for (const pixelIdx of star.pixels) {
-          const dataIdx = pixelIdx * 4;
-          targetData.data[dataIdx] = data[dataIdx];
-          targetData.data[dataIdx + 1] = data[dataIdx + 1];
-          targetData.data[dataIdx + 2] = data[dataIdx + 2];
-          targetData.data[dataIdx + 3] = data[dataIdx + 3];
+        // Copy all pixels of this complete star to the target layer (32-bit at a time)
+        for (let i = 0; i < star.pixelCount; i++) {
+          const pixelIdx = star.pixels[i];
+          targetData32[pixelIdx] = data32[pixelIdx];
         }
       }
       
@@ -232,9 +332,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       smallCtx.putImageData(smallData, 0, 0);
       
       setStarLayers({
-        bright: largeCanvas,   // Large stars (closest)
-        medium: mediumCanvas,  // Medium stars
-        dim: smallCanvas       // Small stars (farthest)
+        bright: largeCanvas,
+        medium: mediumCanvas,
+        dim: smallCanvas
       });
       
       console.log(`Star layers created: ${largeCount} large, ${mediumCount} medium, ${smallCount} small stars`);
@@ -263,7 +363,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     if (!canvasRef.current || !isAnimating) return;
     
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d', { alpha: false })!;
     const { motionType = 'zoom_in', speed = 1, duration = 10, spin = 0, spinDirection = 'clockwise' } = settings;
     
     // Calculate progress - initialize timing on first frame
@@ -302,19 +402,22 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const rotationMultiplier = spinDirection === 'counterclockwise' ? -1 : 1;
     const currentRotation = (spin * progressRatio * Math.PI * rotationMultiplier) / 180; // Convert to radians
     
-    // Calculate scale needed to fill frame when rotated
-    // At 45 degrees, we need sqrt(2) ≈ 1.414x scale to avoid corners
+    // Calculate scale needed to fill frame when rotated (optimized)
     const rotationScale = spin > 0 ? 1 + (Math.abs(Math.sin(currentRotation)) * 0.414) : 1;
-    
-    // Save context and apply rotation at center
-    ctx.save();
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(currentRotation);
-    ctx.scale(rotationScale, rotationScale);
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
     
     // Amplification factor from settings (100-300%)
     const ampFactor = (settings.amplification || 150) / 100;
+    
+    // Pre-calculate common values
+    const canvasCenterX = canvas.width * 0.5;
+    const canvasCenterY = canvas.height * 0.5;
+    
+    // Save context and apply rotation at center
+    ctx.save();
+    ctx.translate(canvasCenterX, canvasCenterY);
+    ctx.rotate(currentRotation);
+    ctx.scale(rotationScale, rotationScale);
+    ctx.translate(-canvasCenterX, -canvasCenterY);
     
     if (motionType === 'zoom_in') {
       // Dramatic 3D depth: large stars zoom MUCH faster than small stars
