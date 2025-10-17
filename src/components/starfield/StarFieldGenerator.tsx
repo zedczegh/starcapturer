@@ -520,36 +520,82 @@ const StarFieldGenerator: React.FC = () => {
 
   const downloadVideo = useCallback(async () => {
     const canvas = canvasRef.current;
-    if (!canvas) {
-      toast.error(t('Preview not ready', '预览未就绪'));
+    if (!canvas || !isCanvasReady) {
+      toast.error(t('Preview not ready. Please process images first.', '预览未就绪。请先处理图像。'));
       return;
     }
     
     setIsGeneratingVideo(true);
-    setIsAnimating(false); // Stop current animation
+    setIsAnimating(false);
     
-    setTimeout(() => {
-      setAnimationProgress(0);
-      setIsAnimating(true); // Start recording from beginning
+    toast.info(t('Preparing to record...', '准备录制...'));
+    
+    // Wait a moment for any ongoing animation to stop
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Reset progress and prepare for recording
+    setAnimationProgress(0);
+    
+    // Wait for reset to take effect
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    try {
+      const fps = 60;
+      const duration = animationSettings.duration;
+      const stream = canvas.captureStream(fps);
       
-      toast.info(t('Recording animation...', '录制动画中...'));
+      // Check if stream has video tracks
+      const videoTracks = stream.getVideoTracks();
+      if (videoTracks.length === 0) {
+        throw new Error('No video tracks available');
+      }
       
-      const stream = canvas.captureStream(60);
+      // Try different codecs based on browser support
+      let mimeType = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm;codecs=vp8';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/webm';
+        }
+      }
+      
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm',
-        videoBitsPerSecond: 8000000
+        mimeType,
+        videoBitsPerSecond: 10000000 // 10 Mbps
       });
       
       const chunks: Blob[] = [];
+      let hasReceivedData = false;
       
       mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
+        if (e.data && e.data.size > 0) {
+          chunks.push(e.data);
+          hasReceivedData = true;
+          console.log(`Recorded chunk: ${e.data.size} bytes`);
+        }
       };
       
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' });
+        console.log(`Recording stopped. Total chunks: ${chunks.length}`);
         
-        // Download immediately
+        if (!hasReceivedData || chunks.length === 0) {
+          toast.error(t('Recording failed - no data captured', '录制失败 - 未捕获数据'));
+          setIsGeneratingVideo(false);
+          setIsAnimating(false);
+          return;
+        }
+        
+        const blob = new Blob(chunks, { type: mimeType });
+        console.log(`Final video blob size: ${blob.size} bytes`);
+        
+        if (blob.size === 0) {
+          toast.error(t('Recording failed - empty video', '录制失败 - 视频为空'));
+          setIsGeneratingVideo(false);
+          setIsAnimating(false);
+          return;
+        }
+        
+        // Download the video
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -561,19 +607,42 @@ const StarFieldGenerator: React.FC = () => {
         
         setIsGeneratingVideo(false);
         setIsAnimating(false);
-        toast.success(t('Video downloaded!', '视频已下载！'));
+        setAnimationProgress(0);
+        toast.success(t('Video downloaded successfully!', '视频下载成功！'));
       };
       
-      mediaRecorder.start(100);
+      mediaRecorder.onerror = (e) => {
+        console.error('MediaRecorder error:', e);
+        toast.error(t('Recording error occurred', '录制出错'));
+        setIsGeneratingVideo(false);
+        setIsAnimating(false);
+      };
       
-      // Ensure we record the FULL duration + extra buffer
+      // Start recording
+      mediaRecorder.start(100); // Collect data every 100ms
+      console.log('MediaRecorder started');
+      
+      // Start animation immediately after starting recorder
+      setIsAnimating(true);
+      toast.success(t('Recording started...', '开始录制...'));
+      
+      // Stop recording after full duration + buffer
+      const recordingDuration = (duration * 1000) + 1500; // Extra 1.5s buffer
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
+          console.log('Stopping MediaRecorder');
           mediaRecorder.stop();
+          stream.getTracks().forEach(track => track.stop());
         }
-      }, (animationSettings.duration * 1000) + 1000);
-    }, 100);
-  }, [animationSettings.duration, t]);
+      }, recordingDuration);
+      
+    } catch (error) {
+      console.error('Download video error:', error);
+      toast.error(t('Failed to record video', '视频录制失败'));
+      setIsGeneratingVideo(false);
+      setIsAnimating(false);
+    }
+  }, [animationSettings.duration, isCanvasReady, t]);
 
   const resetAll = useCallback(() => {
     setStarsOnlyImage(null);
@@ -928,9 +997,10 @@ const StarFieldGenerator: React.FC = () => {
                     <div className="flex items-center justify-center gap-2">
                       <Button
                         onClick={toggleAnimation}
+                        disabled={isGeneratingVideo}
                         variant="outline"
                         size="sm"
-                        className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50"
+                        className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50 disabled:opacity-50"
                       >
                         {isAnimating ? (
                           <>
@@ -947,10 +1017,10 @@ const StarFieldGenerator: React.FC = () => {
                       
                       <Button
                         onClick={handleReplay}
-                        disabled={isAnimating && animationProgress < 10}
+                        disabled={isGeneratingVideo || (isAnimating && animationProgress < 10)}
                         variant="outline"
                         size="sm"
-                        className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50"
+                        className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50 disabled:opacity-50"
                       >
                         <RotateCcw className="h-4 w-4 mr-2" />
                         {t('Replay', '重播')}
