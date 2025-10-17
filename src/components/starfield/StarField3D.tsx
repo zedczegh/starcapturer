@@ -43,7 +43,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
   const animationStartTimeRef = useRef<number>(0);
-  const offsetsRef = useRef({ 
+  const pausedTimeRef = useRef<number>(0);
+  const offsetsRef = useRef({
     layer1: { x: 0, y: 0, scale: 1 }, // Largest/brightest stars (closest)
     layer2: { x: 0, y: 0, scale: 1 }, // Medium stars
     layer3: { x: 0, y: 0, scale: 1 }, // Small stars (farthest)
@@ -420,66 +421,34 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
   useEffect(() => {
     if (isAnimating) {
-      // Reset timer and progress when animation starts
-      animationStartTimeRef.current = 0;
-      
-      // Immediately set progress to 0 to ensure the dot starts at beginning
-      if (onProgressUpdate) {
-        onProgressUpdate(0);
+      // If resuming from pause (and not starting from 0), adjust start time
+      if (pausedTimeRef.current > 0 && pausedTimeRef.current < 1000) {
+        // Resuming from pause
+        animationStartTimeRef.current = Date.now() - pausedTimeRef.current;
+        pausedTimeRef.current = 0;
+      } else {
+        // Starting fresh (replay or first play)
+        pausedTimeRef.current = 0;
+        animationStartTimeRef.current = 0;
+        if (onProgressUpdate) {
+          onProgressUpdate(0);
+        }
+        offsetsRef.current = { 
+          layer1: { x: 0, y: 0, scale: 1 },
+          layer2: { x: 0, y: 0, scale: 1 },
+          layer3: { x: 0, y: 0, scale: 1 },
+          background: { x: 0, y: 0, scale: 1 }
+        };
       }
-      
-      // Initialize all scales and positions to their starting values
-      // They will be calculated based on progress in the animate function
-      offsetsRef.current = { 
-        layer1: { x: 0, y: 0, scale: 1 },
-        layer2: { x: 0, y: 0, scale: 1 },
-        layer3: { x: 0, y: 0, scale: 1 },
-        background: { x: 0, y: 0, scale: 1 }
-      };
       
       animate();
     } else {
+      // Pausing - save current elapsed time
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      animationStartTimeRef.current = 0;
-      if (onProgressUpdate) {
-        onProgressUpdate(0);
-      }
-      // Draw static frame
-      if (canvasRef.current) {
-        const ctx = canvasRef.current.getContext('2d')!;
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        
-        if (backgroundImg) {
-          ctx.globalAlpha = 0.85;
-          // Center image without stretching
-          const drawX = (canvasRef.current.width - backgroundImg.width) / 2;
-          const drawY = (canvasRef.current.height - backgroundImg.height) / 2;
-          ctx.drawImage(backgroundImg, drawX, drawY, backgroundImg.width, backgroundImg.height);
-          ctx.globalAlpha = 1.0;
-        }
-        
-        if (starLayers.dim || starLayers.medium || starLayers.bright) {
-          ctx.globalCompositeOperation = 'screen';
-          if (starLayers.dim) {
-            const drawX = (canvasRef.current.width - starLayers.dim.width) / 2;
-            const drawY = (canvasRef.current.height - starLayers.dim.height) / 2;
-            ctx.drawImage(starLayers.dim, drawX, drawY);
-          }
-          if (starLayers.medium) {
-            const drawX = (canvasRef.current.width - starLayers.medium.width) / 2;
-            const drawY = (canvasRef.current.height - starLayers.medium.height) / 2;
-            ctx.drawImage(starLayers.medium, drawX, drawY);
-          }
-          if (starLayers.bright) {
-            const drawX = (canvasRef.current.width - starLayers.bright.width) / 2;
-            const drawY = (canvasRef.current.height - starLayers.bright.height) / 2;
-            ctx.drawImage(starLayers.bright, drawX, drawY);
-          }
-          ctx.globalCompositeOperation = 'source-over';
-        }
+      if (animationStartTimeRef.current > 0) {
+        pausedTimeRef.current = Date.now() - animationStartTimeRef.current;
       }
     }
     
@@ -488,7 +457,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isAnimating, animate, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
+  }, [isAnimating, animate, onProgressUpdate]);
 
   // Notify parent when canvas and layers are ready
   useEffect(() => {
