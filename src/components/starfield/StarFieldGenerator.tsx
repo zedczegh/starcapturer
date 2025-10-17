@@ -12,8 +12,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import StarField3D from './StarField3D';
 import UTIF from 'utif';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 interface ProcessedStarData {
   x: number;
@@ -55,15 +53,12 @@ const StarFieldGenerator: React.FC = () => {
   const [animationProgress, setAnimationProgress] = useState(0);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [showFormatDialog, setShowFormatDialog] = useState(false);
-  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
-  const [mp4Progress, setMp4Progress] = useState(0);
-  const [mp4Blob, setMp4Blob] = useState<Blob | null>(null);
-  const [isEncodingMP4, setIsEncodingMP4] = useState(false);
+  const [mp4Supported, setMp4Supported] = useState(false);
+  const [isGeneratingMP4, setIsGeneratingMP4] = useState(false);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const ffmpegRef = useRef<FFmpeg | null>(null);
 
   // Animation settings with motion controls
   const [animationSettings, setAnimationSettings] = useState({
@@ -79,22 +74,23 @@ const StarFieldGenerator: React.FC = () => {
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
   
-  // Initialize FFmpeg instance (but don't load it yet - load on demand)
+  // Check MP4 support on mount
   useEffect(() => {
-    if (!ffmpegRef.current) {
-      const ffmpeg = new FFmpeg();
-      
-      // Add logging callbacks
-      ffmpeg.on('log', ({ message }) => {
-        console.log('[FFmpeg]:', message);
-      });
-      
-      ffmpeg.on('progress', ({ progress, time }) => {
-        console.log('[FFmpeg Progress]:', `${Math.round(progress * 100)}%`, time);
-      });
-      
-      ffmpegRef.current = ffmpeg;
-      console.log('FFmpeg instance created (not loaded yet)');
+    // Check if browser supports MP4 recording directly
+    const mp4Types = [
+      'video/mp4',
+      'video/mp4;codecs=h264',
+      'video/mp4;codecs=avc1',
+      'video/x-m4v',
+    ];
+    
+    const supported = mp4Types.some(type => MediaRecorder.isTypeSupported(type));
+    setMp4Supported(supported);
+    
+    if (supported) {
+      console.log('✓ Browser supports native MP4 recording');
+    } else {
+      console.log('✗ Browser does not support MP4 recording (WebM only)');
     }
   }, []);
   
@@ -688,20 +684,23 @@ const StarFieldGenerator: React.FC = () => {
       return;
     }
     
-    setIsEncodingMP4(true);
-    setIsGeneratingVideo(true);
-    setMp4Progress(0);
-    setMp4Blob(null);
+    if (!mp4Supported) {
+      toast.error(t(
+        'MP4 recording not supported in this browser. Please use WebM format or try Safari.', 
+        'MP4录制在此浏览器中不受支持。请使用WebM格式或尝试Safari。'
+      ));
+      return;
+    }
     
-    console.log('=== Starting MP4 Generation ===');
-    toast.info(t('Preparing recording...', '准备录制...'));
+    setIsGeneratingMP4(true);
+    setIsGeneratingVideo(true);
+    
+    console.log('=== Starting MP4 Recording ===');
+    toast.info(t('Preparing MP4 recording...', '准备MP4录制...'));
     
     try {
       const fps = 60;
       const duration = animationSettings.duration;
-      
-      // Step 1: Setup and ensure animation is ready (0-5%)
-      setMp4Progress(0);
       
       // Stop any current animation and reset
       setIsAnimating(false);
@@ -711,52 +710,57 @@ const StarFieldGenerator: React.FC = () => {
       setAnimationProgress(0);
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Start animation before recording
+      // Start animation
       setIsAnimating(true);
-      console.log('Animation started, waiting for frames to render...');
-      
-      // Wait longer for initial frames to render
+      console.log('Animation started, waiting for frames...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      setMp4Progress(5);
-      toast.info(t('Recording video...', '录制视频...'));
+      toast.info(t('Recording MP4...', '录制MP4...'));
       
-      // Step 2: Record WebM (5-40%)
-      console.log('Setting up canvas stream...');
+      // Setup canvas stream
+      console.log('Setting up MP4 recording...');
       const stream = canvas.captureStream(fps);
       
       const videoTracks = stream.getVideoTracks();
-      console.log('Video tracks:', videoTracks.length);
-      
       if (videoTracks.length === 0) {
         throw new Error('No video tracks available from canvas');
       }
       
-      // Check track settings
+      console.log('Video tracks:', videoTracks.length);
       const trackSettings = videoTracks[0].getSettings();
       console.log('Track settings:', trackSettings);
       
-      let mimeType = 'video/webm;codecs=vp9';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        console.log('VP9 not supported, trying VP8');
-        mimeType = 'video/webm;codecs=vp8';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          console.log('VP8 not supported, using default webm');
-          mimeType = 'video/webm';
+      // Try MP4 mime types in order of preference
+      let mimeType = '';
+      const mp4Types = [
+        'video/mp4;codecs=h264',
+        'video/mp4;codecs=avc1',
+        'video/mp4',
+        'video/x-m4v',
+      ];
+      
+      for (const type of mp4Types) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          mimeType = type;
+          console.log('Using MIME type:', mimeType);
+          break;
         }
       }
-      console.log('Using MIME type:', mimeType);
+      
+      if (!mimeType) {
+        throw new Error('No supported MP4 codec found');
+      }
       
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
-        videoBitsPerSecond: 10000000
+        videoBitsPerSecond: 10000000 // 10 Mbps
       });
       
       const chunks: Blob[] = [];
       let recordingStartTime = 0;
       let chunkCount = 0;
       
-      const webmBlob = await new Promise<Blob>((resolve, reject) => {
+      const mp4Blob = await new Promise<Blob>((resolve, reject) => {
         mediaRecorder.ondataavailable = (e) => {
           if (e.data && e.data.size > 0) {
             chunks.push(e.data);
@@ -767,295 +771,100 @@ const StarFieldGenerator: React.FC = () => {
         
         mediaRecorder.onstart = () => {
           recordingStartTime = Date.now();
-          console.log('✓ Recording started at', new Date(recordingStartTime).toISOString());
+          console.log('✓ MP4 recording started');
         };
         
         mediaRecorder.onstop = () => {
           const recordingDuration = Date.now() - recordingStartTime;
           console.log(`Recording stopped after ${recordingDuration}ms`);
-          console.log(`Total chunks: ${chunks.length}, Total size: ${chunks.reduce((sum, c) => sum + c.size, 0)} bytes`);
+          console.log(`Total chunks: ${chunks.length}`);
           
           if (chunks.length === 0) {
-            reject(new Error('No data recorded - recording failed to capture frames'));
+            reject(new Error('No data recorded'));
             return;
           }
           
           const blob = new Blob(chunks, { type: mimeType });
-          console.log(`✓ WebM blob created: ${blob.size} bytes`);
+          console.log(`✓ MP4 blob created: ${blob.size} bytes`);
           
           if (blob.size === 0) {
-            reject(new Error('WebM blob is empty - no frames captured'));
+            reject(new Error('MP4 blob is empty'));
             return;
           }
           
-          setMp4Progress(40);
           resolve(blob);
         };
         
         mediaRecorder.onerror = (e) => {
           console.error('MediaRecorder error:', e);
-          reject(new Error('MediaRecorder error during recording'));
+          reject(new Error('Recording error'));
         };
         
-        // Ensure animation is definitely running
-        if (!isAnimating) {
-          console.log('Animation not running, starting it now');
-          setIsAnimating(true);
-        }
-        
-        // Start recording after ensuring everything is ready
+        // Start recording
         setTimeout(() => {
           if (mediaRecorder.state === 'inactive') {
-            console.log('Starting MediaRecorder with 100ms timeslice...');
-            mediaRecorder.start(100); // Request data every 100ms
+            console.log('Starting MP4 recording...');
+            mediaRecorder.start(100);
             console.log('MediaRecorder state:', mediaRecorder.state);
             
-            // Update progress during recording
-            const progressInterval = setInterval(() => {
-              if (mediaRecorder.state === 'recording') {
-                const elapsed = Date.now() - recordingStartTime;
-                const progress = Math.min((elapsed / (duration * 1000)) * 35, 35);
-                setMp4Progress(5 + progress);
-              } else {
-                clearInterval(progressInterval);
-              }
-            }, 200);
-            
             // Stop after duration + buffer
-            const stopTimeout = setTimeout(() => {
-              clearInterval(progressInterval);
+            setTimeout(() => {
               if (mediaRecorder.state === 'recording') {
-                console.log('Stopping MediaRecorder after duration');
+                console.log('Stopping MP4 recording');
                 mediaRecorder.stop();
-                stream.getTracks().forEach(track => {
-                  track.stop();
-                  console.log('Track stopped');
-                });
+                stream.getTracks().forEach(track => track.stop());
               }
-            }, (duration * 1000) + 2000); // 2 second buffer
+            }, (duration * 1000) + 2000);
           }
-        }, 500); // Wait 500ms before starting recording to ensure frames are rendering
+        }, 500);
       });
       
-      console.log(`✓ WebM recording complete: ${webmBlob.size} bytes`);
+      console.log(`✓ MP4 recording complete: ${mp4Blob.size} bytes`);
       
-      if (webmBlob.size < 1000) {
-        throw new Error(`WebM recording too small: ${webmBlob.size} bytes - likely no frames captured`);
+      if (mp4Blob.size < 1000) {
+        throw new Error(`MP4 recording too small: ${mp4Blob.size} bytes`);
       }
       
-      // Step 2: Load FFmpeg if needed (40-50%)
-      setMp4Progress(40);
-      console.log('=== FFmpeg Loading Phase ===');
-      console.log('FFmpeg loaded:', ffmpegLoaded);
-      console.log('FFmpeg ref exists:', !!ffmpegRef.current);
+      // Download the MP4
+      const url = URL.createObjectURL(mp4Blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `starfield-${Date.now()}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       
-      if (!ffmpegRef.current) {
-        throw new Error('FFmpeg instance not initialized');
-      }
+      setIsGeneratingMP4(false);
+      setIsGeneratingVideo(false);
+      setIsAnimating(false);
+      setAnimationProgress(0);
       
-      if (!ffmpegLoaded) {
-        toast.info(t('Loading video encoder (this may take 30s)...', '加载视频编码器（可能需要30秒）...'));
-        console.log('=== Loading FFmpeg (~32MB download) ===');
-        
-        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-        
-        try {
-          // Step 1: Fetch core JS
-          console.log('[1/3] Fetching core JS...');
-          const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-          console.log('✓ Core JS ready');
-          setMp4Progress(43);
-          
-          // Step 2: Fetch WASM
-          console.log('[2/3] Fetching WASM file (~32MB)...');
-          const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-          console.log('✓ WASM ready');
-          setMp4Progress(46);
-          
-          // Step 3: Initialize FFmpeg with proper timeout
-          console.log('[3/3] Initializing FFmpeg (this can take 20-30s)...');
-          console.log('Note: If this hangs, your browser may not support the encoder');
-          
-          let initResolved = false;
-          
-          const initPromise = new Promise(async (resolve, reject) => {
-            try {
-              await ffmpegRef.current!.load({
-                coreURL,
-                wasmURL,
-              });
-              if (!initResolved) {
-                initResolved = true;
-                resolve(true);
-              }
-            } catch (e) {
-              if (!initResolved) {
-                initResolved = true;
-                reject(e);
-              }
-            }
-          });
-          
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => {
-              if (!initResolved) {
-                initResolved = true;
-                console.error('✗ FFmpeg initialization timeout after 30s');
-                reject(new Error('FFmpeg took too long to initialize. Your browser may not support MP4 encoding. Please use WebM format instead.'));
-              }
-            }, 30000);
-          });
-          
-          await Promise.race([initPromise, timeoutPromise]);
-          
-          if (initResolved) {
-            console.log('✓ FFmpeg initialized successfully!');
-            setFfmpegLoaded(true);
-            setMp4Progress(50);
-            toast.success(t('Encoder ready!', '编码器就绪！'));
-          }
-        } catch (error) {
-          console.error('=== FFmpeg Loading Failed ===');
-          console.error('Error:', error);
-          
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          
-          // User-friendly error message
-          toast.error(t(
-            'MP4 encoder unavailable. Please download as WebM instead.', 
-            'MP4编码器不可用。请改用WebM格式下载。'
-          ));
-          
-          throw new Error(`FFmpeg initialization failed: ${errorMsg}`);
-        }
-      } else {
-        setMp4Progress(50);
-        console.log('✓ FFmpeg already loaded');
-      }
-      
-      // Step 3: Convert WebM to MP4 (50-100%)
-      console.log('=== MP4 Conversion Phase ===');
-      toast.info(t('Converting to MP4...', '转换为MP4...'));
-      const ffmpeg = ffmpegRef.current;
-      
-      // Simulate progress for conversion (actual conversion happens in one go)
-      let conversionProgress = 50;
-      const progressInterval = setInterval(() => {
-        if (conversionProgress < 90) {
-          conversionProgress += 2;
-          setMp4Progress(conversionProgress);
-        }
-      }, 500);
-      
-      try {
-        // Write WebM to FFmpeg virtual filesystem
-        console.log('Writing WebM to FFmpeg filesystem...');
-        const webmData = await fetchFile(webmBlob);
-        console.log(`WebM data size: ${webmData.byteLength} bytes`);
-        await ffmpeg.writeFile('input.webm', webmData);
-        console.log('✓ WebM written to FFmpeg filesystem');
-        
-        setMp4Progress(60);
-        
-        // Convert with settings optimized for compatibility
-        console.log('Executing FFmpeg conversion (this may take a moment)...');
-        await ffmpeg.exec([
-          '-i', 'input.webm',
-          '-c:v', 'libx264',      // H.264 codec for maximum compatibility
-          '-preset', 'fast',       // Faster encoding
-          '-crf', '23',            // Good quality
-          '-pix_fmt', 'yuv420p',   // Required for compatibility
-          '-movflags', '+faststart', // Web streaming optimization
-          '-r', fps.toString(),    // Match source framerate
-          'output.mp4'
-        ]);
-        console.log('✓ FFmpeg conversion completed successfully');
-        
-        clearInterval(progressInterval);
-        setMp4Progress(90);
-        
-        // Read the converted MP4 file
-        console.log('Reading MP4 output...');
-        const mp4Data = await ffmpeg.readFile('output.mp4') as Uint8Array;
-        const mp4ArrayBuffer = new Uint8Array(mp4Data).buffer;
-        const mp4Blob = new Blob([mp4ArrayBuffer], { type: 'video/mp4' });
-        
-        console.log(`✓ MP4 created: ${mp4Blob.size} bytes (${(mp4Blob.size / 1024 / 1024).toFixed(2)} MB)`);
-        
-        if (mp4Blob.size < 1000) {
-          throw new Error(`MP4 file too small: ${mp4Blob.size} bytes`);
-        }
-        
-        // Clean up FFmpeg filesystem
-        console.log('Cleaning up...');
-        try {
-          await ffmpeg.deleteFile('input.webm');
-          await ffmpeg.deleteFile('output.mp4');
-          console.log('✓ Cleanup complete');
-        } catch (cleanupError) {
-          console.warn('Cleanup warning (non-critical):', cleanupError);
-        }
-        
-        setMp4Progress(100);
-        setMp4Blob(mp4Blob);
-        setIsGeneratingVideo(false);
-        setIsAnimating(false);
-        setAnimationProgress(0);
-        
-        console.log('=== MP4 Generation Complete ===');
-        toast.success(t('MP4 ready to download!', 'MP4准备下载！'));
-        
-      } catch (conversionError) {
-        clearInterval(progressInterval);
-        console.error('✗ Conversion failed:', conversionError);
-        throw conversionError;
-      }
+      console.log('=== MP4 Download Complete ===');
+      toast.success(t('MP4 video downloaded!', 'MP4视频已下载！'));
       
     } catch (error) {
-      console.error('=== MP4 Generation Failed ===');
+      console.error('=== MP4 Recording Failed ===');
       console.error('Error:', error);
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error message:', errorMessage);
       
       toast.error(t(
-        `Failed to encode MP4: ${errorMessage}`, 
-        `MP4编码失败: ${errorMessage}`
+        `MP4 recording failed: ${errorMessage}`, 
+        `MP4录制失败: ${errorMessage}`
       ));
       
-      setIsEncodingMP4(false);
+      setIsGeneratingMP4(false);
       setIsGeneratingVideo(false);
       setIsAnimating(false);
-      setMp4Progress(0);
     }
-  }, [animationSettings.duration, processedStars.length, starsOnlyImage, starlessImage, ffmpegLoaded, isAnimating, t]);
-
-  const downloadMP4File = useCallback(() => {
-    if (!mp4Blob) return;
-    
-    const url = URL.createObjectURL(mp4Blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `starfield-${Date.now()}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success(t('MP4 video downloaded!', 'MP4视频已下载！'));
-    
-    // Reset
-    setMp4Blob(null);
-    setMp4Progress(0);
-    setIsEncodingMP4(false);
-  }, [mp4Blob, t]);
+  }, [animationSettings.duration, processedStars.length, starsOnlyImage, starlessImage, mp4Supported, t]);
 
   const resetAll = useCallback(() => {
     // Force stop any ongoing video generation immediately
     setIsGeneratingVideo(false);
-    setIsEncodingMP4(false);
-    setMp4Progress(0);
-    setMp4Blob(null);
+    setIsGeneratingMP4(false);
     setShowFormatDialog(false);
     
     // Stop animation immediately
@@ -1383,33 +1192,6 @@ const StarFieldGenerator: React.FC = () => {
                 </Button>
               )}
             </div>
-            
-            {/* MP4 Encoding Progress Bar - Only show when ready */}
-            {currentStep === 'ready' && isEncodingMP4 && mp4Progress > 0 && (
-              <Card className="bg-cosmic-900/50 border-cosmic-700/50">
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-cosmic-200 font-medium">
-                      {mp4Progress < 40 
-                        ? t('Recording video...', '录制视频...')
-                        : mp4Progress < 50
-                        ? t('Loading encoder...', '加载编码器...')
-                        : t('Converting to MP4...', '转换为MP4...')
-                      }
-                    </span>
-                    <span className="text-cosmic-300 font-semibold">
-                      {Math.round(mp4Progress)}%
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-cosmic-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-green-600 via-emerald-500 to-green-600 transition-all duration-300 animate-pulse"
-                      style={{ width: `${mp4Progress}%` }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
 
@@ -1437,8 +1219,8 @@ const StarFieldGenerator: React.FC = () => {
                 {t('WebM (Fast, Browser Native)', 'WebM（快速，浏览器原生）')}
               </Button>
               
-              {/* MP4 Button with better error handling */}
-              {!isEncodingMP4 && !mp4Blob && (
+              {/* MP4 Button - check browser support */}
+              {mp4Supported ? (
                 <div className="space-y-2">
                   <Button
                     onClick={() => {
@@ -1452,42 +1234,22 @@ const StarFieldGenerator: React.FC = () => {
                     {t('MP4 (Universal Compatibility)', 'MP4（通用兼容性）')}
                   </Button>
                   <p className="text-xs text-cosmic-400 text-center">
-                    {t('Requires ~32MB download and may take 30+ seconds', '需要下载约32MB，可能需要30秒以上')}
+                    {t('Native browser MP4 recording', '浏览器原生MP4录制')}
                   </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Button
+                    disabled
+                    className="w-full bg-cosmic-800/50 text-cosmic-400 cursor-not-allowed"
+                  >
+                    <Video className="h-4 w-4 mr-2" />
+                    {t('MP4 (Not Supported)', 'MP4（不支持）')}
+                  </Button>
                   <p className="text-xs text-yellow-400/70 text-center">
-                    {t('If MP4 fails, use WebM format above', '如果MP4失败，请使用上面的WebM格式')}
+                    {t('MP4 recording not supported in this browser. Use WebM or try Safari.', 'MP4录制在此浏览器中不受支持。请使用WebM或尝试Safari。')}
                   </p>
                 </div>
-              )}
-              
-              {/* Progress Bar during encoding - hide if dialog closed or reset */}
-              {isEncodingMP4 && !mp4Blob && showFormatDialog && (
-                <div className="w-full space-y-2">
-                  <div className="flex items-center justify-between text-sm text-cosmic-300">
-                    <span>{t('Encoding MP4...', '编码MP4...')}</span>
-                    <span>{Math.round(mp4Progress)}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-cosmic-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-green-600 to-emerald-600 transition-all duration-300"
-                      style={{ width: `${mp4Progress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-              
-              {/* Download Button after encoding */}
-              {mp4Blob && showFormatDialog && (
-                <Button
-                  onClick={() => {
-                    setShowFormatDialog(false);
-                    downloadMP4File();
-                  }}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  {t('Download MP4', '下载MP4')}
-                </Button>
               )}
             </div>
           </DialogContent>
