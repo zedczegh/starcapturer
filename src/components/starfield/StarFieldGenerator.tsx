@@ -712,22 +712,18 @@ const StarFieldGenerator: React.FC = () => {
           bitrate: `${(bitrate / 1000000).toFixed(0)} Mbps`
         });
         
-        // Create recording canvas (scaled if needed) with optimized settings
+        // Create recording canvas (scaled if needed)
         const canvasPool = CanvasPool.getInstance();
         const recordCanvas = canvasPool.acquire(recordWidth, recordHeight);
         const recordCtx = recordCanvas.getContext('2d', {
           alpha: false,
-          desynchronized: true, // Allow async rendering
-          willReadFrequently: false, // Optimize for drawing, not reading
-        }) as CanvasRenderingContext2D;
+          desynchronized: true,
+          willReadFrequently: false
+        })!;
         
-        // Set high-quality scaling with minimal overhead
+        // Set high-quality scaling
         recordCtx.imageSmoothingEnabled = true;
         recordCtx.imageSmoothingQuality = 'high';
-        
-        // Pre-fill with black to avoid transparency overhead
-        recordCtx.fillStyle = '#000000';
-        recordCtx.fillRect(0, 0, recordWidth, recordHeight);
         
         try {
           const duration = animationSettings.duration;
@@ -830,35 +826,44 @@ const StarFieldGenerator: React.FC = () => {
           
           // toast.success(t(`Recording at ${recordFps}fps...`, `以${recordFps}fps录制...`));
           
-          // Highly optimized non-blocking frame update loop
-          // Uses setInterval for precise timing independent of display refresh rate
-          const updateInterval = 1000 / recordFps;
+          // Simple non-blocking frame update loop
+          // The stream automatically captures frames at the specified FPS
+          let lastUpdateTime = performance.now();
+          const updateInterval = 1000 / recordFps; // Update recording canvas at target FPS
           const totalFrames = Math.ceil(duration * recordFps);
           
-          // Use setInterval for consistent timing that doesn't interfere with animation loop
-          const captureIntervalId = setInterval(() => {
-            if (!recordingActive) {
-              clearInterval(captureIntervalId);
-              return;
-            }
+          const updateRecordingCanvas = () => {
+            if (!recordingActive) return;
             
-            // Copy frame asynchronously without blocking animation
-            try {
+            const now = performance.now();
+            const elapsed = now - lastUpdateTime;
+            
+            // Update recording canvas when it's time for next frame
+            if (elapsed >= updateInterval) {
+              // Copy current frame from display to recording canvas
               recordCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
-              frameCount++;
               
-              // Progress logging (less frequent to reduce overhead)
+              frameCount++;
+              lastUpdateTime = now - (elapsed % updateInterval); // Account for drift
+              
+              // Progress logging
               if (frameCount % 60 === 0 || frameCount === totalFrames) {
                 const progress = Math.min((frameCount / totalFrames) * 100, 100);
                 console.log(`Recording: ${frameCount}/${totalFrames} frames (${progress.toFixed(0)}%)`);
               }
-            } catch (err) {
-              console.error('Frame capture error:', err);
             }
-          }, updateInterval);
+            
+            // Continue updating
+            if (recordingActive) {
+              requestAnimationFrame(updateRecordingCanvas);
+            }
+          };
+          
+          // Start update loop
+          requestAnimationFrame(updateRecordingCanvas);
           
           // Auto-stop after duration
-          const stopTimeoutId = setTimeout(() => {
+          setTimeout(() => {
             if (mediaRecorder.state === 'recording') {
               console.log('Stopping recording after', ((duration * 1000 + 2000) / 1000).toFixed(1), 'seconds');
               recordingActive = false;
