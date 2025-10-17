@@ -854,7 +854,7 @@ const StarFieldGenerator: React.FC = () => {
       }
       
       if (!ffmpegLoaded) {
-        toast.info(t('Loading video encoder...', '加载视频编码器...'));
+        toast.info(t('Loading video encoder (this may take 30s)...', '加载视频编码器（可能需要30秒）...'));
         console.log('=== Loading FFmpeg (~32MB download) ===');
         
         const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
@@ -863,50 +863,70 @@ const StarFieldGenerator: React.FC = () => {
           // Step 1: Fetch core JS
           console.log('[1/3] Fetching core JS...');
           const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-          console.log('✓ Core JS URL created:', coreURL.substring(0, 50) + '...');
+          console.log('✓ Core JS ready');
           setMp4Progress(43);
           
           // Step 2: Fetch WASM
           console.log('[2/3] Fetching WASM file (~32MB)...');
           const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-          console.log('✓ WASM URL created:', wasmURL.substring(0, 50) + '...');
+          console.log('✓ WASM ready');
           setMp4Progress(46);
           
-          // Step 3: Initialize FFmpeg with timeout
-          console.log('[3/3] Initializing FFmpeg instance...');
-          console.log('FFmpeg instance exists:', !!ffmpegRef.current);
+          // Step 3: Initialize FFmpeg with proper timeout
+          console.log('[3/3] Initializing FFmpeg (this can take 20-30s)...');
+          console.log('Note: If this hangs, your browser may not support the encoder');
           
-          const initPromise = ffmpegRef.current!.load({
-            coreURL,
-            wasmURL,
+          let initResolved = false;
+          
+          const initPromise = new Promise(async (resolve, reject) => {
+            try {
+              await ffmpegRef.current!.load({
+                coreURL,
+                wasmURL,
+              });
+              if (!initResolved) {
+                initResolved = true;
+                resolve(true);
+              }
+            } catch (e) {
+              if (!initResolved) {
+                initResolved = true;
+                reject(e);
+              }
+            }
           });
           
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => {
-              console.error('✗ FFmpeg initialization timeout after 30s');
-              reject(new Error('FFmpeg initialization timeout (30s)'));
-            }, 30000); // 30 second timeout for initialization
+              if (!initResolved) {
+                initResolved = true;
+                console.error('✗ FFmpeg initialization timeout after 30s');
+                reject(new Error('FFmpeg took too long to initialize. Your browser may not support MP4 encoding. Please use WebM format instead.'));
+              }
+            }, 30000);
           });
           
           await Promise.race([initPromise, timeoutPromise]);
           
-          console.log('✓ FFmpeg initialized successfully');
-          setFfmpegLoaded(true);
-          setMp4Progress(50);
-          console.log('=== FFmpeg Ready ===');
+          if (initResolved) {
+            console.log('✓ FFmpeg initialized successfully!');
+            setFfmpegLoaded(true);
+            setMp4Progress(50);
+            toast.success(t('Encoder ready!', '编码器就绪！'));
+          }
         } catch (error) {
           console.error('=== FFmpeg Loading Failed ===');
-          console.error('Error type:', error?.constructor?.name);
-          console.error('Error message:', error instanceof Error ? error.message : String(error));
-          console.error('Error stack:', error instanceof Error ? error.stack : 'N/A');
+          console.error('Error:', error);
           
           const errorMsg = error instanceof Error ? error.message : String(error);
+          
+          // User-friendly error message
           toast.error(t(
-            `Encoder failed: ${errorMsg}`, 
-            `编码器失败: ${errorMsg}`
+            'MP4 encoder unavailable. Please download as WebM instead.', 
+            'MP4编码器不可用。请改用WebM格式下载。'
           ));
           
-          throw new Error(`FFmpeg load failed: ${errorMsg}`);
+          throw new Error(`FFmpeg initialization failed: ${errorMsg}`);
         }
       } else {
         setMp4Progress(50);
@@ -1417,19 +1437,27 @@ const StarFieldGenerator: React.FC = () => {
                 {t('WebM (Fast, Browser Native)', 'WebM（快速，浏览器原生）')}
               </Button>
               
-              {/* MP4 Button with Progress */}
+              {/* MP4 Button with better error handling */}
               {!isEncodingMP4 && !mp4Blob && (
-                <Button
-                  onClick={() => {
-                    setShowFormatDialog(false);
-                    downloadVideoMP4();
-                  }}
-                  disabled={isGeneratingVideo}
-                  className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
-                >
-                  <Video className="h-4 w-4 mr-2" />
-                  {t('MP4 (Universal Compatibility)', 'MP4（通用兼容性）')}
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => {
+                      setShowFormatDialog(false);
+                      downloadVideoMP4();
+                    }}
+                    disabled={isGeneratingVideo}
+                    className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
+                  >
+                    <Video className="h-4 w-4 mr-2" />
+                    {t('MP4 (Universal Compatibility)', 'MP4（通用兼容性）')}
+                  </Button>
+                  <p className="text-xs text-cosmic-400 text-center">
+                    {t('Requires ~32MB download and may take 30+ seconds', '需要下载约32MB，可能需要30秒以上')}
+                  </p>
+                  <p className="text-xs text-yellow-400/70 text-center">
+                    {t('If MP4 fails, use WebM format above', '如果MP4失败，请使用上面的WebM格式')}
+                  </p>
+                </div>
               )}
               
               {/* Progress Bar during encoding - hide if dialog closed or reset */}
