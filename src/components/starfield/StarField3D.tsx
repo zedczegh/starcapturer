@@ -57,7 +57,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const [backgroundImg, setBackgroundImg] = useState<HTMLImageElement | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
 
-  // Load and separate stars into layers based on size and brightness for proper depth
+  // Load and separate stars into layers - keep original appearance
   useEffect(() => {
     if (!starsOnlyImage || stars.length === 0) return;
 
@@ -66,54 +66,49 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Set canvas dimensions to match image
       setImageDimensions({ width: img.width, height: img.height });
       
-      // Sort stars by combined size and brightness for better depth perception
-      // Larger, brighter stars appear closer; smaller, dimmer stars appear farther
+      // Sort stars by combined size and brightness for depth perception
       const sortedStars = [...stars].sort((a, b) => {
         const depthA = a.size * a.brightness;
         const depthB = b.size * b.brightness;
         return depthB - depthA;
       });
       
-      // Distribute stars across 3 layers: 25% closest, 35% middle, 40% farthest
+      // Distribute: 25% closest, 35% middle, 40% farthest
       const layer1Count = Math.floor(sortedStars.length * 0.25);
       const layer2Count = Math.floor(sortedStars.length * 0.35);
       
-      const layer1Stars = sortedStars.slice(0, layer1Count); // Closest/brightest
-      const layer2Stars = sortedStars.slice(layer1Count, layer1Count + layer2Count); // Middle
-      const layer3Stars = sortedStars.slice(layer1Count + layer2Count); // Farthest/dimmest
+      const layer1Stars = sortedStars.slice(0, layer1Count);
+      const layer2Stars = sortedStars.slice(layer1Count, layer1Count + layer2Count);
+      const layer3Stars = sortedStars.slice(layer1Count + layer2Count);
       
-      console.log(`Star layer distribution: L1(close)=${layer1Stars.length}, L2(mid)=${layer2Stars.length}, L3(far)=${layer3Stars.length}`);
+      console.log(`Star layers: L1=${layer1Stars.length}, L2=${layer2Stars.length}, L3=${layer3Stars.length}`);
       
-      // Create canvas for each layer with transparent background
+      // Load source image data
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = img.width;
+      tempCanvas.height = img.height;
+      const tempCtx = tempCanvas.getContext('2d')!;
+      tempCtx.drawImage(img, 0, 0);
+      const sourceImageData = tempCtx.getImageData(0, 0, img.width, img.height);
+      const sourceData = sourceImageData.data;
+      
+      // Create canvas for each layer - preserve exact star appearance from original
       const createLayerCanvas = (layerStars: StarData[], layerName: string) => {
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext('2d')!;
         
-        // Start with completely transparent canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Load source image data
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = img.width;
-        tempCanvas.height = img.height;
-        const tempCtx = tempCanvas.getContext('2d')!;
-        tempCtx.drawImage(img, 0, 0);
-        const imageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
-        const sourceData = imageData.data;
-        
-        // Create new image data with transparent background
+        // Create transparent canvas
         const newData = ctx.createImageData(canvas.width, canvas.height);
         
-        // Extract each star with its glow into this layer
+        // Extract each star with generous radius to capture full glow
         layerStars.forEach(star => {
-          // Calculate capture radius based on star size for proper glow
-          const baseRadius = Math.max(star.size * 3, 6);
-          const glowRadius = Math.ceil(baseRadius * 1.5);
+          // Generous radius to capture full star and glow
+          const radius = Math.ceil(Math.max(star.size * 5, 10));
           
-          for (let dy = -glowRadius; dy <= glowRadius; dy++) {
-            for (let dx = -glowRadius; dx <= glowRadius; dx++) {
+          for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
               const px = Math.round(star.x) + dx;
               const py = Math.round(star.y) + dy;
               
@@ -121,22 +116,23 @@ const StarField3D: React.FC<StarField3DProps> = ({
                 const idx = (py * canvas.width + px) * 4;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 
-                // Only copy pixels within glow radius that have actual brightness
-                if (dist <= glowRadius) {
+                if (dist <= radius) {
                   const r = sourceData[idx];
                   const g = sourceData[idx + 1];
                   const b = sourceData[idx + 2];
-                  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
                   
-                  // Only copy bright pixels (not black background)
-                  if (luminance > 10) {
-                    // Keep brightest value to avoid dim overlaps
-                    const existingLum = 0.299 * newData.data[idx] + 0.587 * newData.data[idx + 1] + 0.114 * newData.data[idx + 2];
-                    if (luminance > existingLum) {
+                  // Copy any non-black pixel (stars and their glow)
+                  if (r > 5 || g > 5 || b > 5) {
+                    // Use brightest value to preserve star appearance
+                    const currentR = newData.data[idx];
+                    const currentG = newData.data[idx + 1];
+                    const currentB = newData.data[idx + 2];
+                    
+                    if (r + g + b > currentR + currentG + currentB) {
                       newData.data[idx] = r;
                       newData.data[idx + 1] = g;
                       newData.data[idx + 2] = b;
-                      newData.data[idx + 3] = 255; // Full opacity
+                      newData.data[idx + 3] = 255;
                     }
                   }
                 }
@@ -146,14 +142,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
         });
         
         ctx.putImageData(newData, 0, 0);
-        console.log(`${layerName}: ${layerStars.length} stars extracted with transparent background`);
+        console.log(`${layerName}: ${layerStars.length} stars with original appearance`);
         return canvas;
       };
       
       setStarLayers({
-        layer1: createLayerCanvas(layer1Stars, 'Layer1 (closest)'),
-        layer2: createLayerCanvas(layer2Stars, 'Layer2 (middle)'),
-        layer3: createLayerCanvas(layer3Stars, 'Layer3 (farthest)')
+        layer1: createLayerCanvas(layer1Stars, 'Layer1(closest)'),
+        layer2: createLayerCanvas(layer2Stars, 'Layer2(middle)'),
+        layer3: createLayerCanvas(layer3Stars, 'Layer3(farthest)')
       });
     };
     
