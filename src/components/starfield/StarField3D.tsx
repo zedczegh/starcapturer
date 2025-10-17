@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { MemoryManager } from '@/lib/performance/MemoryManager';
 
 interface StarData {
   x: number;
@@ -60,6 +61,26 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const [backgroundImg, setBackgroundImg] = useState<ImageBitmap | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
   
+  // Canvas pooling for performance
+  const canvasPoolRef = useRef<HTMLCanvasElement[]>([]);
+  
+  // Canvas pooling functions
+  const getPooledCanvas = useCallback((width: number, height: number): HTMLCanvasElement => {
+    let canvas = canvasPoolRef.current.pop();
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+    }
+    canvas.width = width;
+    canvas.height = height;
+    return canvas;
+  }, []);
+  
+  const returnToPool = useCallback((canvas: HTMLCanvasElement) => {
+    if (canvasPoolRef.current.length < 5) { // Limit pool size
+      canvasPoolRef.current.push(canvas);
+    }
+  }, []);
+  
   // Cache for rendered frames to avoid redundant calculations
   const lastRenderState = useRef<{
     progress: number;
@@ -75,17 +96,22 @@ const StarField3D: React.FC<StarField3DProps> = ({
     if (!starsOnlyImage) return;
 
     const img = new Image();
-    img.onload = () => {
+    img.onload = async () => {
       setImageDimensions({ width: img.width, height: img.height });
+      
+      // Monitor memory during star detection
+      const memStats = MemoryManager.getMemoryStats();
+      console.log('Memory before star detection:', memStats);
       
       console.log('Detecting complete stars with cores and spikes...');
       const startTime = performance.now();
       
-      // Draw image to canvas
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = img.width;
-      tempCanvas.height = img.height;
-      const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!;
+      // Use pooled canvas for better memory management
+      const tempCanvas = getPooledCanvas(img.width, img.height);
+      const tempCtx = tempCanvas.getContext('2d', { 
+        willReadFrequently: true,
+        desynchronized: true // Better performance
+      })!;
       tempCtx.drawImage(img, 0, 0);
       
       const sourceData = tempCtx.getImageData(0, 0, img.width, img.height);
@@ -291,17 +317,23 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       console.log(`Size thresholds - Large: ${largeThreshold}, Medium: ${mediumThreshold}`);
       
-      // Create three separate canvases
-      const largeCanvas = document.createElement('canvas');
-      const mediumCanvas = document.createElement('canvas');
-      const smallCanvas = document.createElement('canvas');
+      // Use pooled canvases for layer creation
+      const largeCanvas = getPooledCanvas(width, height);
+      const mediumCanvas = getPooledCanvas(width, height);
+      const smallCanvas = getPooledCanvas(width, height);
       
-      largeCanvas.width = mediumCanvas.width = smallCanvas.width = width;
-      largeCanvas.height = mediumCanvas.height = smallCanvas.height = height;
-      
-      const largeCtx = largeCanvas.getContext('2d')!;
-      const mediumCtx = mediumCanvas.getContext('2d')!;
-      const smallCtx = smallCanvas.getContext('2d')!;
+      const largeCtx = largeCanvas.getContext('2d', { 
+        alpha: true,
+        desynchronized: true 
+      })!;
+      const mediumCtx = mediumCanvas.getContext('2d', { 
+        alpha: true,
+        desynchronized: true 
+      })!;
+      const smallCtx = smallCanvas.getContext('2d', { 
+        alpha: true,
+        desynchronized: true 
+      })!;
       
       // Create image data for each layer
       const largeData = largeCtx.createImageData(width, height);
@@ -315,7 +347,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       let largeCount = 0, mediumCount = 0, smallCount = 0;
       
-      // Assign each complete star to one layer based on its size
+      // Assign each complete star to one layer based on its size with batch processing
+      const batchSize = 1024;
       for (const star of starRegions) {
         let targetData32: Uint32Array;
         if (star.size >= largeThreshold) {
@@ -329,10 +362,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
           smallCount++;
         }
         
-        // Copy all pixels of this complete star to the target layer (32-bit at a time)
-        for (let i = 0; i < star.pixelCount; i++) {
-          const pixelIdx = star.pixels[i];
-          targetData32[pixelIdx] = data32[pixelIdx];
+        // Copy pixels in batches for better performance
+        for (let i = 0; i < star.pixelCount; i += batchSize) {
+          const end = Math.min(i + batchSize, star.pixelCount);
+          for (let j = i; j < end; j++) {
+            const pixelIdx = star.pixels[j];
+            targetData32[pixelIdx] = data32[pixelIdx];
+          }
         }
       }
       
@@ -341,11 +377,20 @@ const StarField3D: React.FC<StarField3DProps> = ({
       mediumCtx.putImageData(mediumData, 0, 0);
       smallCtx.putImageData(smallData, 0, 0);
       
-      // Convert canvases to ImageBitmaps for faster GPU-accelerated rendering
+      // Convert canvases to ImageBitmaps with optimized settings
       Promise.all([
-        createImageBitmap(largeCanvas),
-        createImageBitmap(mediumCanvas),
-        createImageBitmap(smallCanvas)
+        createImageBitmap(largeCanvas, { 
+          premultiplyAlpha: 'premultiply',
+          colorSpaceConversion: 'none' // Faster processing
+        }),
+        createImageBitmap(mediumCanvas, { 
+          premultiplyAlpha: 'premultiply',
+          colorSpaceConversion: 'none'
+        }),
+        createImageBitmap(smallCanvas, { 
+          premultiplyAlpha: 'premultiply',
+          colorSpaceConversion: 'none'
+        })
       ]).then(([brightBitmap, mediumBitmap, dimBitmap]) => {
         setStarLayers({
           bright: brightBitmap,
@@ -353,21 +398,36 @@ const StarField3D: React.FC<StarField3DProps> = ({
           dim: dimBitmap
         });
         
+        // Return canvases to pool
+        returnToPool(tempCanvas);
+        returnToPool(largeCanvas);
+        returnToPool(mediumCanvas);
+        returnToPool(smallCanvas);
+        
+        // Force garbage collection after processing
+        MemoryManager.forceGarbageCollection();
+        
+        const memStatsAfter = MemoryManager.getMemoryStats();
         console.log(`Star layers created: ${largeCount} large, ${mediumCount} medium, ${smallCount} small stars`);
+        console.log(`Memory after processing: ${memStatsAfter.percentage.toFixed(1)}%`);
       });
     };
     
     img.src = starsOnlyImage;
-  }, [starsOnlyImage]);
+  }, [starsOnlyImage, getPooledCanvas, returnToPool]);
 
-  // Load background image as ImageBitmap for faster rendering
+  // Load background image as ImageBitmap with optimization
   useEffect(() => {
     if (!backgroundImage) return;
     
     const img = new Image();
     img.onload = () => {
-      // Convert to ImageBitmap for GPU-accelerated rendering
-      createImageBitmap(img).then(bitmap => {
+      // Convert to ImageBitmap with optimized settings
+      createImageBitmap(img, {
+        premultiplyAlpha: 'premultiply',
+        colorSpaceConversion: 'none',
+        resizeQuality: 'high'
+      }).then(bitmap => {
         setBackgroundImg(bitmap);
         // Set dimensions if not already set
         if (imageDimensions.width === 1920 && imageDimensions.height === 1080) {
@@ -378,12 +438,16 @@ const StarField3D: React.FC<StarField3DProps> = ({
     img.src = backgroundImage;
   }, [backgroundImage, imageDimensions]);
 
-  // Animation loop
+  // Animation loop with optimized rendering
   const animate = useCallback(() => {
     if (!canvasRef.current || !isAnimating) return;
     
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d', { alpha: false })!;
+    const ctx = canvas.getContext('2d', { 
+      alpha: false,
+      desynchronized: true, // Reduced latency
+      willReadFrequently: false
+    })!;
     const { motionType = 'zoom_in', speed = 1, duration = 10, spin = 0, spinDirection = 'clockwise' } = settings;
     
     // Calculate progress - initialize timing on first frame
@@ -415,8 +479,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Disable image smoothing for crisp rendering (faster)
-    ctx.imageSmoothingEnabled = false;
+    // Optimize rendering settings
+    ctx.imageSmoothingEnabled = false; // Crisp rendering
+    ctx.imageSmoothingQuality = 'low'; // Faster rendering
     
     // Calculate zoom/pan with DRAMATIC parallax differences for 3D depth
     const progressRatio = progress / 100;
@@ -601,13 +666,19 @@ const StarField3D: React.FC<StarField3DProps> = ({
     };
   }, [isAnimating, animate, onProgressUpdate]);
   
-  // Cleanup ImageBitmaps on unmount to prevent memory leaks
+  // Cleanup ImageBitmaps and canvas pool on unmount
   useEffect(() => {
     return () => {
       if (starLayers.bright) starLayers.bright.close();
       if (starLayers.medium) starLayers.medium.close();
       if (starLayers.dim) starLayers.dim.close();
       if (backgroundImg) backgroundImg.close();
+      
+      // Clear canvas pool
+      canvasPoolRef.current = [];
+      
+      // Final memory cleanup
+      MemoryManager.forceGarbageCollection();
     };
   }, []);
 
