@@ -43,7 +43,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
   const animationStartTimeRef = useRef<number>(0);
-  const pausedTimeRef = useRef<number>(0);
+  const totalPausedTimeRef = useRef<number>(0);
+  const lastPauseTimeRef = useRef<number>(0);
   const offsetsRef = useRef({
     layer1: { x: 0, y: 0, scale: 1 }, // Largest/brightest stars (closest)
     layer2: { x: 0, y: 0, scale: 1 }, // Medium stars
@@ -271,7 +272,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       animationStartTimeRef.current = Date.now();
     }
     
-    const elapsed = (Date.now() - animationStartTimeRef.current - pausedTimeRef.current) / 1000;
+    const elapsed = (Date.now() - animationStartTimeRef.current - totalPausedTimeRef.current) / 1000;
     const progress = Math.min((elapsed / duration) * 100, 100);
     
     if (onProgressUpdate) {
@@ -421,22 +422,34 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
   useEffect(() => {
     if (isAnimating) {
-      // Reset everything when starting fresh
-      animationStartTimeRef.current = 0;
-      pausedTimeRef.current = 0;
-      offsetsRef.current = { 
-        layer1: { x: 0, y: 0, scale: 1 },
-        layer2: { x: 0, y: 0, scale: 1 },
-        layer3: { x: 0, y: 0, scale: 1 },
-        background: { x: 0, y: 0, scale: 1 }
-      };
-      if (onProgressUpdate) {
-        onProgressUpdate(0);
+      // If we have a lastPauseTime, we're resuming from pause
+      if (lastPauseTimeRef.current > 0) {
+        // Add the pause duration to total paused time
+        totalPausedTimeRef.current += Date.now() - lastPauseTimeRef.current;
+        lastPauseTimeRef.current = 0;
+      } else {
+        // Starting fresh - reset everything
+        animationStartTimeRef.current = 0;
+        totalPausedTimeRef.current = 0;
+        lastPauseTimeRef.current = 0;
+        offsetsRef.current = { 
+          layer1: { x: 0, y: 0, scale: 1 },
+          layer2: { x: 0, y: 0, scale: 1 },
+          layer3: { x: 0, y: 0, scale: 1 },
+          background: { x: 0, y: 0, scale: 1 }
+        };
+        if (onProgressUpdate) {
+          onProgressUpdate(0);
+        }
       }
       animate();
     } else {
+      // Pausing - record when we paused
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (animationStartTimeRef.current > 0) {
+        lastPauseTimeRef.current = Date.now();
       }
     }
     
