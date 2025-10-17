@@ -14,6 +14,9 @@ import StarField3D from './StarField3D';
 import UTIF from 'utif';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { CanvasPool } from '@/lib/performance/CanvasPool';
+import { MemoryManager } from '@/lib/performance/MemoryManager';
+import { ChunkedProcessor } from '@/lib/performance/ChunkedProcessor';
 
 interface ProcessedStarData {
   x: number;
@@ -107,32 +110,63 @@ const StarFieldGenerator: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const decodeTiffToDataUrl = useCallback((arrayBuffer: ArrayBuffer): Promise<string> => {
-    return new Promise((resolve, reject) => {
+  const decodeTiffToDataUrl = useCallback(async (arrayBuffer: ArrayBuffer): Promise<string> => {
+    const canvasPool = CanvasPool.getInstance();
+    
+    const { result } = await MemoryManager.monitorOperation(async () => {
+      const ifds = UTIF.decode(arrayBuffer);
+      UTIF.decodeImage(arrayBuffer, ifds[0]);
+      const rgba = UTIF.toRGBA8(ifds[0]);
+      
+      const width = ifds[0].width;
+      const height = ifds[0].height;
+      
+      // Check if we need to downscale for memory
+      const params = MemoryManager.getOptimalProcessingParams(width, height);
+      
+      let targetWidth = width;
+      let targetHeight = height;
+      
+      if (params.shouldDownscale) {
+        targetWidth = Math.floor(width * params.recommendedScale);
+        targetHeight = Math.floor(height * params.recommendedScale);
+        console.log(`Downscaling TIFF from ${width}x${height} to ${targetWidth}x${targetHeight} for memory optimization`);
+        toast.info(`Optimizing large image: ${targetWidth}x${targetHeight}`, { duration: 2000 });
+      }
+      
+      // Use canvas pool
+      const canvas = canvasPool.acquire(targetWidth, targetHeight);
+      const ctx = canvas.getContext('2d')!;
+      
       try {
-        const ifds = UTIF.decode(arrayBuffer);
-        UTIF.decodeImage(arrayBuffer, ifds[0]);
-        const rgba = UTIF.toRGBA8(ifds[0]);
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = ifds[0].width;
-        canvas.height = ifds[0].height;
-        const ctx = canvas.getContext('2d');
-        
-        if (!ctx) {
-          reject(new Error('Failed to get canvas context'));
-          return;
+        if (params.shouldDownscale) {
+          // Create temp canvas with original size for downscaling
+          const tempCanvas = canvasPool.acquire(width, height);
+          const tempCtx = tempCanvas.getContext('2d')!;
+          
+          const imageData = tempCtx.createImageData(width, height);
+          imageData.data.set(rgba);
+          tempCtx.putImageData(imageData, 0, 0);
+          
+          // Downscale with high quality
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(tempCanvas, 0, 0, targetWidth, targetHeight);
+          
+          canvasPool.release(tempCanvas);
+        } else {
+          const imageData = ctx.createImageData(targetWidth, targetHeight);
+          imageData.data.set(rgba);
+          ctx.putImageData(imageData, 0, 0);
         }
         
-        const imageData = ctx.createImageData(canvas.width, canvas.height);
-        imageData.data.set(rgba);
-        ctx.putImageData(imageData, 0, 0);
-        
-        resolve(canvas.toDataURL('image/png'));
-      } catch (error) {
-        reject(error);
+        const dataUrl = canvas.toDataURL('image/png');
+        return dataUrl;
+      } finally {
+        canvasPool.release(canvas);
       }
-    });
+    }, 'TIFF Decode');
+    return result;
   }, []);
 
   const handleStarsOnlyUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -283,50 +317,81 @@ const StarFieldGenerator: React.FC = () => {
     }
   }, [t, decodeTiffToDataUrl]);
 
-  // Generate depth map from starless image
-  const generateDepthMap = useCallback((img: HTMLImageElement): HTMLCanvasElement => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
-    canvas.width = img.width;
-    canvas.height = img.height;
+  // Generate depth map from starless image - optimized with chunked processing
+  const generateDepthMap = useCallback(async (img: HTMLImageElement): Promise<HTMLCanvasElement> => {
+    const canvasPool = CanvasPool.getInstance();
     
-    // Draw starless image
-    ctx.drawImage(img, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    
-    // Create depth map based on luminance with enhanced blue bias for nebula
-    const depthData = new ImageData(canvas.width, canvas.height);
-    for (let i = 0; i < data.length; i += 4) {
-      // Enhanced luminance with blue bias for nebula depth perception
-      const luminance = 0.2 * data[i] + 0.5 * data[i + 1] + 0.8 * data[i + 2];
-      const enhancedLum = Math.pow(luminance / 255, 0.8) * 255; // Gamma correction for depth
-      depthData.data[i] = enhancedLum;
-      depthData.data[i + 1] = enhancedLum;
-      depthData.data[i + 2] = enhancedLum;
-      depthData.data[i + 3] = 255;
-    }
-    
-    ctx.putImageData(depthData, 0, 0);
-    
-    // Apply slight blur for smoother depth transitions
-    ctx.filter = 'blur(2px)';
-    ctx.drawImage(canvas, 0, 0);
-    ctx.filter = 'none';
-    
-    return canvas;
+    const { result } = await MemoryManager.monitorOperation(async () => {
+      const canvas = canvasPool.acquire(img.width, img.height);
+      const ctx = canvas.getContext('2d')!;
+      
+      try {
+        // Draw starless image
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Process depth map in chunks for large images
+        const processedData = await ChunkedProcessor.processImageInChunks(
+          imageData,
+          (chunkData) => {
+            const data = chunkData.data;
+            const result = new ImageData(chunkData.width, chunkData.height);
+            
+            // Create depth map based on luminance with enhanced blue bias for nebula
+            for (let i = 0; i < data.length; i += 4) {
+              // Enhanced luminance with blue bias for nebula depth perception
+              const luminance = 0.2 * data[i] + 0.5 * data[i + 1] + 0.8 * data[i + 2];
+              const enhancedLum = Math.pow(luminance / 255, 0.8) * 255; // Gamma correction for depth
+              result.data[i] = enhancedLum;
+              result.data[i + 1] = enhancedLum;
+              result.data[i + 2] = enhancedLum;
+              result.data[i + 3] = 255;
+            }
+            
+            return result;
+          },
+          undefined,
+          (progress) => {
+            console.log(`Depth map generation: ${Math.round(progress * 100)}%`);
+          }
+        );
+        
+        // Combine chunks back
+        let yOffset = 0;
+        for (const chunk of processedData) {
+          ctx.putImageData(chunk, 0, yOffset);
+          yOffset += chunk.height;
+        }
+        
+        // Apply slight blur for smoother depth transitions
+        ctx.filter = 'blur(2px)';
+        const blurCanvas = canvasPool.acquire(canvas.width, canvas.height);
+        const blurCtx = blurCanvas.getContext('2d')!;
+        blurCtx.drawImage(canvas, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.filter = 'none';
+        ctx.drawImage(blurCanvas, 0, 0);
+        canvasPool.release(blurCanvas);
+        
+        return canvas;
+      } catch (error) {
+        canvasPool.release(canvas);
+        throw error;
+      }
+    }, 'Depth Map Generation');
+    return result;
   }, []);
 
-  // Extract star positions with diffraction spike detection (Newtonian cross stars)
+  // Extract star positions with diffraction spike detection (Newtonian cross stars) - optimized
   const extractStarPositions = useCallback((img: HTMLImageElement): StarPosition[] => {
-    const canvas = document.createElement('canvas');
+    const canvasPool = CanvasPool.getInstance();
+    const canvas = canvasPool.acquire(img.width, img.height);
     const ctx = canvas.getContext('2d')!;
-    canvas.width = img.width;
-    canvas.height = img.height;
     
-    ctx.drawImage(img, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
+    try {
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
     
     const stars: StarPosition[] = [];
     const threshold = 100; // Lower threshold to capture diffraction spikes
@@ -441,6 +506,9 @@ const StarFieldGenerator: React.FC = () => {
     
     console.log(`Detected ${stars.length} stars with diffraction spikes`);
     return stars;
+    } finally {
+      canvasPool.release(canvas);
+    }
   }, []);
 
   const processImages = useCallback(async () => {
@@ -453,6 +521,8 @@ const StarFieldGenerator: React.FC = () => {
     setCurrentStep('processing');
     
     try {
+      toast.info(t('Analyzing images...', '分析图像...'), { duration: 2000 });
+      
       // Extract star positions from stars only image
       const stars = extractStarPositions(starsOnlyElement);
       setDetectedStars(stars);
@@ -463,9 +533,13 @@ const StarFieldGenerator: React.FC = () => {
         return;
       }
       
-      // Generate depth map from starless image
-      const depthMap = generateDepthMap(starlessElement);
+      toast.info(t(`Detected ${stars.length} stars, generating depth map...`, `检测到${stars.length}颗星，生成深度图...`), { duration: 2000 });
+      
+      // Generate depth map from starless image (now async with chunked processing)
+      const depthMap = await generateDepthMap(starlessElement);
       setDepthMapCanvas(depthMap);
+      
+      toast.info(t('Mapping stars to 3D space...', '将星体映射到3D空间...'), { duration: 2000 });
       
       // Assign depth to stars based on depth map
       const depthCtx = depthMap.getContext('2d')!;
@@ -498,12 +572,21 @@ const StarFieldGenerator: React.FC = () => {
       setProcessedStars(processedStarsData);
       setCurrentStep('ready');
       
+      // Log memory stats
+      const memStats = MemoryManager.getMemoryStats();
+      console.log('Memory after processing:', memStats);
+      
+      toast.success(t('Processing complete!', '处理完成！'));
+      
     } catch (error) {
       console.error('Processing error:', error);
       toast.error(t('Processing failed. Please try again.', '处理失败。请重试。'));
       setCurrentStep('upload');
     } finally {
       setIsProcessing(false);
+      
+      // Trigger cleanup
+      MemoryManager.forceGarbageCollection();
     }
   }, [starsOnlyElement, starlessElement, extractStarPositions, generateDepthMap, t]);
 
@@ -568,152 +651,150 @@ const StarFieldGenerator: React.FC = () => {
     // Give canvas time to render several frames before recording
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    try {
-      console.log('Starting WebM recording...');
-      console.log('Canvas ref:', canvasRef.current);
-      console.log('Is canvas ready:', isCanvasReady);
-      
-      let canvas = canvasRef.current;
-      
-      // If canvas ref is null, try to find the canvas element directly
-      if (!canvas) {
-        console.log('Canvas ref is null, trying to find canvas in DOM...');
-        const canvasElements = document.querySelectorAll('canvas');
-        console.log('Found canvas elements:', canvasElements.length);
+    return MemoryManager.monitorOperation(async () => {
+      try {
+        console.log('Starting WebM recording...');
         
-        // Look for Three.js canvas (usually has specific attributes)
-        for (const canvasEl of canvasElements) {
-          if (canvasEl instanceof HTMLCanvasElement && canvasEl.width > 0 && canvasEl.height > 0) {
-            console.log('Found potential canvas:', canvasEl);
-            canvas = canvasEl;
-            // Update our ref for future use
-            canvasRef.current = canvas;
-            break;
+        let canvas = canvasRef.current;
+        
+        // If canvas ref is null, try to find the canvas element directly
+        if (!canvas) {
+          const canvasElements = document.querySelectorAll('canvas');
+          
+          // Look for Three.js canvas
+          for (const canvasEl of canvasElements) {
+            if (canvasEl instanceof HTMLCanvasElement && canvasEl.width > 0 && canvasEl.height > 0) {
+              canvas = canvasEl;
+              canvasRef.current = canvas;
+              break;
+            }
           }
         }
-      }
-      
-      if (!canvas) {
-        throw new Error('Canvas not available - please make sure the 3D animation is fully loaded and visible');
-      }
-      
-      if (!(canvas instanceof HTMLCanvasElement)) {
-        throw new Error('Invalid canvas element - not an HTMLCanvasElement');
-      }
-      
-      console.log('Canvas validation passed:', canvas);
-      console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
-      
-      const fps = 60;
-      const duration = animationSettings.duration;
-      const stream = canvas.captureStream(fps);
-      
-      // Check if stream has video tracks
-      const videoTracks = stream.getVideoTracks();
-      if (videoTracks.length === 0) {
-        throw new Error('No video tracks available');
-      }
-      
-      console.log('Video track settings:', videoTracks[0].getSettings());
-      
-      // Try different codecs based on browser support
-      let mimeType = 'video/webm;codecs=vp9';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/webm;codecs=vp8';
+        
+        if (!canvas) {
+          throw new Error('Canvas not available');
+        }
+        
+        console.log('Canvas found:', canvas.width, 'x', canvas.height);
+        
+        const fps = 60;
+        const duration = animationSettings.duration;
+        const stream = canvas.captureStream(fps);
+        
+        // Check if stream has video tracks
+        const videoTracks = stream.getVideoTracks();
+        if (videoTracks.length === 0) {
+          throw new Error('No video tracks available');
+        }
+        
+        console.log('Video track settings:', videoTracks[0].getSettings());
+        
+        // Try different codecs based on browser support
+        let mimeType = 'video/webm;codecs=vp9';
         if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'video/webm';
+          mimeType = 'video/webm;codecs=vp8';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm';
+          }
         }
+        
+        console.log('Using mimeType:', mimeType);
+        
+        const mediaRecorder = new MediaRecorder(stream, {
+          mimeType,
+          videoBitsPerSecond: 10000000 // 10 Mbps
+        });
+        
+        const chunks: Blob[] = [];
+        let hasReceivedData = false;
+        
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            chunks.push(e.data);
+            hasReceivedData = true;
+            console.log(`Recorded chunk: ${e.data.size} bytes`);
+          }
+        };
+        
+        mediaRecorder.onstop = () => {
+          console.log(`Recording stopped. Total chunks: ${chunks.length}`);
+          
+          if (!hasReceivedData || chunks.length === 0) {
+            toast.error(t('Recording failed - no data captured. Please try again.', '录制失败 - 未捕获数据。请重试。'));
+            setIsGeneratingVideo(false);
+            setIsAnimating(false);
+            return;
+          }
+          
+          const blob = new Blob(chunks, { type: mimeType });
+          console.log(`Final video blob size: ${blob.size} bytes`);
+          
+          if (blob.size === 0) {
+            toast.error(t('Recording failed - empty video', '录制失败 - 视频为空'));
+            setIsGeneratingVideo(false);
+            setIsAnimating(false);
+            return;
+          }
+          
+          // Download the video
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `starfield-${Date.now()}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          setIsGeneratingVideo(false);
+          setIsAnimating(false);
+          toast.success(t('Video downloaded successfully!', '视频下载成功！'));
+          
+          MemoryManager.forceGarbageCollection();
+        };
+        
+        mediaRecorder.onerror = (e) => {
+          console.error('MediaRecorder error:', e);
+          toast.error(t('Recording error occurred', '录制出错'));
+          setIsGeneratingVideo(false);
+          setIsAnimating(false);
+        };
+        
+        // Ensure animation is running
+        setIsAnimating(true);
+        
+        // Wait for more frames to ensure recording captures content
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Start recording - request data every 100ms
+        console.log('Starting MediaRecorder...');
+        mediaRecorder.start(100);
+        console.log('MediaRecorder started, state:', mediaRecorder.state);
+        
+        toast.success(t('Recording started...', '开始录制...'));
+        
+        // Stop recording after full duration + buffer
+        const recordingDuration = (duration * 1000) + 2000; // Extra 2s buffer
+        setTimeout(() => {
+          if (mediaRecorder.state === 'recording') {
+            console.log('Stopping MediaRecorder');
+            mediaRecorder.stop();
+            stream.getTracks().forEach(track => track.stop());
+          }
+        }, recordingDuration);
+        
+      } catch (error) {
+        console.error('Download video error:', error);
+        toast.error(t('Failed to record video', '视频录制失败'));
+        setIsGeneratingVideo(false);
+        setIsAnimating(false);
+        MemoryManager.forceGarbageCollection();
+        throw error;
       }
-      
-      console.log('Using mimeType:', mimeType);
-      
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond: 10000000 // 10 Mbps
-      });
-      
-      const chunks: Blob[] = [];
-      let hasReceivedData = false;
-      
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          chunks.push(e.data);
-          hasReceivedData = true;
-          console.log(`Recorded chunk: ${e.data.size} bytes`);
-        }
-      };
-      
-      mediaRecorder.onstop = () => {
-        console.log(`Recording stopped. Total chunks: ${chunks.length}`);
-        
-        if (!hasReceivedData || chunks.length === 0) {
-          toast.error(t('Recording failed - no data captured. Please try again.', '录制失败 - 未捕获数据。请重试。'));
-          setIsGeneratingVideo(false);
-          setIsAnimating(false);
-          return;
-        }
-        
-        const blob = new Blob(chunks, { type: mimeType });
-        console.log(`Final video blob size: ${blob.size} bytes`);
-        
-        if (blob.size === 0) {
-          toast.error(t('Recording failed - empty video', '录制失败 - 视频为空'));
-          setIsGeneratingVideo(false);
-          setIsAnimating(false);
-          return;
-        }
-        
-        // Download the video
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `starfield-${Date.now()}.webm`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        setIsGeneratingVideo(false);
-        setIsAnimating(false);
-        toast.success(t('Video downloaded successfully!', '视频下载成功！'));
-      };
-      
-      mediaRecorder.onerror = (e) => {
-        console.error('MediaRecorder error:', e);
-        toast.error(t('Recording error occurred', '录制出错'));
-        setIsGeneratingVideo(false);
-        setIsAnimating(false);
-      };
-      
-      // Ensure animation is running
-      setIsAnimating(true);
-      
-      // Wait for more frames to ensure recording captures content
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Start recording - request data every 100ms
-      console.log('Starting MediaRecorder...');
-      mediaRecorder.start(100);
-      console.log('MediaRecorder started, state:', mediaRecorder.state);
-      
-      toast.success(t('Recording started...', '开始录制...'));
-      
-      // Stop recording after full duration + buffer
-      const recordingDuration = (duration * 1000) + 2000; // Extra 2s buffer
-      setTimeout(() => {
-        if (mediaRecorder.state === 'recording') {
-          console.log('Stopping MediaRecorder');
-          mediaRecorder.stop();
-          stream.getTracks().forEach(track => track.stop());
-        }
-      }, recordingDuration);
-      
-    } catch (error) {
-      console.error('Download video error:', error);
-      toast.error(t('Failed to record video', '视频录制失败'));
+    }, 'WebM Recording').catch(() => {
       setIsGeneratingVideo(false);
       setIsAnimating(false);
-    }
+    });
   }, [animationSettings.duration, currentStep, t]);
 
   const downloadVideoMP4 = useCallback(async () => {
@@ -721,15 +802,16 @@ const StarFieldGenerator: React.FC = () => {
       toast.error(t('Please process images first', '请先处理图像'));
       return;
     }
-
-    try {
-      setIsEncodingMP4(true);
-      setIsGeneratingVideo(true);
-      setMp4Progress(0);
-      setMp4Blob(null);
-      
-      console.log('=== Starting MP4 Generation ===');
-      toast.info(t('Preparing recording...', '准备录制...'));
+    
+    return MemoryManager.monitorOperation(async () => {
+      try {
+        setIsEncodingMP4(true);
+        setIsGeneratingVideo(true);
+        setMp4Progress(0);
+        setMp4Blob(null);
+        
+        console.log('=== Starting MP4 Generation ===');
+        toast.info(t('Preparing recording...', '准备录制...'));
       
       const fps = 60;
       const duration = animationSettings.duration;
@@ -756,14 +838,24 @@ const StarFieldGenerator: React.FC = () => {
       toast.info(t('Recording video...', '录制视频...'));
       
       // Step 2: Record WebM (5-40%)
-      console.log('Setting up canvas stream...');
-      const canvas = canvasRef.current!;
+      let canvas = canvasRef.current;
+      
       if (!canvas) {
-        throw new Error('Canvas not available - please wait for the animation to fully load');
+        const canvasElements = document.querySelectorAll('canvas');
+        for (const canvasEl of canvasElements) {
+          if (canvasEl instanceof HTMLCanvasElement && canvasEl.width > 0 && canvasEl.height > 0) {
+            canvas = canvasEl;
+            canvasRef.current = canvas;
+            break;
+          }
+        }
       }
       
-      console.log('Canvas found for MP4:', canvas);
-      console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+      if (!canvas) {
+        throw new Error('Canvas not available');
+      }
+      
+      console.log('Canvas found:', canvas.width, 'x', canvas.height);
       
       const stream = canvas.captureStream(fps);
       
@@ -1042,23 +1134,31 @@ const StarFieldGenerator: React.FC = () => {
         throw conversionError;
       }
       
-    } catch (error) {
-      console.error('=== MP4 Generation Failed ===');
-      console.error('Error:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error message:', errorMessage);
-      
-      toast.error(t(
-        `Failed to encode MP4: ${errorMessage}`, 
-        `MP4编码失败: ${errorMessage}`
-      ));
-      
+      } catch (error) {
+        console.error('=== MP4 Generation Failed ===');
+        console.error('Error:', error);
+        
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Error message:', errorMessage);
+        
+        toast.error(t(
+          `Failed to encode MP4: ${errorMessage}`, 
+          `MP4编码失败: ${errorMessage}`
+        ));
+        
+        setIsEncodingMP4(false);
+        setIsGeneratingVideo(false);
+        setIsAnimating(false);
+        setMp4Progress(0);
+        
+        MemoryManager.forceGarbageCollection();
+        throw error;
+      }
+    }, 'MP4 Recording').catch(() => {
       setIsEncodingMP4(false);
       setIsGeneratingVideo(false);
       setIsAnimating(false);
-      setMp4Progress(0);
-    }
+    });
   }, [animationSettings.duration, ffmpegLoaded, isAnimating, currentStep, t]);
 
   const downloadMP4File = useCallback(() => {
