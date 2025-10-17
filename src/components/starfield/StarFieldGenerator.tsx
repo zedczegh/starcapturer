@@ -284,7 +284,7 @@ const StarFieldGenerator: React.FC = () => {
     return canvas;
   }, []);
 
-  // Extract exact star positions from stars only image using improved detection
+  // Extract star positions with diffraction spike detection (Newtonian cross stars)
   const extractStarPositions = useCallback((img: HTMLImageElement): StarPosition[] => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
@@ -296,10 +296,10 @@ const StarFieldGenerator: React.FC = () => {
     const data = imageData.data;
     
     const stars: StarPosition[] = [];
-    const threshold = 150; // High threshold - only detect actual bright stars
-    const minStarSize = 2; // Minimum pixels for a valid star
-    const maxStarSize = 100; // Maximum pixels to avoid large nebula regions
-    const minDistance = 4; // Minimum distance between star centers
+    const threshold = 100; // Lower threshold to capture diffraction spikes
+    const minStarSize = 3; // Minimum pixels for a valid star
+    const maxStarSize = 500; // Higher to capture full spike patterns
+    const minDistance = 3; // Minimum distance between star centers
     
     // Create a visited map
     const visited = new Uint8Array(canvas.width * canvas.height);
@@ -314,7 +314,7 @@ const StarFieldGenerator: React.FC = () => {
         const luminance = 0.299 * data[pixelIdx] + 0.587 * data[pixelIdx + 1] + 0.114 * data[pixelIdx + 2];
         
         if (luminance > threshold) {
-          // Found a bright pixel - grow the star region
+          // Found a bright pixel - grow the star region including spikes
           const starPixels: {x: number, y: number, lum: number}[] = [];
           const queue: {x: number, y: number}[] = [{x, y}];
           visited[idx] = 1;
@@ -343,7 +343,7 @@ const StarFieldGenerator: React.FC = () => {
             minY = Math.min(minY, curr.y);
             maxY = Math.max(maxY, curr.y);
             
-            // Check 8-connected neighbors
+            // Check 8-connected neighbors for spike detection
             for (let dy = -1; dy <= 1; dy++) {
               for (let dx = -1; dx <= 1; dx++) {
                 if (dx === 0 && dy === 0) continue;
@@ -357,8 +357,8 @@ const StarFieldGenerator: React.FC = () => {
                     const nPixelIdx = nIdx * 4;
                     const nLum = 0.299 * data[nPixelIdx] + 0.587 * data[nPixelIdx + 1] + 0.114 * data[nPixelIdx + 2];
                     
-                    // Use adaptive threshold - dimmer pixels near bright ones
-                    if (nLum > threshold * 0.5) {
+                    // Lower adaptive threshold to capture faint spikes
+                    if (nLum > threshold * 0.3) {
                       visited[nIdx] = 1;
                       queue.push({x: nx, y: ny});
                     }
@@ -368,48 +368,45 @@ const StarFieldGenerator: React.FC = () => {
             }
           }
           
-          // Validate star region
+          // Validate star region - allow elongated regions for spikes
           if (starPixels.length >= minStarSize && starPixels.length <= maxStarSize) {
-            const starWidth = maxX - minX + 1;
-            const starHeight = maxY - minY + 1;
-            const aspectRatio = Math.max(starWidth, starHeight) / Math.min(starWidth, starHeight);
+            const totalWeight = starPixels.reduce((sum, p) => sum + p.lum * p.lum, 0);
+            const centroidX = Math.round(totalX / totalWeight);
+            const centroidY = Math.round(totalY / totalWeight);
             
-            // Reject elongated regions (likely artifacts)
-            if (aspectRatio < 3) {
-              const totalWeight = starPixels.reduce((sum, p) => sum + p.lum * p.lum, 0);
-              const centroidX = Math.round(totalX / totalWeight);
-              const centroidY = Math.round(totalY / totalWeight);
+            // Check minimum distance from existing stars
+            const tooClose = stars.some(s => {
+              const dx = s.x - centroidX;
+              const dy = s.y - centroidY;
+              return Math.sqrt(dx * dx + dy * dy) < minDistance;
+            });
+            
+            if (!tooClose) {
+              const centerIdx = (centroidY * canvas.width + centroidX) * 4;
               
-              // Check minimum distance from existing stars
-              const tooClose = stars.some(s => {
-                const dx = s.x - centroidX;
-                const dy = s.y - centroidY;
-                return Math.sqrt(dx * dx + dy * dy) < minDistance;
+              // Calculate actual star size including spikes
+              const starWidth = maxX - minX + 1;
+              const starHeight = maxY - minY + 1;
+              const actualSize = Math.max(starWidth, starHeight);
+              
+              stars.push({
+                x: centroidX,
+                y: centroidY,
+                brightness: maxLum / 255,
+                size: actualSize, // Use max dimension for proper size-based layering
+                color: {
+                  r: data[centerIdx],
+                  g: data[centerIdx + 1],
+                  b: data[centerIdx + 2]
+                }
               });
-              
-              if (!tooClose) {
-                const centerIdx = (centroidY * canvas.width + centroidX) * 4;
-                const avgLum = totalLum / starPixels.length;
-                
-                stars.push({
-                  x: centroidX,
-                  y: centroidY,
-                  brightness: maxLum / 255,
-                  size: Math.sqrt(starPixels.length) * 0.5, // Size based on area
-                  color: {
-                    r: data[centerIdx],
-                    g: data[centerIdx + 1],
-                    b: data[centerIdx + 2]
-                  }
-                });
-              }
             }
           }
         }
       }
     }
     
-    console.log(`Detected ${stars.length} stars from image`);
+    console.log(`Detected ${stars.length} stars with diffraction spikes`);
     return stars;
   }, []);
 

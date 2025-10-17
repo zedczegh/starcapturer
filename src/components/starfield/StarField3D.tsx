@@ -57,25 +57,32 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const [backgroundImg, setBackgroundImg] = useState<HTMLImageElement | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
 
-  // Create brightness-based star layers (each pixel in only ONE layer)
+  // Create SIZE-based star layers - each star (including spikes) in only ONE layer
   useEffect(() => {
-    if (!starsOnlyImage) return;
+    if (!starsOnlyImage || stars.length === 0) return;
 
     const img = new Image();
     img.onload = () => {
       setImageDimensions({ width: img.width, height: img.height });
       
+      // Sort stars by size to determine layer thresholds
+      const sortedBySizes = [...stars].sort((a, b) => b.size - a.size);
+      const largeThreshold = sortedBySizes[Math.floor(stars.length * 0.3)]?.size || 10; // Top 30%
+      const mediumThreshold = sortedBySizes[Math.floor(stars.length * 0.65)]?.size || 5; // Middle 35%
+      
+      console.log(`Size thresholds - Large: ${largeThreshold}, Medium: ${mediumThreshold}`);
+      
       // Create three separate canvases
-      const brightCanvas = document.createElement('canvas');
+      const largeCanvas = document.createElement('canvas');
       const mediumCanvas = document.createElement('canvas');
-      const dimCanvas = document.createElement('canvas');
+      const smallCanvas = document.createElement('canvas');
       
-      brightCanvas.width = mediumCanvas.width = dimCanvas.width = img.width;
-      brightCanvas.height = mediumCanvas.height = dimCanvas.height = img.height;
+      largeCanvas.width = mediumCanvas.width = smallCanvas.width = img.width;
+      largeCanvas.height = mediumCanvas.height = smallCanvas.height = img.height;
       
-      const brightCtx = brightCanvas.getContext('2d')!;
+      const largeCtx = largeCanvas.getContext('2d')!;
       const mediumCtx = mediumCanvas.getContext('2d')!;
-      const dimCtx = dimCanvas.getContext('2d')!;
+      const smallCtx = smallCanvas.getContext('2d')!;
       
       // Draw image to temporary canvas to read pixel data
       const tempCanvas = document.createElement('canvas');
@@ -87,63 +94,93 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const sourceData = tempCtx.getImageData(0, 0, img.width, img.height);
       
       // Create separate image data for each layer
-      const brightData = brightCtx.createImageData(img.width, img.height);
+      const largeData = largeCtx.createImageData(img.width, img.height);
       const mediumData = mediumCtx.createImageData(img.width, img.height);
-      const dimData = dimCtx.createImageData(img.width, img.height);
+      const smallData = smallCtx.createImageData(img.width, img.height);
       
-      // Split pixels into layers based on brightness
-      // Each pixel goes to ONLY ONE layer
+      // Create a map of which layer each pixel belongs to based on nearest star
+      const pixelLayerMap = new Uint8Array(img.width * img.height); // 0=none, 1=large, 2=medium, 3=small
+      
+      // For each star, assign all its pixels to appropriate layer
+      for (const star of stars) {
+        const starLayer = star.size >= largeThreshold ? 1 : 
+                         star.size >= mediumThreshold ? 2 : 3;
+        
+        // Mark all pixels within star's bounding box
+        const radius = Math.ceil(star.size / 2) + 5; // Extra padding for spikes
+        
+        for (let dy = -radius; dy <= radius; dy++) {
+          for (let dx = -radius; dx <= radius; dx++) {
+            const px = Math.floor(star.x) + dx;
+            const py = Math.floor(star.y) + dy;
+            
+            if (px >= 0 && px < img.width && py >= 0 && py < img.height) {
+              const idx = py * img.width + px;
+              const pixelIdx = idx * 4;
+              
+              // Only assign if pixel has some brightness
+              const luminance = 0.299 * sourceData.data[pixelIdx] + 
+                              0.587 * sourceData.data[pixelIdx + 1] + 
+                              0.114 * sourceData.data[pixelIdx + 2];
+              
+              if (luminance > 30 && pixelLayerMap[idx] === 0) {
+                pixelLayerMap[idx] = starLayer;
+              }
+            }
+          }
+        }
+      }
+      
+      // Split pixels into layers based on the map
       for (let i = 0; i < sourceData.data.length; i += 4) {
+        const pixelIndex = i / 4;
+        const layer = pixelLayerMap[pixelIndex];
+        
         const r = sourceData.data[i];
         const g = sourceData.data[i + 1];
         const b = sourceData.data[i + 2];
         const a = sourceData.data[i + 3];
         
-        // Calculate luminance
-        const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-        
-        // Determine which layer this pixel belongs to
-        // Bright stars (>200) = close, fast moving
-        // Medium stars (100-200) = middle distance
-        // Dim stars (<100) = far, slow moving
-        if (luminance > 200 && a > 0) {
-          // Bright layer (closest)
-          brightData.data[i] = r;
-          brightData.data[i + 1] = g;
-          brightData.data[i + 2] = b;
-          brightData.data[i + 3] = a;
-        } else if (luminance > 100 && a > 0) {
-          // Medium layer
+        if (layer === 1) {
+          // Large stars (closest, fastest)
+          largeData.data[i] = r;
+          largeData.data[i + 1] = g;
+          largeData.data[i + 2] = b;
+          largeData.data[i + 3] = a;
+        } else if (layer === 2) {
+          // Medium stars
           mediumData.data[i] = r;
           mediumData.data[i + 1] = g;
           mediumData.data[i + 2] = b;
           mediumData.data[i + 3] = a;
-        } else if (luminance > 0 && a > 0) {
-          // Dim layer (farthest)
-          dimData.data[i] = r;
-          dimData.data[i + 1] = g;
-          dimData.data[i + 2] = b;
-          dimData.data[i + 3] = a;
+        } else if (layer === 3) {
+          // Small stars (farthest, slowest)
+          smallData.data[i] = r;
+          smallData.data[i + 1] = g;
+          smallData.data[i + 2] = b;
+          smallData.data[i + 3] = a;
         }
-        // If pixel is black/transparent, it stays transparent in all layers
       }
       
       // Put the separated data onto the canvases
-      brightCtx.putImageData(brightData, 0, 0);
+      largeCtx.putImageData(largeData, 0, 0);
       mediumCtx.putImageData(mediumData, 0, 0);
-      dimCtx.putImageData(dimData, 0, 0);
+      smallCtx.putImageData(smallData, 0, 0);
       
       setStarLayers({
-        bright: brightCanvas,
-        medium: mediumCanvas,
-        dim: dimCanvas
+        bright: largeCanvas,   // Large stars (closest)
+        medium: mediumCanvas,  // Medium stars
+        dim: smallCanvas       // Small stars (farthest)
       });
       
-      console.log('Star layers created with brightness-based separation');
+      const largeCount = stars.filter(s => s.size >= largeThreshold).length;
+      const mediumCount = stars.filter(s => s.size >= mediumThreshold && s.size < largeThreshold).length;
+      const smallCount = stars.filter(s => s.size < mediumThreshold).length;
+      console.log(`Star layers by size: ${largeCount} large, ${mediumCount} medium, ${smallCount} small`);
     };
     
     img.src = starsOnlyImage;
-  }, [starsOnlyImage]);
+  }, [starsOnlyImage, stars]);
 
   // Load background image
   useEffect(() => {
@@ -202,24 +239,24 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const ampFactor = (settings.amplification || 150) / 100;
     
     if (motionType === 'zoom_in') {
-      // Create 3D depth: bright stars zoom faster than dim stars
+      // Create 3D depth: large stars zoom faster than small stars
       offsetsRef.current.background.scale = 1.0 + (progressRatio * 0.4 * ampFactor);  // Background moves slowest
-      offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 0.7 * ampFactor);      // Dim stars (far)
+      offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 0.6 * ampFactor);      // Small stars (far)
       offsetsRef.current.layer2.scale = 1.0 + (progressRatio * 1.0 * ampFactor);      // Medium stars
-      offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 1.4 * ampFactor);      // Bright stars (close) - fastest
+      offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 1.5 * ampFactor);      // Large stars (close) - fastest
     } else if (motionType === 'zoom_out') {
       // Zoom out with depth
       const bgMax = 1.0 + (0.4 * ampFactor);
-      const dimMax = 1.0 + (0.7 * ampFactor);
+      const smallMax = 1.0 + (0.6 * ampFactor);
       const medMax = 1.0 + (1.0 * ampFactor);
-      const brightMax = 1.0 + (1.4 * ampFactor);
+      const largeMax = 1.0 + (1.5 * ampFactor);
       
       offsetsRef.current.background.scale = bgMax - (progressRatio * 0.4 * ampFactor);
-      offsetsRef.current.layer3.scale = dimMax - (progressRatio * 0.7 * ampFactor);
+      offsetsRef.current.layer3.scale = smallMax - (progressRatio * 0.6 * ampFactor);
       offsetsRef.current.layer2.scale = medMax - (progressRatio * 1.0 * ampFactor);
-      offsetsRef.current.layer1.scale = brightMax - (progressRatio * 1.4 * ampFactor);
+      offsetsRef.current.layer1.scale = largeMax - (progressRatio * 1.5 * ampFactor);
     } else if (motionType === 'pan_left') {
-      // Pan with 3D parallax: bright stars pan faster
+      // Pan with 3D parallax: large stars pan faster
       const panAmount = progressRatio * speed * 250 * ampFactor;
       offsetsRef.current.background.scale = 1.0 + (0.3 * ampFactor);
       offsetsRef.current.layer3.scale = 1.0 + (0.3 * ampFactor);
@@ -227,9 +264,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       offsetsRef.current.layer1.scale = 1.0 + (0.3 * ampFactor);
       
       offsetsRef.current.background.x = -panAmount * 0.4;  // Background slowest
-      offsetsRef.current.layer3.x = -panAmount * 0.7;      // Dim stars
+      offsetsRef.current.layer3.x = -panAmount * 0.6;      // Small stars
       offsetsRef.current.layer2.x = -panAmount * 1.0;      // Medium stars
-      offsetsRef.current.layer1.x = -panAmount * 1.4;      // Bright stars fastest
+      offsetsRef.current.layer1.x = -panAmount * 1.5;      // Large stars fastest
     } else if (motionType === 'pan_right') {
       // Pan right with 3D parallax
       const panAmount = progressRatio * speed * 250 * ampFactor;
@@ -239,9 +276,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       offsetsRef.current.layer1.scale = 1.0 + (0.3 * ampFactor);
       
       offsetsRef.current.background.x = panAmount * 0.4;
-      offsetsRef.current.layer3.x = panAmount * 0.7;
+      offsetsRef.current.layer3.x = panAmount * 0.6;
       offsetsRef.current.layer2.x = panAmount * 1.0;
-      offsetsRef.current.layer1.x = panAmount * 1.4;
+      offsetsRef.current.layer1.x = panAmount * 1.5;
     }
     
     // Draw background layer (nebula) first
@@ -262,12 +299,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.restore();
     }
     
-    // Draw three star layers with 3D parallax (back to front)
+    // Draw three size-based star layers with 3D parallax (back to front)
     if (starLayers.dim || starLayers.medium || starLayers.bright) {
       ctx.save();
       ctx.globalCompositeOperation = 'screen';
       
-      // Layer 3: Dim stars (farthest, slowest movement)
+      // Layer 3: Small stars (farthest, slowest movement)
       if (starLayers.dim) {
         const scale = offsetsRef.current.layer3.scale;
         const scaledWidth = starLayers.dim.width * scale;
@@ -287,7 +324,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         ctx.drawImage(starLayers.medium, drawX, drawY, scaledWidth, scaledHeight);
       }
       
-      // Layer 1: Bright stars (closest, fastest movement)
+      // Layer 1: Large stars (closest, fastest movement)
       if (starLayers.bright) {
         const scale = offsetsRef.current.layer1.scale;
         const scaledWidth = starLayers.bright.width * scale;
