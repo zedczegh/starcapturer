@@ -16,12 +16,14 @@ interface StarField3DProps {
     speed?: number;
     duration?: number;
     fieldOfView?: number;
+    amplification?: number;
   };
   isAnimating: boolean;
   isRecording: boolean;
   backgroundImage?: string | null;
   starsOnlyImage?: string | null;
   onCanvasReady?: (canvas: HTMLCanvasElement) => void;
+  onProgressUpdate?: (progress: number) => void;
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -31,10 +33,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
   isRecording,
   backgroundImage,
   starsOnlyImage,
-  onCanvasReady
+  onCanvasReady,
+  onProgressUpdate
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
+  const animationStartTimeRef = useRef<number>(0);
   const offsetsRef = useRef({ 
     layer1: { x: 0, y: 0, scale: 1 }, // Largest/brightest stars (closest)
     layer2: { x: 0, y: 0, scale: 1 }, // Medium stars
@@ -146,7 +150,19 @@ const StarField3D: React.FC<StarField3DProps> = ({
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d')!;
-    const { motionType = 'zoom_in', speed = 1 } = settings;
+    const { motionType = 'zoom_in', speed = 1, duration = 10 } = settings;
+    
+    // Calculate progress
+    if (animationStartTimeRef.current === 0) {
+      animationStartTimeRef.current = Date.now();
+    }
+    
+    const elapsed = (Date.now() - animationStartTimeRef.current) / 1000;
+    const progress = Math.min((elapsed / duration) * 100, 100);
+    
+    if (onProgressUpdate) {
+      onProgressUpdate(progress);
+    }
     
     // Clear canvas
     ctx.fillStyle = '#000000';
@@ -223,11 +239,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
     drawLayer(starLayers.layer1, offsetsRef.current.layer1, 1.0); // Closest
     
     animationFrameRef.current = requestAnimationFrame(animate);
-  }, [isAnimating, settings, backgroundImg, starLayers]);
+  }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate]);
 
   useEffect(() => {
     if (isAnimating) {
-      // Reset offsets when animation starts
+      // Reset offsets and timer when animation starts
+      animationStartTimeRef.current = 0;
       offsetsRef.current = { 
         layer1: { x: 0, y: 0, scale: 1 },
         layer2: { x: 0, y: 0, scale: 1 },
@@ -238,6 +255,10 @@ const StarField3D: React.FC<StarField3DProps> = ({
     } else {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+      }
+      animationStartTimeRef.current = 0;
+      if (onProgressUpdate) {
+        onProgressUpdate(0);
       }
       // Draw static frame
       if (canvasRef.current) {
@@ -277,7 +298,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isAnimating, animate, backgroundImg, starLayers]);
+  }, [isAnimating, animate, backgroundImg, starLayers, onProgressUpdate]);
 
   // Notify parent when canvas is ready
   useEffect(() => {

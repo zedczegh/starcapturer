@@ -31,7 +31,7 @@ interface StarPosition {
 }
 
 const StarFieldGenerator: React.FC = () => {
-  const { t } = useLanguage();
+  const { language } = useLanguage();
   
   // Two separate images
   const [starsOnlyImage, setStarsOnlyImage] = useState<string | null>(null);
@@ -47,6 +47,7 @@ const StarFieldGenerator: React.FC = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'ready' | 'generating'>('upload');
+  const [animationProgress, setAnimationProgress] = useState(0); // 0-100%
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
@@ -56,12 +57,22 @@ const StarFieldGenerator: React.FC = () => {
 
   // Animation settings with motion controls
   const [animationSettings, setAnimationSettings] = useState({
-    motionType: 'zoom_in', // zoom_in, zoom_out, pan_left, pan_right
-    speed: 1.0,
-    duration: 15,
+    motionType: 'zoom_in' as 'zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right',
+    speed: 1.5,
+    duration: 10,
     fieldOfView: 75,
-    depthMultiplier: 1.0
+    depthMultiplier: 1.0,
+    amplification: 150 // 120-300%
   });
+
+  const t = (en: string, zh: string) => language === 'en' ? en : zh;
+  
+  // Format time in MM:SS format
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const decodeTiffToDataUrl = useCallback((arrayBuffer: ArrayBuffer): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -752,17 +763,24 @@ const StarFieldGenerator: React.FC = () => {
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-cosmic-200">{t('Flight Speed', '飞行速度')}</Label>
-                    <span className="text-cosmic-300 text-sm">{animationSettings.speed.toFixed(1)}x</span>
+                    <Label className="text-cosmic-200">{t('Motion Amplification', '动作放大')}</Label>
+                    <span className="text-cosmic-300 text-sm font-semibold">{animationSettings.amplification}%</span>
                   </div>
                   <Slider
-                    value={[animationSettings.speed]}
-                    onValueChange={(value) => setAnimationSettings(prev => ({...prev, speed: value[0]}))}
-                    min={0.5}
-                    max={3.0}
-                    step={0.1}
+                    value={[animationSettings.amplification]}
+                    onValueChange={(value) => setAnimationSettings(prev => ({
+                      ...prev, 
+                      amplification: value[0],
+                      speed: (value[0] / 100) * (60 / prev.duration) // Calculate speed based on amplification and duration
+                    }))}
+                    min={120}
+                    max={300}
+                    step={10}
                     className="w-full"
                   />
+                  <p className="text-xs text-cosmic-400">
+                    {t('Higher amplification = faster motion through space', '更高的放大倍数 = 更快的空间移动速度')}
+                  </p>
                 </div>
 
                 <div className="space-y-3">
@@ -772,7 +790,11 @@ const StarFieldGenerator: React.FC = () => {
                   </div>
                   <Slider
                     value={[animationSettings.duration]}
-                    onValueChange={(value) => setAnimationSettings(prev => ({...prev, duration: value[0]}))}
+                    onValueChange={(value) => setAnimationSettings(prev => ({
+                      ...prev, 
+                      duration: value[0],
+                      speed: (prev.amplification / 100) * (60 / value[0]) // Recalculate speed when duration changes
+                    }))}
                     min={5}
                     max={60}
                     step={5}
@@ -840,15 +862,40 @@ const StarFieldGenerator: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="h-[500px] p-0">
-              <StarField3D
-                stars={processedStars}
-                settings={animationSettings}
-                isAnimating={isAnimating}
-                isRecording={isRecording}
-                backgroundImage={starlessImage}
-                starsOnlyImage={starsOnlyImage}
-                onCanvasReady={handleCanvasReady}
-              />
+              <div className="space-y-2">
+                <StarField3D
+                  stars={processedStars}
+                  settings={animationSettings}
+                  isAnimating={isAnimating}
+                  isRecording={isRecording}
+                  backgroundImage={starlessImage}
+                  starsOnlyImage={starsOnlyImage}
+                  onCanvasReady={handleCanvasReady}
+                  onProgressUpdate={setAnimationProgress}
+                />
+                
+                {/* Progress Bar */}
+                {(isAnimating || isRecording) && (
+                  <div className="space-y-2 px-4 pb-3">
+                    {/* Progress bar */}
+                    <div className="relative w-full h-1.5 bg-cosmic-800/50 rounded-full overflow-hidden">
+                      <div 
+                        className="absolute left-0 top-0 h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300"
+                        style={{ width: `${animationProgress}%` }}
+                      />
+                    </div>
+                    
+                    {/* Time display */}
+                    <div className="flex items-center justify-between text-xs text-cosmic-300">
+                      <span>{formatTime((animationProgress / 100) * animationSettings.duration)}</span>
+                      <span className="text-cosmic-400">
+                        {Math.round(animationProgress)}%
+                      </span>
+                      <span>{formatTime(animationSettings.duration)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
