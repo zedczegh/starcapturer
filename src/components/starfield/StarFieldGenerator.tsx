@@ -80,7 +80,8 @@ const StarFieldGenerator: React.FC = () => {
     depthMultiplier: 1.0,
     amplification: 150, // 100-300%
     spin: 0, // 0-90 degrees
-    spinDirection: 'clockwise' as 'clockwise' | 'counterclockwise'
+    spinDirection: 'clockwise' as 'clockwise' | 'counterclockwise',
+    enableDownscale: false // User-controlled downscaling
   });
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
@@ -113,7 +114,7 @@ const StarFieldGenerator: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const decodeTiffToDataUrl = useCallback(async (arrayBuffer: ArrayBuffer): Promise<string> => {
+  const decodeTiffToDataUrl = useCallback(async (arrayBuffer: ArrayBuffer, enableDownscale: boolean): Promise<string> => {
     const canvasPool = CanvasPool.getInstance();
     
     try {
@@ -124,16 +125,22 @@ const StarFieldGenerator: React.FC = () => {
       const width = ifds[0].width;
       const height = ifds[0].height;
       
-      // Check if we need to downscale for memory only if memory is constrained
-      const params = MemoryManager.getOptimalProcessingParams(width, height);
-      
       let targetWidth = width;
       let targetHeight = height;
       
-      if (params.shouldDownscale) {
-        targetWidth = Math.floor(width * params.recommendedScale);
-        targetHeight = Math.floor(height * params.recommendedScale);
-        console.log(`Downscaling TIFF from ${width}x${height} to ${targetWidth}x${targetHeight} for memory optimization`);
+      // Only downscale if user has enabled it
+      if (enableDownscale) {
+        // Calculate optimal scale for large images
+        const isHighResolution = width * height > 4096 * 4096; // 16MP threshold
+        
+        if (isHighResolution) {
+          const scale = Math.sqrt(4096 * 4096 / (width * height));
+          targetWidth = Math.floor(width * scale);
+          targetHeight = Math.floor(height * scale);
+          console.log(`📐 User downscaling: ${width}x${height} → ${targetWidth}x${targetHeight} (${(scale * 100).toFixed(0)}%)`);
+        } else {
+          console.log(`✓ Image size ${width}x${height} within limits, no downscaling needed`);
+        }
       }
       
       // Use canvas pool
@@ -141,7 +148,7 @@ const StarFieldGenerator: React.FC = () => {
       const ctx = canvas.getContext('2d')!;
       
       try {
-        if (params.shouldDownscale) {
+        if (targetWidth !== width || targetHeight !== height) {
           // Create temp canvas with original size for downscaling
           const tempCanvas = canvasPool.acquire(width, height);
           const tempCtx = tempCanvas.getContext('2d')!;
@@ -203,7 +210,7 @@ const StarFieldGenerator: React.FC = () => {
       arrayBufferReader.onload = async (e) => {
         try {
           const arrayBuffer = e.target?.result as ArrayBuffer;
-          const dataUrl = await decodeTiffToDataUrl(arrayBuffer);
+          const dataUrl = await decodeTiffToDataUrl(arrayBuffer, animationSettings.enableDownscale);
           setStarsOnlyImage(dataUrl);
           
           const img = new Image();
@@ -223,23 +230,62 @@ const StarFieldGenerator: React.FC = () => {
     } else {
       // Handle standard image formats
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const result = e.target?.result as string;
-        setStarsOnlyImage(result);
         
-        const img = new Image();
-        img.onload = () => {
-          setStarsOnlyElement(img);
-        };
-        img.onerror = () => {
-          setStarsOnlyImage(null);
-          if (starsFileInputRef.current) starsFileInputRef.current.value = '';
-        };
-        img.src = result;
+        if (animationSettings.enableDownscale) {
+          // Apply downscaling if enabled
+          const img = new Image();
+          img.onload = async () => {
+            const isHighResolution = img.width * img.height > 4096 * 4096; // 16MP
+            
+            if (isHighResolution) {
+              const canvasPool = CanvasPool.getInstance();
+              const scale = Math.sqrt(4096 * 4096 / (img.width * img.height));
+              const targetWidth = Math.floor(img.width * scale);
+              const targetHeight = Math.floor(img.height * scale);
+              
+              console.log(`📐 User downscaling: ${img.width}x${img.height} → ${targetWidth}x${targetHeight}`);
+              
+              const canvas = canvasPool.acquire(targetWidth, targetHeight);
+              const ctx = canvas.getContext('2d')!;
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+              
+              const optimizedDataUrl = canvas.toDataURL('image/png', 0.95);
+              canvasPool.release(canvas);
+              
+              setStarsOnlyImage(optimizedDataUrl);
+              const optimizedImg = new Image();
+              optimizedImg.onload = () => setStarsOnlyElement(optimizedImg);
+              optimizedImg.src = optimizedDataUrl;
+            } else {
+              console.log(`✓ Image size ${img.width}x${img.height} within limits, no downscaling needed`);
+              setStarsOnlyImage(result);
+              setStarsOnlyElement(img);
+            }
+          };
+          img.onerror = () => {
+            setStarsOnlyImage(null);
+            if (starsFileInputRef.current) starsFileInputRef.current.value = '';
+          };
+          img.src = result;
+        } else {
+          // No downscaling, use original
+          setStarsOnlyImage(result);
+          const img = new Image();
+          img.onload = () => setStarsOnlyElement(img);
+          img.onerror = () => {
+            setStarsOnlyImage(null);
+            if (starsFileInputRef.current) starsFileInputRef.current.value = '';
+          };
+          img.src = result;
+        }
       };
       reader.readAsDataURL(file);
     }
-  }, [decodeTiffToDataUrl]);
+  }, [decodeTiffToDataUrl, animationSettings.enableDownscale]);
 
   const handleStarlessUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -270,7 +316,7 @@ const StarFieldGenerator: React.FC = () => {
       arrayBufferReader.onload = async (e) => {
         try {
           const arrayBuffer = e.target?.result as ArrayBuffer;
-          const dataUrl = await decodeTiffToDataUrl(arrayBuffer);
+          const dataUrl = await decodeTiffToDataUrl(arrayBuffer, animationSettings.enableDownscale);
           setStarlessImage(dataUrl);
           
           const img = new Image();
@@ -290,23 +336,62 @@ const StarFieldGenerator: React.FC = () => {
     } else {
       // Handle standard image formats
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const result = e.target?.result as string;
-        setStarlessImage(result);
         
-        const img = new Image();
-        img.onload = () => {
-          setStarlessElement(img);
-        };
-        img.onerror = () => {
-          setStarlessImage(null);
-          if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
-        };
-        img.src = result;
+        if (animationSettings.enableDownscale) {
+          // Apply downscaling if enabled
+          const img = new Image();
+          img.onload = async () => {
+            const isHighResolution = img.width * img.height > 4096 * 4096; // 16MP
+            
+            if (isHighResolution) {
+              const canvasPool = CanvasPool.getInstance();
+              const scale = Math.sqrt(4096 * 4096 / (img.width * img.height));
+              const targetWidth = Math.floor(img.width * scale);
+              const targetHeight = Math.floor(img.height * scale);
+              
+              console.log(`📐 User downscaling: ${img.width}x${img.height} → ${targetWidth}x${targetHeight}`);
+              
+              const canvas = canvasPool.acquire(targetWidth, targetHeight);
+              const ctx = canvas.getContext('2d')!;
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+              
+              const optimizedDataUrl = canvas.toDataURL('image/png', 0.95);
+              canvasPool.release(canvas);
+              
+              setStarlessImage(optimizedDataUrl);
+              const optimizedImg = new Image();
+              optimizedImg.onload = () => setStarlessElement(optimizedImg);
+              optimizedImg.src = optimizedDataUrl;
+            } else {
+              console.log(`✓ Image size ${img.width}x${img.height} within limits, no downscaling needed`);
+              setStarlessImage(result);
+              setStarlessElement(img);
+            }
+          };
+          img.onerror = () => {
+            setStarlessImage(null);
+            if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
+          };
+          img.src = result;
+        } else {
+          // No downscaling, use original
+          setStarlessImage(result);
+          const img = new Image();
+          img.onload = () => setStarlessElement(img);
+          img.onerror = () => {
+            setStarlessImage(null);
+            if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
+          };
+          img.src = result;
+        }
       };
       reader.readAsDataURL(file);
     }
-  }, [decodeTiffToDataUrl]);
+  }, [decodeTiffToDataUrl, animationSettings.enableDownscale]);
 
   // Generate depth map from starless image - optimized with chunked processing
   const generateDepthMap = useCallback(async (img: HTMLImageElement): Promise<HTMLCanvasElement> => {
@@ -1559,6 +1644,32 @@ const StarFieldGenerator: React.FC = () => {
                     step={5}
                     className="w-full"
                   />
+                </div>
+
+                <div className="space-y-3 pt-2 border-t border-cosmic-700/30">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label className="text-cosmic-200">{t('Downscale by Resolution', '按分辨率缩小')}</Label>
+                      <p className="text-xs text-cosmic-400">
+                        {t('Automatically downscale images >16MP for better performance', '自动缩小超过1600万像素的图像以获得更好的性能')}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="enableDownscale"
+                        checked={animationSettings.enableDownscale}
+                        onChange={(e) => setAnimationSettings(prev => ({ 
+                          ...prev, 
+                          enableDownscale: e.target.checked 
+                        }))}
+                        className="w-5 h-5 rounded border-cosmic-700/50 bg-cosmic-800/50 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <Label htmlFor="enableDownscale" className="text-cosmic-300 text-sm cursor-pointer">
+                        {animationSettings.enableDownscale ? t('Enabled', '已启用') : t('Disabled', '已禁用')}
+                      </Label>
+                    </div>
+                  </div>
                 </div>
 
                 <Button
