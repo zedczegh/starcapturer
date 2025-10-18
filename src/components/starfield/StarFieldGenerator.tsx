@@ -708,8 +708,16 @@ const StarFieldGenerator: React.FC = () => {
     }
     
     setIsGeneratingVideo(true);
-    setIsRecording(false); // Not using real-time recording anymore
+    setIsRecording(false);
     setIsAnimating(false);
+    
+    // Auto-scroll to preview area where progress indicator will appear
+    setTimeout(() => {
+      const previewElement = document.querySelector('[data-preview-container]');
+      if (previewElement) {
+        previewElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
     
     // Wait for any ongoing animation to stop
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -758,7 +766,7 @@ const StarFieldGenerator: React.FC = () => {
       const duration = animationSettings.duration;
       const totalFrames = Math.ceil(duration * fps);
       
-      console.log(`Will render ${totalFrames} frames at ${fps}fps`);
+      console.log(`Will render ${totalFrames} frames at ${fps}fps for ${duration}s video`);
       
       // Create offscreen canvas for rendering
       const canvasPool = CanvasPool.getInstance();
@@ -770,30 +778,34 @@ const StarFieldGenerator: React.FC = () => {
       
       renderCtx.imageSmoothingEnabled = false; // Fast rendering
       
-      // STAGE 1: Pre-render all frames (smooth, no recording overhead)
+      // STAGE 1: Pre-render all frames by letting animation run naturally
       setVideoProgress({ stage: 'Rendering frames...', percent: 0 });
       console.log('Stage 1: Pre-rendering frames...');
       
       const frames: ImageData[] = [];
       
-      // Temporarily enable animation for frame capture
+      // Reset and start animation from beginning
       setAnimationProgress(0);
       setIsAnimating(true);
       
-      // Wait for animation to initialize
+      // Wait for animation to fully initialize
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // Capture frames at precise intervals while animation runs
+      const frameInterval = 1000 / fps; // ~33.33ms for 30fps
+      const startTime = performance.now();
+      
       for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-        // Calculate target progress for this frame
-        const targetProgress = (frameIndex / totalFrames) * 100;
+        // Calculate target time for this frame
+        const targetTime = frameIndex * frameInterval;
+        const currentTime = performance.now() - startTime;
         
-        // Update animation progress to render this frame
-        setAnimationProgress(targetProgress);
+        // Wait until we reach the target time for this frame
+        if (currentTime < targetTime) {
+          await new Promise(resolve => setTimeout(resolve, targetTime - currentTime));
+        }
         
-        // Wait for canvas to render this frame
-        await new Promise(resolve => setTimeout(resolve, 1000 / fps));
-        
-        // Capture frame from source canvas
+        // Capture frame from source canvas (which is animating naturally)
         renderCtx.fillStyle = '#000000';
         renderCtx.fillRect(0, 0, recordWidth, recordHeight);
         renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
@@ -809,14 +821,16 @@ const StarFieldGenerator: React.FC = () => {
           percent: renderProgress 
         });
         
-        if (frameIndex % 30 === 0) {
-          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames`);
+        if ((frameIndex + 1) % 30 === 0) {
+          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames (${((frameIndex + 1) / totalFrames * 100).toFixed(1)}%)`);
         }
       }
       
       // Stop animation
       setIsAnimating(false);
-      console.log(`✓ All ${frames.length} frames rendered`);
+      
+      const actualDuration = (performance.now() - startTime) / 1000;
+      console.log(`✓ All ${frames.length} frames rendered in ${actualDuration.toFixed(2)}s`);
       
       // STAGE 2: Encode frames to WebM video
       setVideoProgress({ stage: 'Encoding video...', percent: 50 });
@@ -855,10 +869,11 @@ const StarFieldGenerator: React.FC = () => {
       mediaRecorder.start();
       
       // Play back pre-rendered frames at correct timing
-      const frameInterval = 1000 / fps;
       let currentFrame = 0;
       
       const playbackPromise = new Promise<void>((resolve) => {
+        const playbackStart = performance.now();
+        
         const playFrame = () => {
           if (currentFrame >= frames.length) {
             mediaRecorder.stop();
@@ -868,16 +883,22 @@ const StarFieldGenerator: React.FC = () => {
           
           // Draw frame
           encodingCtx.putImageData(frames[currentFrame], 0, 0);
-          currentFrame++;
           
           // Update encoding progress
           const encodeProgress = 50 + ((currentFrame / frames.length) * 50); // Second 50%
           setVideoProgress({ 
-            stage: `Encoding... ${currentFrame}/${frames.length}`, 
+            stage: `Encoding... ${currentFrame + 1}/${frames.length}`, 
             percent: encodeProgress 
           });
           
-          setTimeout(playFrame, frameInterval);
+          currentFrame++;
+          
+          // Schedule next frame at precise time
+          const targetTime = currentFrame * frameInterval;
+          const elapsed = performance.now() - playbackStart;
+          const delay = Math.max(0, targetTime - elapsed);
+          
+          setTimeout(playFrame, delay);
         };
         
         playFrame();
@@ -897,12 +918,12 @@ const StarFieldGenerator: React.FC = () => {
       // Create and download video
       const blob = new Blob(chunks, { type: mimeType });
       const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
-      console.log(`✓ Final video: ${sizeMB} MB`);
+      console.log(`✓ Final video: ${sizeMB} MB, Duration: ${duration}s, ${totalFrames} frames at ${fps}fps`);
       
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `starfield-${recordWidth}x${recordHeight}-${Date.now()}.webm`;
+      a.download = `starfield-${duration}s-${recordWidth}x${recordHeight}-${Date.now()}.webm`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1791,8 +1812,8 @@ const StarFieldGenerator: React.FC = () => {
                 }
               </CardDescription>
             </CardHeader>
-            <CardContent className="h-[500px] p-0">
-              <div className="space-y-2">
+            <CardContent className="h-[500px] p-0" data-preview-container>
+              <div className="space-y-2 relative">
                 {/* Video Generation Progress Overlay */}
                 {isGeneratingVideo && videoProgress.stage && (
                   <div className="absolute inset-0 z-50 flex items-center justify-center bg-cosmic-950/90 backdrop-blur-sm rounded-lg">
@@ -1822,7 +1843,7 @@ const StarFieldGenerator: React.FC = () => {
                       
                       <p className="text-xs text-cosmic-400 text-center">
                         {videoProgress.percent < 50 
-                          ? t('Rendering all frames smoothly without recording overhead...', '流畅渲染所有帧，无录制开销...')
+                          ? t('Rendering all frames smoothly...', '流畅渲染所有帧...')
                           : t('Encoding frames to video format...', '将帧编码为视频格式...')
                         }
                       </p>
