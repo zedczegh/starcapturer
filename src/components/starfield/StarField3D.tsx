@@ -41,9 +41,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
   onAnimationComplete
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const animationFrameRef = useRef<number>();
   const animationStartTimeRef = useRef<number>(0);
   const pausedTimeRef = useRef<number>(0);
+  const lastProgressUpdateRef = useRef<number>(0);
   const offsetsRef = useRef({
     layer1: { x: 0, y: 0, scale: 1 }, // Largest/brightest stars (closest)
     layer2: { x: 0, y: 0, scale: 1 }, // Medium stars
@@ -69,6 +71,20 @@ const StarField3D: React.FC<StarField3DProps> = ({
     scale3: number;
     scaleBg: number;
   } | null>(null);
+  
+  // Cache calculated dimensions to avoid recalculation every frame
+  const cachedDimensions = useRef<{
+    canvasCenterX: number;
+    canvasCenterY: number;
+    bgScaledWidth: number;
+    bgScaledHeight: number;
+    layer3ScaledWidth: number;
+    layer3ScaledHeight: number;
+    layer2ScaledWidth: number;
+    layer2ScaledHeight: number;
+    layer1ScaledWidth: number;
+    layer1ScaledHeight: number;
+  } | null>(null);
 
   // Create star layers by detecting complete stars first, then assigning whole stars to layers
   useEffect(() => {
@@ -85,7 +101,10 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = img.width;
       tempCanvas.height = img.height;
-      const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!;
+      const tempCtx = tempCanvas.getContext('2d', { 
+        willReadFrequently: true,
+        alpha: false 
+      })!;
       tempCtx.drawImage(img, 0, 0);
       
       const sourceData = tempCtx.getImageData(0, 0, img.width, img.height);
@@ -299,9 +318,18 @@ const StarField3D: React.FC<StarField3DProps> = ({
       largeCanvas.width = mediumCanvas.width = smallCanvas.width = width;
       largeCanvas.height = mediumCanvas.height = smallCanvas.height = height;
       
-      const largeCtx = largeCanvas.getContext('2d')!;
-      const mediumCtx = mediumCanvas.getContext('2d')!;
-      const smallCtx = smallCanvas.getContext('2d')!;
+      const largeCtx = largeCanvas.getContext('2d', { 
+        alpha: false,
+        willReadFrequently: false 
+      })!;
+      const mediumCtx = mediumCanvas.getContext('2d', { 
+        alpha: false,
+        willReadFrequently: false 
+      })!;
+      const smallCtx = smallCanvas.getContext('2d', { 
+        alpha: false,
+        willReadFrequently: false 
+      })!;
       
       // Create image data for each layer
       const largeData = largeCtx.createImageData(width, height);
@@ -410,12 +438,21 @@ const StarField3D: React.FC<StarField3DProps> = ({
     img.src = backgroundImage;
   }, [backgroundImage, imageDimensions]);
 
-  // Animation loop
+  // Animation loop - optimized with cached context and throttled updates
   const animate = useCallback(() => {
     if (!canvasRef.current || !isAnimating) return;
     
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d', { alpha: false })!;
+    
+    // Cache canvas context for better performance
+    if (!canvasCtxRef.current) {
+      canvasCtxRef.current = canvas.getContext('2d', { 
+        alpha: false,
+        desynchronized: true // Hint to browser for better performance
+      })!;
+    }
+    
+    const ctx = canvasCtxRef.current;
     const { motionType = 'zoom_in', speed = 1, duration = 10, spin = 0, spinDirection = 'clockwise' } = settings;
     
     // Calculate progress - initialize timing on first frame
@@ -424,12 +461,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
       pausedTimeRef.current = 0;
     }
     
-    const elapsed = (Date.now() - animationStartTimeRef.current - pausedTimeRef.current) / 1000;
+    const now = Date.now();
+    const elapsed = (now - animationStartTimeRef.current - pausedTimeRef.current) / 1000;
     const progress = Math.min((elapsed / duration) * 100, 100);
     
-    // Always update progress
-    if (onProgressUpdate) {
+    // Throttle progress updates to every 16ms (~60fps) to reduce overhead
+    if (onProgressUpdate && now - lastProgressUpdateRef.current > 16) {
       onProgressUpdate(progress);
+      lastProgressUpdateRef.current = now;
     }
     
     // Stop animation when duration is reached
@@ -473,9 +512,26 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // Amplification factor from settings (100-300%)
     const ampFactor = (settings.amplification || 150) / 100;
     
-    // Pre-calculate common values
-    const canvasCenterX = canvas.width * 0.5;
-    const canvasCenterY = canvas.height * 0.5;
+    // Pre-calculate common values (cached per canvas size)
+    if (!cachedDimensions.current || 
+        cachedDimensions.current.canvasCenterX !== canvas.width * 0.5 ||
+        cachedDimensions.current.canvasCenterY !== canvas.height * 0.5) {
+      cachedDimensions.current = {
+        canvasCenterX: canvas.width * 0.5,
+        canvasCenterY: canvas.height * 0.5,
+        bgScaledWidth: backgroundImg?.width || 0,
+        bgScaledHeight: backgroundImg?.height || 0,
+        layer3ScaledWidth: starLayers.dim?.width || 0,
+        layer3ScaledHeight: starLayers.dim?.height || 0,
+        layer2ScaledWidth: starLayers.medium?.width || 0,
+        layer2ScaledHeight: starLayers.medium?.height || 0,
+        layer1ScaledWidth: starLayers.bright?.width || 0,
+        layer1ScaledHeight: starLayers.bright?.height || 0
+      };
+    }
+    
+    const canvasCenterX = cachedDimensions.current.canvasCenterX;
+    const canvasCenterY = cachedDimensions.current.canvasCenterY;
     
     // Only recalculate offsets if state changed
     if (stateChanged) {
@@ -540,36 +596,33 @@ const StarField3D: React.FC<StarField3DProps> = ({
     ctx.scale(rotationScale, rotationScale);
     ctx.translate(-canvasCenterX, -canvasCenterY);
     
-    // Draw background layer (nebula) first
+    // Draw background layer (nebula) first - use cached dimensions when possible
     if (backgroundImg) {
-      ctx.save();
-      ctx.globalAlpha = 0.85;
-      ctx.globalCompositeOperation = 'source-over';
-      
       const bgScale = offsetsRef.current.background.scale;
       const bgX = offsetsRef.current.background.x;
       const bgY = offsetsRef.current.background.y;
       
-      const scaledWidth = backgroundImg.width * bgScale;
-      const scaledHeight = backgroundImg.height * bgScale;
+      const scaledWidth = cachedDimensions.current.bgScaledWidth * bgScale;
+      const scaledHeight = cachedDimensions.current.bgScaledHeight * bgScale;
       const drawX = (canvas.width - scaledWidth) * 0.5 + bgX;
       const drawY = (canvas.height - scaledHeight) * 0.5 + bgY;
       
+      ctx.globalAlpha = 0.85;
+      ctx.globalCompositeOperation = 'source-over';
       ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
-      ctx.restore();
     }
     
     // Draw three size-based star layers with 3D parallax (back to front)
+    // Single composite operation for all star layers for better performance
     if (starLayers.dim || starLayers.medium || starLayers.bright) {
-      ctx.save();
       ctx.globalCompositeOperation = 'screen';
       ctx.globalAlpha = 1.0;
       
       // Layer 3: Small stars (farthest, slowest movement)
       if (starLayers.dim) {
         const scale = offsetsRef.current.layer3.scale;
-        const scaledWidth = starLayers.dim.width * scale;
-        const scaledHeight = starLayers.dim.height * scale;
+        const scaledWidth = cachedDimensions.current.layer3ScaledWidth * scale;
+        const scaledHeight = cachedDimensions.current.layer3ScaledHeight * scale;
         const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer3.x;
         const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer3.y;
         ctx.drawImage(starLayers.dim, drawX, drawY, scaledWidth, scaledHeight);
@@ -578,8 +631,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Layer 2: Medium stars (middle distance, medium speed)
       if (starLayers.medium) {
         const scale = offsetsRef.current.layer2.scale;
-        const scaledWidth = starLayers.medium.width * scale;
-        const scaledHeight = starLayers.medium.height * scale;
+        const scaledWidth = cachedDimensions.current.layer2ScaledWidth * scale;
+        const scaledHeight = cachedDimensions.current.layer2ScaledHeight * scale;
         const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer2.x;
         const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer2.y;
         ctx.drawImage(starLayers.medium, drawX, drawY, scaledWidth, scaledHeight);
@@ -588,27 +641,26 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Layer 1: Large stars (closest, fastest movement)
       if (starLayers.bright) {
         const scale = offsetsRef.current.layer1.scale;
-        const scaledWidth = starLayers.bright.width * scale;
-        const scaledHeight = starLayers.bright.height * scale;
+        const scaledWidth = cachedDimensions.current.layer1ScaledWidth * scale;
+        const scaledHeight = cachedDimensions.current.layer1ScaledHeight * scale;
         const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer1.x;
         const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer1.y;
         ctx.drawImage(starLayers.bright, drawX, drawY, scaledWidth, scaledHeight);
       }
-      
-      ctx.restore();
     }
     
     // Restore rotation transform
     ctx.restore();
     
     animationFrameRef.current = requestAnimationFrame(animate);
-  }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
+  }, [isAnimating, isRecording, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
 
   useEffect(() => {
     if (isAnimating) {
       // Always reset timing refs when animation starts
       animationStartTimeRef.current = 0;
       pausedTimeRef.current = 0;
+      lastProgressUpdateRef.current = 0;
       offsetsRef.current = { 
         layer1: { x: 0, y: 0, scale: 1 },
         layer2: { x: 0, y: 0, scale: 1 },
@@ -616,6 +668,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
         background: { x: 0, y: 0, scale: 1 }
       };
       lastRenderState.current = null;
+      cachedDimensions.current = null;
+      
+      // Clear cached context so it can be recreated with current settings
+      canvasCtxRef.current = null;
+      
       // Ensure progress starts at 0
       if (onProgressUpdate) {
         onProgressUpdate(0);
@@ -638,15 +695,22 @@ const StarField3D: React.FC<StarField3DProps> = ({
     };
   }, [isAnimating, animate, onProgressUpdate]);
   
-  // Cleanup ImageBitmaps on unmount to prevent memory leaks
+  // Cleanup ImageBitmaps when new layers are created or on unmount
   useEffect(() => {
+    // Cleanup old bitmaps before new ones are set
     return () => {
       if (starLayers.bright) starLayers.bright.close();
       if (starLayers.medium) starLayers.medium.close();
       if (starLayers.dim) starLayers.dim.close();
+    };
+  }, [starLayers.bright, starLayers.medium, starLayers.dim]);
+  
+  // Cleanup background image when changed or on unmount
+  useEffect(() => {
+    return () => {
       if (backgroundImg) backgroundImg.close();
     };
-  }, []);
+  }, [backgroundImg]);
 
   // Notify parent when canvas and layers are ready
   useEffect(() => {
