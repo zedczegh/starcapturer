@@ -761,23 +761,26 @@ const StarFieldGenerator: React.FC = () => {
           console.log(`Scaled to ${recordWidth}x${recordHeight} for optimal performance`);
         }
         
-        let recordFps = 60;
+        // Optimize FPS for smooth recording with many stars (10k+)
+        // 30fps provides smooth playback with significantly less overhead
+        let recordFps = 30;
         
-        // High-quality bitrate settings for sharper output
-        let bitrate = 50000000; // 50 Mbps for 1080p - much sharper
+        // Adjust bitrate for 30fps to maintain quality
+        let bitrate = 25000000; // 25 Mbps for 1080p at 30fps
         
         if (recordWidth * recordHeight > 1920 * 1080 * 0.5) {
-          bitrate = 50000000; // 50 Mbps for near-1080p
+          bitrate = 25000000; // 25 Mbps for near-1080p
         } else if (recordWidth * recordHeight > 1280 * 720) {
-          bitrate = 35000000; // 35 Mbps for 720p+
+          bitrate = 18000000; // 18 Mbps for 720p+
         } else {
-          bitrate = 25000000; // 25 Mbps for smaller resolutions
+          bitrate = 12000000; // 12 Mbps for smaller resolutions
         }
         
         console.log('Recording settings:', {
           resolution: `${recordWidth}x${recordHeight}`,
           fps: recordFps,
-          bitrate: `${(bitrate / 1000000).toFixed(0)} Mbps`
+          bitrate: `${(bitrate / 1000000).toFixed(0)} Mbps`,
+          optimized: 'Smooth recording for high star count'
         });
         
         // Create recording canvas (scaled if needed)
@@ -786,20 +789,15 @@ const StarFieldGenerator: React.FC = () => {
         const recordCtx = recordCanvas.getContext('2d', {
           alpha: false,
           desynchronized: true,
-          willReadFrequently: false,
-          colorSpace: 'srgb'
+          willReadFrequently: false
         })!;
         
-        // Set maximum quality scaling for sharpest output
-        recordCtx.imageSmoothingEnabled = true;
-        recordCtx.imageSmoothingQuality = 'high';
+        // Use FAST rendering settings (same as preview) for smooth recording
+        // This is the key to matching preview performance!
+        recordCtx.imageSmoothingEnabled = false; // Fast mode - no smoothing overhead
         
-        // Improve source canvas rendering quality during recording
-        const sourceCtx = sourceCanvas.getContext('2d');
-        if (sourceCtx) {
-          sourceCtx.imageSmoothingEnabled = true;
-          sourceCtx.imageSmoothingQuality = 'high';
-        }
+        // Don't modify source canvas rendering - let it use preview settings
+        // The source already renders smoothly, just copy it efficiently
         
         try {
           const duration = animationSettings.duration;
@@ -879,7 +877,8 @@ const StarFieldGenerator: React.FC = () => {
             
             const blob = new Blob(chunks, { type: mimeType });
             const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
-            console.log(`Final video: ${sizeMB} MB (${frameCount} frames at ${recordFps}fps)`);
+            console.log(`✓ Recording complete: ${sizeMB} MB (${frameCount} frames at ${recordFps}fps)`);
+            console.log(`  Average: ${(frameCount / duration).toFixed(1)} fps captured`);
             
             if (blob.size < 10000) {
               setIsGeneratingVideo(false);
@@ -918,10 +917,10 @@ const StarFieldGenerator: React.FC = () => {
           }
           
           // Start recording
-          console.log('Starting MediaRecorder...');
+          console.log('Starting MediaRecorder with optimized settings...');
           mediaRecorder.start(100); // Collect data every 100ms
           
-          // Simple non-blocking frame update loop
+          // Optimized frame update loop - minimal overhead
           let lastUpdateTime = performance.now();
           const updateInterval = 1000 / recordFps;
           const totalFrames = Math.ceil(duration * recordFps);
@@ -934,22 +933,16 @@ const StarFieldGenerator: React.FC = () => {
             
             // Update recording canvas when it's time for next frame
             if (elapsed >= updateInterval) {
-              // Clear with pure black for best compression
+              // Fast frame copy - no save/restore, no repeated settings
               recordCtx.fillStyle = '#000000';
               recordCtx.fillRect(0, 0, recordWidth, recordHeight);
-              
-              // Copy current frame from display to recording canvas with high quality
-              recordCtx.save();
-              recordCtx.imageSmoothingEnabled = true;
-              recordCtx.imageSmoothingQuality = 'high';
               recordCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
-              recordCtx.restore();
               
               frameCount++;
               lastUpdateTime = now - (elapsed % updateInterval);
               
-              // Progress logging
-              if (frameCount % 60 === 0 || frameCount === totalFrames) {
+              // Progress logging (less frequent to reduce overhead)
+              if (frameCount % 30 === 0 || frameCount === totalFrames) {
                 const progress = Math.min((frameCount / totalFrames) * 100, 100);
                 console.log(`Recording: ${frameCount}/${totalFrames} frames (${progress.toFixed(0)}%)`);
               }

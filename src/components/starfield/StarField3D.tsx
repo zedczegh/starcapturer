@@ -486,13 +486,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Enable high-quality rendering when recording, fast rendering when previewing
-    if (isRecording) {
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-    } else {
-      ctx.imageSmoothingEnabled = false; // Fast preview
-    }
+    // Always use fast rendering for smooth performance, even during recording
+    // This matches preview performance and prevents frame drops with 10k+ stars
+    ctx.imageSmoothingEnabled = false;
     
     // Calculate zoom/pan with DRAMATIC parallax differences for 3D depth
     const progressRatio = progress / 100;
@@ -653,7 +649,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     ctx.restore();
     
     animationFrameRef.current = requestAnimationFrame(animate);
-  }, [isAnimating, isRecording, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
+  }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
 
   useEffect(() => {
     if (isAnimating) {
