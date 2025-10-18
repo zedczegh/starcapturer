@@ -315,24 +315,41 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       let largeCount = 0, mediumCount = 0, smallCount = 0;
       
-      // Assign each complete star to one layer based on its size
-      for (const star of starRegions) {
-        let targetData32: Uint32Array;
-        if (star.size >= largeThreshold) {
-          targetData32 = largeData32;
-          largeCount++;
-        } else if (star.size >= mediumThreshold) {
-          targetData32 = mediumData32;
-          mediumCount++;
-        } else {
-          targetData32 = smallData32;
-          smallCount++;
+      // Batch size for processing - process stars in batches to reduce overhead
+      const BATCH_SIZE = 1024;
+      let starsProcessed = 0;
+      
+      // Assign each complete star to one layer based on its size with batched processing
+      for (let batchStart = 0; batchStart < starRegions.length; batchStart += BATCH_SIZE) {
+        const batchEnd = Math.min(batchStart + BATCH_SIZE, starRegions.length);
+        
+        for (let starIdx = batchStart; starIdx < batchEnd; starIdx++) {
+          const star = starRegions[starIdx];
+          let targetData32: Uint32Array;
+          
+          if (star.size >= largeThreshold) {
+            targetData32 = largeData32;
+            largeCount++;
+          } else if (star.size >= mediumThreshold) {
+            targetData32 = mediumData32;
+            mediumCount++;
+          } else {
+            targetData32 = smallData32;
+            smallCount++;
+          }
+          
+          // Copy all pixels of this complete star to the target layer (32-bit at a time)
+          for (let i = 0; i < star.pixelCount; i++) {
+            const pixelIdx = star.pixels[i];
+            targetData32[pixelIdx] = data32[pixelIdx];
+          }
         }
         
-        // Copy all pixels of this complete star to the target layer (32-bit at a time)
-        for (let i = 0; i < star.pixelCount; i++) {
-          const pixelIdx = star.pixels[i];
-          targetData32[pixelIdx] = data32[pixelIdx];
+        starsProcessed += (batchEnd - batchStart);
+        
+        // Progress update for large images
+        if (starRegions.length > 5000 && starsProcessed % 2048 === 0) {
+          console.log(`Processing stars: ${starsProcessed}/${starRegions.length} (${((starsProcessed / starRegions.length) * 100).toFixed(0)}%)`);
         }
       }
       
@@ -342,10 +359,17 @@ const StarField3D: React.FC<StarField3DProps> = ({
       smallCtx.putImageData(smallData, 0, 0);
       
       // Convert canvases to ImageBitmaps for faster GPU-accelerated rendering
+      // Use optimized settings for better performance with large images
+      const bitmapOptions: ImageBitmapOptions = {
+        premultiplyAlpha: 'premultiply',
+        colorSpaceConversion: 'none',
+        resizeQuality: 'high'
+      };
+      
       Promise.all([
-        createImageBitmap(largeCanvas),
-        createImageBitmap(mediumCanvas),
-        createImageBitmap(smallCanvas)
+        createImageBitmap(largeCanvas, bitmapOptions),
+        createImageBitmap(mediumCanvas, bitmapOptions),
+        createImageBitmap(smallCanvas, bitmapOptions)
       ]).then(([brightBitmap, mediumBitmap, dimBitmap]) => {
         setStarLayers({
           bright: brightBitmap,
@@ -353,7 +377,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
           dim: dimBitmap
         });
         
-        console.log(`Star layers created: ${largeCount} large, ${mediumCount} medium, ${smallCount} small stars`);
+        const totalTime = (performance.now() - startTime).toFixed(0);
+        console.log(`✓ Star layers ready: ${largeCount} large, ${mediumCount} medium, ${smallCount} small stars (${totalTime}ms total)`);
       });
     };
     
@@ -366,13 +391,20 @@ const StarField3D: React.FC<StarField3DProps> = ({
     
     const img = new Image();
     img.onload = () => {
-      // Convert to ImageBitmap for GPU-accelerated rendering
-      createImageBitmap(img).then(bitmap => {
+      // Convert to ImageBitmap for GPU-accelerated rendering with optimal settings
+      const bitmapOptions: ImageBitmapOptions = {
+        premultiplyAlpha: 'premultiply',
+        colorSpaceConversion: 'none',
+        resizeQuality: 'high'
+      };
+      
+      createImageBitmap(img, bitmapOptions).then(bitmap => {
         setBackgroundImg(bitmap);
         // Set dimensions if not already set
         if (imageDimensions.width === 1920 && imageDimensions.height === 1080) {
           setImageDimensions({ width: img.width, height: img.height });
         }
+        console.log('✓ Background image loaded for rendering');
       });
     };
     img.src = backgroundImage;
