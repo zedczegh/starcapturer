@@ -1767,37 +1767,66 @@ const StarFieldGenerator: React.FC = () => {
               <div className="space-y-2">
                 {/* Video Generation Progress Overlay */}
                 {isGeneratingVideo && videoProgress.stage && (
-                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-cosmic-950/90 backdrop-blur-sm rounded-lg">
-                    <div className="max-w-md w-full mx-4 space-y-4 p-6 bg-cosmic-900/80 border border-cosmic-700/50 rounded-lg">
-                      <div className="text-center space-y-2">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                          <h3 className="text-white font-semibold text-lg">
-                            {t('Generating Video', '生成视频中')}
-                          </h3>
+                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-cosmic-950/95 via-cosmic-900/95 to-cosmic-950/95 backdrop-blur-md rounded-lg animate-fade-in">
+                    <div className="max-w-lg w-full mx-6 animate-scale-in">
+                      <div className="relative p-8 bg-gradient-to-br from-cosmic-900/90 to-cosmic-950/90 border-2 border-cosmic-700/40 rounded-2xl shadow-2xl backdrop-blur-sm">
+                        {/* Glow effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-emerald-500/10 rounded-2xl blur-xl"></div>
+                        
+                        <div className="relative space-y-6">
+                          {/* Header with icon */}
+                          <div className="text-center space-y-3">
+                            <div className="flex items-center justify-center gap-3">
+                              <div className="relative">
+                                <Video className="h-7 w-7 text-blue-400 animate-pulse" />
+                                <div className="absolute inset-0 animate-ping">
+                                  <Video className="h-7 w-7 text-blue-400 opacity-20" />
+                                </div>
+                              </div>
+                              <h3 className="text-white font-bold text-2xl tracking-tight">
+                                {t('Generating Video', '生成视频中')}
+                              </h3>
+                            </div>
+                            <p className="text-cosmic-200 text-base font-medium">{videoProgress.stage}</p>
+                          </div>
+                          
+                          {/* Progress section */}
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between text-base">
+                              <span className="text-cosmic-300 font-medium">{t('Progress', '进度')}</span>
+                              <span className="text-white font-bold text-lg tabular-nums">{Math.round(videoProgress.percent)}%</span>
+                            </div>
+                            
+                            {/* Enhanced progress bar */}
+                            <div className="relative">
+                              <div className="w-full h-4 bg-cosmic-800/60 rounded-full overflow-hidden border border-cosmic-700/30 shadow-inner">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500 relative transition-all duration-500 ease-out shadow-lg"
+                                  style={{ width: `${videoProgress.percent}%` }}
+                                >
+                                  {/* Shine effect */}
+                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
+                                </div>
+                              </div>
+                              {/* Glow under progress bar */}
+                              <div 
+                                className="absolute -bottom-2 left-0 h-3 bg-gradient-to-r from-blue-500/40 via-purple-500/40 to-emerald-500/40 blur-lg transition-all duration-500"
+                                style={{ width: `${videoProgress.percent}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                          
+                          {/* Status message */}
+                          <div className="pt-2">
+                            <p className="text-sm text-cosmic-300 text-center leading-relaxed px-4">
+                              {videoProgress.percent < 50 
+                                ? t('Rendering all frames smoothly without recording overhead...', '流畅渲染所有帧，无录制开销...')
+                                : t('Encoding frames to video format...', '将帧编码为视频格式...')
+                              }
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-cosmic-300 text-sm">{videoProgress.stage}</p>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm text-cosmic-300">
-                          <span>{t('Progress', '进度')}</span>
-                          <span>{Math.round(videoProgress.percent)}%</span>
-                        </div>
-                        <div className="w-full h-3 bg-cosmic-800 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-blue-600 via-purple-600 to-emerald-600 transition-all duration-300"
-                            style={{ width: `${videoProgress.percent}%` }}
-                          />
-                        </div>
-                      </div>
-                      
-                      <p className="text-xs text-cosmic-400 text-center">
-                        {videoProgress.percent < 50 
-                          ? t('Rendering all frames smoothly without recording overhead...', '流畅渲染所有帧，无录制开销...')
-                          : t('Encoding frames to video format...', '将帧编码为视频格式...')
-                        }
-                      </p>
                     </div>
                   </div>
                 )}
