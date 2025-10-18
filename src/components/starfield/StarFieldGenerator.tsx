@@ -1584,28 +1584,30 @@ const StarFieldGenerator: React.FC = () => {
                   />
                 </div>
 
-                <div className="space-y-3 pt-2 border-t border-cosmic-700/30">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label className="text-cosmic-200">{t('Downscale by Resolution', '按分辨率缩小')}</Label>
-                      <p className="text-xs text-cosmic-400">
-                        {t('Automatically downscale images >16MP for better performance', '自动缩小超过1600万像素的图像以获得更好的性能')}
+                <div className="space-y-4 pt-4 border-t border-cosmic-700/30">
+                  <div className="flex items-center justify-between gap-4 p-4 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 hover:border-cosmic-600/50 transition-colors">
+                    <div className="flex-1 space-y-1.5">
+                      <Label htmlFor="enableDownscale" className="text-cosmic-100 text-base font-medium cursor-pointer">
+                        {t('Auto Resolution Scaling', '自动分辨率缩放')}
+                      </Label>
+                      <p className="text-xs text-cosmic-400 leading-relaxed">
+                        {t('Optimize large images (>16MP) by automatically downscaling to 4K resolution for smoother performance', '自动将大型图像（>1600万像素）优化至4K分辨率，以获得更流畅的性能')}
                       </p>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
                         id="enableDownscale"
                         checked={animationSettings.enableDownscale}
-                        onChange={(e) => setAnimationSettings(prev => ({ 
+                        onChange={(e) => setAnimationSettings(prev => ({
                           ...prev, 
                           enableDownscale: e.target.checked 
                         }))}
-                        className="w-5 h-5 rounded border-cosmic-700/50 bg-cosmic-800/50 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                        className="w-5 h-5 rounded border-cosmic-700/50 bg-cosmic-800/50 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer transition-colors"
                       />
-                      <Label htmlFor="enableDownscale" className="text-cosmic-300 text-sm cursor-pointer">
+                      <span className={`text-sm font-medium ${animationSettings.enableDownscale ? 'text-blue-400' : 'text-cosmic-500'}`}>
                         {animationSettings.enableDownscale ? t('Enabled', '已启用') : t('Disabled', '已禁用')}
-                      </Label>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1720,58 +1722,6 @@ const StarFieldGenerator: React.FC = () => {
                 {t('WebM (Fast, Browser Native)', 'WebM（快速，浏览器原生）')}
               </Button>
               
-              {/* MP4 Button with better error handling */}
-              {!isEncodingMP4 && !mp4Blob && (
-                <div className="space-y-2">
-                  <Button
-                    onClick={() => {
-                      setShowFormatDialog(false);
-                      downloadVideoMP4();
-                    }}
-                    disabled={isGeneratingVideo}
-                    className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
-                  >
-                    <Video className="h-4 w-4 mr-2" />
-                    {t('MP4 (Universal Compatibility)', 'MP4（通用兼容性）')}
-                  </Button>
-                  <p className="text-xs text-cosmic-400 text-center">
-                    {t('Requires ~32MB download and may take 30+ seconds', '需要下载约32MB，可能需要30秒以上')}
-                  </p>
-                  <p className="text-xs text-yellow-400/70 text-center">
-                    {t('If MP4 fails, use WebM format above', '如果MP4失败，请使用上面的WebM格式')}
-                  </p>
-                </div>
-              )}
-              
-              {/* Progress Bar during encoding - hide if dialog closed or reset */}
-              {isEncodingMP4 && !mp4Blob && showFormatDialog && (
-                <div className="w-full space-y-2">
-                  <div className="flex items-center justify-between text-sm text-cosmic-300">
-                    <span>{t('Encoding MP4...', '编码MP4...')}</span>
-                    <span>{Math.round(mp4Progress)}%</span>
-                  </div>
-                  <div className="w-full h-2 bg-cosmic-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-green-600 to-emerald-600 transition-all duration-300"
-                      style={{ width: `${mp4Progress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-              
-              {/* Download Button after encoding */}
-              {mp4Blob && showFormatDialog && (
-                <Button
-                  onClick={() => {
-                    setShowFormatDialog(false);
-                    downloadMP4File();
-                  }}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  {t('Download MP4', '下载MP4')}
-                </Button>
-              )}
             </div>
           </DialogContent>
         </Dialog>
