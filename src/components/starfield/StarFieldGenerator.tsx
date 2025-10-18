@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -711,6 +712,14 @@ const StarFieldGenerator: React.FC = () => {
     setIsRecording(false); // Not using real-time recording anymore
     setIsAnimating(false);
     
+    // Auto-scroll to preview area
+    setTimeout(() => {
+      const previewContainer = document.querySelector('[data-preview-container]');
+      if (previewContainer) {
+        previewContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+    
     // Wait for any ongoing animation to stop
     await new Promise(resolve => setTimeout(resolve, 300));
     
@@ -770,47 +779,62 @@ const StarFieldGenerator: React.FC = () => {
       
       renderCtx.imageSmoothingEnabled = false; // Fast rendering
       
-      // STAGE 1: Pre-render all frames (smooth, no recording overhead)
+      // STAGE 1: Pre-render all frames by letting animation run naturally
       setVideoProgress({ stage: 'Rendering frames...', percent: 0 });
       console.log('Stage 1: Pre-rendering frames...');
       
       const frames: ImageData[] = [];
       
-      // Temporarily enable animation for frame capture
+      // Reset and start animation
       setAnimationProgress(0);
       setIsAnimating(true);
       
       // Wait for animation to initialize
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-        // Calculate target progress for this frame
-        const targetProgress = (frameIndex / totalFrames) * 100;
+      const startTime = performance.now();
+      const captureInterval = 1000 / fps; // Time per frame in ms
+      let nextFrameTime = startTime + captureInterval;
+      let frameIndex = 0;
+      
+      // Capture frames at precise intervals as animation runs naturally
+      while (frameIndex < totalFrames) {
+        const currentTime = performance.now();
+        const elapsed = currentTime - startTime;
         
-        // Update animation progress to render this frame
-        setAnimationProgress(targetProgress);
+        // Check if it's time to capture the next frame
+        if (currentTime >= nextFrameTime) {
+          // Capture frame from source canvas
+          renderCtx.fillStyle = '#000000';
+          renderCtx.fillRect(0, 0, recordWidth, recordHeight);
+          renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
+          
+          // Store frame data
+          const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
+          frames.push(frameData);
+          
+          frameIndex++;
+          nextFrameTime = startTime + (frameIndex * captureInterval);
+          
+          // Update progress
+          const renderProgress = (frameIndex / totalFrames) * 50; // First 50% for rendering
+          setVideoProgress({ 
+            stage: `Rendering frames... ${frameIndex}/${totalFrames}`, 
+            percent: renderProgress 
+          });
+          
+          if (frameIndex % 30 === 0) {
+            console.log(`Rendered ${frameIndex}/${totalFrames} frames at ${elapsed.toFixed(0)}ms`);
+          }
+        }
         
-        // Wait for canvas to render this frame
-        await new Promise(resolve => setTimeout(resolve, 1000 / fps));
+        // Small wait to prevent blocking
+        await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)));
         
-        // Capture frame from source canvas
-        renderCtx.fillStyle = '#000000';
-        renderCtx.fillRect(0, 0, recordWidth, recordHeight);
-        renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
-        
-        // Store frame data
-        const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
-        frames.push(frameData);
-        
-        // Update progress
-        const renderProgress = ((frameIndex + 1) / totalFrames) * 50; // First 50% for rendering
-        setVideoProgress({ 
-          stage: `Rendering frames... ${frameIndex + 1}/${totalFrames}`, 
-          percent: renderProgress 
-        });
-        
-        if (frameIndex % 30 === 0) {
-          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames`);
+        // Safety timeout check
+        if (elapsed > (duration * 1000) + 2000) {
+          console.warn('Frame capture timeout, breaking loop');
+          break;
         }
       }
       
@@ -902,7 +926,7 @@ const StarFieldGenerator: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `starfield-${recordWidth}x${recordHeight}-${Date.now()}.webm`;
+      a.download = `starfield-${recordWidth}x${recordHeight}-${duration}s-${Date.now()}.webm`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1595,15 +1619,13 @@ const StarFieldGenerator: React.FC = () => {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
+                      <Switch
                         id="enableDownscale"
                         checked={animationSettings.enableDownscale}
-                        onChange={(e) => setAnimationSettings(prev => ({
+                        onCheckedChange={(checked) => setAnimationSettings(prev => ({
                           ...prev, 
-                          enableDownscale: e.target.checked 
+                          enableDownscale: checked 
                         }))}
-                        className="w-5 h-5 rounded border-cosmic-700/50 bg-cosmic-800/50 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer transition-colors"
                       />
                       <span className={`text-sm font-medium ${animationSettings.enableDownscale ? 'text-blue-400' : 'text-cosmic-500'}`}>
                         {animationSettings.enableDownscale ? t('Enabled', '已启用') : t('Disabled', '已禁用')}
@@ -1741,7 +1763,7 @@ const StarFieldGenerator: React.FC = () => {
                 }
               </CardDescription>
             </CardHeader>
-            <CardContent className="h-[500px] p-0">
+            <CardContent className="h-[500px] p-0" data-preview-container>
               <div className="space-y-2">
                 {/* Video Generation Progress Overlay */}
                 {isGeneratingVideo && videoProgress.stage && (
