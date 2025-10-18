@@ -56,8 +56,6 @@ const StarFieldGenerator: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'ready' | 'generating'>('upload');
   const [animationProgress, setAnimationProgress] = useState(0);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
-  const [isUsingOptimizedImages, setIsUsingOptimizedImages] = useState(false);
-  const [optimizationScale, setOptimizationScale] = useState(1.0);
   const [showFormatDialog, setShowFormatDialog] = useState(false);
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [mp4Progress, setMp4Progress] = useState(0);
@@ -115,10 +113,10 @@ const StarFieldGenerator: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const decodeTiffToDataUrl = useCallback(async (arrayBuffer: ArrayBuffer, fileSize: number): Promise<string> => {
+  const decodeTiffToDataUrl = useCallback(async (arrayBuffer: ArrayBuffer): Promise<string> => {
     const canvasPool = CanvasPool.getInstance();
     
-    const { result } = await MemoryManager.monitorOperation(async () => {
+    try {
       const ifds = UTIF.decode(arrayBuffer);
       UTIF.decodeImage(arrayBuffer, ifds[0]);
       const rgba = UTIF.toRGBA8(ifds[0]);
@@ -126,35 +124,16 @@ const StarFieldGenerator: React.FC = () => {
       const width = ifds[0].width;
       const height = ifds[0].height;
       
-      // Intelligent optimization for large files (>100MB) or high-resolution images
-      const isOversized = fileSize > 100 * 1024 * 1024; // 100MB threshold
-      const isHighResolution = width * height > 4096 * 4096; // 16MP threshold
+      // Check if we need to downscale for memory only if memory is constrained
+      const params = MemoryManager.getOptimalProcessingParams(width, height);
       
       let targetWidth = width;
       let targetHeight = height;
-      let scale = 1.0;
       
-      // Check memory-based optimization first
-      const params = MemoryManager.getOptimalProcessingParams(width, height);
-      
-      if (params.shouldDownscale || isOversized || isHighResolution) {
-        // Calculate optimal scale based on multiple factors
-        if (isOversized || isHighResolution) {
-          // More aggressive downscaling for oversized files
-          const sizeBasedScale = isOversized ? Math.sqrt(50 * 1024 * 1024 / fileSize) : 1.0;
-          const resolutionBasedScale = isHighResolution ? Math.sqrt(4096 * 4096 / (width * height)) : 1.0;
-          scale = Math.min(params.recommendedScale, sizeBasedScale, resolutionBasedScale, 0.75); // Max 75% for oversized
-          
-          setIsUsingOptimizedImages(true);
-          setOptimizationScale(scale);
-          console.log(`🚀 Intelligent optimization: File ${(fileSize / 1024 / 1024).toFixed(1)}MB, Resolution ${width}x${height}`);
-        } else {
-          scale = params.recommendedScale;
-        }
-        
-        targetWidth = Math.floor(width * scale);
-        targetHeight = Math.floor(height * scale);
-        console.log(`✓ Optimized from ${width}x${height} to ${targetWidth}x${targetHeight} (${(scale * 100).toFixed(0)}% scale) for smooth performance`);
+      if (params.shouldDownscale) {
+        targetWidth = Math.floor(width * params.recommendedScale);
+        targetHeight = Math.floor(height * params.recommendedScale);
+        console.log(`Downscaling TIFF from ${width}x${height} to ${targetWidth}x${targetHeight} for memory optimization`);
       }
       
       // Use canvas pool
@@ -188,52 +167,12 @@ const StarFieldGenerator: React.FC = () => {
       } finally {
         canvasPool.release(canvas);
       }
-    }, 'TIFF Decode');
-    return result;
+    } catch (error) {
+      console.error('TIFF decode error:', error);
+      throw new Error('Failed to decode TIFF file. The file may be too large or corrupted.');
+    }
   }, []);
 
-  const optimizeImageIfNeeded = useCallback(async (img: HTMLImageElement, fileSize: number): Promise<string> => {
-    const isOversized = fileSize > 100 * 1024 * 1024; // 100MB
-    const isHighResolution = img.width * img.height > 4096 * 4096; // 16MP
-    
-    if (!isOversized && !isHighResolution) {
-      return img.src; // No optimization needed
-    }
-    
-    const canvasPool = CanvasPool.getInstance();
-    const { result } = await MemoryManager.monitorOperation(async () => {
-      // Calculate optimal scale
-      const sizeBasedScale = isOversized ? Math.sqrt(50 * 1024 * 1024 / fileSize) : 1.0;
-      const resolutionBasedScale = isHighResolution ? Math.sqrt(4096 * 4096 / (img.width * img.height)) : 1.0;
-      const scale = Math.min(sizeBasedScale, resolutionBasedScale, 0.75); // Max 75%
-      
-      const targetWidth = Math.floor(img.width * scale);
-      const targetHeight = Math.floor(img.height * scale);
-      
-      console.log(`🚀 Optimizing oversized image: ${(fileSize / 1024 / 1024).toFixed(1)}MB, ${img.width}x${img.height} → ${targetWidth}x${targetHeight}`);
-      
-      setIsUsingOptimizedImages(true);
-      setOptimizationScale(scale);
-      
-      // Use high-quality downscaling with chunked processing for very large images
-      const canvas = canvasPool.acquire(targetWidth, targetHeight);
-      const ctx = canvas.getContext('2d', { 
-        alpha: true,
-        willReadFrequently: false 
-      })!;
-      
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-      
-      const optimizedDataUrl = canvas.toDataURL('image/png', 0.95);
-      canvasPool.release(canvas);
-      
-      return optimizedDataUrl;
-    }, 'Image Optimization');
-    
-    return result;
-  }, []);
 
   const handleStarsOnlyUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -256,7 +195,6 @@ const StarFieldGenerator: React.FC = () => {
       return;
     }
 
-    const fileSize = file.size;
     const isTiff = fileName.endsWith('.tiff') || fileName.endsWith('.tif');
     
     if (isTiff) {
@@ -265,7 +203,7 @@ const StarFieldGenerator: React.FC = () => {
       arrayBufferReader.onload = async (e) => {
         try {
           const arrayBuffer = e.target?.result as ArrayBuffer;
-          const dataUrl = await decodeTiffToDataUrl(arrayBuffer, fileSize);
+          const dataUrl = await decodeTiffToDataUrl(arrayBuffer);
           setStarsOnlyImage(dataUrl);
           
           const img = new Image();
@@ -283,29 +221,15 @@ const StarFieldGenerator: React.FC = () => {
       };
       arrayBufferReader.readAsArrayBuffer(file);
     } else {
-      // Handle standard image formats with intelligent optimization
+      // Handle standard image formats
       const reader = new FileReader();
-      reader.onload = async (e) => {
+      reader.onload = (e) => {
         const result = e.target?.result as string;
+        setStarsOnlyImage(result);
         
         const img = new Image();
-        img.onload = async () => {
-          try {
-            // Check if optimization is needed
-            const optimizedDataUrl = await optimizeImageIfNeeded(img, fileSize);
-            setStarsOnlyImage(optimizedDataUrl);
-            
-            // Create element from optimized image
-            const optimizedImg = new Image();
-            optimizedImg.onload = () => {
-              setStarsOnlyElement(optimizedImg);
-            };
-            optimizedImg.src = optimizedDataUrl;
-          } catch (error) {
-            console.error('Image optimization failed:', error);
-            setStarsOnlyImage(result);
-            setStarsOnlyElement(img);
-          }
+        img.onload = () => {
+          setStarsOnlyElement(img);
         };
         img.onerror = () => {
           setStarsOnlyImage(null);
@@ -315,7 +239,7 @@ const StarFieldGenerator: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
-  }, [decodeTiffToDataUrl, optimizeImageIfNeeded]);
+  }, [decodeTiffToDataUrl]);
 
   const handleStarlessUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -338,7 +262,6 @@ const StarFieldGenerator: React.FC = () => {
       return;
     }
 
-    const fileSize = file.size;
     const isTiff = fileName.endsWith('.tiff') || fileName.endsWith('.tif');
     
     if (isTiff) {
@@ -347,7 +270,7 @@ const StarFieldGenerator: React.FC = () => {
       arrayBufferReader.onload = async (e) => {
         try {
           const arrayBuffer = e.target?.result as ArrayBuffer;
-          const dataUrl = await decodeTiffToDataUrl(arrayBuffer, fileSize);
+          const dataUrl = await decodeTiffToDataUrl(arrayBuffer);
           setStarlessImage(dataUrl);
           
           const img = new Image();
@@ -365,29 +288,15 @@ const StarFieldGenerator: React.FC = () => {
       };
       arrayBufferReader.readAsArrayBuffer(file);
     } else {
-      // Handle standard image formats with intelligent optimization
+      // Handle standard image formats
       const reader = new FileReader();
-      reader.onload = async (e) => {
+      reader.onload = (e) => {
         const result = e.target?.result as string;
+        setStarlessImage(result);
         
         const img = new Image();
-        img.onload = async () => {
-          try {
-            // Check if optimization is needed
-            const optimizedDataUrl = await optimizeImageIfNeeded(img, fileSize);
-            setStarlessImage(optimizedDataUrl);
-            
-            // Create element from optimized image
-            const optimizedImg = new Image();
-            optimizedImg.onload = () => {
-              setStarlessElement(optimizedImg);
-            };
-            optimizedImg.src = optimizedDataUrl;
-          } catch (error) {
-            console.error('Image optimization failed:', error);
-            setStarlessImage(result);
-            setStarlessElement(img);
-          }
+        img.onload = () => {
+          setStarlessElement(img);
         };
         img.onerror = () => {
           setStarlessImage(null);
@@ -397,7 +306,7 @@ const StarFieldGenerator: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
-  }, [decodeTiffToDataUrl, optimizeImageIfNeeded]);
+  }, [decodeTiffToDataUrl]);
 
   // Generate depth map from starless image - optimized with chunked processing
   const generateDepthMap = useCallback(async (img: HTMLImageElement): Promise<HTMLCanvasElement> => {
@@ -754,19 +663,17 @@ const StarFieldGenerator: React.FC = () => {
         
         console.log('Source canvas:', sourceWidth, 'x', sourceHeight);
         
-        // Intelligent resolution capping based on optimization status
+        // Cap resolution at 1920x1080 for smoother playback and smaller file sizes
         let recordWidth = sourceWidth;
         let recordHeight = sourceHeight;
-        
-        // If already using optimized images, use more conservative limits
-        const maxWidth = isUsingOptimizedImages ? 1600 : 1920;
-        const maxHeight = isUsingOptimizedImages ? 900 : 1080;
+        const maxWidth = 1920;
+        const maxHeight = 1080;
         
         if (recordWidth > maxWidth || recordHeight > maxHeight) {
           const scale = Math.min(maxWidth / recordWidth, maxHeight / recordHeight);
           recordWidth = Math.round(recordWidth * scale);
           recordHeight = Math.round(recordHeight * scale);
-          console.log(`✓ Recording resolution: ${recordWidth}x${recordHeight} (optimized for ${isUsingOptimizedImages ? 'large files' : 'performance'})`);
+          console.log(`Scaled to ${recordWidth}x${recordHeight} for optimal performance`);
         }
         
         let recordFps = 60;
