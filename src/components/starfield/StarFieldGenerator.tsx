@@ -674,12 +674,16 @@ const StarFieldGenerator: React.FC = () => {
         }
         
         let recordFps = 60;
-        let bitrate = 15000000; // 15 Mbps for 1080p
+        
+        // High-quality bitrate settings for sharper output
+        let bitrate = 50000000; // 50 Mbps for 1080p - much sharper
         
         if (recordWidth * recordHeight > 1920 * 1080 * 0.5) {
-          bitrate = 15000000; // 15 Mbps for near-1080p
+          bitrate = 50000000; // 50 Mbps for near-1080p
+        } else if (recordWidth * recordHeight > 1280 * 720) {
+          bitrate = 35000000; // 35 Mbps for 720p+
         } else {
-          bitrate = 10000000; // 10 Mbps for smaller resolutions
+          bitrate = 25000000; // 25 Mbps for smaller resolutions
         }
         
         console.log('Recording settings:', {
@@ -694,12 +698,20 @@ const StarFieldGenerator: React.FC = () => {
         const recordCtx = recordCanvas.getContext('2d', {
           alpha: false,
           desynchronized: true,
-          willReadFrequently: false
+          willReadFrequently: false,
+          colorSpace: 'srgb'
         })!;
         
-        // Set high-quality scaling
+        // Set maximum quality scaling for sharpest output
         recordCtx.imageSmoothingEnabled = true;
         recordCtx.imageSmoothingQuality = 'high';
+        
+        // Improve source canvas rendering quality during recording
+        const sourceCtx = sourceCanvas.getContext('2d');
+        if (sourceCtx) {
+          sourceCtx.imageSmoothingEnabled = true;
+          sourceCtx.imageSmoothingQuality = 'high';
+        }
         
         try {
           const duration = animationSettings.duration;
@@ -714,8 +726,12 @@ const StarFieldGenerator: React.FC = () => {
           
           console.log('Video track created for', recordWidth, 'x', recordHeight);
           
-          // Select best codec
+          // Select best codec with highest quality profile
           let mimeType = 'video/webm;codecs=vp9';
+          let codecConfig: MediaRecorderOptions = {
+            videoBitsPerSecond: bitrate
+          };
+          
           if (!MediaRecorder.isTypeSupported(mimeType)) {
             console.log('VP9 not supported, trying VP8');
             mimeType = 'video/webm;codecs=vp8';
@@ -725,12 +741,11 @@ const StarFieldGenerator: React.FC = () => {
             }
           }
           
+          codecConfig.mimeType = mimeType;
+          
           console.log('Using codec:', mimeType, 'at', (bitrate / 1000000).toFixed(0), 'Mbps');
           
-          const mediaRecorder = new MediaRecorder(stream, {
-            mimeType,
-            videoBitsPerSecond: bitrate
-          });
+          const mediaRecorder = new MediaRecorder(stream, codecConfig);
           
           const chunks: Blob[] = [];
           let frameCount = 0;
@@ -831,8 +846,16 @@ const StarFieldGenerator: React.FC = () => {
             
             // Update recording canvas when it's time for next frame
             if (elapsed >= updateInterval) {
-              // Copy current frame from display to recording canvas
+              // Clear with pure black for best compression
+              recordCtx.fillStyle = '#000000';
+              recordCtx.fillRect(0, 0, recordWidth, recordHeight);
+              
+              // Copy current frame from display to recording canvas with high quality
+              recordCtx.save();
+              recordCtx.imageSmoothingEnabled = true;
+              recordCtx.imageSmoothingQuality = 'high';
               recordCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
+              recordCtx.restore();
               
               frameCount++;
               lastUpdateTime = now - (elapsed % updateInterval);
