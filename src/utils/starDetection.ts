@@ -438,9 +438,40 @@ function calculateStarConfidence(imageData: ImageData, x: number, y: number, sca
 }
 
 /**
- * Classify star type based on characteristics
+ * Classify star type based on characteristics with improved saturated star detection
  */
 function classifyStar(imageData: ImageData, x: number, y: number, scale: number, luminance: number): 'point' | 'extended' | 'saturated' {
+  const { data, width, height } = imageData;
+  
+  // Check for saturation in a wider region to catch bright halos
+  const checkRadius = Math.max(5, scale * 2);
+  let saturatedPixels = 0;
+  let totalChecked = 0;
+  
+  for (let dy = -checkRadius; dy <= checkRadius; dy++) {
+    for (let dx = -checkRadius; dx <= checkRadius; dx++) {
+      const px = x + dx;
+      const py = y + dy;
+      if (px >= 0 && px < width && py >= 0 && py < height) {
+        const idx = (py * width + px) * 4;
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
+        
+        // Check if any channel is saturated or near-saturated
+        if (r >= 240 || g >= 240 || b >= 240) {
+          saturatedPixels++;
+        }
+        totalChecked++;
+      }
+    }
+  }
+  
+  // If more than 5% of nearby pixels are saturated, it's a saturated star
+  if (saturatedPixels / totalChecked > 0.05) {
+    return 'saturated';
+  }
+  
   if (luminance >= 250) {
     return 'saturated';
   }
@@ -783,19 +814,26 @@ export async function separateStarsAndNebula(
 }
 
 /**
- * Create precise star mask for better separation with Gaussian feathering
+ * Create precise star mask for better separation with enhanced Gaussian feathering for bright stars
  */
 function createPreciseStarMask(width: number, height: number, stars: DetectedStar[]): Float32Array {
   const mask = new Float32Array(width * height);
   
   for (const star of stars) {
-    // Increase radius for better feathering
-    const radius = Math.max(5, star.size * 5);
+    // Adaptive radius based on star type and brightness
+    let radiusMultiplier = 5;
+    if (star.type === 'saturated') {
+      radiusMultiplier = 8; // Much larger for saturated stars with halos
+    } else if (star.type === 'extended') {
+      radiusMultiplier = 6.5;
+    }
+    
+    const radius = Math.max(8, star.size * radiusMultiplier);
     const centerX = Math.round(star.x);
     const centerY = Math.round(star.y);
     
-    // Use Gaussian falloff for smoother edges
-    const sigma = radius / 3; // Controls falloff smoothness
+    // More aggressive feathering for bright stars
+    const sigma = star.type === 'saturated' ? radius / 2.5 : radius / 3;
     
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
@@ -805,9 +843,16 @@ function createPreciseStarMask(width: number, height: number, stars: DetectedSta
         if (x >= 0 && x < width && y >= 0 && y < height) {
           const distance = Math.sqrt(dx * dx + dy * dy);
           
-          // Gaussian falloff for smooth feathering
-          const gaussianFalloff = Math.exp(-(distance * distance) / (2 * sigma * sigma));
-          const maskValue = gaussianFalloff * star.confidence;
+          // Multi-layer Gaussian for better feathering on bright stars
+          let maskValue;
+          if (star.type === 'saturated' && distance < radius * 0.4) {
+            // Core region: strong mask
+            maskValue = Math.exp(-(distance * distance) / (2 * (sigma * 0.5) * (sigma * 0.5))) * star.confidence;
+          } else {
+            // Outer region: gentle falloff
+            const gaussianFalloff = Math.exp(-(distance * distance) / (2 * sigma * sigma));
+            maskValue = gaussianFalloff * star.confidence * 0.9;
+          }
           
           const idx = y * width + x;
           
@@ -822,60 +867,78 @@ function createPreciseStarMask(width: number, height: number, stars: DetectedSta
 }
 
 /**
- * Render star with realistic Point Spread Function with improved feathering
+ * Render star with realistic Point Spread Function with enhanced feathering for all star types
  */
 function renderStarWithPSF(ctx: CanvasRenderingContext2D, star: DetectedStar) {
   const { x, y, size, color, brightness, type } = star;
   
-  // Create realistic star appearance based on type with larger halos
+  // Create realistic star appearance with extended halos and smoother transitions
   let coreSize = size;
-  let midSize = size * 2;
-  let haloSize = size * 4; // Increased for smoother falloff
+  let innerHaloSize = size * 2;
+  let midSize = size * 4;
+  let outerHaloSize = size * 7; // Extended outer halo
   
   switch (type) {
     case 'point':
       coreSize = Math.max(0.5, size * 0.8);
-      midSize = size * 1.8;
-      haloSize = size * 3.5;
+      innerHaloSize = size * 2;
+      midSize = size * 4;
+      outerHaloSize = size * 6;
       break;
     case 'extended':
       coreSize = size;
-      midSize = size * 2.5;
-      haloSize = size * 5;
+      innerHaloSize = size * 3;
+      midSize = size * 5.5;
+      outerHaloSize = size * 9;
       break;
     case 'saturated':
-      coreSize = size * 1.2;
-      midSize = size * 3;
-      haloSize = size * 6;
+      coreSize = size * 1.3;
+      innerHaloSize = size * 4;
+      midSize = size * 7;
+      outerHaloSize = size * 12; // Very large for bright stars
       break;
   }
   
   const { r, g, b } = color;
   
-  // Outer halo with extended feathering (draw first, underneath)
-  const outerHaloGradient = ctx.createRadialGradient(x, y, midSize, x, y, haloSize);
-  outerHaloGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness * 0.15})`);
-  outerHaloGradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${brightness * 0.08})`);
-  outerHaloGradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${brightness * 0.03})`);
-  outerHaloGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  // Four-layer gradient system for ultra-smooth feathering
+  
+  // Far outer halo (barely visible glow)
+  const farHaloGradient = ctx.createRadialGradient(x, y, midSize * 0.7, x, y, outerHaloSize);
+  farHaloGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness * 0.06})`);
+  farHaloGradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${brightness * 0.03})`);
+  farHaloGradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${brightness * 0.01})`);
+  farHaloGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  
+  ctx.fillStyle = farHaloGradient;
+  ctx.fillRect(x - outerHaloSize, y - outerHaloSize, outerHaloSize * 2, outerHaloSize * 2);
+  
+  // Outer halo with gentle transition
+  const outerHaloGradient = ctx.createRadialGradient(x, y, innerHaloSize, x, y, midSize);
+  outerHaloGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness * 0.18})`);
+  outerHaloGradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${brightness * 0.12})`);
+  outerHaloGradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${brightness * 0.07})`);
+  outerHaloGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.03})`);
   
   ctx.fillStyle = outerHaloGradient;
-  ctx.fillRect(x - haloSize, y - haloSize, haloSize * 2, haloSize * 2);
-  
-  // Mid halo for smooth transition
-  const midHaloGradient = ctx.createRadialGradient(x, y, coreSize, x, y, midSize);
-  midHaloGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness * 0.4})`);
-  midHaloGradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${brightness * 0.25})`);
-  midHaloGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.1})`);
-  
-  ctx.fillStyle = midHaloGradient;
   ctx.fillRect(x - midSize, y - midSize, midSize * 2, midSize * 2);
   
-  // Core brightness (on top)
+  // Mid halo for smooth transition to core
+  const midHaloGradient = ctx.createRadialGradient(x, y, coreSize, x, y, innerHaloSize);
+  midHaloGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness * 0.45})`);
+  midHaloGradient.addColorStop(0.35, `rgba(${r}, ${g}, ${b}, ${brightness * 0.32})`);
+  midHaloGradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${brightness * 0.22})`);
+  midHaloGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.15})`);
+  
+  ctx.fillStyle = midHaloGradient;
+  ctx.fillRect(x - innerHaloSize, y - innerHaloSize, innerHaloSize * 2, innerHaloSize * 2);
+  
+  // Core brightness with soft edges (on top)
   const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, coreSize);
   coreGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness})`);
-  coreGradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${brightness * 0.85})`);
-  coreGradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${brightness * 0.6})`);
+  coreGradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${brightness * 0.9})`);
+  coreGradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${brightness * 0.7})`);
+  coreGradient.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${brightness * 0.5})`);
   coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.35})`);
   
   ctx.fillStyle = coreGradient;
