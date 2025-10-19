@@ -709,7 +709,7 @@ const StarFieldGenerator: React.FC = () => {
     }
     
     setIsGeneratingVideo(true);
-    setIsRecording(false); // Not using real-time recording anymore
+    setIsRecording(false);
     setIsAnimating(false);
     
     // Auto-scroll to preview area
@@ -724,7 +724,7 @@ const StarFieldGenerator: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 300));
     
     try {
-      console.log('=== Starting Frame-by-Frame WebM Generation ===');
+      console.log('=== Starting Precise Frame-by-Frame WebM Generation ===');
       setVideoProgress({ stage: 'Initializing...', percent: 0 });
       
       let sourceCanvas = canvasRef.current;
@@ -767,7 +767,7 @@ const StarFieldGenerator: React.FC = () => {
       const duration = animationSettings.duration;
       const totalFrames = Math.ceil(duration * fps);
       
-      console.log(`Will render ${totalFrames} frames at ${fps}fps`);
+      console.log(`Will render ${totalFrames} frames at ${fps}fps with precise frame control`);
       
       // Create offscreen canvas for rendering
       const canvasPool = CanvasPool.getInstance();
@@ -777,70 +777,53 @@ const StarFieldGenerator: React.FC = () => {
         willReadFrequently: false
       })!;
       
-      renderCtx.imageSmoothingEnabled = false; // Fast rendering
+      renderCtx.imageSmoothingEnabled = false;
       
-      // STAGE 1: Pre-render all frames by letting animation run naturally
+      // STAGE 1: Pre-render all frames with PRECISE progress control
       setVideoProgress({ stage: 'Rendering frames...', percent: 0 });
-      console.log('Stage 1: Pre-rendering frames...');
+      console.log('Stage 1: Pre-rendering frames with precise control...');
       
       const frames: ImageData[] = [];
       
-      // Reset and start animation
-      setAnimationProgress(0);
+      // Enable controlled rendering mode
       setIsAnimating(true);
       
-      // Wait for animation to initialize
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      const startTime = performance.now();
-      const captureInterval = 1000 / fps; // Time per frame in ms
-      let nextFrameTime = startTime + captureInterval;
-      let frameIndex = 0;
-      
-      // Capture frames at precise intervals as animation runs naturally
-      while (frameIndex < totalFrames) {
-        const currentTime = performance.now();
-        const elapsed = currentTime - startTime;
+      // Render each frame precisely by controlling animation progress
+      for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+        // Calculate exact progress for this frame (0-100)
+        const frameProgress = (frameIndex / (totalFrames - 1)) * 100;
         
-        // Check if it's time to capture the next frame
-        if (currentTime >= nextFrameTime) {
-          // Capture frame from source canvas
-          renderCtx.fillStyle = '#000000';
-          renderCtx.fillRect(0, 0, recordWidth, recordHeight);
-          renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
-          
-          // Store frame data
-          const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
-          frames.push(frameData);
-          
-          frameIndex++;
-          nextFrameTime = startTime + (frameIndex * captureInterval);
-          
-          // Update progress
-          const renderProgress = (frameIndex / totalFrames) * 50; // First 50% for rendering
-          setVideoProgress({ 
-            stage: `Rendering frames... ${frameIndex}/${totalFrames}`, 
-            percent: renderProgress 
-          });
-          
-          if (frameIndex % 30 === 0) {
-            console.log(`Rendered ${frameIndex}/${totalFrames} frames at ${elapsed.toFixed(0)}ms`);
-          }
-        }
+        // Set exact animation progress
+        setAnimationProgress(frameProgress);
         
-        // Small wait to prevent blocking
-        await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)));
+        // Wait for React to update and canvas to render
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => setTimeout(resolve, 16)); // Small delay to ensure rendering
         
-        // Safety timeout check
-        if (elapsed > (duration * 1000) + 2000) {
-          console.warn('Frame capture timeout, breaking loop');
-          break;
+        // Capture frame from source canvas
+        renderCtx.fillStyle = '#000000';
+        renderCtx.fillRect(0, 0, recordWidth, recordHeight);
+        renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
+        
+        // Store frame data
+        const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
+        frames.push(frameData);
+        
+        // Update progress
+        const renderProgress = (frameIndex / totalFrames) * 50;
+        setVideoProgress({ 
+          stage: `Rendering frames... ${frameIndex + 1}/${totalFrames}`, 
+          percent: renderProgress 
+        });
+        
+        if ((frameIndex + 1) % 30 === 0) {
+          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames (${frameProgress.toFixed(1)}% animation)`);
         }
       }
       
       // Stop animation
       setIsAnimating(false);
-      console.log(`✓ All ${frames.length} frames rendered`);
+      console.log(`✓ All ${frames.length} frames rendered with precise timing`);
       
       // STAGE 2: Encode frames to WebM video
       setVideoProgress({ stage: 'Encoding video...', percent: 50 });
@@ -895,7 +878,7 @@ const StarFieldGenerator: React.FC = () => {
           currentFrame++;
           
           // Update encoding progress
-          const encodeProgress = 50 + ((currentFrame / frames.length) * 50); // Second 50%
+          const encodeProgress = 50 + ((currentFrame / frames.length) * 50);
           setVideoProgress({ 
             stage: `Encoding... ${currentFrame}/${frames.length}`, 
             percent: encodeProgress 
@@ -1841,6 +1824,7 @@ const StarFieldGenerator: React.FC = () => {
                   onCanvasReady={handleCanvasReady}
                   onProgressUpdate={handleProgressUpdate}
                   onAnimationComplete={handleAnimationComplete}
+                  controlledProgress={isGeneratingVideo ? animationProgress : undefined}
                 />
                 
                 {/* Progress Bar and Controls */}
