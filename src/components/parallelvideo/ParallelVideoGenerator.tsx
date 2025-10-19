@@ -320,34 +320,28 @@ const ParallelVideoGenerator: React.FC = () => {
         horizontalDisplace
       );
 
-      // Step 3: Extract stars from composites (stars have repositioning but NO displacement)
-      setProcessingStep(t('Extracting stars without displacement...', '提取无位移星点...'));
+      // Step 3: Use ORIGINAL uploaded stars images directly (traditional morph handles repositioning internally)
+      setProcessingStep(t('Using original stars images...', '使用原始星点图像...'));
       
-      // LEFT: Extract stars from left composite
-      const leftStarsCanvas = canvasPool.acquire(leftCanvas.width, leftCanvas.height);
+      // LEFT: Use original uploaded stars as-is
+      const leftStarsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
       const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
-      const leftCompositeData = leftCanvas.getContext('2d')!.getImageData(0, 0, leftCanvas.width, leftCanvas.height);
+      leftStarsCtx.drawImage(starsElement, 0, 0);
+      
+      // RIGHT: Also use original uploaded stars (traditional morph already repositioned stars in composite)
+      // Extract the repositioned stars from right composite by subtracting starless
+      const rightStarsCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
+      const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
       
       const tempCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
       const tempCtx = tempCanvas.getContext('2d')!;
       tempCtx.drawImage(starlessElement, 0, 0);
       const originalStarlessData = tempCtx.getImageData(0, 0, starlessElement.width, starlessElement.height);
       
-      const leftStarsData = leftStarsCtx.createImageData(leftCanvas.width, leftCanvas.height);
-      for (let i = 0; i < leftCompositeData.data.length; i += 4) {
-        leftStarsData.data[i] = Math.max(0, leftCompositeData.data[i] - originalStarlessData.data[i]);
-        leftStarsData.data[i + 1] = Math.max(0, leftCompositeData.data[i + 1] - originalStarlessData.data[i + 1]);
-        leftStarsData.data[i + 2] = Math.max(0, leftCompositeData.data[i + 2] - originalStarlessData.data[i + 2]);
-        leftStarsData.data[i + 3] = 255;
-      }
-      leftStarsCtx.putImageData(leftStarsData, 0, 0);
-      
-      // RIGHT: Extract stars from right composite (repositioned but not displaced)
-      const rightStarsCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
-      const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
       const rightCompositeData = rightCanvas.getContext('2d')!.getImageData(0, 0, rightCanvas.width, rightCanvas.height);
-      
       const rightStarsData = rightStarsCtx.createImageData(rightCanvas.width, rightCanvas.height);
+      
+      // Extract repositioned stars from right composite
       for (let i = 0; i < rightCompositeData.data.length; i += 4) {
         rightStarsData.data[i] = Math.max(0, rightCompositeData.data[i] - originalStarlessData.data[i]);
         rightStarsData.data[i + 1] = Math.max(0, rightCompositeData.data[i + 1] - originalStarlessData.data[i + 1]);
