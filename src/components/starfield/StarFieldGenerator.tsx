@@ -779,57 +779,68 @@ const StarFieldGenerator: React.FC = () => {
       
       renderCtx.imageSmoothingEnabled = false; // Fast rendering
       
-      // STAGE 1: Pre-render all frames with precise timing control
+      // STAGE 1: Pre-render all frames by letting animation run naturally
       setVideoProgress({ stage: 'Rendering frames...', percent: 0 });
-      console.log('Stage 1: Pre-rendering frames with precise timing...');
+      console.log('Stage 1: Pre-rendering frames...');
       
       const frames: ImageData[] = [];
       
-      // Stop any existing animation
-      setIsAnimating(false);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Reset and start animation
+      setAnimationProgress(0);
+      setIsAnimating(true);
       
-      // Manually control animation progress for precise timing
+      // Wait for animation to initialize
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
       const startTime = performance.now();
+      const captureInterval = 1000 / fps; // Time per frame in ms
+      let nextFrameTime = startTime + captureInterval;
+      let frameIndex = 0;
       
-      for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-        // Calculate exact animation progress for this frame
-        const frameProgress = frameIndex / (totalFrames - 1); // 0 to 1
+      // Capture frames at precise intervals as animation runs naturally
+      while (frameIndex < totalFrames) {
+        const currentTime = performance.now();
+        const elapsed = currentTime - startTime;
         
-        // Set animation to exact position for this frame
-        setAnimationProgress(frameProgress);
-        
-        // Wait for React to update and canvas to render
-        await new Promise(resolve => {
-          requestAnimationFrame(() => {
-            // Double RAF to ensure rendering is complete
-            requestAnimationFrame(() => resolve(undefined));
+        // Check if it's time to capture the next frame
+        if (currentTime >= nextFrameTime) {
+          // Capture frame from source canvas
+          renderCtx.fillStyle = '#000000';
+          renderCtx.fillRect(0, 0, recordWidth, recordHeight);
+          renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
+          
+          // Store frame data
+          const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
+          frames.push(frameData);
+          
+          frameIndex++;
+          nextFrameTime = startTime + (frameIndex * captureInterval);
+          
+          // Update progress
+          const renderProgress = (frameIndex / totalFrames) * 50; // First 50% for rendering
+          setVideoProgress({ 
+            stage: `Rendering frames... ${frameIndex}/${totalFrames}`, 
+            percent: renderProgress 
           });
-        });
+          
+          if (frameIndex % 30 === 0) {
+            console.log(`Rendered ${frameIndex}/${totalFrames} frames at ${elapsed.toFixed(0)}ms`);
+          }
+        }
         
-        // Capture frame from source canvas
-        renderCtx.fillStyle = '#000000';
-        renderCtx.fillRect(0, 0, recordWidth, recordHeight);
-        renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
+        // Small wait to prevent blocking
+        await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)));
         
-        // Store frame data
-        const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
-        frames.push(frameData);
-        
-        // Update progress
-        const renderProgress = (frameIndex / totalFrames) * 50; // First 50% for rendering
-        setVideoProgress({ 
-          stage: `Rendering frames... ${frameIndex + 1}/${totalFrames}`, 
-          percent: renderProgress 
-        });
-        
-        if (frameIndex % 30 === 0) {
-          const elapsed = performance.now() - startTime;
-          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames at ${elapsed.toFixed(0)}ms`);
+        // Safety timeout check
+        if (elapsed > (duration * 1000) + 2000) {
+          console.warn('Frame capture timeout, breaking loop');
+          break;
         }
       }
       
-      console.log(`✓ All ${frames.length} frames rendered with precise timing`);
+      // Stop animation
+      setIsAnimating(false);
+      console.log(`✓ All ${frames.length} frames rendered`);
       
       // STAGE 2: Encode frames to WebM video
       setVideoProgress({ stage: 'Encoding video...', percent: 50 });
@@ -963,14 +974,18 @@ const StarFieldGenerator: React.FC = () => {
       
       // Stop any current animation and reset
       setIsAnimating(false);
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Reset animation to start
       setAnimationProgress(0);
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Enable animation with controlled progress (no natural timing)
+      // Start animation before recording
       setIsAnimating(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('Animation started, waiting for frames to render...');
+      
+      // Wait longer for initial frames to render
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       setMp4Progress(5);
       // toast.info(t('Recording video...', '录制视频...'));
@@ -1028,10 +1043,6 @@ const StarFieldGenerator: React.FC = () => {
       let recordingStartTime = 0;
       let chunkCount = 0;
       
-      // Calculate frame timing
-      const totalFrames = Math.floor(duration * fps);
-      const frameInterval = 1000 / fps; // ms per frame
-      
       const webmBlob = await new Promise<Blob>((resolve, reject) => {
         mediaRecorder.ondataavailable = (e) => {
           if (e.data && e.data.size > 0) {
@@ -1085,60 +1096,32 @@ const StarFieldGenerator: React.FC = () => {
             console.log('Starting MediaRecorder with 100ms timeslice...');
             mediaRecorder.start(100); // Request data every 100ms
             console.log('MediaRecorder state:', mediaRecorder.state);
-          }
-        }, 100);
-        
-        // Start recording
-        mediaRecorder.start(100); // Capture chunks every 100ms
-        console.log('MediaRecorder started, rendering frames...');
-        
-        // Frame-by-frame rendering with precise timing control
-        let currentFrame = 0;
-        const renderFrames = async () => {
-          while (currentFrame < totalFrames && mediaRecorder.state === 'recording') {
-            // Calculate exact progress for this frame
-            const frameProgress = (currentFrame / (totalFrames - 1)) * 100;
             
-            // Update animation to this exact frame
-            setAnimationProgress(frameProgress);
+            // Update progress during recording
+            const progressInterval = setInterval(() => {
+              if (mediaRecorder.state === 'recording') {
+                const elapsed = Date.now() - recordingStartTime;
+                const progress = Math.min((elapsed / (duration * 1000)) * 35, 35);
+                setMp4Progress(5 + progress);
+              } else {
+                clearInterval(progressInterval);
+              }
+            }, 200);
             
-            // Wait for frame to render (2 animation frames to ensure rendering completes)
-            await new Promise(resolve => {
-              requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                  resolve(undefined);
+            // Stop after duration + buffer
+            const stopTimeout = setTimeout(() => {
+              clearInterval(progressInterval);
+              if (mediaRecorder.state === 'recording') {
+                console.log('Stopping MediaRecorder after duration');
+                mediaRecorder.stop();
+                stream.getTracks().forEach(track => {
+                  track.stop();
+                  console.log('Track stopped');
                 });
-              });
-            });
-            
-            // Update recording progress UI
-            const recordProgress = 5 + (frameProgress / 100) * 35;
-            setMp4Progress(recordProgress);
-            
-            currentFrame++;
-            
-            // Small delay to let canvas stream capture the frame
-            await new Promise(resolve => setTimeout(resolve, Math.max(1, frameInterval - 16)));
+              }
+            }, (duration * 1000) + 2000); // 2 second buffer
           }
-          
-          // All frames rendered, stop recording
-          console.log(`✓ Rendered ${currentFrame} frames, stopping recording`);
-          if (mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-            stream.getTracks().forEach(track => track.stop());
-          }
-        };
-        
-        // Start frame rendering after a brief delay
-        setTimeout(() => {
-          renderFrames().catch(error => {
-            console.error('Frame rendering error:', error);
-            if (mediaRecorder.state === 'recording') {
-              mediaRecorder.stop();
-              stream.getTracks().forEach(track => track.stop());
-            }
-          });
-        }, 300);
+        }, 500); // Wait 500ms before starting recording to ensure frames are rendering
       });
       
       console.log(`✓ WebM recording complete: ${webmBlob.size} bytes`);
@@ -1858,7 +1841,6 @@ const StarFieldGenerator: React.FC = () => {
                   onCanvasReady={handleCanvasReady}
                   onProgressUpdate={handleProgressUpdate}
                   onAnimationComplete={handleAnimationComplete}
-                  controlledProgress={animationProgress}
                 />
                 
                 {/* Progress Bar and Controls */}

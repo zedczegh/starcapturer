@@ -27,7 +27,6 @@ interface StarField3DProps {
   onCanvasReady?: (canvas: HTMLCanvasElement) => void;
   onProgressUpdate?: (progress: number) => void;
   onAnimationComplete?: () => void;
-  controlledProgress?: number; // External progress control for recording
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -39,8 +38,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   starsOnlyImage,
   onCanvasReady,
   onProgressUpdate,
-  onAnimationComplete,
-  controlledProgress
+  onAnimationComplete
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -457,28 +455,20 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const ctx = canvasCtxRef.current;
     const { motionType = 'zoom_in', speed = 1, duration = 10, spin = 0, spinDirection = 'clockwise' } = settings;
     
-    // Use controlled progress if provided (for recording), otherwise calculate from time
-    let progress: number;
-    if (controlledProgress !== undefined) {
-      // External control for precise frame-by-frame recording
-      progress = Math.min(Math.max(controlledProgress, 0), 100);
-    } else {
-      // Calculate progress - initialize timing on first frame
-      if (animationStartTimeRef.current === 0) {
-        animationStartTimeRef.current = Date.now();
-        pausedTimeRef.current = 0;
-      }
-      
-      const now = Date.now();
-      const elapsed = (now - animationStartTimeRef.current - pausedTimeRef.current) / 1000;
-      progress = Math.min((elapsed / duration) * 100, 100);
+    // Calculate progress - initialize timing on first frame
+    if (animationStartTimeRef.current === 0) {
+      animationStartTimeRef.current = Date.now();
+      pausedTimeRef.current = 0;
     }
     
+    const now = Date.now();
+    const elapsed = (now - animationStartTimeRef.current - pausedTimeRef.current) / 1000;
+    const progress = Math.min((elapsed / duration) * 100, 100);
+    
     // Throttle progress updates to every 16ms (~60fps) to reduce overhead
-    const currentTime = Date.now();
-    if (onProgressUpdate && currentTime - lastProgressUpdateRef.current > 16) {
+    if (onProgressUpdate && now - lastProgressUpdateRef.current > 16) {
       onProgressUpdate(progress);
-      lastProgressUpdateRef.current = currentTime;
+      lastProgressUpdateRef.current = now;
     }
     
     // Stop animation when duration is reached
