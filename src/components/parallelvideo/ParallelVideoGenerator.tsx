@@ -293,7 +293,21 @@ const ParallelVideoGenerator: React.FC = () => {
 
       console.log('Stereo pair created - Left:', leftCanvas.width, 'x', leftCanvas.height);
 
-      // Step 3: Extract stars from both views
+      // Step 3: Extract morphed starless backgrounds from the composites
+      setProcessingStep(t('Extracting morphed backgrounds...', '提取变形背景...'));
+      
+      const canvasPool = CanvasPool.getInstance();
+      
+      // Create clean background canvases from the morphed composites
+      const leftBgCanvas = canvasPool.acquire(leftCanvas.width, leftCanvas.height);
+      const leftBgCtx = leftBgCanvas.getContext('2d')!;
+      leftBgCtx.drawImage(leftCanvas, 0, 0);
+      
+      const rightBgCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
+      const rightBgCtx = rightBgCanvas.getContext('2d')!;
+      rightBgCtx.drawImage(rightCanvas, 0, 0);
+      
+      // Step 4: Extract stars from both views using morphed backgrounds
       setProcessingStep(t('Detecting stars in left view...', '检测左视图星点...'));
       const leftResult = extractStarsFromComposite(leftCanvas, starlessElement, depthMap);
       
@@ -302,12 +316,15 @@ const ParallelVideoGenerator: React.FC = () => {
 
       console.log('Stars detected - Left:', leftResult.stars.length, 'Right:', rightResult.stars.length);
 
-      // Step 4: Set all processed data
-      const starlessDataUrl = starlessElement.src;
-      setLeftBackground(starlessDataUrl);
-      setRightBackground(starlessDataUrl);
+      // Step 5: Set all processed data with morphed backgrounds
+      setLeftBackground(leftBgCanvas.toDataURL());
+      setRightBackground(rightBgCanvas.toDataURL());
       setLeftStarsOnly(leftResult.starsOnly.toDataURL());
       setRightStarsOnly(rightResult.starsOnly.toDataURL());
+      
+      // Cleanup background canvases
+      canvasPool.release(leftBgCanvas);
+      canvasPool.release(rightBgCanvas);
       setLeftStars(leftResult.stars);
       setRightStars(rightResult.stars);
 
