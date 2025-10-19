@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { TraditionalMorphProcessor } from '@/lib/traditionalMorphMode';
+import { refineStarEdges } from '@/utils/starEdgeRefinement';
 
 interface StereoscopicRendererProps {
   starsOnlyImage: string | null;
@@ -43,8 +44,25 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
   
   const [starsImg, setStarsImg] = useState<HTMLImageElement | null>(null);
   const [starlessImg, setStarlessImg] = useState<HTMLImageElement | null>(null);
-  const [leftView, setLeftView] = useState<HTMLCanvasElement | null>(null);
-  const [rightView, setRightView] = useState<HTMLCanvasElement | null>(null);
+  const [leftStarLayers, setLeftStarLayers] = useState<{
+    layer1: ImageBitmap | null;
+    layer2: ImageBitmap | null;
+    layer3: ImageBitmap | null;
+    layer4: ImageBitmap | null;
+    layer5: ImageBitmap | null;
+    layer6: ImageBitmap | null;
+  }>({ layer1: null, layer2: null, layer3: null, layer4: null, layer5: null, layer6: null });
+  const [rightStarLayers, setRightStarLayers] = useState<{
+    layer1: ImageBitmap | null;
+    layer2: ImageBitmap | null;
+    layer3: ImageBitmap | null;
+    layer4: ImageBitmap | null;
+    layer5: ImageBitmap | null;
+    layer6: ImageBitmap | null;
+  }>({ layer1: null, layer2: null, layer3: null, layer4: null, layer5: null, layer6: null });
+  const [leftBackground, setLeftBackground] = useState<ImageBitmap | null>(null);
+  const [rightBackground, setRightBackground] = useState<ImageBitmap | null>(null);
+  const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
   const [isGenerating, setIsGenerating] = useState(false);
   const processorRef = useRef<TraditionalMorphProcessor | null>(null);
 
@@ -96,13 +114,13 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
     };
   }, []);
 
-  // Generate stereo views using TraditionalMorphProcessor
+  // Generate stereo views and separate into layers
   useEffect(() => {
     if (!starlessImg || !starsImg || !processorRef.current || isGenerating) return;
 
-    const generateStereoViews = async () => {
+    const generateStereoViewsWithLayers = async () => {
       setIsGenerating(true);
-      console.log('🗺️ [StereoRenderer] Generating stereo pair using TraditionalMorphProcessor');
+      console.log('🗺️ [StereoRenderer] Generating stereo pair with layer separation');
 
       try {
         const processor = processorRef.current!;
@@ -150,14 +168,229 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
           }
         );
         
-        // Store the left and right views (without combining into stereo pair yet)
-        setLeftView(result.leftCanvas);
-        setRightView(result.rightCanvas);
+        const leftCanvas = result.leftCanvas;
+        const rightCanvas = result.rightCanvas;
         
-        console.log('✅ [StereoRenderer] Stereo views generated successfully:', {
-          leftSize: `${result.leftCanvas.width}x${result.leftCanvas.height}`,
-          rightSize: `${result.rightCanvas.width}x${result.rightCanvas.height}`
+        console.log('✅ [StereoRenderer] Stereo pair generated, now separating into layers');
+        
+        // Function to separate a stereo view canvas into star layers
+        const separateIntoLayers = async (canvas: HTMLCanvasElement, viewName: string) => {
+          const width = canvas.width;
+          const height = canvas.height;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: false })!;
+          const sourceData = ctx.getImageData(0, 0, width, height);
+          const data = sourceData.data;
+          
+          // Pre-calculate luminance
+          const pixelCount = width * height;
+          const luminanceCache = new Float32Array(pixelCount);
+          const data32 = new Uint32Array(data.buffer);
+          
+          for (let i = 0; i < pixelCount; i++) {
+            const pixel = data32[i];
+            const r = pixel & 0xFF;
+            const g = (pixel >> 8) & 0xFF;
+            const b = (pixel >> 16) & 0xFF;
+            luminanceCache[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+          }
+          
+          // Detect star regions
+          const visited = new Uint8Array(pixelCount);
+          const starRegions: {
+            pixels: Uint32Array;
+            pixelCount: number;
+            maxLuminance: number;
+            size: number;
+          }[] = [];
+          
+          const threshold = 30;
+          const lowThreshold = threshold * 0.5;
+          const maxQueueSize = 5000;
+          const queueX = new Uint16Array(maxQueueSize);
+          const queueY = new Uint16Array(maxQueueSize);
+          const pixelBuffer = new Uint32Array(maxQueueSize);
+          
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+              const idx = y * width + x;
+              if (visited[idx]) continue;
+              
+              const luminance = luminanceCache[idx];
+              
+              if (luminance > threshold) {
+                let queueStart = 0;
+                let queueEnd = 0;
+                let pixelCount = 0;
+                
+                queueX[queueEnd] = x;
+                queueY[queueEnd] = y;
+                queueEnd++;
+                visited[idx] = 1;
+                
+                let maxLum = luminance;
+                let minX = x, maxX = x, minY = y, maxY = y;
+                
+                while (queueStart < queueEnd && pixelCount < maxQueueSize) {
+                  const currX = queueX[queueStart];
+                  const currY = queueY[queueStart];
+                  queueStart++;
+                  
+                  const currIdx = currY * width + currX;
+                  pixelBuffer[pixelCount++] = currIdx;
+                  
+                  const currLum = luminanceCache[currIdx];
+                  if (currLum > maxLum) maxLum = currLum;
+                  
+                  if (currX < minX) minX = currX;
+                  if (currX > maxX) maxX = currX;
+                  if (currY < minY) minY = currY;
+                  if (currY > maxY) maxY = currY;
+                  
+                  // Check 8-connected neighbors
+                  const neighbors = [
+                    [currX - 1, currY - 1], [currX, currY - 1], [currX + 1, currY - 1],
+                    [currX - 1, currY], [currX + 1, currY],
+                    [currX - 1, currY + 1], [currX, currY + 1], [currX + 1, currY + 1]
+                  ];
+                  
+                  for (const [nx, ny] of neighbors) {
+                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                      const nIdx = ny * width + nx;
+                      if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                        visited[nIdx] = 1;
+                        queueX[queueEnd] = nx;
+                        queueY[queueEnd] = ny;
+                        queueEnd++;
+                      }
+                    }
+                  }
+                }
+                
+                if (pixelCount >= 5 && pixelCount <= maxQueueSize) {
+                  const size = Math.max(maxX - minX, maxY - minY);
+                  const pixels = new Uint32Array(pixelCount);
+                  pixels.set(pixelBuffer.subarray(0, pixelCount));
+                  
+                  starRegions.push({ pixels, pixelCount, maxLuminance: maxLum, size });
+                }
+              }
+            }
+          }
+          
+          console.log(`[StereoRenderer/${viewName}] Detected ${starRegions.length} stars`);
+          
+          // Sort and distribute into 6 layers
+          starRegions.sort((a, b) => b.size - a.size);
+          
+          const layer1Threshold = starRegions[Math.floor(starRegions.length * 0.167)]?.size || 25;
+          const layer2Threshold = starRegions[Math.floor(starRegions.length * 0.333)]?.size || 18;
+          const layer3Threshold = starRegions[Math.floor(starRegions.length * 0.500)]?.size || 12;
+          const layer4Threshold = starRegions[Math.floor(starRegions.length * 0.667)]?.size || 8;
+          const layer5Threshold = starRegions[Math.floor(starRegions.length * 0.833)]?.size || 5;
+          
+          // Create 6 canvases for layers
+          const canvases = Array(6).fill(null).map(() => {
+            const c = document.createElement('canvas');
+            c.width = width;
+            c.height = height;
+            return c;
+          });
+          
+          const contexts = canvases.map(c => c.getContext('2d', { alpha: false })!);
+          const imageDatas = contexts.map(ctx => ctx.createImageData(width, height));
+          const data32Views = imageDatas.map(imgData => new Uint32Array(imgData.data.buffer));
+          
+          // Assign stars to layers
+          for (const star of starRegions) {
+            let layerIndex: number;
+            
+            if (star.size >= layer1Threshold) layerIndex = 0;
+            else if (star.size >= layer2Threshold) layerIndex = 1;
+            else if (star.size >= layer3Threshold) layerIndex = 2;
+            else if (star.size >= layer4Threshold) layerIndex = 3;
+            else if (star.size >= layer5Threshold) layerIndex = 4;
+            else layerIndex = 5;
+            
+            const targetData32 = data32Views[layerIndex];
+            for (let i = 0; i < star.pixelCount; i++) {
+              const pixelIdx = star.pixels[i];
+              targetData32[pixelIdx] = data32[pixelIdx];
+            }
+          }
+          
+          // Put data onto canvases
+          contexts.forEach((ctx, i) => ctx.putImageData(imageDatas[i], 0, 0));
+          
+          // Apply edge refinement
+          const refinedCanvases = canvases.map((canvas, i) => {
+            const smoothingRadius = Math.max(1, 3 - Math.floor(i / 2));
+            const edgeThreshold = 45 - i * 5;
+            const coreThreshold = 220 - i * 15;
+            
+            return refineStarEdges(canvas, {
+              smoothingRadius,
+              edgeThreshold,
+              preserveCore: true,
+              coreThreshold
+            });
+          });
+          
+          // Convert to ImageBitmaps
+          return Promise.all(
+            refinedCanvases.map(c => createImageBitmap(c, { 
+              premultiplyAlpha: 'premultiply',
+              colorSpaceConversion: 'none',
+              resizeQuality: 'high'
+            }))
+          );
+        };
+        
+        // Separate both left and right views into layers
+        const [leftBitmaps, rightBitmaps] = await Promise.all([
+          separateIntoLayers(leftCanvas, 'Left'),
+          separateIntoLayers(rightCanvas, 'Right')
+        ]);
+        
+        setLeftStarLayers({
+          layer1: leftBitmaps[0],
+          layer2: leftBitmaps[1],
+          layer3: leftBitmaps[2],
+          layer4: leftBitmaps[3],
+          layer5: leftBitmaps[4],
+          layer6: leftBitmaps[5]
         });
+        
+        setRightStarLayers({
+          layer1: rightBitmaps[0],
+          layer2: rightBitmaps[1],
+          layer3: rightBitmaps[2],
+          layer4: rightBitmaps[3],
+          layer5: rightBitmaps[4],
+          layer6: rightBitmaps[5]
+        });
+        
+        // Convert backgrounds to ImageBitmap
+        const leftBgBitmap = await createImageBitmap(result.leftCanvas.getContext('2d')!.createImageData(result.leftCanvas.width, result.leftCanvas.height));
+        const rightBgBitmap = await createImageBitmap(result.rightCanvas.getContext('2d')!.createImageData(result.rightCanvas.width, result.rightCanvas.height));
+        
+        // Actually, we need to extract the background (starless) from the stereo views
+        // For now, use the starless image directly
+        const leftBgCanvas = document.createElement('canvas');
+        leftBgCanvas.width = starlessImg.width;
+        leftBgCanvas.height = starlessImg.height;
+        leftBgCanvas.getContext('2d')!.drawImage(starlessImg, 0, 0);
+        const leftBg = await createImageBitmap(leftBgCanvas);
+        
+        const rightBgCanvas = document.createElement('canvas');
+        rightBgCanvas.width = starlessImg.width;
+        rightBgCanvas.height = starlessImg.height;
+        rightBgCanvas.getContext('2d')!.drawImage(starlessImg, 0, 0);
+        const rightBg = await createImageBitmap(rightBgCanvas);
+        
+        setLeftBackground(leftBg);
+        setRightBackground(rightBg);
+        
+        console.log('✅ [StereoRenderer] Layer separation complete');
         
       } catch (error) {
         console.error('❌ [StereoRenderer] Failed to generate stereo views:', error);
@@ -166,18 +399,25 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
       }
     };
 
-    generateStereoViews();
+    generateStereoViewsWithLayers();
   }, [starlessImg, starsImg, stereoParams]);
 
-  // Render stereo pair to main canvas with motion settings applied
+  // Render stereo pair to main canvas with motion settings and layer parallax applied
   const renderStereoFrame = useCallback((progress: number) => {
-    if (!canvasRef.current || !leftView || !rightView) return;
+    if (!canvasRef.current || !leftBackground || !rightBackground) return;
+    
+    const hasLeftLayers = leftStarLayers.layer1 && leftStarLayers.layer2 && leftStarLayers.layer3 && 
+                          leftStarLayers.layer4 && leftStarLayers.layer5 && leftStarLayers.layer6;
+    const hasRightLayers = rightStarLayers.layer1 && rightStarLayers.layer2 && rightStarLayers.layer3 && 
+                           rightStarLayers.layer4 && rightStarLayers.layer5 && rightStarLayers.layer6;
+    
+    if (!hasLeftLayers || !hasRightLayers) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d')!;
 
-    const width = leftView.width;
-    const height = leftView.height;
+    const width = imageDimensions.width;
+    const height = imageDimensions.height;
     const spacing = stereoParams.stereoSpacing;
 
     // Set canvas size for stereo pair side-by-side
@@ -192,42 +432,90 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
     
     // Calculate motion parameters based on progress
     const normalizedProgress = progress / 100;
-    
-    // Amplification affects the scale and movement range
     const amplificationFactor = amplification / 100;
     
-    // Calculate scale based on motion type and amplification
-    let scaleFactor = 1.0;
-    let panX = 0;
-    let panY = 0;
-    let rotation = 0;
+    // Calculate parallax multipliers (from StarField3D logic)
+    const depthIntensity = 50; // Can be made configurable
+    const baseIntensity = 0.15 + (depthIntensity / 100) * 0.85;
+    const intensityRange = (depthIntensity / 100) * 0.4;
     
+    const parallaxMultipliers = {
+      background: baseIntensity - intensityRange,
+      layer6: baseIntensity - intensityRange * 0.7,
+      layer5: baseIntensity - intensityRange * 0.4,
+      layer4: baseIntensity,
+      layer3: baseIntensity + intensityRange * 0.4,
+      layer2: baseIntensity + intensityRange * 0.7,
+      layer1: baseIntensity + intensityRange
+    };
+    
+    // Calculate scales and offsets for each layer
+    const layerTransforms = {
+      background: { scale: 1, panX: 0, panY: 0, rotation: 0 },
+      layer6: { scale: 1, panX: 0, panY: 0, rotation: 0 },
+      layer5: { scale: 1, panX: 0, panY: 0, rotation: 0 },
+      layer4: { scale: 1, panX: 0, panY: 0, rotation: 0 },
+      layer3: { scale: 1, panX: 0, panY: 0, rotation: 0 },
+      layer2: { scale: 1, panX: 0, panY: 0, rotation: 0 },
+      layer1: { scale: 1, panX: 0, panY: 0, rotation: 0 }
+    };
+    
+    // Apply motion based on motion type with parallax
     if (motionType === 'zoom_in') {
-      // Zoom in: scale from 1.0 to (1.0 + amplificationFactor)
-      scaleFactor = 1.0 + (normalizedProgress * amplificationFactor);
+      layerTransforms.background.scale = 1.0 + (normalizedProgress * parallaxMultipliers.background * amplificationFactor);
+      layerTransforms.layer6.scale = 1.0 + (normalizedProgress * parallaxMultipliers.layer6 * amplificationFactor);
+      layerTransforms.layer5.scale = 1.0 + (normalizedProgress * parallaxMultipliers.layer5 * amplificationFactor);
+      layerTransforms.layer4.scale = 1.0 + (normalizedProgress * parallaxMultipliers.layer4 * amplificationFactor);
+      layerTransforms.layer3.scale = 1.0 + (normalizedProgress * parallaxMultipliers.layer3 * amplificationFactor);
+      layerTransforms.layer2.scale = 1.0 + (normalizedProgress * parallaxMultipliers.layer2 * amplificationFactor);
+      layerTransforms.layer1.scale = 1.0 + (normalizedProgress * parallaxMultipliers.layer1 * 2.0 * amplificationFactor);
     } else if (motionType === 'zoom_out') {
-      // Zoom out: scale from (1.0 + amplificationFactor) to 1.0
-      scaleFactor = (1.0 + amplificationFactor) - (normalizedProgress * amplificationFactor);
-    } else if (motionType === 'pan_left') {
-      // Pan left: move from right to left
+      const bgMax = 1.0 + (parallaxMultipliers.background * amplificationFactor);
+      const layer6Max = 1.0 + (parallaxMultipliers.layer6 * amplificationFactor);
+      const layer5Max = 1.0 + (parallaxMultipliers.layer5 * amplificationFactor);
+      const layer4Max = 1.0 + (parallaxMultipliers.layer4 * amplificationFactor);
+      const layer3Max = 1.0 + (parallaxMultipliers.layer3 * amplificationFactor);
+      const layer2Max = 1.0 + (parallaxMultipliers.layer2 * amplificationFactor);
+      const layer1Max = 1.0 + (parallaxMultipliers.layer1 * 2.0 * amplificationFactor);
+      
+      layerTransforms.background.scale = bgMax - (normalizedProgress * parallaxMultipliers.background * amplificationFactor);
+      layerTransforms.layer6.scale = layer6Max - (normalizedProgress * parallaxMultipliers.layer6 * amplificationFactor);
+      layerTransforms.layer5.scale = layer5Max - (normalizedProgress * parallaxMultipliers.layer5 * amplificationFactor);
+      layerTransforms.layer4.scale = layer4Max - (normalizedProgress * parallaxMultipliers.layer4 * amplificationFactor);
+      layerTransforms.layer3.scale = layer3Max - (normalizedProgress * parallaxMultipliers.layer3 * amplificationFactor);
+      layerTransforms.layer2.scale = layer2Max - (normalizedProgress * parallaxMultipliers.layer2 * amplificationFactor);
+      layerTransforms.layer1.scale = layer1Max - (normalizedProgress * parallaxMultipliers.layer1 * 2.0 * amplificationFactor);
+    } else if (motionType === 'pan_left' || motionType === 'pan_right') {
+      const direction = motionType === 'pan_left' ? -1 : 1;
       const maxPan = width * amplificationFactor * 0.5;
-      panX = maxPan - (normalizedProgress * maxPan * 2);
-    } else if (motionType === 'pan_right') {
-      // Pan right: move from left to right
-      const maxPan = width * amplificationFactor * 0.5;
-      panX = -maxPan + (normalizedProgress * maxPan * 2);
+      
+      layerTransforms.background.panX = direction * (normalizedProgress - 0.5) * maxPan * parallaxMultipliers.background * 2;
+      layerTransforms.layer6.panX = direction * (normalizedProgress - 0.5) * maxPan * parallaxMultipliers.layer6 * 2;
+      layerTransforms.layer5.panX = direction * (normalizedProgress - 0.5) * maxPan * parallaxMultipliers.layer5 * 2;
+      layerTransforms.layer4.panX = direction * (normalizedProgress - 0.5) * maxPan * parallaxMultipliers.layer4 * 2;
+      layerTransforms.layer3.panX = direction * (normalizedProgress - 0.5) * maxPan * parallaxMultipliers.layer3 * 2;
+      layerTransforms.layer2.panX = direction * (normalizedProgress - 0.5) * maxPan * parallaxMultipliers.layer2 * 2;
+      layerTransforms.layer1.panX = direction * (normalizedProgress - 0.5) * maxPan * parallaxMultipliers.layer1 * 4;
     }
     
-    // Apply spin rotation
+    // Apply spin rotation (same for all layers)
     if (spin > 0) {
       const spinRadians = (spin * Math.PI) / 180;
-      rotation = spinDirection === 'clockwise' 
+      const rotation = spinDirection === 'clockwise' 
         ? normalizedProgress * spinRadians 
         : -normalizedProgress * spinRadians;
+      
+      Object.values(layerTransforms).forEach(transform => {
+        transform.rotation = rotation;
+      });
     }
 
-    // Function to draw a view with transformations constrained to frame
-    const drawView = (view: HTMLCanvasElement, targetX: number) => {
+    // Function to draw a view with layers at specified position
+    const drawViewWithLayers = (
+      background: ImageBitmap,
+      layers: typeof leftStarLayers,
+      targetX: number
+    ) => {
       ctx.save();
       
       // Set clipping region for this view
@@ -235,33 +523,43 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
       ctx.rect(targetX, 0, width, height);
       ctx.clip();
       
-      // Translate to center of this view's area
-      ctx.translate(targetX + width / 2, height / 2);
+      // Helper to draw a layer with its transform
+      const drawLayer = (layer: ImageBitmap | null, transform: typeof layerTransforms.background) => {
+        if (!layer) return;
+        
+        ctx.save();
+        ctx.translate(targetX + width / 2, height / 2);
+        
+        if (transform.rotation !== 0) {
+          ctx.rotate(transform.rotation);
+        }
+        
+        ctx.scale(transform.scale, transform.scale);
+        ctx.translate(transform.panX / transform.scale, transform.panY / transform.scale);
+        
+        ctx.drawImage(layer, -width / 2, -height / 2, width, height);
+        ctx.restore();
+      };
       
-      // Apply rotation
-      if (rotation !== 0) {
-        ctx.rotate(rotation);
-      }
-      
-      // Apply scale
-      ctx.scale(scaleFactor, scaleFactor);
-      
-      // Apply pan offset (scaled appropriately)
-      ctx.translate(panX / scaleFactor, panY / scaleFactor);
-      
-      // Draw image centered
-      ctx.drawImage(view, -width / 2, -height / 2, width, height);
+      // Draw layers from back to front
+      drawLayer(background, layerTransforms.background);
+      drawLayer(layers.layer6, layerTransforms.layer6);
+      drawLayer(layers.layer5, layerTransforms.layer5);
+      drawLayer(layers.layer4, layerTransforms.layer4);
+      drawLayer(layers.layer3, layerTransforms.layer3);
+      drawLayer(layers.layer2, layerTransforms.layer2);
+      drawLayer(layers.layer1, layerTransforms.layer1);
       
       ctx.restore();
     };
 
-    // Draw left view with motion (constrained to left frame)
-    drawView(leftView, 0);
+    // Draw left view with parallax layers
+    drawViewWithLayers(leftBackground, leftStarLayers, 0);
 
-    // Draw right view with motion (constrained to right frame)
-    drawView(rightView, width + spacing);
+    // Draw right view with parallax layers
+    drawViewWithLayers(rightBackground, rightStarLayers, width + spacing);
 
-  }, [leftView, rightView, stereoParams.stereoSpacing, animationSettings]);
+  }, [leftBackground, rightBackground, leftStarLayers, rightStarLayers, imageDimensions, stereoParams.stereoSpacing, animationSettings]);
 
   // Animation loop
   const animate = useCallback(() => {
@@ -316,28 +614,37 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
 
   // Always render current frame when views or settings change
   useEffect(() => {
-    if (leftView && rightView) {
+    const hasLeftLayers = leftStarLayers.layer1 && leftBackground;
+    const hasRightLayers = rightStarLayers.layer1 && rightBackground;
+    
+    if (hasLeftLayers && hasRightLayers) {
       renderStereoFrame(currentProgressRef.current);
     }
-  }, [leftView, rightView, animationSettings, renderStereoFrame]);
+  }, [leftBackground, rightBackground, leftStarLayers, rightStarLayers, animationSettings, renderStereoFrame]);
 
   // Handle external progress updates (for video recording)
   useEffect(() => {
-    if (externalProgress !== undefined && leftView && rightView) {
+    const hasLeftLayers = leftStarLayers.layer1 && leftBackground;
+    const hasRightLayers = rightStarLayers.layer1 && rightBackground;
+    
+    if (externalProgress !== undefined && hasLeftLayers && hasRightLayers) {
       console.log(`📹 [StereoRenderer] External progress update: ${externalProgress.toFixed(1)}%`);
       currentProgressRef.current = externalProgress;
       renderStereoFrame(externalProgress);
     }
-  }, [externalProgress, leftView, rightView, renderStereoFrame]);
+  }, [externalProgress, leftBackground, rightBackground, leftStarLayers, rightStarLayers, renderStereoFrame]);
 
   // Notify parent when canvas is ready and render initial frame
   useEffect(() => {
-    if (canvasRef.current && leftView && rightView && onCanvasReady) {
+    const hasLeftLayers = leftStarLayers.layer1 && leftBackground;
+    const hasRightLayers = rightStarLayers.layer1 && rightBackground;
+    
+    if (canvasRef.current && hasLeftLayers && hasRightLayers && onCanvasReady) {
       console.log('✅ [StereoRenderer] Canvas ready, rendering initial frame');
       renderStereoFrame(0);
       onCanvasReady(canvasRef.current);
     }
-  }, [leftView, rightView, onCanvasReady, renderStereoFrame]);
+  }, [leftBackground, rightBackground, leftStarLayers, rightStarLayers, onCanvasReady, renderStereoFrame]);
 
   return (
     <canvas
