@@ -45,6 +45,7 @@ const ParallelVideoGenerator: React.FC = () => {
   // Processing state
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
+  const [progress, setProgress] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [videoProgress, setVideoProgress] = useState({ stage: '', percent: 0 });
   const [isReady, setIsReady] = useState(false);
@@ -53,15 +54,11 @@ const ParallelVideoGenerator: React.FC = () => {
   const leftCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rightCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Traditional Morph Parameters - now configurable!
-  const [morphParams, setMorphParams] = useState<TraditionalMorphParams>({
-    horizontalDisplace: 25,
-    starShiftAmount: 6,
-    luminanceBlur: 1.5,
-    contrastBoost: 1.2,
-    stereoSpacing: 600,
-    borderSize: 0 // No borders for video
-  });
+  // Traditional Morph Parameters - matching stereoscope processor exactly
+  const [horizontalDisplace, setHorizontalDisplace] = useState<number>(25);
+  const [starShiftAmount, setStarShiftAmount] = useState<number>(6);
+  const [stereoSpacing, setStereoSpacing] = useState<number>(600);
+  const [borderSize, setBorderSize] = useState<number>(300);
 
   // 3D Star Field Motion Settings - complete settings
   const [motionSettings, setMotionSettings] = useState<MotionSettings>({
@@ -189,20 +186,36 @@ const ParallelVideoGenerator: React.FC = () => {
     setProcessingStep(t('Initializing...', '初始化...'));
 
     try {
-      // Step 1: Create stereo pair with traditional morph
+      // Step 1: Create traditional processor (exactly like stereoscope processor)
+      const { TraditionalMorphProcessor } = await import('@/lib/traditionalMorphMode');
+      const processor = new TraditionalMorphProcessor();
+      
+      const inputs = {
+        starlessImage: starlessFile,
+        starsOnlyImage: starsFile
+      };
+      
+      const traditionalParams = {
+        horizontalDisplace,
+        starShiftAmount,
+        luminanceBlur: 1.5, // Fixed values not shown in UI
+        contrastBoost: 1.2
+      };
+
+      // Step 2: Create stereo pair with traditional morph
       setProcessingStep(t('Creating stereoscopic pair with Traditional Morph...', '使用传统变形创建立体对...'));
-      const result = await TraditionalMorphService.createStereoPair(
-        starlessFile,
-        starsFile,
-        morphParams,
+      const { leftCanvas, rightCanvas, depthMap } = await processor.createTraditionalStereoPair(
+        inputs,
+        traditionalParams,
         (step, progress) => {
           setProcessingStep(step);
+          if (progress) setProgress(progress);
         }
       );
 
-      console.log('Stereo pair created:', result);
+      console.log('Stereo pair created - Left:', leftCanvas.width, 'x', leftCanvas.height);
 
-      // Step 2: Load original starless image
+      // Step 3: Load original starless image
       setProcessingStep(t('Loading starless background...', '加载无星背景...'));
       const starlessImg = new Image();
       await new Promise<void>((resolve, reject) => {
@@ -213,22 +226,25 @@ const ParallelVideoGenerator: React.FC = () => {
 
       console.log('Starless image loaded:', starlessImg.width, 'x', starlessImg.height);
 
-      // Step 3: Extract stars from both views
+      // Step 4: Extract stars from both views
       setProcessingStep(t('Separating stars from left view...', '从左视图分离星点...'));
-      const leftResult = extractStarsFromComposite(result.leftComposite, starlessImg, result.depthMap);
+      const leftResult = extractStarsFromComposite(leftCanvas, starlessImg, depthMap);
       
       setProcessingStep(t('Separating stars from right view...', '从右视图分离星点...'));
-      const rightResult = extractStarsFromComposite(result.rightComposite, starlessImg, result.depthMap);
+      const rightResult = extractStarsFromComposite(rightCanvas, starlessImg, depthMap);
 
       console.log('Stars extracted - Left:', leftResult.stars.length, 'Right:', rightResult.stars.length);
 
-      // Step 4: Set all processed data
+      // Step 5: Set all processed data
       setLeftBackground(starlessImg.src);
       setRightBackground(starlessImg.src);
       setLeftStarsOnly(leftResult.starsOnly.toDataURL());
       setRightStarsOnly(rightResult.starsOnly.toDataURL());
       setLeftStars(leftResult.stars);
       setRightStars(rightResult.stars);
+
+      // Cleanup
+      processor.dispose();
 
       setIsReady(true);
       setProcessingStep('');
@@ -246,7 +262,7 @@ const ParallelVideoGenerator: React.FC = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [starlessFile, starsFile, morphParams, t, extractStarsFromComposite]);
+  }, [starlessFile, starsFile, horizontalDisplace, starShiftAmount, t, extractStarsFromComposite]);
 
   // Generate parallel videos
   const generateParallelVideo = useCallback(async () => {
@@ -407,13 +423,16 @@ const ParallelVideoGenerator: React.FC = () => {
 
             <Separator className="bg-cosmic-700/30" />
 
-            {/* Traditional Morph Parameters */}
+            {/* Traditional Morph Parameters - Exactly matching stereoscope processor */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
                 <Settings2 className="w-5 h-5 text-purple-400" />
                 <h3 className="text-lg font-semibold text-white">
                   {t('Traditional Morph Parameters', '传统变形参数')}
                 </h3>
+                <p className="text-sm text-cosmic-400">
+                  {t('Professional parameters for authentic 3D astrophotography', '专业参数用于真实的3D天文摄影')}
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -421,34 +440,30 @@ const ParallelVideoGenerator: React.FC = () => {
                 <div className="space-y-2">
                   <Label className="text-cosmic-200 flex items-center justify-between">
                     <span>{t('Horizontal Displacement', '水平位移')}</span>
-                    <span className="text-amber-400 font-mono">{morphParams.horizontalDisplace}</span>
+                    <span className="text-amber-400 font-mono text-lg">({horizontalDisplace})</span>
                   </Label>
                   <Slider
-                    value={[morphParams.horizontalDisplace]}
-                    onValueChange={([value]) => 
-                      setMorphParams({ ...morphParams, horizontalDisplace: value })
-                    }
+                    value={[horizontalDisplace]}
+                    onValueChange={([value]) => setHorizontalDisplace(value)}
                     min={10}
-                    max={50}
+                    max={30}
                     step={1}
                     className="mt-2"
                   />
                   <p className="text-xs text-cosmic-400">
-                    {t('Controls nebula depth displacement (10-50 recommended)', '控制星云深度位移（推荐10-50）')}
+                    {t('Controls nebula depth displacement effect (10-30 recommended)', '控制星云深度位移效果（推荐10-30）')}
                   </p>
                 </div>
 
-                {/* Star Shift */}
+                {/* Star Shift Amount */}
                 <div className="space-y-2">
                   <Label className="text-cosmic-200 flex items-center justify-between">
                     <span>{t('Star Shift Amount', '星点位移量')}</span>
-                    <span className="text-amber-400 font-mono">{morphParams.starShiftAmount}px</span>
+                    <span className="text-amber-400 font-mono text-lg">({starShiftAmount}px)</span>
                   </Label>
                   <Slider
-                    value={[morphParams.starShiftAmount]}
-                    onValueChange={([value]) => 
-                      setMorphParams({ ...morphParams, starShiftAmount: value })
-                    }
+                    value={[starShiftAmount]}
+                    onValueChange={([value]) => setStarShiftAmount(value)}
                     min={2}
                     max={15}
                     step={0.5}
@@ -459,45 +474,41 @@ const ParallelVideoGenerator: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Luminance Blur */}
+                {/* Stereo Spacing */}
                 <div className="space-y-2">
                   <Label className="text-cosmic-200 flex items-center justify-between">
-                    <span>{t('Depth Map Blur', '深度图模糊')}</span>
-                    <span className="text-amber-400 font-mono">{morphParams.luminanceBlur.toFixed(1)}px</span>
+                    <span>{t('Stereo Spacing', '立体间距')}</span>
+                    <span className="text-amber-400 font-mono text-lg">({stereoSpacing}px)</span>
                   </Label>
                   <Slider
-                    value={[morphParams.luminanceBlur]}
-                    onValueChange={([value]) => 
-                      setMorphParams({ ...morphParams, luminanceBlur: value })
-                    }
-                    min={0.5}
-                    max={3}
-                    step={0.1}
+                    value={[stereoSpacing]}
+                    onValueChange={([value]) => setStereoSpacing(value)}
+                    min={0}
+                    max={1000}
+                    step={50}
                     className="mt-2"
                   />
                   <p className="text-xs text-cosmic-400">
-                    {t('Smoothing for depth map transitions', '深度图过渡平滑度')}
+                    {t('Gap between left and right stereo images for easier viewing', '左右立体图像之间的间隙，便于观看')}
                   </p>
                 </div>
 
-                {/* Contrast Boost */}
+                {/* Border Size */}
                 <div className="space-y-2">
                   <Label className="text-cosmic-200 flex items-center justify-between">
-                    <span>{t('Contrast Boost', '对比度增强')}</span>
-                    <span className="text-amber-400 font-mono">{morphParams.contrastBoost.toFixed(2)}x</span>
+                    <span>{t('Border Size', '边框大小')}</span>
+                    <span className="text-amber-400 font-mono text-lg">({borderSize}px)</span>
                   </Label>
                   <Slider
-                    value={[morphParams.contrastBoost]}
-                    onValueChange={([value]) => 
-                      setMorphParams({ ...morphParams, contrastBoost: value })
-                    }
-                    min={1.0}
-                    max={1.5}
-                    step={0.05}
+                    value={[borderSize]}
+                    onValueChange={([value]) => setBorderSize(value)}
+                    min={0}
+                    max={600}
+                    step={50}
                     className="mt-2"
                   />
                   <p className="text-xs text-cosmic-400">
-                    {t('Final contrast adjustment', '最终对比度调整')}
+                    {t('Size of black borders around stereo pair (0 = no borders)', '立体对周围的黑色边框大小（0 = 无边框）')}
                   </p>
                 </div>
               </div>
