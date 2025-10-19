@@ -19,6 +19,8 @@ import { MemoryManager } from '@/lib/performance/MemoryManager';
 import { ChunkedProcessor } from '@/lib/performance/ChunkedProcessor';
 import { loadImageFromFile, validateImageFile } from '@/utils/imageProcessingUtils';
 import { captureFrames, encodeFramesToWebM, downloadBlob, calculateRecordingDimensions } from '@/utils/videoEncodingUtils';
+import { TraditionalMorphProcessor, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
+import { processFrameToStereoscopic } from '@/utils/stereoscopicVideoUtils';
 
 interface ProcessedStarData {
   x: number;
@@ -77,6 +79,17 @@ const StarFieldGenerator: React.FC = () => {
   
   // 3D depth intensity control (0-100 scale)
   const [depthIntensity, setDepthIntensity] = useState<number>(50);
+  
+  // Stereoscopic 3D video settings
+  const [enableStereoscopic, setEnableStereoscopic] = useState(false);
+  const [stereoSpacing, setStereoSpacing] = useState<number>(600);
+  const [borderSize, setBorderSize] = useState<number>(300);
+  const [traditionalParams, setTraditionalParams] = useState<TraditionalMorphParams>({
+    horizontalDisplace: 25,
+    starShiftAmount: 6,
+    luminanceBlur: 1.5,
+    contrastBoost: 1.2
+  });
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
@@ -631,12 +644,33 @@ const StarFieldGenerator: React.FC = () => {
         await new Promise(resolve => requestAnimationFrame(resolve)); // Double RAF for stability
         
         // Capture frame from source canvas
-        renderCtx.fillStyle = '#000000';
-        renderCtx.fillRect(0, 0, recordWidth, recordHeight);
-        renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
+        let frameCanvas = renderCanvas;
+        const frameCtx = renderCtx;
+        
+        frameCtx.fillStyle = '#000000';
+        frameCtx.fillRect(0, 0, recordWidth, recordHeight);
+        frameCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
+        
+        // Apply stereoscopic processing if enabled
+        if (enableStereoscopic && starsOnlyImage && starlessImage) {
+          try {
+            const stereoCanvas = await processFrameToStereoscopic(
+              renderCanvas,
+              starsOnlyImage,
+              starlessImage,
+              traditionalParams,
+              stereoSpacing,
+              borderSize
+            );
+            frameCanvas = stereoCanvas;
+          } catch (error) {
+            console.error('Stereoscopic processing error for frame', frameIndex, error);
+            // Continue with non-stereoscopic frame on error
+          }
+        }
         
         // Store frame data
-        const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
+        const frameData = frameCanvas.getContext('2d')!.getImageData(0, 0, frameCanvas.width, frameCanvas.height);
         frames.push(frameData);
         
         // Update progress
@@ -1460,6 +1494,143 @@ const StarFieldGenerator: React.FC = () => {
                   </p>
                 </div>
 
+                {/* Stereoscopic 3D Video Toggle */}
+                <div className="space-y-4 pt-4 border-t border-cosmic-700/30">
+                  <div className="flex items-center justify-between gap-4 p-4 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 hover:border-cosmic-600/50 transition-colors">
+                    <div className="flex-1 space-y-1.5">
+                      <Label htmlFor="enableStereoscopic" className="text-cosmic-100 text-base font-medium cursor-pointer">
+                        {t('Stereoscopic 3D Video', '立体3D视频')}
+                      </Label>
+                      <p className="text-xs text-cosmic-400 leading-relaxed">
+                        {t('Generate side-by-side stereoscopic video with advanced depth processing', '生成具有高级深度处理的并排立体视频')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        id="enableStereoscopic"
+                        checked={enableStereoscopic}
+                        onCheckedChange={setEnableStereoscopic}
+                      />
+                      <span className={`text-sm font-medium ${enableStereoscopic ? 'text-blue-400' : 'text-cosmic-500'}`}>
+                        {enableStereoscopic ? t('Enabled', '已启用') : t('Disabled', '已禁用')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Stereoscopic Settings - Only show when enabled */}
+                  {enableStereoscopic && (
+                    <div className="space-y-4 pl-4 border-l-2 border-cosmic-700/30">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-cosmic-200 text-sm">{t('Nebula Displacement', '星云位移')}</Label>
+                          <span className="text-cosmic-300 text-sm font-semibold">{traditionalParams.horizontalDisplace}px</span>
+                        </div>
+                        <Slider
+                          value={[traditionalParams.horizontalDisplace]}
+                          onValueChange={(value) => setTraditionalParams(prev => ({ ...prev, horizontalDisplace: value[0] }))}
+                          min={5}
+                          max={50}
+                          step={1}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-cosmic-400">
+                          {t('Horizontal displacement for nebula depth', '星云深度的水平位移')}
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-cosmic-200 text-sm">{t('Star Shift', '星体偏移')}</Label>
+                          <span className="text-cosmic-300 text-sm font-semibold">{traditionalParams.starShiftAmount}px</span>
+                        </div>
+                        <Slider
+                          value={[traditionalParams.starShiftAmount]}
+                          onValueChange={(value) => setTraditionalParams(prev => ({ ...prev, starShiftAmount: value[0] }))}
+                          min={1}
+                          max={15}
+                          step={0.5}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-cosmic-400">
+                          {t('Star parallax shift for 3D effect', '星体视差偏移以产生3D效果')}
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-cosmic-200 text-sm">{t('Stereo Spacing', '立体间距')}</Label>
+                          <span className="text-cosmic-300 text-sm font-semibold">{stereoSpacing}px</span>
+                        </div>
+                        <Slider
+                          value={[stereoSpacing]}
+                          onValueChange={(value) => setStereoSpacing(value[0])}
+                          min={0}
+                          max={1200}
+                          step={50}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-cosmic-400">
+                          {t('Spacing between left and right views', '左右视图之间的间距')}
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-cosmic-200 text-sm">{t('Border Size', '边框大小')}</Label>
+                          <span className="text-cosmic-300 text-sm font-semibold">{borderSize}px</span>
+                        </div>
+                        <Slider
+                          value={[borderSize]}
+                          onValueChange={(value) => setBorderSize(value[0])}
+                          min={0}
+                          max={600}
+                          step={50}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-cosmic-400">
+                          {t('Black border around the stereo pair', '立体对周围的黑色边框')}
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-cosmic-200 text-sm">{t('Luminance Blur', '亮度模糊')}</Label>
+                          <span className="text-cosmic-300 text-sm font-semibold">{traditionalParams.luminanceBlur.toFixed(1)}</span>
+                        </div>
+                        <Slider
+                          value={[traditionalParams.luminanceBlur]}
+                          onValueChange={(value) => setTraditionalParams(prev => ({ ...prev, luminanceBlur: value[0] }))}
+                          min={0.5}
+                          max={3.0}
+                          step={0.1}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-cosmic-400">
+                          {t('Smoothness of depth transitions', '深度过渡的平滑度')}
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-cosmic-200 text-sm">{t('Contrast Boost', '对比度增强')}</Label>
+                          <span className="text-cosmic-300 text-sm font-semibold">{traditionalParams.contrastBoost.toFixed(1)}</span>
+                        </div>
+                        <Slider
+                          value={[traditionalParams.contrastBoost]}
+                          onValueChange={(value) => setTraditionalParams(prev => ({ ...prev, contrastBoost: value[0] }))}
+                          min={1.0}
+                          max={2.0}
+                          step={0.1}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-cosmic-400">
+                          {t('Enhance image contrast for depth', '增强图像对比度以产生深度')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-cosmic-200">{t('Duration (seconds)', '持续时间（秒）')}</Label>
@@ -1717,6 +1888,12 @@ const StarFieldGenerator: React.FC = () => {
                   frameRenderTrigger={frameRenderTrigger}
                   externalProgress={animationProgress}
                   depthIntensity={depthIntensity}
+                  stereoscopicSettings={{
+                    enabled: enableStereoscopic,
+                    stereoSpacing,
+                    borderSize,
+                    traditionalParams
+                  }}
                 />
                 
                 {/* Progress Bar and Controls */}

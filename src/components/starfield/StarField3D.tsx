@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { refineStarEdges } from '@/utils/starEdgeRefinement';
+import { TraditionalMorphProcessor, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 
 interface StarData {
   x: number;
@@ -33,6 +34,12 @@ interface StarField3DProps {
   frameRenderTrigger?: number; // Trigger value that changes to force frame render
   externalProgress?: number; // External progress value to detect replay
   depthIntensity?: number; // 0-100 scale for parallax intensity
+  stereoscopicSettings?: {
+    enabled: boolean;
+    stereoSpacing: number;
+    borderSize: number;
+    traditionalParams: TraditionalMorphParams;
+  };
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -49,7 +56,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
   videoProgressRef,
   frameRenderTrigger,
   externalProgress,
-  depthIntensity = 50
+  depthIntensity = 50,
+  stereoscopicSettings
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
