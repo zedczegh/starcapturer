@@ -28,6 +28,8 @@ interface StarField3DProps {
   onProgressUpdate?: (progress: number) => void;
   onAnimationComplete?: () => void;
   controlledProgress?: number; // For precise external control during video recording
+  videoProgressRef?: React.MutableRefObject<number>; // Direct ref for video rendering
+  frameRenderTrigger?: number; // Trigger value that changes to force frame render
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -40,7 +42,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
   onCanvasReady,
   onProgressUpdate,
   onAnimationComplete,
-  controlledProgress
+  controlledProgress,
+  videoProgressRef,
+  frameRenderTrigger
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -442,7 +446,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
   // Animation loop - optimized with cached context and throttled updates
   const animate = useCallback(() => {
-    if (!canvasRef.current || !isAnimating) return;
+    if (!canvasRef.current) return;
+    
+    // During video generation, we don't need isAnimating check
+    const isVideoRendering = videoProgressRef !== undefined;
+    if (!isVideoRendering && !isAnimating) return;
     
     const canvas = canvasRef.current;
     
@@ -460,7 +468,10 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // Use controlled progress if provided (for video recording), otherwise calculate from time
     let progress: number;
     
-    if (controlledProgress !== undefined) {
+    if (videoProgressRef !== undefined) {
+      // Video rendering mode - read directly from ref (bypasses React batching)
+      progress = videoProgressRef.current;
+    } else if (controlledProgress !== undefined) {
       // External control mode - use precise progress value
       progress = controlledProgress;
     } else {
@@ -659,11 +670,22 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // Restore rotation transform
     ctx.restore();
     
-    animationFrameRef.current = requestAnimationFrame(animate);
-  }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete]);
+    // Continue animation loop (unless in video rendering mode where we control it manually)
+    if (!videoProgressRef) {
+      animationFrameRef.current = requestAnimationFrame(animate);
+    }
+  }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete, controlledProgress, videoProgressRef]);
+
+  // Trigger frame rendering when frameRenderTrigger changes (for video generation)
+  useEffect(() => {
+    if (frameRenderTrigger !== undefined && frameRenderTrigger > 0 && videoProgressRef && canvasRef.current) {
+      // In video rendering mode, manually trigger animate for each frame
+      animate();
+    }
+  }, [frameRenderTrigger, videoProgressRef, animate]);
 
   useEffect(() => {
-    if (isAnimating) {
+    if (isAnimating && !videoProgressRef) {
       // Always reset timing refs when animation starts
       animationStartTimeRef.current = 0;
       pausedTimeRef.current = 0;
@@ -684,7 +706,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       if (onProgressUpdate) {
         onProgressUpdate(0);
       }
-      // Start animation loop
+      // Start animation loop (only in normal playback mode, not video rendering)
       animationFrameRef.current = requestAnimationFrame(animate);
     } else {
       // Stop animation loop when paused
@@ -700,7 +722,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         animationFrameRef.current = undefined;
       }
     };
-  }, [isAnimating, animate, onProgressUpdate]);
+  }, [isAnimating, animate, onProgressUpdate, videoProgressRef]);
   
   // Cleanup ImageBitmaps when new layers are created or on unmount
   useEffect(() => {

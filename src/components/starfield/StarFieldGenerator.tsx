@@ -57,6 +57,8 @@ const StarFieldGenerator: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'ready' | 'generating'>('upload');
   const [animationProgress, setAnimationProgress] = useState(0);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const videoProgressRef = useRef<number>(0); // Direct ref for frame-by-frame control
+  const [frameRenderTrigger, setFrameRenderTrigger] = useState(0); // Trigger to force frame render
   const [showFormatDialog, setShowFormatDialog] = useState(false);
   const [videoProgress, setVideoProgress] = useState({ stage: '', percent: 0 });
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
@@ -785,20 +787,23 @@ const StarFieldGenerator: React.FC = () => {
       
       const frames: ImageData[] = [];
       
-      // Enable controlled rendering mode
-      setIsAnimating(true);
+      // Enable controlled rendering mode - stop normal animation
+      setIsAnimating(false);
       
-      // Render each frame precisely by controlling animation progress
+      // Render each frame precisely by controlling animation progress via ref
       for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
         // Calculate exact progress for this frame (0-100)
         const frameProgress = (frameIndex / (totalFrames - 1)) * 100;
         
-        // Set exact animation progress
-        setAnimationProgress(frameProgress);
+        // Set progress directly in ref (bypasses React batching)
+        videoProgressRef.current = frameProgress;
         
-        // Wait for React to update and canvas to render
+        // Trigger a re-render to update the canvas
+        setFrameRenderTrigger(prev => prev + 1);
+        
+        // Wait for rendering to complete
         await new Promise(resolve => requestAnimationFrame(resolve));
-        await new Promise(resolve => setTimeout(resolve, 16)); // Small delay to ensure rendering
+        await new Promise(resolve => requestAnimationFrame(resolve)); // Double RAF for stability
         
         // Capture frame from source canvas
         renderCtx.fillStyle = '#000000';
@@ -1824,7 +1829,9 @@ const StarFieldGenerator: React.FC = () => {
                   onCanvasReady={handleCanvasReady}
                   onProgressUpdate={handleProgressUpdate}
                   onAnimationComplete={handleAnimationComplete}
-                  controlledProgress={isGeneratingVideo ? animationProgress : undefined}
+                  controlledProgress={isGeneratingVideo ? videoProgressRef.current : undefined}
+                  videoProgressRef={isGeneratingVideo ? videoProgressRef : undefined}
+                  frameRenderTrigger={frameRenderTrigger}
                 />
                 
                 {/* Progress Bar and Controls */}
