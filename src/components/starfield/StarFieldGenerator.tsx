@@ -75,6 +75,9 @@ const StarFieldGenerator: React.FC = () => {
     starless: { show: false, progress: 0, fileName: '' }
   });
   
+  // 3D depth intensity control (0-100 scale)
+  const [depthIntensity, setDepthIntensity] = useState<number>(50);
+  
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -423,6 +426,9 @@ const StarFieldGenerator: React.FC = () => {
       const depthCtx = depthMap.getContext('2d')!;
       const depthData = depthCtx.getImageData(0, 0, depthMap.width, depthMap.height);
       
+      // Calculate intensity multiplier (0-100 -> 0.2-2.0)
+      const intensityMultiplier = 0.2 + (depthIntensity / 100) * 1.8;
+      
       const processedStarsData: ProcessedStarData[] = stars.map(star => {
         // Get depth from depth map at star position
         const depthIdx = (Math.floor(star.y) * depthMap.width + Math.floor(star.x)) * 4;
@@ -438,7 +444,7 @@ const StarFieldGenerator: React.FC = () => {
         return {
           x: (star.x - centerX) * scale,
           y: -(star.y - centerY) * scale, // Invert Y for correct orientation
-          z: (depth - 0.5) * 200, // Spread depth from -100 to 100
+          z: (depth - 0.5) * 200 * intensityMultiplier, // Apply intensity to depth range
           brightness: star.brightness,
           size: star.size,
           color3d: `rgb(${star.color.r}, ${star.color.g}, ${star.color.b})`,
@@ -463,7 +469,7 @@ const StarFieldGenerator: React.FC = () => {
       // Trigger cleanup
       MemoryManager.forceGarbageCollection();
     }
-  }, [starsOnlyElement, starlessElement, extractStarPositions, generateDepthMap, t]);
+  }, [starsOnlyElement, starlessElement, extractStarPositions, generateDepthMap, depthIntensity, t]);
 
   const handleCanvasReady = useCallback((canvas: HTMLCanvasElement) => {
     console.log('Canvas ready callback triggered', canvas);
@@ -1173,15 +1179,15 @@ const StarFieldGenerator: React.FC = () => {
         <div className="flex items-center gap-4 bg-cosmic-900/50 border border-cosmic-700/50 rounded-lg p-4">
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${currentStep === 'upload' ? 'bg-blue-500/20 text-blue-300' : (currentStep === 'processing' || currentStep === 'ready' || currentStep === 'generating') ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
             <Upload className="h-4 w-4" />
-            <span className="text-sm">1. Upload Images</span>
+            <span className="text-sm">{t('1. Upload Images', '1. 上传图像')}</span>
           </div>
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${currentStep === 'processing' ? 'bg-blue-500/20 text-blue-300' : currentStep === 'ready' || currentStep === 'generating' ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
             <ImageIcon className="h-4 w-4" />
-            <span className="text-sm">2. Process & Map</span>
+            <span className="text-sm">{t('2. Process & Map', '2. 处理与映射')}</span>
           </div>
           <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${currentStep === 'generating' ? 'bg-blue-500/20 text-blue-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
             <Video className="h-4 w-4" />
-            <span className="text-sm">3. Generate</span>
+            <span className="text-sm">{t('3. Generate', '3. 生成')}</span>
           </div>
         </div>
       </div>
@@ -1211,7 +1217,7 @@ const StarFieldGenerator: React.FC = () => {
                   type="file"
                   accept="image/*,.fits,.fit,.tiff,.tif"
                   onChange={handleStarsOnlyUpload}
-                  className="bg-cosmic-800/50 border-cosmic-700/50 text-white file:bg-cosmic-700 file:text-white file:border-0"
+                  className="bg-cosmic-800/50 border-cosmic-700/50 text-white cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-cosmic-700 file:text-white hover:file:bg-cosmic-600 file:cursor-pointer"
                 />
                 
                 {/* Upload Progress for Stars */}
@@ -1245,7 +1251,7 @@ const StarFieldGenerator: React.FC = () => {
                   type="file"
                   accept="image/*,.fits,.fit,.tiff,.tif"
                   onChange={handleStarlessUpload}
-                  className="bg-cosmic-800/50 border-cosmic-700/50 text-white file:bg-cosmic-700 file:text-white file:border-0"
+                  className="bg-cosmic-800/50 border-cosmic-700/50 text-white cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-cosmic-700 file:text-white hover:file:bg-cosmic-600 file:cursor-pointer"
                 />
                 
                 {/* Upload Progress for Starless */}
@@ -1402,6 +1408,24 @@ const StarFieldGenerator: React.FC = () => {
                   </div>
                   <p className="text-xs text-cosmic-400">
                     {t('Rotation angle during animation (0° = no rotation)', '动画期间的旋转角度（0° = 无旋转）')}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-cosmic-200">{t('3D Intensity', '3D强度')}</Label>
+                    <span className="text-cosmic-300 text-sm font-semibold">{depthIntensity}%</span>
+                  </div>
+                  <Slider
+                    value={[depthIntensity]}
+                    onValueChange={(value) => setDepthIntensity(value[0])}
+                    min={0}
+                    max={100}
+                    step={5}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-cosmic-400">
+                    {t('Controls the depth range of the 3D parallax effect (higher = more dramatic)', '控制3D视差效果的深度范围（越高越戏剧化）')}
                   </p>
                 </div>
 
