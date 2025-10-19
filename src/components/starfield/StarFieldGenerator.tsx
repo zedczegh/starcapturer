@@ -2081,27 +2081,18 @@ const StarFieldGenerator: React.FC = () => {
           </Card>
 
           {/* Stereoscopic 3D Preview - Only show when stereoscopic is enabled and canvas is ready */}
-          {enableStereoscopic && processedStars.length > 0 && (
-            <>
-              {!mainCanvas && (
-                <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                  <p className="text-yellow-500">Waiting for main canvas to initialize...</p>
-                </div>
-              )}
-              {mainCanvas && (
-                <StereoscopicPreview
-                  sourceCanvas={mainCanvas}
-                  starsOnlyImage={starsOnlyImage}
-                  starlessImage={starlessImage}
-                  mainAnimationProgress={animationProgress}
-                  duration={animationSettings.duration}
-                  traditionalParams={traditionalParams}
-                  stereoSpacing={stereoSpacing}
-                  borderSize={borderSize}
-                  language={language}
-                />
-              )}
-            </>
+          {enableStereoscopic && processedStars.length > 0 && mainCanvas && (
+            <StereoscopicPreview
+              sourceCanvas={mainCanvas}
+              starsOnlyImage={starsOnlyImage}
+              starlessImage={starlessImage}
+              mainAnimationProgress={animationProgress}
+              duration={animationSettings.duration}
+              traditionalParams={traditionalParams}
+              stereoSpacing={stereoSpacing}
+              borderSize={borderSize}
+              language={language}
+            />
           )}
         </div>
       </div>
