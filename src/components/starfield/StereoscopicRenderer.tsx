@@ -369,23 +369,50 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
           layer6: rightBitmaps[5]
         });
         
-        // Convert backgrounds to ImageBitmap
-        const leftBgBitmap = await createImageBitmap(result.leftCanvas.getContext('2d')!.createImageData(result.leftCanvas.width, result.leftCanvas.height));
-        const rightBgBitmap = await createImageBitmap(result.rightCanvas.getContext('2d')!.createImageData(result.rightCanvas.width, result.rightCanvas.height));
+        // Extract the background (starless) portions from the stereo pair canvases
+        // The processor already applied the proper horizontal displacement to the backgrounds
+        const extractBackground = async (stereoCanvas: HTMLCanvasElement, starsCanvas: HTMLCanvasElement) => {
+          const bgCanvas = document.createElement('canvas');
+          bgCanvas.width = stereoCanvas.width;
+          bgCanvas.height = stereoCanvas.height;
+          const bgCtx = bgCanvas.getContext('2d')!;
+          
+          // Draw the full stereo view
+          bgCtx.drawImage(stereoCanvas, 0, 0);
+          
+          // Get pixel data
+          const imageData = bgCtx.getImageData(0, 0, bgCanvas.width, bgCanvas.height);
+          const starsCtx = starsCanvas.getContext('2d', { willReadFrequently: true })!;
+          const starsData = starsCtx.getImageData(0, 0, starsCanvas.width, starsCanvas.height);
+          
+          // Remove star pixels to leave only background
+          for (let i = 0; i < imageData.data.length; i += 4) {
+            const starAlpha = starsData.data[i + 3];
+            if (starAlpha > 10) {
+              // This pixel has a star, make it transparent in background
+              imageData.data[i + 3] = 0;
+            }
+          }
+          
+          bgCtx.putImageData(imageData, 0, 0);
+          return bgCanvas;
+        };
         
-        // Actually, we need to extract the background (starless) from the stereo views
-        // For now, use the starless image directly
-        const leftBgCanvas = document.createElement('canvas');
-        leftBgCanvas.width = starlessImg.width;
-        leftBgCanvas.height = starlessImg.height;
-        leftBgCanvas.getContext('2d')!.drawImage(starlessImg, 0, 0);
-        const leftBg = await createImageBitmap(leftBgCanvas);
+        const [leftBgCanvas, rightBgCanvas] = await Promise.all([
+          extractBackground(leftCanvas, starsCanvas),
+          extractBackground(rightCanvas, starsCanvas)
+        ]);
         
-        const rightBgCanvas = document.createElement('canvas');
-        rightBgCanvas.width = starlessImg.width;
-        rightBgCanvas.height = starlessImg.height;
-        rightBgCanvas.getContext('2d')!.drawImage(starlessImg, 0, 0);
-        const rightBg = await createImageBitmap(rightBgCanvas);
+        const leftBg = await createImageBitmap(leftBgCanvas, {
+          premultiplyAlpha: 'premultiply',
+          colorSpaceConversion: 'none',
+          resizeQuality: 'high'
+        });
+        const rightBg = await createImageBitmap(rightBgCanvas, {
+          premultiplyAlpha: 'premultiply',
+          colorSpaceConversion: 'none',
+          resizeQuality: 'high'
+        });
         
         setLeftBackground(leftBg);
         setRightBackground(rightBg);
