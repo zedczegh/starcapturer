@@ -81,13 +81,7 @@ const StarFieldGenerator: React.FC = () => {
   
   // Stereoscopic 3D mode states
   const [stereoscopicMode, setStereoscopicMode] = useState(false);
-  const [stereoParams, setStereoParams] = useState({
-    horizontalDisplace: 25,      // Default from Traditional Morph
-    starShiftAmount: 6,           // Default from Traditional Morph
-    luminanceBlur: 1.5,           // Default from Traditional Morph
-    contrastBoost: 1.2,           // Default from Traditional Morph
-    stereoSpacing: 600            // Default from Traditional Morph
-  });
+  const [stereoSpacing, setStereoSpacing] = useState(600); // Gap between left and right views
   const [stereoAnimating, setStereoAnimating] = useState(false);
   const [stereoProgress, setStereoProgress] = useState(0);
   const [stereoCanvasReady, setStereoCanvasReady] = useState(false);
@@ -1775,88 +1769,6 @@ const StarFieldGenerator: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Stereoscopic Parameters */}
-                  {stereoscopicMode && (
-                    <div className="space-y-4 p-4 bg-cosmic-800/20 rounded-lg border border-blue-500/30">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-sm">{t('Nebula Displacement', '星云位移')}</Label>
-                          <span className="text-cosmic-300 text-sm font-semibold">{stereoParams.horizontalDisplace}px</span>
-                        </div>
-                        <Slider
-                          value={[stereoParams.horizontalDisplace]}
-                          onValueChange={(value) => setStereoParams(prev => ({...prev, horizontalDisplace: value[0]}))}
-                          min={10}
-                          max={50}
-                          step={1}
-                          className="w-full"
-                        />
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-sm">{t('Star Shift Amount', '星点位移量')}</Label>
-                          <span className="text-cosmic-300 text-sm font-semibold">{stereoParams.starShiftAmount}px</span>
-                        </div>
-                        <Slider
-                          value={[stereoParams.starShiftAmount]}
-                          onValueChange={(value) => setStereoParams(prev => ({...prev, starShiftAmount: value[0]}))}
-                          min={0}
-                          max={15}
-                          step={0.5}
-                          className="w-full"
-                        />
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-sm">{t('Depth Map Blur', '深度图模糊')}</Label>
-                          <span className="text-cosmic-300 text-sm font-semibold">{stereoParams.luminanceBlur}px</span>
-                        </div>
-                        <Slider
-                          value={[stereoParams.luminanceBlur]}
-                          onValueChange={(value) => setStereoParams(prev => ({...prev, luminanceBlur: value[0]}))}
-                          min={0}
-                          max={5}
-                          step={0.5}
-                          className="w-full"
-                        />
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-sm">{t('Contrast Boost', '对比度增强')}</Label>
-                          <span className="text-cosmic-300 text-sm font-semibold">{stereoParams.contrastBoost.toFixed(1)}x</span>
-                        </div>
-                        <Slider
-                          value={[stereoParams.contrastBoost * 10]}
-                          onValueChange={(value) => setStereoParams(prev => ({...prev, contrastBoost: value[0] / 10}))}
-                          min={10}
-                          max={20}
-                          step={1}
-                          className="w-full"
-                        />
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-sm">{t('Stereo Spacing', '立体间距')}</Label>
-                          <span className="text-cosmic-300 text-sm font-semibold">{stereoParams.stereoSpacing}px</span>
-                        </div>
-                        <Slider
-                          value={[stereoParams.stereoSpacing]}
-                          onValueChange={(value) => setStereoParams(prev => ({...prev, stereoSpacing: value[0]}))}
-                          min={100}
-                          max={600}
-                          step={50}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-cosmic-400">
-                          {t('Spacing between left and right views in stereo pair', '立体对中左右视图之间的间距')}
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <Button
@@ -2202,7 +2114,8 @@ const StarFieldGenerator: React.FC = () => {
                     spin: animationSettings.spin,
                     spinDirection: animationSettings.spinDirection
                   }}
-                  stereoParams={stereoParams}
+                  stereoSpacing={stereoSpacing}
+                  depthIntensity={depthIntensity}
                   externalProgress={stereoProgress}
                 />
                 
