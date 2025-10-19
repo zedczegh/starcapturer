@@ -328,10 +328,14 @@ const ParallelVideoGenerator: React.FC = () => {
       const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
       leftStarsCtx.drawImage(starsElement, 0, 0);
       
+      console.log('Left stars canvas created:', leftStarsCanvas.width, 'x', leftStarsCanvas.height);
+      
       // RIGHT: Apply displacement to the ORIGINAL uploaded stars (not extracted from composite)
       const starsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
       const starsCtx = starsCanvas.getContext('2d')!;
       starsCtx.drawImage(starsElement, 0, 0);
+      
+      console.log('Stars canvas for displacement:', starsCanvas.width, 'x', starsCanvas.height);
       
       // Apply the SAME displacement to stars that we applied to starless
       const displacedStarsCanvas = await processor.applyOptimizedDisplacement(
@@ -340,9 +344,17 @@ const ParallelVideoGenerator: React.FC = () => {
         horizontalDisplace
       );
       
+      console.log('Displaced stars canvas created:', displacedStarsCanvas.width, 'x', displacedStarsCanvas.height);
+      
       const rightStarsCanvas = canvasPool.acquire(displacedStarsCanvas.width, displacedStarsCanvas.height);
       const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
       rightStarsCtx.drawImage(displacedStarsCanvas, 0, 0);
+      
+      // Verify the canvases have actual pixel data
+      const leftStarsCheck = leftStarsCtx.getImageData(leftStarsCanvas.width/2, leftStarsCanvas.height/2, 1, 1);
+      const rightStarsCheck = rightStarsCtx.getImageData(rightStarsCanvas.width/2, rightStarsCanvas.height/2, 1, 1);
+      console.log('Left stars pixel check:', leftStarsCheck.data[0], leftStarsCheck.data[1], leftStarsCheck.data[2]);
+      console.log('Right stars pixel check:', rightStarsCheck.data[0], rightStarsCheck.data[1], rightStarsCheck.data[2]);
       
       // Step 4: Detect stars for 3D rendering
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
