@@ -87,6 +87,10 @@ const ParallelVideoGenerator: React.FC = () => {
 
   const [depthIntensity, setDepthIntensity] = useState<number>(50);
   const [isAnimating, setIsAnimating] = useState(false);
+  
+  // Video generation control refs
+  const videoProgressRef = useRef<number>(0);
+  const [frameRenderTrigger, setFrameRenderTrigger] = useState(0);
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
 
@@ -465,67 +469,182 @@ const ParallelVideoGenerator: React.FC = () => {
     }
   }, [starlessFile, starsFile, starlessElement, starsElement, horizontalDisplace, starShiftAmount, t, extractStarsFromComposite]);
 
-  // Generate parallel videos
+  // Generate stitched parallel video with frame-by-frame rendering
   const generateParallelVideo = useCallback(async () => {
-    if (!leftCanvasRef.current || !rightCanvasRef.current) {
+    if (!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current) {
       toast.error(t('Canvas not ready', '画布未就绪'));
       return;
     }
 
     setIsGenerating(true);
+    const canvasPool = CanvasPool.getInstance();
     
     try {
-      // Generate left video
-      setVideoProgress({ stage: t('Generating left video...', '生成左侧视频...'), percent: 0 });
-      const leftBlob = await VideoGenerationService.generateVideo({
-        sourceCanvas: leftCanvasRef.current,
-        duration: motionSettings.duration,
-        fps: 30,
-        width: leftCanvasRef.current.width,
-        height: leftCanvasRef.current.height,
-        format: 'webm',
-        onProgress: (progress) => {
-          setVideoProgress({ 
-            stage: t('Generating left video...', '生成左侧视频...'), 
-            percent: progress.percent / 2 
-          });
+      const stitchedCanvas = stitchedCanvasRef.current;
+      const recordWidth = Math.min(stitchedCanvas.width, 1920);
+      const recordHeight = Math.min(stitchedCanvas.height, 1080);
+      
+      // Scale if needed
+      let scale = 1;
+      if (stitchedCanvas.width > 1920 || stitchedCanvas.height > 1080) {
+        scale = Math.min(1920 / stitchedCanvas.width, 1080 / stitchedCanvas.height);
+        console.log(`Scaling stitched canvas by ${scale.toFixed(2)}`);
+      }
+      
+      const fps = 30;
+      const duration = motionSettings.duration;
+      const totalFrames = Math.ceil(duration * fps);
+      
+      console.log(`Rendering ${totalFrames} frames at ${fps}fps for stitched video`);
+      
+      // Create offscreen canvas for rendering
+      const renderCanvas = canvasPool.acquire(recordWidth, recordHeight);
+      const renderCtx = renderCanvas.getContext('2d', {
+        alpha: false,
+        willReadFrequently: false
+      })!;
+      renderCtx.imageSmoothingEnabled = false;
+      
+      // STAGE 1: Pre-render all frames
+      setVideoProgress({ stage: t('Rendering frames...', '渲染帧...'), percent: 0 });
+      console.log('Stage 1: Pre-rendering frames...');
+      
+      const frames: ImageData[] = [];
+      
+      // Stop normal animation
+      setIsAnimating(false);
+      
+      // Render each frame
+      for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+        // Calculate exact progress for this frame (0-100)
+        const frameProgress = (frameIndex / (totalFrames - 1)) * 100;
+        
+        // Set progress directly in ref (bypasses React batching)
+        videoProgressRef.current = frameProgress;
+        
+        // Trigger a re-render to update both canvases
+        setFrameRenderTrigger(prev => prev + 1);
+        
+        // Wait for rendering to complete
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => requestAnimationFrame(resolve)); // Double RAF for stability
+        
+        // Capture frame from stitched canvas
+        renderCtx.fillStyle = '#000000';
+        renderCtx.fillRect(0, 0, recordWidth, recordHeight);
+        renderCtx.drawImage(stitchedCanvas, 0, 0, recordWidth, recordHeight);
+        
+        // Store frame data
+        const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
+        frames.push(frameData);
+        
+        // Update progress
+        const renderProgress = (frameIndex / totalFrames) * 50;
+        setVideoProgress({ 
+          stage: t(`Rendering frames... ${frameIndex + 1}/${totalFrames}`, `渲染帧... ${frameIndex + 1}/${totalFrames}`), 
+          percent: renderProgress 
+        });
+        
+        if ((frameIndex + 1) % 30 === 0) {
+          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames`);
         }
-      });
-
-      // Generate right video
-      setVideoProgress({ stage: t('Generating right video...', '生成右侧视频...'), percent: 50 });
-      const rightBlob = await VideoGenerationService.generateVideo({
-        sourceCanvas: rightCanvasRef.current,
-        duration: motionSettings.duration,
-        fps: 30,
-        width: rightCanvasRef.current.width,
-        height: rightCanvasRef.current.height,
-        format: 'webm',
-        onProgress: (progress) => {
-          setVideoProgress({ 
-            stage: t('Generating right video...', '生成右侧视频...'), 
-            percent: 50 + progress.percent / 2 
-          });
+      }
+      
+      console.log(`✓ All ${frames.length} frames rendered`);
+      
+      // STAGE 2: Encode frames to WebM video
+      setVideoProgress({ stage: t('Encoding video...', '编码视频...'), percent: 50 });
+      console.log('Stage 2: Encoding to WebM...');
+      
+      // Create a temporary canvas for MediaRecorder
+      const encodingCanvas = canvasPool.acquire(recordWidth, recordHeight);
+      const encodingCtx = encodingCanvas.getContext('2d')!;
+      
+      // Set up MediaRecorder
+      const stream = encodingCanvas.captureStream(fps);
+      
+      let mimeType = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm;codecs=vp8';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/webm';
         }
+      }
+      
+      const chunks: Blob[] = [];
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 8000000
       });
-
-      // Download both videos
+      
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+      
+      const videoBlob = await new Promise<Blob>((resolve, reject) => {
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunks, { type: mimeType });
+          resolve(blob);
+        };
+        
+        mediaRecorder.onerror = (e) => {
+          reject(new Error('MediaRecorder error'));
+        };
+        
+        mediaRecorder.start();
+        
+        // Play back frames at correct fps
+        let frameIdx = 0;
+        const frameInterval = 1000 / fps;
+        
+        const playFrames = () => {
+          if (frameIdx >= frames.length) {
+            mediaRecorder.stop();
+            return;
+          }
+          
+          // Draw frame
+          encodingCtx.putImageData(frames[frameIdx], 0, 0);
+          frameIdx++;
+          
+          // Update progress
+          const encodeProgress = 50 + (frameIdx / frames.length) * 45;
+          setVideoProgress({
+            stage: t(`Encoding video... ${frameIdx}/${frames.length}`, `编码视频... ${frameIdx}/${frames.length}`),
+            percent: encodeProgress
+          });
+          
+          setTimeout(playFrames, frameInterval);
+        };
+        
+        playFrames();
+      });
+      
+      console.log('✓ Video encoded successfully');
+      
+      // Download video
       setVideoProgress({ stage: t('Downloading...', '下载中...'), percent: 95 });
-      VideoGenerationService.downloadVideo(leftBlob, `left-view-${Date.now()}.webm`);
-      VideoGenerationService.downloadVideo(rightBlob, `right-view-${Date.now()}.webm`);
-
-      toast.success(t('Videos generated successfully!', '视频生成成功！'));
+      VideoGenerationService.downloadVideo(videoBlob, `parallel-3d-${Date.now()}.webm`);
+      
+      toast.success(t('Video generated successfully!', '视频生成成功！'));
       setVideoProgress({ stage: '', percent: 100 });
+      
+      // Clean up
+      canvasPool.release(renderCanvas);
+      canvasPool.release(encodingCanvas);
+      
     } catch (error) {
       console.error('Video generation error:', error);
-      toast.error(t('Failed to generate videos', '视频生成失败'));
+      toast.error(t('Failed to generate video', '视频生成失败'));
     } finally {
       setIsGenerating(false);
       setTimeout(() => {
         setVideoProgress({ stage: '', percent: 0 });
       }, 2000);
     }
-  }, [leftCanvasRef, rightCanvasRef, motionSettings, t]);
+  }, [leftCanvasRef, rightCanvasRef, stitchedCanvasRef, motionSettings, stereoSpacing, borderSize, t]);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -977,62 +1096,46 @@ const ParallelVideoGenerator: React.FC = () => {
                   {t('Preview', '预览')}
                 </h3>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Left View */}
-                  <div className="space-y-2">
-                    <Label className="text-cosmic-200 text-sm">
-                      {t('Left View', '左视图')}
-                    </Label>
-                    <div className="aspect-video bg-black rounded-lg overflow-hidden border-2 border-cosmic-700 shadow-2xl">
-                      {leftStars.length > 0 ? (
-                        <StarField3D
-                          stars={leftStars}
-                          settings={motionSettings}
-                          isAnimating={isAnimating}
-                          isRecording={false}
-                          backgroundImage={leftBackground}
-                          starsOnlyImage={leftStarsOnly}
-                          depthIntensity={depthIntensity}
-                          onCanvasReady={(canvas) => { 
-                            leftCanvasRef.current = canvas;
-                            console.log('Left canvas ready');
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-cosmic-400">
-                          {t('Waiting...', '等待中...')}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                {/* Hidden Left View - for rendering only */}
+                <div className="hidden">
+                  {leftStars.length > 0 && (
+                    <StarField3D
+                      stars={leftStars}
+                      settings={motionSettings}
+                      isAnimating={isAnimating}
+                      isRecording={false}
+                      backgroundImage={leftBackground}
+                      starsOnlyImage={leftStarsOnly}
+                      depthIntensity={depthIntensity}
+                      videoProgressRef={isGenerating ? videoProgressRef : undefined}
+                      frameRenderTrigger={frameRenderTrigger}
+                      onCanvasReady={(canvas) => { 
+                        leftCanvasRef.current = canvas;
+                        console.log('Left canvas ready');
+                      }}
+                    />
+                  )}
+                </div>
 
-                  {/* Right View */}
-                  <div className="space-y-2">
-                    <Label className="text-cosmic-200 text-sm">
-                      {t('Right View', '右视图')}
-                    </Label>
-                    <div className="aspect-video bg-black rounded-lg overflow-hidden border-2 border-cosmic-700 shadow-2xl">
-                      {rightStars.length > 0 ? (
-                        <StarField3D
-                          stars={rightStars}
-                          settings={motionSettings}
-                          isAnimating={isAnimating}
-                          isRecording={false}
-                          backgroundImage={rightBackground}
-                          starsOnlyImage={rightStarsOnly}
-                          depthIntensity={depthIntensity}
-                          onCanvasReady={(canvas) => { 
-                            rightCanvasRef.current = canvas;
-                            console.log('Right canvas ready');
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-cosmic-400">
-                          {t('Waiting...', '等待中...')}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                {/* Hidden Right View - for rendering only */}
+                <div className="hidden">
+                  {rightStars.length > 0 && (
+                    <StarField3D
+                      stars={rightStars}
+                      settings={motionSettings}
+                      isAnimating={isAnimating}
+                      isRecording={false}
+                      backgroundImage={rightBackground}
+                      starsOnlyImage={rightStarsOnly}
+                      depthIntensity={depthIntensity}
+                      videoProgressRef={isGenerating ? videoProgressRef : undefined}
+                      frameRenderTrigger={frameRenderTrigger}
+                      onCanvasReady={(canvas) => { 
+                        rightCanvasRef.current = canvas;
+                        console.log('Right canvas ready');
+                      }}
+                    />
+                  )}
                 </div>
 
                 {/* Stitched View */}
@@ -1057,7 +1160,7 @@ const ParallelVideoGenerator: React.FC = () => {
                     onClick={() => setIsAnimating(!isAnimating)}
                     className="flex-1 bg-cosmic-800 hover:bg-cosmic-700 border border-cosmic-600"
                     variant="outline"
-                    disabled={!leftCanvasRef.current || !rightCanvasRef.current}
+                    disabled={!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current}
                   >
                     {isAnimating ? (
                       <>
@@ -1079,25 +1182,25 @@ const ParallelVideoGenerator: React.FC = () => {
                     }}
                     className="bg-cosmic-800 hover:bg-cosmic-700 border border-cosmic-600"
                     variant="outline"
-                    disabled={!leftCanvasRef.current || !rightCanvasRef.current}
+                    disabled={!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current}
                   >
                     <RotateCcw className="w-4 h-4" />
                   </Button>
 
                   <Button
                     onClick={generateParallelVideo}
-                    disabled={isGenerating || !leftCanvasRef.current || !rightCanvasRef.current}
+                    disabled={isGenerating || !leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current}
                     className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-blue-500/20"
                   >
                     <Video className="w-4 h-4 mr-2" />
                     {isGenerating 
                       ? `${videoProgress.stage} (${Math.round(videoProgress.percent)}%)` 
-                      : t('Generate Videos', '生成视频')
+                      : t('Generate Video', '生成视频')
                     }
                   </Button>
                 </div>
 
-                {(!leftCanvasRef.current || !rightCanvasRef.current) && (
+                {(!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current) && (
                   <p className="text-sm text-cosmic-400 text-center">
                     {t('Initializing canvas...', '初始化画布中...')}
                   </p>
