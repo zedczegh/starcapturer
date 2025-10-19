@@ -678,7 +678,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     if (stateChanged) {
       if (motionType === 'zoom_in') {
         // Dramatic 3D depth: large stars zoom MUCH faster than small stars
-        offsetsRef.current.background.scale = 1.0 + (progressRatio * parallaxMultipliers.background * ampFactor);
+        offsetsRef.current.background.scale = 1.0 + (progressRatio * parallaxMultipliers.background * ampFactor * 1.5);
         offsetsRef.current.layer6.scale = 1.0 + (progressRatio * parallaxMultipliers.layer6 * ampFactor);
         offsetsRef.current.layer5.scale = 1.0 + (progressRatio * parallaxMultipliers.layer5 * ampFactor);
         offsetsRef.current.layer4.scale = 1.0 + (progressRatio * parallaxMultipliers.layer4 * ampFactor);
@@ -687,7 +687,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer1.scale = 1.0 + (progressRatio * parallaxMultipliers.layer1 * 2.0 * ampFactor);
       } else if (motionType === 'zoom_out') {
         // Dramatic zoom out with depth
-        const bgMax = 1.0 + (parallaxMultipliers.background * ampFactor);
+        const bgMax = 1.0 + (parallaxMultipliers.background * ampFactor * 1.5);
         const layer6Max = 1.0 + (parallaxMultipliers.layer6 * ampFactor);
         const layer5Max = 1.0 + (parallaxMultipliers.layer5 * ampFactor);
         const layer4Max = 1.0 + (parallaxMultipliers.layer4 * ampFactor);
@@ -695,7 +695,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         const layer2Max = 1.0 + (parallaxMultipliers.layer2 * ampFactor);
         const layer1Max = 1.0 + (parallaxMultipliers.layer1 * 2.0 * ampFactor);
         
-        offsetsRef.current.background.scale = bgMax - (progressRatio * parallaxMultipliers.background * ampFactor);
+        offsetsRef.current.background.scale = bgMax - (progressRatio * parallaxMultipliers.background * ampFactor * 1.5);
         offsetsRef.current.layer6.scale = layer6Max - (progressRatio * parallaxMultipliers.layer6 * ampFactor);
         offsetsRef.current.layer5.scale = layer5Max - (progressRatio * parallaxMultipliers.layer5 * ampFactor);
         offsetsRef.current.layer4.scale = layer4Max - (progressRatio * parallaxMultipliers.layer4 * ampFactor);
