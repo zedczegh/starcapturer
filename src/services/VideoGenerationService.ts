@@ -92,7 +92,7 @@ export class VideoGenerationService {
       
       const webmBlob = await encodeFramesToWebM(
         frames,
-        { width, height, fps, duration, bitrate: 8000000 },
+        { width, height, fps, duration, bitrate: 50000000 },
         (progress) => {
           onProgress?.({ stage: 'Encoding to WebM', percent: 40 + progress.percent * 0.3 });
         }
@@ -115,8 +115,8 @@ export class VideoGenerationService {
         await ffmpeg.exec([
           '-i', 'input.webm',
           '-c:v', 'libx264',
-          '-preset', 'medium',
-          '-crf', '23',
+          '-preset', 'slow',
+          '-crf', '15',
           '-pix_fmt', 'yuv420p',
           '-movflags', '+faststart',
           'output.mp4'
