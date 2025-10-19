@@ -293,32 +293,10 @@ const ParallelVideoGenerator: React.FC = () => {
 
       console.log('Stereo pair created - Left:', leftCanvas.width, 'x', leftCanvas.height);
 
-      // Step 3: Extract clean layers - StarField3D needs clean separated layers to apply motion
-      setProcessingStep(t('Extracting clean layers for animation...', '提取清晰图层用于动画...'));
+      // Step 3: Extract stars only - BOTH views use SAME original starless for animation
+      setProcessingStep(t('Extracting stars layers...', '提取星点图层...'));
       
       const canvasPool = CanvasPool.getInstance();
-      
-      // For LEFT view: just use original starless + extract stars from left composite
-      const leftStarsCanvas = canvasPool.acquire(leftCanvas.width, leftCanvas.height);
-      const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
-      
-      // Draw left composite and use screen blend inverse to extract stars
-      leftStarsCtx.drawImage(starlessElement, 0, 0);
-      leftStarsCtx.globalCompositeOperation = 'difference';
-      leftStarsCtx.drawImage(leftCanvas, 0, 0);
-      leftStarsCtx.globalCompositeOperation = 'source-over';
-      
-      // For RIGHT view: Extract morphed starless from right composite
-      // Method: Right composite = morphed starless (screen blend) morphed stars
-      // To extract starless: subtract stars from composite using reverse screen blend math
-      const rightBgCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
-      const rightBgCtx = rightBgCanvas.getContext('2d')!;
-      
-      const rightStarsCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
-      const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
-      
-      // Get data
-      const rightCompositeData = rightCanvas.getContext('2d')!.getImageData(0, 0, rightCanvas.width, rightCanvas.height);
       
       // Create temp canvas for starless data
       const tempCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
@@ -326,44 +304,32 @@ const ParallelVideoGenerator: React.FC = () => {
       tempCtx.drawImage(starlessElement, 0, 0);
       const originalStarlessData = tempCtx.getImageData(0, 0, starlessElement.width, starlessElement.height);
       
-      const rightBgData = rightBgCtx.createImageData(rightCanvas.width, rightCanvas.height);
+      // LEFT: Extract stars from left composite by subtracting starless
+      const leftStarsCanvas = canvasPool.acquire(leftCanvas.width, leftCanvas.height);
+      const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
+      const leftCompositeData = leftCanvas.getContext('2d')!.getImageData(0, 0, leftCanvas.width, leftCanvas.height);
+      const leftStarsData = leftStarsCtx.createImageData(leftCanvas.width, leftCanvas.height);
+      
+      for (let i = 0; i < leftCompositeData.data.length; i += 4) {
+        leftStarsData.data[i] = Math.max(0, leftCompositeData.data[i] - originalStarlessData.data[i]);
+        leftStarsData.data[i + 1] = Math.max(0, leftCompositeData.data[i + 1] - originalStarlessData.data[i + 1]);
+        leftStarsData.data[i + 2] = Math.max(0, leftCompositeData.data[i + 2] - originalStarlessData.data[i + 2]);
+        leftStarsData.data[i + 3] = 255;
+      }
+      leftStarsCtx.putImageData(leftStarsData, 0, 0);
+      
+      // RIGHT: Extract stars from right composite by subtracting starless
+      const rightStarsCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
+      const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
+      const rightCompositeData = rightCanvas.getContext('2d')!.getImageData(0, 0, rightCanvas.width, rightCanvas.height);
       const rightStarsData = rightStarsCtx.createImageData(rightCanvas.width, rightCanvas.height);
       
-      // Inverse screen blend extraction for clean separation
       for (let i = 0; i < rightCompositeData.data.length; i += 4) {
-        const compositeR = rightCompositeData.data[i] / 255;
-        const compositeG = rightCompositeData.data[i + 1] / 255;
-        const compositeB = rightCompositeData.data[i + 2] / 255;
-        
-        const starlessR = originalStarlessData.data[i] / 255;
-        const starlessG = originalStarlessData.data[i + 1] / 255;
-        const starlessB = originalStarlessData.data[i + 2] / 255;
-        
-        // Reverse screen blend: if composite = 1 - (1 - bg) * (1 - stars)
-        // Then: stars = 1 - (1 - composite) / (1 - bg) [when bg < 1]
-        // Simplified: stars = (composite - bg) / (1 - bg) for approximation
-        
-        const starsR = starlessR < 0.99 ? Math.max(0, Math.min(1, (compositeR - starlessR) / (1 - starlessR))) : compositeR - starlessR;
-        const starsG = starlessG < 0.99 ? Math.max(0, Math.min(1, (compositeG - starlessG) / (1 - starlessG))) : compositeG - starlessG;
-        const starsB = starlessB < 0.99 ? Math.max(0, Math.min(1, (compositeB - starlessB) / (1 - starlessB))) : compositeB - starlessB;
-        
-        rightStarsData.data[i] = starsR * 255;
-        rightStarsData.data[i + 1] = starsG * 255;
-        rightStarsData.data[i + 2] = starsB * 255;
+        rightStarsData.data[i] = Math.max(0, rightCompositeData.data[i] - originalStarlessData.data[i]);
+        rightStarsData.data[i + 1] = Math.max(0, rightCompositeData.data[i + 1] - originalStarlessData.data[i + 1]);
+        rightStarsData.data[i + 2] = Math.max(0, rightCompositeData.data[i + 2] - originalStarlessData.data[i + 2]);
         rightStarsData.data[i + 3] = 255;
-        
-        // Background = composite - stars contribution (using screen blend reverse)
-        const bgR = Math.max(0, compositeR - (1 - (1 - starlessR) * (1 - starsR)) + starlessR);
-        const bgG = Math.max(0, compositeG - (1 - (1 - starlessG) * (1 - starsG)) + starlessG);
-        const bgB = Math.max(0, compositeB - (1 - (1 - starlessB) * (1 - starsB)) + starlessB);
-        
-        rightBgData.data[i] = bgR * 255;
-        rightBgData.data[i + 1] = bgG * 255;
-        rightBgData.data[i + 2] = bgB * 255;
-        rightBgData.data[i + 3] = 255;
       }
-      
-      rightBgCtx.putImageData(rightBgData, 0, 0);
       rightStarsCtx.putImageData(rightStarsData, 0, 0);
       
       // Step 4: Detect stars for 3D rendering using depth map from traditional morph
@@ -373,14 +339,14 @@ const ParallelVideoGenerator: React.FC = () => {
 
       console.log('Stars detected - Left:', leftResult.stars.length, 'Right:', rightResult.stars.length);
 
-      // Step 5: Set data EXACTLY like 3D Star Field Generator
-      // LEFT: Original starless + extracted left stars
+      // Step 5: Set data - BOTH use SAME starless, StarField3D will animate it
+      // LEFT: Original starless + left stars
       setLeftBackground(starlessElement.src);
       setLeftStarsOnly(leftStarsCanvas.toDataURL());
       setLeftStars(leftResult.stars);
       
-      // RIGHT: Morphed starless + extracted right stars (ALL from composites - no extra displacement)
-      setRightBackground(rightBgCanvas.toDataURL());
+      // RIGHT: SAME original starless + right stars (stars are displaced, background is not)
+      setRightBackground(starlessElement.src);
       setRightStarsOnly(rightStarsCanvas.toDataURL());
       setRightStars(rightResult.stars);
       
@@ -388,7 +354,6 @@ const ParallelVideoGenerator: React.FC = () => {
       canvasPool.release(tempCanvas);
       canvasPool.release(leftStarsCanvas);
       canvasPool.release(rightStarsCanvas);
-      canvasPool.release(rightBgCanvas);
       processor.dispose();
 
       setIsReady(true);
