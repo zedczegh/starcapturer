@@ -171,49 +171,10 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
         );
         
         console.log('✅ [StereoRenderer] Stereo pair generated with depth map');
-        console.log('🔧 [StereoRenderer] Now creating separate stereo displacements for stars and background');
+        console.log('🔄 [StereoRenderer] FIRST: Separating stars into 6 layers, THEN applying displacement to each layer');
         
-        // Use the generated depth map to create left/right versions of stars and starless
-        // For LEFT view: use originals (no displacement)
-        const leftStarsCanvas = document.createElement('canvas');
-        leftStarsCanvas.width = width;
-        leftStarsCanvas.height = height;
-        leftStarsCanvas.getContext('2d')!.drawImage(starsImg, 0, 0);
-        
-        const leftBgCanvas = document.createElement('canvas');
-        leftBgCanvas.width = width;
-        leftBgCanvas.height = height;
-        leftBgCanvas.getContext('2d')!.drawImage(starlessImg, 0, 0);
-        
-        // For RIGHT view: apply displacement based on depth map
-        const OptimizedDisplacementProcessor = (await import('@/lib/optimizedDisplacement')).OptimizedDisplacementProcessor;
-        
-        // Create depth maps object structure for displacement
-        const depthMaps = {
-          primaryDepth: result.depthMap,
-          structureDepth: result.depthMap, // Use same depth map for all
-          edgeDepth: result.depthMap,
-          combinedDepth: result.depthMap
-        };
-        
-        // Apply displacement to stars-only for right view
-        const rightStarsCanvas = await OptimizedDisplacementProcessor.applyOptimizedDisplacement(
-          leftStarsCanvas,
-          depthMaps,
-          stereoParams.horizontalDisplace,
-          (step, progress) => console.log(`[StereoRenderer] ${step} - ${progress?.toFixed(0)}%`)
-        );
-        
-        // Apply displacement to starless for right view
-        const rightBgCanvas = await OptimizedDisplacementProcessor.applyOptimizedDisplacement(
-          leftBgCanvas,
-          depthMaps,
-          stereoParams.horizontalDisplace,
-          (step, progress) => console.log(`[StereoRenderer] ${step} - ${progress?.toFixed(0)}%`)
-        );
-        
-        console.log('✅ [StereoRenderer] Generated left and right versions of stars and background');
-        console.log('🔄 [StereoRenderer] Separating stars into 6 depth layers for both views');
+        // CORRECT WORKFLOW: Separate stars into layers FIRST, then displace each layer
+        // This prevents artifacts from trying to separate already-displaced (distorted) stars
         
         // Function to separate a stars-only canvas into star layers (matching StarField3D logic)
         const separateIntoLayers = async (starsCanvas: HTMLCanvasElement, viewName: string) => {
@@ -377,21 +338,61 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
             });
           });
           
-          // Convert to ImageBitmaps
-          return Promise.all(
-            refinedCanvases.map(c => createImageBitmap(c, { 
-              premultiplyAlpha: 'premultiply',
-              colorSpaceConversion: 'none',
-              resizeQuality: 'high'
-            }))
-          );
+          // Return refined canvases (not ImageBitmaps yet - we need to displace them first)
+          return refinedCanvases;
         };
         
-        // Separate both left and right stars-only images into layers
-        const [leftBitmaps, rightBitmaps] = await Promise.all([
-          separateIntoLayers(leftStarsCanvas, 'Left'),
-          separateIntoLayers(rightStarsCanvas, 'Right')
-        ]);
+        // Separate stars into 6 layers from the ORIGINAL stars-only image
+        const originalStarsCanvas = document.createElement('canvas');
+        originalStarsCanvas.width = width;
+        originalStarsCanvas.height = height;
+        originalStarsCanvas.getContext('2d')!.drawImage(starsImg, 0, 0);
+        
+        console.log('⚙️ [StereoRenderer] Separating original stars into 6 layers...');
+        const layerCanvases = await separateIntoLayers(originalStarsCanvas, 'Original');
+        
+        console.log('🔧 [StereoRenderer] Now applying displacement to each layer independently for right view');
+        
+        // Prepare displacement processor
+        const OptimizedDisplacementProcessor = (await import('@/lib/optimizedDisplacement')).OptimizedDisplacementProcessor;
+        const depthMaps = {
+          primaryDepth: result.depthMap,
+          structureDepth: result.depthMap,
+          edgeDepth: result.depthMap,
+          combinedDepth: result.depthMap
+        };
+        
+        // For LEFT view: use original separated layers (no displacement)
+        const leftBitmaps = await Promise.all(
+          layerCanvases.map(canvas => createImageBitmap(canvas, {
+            premultiplyAlpha: 'premultiply',
+            colorSpaceConversion: 'none',
+            resizeQuality: 'high'
+          }))
+        );
+        
+        // For RIGHT view: apply displacement to each layer separately
+        console.log('🔄 [StereoRenderer] Applying displacement to 6 star layers...');
+        const rightLayerCanvases = await Promise.all(
+          layerCanvases.map(async (layerCanvas, index) => {
+            console.log(`  Displacing layer ${index + 1}/6...`);
+            // Displacement requires canvas/image, layerCanvas is already a canvas
+            return await OptimizedDisplacementProcessor.applyOptimizedDisplacement(
+              layerCanvas,
+              depthMaps,
+              stereoParams.horizontalDisplace,
+              (step, progress) => {} // Silent progress for layers
+            );
+          })
+        );
+        
+        const rightBitmaps = await Promise.all(
+          rightLayerCanvases.map(canvas => createImageBitmap(canvas, {
+            premultiplyAlpha: 'premultiply',
+            colorSpaceConversion: 'none',
+            resizeQuality: 'high'
+          }))
+        );
         
         setLeftStarLayers({
           layer1: leftBitmaps[0],
@@ -411,7 +412,20 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
           layer6: rightBitmaps[5]
         });
         
-        // Convert backgrounds to ImageBitmaps
+        // Handle backgrounds (apply minimal displacement to starless)
+        const leftBgCanvas = document.createElement('canvas');
+        leftBgCanvas.width = width;
+        leftBgCanvas.height = height;
+        leftBgCanvas.getContext('2d')!.drawImage(starlessImg, 0, 0);
+        
+        console.log('🔄 [StereoRenderer] Applying displacement to background...');
+        const rightBgCanvas = await OptimizedDisplacementProcessor.applyOptimizedDisplacement(
+          leftBgCanvas,
+          depthMaps,
+          stereoParams.horizontalDisplace,
+          (step, progress) => console.log(`[StereoRenderer] ${step} - ${progress?.toFixed(0)}%`)
+        );
+        
         const leftBg = await createImageBitmap(leftBgCanvas);
         const rightBg = await createImageBitmap(rightBgCanvas);
         
@@ -419,7 +433,7 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
         setRightBackground(rightBg);
         setImageDimensions({ width, height });
         
-        console.log('✅ [StereoRenderer] Both views separated into 6 star layers + background');
+        console.log('✅ [StereoRenderer] All layers separated and displaced cleanly - no artifacts!');
         
       } catch (error) {
         console.error('❌ [StereoRenderer] Failed to generate stereo views:', error);
