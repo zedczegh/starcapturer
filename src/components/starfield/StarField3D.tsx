@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { refineStarEdges } from '@/utils/starEdgeRefinement';
-import { TraditionalMorphProcessor, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 
 interface StarData {
   x: number;
@@ -34,14 +33,6 @@ interface StarField3DProps {
   frameRenderTrigger?: number; // Trigger value that changes to force frame render
   externalProgress?: number; // External progress value to detect replay
   depthIntensity?: number; // 0-100 scale for parallax intensity
-  stereoscopicSettings?: {
-    enabled: boolean;
-    stereoSpacing: number;
-    borderSize: number;
-    traditionalParams: TraditionalMorphParams;
-    starsOnlyImage?: string;
-    starlessImage?: string;
-  };
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -58,8 +49,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   videoProgressRef,
   frameRenderTrigger,
   externalProgress,
-  depthIntensity = 50,
-  stereoscopicSettings
+  depthIntensity = 50
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -490,10 +480,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
     if (!canvasRef.current) return;
     
     // During video generation, we don't need isAnimating check
-    // Also skip check if we have layers and this is likely an initial render
     const isVideoRendering = videoProgressRef !== undefined;
-    const hasLayersForInitialRender = (starLayers.layer1 || starLayers.layer2 || starLayers.layer3) && currentProgressRef.current === 0;
-    if (!isVideoRendering && !isAnimating && !hasLayersForInitialRender) return;
+    if (!isVideoRendering && !isAnimating) return;
     
     const canvas = canvasRef.current;
     
@@ -910,20 +898,6 @@ const StarField3D: React.FC<StarField3DProps> = ({
       }
     };
   }, [isAnimating, animate, onProgressUpdate, videoProgressRef]);
-  
-  // Render initial frame when layers become available
-  useEffect(() => {
-    const hasLayers = starLayers.layer1 || starLayers.layer2 || starLayers.layer3 || 
-                     starLayers.layer4 || starLayers.layer5 || starLayers.layer6;
-    
-    if (canvasRef.current && hasLayers && backgroundImg && currentProgressRef.current === 0) {
-      // Always render initial frame when layers are ready, regardless of animation state
-      console.log('Rendering initial frame with layers ready');
-      requestAnimationFrame(() => {
-        animate();
-      });
-    }
-  }, [starLayers.layer1, starLayers.layer2, starLayers.layer3, starLayers.layer4, starLayers.layer5, starLayers.layer6, backgroundImg, animate]);
   
   // Cleanup ImageBitmaps when new layers are created or on unmount
   useEffect(() => {

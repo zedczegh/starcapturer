@@ -12,7 +12,6 @@ import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon } f
 import { useLanguage } from '@/contexts/LanguageContext';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import StarField3D from './StarField3D';
-import StereoscopicPreview from './StereoscopicPreview';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { CanvasPool } from '@/lib/performance/CanvasPool';
@@ -20,8 +19,6 @@ import { MemoryManager } from '@/lib/performance/MemoryManager';
 import { ChunkedProcessor } from '@/lib/performance/ChunkedProcessor';
 import { loadImageFromFile, validateImageFile } from '@/utils/imageProcessingUtils';
 import { captureFrames, encodeFramesToWebM, downloadBlob, calculateRecordingDimensions } from '@/utils/videoEncodingUtils';
-import { TraditionalMorphProcessor, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
-import { processFrameToStereoscopic } from '@/utils/stereoscopicVideoUtils';
 
 interface ProcessedStarData {
   x: number;
@@ -65,7 +62,6 @@ const StarFieldGenerator: React.FC = () => {
   const videoProgressRef = useRef<number>(0); // Direct ref for frame-by-frame control
   const [frameRenderTrigger, setFrameRenderTrigger] = useState(0); // Trigger to force frame render
   const [showFormatDialog, setShowFormatDialog] = useState(false);
-  const [showStereoFormatDialog, setShowStereoFormatDialog] = useState(false);
   const [videoProgress, setVideoProgress] = useState({ stage: '', percent: 0 });
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [mp4Progress, setMp4Progress] = useState(0);
@@ -82,22 +78,9 @@ const StarFieldGenerator: React.FC = () => {
   // 3D depth intensity control (0-100 scale)
   const [depthIntensity, setDepthIntensity] = useState<number>(50);
   
-  // Stereoscopic 3D video settings
-  const [enableStereoscopic, setEnableStereoscopic] = useState(false);
-  const [stereoSpacing, setStereoSpacing] = useState<number>(600);
-  const [borderSize, setBorderSize] = useState<number>(300);
-  const [traditionalParams, setTraditionalParams] = useState<TraditionalMorphParams>({
-    horizontalDisplace: 25,
-    starShiftAmount: 6,
-    luminanceBlur: 1.5,
-    contrastBoost: 1.2
-  });
-  
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const stereoPreviewCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [mainCanvas, setMainCanvas] = useState<HTMLCanvasElement | null>(null); // State to track canvas
   const ffmpegRef = useRef<FFmpeg | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -489,20 +472,13 @@ const StarFieldGenerator: React.FC = () => {
   }, [starsOnlyElement, starlessElement, extractStarPositions, generateDepthMap, depthIntensity, t]);
 
   const handleCanvasReady = useCallback((canvas: HTMLCanvasElement) => {
-    console.log('🎯 Canvas ready callback triggered', {
-      hasCanvas: !!canvas,
-      canvasWidth: canvas?.width,
-      canvasHeight: canvas?.height,
-      hasContext: !!canvas?.getContext('2d')
-    });
+    console.log('Canvas ready callback triggered', canvas);
     if (canvas && canvas.getContext('2d')) {
       canvasRef.current = canvas;
-      setMainCanvas(canvas); // Update state to trigger stereoscopic preview
       setIsCanvasReady(true);
-      setCurrentStep('ready');
-      console.log('✅ Canvas successfully set and ready, dimensions:', canvas.width, 'x', canvas.height);
+      console.log('Canvas successfully set and ready');
     } else {
-      console.error('❌ Canvas is not properly initialized');
+      console.error('Canvas is not properly initialized');
     }
   }, []);
 
@@ -545,14 +521,8 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const initiateDownload = useCallback(() => {
-    if (enableStereoscopic) {
-      // Show stereo format dialog with two options
-      setShowStereoFormatDialog(true);
-    } else {
-      // Normal flow - show regular format dialog
-      setShowFormatDialog(true);
-    }
-  }, [enableStereoscopic]);
+    setShowFormatDialog(true);
+  }, []);
 
   const stopRecording = useCallback(() => {
     if (recordingStopCallbackRef.current) {
@@ -560,8 +530,7 @@ const StarFieldGenerator: React.FC = () => {
     }
   }, []);
 
-  // Download normal WebM video (with optional stereoscopic processing)
-  const downloadVideoWebM = useCallback(async (forceStereoscopic: boolean = false) => {
+  const downloadVideoWebM = useCallback(async () => {
     if (currentStep !== 'ready') {
       return;
     }
@@ -608,26 +577,17 @@ const StarFieldGenerator: React.FC = () => {
       
       console.log('Source canvas:', sourceWidth, 'x', sourceHeight);
       
-      // Calculate dimensions based on stereoscopic mode
+      // Cap resolution at 1920x1080
       let recordWidth = sourceWidth;
       let recordHeight = sourceHeight;
+      const maxWidth = 1920;
+      const maxHeight = 1080;
       
-      if (enableStereoscopic) {
-        // For stereoscopic: double width + spacing + borders
-        recordWidth = (sourceWidth * 2) + stereoSpacing + (borderSize * 2);
-        recordHeight = sourceHeight + (borderSize * 2);
-        console.log(`Stereoscopic mode: ${recordWidth}x${recordHeight}`);
-      } else {
-        // Cap resolution at 1920x1080 for normal mode
-        const maxWidth = 1920;
-        const maxHeight = 1080;
-        
-        if (recordWidth > maxWidth || recordHeight > maxHeight) {
-          const scale = Math.min(maxWidth / recordWidth, maxHeight / recordHeight);
-          recordWidth = Math.round(recordWidth * scale);
-          recordHeight = Math.round(recordHeight * scale);
-          console.log(`Scaled to ${recordWidth}x${recordHeight}`);
-        }
+      if (recordWidth > maxWidth || recordHeight > maxHeight) {
+        const scale = Math.min(maxWidth / recordWidth, maxHeight / recordHeight);
+        recordWidth = Math.round(recordWidth * scale);
+        recordHeight = Math.round(recordHeight * scale);
+        console.log(`Scaled to ${recordWidth}x${recordHeight}`);
       }
       
       const fps = 30;
@@ -646,11 +606,11 @@ const StarFieldGenerator: React.FC = () => {
       
       renderCtx.imageSmoothingEnabled = false;
       
-      // STAGE 1: Pre-render all frames normally (without stereoscopic processing)
+      // STAGE 1: Pre-render all frames with PRECISE progress control
       setVideoProgress({ stage: 'Rendering frames...', percent: 0 });
-      console.log('Stage 1: Pre-rendering normal animation frames...');
+      console.log('Stage 1: Pre-rendering frames with precise control...');
       
-      const normalFrames: ImageData[] = [];
+      const frames: ImageData[] = [];
       
       // Enable controlled rendering mode - stop normal animation
       setIsAnimating(false);
@@ -670,106 +630,37 @@ const StarFieldGenerator: React.FC = () => {
         await new Promise(resolve => requestAnimationFrame(resolve));
         await new Promise(resolve => requestAnimationFrame(resolve)); // Double RAF for stability
         
-        // Capture normal frame from source canvas
+        // Capture frame from source canvas
         renderCtx.fillStyle = '#000000';
         renderCtx.fillRect(0, 0, recordWidth, recordHeight);
         renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
         
         // Store frame data
         const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
-        normalFrames.push(frameData);
+        frames.push(frameData);
         
-        // Update progress (0-40% for normal rendering)
-        const renderProgress = (frameIndex / totalFrames) * 40;
+        // Update progress
+        const renderProgress = (frameIndex / totalFrames) * 50;
         setVideoProgress({ 
           stage: `Rendering frames... ${frameIndex + 1}/${totalFrames}`, 
           percent: renderProgress 
         });
         
         if ((frameIndex + 1) % 30 === 0) {
-          console.log(`Rendered ${frameIndex + 1}/${totalFrames} normal frames (${frameProgress.toFixed(1)}% animation)`);
+          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames (${frameProgress.toFixed(1)}% animation)`);
         }
-      }
-      
-      console.log(`✓ All ${normalFrames.length} normal frames rendered`);
-      
-      // STAGE 2: Apply stereoscopic processing to each frame if enabled
-      let finalFrames = normalFrames;
-      let finalWidth = recordWidth;
-      let finalHeight = recordHeight;
-      
-      if ((enableStereoscopic && forceStereoscopic) && starsOnlyImage && starlessImage) {
-        setVideoProgress({ stage: 'Processing stereoscopic pairs...', percent: 40 });
-        console.log('Stage 2: Processing frames for stereoscopic output...');
-        
-        const stereoFrames: ImageData[] = [];
-        
-        // Calculate stereoscopic dimensions
-        finalWidth = (sourceWidth * 2) + stereoSpacing + (borderSize * 2);
-        finalHeight = sourceHeight + (borderSize * 2);
-        
-        // Create a temporary canvas for each normal frame
-        const tempCanvas = canvasPool.acquire(recordWidth, recordHeight);
-        const tempCtx = tempCanvas.getContext('2d')!;
-        
-        for (let i = 0; i < normalFrames.length; i++) {
-          // Put normal frame data onto temp canvas
-          tempCtx.putImageData(normalFrames[i], 0, 0);
-          
-          try {
-            // Process through stereoscopic processor
-            const stereoCanvas = await processFrameToStereoscopic(
-              tempCanvas,
-              starsOnlyImage,
-              starlessImage,
-              traditionalParams,
-              stereoSpacing,
-              borderSize
-            );
-            
-            // Extract stereo frame data
-            const stereoCtx = stereoCanvas.getContext('2d')!;
-            const stereoFrameData = stereoCtx.getImageData(0, 0, stereoCanvas.width, stereoCanvas.height);
-            stereoFrames.push(stereoFrameData);
-            
-            // Update progress (40-70% for stereoscopic processing)
-            const stereoProgress = 40 + ((i / normalFrames.length) * 30);
-            setVideoProgress({ 
-              stage: `Processing stereo... ${i + 1}/${normalFrames.length}`, 
-              percent: stereoProgress 
-            });
-            
-            if ((i + 1) % 10 === 0) {
-              console.log(`Processed ${i + 1}/${normalFrames.length} stereoscopic frames`);
-            }
-          } catch (error) {
-            console.error(`Error processing stereoscopic frame ${i}:`, error);
-            // Fall back to normal frame with borders
-            const fallbackCanvas = canvasPool.acquire(finalWidth, finalHeight);
-            const fallbackCtx = fallbackCanvas.getContext('2d')!;
-            fallbackCtx.fillStyle = '#000000';
-            fallbackCtx.fillRect(0, 0, finalWidth, finalHeight);
-            fallbackCtx.drawImage(tempCanvas, borderSize, borderSize);
-            const fallbackData = fallbackCtx.getImageData(0, 0, finalWidth, finalHeight);
-            stereoFrames.push(fallbackData);
-            canvasPool.release(fallbackCanvas);
-          }
-        }
-        
-        canvasPool.release(tempCanvas);
-        finalFrames = stereoFrames;
-        console.log(`✓ All ${stereoFrames.length} stereoscopic frames processed`);
       }
       
       // Stop animation
       setIsAnimating(false);
+      console.log(`✓ All ${frames.length} frames rendered with precise timing`);
       
-      // STAGE 3: Encode frames to WebM video
-      setVideoProgress({ stage: 'Encoding video...', percent: 70 });
-      console.log('Stage 3: Encoding to WebM...');
+      // STAGE 2: Encode frames to WebM video
+      setVideoProgress({ stage: 'Encoding video...', percent: 50 });
+      console.log('Stage 2: Encoding to WebM...');
       
-      // Create a temporary canvas for MediaRecorder with final dimensions
-      const encodingCanvas = canvasPool.acquire(finalWidth, finalHeight);
+      // Create a temporary canvas for MediaRecorder
+      const encodingCanvas = canvasPool.acquire(recordWidth, recordHeight);
       const encodingCtx = encodingCanvas.getContext('2d')!;
       
       // Set up MediaRecorder
@@ -806,20 +697,20 @@ const StarFieldGenerator: React.FC = () => {
       
       const playbackPromise = new Promise<void>((resolve) => {
         const playFrame = () => {
-          if (currentFrame >= finalFrames.length) {
+          if (currentFrame >= frames.length) {
             mediaRecorder.stop();
             resolve();
             return;
           }
           
-          // Draw frame with final dimensions
-          encodingCtx.putImageData(finalFrames[currentFrame], 0, 0);
+          // Draw frame
+          encodingCtx.putImageData(frames[currentFrame], 0, 0);
           currentFrame++;
           
-          // Update encoding progress (70-100%)
-          const encodeProgress = 70 + ((currentFrame / finalFrames.length) * 30);
+          // Update encoding progress
+          const encodeProgress = 50 + ((currentFrame / frames.length) * 50);
           setVideoProgress({ 
-            stage: `Encoding... ${currentFrame}/${finalFrames.length}`, 
+            stage: `Encoding... ${currentFrame}/${frames.length}`, 
             percent: encodeProgress 
           });
           
@@ -848,10 +739,7 @@ const StarFieldGenerator: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const filename = (enableStereoscopic && forceStereoscopic)
-        ? `starfield-stereo-${finalWidth}x${finalHeight}-${duration}s-${Date.now()}.webm`
-        : `starfield-${finalWidth}x${finalHeight}-${duration}s-${Date.now()}.webm`;
-      a.download = filename;
+      a.download = `starfield-${recordWidth}x${recordHeight}-${duration}s-${Date.now()}.webm`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1572,143 +1460,6 @@ const StarFieldGenerator: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Stereoscopic 3D Video Toggle */}
-                <div className="space-y-4 pt-4 border-t border-cosmic-700/30">
-                  <div className="flex items-center justify-between gap-4 p-4 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 hover:border-cosmic-600/50 transition-colors">
-                    <div className="flex-1 space-y-1.5">
-                      <Label htmlFor="enableStereoscopic" className="text-cosmic-100 text-base font-medium cursor-pointer">
-                        {t('Stereoscopic 3D Video', '立体3D视频')}
-                      </Label>
-                      <p className="text-xs text-cosmic-400 leading-relaxed">
-                        {t('Generate side-by-side stereoscopic video with advanced depth processing', '生成具有高级深度处理的并排立体视频')}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        id="enableStereoscopic"
-                        checked={enableStereoscopic}
-                        onCheckedChange={setEnableStereoscopic}
-                      />
-                      <span className={`text-sm font-medium ${enableStereoscopic ? 'text-blue-400' : 'text-cosmic-500'}`}>
-                        {enableStereoscopic ? t('Enabled', '已启用') : t('Disabled', '已禁用')}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Stereoscopic Settings - Only show when enabled */}
-                  {enableStereoscopic && (
-                    <div className="space-y-4 pl-4 border-l-2 border-cosmic-700/30">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-sm">{t('Nebula Displacement', '星云位移')}</Label>
-                          <span className="text-cosmic-300 text-sm font-semibold">{traditionalParams.horizontalDisplace}px</span>
-                        </div>
-                        <Slider
-                          value={[traditionalParams.horizontalDisplace]}
-                          onValueChange={(value) => setTraditionalParams(prev => ({ ...prev, horizontalDisplace: value[0] }))}
-                          min={5}
-                          max={50}
-                          step={1}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-cosmic-400">
-                          {t('Horizontal displacement for nebula depth', '星云深度的水平位移')}
-                        </p>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-sm">{t('Star Shift', '星体偏移')}</Label>
-                          <span className="text-cosmic-300 text-sm font-semibold">{traditionalParams.starShiftAmount}px</span>
-                        </div>
-                        <Slider
-                          value={[traditionalParams.starShiftAmount]}
-                          onValueChange={(value) => setTraditionalParams(prev => ({ ...prev, starShiftAmount: value[0] }))}
-                          min={1}
-                          max={15}
-                          step={0.5}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-cosmic-400">
-                          {t('Star parallax shift for 3D effect', '星体视差偏移以产生3D效果')}
-                        </p>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-sm">{t('Stereo Spacing', '立体间距')}</Label>
-                          <span className="text-cosmic-300 text-sm font-semibold">{stereoSpacing}px</span>
-                        </div>
-                        <Slider
-                          value={[stereoSpacing]}
-                          onValueChange={(value) => setStereoSpacing(value[0])}
-                          min={0}
-                          max={1200}
-                          step={50}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-cosmic-400">
-                          {t('Spacing between left and right views', '左右视图之间的间距')}
-                        </p>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-sm">{t('Border Size', '边框大小')}</Label>
-                          <span className="text-cosmic-300 text-sm font-semibold">{borderSize}px</span>
-                        </div>
-                        <Slider
-                          value={[borderSize]}
-                          onValueChange={(value) => setBorderSize(value[0])}
-                          min={0}
-                          max={600}
-                          step={50}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-cosmic-400">
-                          {t('Black border around the stereo pair', '立体对周围的黑色边框')}
-                        </p>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-sm">{t('Luminance Blur', '亮度模糊')}</Label>
-                          <span className="text-cosmic-300 text-sm font-semibold">{traditionalParams.luminanceBlur.toFixed(1)}</span>
-                        </div>
-                        <Slider
-                          value={[traditionalParams.luminanceBlur]}
-                          onValueChange={(value) => setTraditionalParams(prev => ({ ...prev, luminanceBlur: value[0] }))}
-                          min={0.5}
-                          max={3.0}
-                          step={0.1}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-cosmic-400">
-                          {t('Smoothness of depth transitions', '深度过渡的平滑度')}
-                        </p>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-sm">{t('Contrast Boost', '对比度增强')}</Label>
-                          <span className="text-cosmic-300 text-sm font-semibold">{traditionalParams.contrastBoost.toFixed(1)}</span>
-                        </div>
-                        <Slider
-                          value={[traditionalParams.contrastBoost]}
-                          onValueChange={(value) => setTraditionalParams(prev => ({ ...prev, contrastBoost: value[0] }))}
-                          min={1.0}
-                          max={2.0}
-                          step={0.1}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-cosmic-400">
-                          {t('Enhance image contrast for depth', '增强图像对比度以产生深度')}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-cosmic-200">{t('Duration (seconds)', '持续时间（秒）')}</Label>
@@ -1855,7 +1606,7 @@ const StarFieldGenerator: React.FC = () => {
               <Button
                 onClick={() => {
                   setShowFormatDialog(false);
-                  downloadVideoWebM(false);
+                  downloadVideoWebM();
                 }}
                 disabled={isGeneratingVideo}
                 className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
@@ -1863,55 +1614,13 @@ const StarFieldGenerator: React.FC = () => {
                 <Video className="h-4 w-4 mr-2" />
                 {t('WebM (Fast, Browser Native)', 'WebM（快速，浏览器原生）')}
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Stereoscopic Format Selection Dialog */}
-        <Dialog open={showStereoFormatDialog} onOpenChange={setShowStereoFormatDialog}>
-          <DialogContent className="bg-cosmic-900 border-cosmic-700">
-            <DialogHeader>
-              <DialogTitle className="text-white">
-                {t('Choose Stereoscopic Video Mode', '选择立体视频模式')}
-              </DialogTitle>
-              <DialogDescription className="text-cosmic-300">
-                {t('Select whether to render normal or stereoscopic side-by-side video', '选择渲染普通视频还是并排立体视频')}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3 py-4">
-              <Button
-                onClick={() => {
-                  setShowStereoFormatDialog(false);
-                  downloadVideoWebM(false);
-                }}
-                disabled={isGeneratingVideo}
-                className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
-              >
-                <Video className="h-4 w-4 mr-2" />
-                {t('Normal Rendered Video', '普通渲染视频')}
-              </Button>
               
-              <Button
-                onClick={() => {
-                  setShowStereoFormatDialog(false);
-                  downloadVideoWebM(true);
-                }}
-                disabled={isGeneratingVideo}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-              >
-                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                {t('Stereoscopic Rendered Video (Side-by-Side)', '立体渲染视频（并排）')}
-              </Button>
             </div>
           </DialogContent>
         </Dialog>
 
-        {/* Right Panel - 3D Preview and Stereoscopic Preview */}
-        <div className="lg:col-span-2 space-y-24">
-          {/* Main 3D Preview */}
+        {/* Right Panel - 3D Preview */}
+        <div className="lg:col-span-2">
           <Card className="bg-cosmic-900/50 border-cosmic-700/50 h-[600px]">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -2008,17 +1717,9 @@ const StarFieldGenerator: React.FC = () => {
                   frameRenderTrigger={frameRenderTrigger}
                   externalProgress={animationProgress}
                   depthIntensity={depthIntensity}
-                  stereoscopicSettings={enableStereoscopic ? {
-                    enabled: true,
-                    stereoSpacing,
-                    borderSize,
-                    traditionalParams,
-                    starsOnlyImage: starsOnlyImage || '',
-                    starlessImage: starlessImage || ''
-                  } : undefined}
                 />
                 
-                {/* Progress Bar and Controls - Main Preview */}
+                {/* Progress Bar and Controls */}
                 {processedStars.length > 0 && (
                   <div className="space-y-2 px-4 pb-3">
                     {/* Play/Pause and Replay Buttons */}
@@ -2079,21 +1780,6 @@ const StarFieldGenerator: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-
-          {/* Stereoscopic 3D Preview - Only show when stereoscopic is enabled and canvas is ready */}
-          {enableStereoscopic && processedStars.length > 0 && mainCanvas && (
-            <StereoscopicPreview
-              sourceCanvas={mainCanvas}
-              starsOnlyImage={starsOnlyImage}
-              starlessImage={starlessImage}
-              mainAnimationProgress={animationProgress}
-              duration={animationSettings.duration}
-              traditionalParams={traditionalParams}
-              stereoSpacing={stereoSpacing}
-              borderSize={borderSize}
-              language={language}
-            />
-          )}
         </div>
       </div>
     </div>
