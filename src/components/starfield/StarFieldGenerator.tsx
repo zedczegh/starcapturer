@@ -1910,7 +1910,7 @@ const StarFieldGenerator: React.FC = () => {
         </Dialog>
 
         {/* Right Panel - 3D Preview and Stereoscopic Preview */}
-        <div className="lg:col-span-2 space-y-12">
+        <div className="lg:col-span-2 space-y-24">
           {/* Main 3D Preview */}
           <Card className="bg-cosmic-900/50 border-cosmic-700/50 h-[600px]">
             <CardHeader>
