@@ -120,7 +120,7 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
 
     const generateStereoViewsWithLayers = async () => {
       setIsGenerating(true);
-      console.log('🗺️ [StereoRenderer] Generating LEFT and RIGHT stereo views with proper separation');
+      console.log('🗺️ [StereoRenderer] Generating LEFT and RIGHT stereo views using traditional morph');
 
       try {
         const processor = processorRef.current!;
@@ -151,9 +151,9 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
         const starlessFile = new File([starlessBlob], 'starless.png', { type: 'image/png' });
         const starsFile = new File([starsBlob], 'stars.png', { type: 'image/png' });
         
-        console.log('📊 [StereoRenderer] Generating stereo pair with depth map');
+        console.log('📊 [StereoRenderer] Creating stereo pair using traditional morph algorithm with default parameters');
         
-        // Generate stereo pair using traditional morph mode to get depth information
+        // Generate stereo pair using traditional morph - this creates proper left/right composites
         const result = await processor.createTraditionalStereoPair(
           {
             starlessImage: starlessFile,
@@ -170,49 +170,74 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
           }
         );
         
-        console.log('✅ [StereoRenderer] Stereo pair generated with depth map');
-        console.log('🔧 [StereoRenderer] Now creating separate stereo displacements for stars and background');
+        console.log('✅ [StereoRenderer] Traditional morph created left and right composite images');
+        console.log('🔧 [StereoRenderer] Extracting separate stars and backgrounds from composites');
         
-        // Use the generated depth map to create left/right versions of stars and starless
-        // For LEFT view: use originals (no displacement)
-        const leftStarsCanvas = document.createElement('canvas');
-        leftStarsCanvas.width = width;
-        leftStarsCanvas.height = height;
-        leftStarsCanvas.getContext('2d')!.drawImage(starsImg, 0, 0);
+        // The traditional morph gives us:
+        // - leftCanvas: original composite (starless + stars)
+        // - rightCanvas: displaced composite (starless + stars with proper displacement)
         
+        // For LEFT view: use original starless and stars
         const leftBgCanvas = document.createElement('canvas');
         leftBgCanvas.width = width;
         leftBgCanvas.height = height;
         leftBgCanvas.getContext('2d')!.drawImage(starlessImg, 0, 0);
         
-        // For RIGHT view: apply displacement based on depth map
+        const leftStarsCanvas = document.createElement('canvas');
+        leftStarsCanvas.width = width;
+        leftStarsCanvas.height = height;
+        leftStarsCanvas.getContext('2d')!.drawImage(starsImg, 0, 0);
+        
+        // For RIGHT view: extract stars from the displaced composite by subtracting background
+        // The right canvas already has proper displacement applied by traditional morph
+        const rightCompositeCanvas = result.rightCanvas;
+        
+        // Apply displacement to the starless background for right view
         const OptimizedDisplacementProcessor = (await import('@/lib/optimizedDisplacement')).OptimizedDisplacementProcessor;
         
-        // Create depth maps object structure for displacement
         const depthMaps = {
           primaryDepth: result.depthMap,
-          structureDepth: result.depthMap, // Use same depth map for all
+          structureDepth: result.depthMap,
           edgeDepth: result.depthMap,
           combinedDepth: result.depthMap
         };
         
-        // Apply displacement to stars-only for right view
-        const rightStarsCanvas = await OptimizedDisplacementProcessor.applyOptimizedDisplacement(
-          leftStarsCanvas,
-          depthMaps,
-          stereoParams.horizontalDisplace,
-          (step, progress) => console.log(`[StereoRenderer] ${step} - ${progress?.toFixed(0)}%`)
-        );
-        
-        // Apply displacement to starless for right view
+        // Displace the starless background for right view
         const rightBgCanvas = await OptimizedDisplacementProcessor.applyOptimizedDisplacement(
           leftBgCanvas,
           depthMaps,
           stereoParams.horizontalDisplace,
-          (step, progress) => console.log(`[StereoRenderer] ${step} - ${progress?.toFixed(0)}%`)
+          (step, progress) => console.log(`[StereoRenderer] Displacing background - ${step} - ${progress?.toFixed(0)}%`)
         );
         
-        console.log('✅ [StereoRenderer] Generated left and right versions of stars and background');
+        // Extract stars from right composite by removing the displaced background
+        const rightStarsCanvas = document.createElement('canvas');
+        rightStarsCanvas.width = width;
+        rightStarsCanvas.height = height;
+        const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
+        
+        // Draw the composite
+        rightStarsCtx.drawImage(rightCompositeCanvas, 0, 0);
+        
+        // Subtract the displaced background to isolate stars
+        // Use difference blend mode to extract stars
+        const rightCompositeData = rightStarsCtx.getImageData(0, 0, width, height);
+        const rightBgData = rightBgCanvas.getContext('2d')!.getImageData(0, 0, width, height);
+        
+        for (let i = 0; i < rightCompositeData.data.length; i += 4) {
+          const r = Math.max(0, rightCompositeData.data[i] - rightBgData.data[i]);
+          const g = Math.max(0, rightCompositeData.data[i + 1] - rightBgData.data[i + 1]);
+          const b = Math.max(0, rightCompositeData.data[i + 2] - rightBgData.data[i + 2]);
+          
+          // Keep stars (bright pixels after subtraction)
+          rightCompositeData.data[i] = r;
+          rightCompositeData.data[i + 1] = g;
+          rightCompositeData.data[i + 2] = b;
+        }
+        
+        rightStarsCtx.putImageData(rightCompositeData, 0, 0);
+        
+        console.log('✅ [StereoRenderer] Extracted left and right stars and backgrounds');
         console.log('🔄 [StereoRenderer] Separating stars into 6 depth layers for both views');
         
         // Function to separate a stars-only canvas into star layers (matching StarField3D logic)
