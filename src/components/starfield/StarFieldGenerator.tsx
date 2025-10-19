@@ -12,6 +12,7 @@ import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon, Ey
 import { useLanguage } from '@/contexts/LanguageContext';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import StarField3D from './StarField3D';
+import StereoscopicRenderer from './StereoscopicRenderer';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { CanvasPool } from '@/lib/performance/CanvasPool';
@@ -596,6 +597,12 @@ const StarFieldGenerator: React.FC = () => {
     }, 50);
   }, []);
 
+  const handleStereoAnimationComplete = useCallback(() => {
+    console.log('🏁 [Stereo] Stereo animation complete');
+    setStereoAnimating(false);
+    setStereoProgress(100);
+  }, []);
+
   const initiateDownload = useCallback(() => {
     setShowFormatDialog(true);
   }, []);
@@ -839,6 +846,170 @@ const StarFieldGenerator: React.FC = () => {
       setVideoProgress({ stage: '', percent: 0 });
     }
   }, [animationSettings.duration, currentStep]);
+
+  // Download stereoscopic video
+  const downloadStereoVideoWebM = useCallback(async () => {
+    if (!stereoCanvasRef.current || !stereoCanvasReady) {
+      console.error('❌ Stereo canvas not ready');
+      return;
+    }
+
+    setIsGeneratingVideo(true);
+    setIsRecording(true);
+    
+    // Scroll to preview
+    setTimeout(() => {
+      const previewContainer = document.querySelector('[data-stereo-preview]');
+      if (previewContainer) {
+        previewContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+    
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    try {
+      console.log('=== Starting Stereoscopic WebM Generation ===');
+      setVideoProgress({ stage: 'Initializing stereoscopic recording...', percent: 0 });
+      
+      const sourceCanvas = stereoCanvasRef.current;
+      const sourceWidth = sourceCanvas.width;
+      const sourceHeight = sourceCanvas.height;
+      
+      console.log('Stereo canvas:', sourceWidth, 'x', sourceHeight);
+      
+      const fps = 30;
+      const duration = animationSettings.duration;
+      const totalFrames = Math.ceil(duration * fps);
+      
+      console.log(`Rendering ${totalFrames} stereoscopic frames at ${fps}fps`);
+      
+      const canvasPool = CanvasPool.getInstance();
+      
+      // Create rendering canvas
+      const renderCanvas = canvasPool.acquire(sourceWidth, sourceHeight);
+      const renderCtx = renderCanvas.getContext('2d', { alpha: false })!;
+      
+      // Capture frames
+      const frames: ImageData[] = [];
+      
+      for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+        const progress = (frameIndex / totalFrames) * 100;
+        const captureProgress = (progress / 2);
+        
+        setVideoProgress({ 
+          stage: `Rendering stereo frame ${frameIndex + 1}/${totalFrames}`, 
+          percent: captureProgress 
+        });
+        
+        // Temporarily set stereo animation state for this frame
+        setStereoProgress(progress);
+        
+        // Wait for frame to render
+        await new Promise(resolve => setTimeout(resolve, 16));
+        
+        // Copy frame from stereo canvas
+        renderCtx.drawImage(sourceCanvas, 0, 0);
+        const frameData = renderCtx.getImageData(0, 0, sourceWidth, sourceHeight);
+        frames.push(frameData);
+      }
+      
+      console.log(`✓ Captured ${frames.length} stereo frames`);
+      
+      // Reset stereo progress
+      setStereoProgress(0);
+      
+      // Encode to WebM
+      setVideoProgress({ stage: 'Encoding stereoscopic video...', percent: 50 });
+      
+      const encodingCanvas = canvasPool.acquire(sourceWidth, sourceHeight);
+      const encodingCtx = encodingCanvas.getContext('2d', { alpha: false })!;
+      
+      const stream = encodingCanvas.captureStream(fps);
+      
+      const mimeType = 'video/webm;codecs=vp9';
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 8000000
+      });
+      
+      const chunks: Blob[] = [];
+      
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+      
+      mediaRecorder.start();
+      
+      const frameInterval = 1000 / fps;
+      let currentFrame = 0;
+      
+      const playbackPromise = new Promise<void>((resolve) => {
+        const playFrame = () => {
+          if (currentFrame >= frames.length) {
+            mediaRecorder.stop();
+            resolve();
+            return;
+          }
+          
+          encodingCtx.putImageData(frames[currentFrame], 0, 0);
+          currentFrame++;
+          
+          const encodeProgress = 50 + ((currentFrame / frames.length) * 50);
+          setVideoProgress({ 
+            stage: `Encoding stereo... ${currentFrame}/${frames.length}`, 
+            percent: encodeProgress 
+          });
+          
+          setTimeout(playFrame, frameInterval);
+        };
+        
+        playFrame();
+      });
+      
+      await playbackPromise;
+      
+      await new Promise<void>((resolve) => {
+        mediaRecorder.onstop = () => resolve();
+      });
+      
+      stream.getTracks().forEach(track => track.stop());
+      
+      console.log(`✓ Encoding complete, ${chunks.length} chunks`);
+      
+      const blob = new Blob(chunks, { type: mimeType });
+      const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
+      console.log(`✓ Final stereo video: ${sizeMB} MB`);
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `starfield-stereo-${sourceWidth}x${sourceHeight}-${duration}s-${Date.now()}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      canvasPool.release(renderCanvas);
+      canvasPool.release(encodingCanvas);
+      
+      setVideoProgress({ stage: 'Complete!', percent: 100 });
+      setTimeout(() => {
+        setIsGeneratingVideo(false);
+        setIsRecording(false);
+        setVideoProgress({ stage: '', percent: 0 });
+      }, 2000);
+      
+      MemoryManager.forceGarbageCollection();
+      
+    } catch (error) {
+      console.error('Stereo video generation failed:', error);
+      setIsGeneratingVideo(false);
+      setIsRecording(false);
+      setVideoProgress({ stage: '', percent: 0 });
+    }
+  }, [animationSettings.duration, stereoCanvasReady]);
 
   const downloadVideoMP4 = useCallback(async () => {
     if (currentStep !== 'ready') {
@@ -1803,8 +1974,7 @@ const StarFieldGenerator: React.FC = () => {
                   <Button
                     onClick={() => {
                       setShowFormatDialog(false);
-                      // TODO: Implement stereoscopic video generation
-                      console.log('Stereoscopic video download requested');
+                      downloadStereoVideoWebM();
                     }}
                     disabled={isGeneratingVideo}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white"
@@ -1996,7 +2166,7 @@ const StarFieldGenerator: React.FC = () => {
       
       {/* Stereoscopic 3D Preview Section - Completely Separate */}
       {stereoscopicMode && currentStep === 'ready' && processedStars.length > 0 && (
-        <div className="mt-32 pb-12">
+        <div className="mt-32 pb-12" data-stereo-preview>
           <div className="grid grid-cols-1 lg:grid-cols-1">
             <Card className="bg-cosmic-900/50 border-blue-500/50 h-[600px]">
               <CardHeader>
@@ -2009,17 +2179,24 @@ const StarFieldGenerator: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="h-[500px] p-4">
-                <div className="w-full h-full bg-black rounded-lg flex items-center justify-center text-white">
-                  <div className="text-center space-y-4">
-                    <div className="text-6xl">👓</div>
-                    <div className="text-xl font-semibold">
-                      {t('Stereoscopic Preview Coming Soon', '立体预览即将推出')}
-                    </div>
-                    <div className="text-sm text-cosmic-400 max-w-md">
-                      {t('Frame-by-frame stereoscopic rendering with separate left/right views based on depth maps and star patterns', '基于深度图和星点模式的逐帧立体渲染，包含独立的左/右视图')}
-                    </div>
-                  </div>
-                </div>
+                <StereoscopicRenderer
+                  starsOnlyImage={starsOnlyImage}
+                  starlessImage={starlessImage}
+                  isAnimating={stereoAnimating}
+                  onProgressUpdate={(progress) => {
+                    setStereoProgress(progress);
+                    if (progress >= 100) {
+                      handleStereoAnimationComplete();
+                    }
+                  }}
+                  onCanvasReady={(canvas) => {
+                    stereoCanvasRef.current = canvas;
+                    setStereoCanvasReady(true);
+                    console.log('📢 [Stereo] Canvas ready');
+                  }}
+                  animationDuration={animationSettings.duration}
+                  stereoParams={stereoParams}
+                />
                 
                 {/* Stereo Controls - Independent from main preview */}
                 {processedStars.length > 0 && (
