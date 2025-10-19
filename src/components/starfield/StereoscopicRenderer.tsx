@@ -7,6 +7,13 @@ interface StereoscopicRendererProps {
   onProgressUpdate?: (progress: number) => void;
   onCanvasReady?: (canvas: HTMLCanvasElement) => void;
   animationDuration: number;
+  animationSettings: {
+    motionType: 'zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right';
+    speed: number;
+    amplification: number;
+    spin: number;
+    spinDirection: 'clockwise' | 'counterclockwise';
+  };
   stereoParams: {
     horizontalDisplace: number;
     starShiftAmount: number;
@@ -14,6 +21,7 @@ interface StereoscopicRendererProps {
     contrastBoost: number;
     stereoSpacing: number;
   };
+  externalProgress?: number; // For video recording - forces render at specific progress
 }
 
 const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
@@ -23,7 +31,9 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
   onProgressUpdate,
   onCanvasReady,
   animationDuration,
-  stereoParams
+  animationSettings,
+  stereoParams,
+  externalProgress
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>();
@@ -73,7 +83,7 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
   useEffect(() => {
     if (!starlessImg || !starsImg) return;
 
-    console.log('🗺️ [StereoRenderer] Generating depth map and stereo views');
+    console.log('🗺️ [StereoRenderer] Generating depth map and stereo views with current settings');
 
     const width = starlessImg.width;
     const height = starlessImg.height;
@@ -198,7 +208,7 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
     console.log('✅ [StereoRenderer] Stereo views generated successfully');
   }, [starlessImg, starsImg, stereoParams]);
 
-  // Render stereo pair to main canvas
+  // Render stereo pair to main canvas with motion settings applied
   const renderStereoFrame = useCallback((progress: number) => {
     if (!canvasRef.current || !leftView || !rightView) return;
 
@@ -217,26 +227,80 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Apply zoom animation based on progress
-    const zoomFactor = 1 + (progress / 100) * 0.3; // 1.0 to 1.3x zoom
-    const scaledWidth = width * zoomFactor;
-    const scaledHeight = height * zoomFactor;
-    const offsetX = (width - scaledWidth) / 2;
-    const offsetY = (height - scaledHeight) / 2;
+    const { motionType, amplification, spin, spinDirection } = animationSettings;
+    
+    // Calculate motion parameters based on progress
+    const normalizedProgress = progress / 100;
+    
+    // Amplification affects the scale and movement range
+    const amplificationFactor = amplification / 100;
+    
+    // Calculate scale based on motion type and amplification
+    let scaleFactor = 1.0;
+    let panX = 0;
+    let panY = 0;
+    let rotation = 0;
+    
+    if (motionType === 'zoom_in') {
+      // Zoom in: scale from 1.0 to (1.0 + amplificationFactor)
+      scaleFactor = 1.0 + (normalizedProgress * amplificationFactor);
+    } else if (motionType === 'zoom_out') {
+      // Zoom out: scale from (1.0 + amplificationFactor) to 1.0
+      scaleFactor = (1.0 + amplificationFactor) - (normalizedProgress * amplificationFactor);
+    } else if (motionType === 'pan_left') {
+      // Pan left: move from right to left
+      const maxPan = width * amplificationFactor * 0.5;
+      panX = maxPan - (normalizedProgress * maxPan * 2);
+    } else if (motionType === 'pan_right') {
+      // Pan right: move from left to right
+      const maxPan = width * amplificationFactor * 0.5;
+      panX = -maxPan + (normalizedProgress * maxPan * 2);
+    }
+    
+    // Apply spin rotation
+    if (spin > 0) {
+      const spinRadians = (spin * Math.PI) / 180;
+      rotation = spinDirection === 'clockwise' 
+        ? normalizedProgress * spinRadians 
+        : -normalizedProgress * spinRadians;
+    }
 
-    // Draw left view with zoom
-    ctx.save();
-    ctx.translate(0, 0);
-    ctx.drawImage(leftView, offsetX, offsetY, scaledWidth, scaledHeight, 0, 0, width, height);
-    ctx.restore();
+    // Function to draw a view with transformations
+    const drawView = (view: HTMLCanvasElement, targetX: number) => {
+      ctx.save();
+      
+      // Translate to target position
+      ctx.translate(targetX, 0);
+      
+      // Move to center for transformations
+      ctx.translate(width / 2, height / 2);
+      
+      // Apply rotation
+      if (rotation !== 0) {
+        ctx.rotate(rotation);
+      }
+      
+      // Apply scale
+      ctx.scale(scaleFactor, scaleFactor);
+      
+      // Apply pan offset
+      ctx.translate(panX / scaleFactor, panY / scaleFactor);
+      
+      // Draw image centered
+      ctx.drawImage(view, -width / 2, -height / 2, width, height);
+      
+      ctx.restore();
+    };
 
-    // Draw right view with zoom
-    ctx.save();
-    ctx.translate(width + spacing, 0);
-    ctx.drawImage(rightView, offsetX, offsetY, scaledWidth, scaledHeight, 0, 0, width, height);
-    ctx.restore();
+    // Draw left view with motion
+    drawView(leftView, 0);
 
-  }, [leftView, rightView, stereoParams.stereoSpacing]);
+    // Draw right view with motion
+    drawView(rightView, width + spacing);
+
+    console.log(`🎬 [StereoRenderer] Frame rendered - Progress: ${progress.toFixed(1)}%, Scale: ${scaleFactor.toFixed(2)}, Pan: (${panX.toFixed(0)}, ${panY.toFixed(0)}), Rotation: ${(rotation * 180 / Math.PI).toFixed(1)}°`);
+
+  }, [leftView, rightView, stereoParams.stereoSpacing, animationSettings]);
 
   // Animation loop
   const animate = useCallback(() => {
@@ -263,7 +327,7 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
     }
   }, [isAnimating, animationDuration, renderStereoFrame, onProgressUpdate]);
 
-  // Handle animation state changes
+  // Handle animation state changes and render current frame
   useEffect(() => {
     if (isAnimating) {
       if (currentProgressRef.current >= 99.9) {
@@ -280,10 +344,6 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      // Render current frame when paused
-      if (leftView && rightView) {
-        renderStereoFrame(currentProgressRef.current);
-      }
     }
 
     return () => {
@@ -291,7 +351,23 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isAnimating, animate, animationDuration, leftView, rightView, renderStereoFrame]);
+  }, [isAnimating, animate, animationDuration]);
+
+  // Always render current frame when views or settings change
+  useEffect(() => {
+    if (leftView && rightView) {
+      renderStereoFrame(currentProgressRef.current);
+    }
+  }, [leftView, rightView, animationSettings, renderStereoFrame]);
+
+  // Handle external progress updates (for video recording)
+  useEffect(() => {
+    if (externalProgress !== undefined && leftView && rightView) {
+      console.log(`📹 [StereoRenderer] External progress update: ${externalProgress.toFixed(1)}%`);
+      currentProgressRef.current = externalProgress;
+      renderStereoFrame(externalProgress);
+    }
+  }, [externalProgress, leftView, rightView, renderStereoFrame]);
 
   // Notify parent when canvas is ready and render initial frame
   useEffect(() => {

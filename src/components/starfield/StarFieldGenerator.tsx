@@ -901,11 +901,11 @@ const StarFieldGenerator: React.FC = () => {
           percent: captureProgress 
         });
         
-        // Temporarily set stereo animation state for this frame
+        // Force external progress update to trigger stereo renderer
         setStereoProgress(progress);
         
-        // Wait for frame to render
-        await new Promise(resolve => setTimeout(resolve, 16));
+        // Wait for frame to render with motion applied
+        await new Promise(resolve => setTimeout(resolve, 32)); // Give extra time for complex motion
         
         // Copy frame from stereo canvas
         renderCtx.drawImage(sourceCanvas, 0, 0);
@@ -2195,7 +2195,15 @@ const StarFieldGenerator: React.FC = () => {
                     console.log('📢 [Stereo] Canvas ready');
                   }}
                   animationDuration={animationSettings.duration}
+                  animationSettings={{
+                    motionType: animationSettings.motionType,
+                    speed: animationSettings.speed,
+                    amplification: animationSettings.amplification,
+                    spin: animationSettings.spin,
+                    spinDirection: animationSettings.spinDirection
+                  }}
                   stereoParams={stereoParams}
+                  externalProgress={stereoProgress}
                 />
                 
                 {/* Stereo Controls - Independent from main preview */}
