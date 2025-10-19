@@ -783,15 +783,19 @@ export async function separateStarsAndNebula(
 }
 
 /**
- * Create precise star mask for better separation
+ * Create precise star mask for better separation with Gaussian feathering
  */
 function createPreciseStarMask(width: number, height: number, stars: DetectedStar[]): Float32Array {
   const mask = new Float32Array(width * height);
   
   for (const star of stars) {
-    const radius = Math.max(3, star.size * 4);
+    // Increase radius for better feathering
+    const radius = Math.max(5, star.size * 5);
     const centerX = Math.round(star.x);
     const centerY = Math.round(star.y);
+    
+    // Use Gaussian falloff for smoother edges
+    const sigma = radius / 3; // Controls falloff smoothness
     
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
@@ -800,11 +804,15 @@ function createPreciseStarMask(width: number, height: number, stars: DetectedSta
         
         if (x >= 0 && x < width && y >= 0 && y < height) {
           const distance = Math.sqrt(dx * dx + dy * dy);
-          const maskValue = Math.max(0, Math.min(1, 1 - (distance / radius)));
+          
+          // Gaussian falloff for smooth feathering
+          const gaussianFalloff = Math.exp(-(distance * distance) / (2 * sigma * sigma));
+          const maskValue = gaussianFalloff * star.confidence;
+          
           const idx = y * width + x;
           
           // Use maximum mask value for overlapping stars
-          mask[idx] = Math.max(mask[idx], maskValue * star.confidence);
+          mask[idx] = Math.max(mask[idx], maskValue);
         }
       }
     }
@@ -814,48 +822,64 @@ function createPreciseStarMask(width: number, height: number, stars: DetectedSta
 }
 
 /**
- * Render star with realistic Point Spread Function
+ * Render star with realistic Point Spread Function with improved feathering
  */
 function renderStarWithPSF(ctx: CanvasRenderingContext2D, star: DetectedStar) {
   const { x, y, size, color, brightness, type } = star;
   
-  // Create realistic star appearance based on type
+  // Create realistic star appearance based on type with larger halos
   let coreSize = size;
-  let haloSize = size * 2;
+  let midSize = size * 2;
+  let haloSize = size * 4; // Increased for smoother falloff
   
   switch (type) {
     case 'point':
       coreSize = Math.max(0.5, size * 0.8);
-      haloSize = size * 1.5;
+      midSize = size * 1.8;
+      haloSize = size * 3.5;
       break;
     case 'extended':
       coreSize = size;
-      haloSize = size * 2.5;
+      midSize = size * 2.5;
+      haloSize = size * 5;
       break;
     case 'saturated':
       coreSize = size * 1.2;
-      haloSize = size * 3;
+      midSize = size * 3;
+      haloSize = size * 6;
       break;
   }
   
-  // Core brightness
-  const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, coreSize);
   const { r, g, b } = color;
   
+  // Outer halo with extended feathering (draw first, underneath)
+  const outerHaloGradient = ctx.createRadialGradient(x, y, midSize, x, y, haloSize);
+  outerHaloGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness * 0.15})`);
+  outerHaloGradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${brightness * 0.08})`);
+  outerHaloGradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${brightness * 0.03})`);
+  outerHaloGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  
+  ctx.fillStyle = outerHaloGradient;
+  ctx.fillRect(x - haloSize, y - haloSize, haloSize * 2, haloSize * 2);
+  
+  // Mid halo for smooth transition
+  const midHaloGradient = ctx.createRadialGradient(x, y, coreSize, x, y, midSize);
+  midHaloGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness * 0.4})`);
+  midHaloGradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${brightness * 0.25})`);
+  midHaloGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.1})`);
+  
+  ctx.fillStyle = midHaloGradient;
+  ctx.fillRect(x - midSize, y - midSize, midSize * 2, midSize * 2);
+  
+  // Core brightness (on top)
+  const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, coreSize);
   coreGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness})`);
-  coreGradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${brightness * 0.8})`);
-  coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.3})`);
+  coreGradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${brightness * 0.85})`);
+  coreGradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${brightness * 0.6})`);
+  coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.35})`);
   
   ctx.fillStyle = coreGradient;
   ctx.fillRect(x - coreSize, y - coreSize, coreSize * 2, coreSize * 2);
-  
-  // Halo effect
-  const haloGradient = ctx.createRadialGradient(x, y, coreSize, x, y, haloSize);
-  haloGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness * 0.2})`);
-  haloGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  
-  ctx.fillStyle = haloGradient;
-  ctx.fillRect(x - haloSize, y - haloSize, haloSize * 2, haloSize * 2);
   
   // Diffraction spikes for bright stars
   if (brightness > 0.7 && type !== 'point') {

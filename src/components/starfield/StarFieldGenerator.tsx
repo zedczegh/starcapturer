@@ -779,68 +779,57 @@ const StarFieldGenerator: React.FC = () => {
       
       renderCtx.imageSmoothingEnabled = false; // Fast rendering
       
-      // STAGE 1: Pre-render all frames by letting animation run naturally
+      // STAGE 1: Pre-render all frames with precise timing control
       setVideoProgress({ stage: 'Rendering frames...', percent: 0 });
-      console.log('Stage 1: Pre-rendering frames...');
+      console.log('Stage 1: Pre-rendering frames with precise timing...');
       
       const frames: ImageData[] = [];
       
-      // Reset and start animation
-      setAnimationProgress(0);
-      setIsAnimating(true);
+      // Stop any existing animation
+      setIsAnimating(false);
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Wait for animation to initialize
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
+      // Manually control animation progress for precise timing
       const startTime = performance.now();
-      const captureInterval = 1000 / fps; // Time per frame in ms
-      let nextFrameTime = startTime + captureInterval;
-      let frameIndex = 0;
       
-      // Capture frames at precise intervals as animation runs naturally
-      while (frameIndex < totalFrames) {
-        const currentTime = performance.now();
-        const elapsed = currentTime - startTime;
+      for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+        // Calculate exact animation progress for this frame
+        const frameProgress = frameIndex / (totalFrames - 1); // 0 to 1
         
-        // Check if it's time to capture the next frame
-        if (currentTime >= nextFrameTime) {
-          // Capture frame from source canvas
-          renderCtx.fillStyle = '#000000';
-          renderCtx.fillRect(0, 0, recordWidth, recordHeight);
-          renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
-          
-          // Store frame data
-          const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
-          frames.push(frameData);
-          
-          frameIndex++;
-          nextFrameTime = startTime + (frameIndex * captureInterval);
-          
-          // Update progress
-          const renderProgress = (frameIndex / totalFrames) * 50; // First 50% for rendering
-          setVideoProgress({ 
-            stage: `Rendering frames... ${frameIndex}/${totalFrames}`, 
-            percent: renderProgress 
+        // Set animation to exact position for this frame
+        setAnimationProgress(frameProgress);
+        
+        // Wait for React to update and canvas to render
+        await new Promise(resolve => {
+          requestAnimationFrame(() => {
+            // Double RAF to ensure rendering is complete
+            requestAnimationFrame(() => resolve(undefined));
           });
-          
-          if (frameIndex % 30 === 0) {
-            console.log(`Rendered ${frameIndex}/${totalFrames} frames at ${elapsed.toFixed(0)}ms`);
-          }
-        }
+        });
         
-        // Small wait to prevent blocking
-        await new Promise(resolve => requestAnimationFrame(() => resolve(undefined)));
+        // Capture frame from source canvas
+        renderCtx.fillStyle = '#000000';
+        renderCtx.fillRect(0, 0, recordWidth, recordHeight);
+        renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
         
-        // Safety timeout check
-        if (elapsed > (duration * 1000) + 2000) {
-          console.warn('Frame capture timeout, breaking loop');
-          break;
+        // Store frame data
+        const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
+        frames.push(frameData);
+        
+        // Update progress
+        const renderProgress = (frameIndex / totalFrames) * 50; // First 50% for rendering
+        setVideoProgress({ 
+          stage: `Rendering frames... ${frameIndex + 1}/${totalFrames}`, 
+          percent: renderProgress 
+        });
+        
+        if (frameIndex % 30 === 0) {
+          const elapsed = performance.now() - startTime;
+          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames at ${elapsed.toFixed(0)}ms`);
         }
       }
       
-      // Stop animation
-      setIsAnimating(false);
-      console.log(`✓ All ${frames.length} frames rendered`);
+      console.log(`✓ All ${frames.length} frames rendered with precise timing`);
       
       // STAGE 2: Encode frames to WebM video
       setVideoProgress({ stage: 'Encoding video...', percent: 50 });
