@@ -46,6 +46,10 @@ const ParallelVideoGenerator: React.FC = () => {
   const [rightBackground, setRightBackground] = useState<string | null>(null);
   const [leftStarsOnly, setLeftStarsOnly] = useState<string | null>(null);
   const [rightStarsOnly, setRightStarsOnly] = useState<string | null>(null);
+  
+  // Debug: Show intermediate composites
+  const [leftComposite, setLeftComposite] = useState<string | null>(null);
+  const [rightComposite, setRightComposite] = useState<string | null>(null);
 
   // Detected stars for 3D rendering
   const [leftStars, setLeftStars] = useState<StarData[]>([]);
@@ -292,6 +296,10 @@ const ParallelVideoGenerator: React.FC = () => {
       );
 
       console.log('Stereo pair created - Left:', leftCanvas.width, 'x', leftCanvas.height);
+      
+      // DEBUG: Save composites for inspection
+      setLeftComposite(leftCanvas.toDataURL());
+      setRightComposite(rightCanvas.toDataURL());
 
       // Step 2b: NOW apply displacement ONLY to starless background (not the composite)
       setProcessingStep(t('Displacing starless background separately...', '单独位移无星背景...'));
@@ -701,7 +709,58 @@ const ParallelVideoGenerator: React.FC = () => {
 
         {/* Step 2: Motion Settings & Preview */}
         {isReady && (
-          <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
+          <>
+            {/* Debug View: Show all intermediate images */}
+            <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl mb-6">
+              <CardHeader>
+                <CardTitle className="text-xl text-white">Debug: Processed Images</CardTitle>
+                <CardDescription className="text-cosmic-300">
+                  {t('Intermediate results from Traditional Morph', '传统变形的中间结果')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {leftComposite && (
+                    <div className="space-y-2">
+                      <Label className="text-cosmic-200 text-xs">Left Composite</Label>
+                      <img src={leftComposite} alt="Left Composite" className="w-full rounded border border-cosmic-600" />
+                    </div>
+                  )}
+                  {rightComposite && (
+                    <div className="space-y-2">
+                      <Label className="text-cosmic-200 text-xs">Right Composite</Label>
+                      <img src={rightComposite} alt="Right Composite" className="w-full rounded border border-cosmic-600" />
+                    </div>
+                  )}
+                  {leftStarsOnly && (
+                    <div className="space-y-2">
+                      <Label className="text-cosmic-200 text-xs">Left Stars Only</Label>
+                      <img src={leftStarsOnly} alt="Left Stars" className="w-full rounded border border-cosmic-600" />
+                    </div>
+                  )}
+                  {rightStarsOnly && (
+                    <div className="space-y-2">
+                      <Label className="text-cosmic-200 text-xs">Right Stars Only</Label>
+                      <img src={rightStarsOnly} alt="Right Stars" className="w-full rounded border border-cosmic-600" />
+                    </div>
+                  )}
+                  {leftBackground && (
+                    <div className="space-y-2">
+                      <Label className="text-cosmic-200 text-xs">Left Background</Label>
+                      <img src={leftBackground} alt="Left Background" className="w-full rounded border border-cosmic-600" />
+                    </div>
+                  )}
+                  {rightBackground && (
+                    <div className="space-y-2">
+                      <Label className="text-cosmic-200 text-xs">Right Background (Displaced)</Label>
+                      <img src={rightBackground} alt="Right Background" className="w-full rounded border border-cosmic-600" />
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center border border-blue-500/30">
@@ -968,7 +1027,8 @@ const ParallelVideoGenerator: React.FC = () => {
                 )}
               </div>
             </CardContent>
-          </Card>
+            </Card>
+          </>
         )}
       </div>
     </div>
