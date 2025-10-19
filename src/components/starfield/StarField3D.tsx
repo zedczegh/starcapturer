@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { refineStarEdges } from '@/utils/starEdgeRefinement';
 
 interface StarData {
   x: number;
@@ -397,8 +398,31 @@ const StarField3D: React.FC<StarField3DProps> = ({
       mediumCtx.putImageData(mediumData, 0, 0);
       smallCtx.putImageData(smallData, 0, 0);
       
-      // Convert canvases to ImageBitmaps for faster GPU-accelerated rendering
-      // Use optimized settings for better performance with large images
+      console.log('Applying intelligent edge refinement to smooth star edges...');
+      
+      // Apply edge refinement to smooth rough edges from star extraction
+      const refinedLarge = refineStarEdges(largeCanvas, {
+        smoothingRadius: 2,
+        edgeThreshold: 40,
+        preserveCore: true,
+        coreThreshold: 200
+      });
+      
+      const refinedMedium = refineStarEdges(mediumCanvas, {
+        smoothingRadius: 2,
+        edgeThreshold: 35,
+        preserveCore: true,
+        coreThreshold: 180
+      });
+      
+      const refinedSmall = refineStarEdges(smallCanvas, {
+        smoothingRadius: 1,
+        edgeThreshold: 30,
+        preserveCore: true,
+        coreThreshold: 150
+      });
+      
+      // Convert refined canvases to ImageBitmaps for faster GPU-accelerated rendering
       const bitmapOptions: ImageBitmapOptions = {
         premultiplyAlpha: 'premultiply',
         colorSpaceConversion: 'none',
@@ -406,9 +430,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       };
       
       Promise.all([
-        createImageBitmap(largeCanvas, bitmapOptions),
-        createImageBitmap(mediumCanvas, bitmapOptions),
-        createImageBitmap(smallCanvas, bitmapOptions)
+        createImageBitmap(refinedLarge, bitmapOptions),
+        createImageBitmap(refinedMedium, bitmapOptions),
+        createImageBitmap(refinedSmall, bitmapOptions)
       ]).then(([brightBitmap, mediumBitmap, dimBitmap]) => {
         setStarLayers({
           bright: brightBitmap,
@@ -417,7 +441,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         });
         
         const totalTime = (performance.now() - startTime).toFixed(0);
-        console.log(`✓ Star layers ready: ${largeCount} large, ${mediumCount} medium, ${smallCount} small stars (${totalTime}ms total)`);
+        console.log(`✓ Star layers ready with refined edges: ${largeCount} large, ${mediumCount} medium, ${smallCount} small stars (${totalTime}ms total)`);
       });
     };
     
