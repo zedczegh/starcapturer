@@ -293,85 +293,94 @@ const ParallelVideoGenerator: React.FC = () => {
 
       console.log('Stereo pair created - Left:', leftCanvas.width, 'x', leftCanvas.height);
 
-      // Step 3: Recreate depth maps and apply displacement ONLY to starless background
-      setProcessingStep(t('Creating depth maps for starless...', '为无星图像创建深度图...'));
+      // Step 3: Extract layers from composites - NO additional displacement needed!
+      // Traditional morph ALREADY applied all displacement to the composites
+      setProcessingStep(t('Extracting starless and stars layers...', '提取无星和星点图层...'));
       
       const canvasPool = CanvasPool.getInstance();
       
-      // Recreate the depth maps using the processor's method
-      const depthMaps = processor.createAdvancedDepthMap(starlessElement, traditionalParams.luminanceBlur);
+      // Get composite image data
+      const leftCompositeData = leftCanvas.getContext('2d')!.getImageData(0, 0, leftCanvas.width, leftCanvas.height);
+      const rightCompositeData = rightCanvas.getContext('2d')!.getImageData(0, 0, rightCanvas.width, rightCanvas.height);
       
-      // Create clean starless canvas for displacement
-      const starlessCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
-      const starlessCtx = starlessCanvas.getContext('2d')!;
-      starlessCtx.drawImage(starlessElement, 0, 0);
+      // Get original image data for extraction
+      const tempCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
+      const tempCtx = tempCanvas.getContext('2d')!;
+      tempCtx.drawImage(starlessElement, 0, 0);
+      const originalStarlessData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
       
-      // Apply the SAME displacement that was applied to right composite, but ONLY to starless
-      setProcessingStep(t('Displacing starless background...', '位移无星背景...'));
-      const displacedStarlessCanvas = await processor.applyOptimizedDisplacement(
-        starlessCanvas,
-        depthMaps,
-        horizontalDisplace
-      );
+      tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+      tempCtx.drawImage(starsElement, 0, 0);
+      const originalStarsData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
       
-      // Step 4: Extract stars-only from composites by subtracting original starless
-      setProcessingStep(t('Extracting stars layers...', '提取星点图层...'));
-      
-      // LEFT VIEW: Extract stars from left composite
+      // LEFT VIEW: Use original starless, extract stars from left composite
       const leftStarsCanvas = canvasPool.acquire(leftCanvas.width, leftCanvas.height);
       const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
-      
-      const leftCompositeData = leftCanvas.getContext('2d')!.getImageData(0, 0, leftCanvas.width, leftCanvas.height);
-      const starlessData = starlessCanvas.getContext('2d')!.getImageData(0, 0, starlessCanvas.width, starlessCanvas.height);
-      
       const leftStarsData = leftStarsCtx.createImageData(leftCanvas.width, leftCanvas.height);
+      
       for (let i = 0; i < leftCompositeData.data.length; i += 4) {
-        leftStarsData.data[i] = Math.max(0, leftCompositeData.data[i] - starlessData.data[i]);
-        leftStarsData.data[i + 1] = Math.max(0, leftCompositeData.data[i + 1] - starlessData.data[i + 1]);
-        leftStarsData.data[i + 2] = Math.max(0, leftCompositeData.data[i + 2] - starlessData.data[i + 2]);
+        // Extract stars by subtracting original starless from composite
+        leftStarsData.data[i] = Math.max(0, leftCompositeData.data[i] - originalStarlessData.data[i]);
+        leftStarsData.data[i + 1] = Math.max(0, leftCompositeData.data[i + 1] - originalStarlessData.data[i + 1]);
+        leftStarsData.data[i + 2] = Math.max(0, leftCompositeData.data[i + 2] - originalStarlessData.data[i + 2]);
         leftStarsData.data[i + 3] = 255;
       }
       leftStarsCtx.putImageData(leftStarsData, 0, 0);
       
-      // RIGHT VIEW: Extract stars from right composite using DISPLACED starless
+      // RIGHT VIEW: Extract BOTH morphed starless and morphed stars from right composite
       const rightStarsCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
       const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
-      
-      const rightCompositeData = rightCanvas.getContext('2d')!.getImageData(0, 0, rightCanvas.width, rightCanvas.height);
-      const displacedStarlessData = displacedStarlessCanvas.getContext('2d')!.getImageData(0, 0, displacedStarlessCanvas.width, displacedStarlessCanvas.height);
-      
       const rightStarsData = rightStarsCtx.createImageData(rightCanvas.width, rightCanvas.height);
-      for (let i = 0; i < rightCompositeData.data.length; i += 4) {
-        rightStarsData.data[i] = Math.max(0, rightCompositeData.data[i] - displacedStarlessData.data[i]);
-        rightStarsData.data[i + 1] = Math.max(0, rightCompositeData.data[i + 1] - displacedStarlessData.data[i + 1]);
-        rightStarsData.data[i + 2] = Math.max(0, rightCompositeData.data[i + 2] - displacedStarlessData.data[i + 2]);
-        rightStarsData.data[i + 3] = 255;
-      }
-      rightStarsCtx.putImageData(rightStarsData, 0, 0);
       
-      // Step 5: Detect stars for 3D rendering (using depthMap like Star Field Generator)
+      const rightBgCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
+      const rightBgCtx = rightBgCanvas.getContext('2d')!;
+      const rightBgData = rightBgCtx.createImageData(rightCanvas.width, rightCanvas.height);
+      
+      // Extract morphed stars by subtracting original starless from right composite
+      // This gives us the repositioned/morphed stars
+      for (let i = 0; i < rightCompositeData.data.length; i += 4) {
+        const starsR = Math.max(0, rightCompositeData.data[i] - originalStarlessData.data[i]);
+        const starsG = Math.max(0, rightCompositeData.data[i + 1] - originalStarlessData.data[i + 1]);
+        const starsB = Math.max(0, rightCompositeData.data[i + 2] - originalStarlessData.data[i + 2]);
+        
+        rightStarsData.data[i] = starsR;
+        rightStarsData.data[i + 1] = starsG;
+        rightStarsData.data[i + 2] = starsB;
+        rightStarsData.data[i + 3] = 255;
+        
+        // Extract morphed starless by subtracting extracted stars from composite
+        rightBgData.data[i] = Math.max(0, rightCompositeData.data[i] - starsR);
+        rightBgData.data[i + 1] = Math.max(0, rightCompositeData.data[i + 1] - starsG);
+        rightBgData.data[i + 2] = Math.max(0, rightCompositeData.data[i + 2] - starsB);
+        rightBgData.data[i + 3] = 255;
+      }
+      
+      rightStarsCtx.putImageData(rightStarsData, 0, 0);
+      rightBgCtx.putImageData(rightBgData, 0, 0);
+      
+      // Step 4: Detect stars for 3D rendering using depth map from traditional morph
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
       const leftResult = extractStarsFromComposite(leftCanvas, starlessElement, depthMap);
       const rightResult = extractStarsFromComposite(rightCanvas, starlessElement, depthMap);
 
       console.log('Stars detected - Left:', leftResult.stars.length, 'Right:', rightResult.stars.length);
 
-      // Step 6: Set all data EXACTLY like Star Field Generator
-      // LEFT: Original starless + extracted stars
+      // Step 5: Set data EXACTLY like 3D Star Field Generator
+      // LEFT: Original starless + extracted left stars
       setLeftBackground(starlessElement.src);
       setLeftStarsOnly(leftStarsCanvas.toDataURL());
       setLeftStars(leftResult.stars);
       
-      // RIGHT: CLEAN displaced starless + extracted stars
-      setRightBackground(displacedStarlessCanvas.toDataURL());
+      // RIGHT: Morphed starless + extracted right stars (ALL from composites - no extra displacement)
+      setRightBackground(rightBgCanvas.toDataURL());
       setRightStarsOnly(rightStarsCanvas.toDataURL());
       setRightStars(rightResult.stars);
       
       // Cleanup
-      canvasPool.release(starlessCanvas);
-      canvasPool.release(displacedStarlessCanvas);
+      canvasPool.release(tempCanvas);
       canvasPool.release(leftStarsCanvas);
       canvasPool.release(rightStarsCanvas);
+      canvasPool.release(rightBgCanvas);
       processor.dispose();
 
       setIsReady(true);
