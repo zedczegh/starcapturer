@@ -68,9 +68,9 @@ const ParallelVideoGenerator: React.FC = () => {
   const rightCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const stitchedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   
-  // Depth map refs for debug display - all from starless image
-  const primaryDepthRef = useRef<HTMLCanvasElement | null>(null);
-  const combinedDepthRef = useRef<HTMLCanvasElement | null>(null);
+  // Depth map refs for debug display
+  const starlessDepthMapRef = useRef<HTMLCanvasElement | null>(null);
+  const starsDepthMapRef = useRef<HTMLCanvasElement | null>(null);
 
   // Traditional Morph Parameters - matching stereoscope processor exactly
   const [horizontalDisplace, setHorizontalDisplace] = useState<number>(25);
@@ -367,32 +367,33 @@ const ParallelVideoGenerator: React.FC = () => {
       setLeftComposite(leftCanvas.toDataURL());
       setRightComposite(rightCanvas.toDataURL());
 
-      // Step 2b: Create ONE depth map from starless image - this is used for BOTH displacements
-      setProcessingStep(t('Creating depth map from starless image...', '从无星图像创建深度图...'));
+      // Step 2b: Create depth maps and apply displacement separately for starless and stars
+      setProcessingStep(t('Creating depth maps...', '创建深度图...'));
       
       const canvasPool = CanvasPool.getInstance();
       
-      // Create the SINGLE depth map from starless image (represents nebula structure)
-      const depthMaps = processor.createAdvancedDepthMap(starlessElement, traditionalParams.luminanceBlur);
+      // Create depth map for STARLESS image
+      const starlessDepthMaps = processor.createAdvancedDepthMap(starlessElement, traditionalParams.luminanceBlur);
       
-      // Store depth maps for debug display
-      if (primaryDepthRef.current && combinedDepthRef.current) {
-        // Primary depth (luminance-based)
-        primaryDepthRef.current.width = depthMaps.primaryDepth.width;
-        primaryDepthRef.current.height = depthMaps.primaryDepth.height;
-        const primaryCtx = primaryDepthRef.current.getContext('2d')!;
-        primaryCtx.drawImage(depthMaps.primaryDepth, 0, 0);
-        
-        // Combined depth (final depth map used for displacement)
-        combinedDepthRef.current.width = depthMaps.combinedDepth.width;
-        combinedDepthRef.current.height = depthMaps.combinedDepth.height;
-        const combinedCtx = combinedDepthRef.current.getContext('2d')!;
-        combinedCtx.drawImage(depthMaps.combinedDepth, 0, 0);
-        
-        console.log('Depth maps stored for display - Primary and Combined');
+      // Create depth map for STARS image
+      const starsDepthMaps = processor.createAdvancedDepthMap(starsElement, traditionalParams.luminanceBlur);
+      
+      // Store depth maps for debug display (combined depth maps)
+      if (starlessDepthMapRef.current) {
+        starlessDepthMapRef.current.width = starlessDepthMaps.combinedDepth.width;
+        starlessDepthMapRef.current.height = starlessDepthMaps.combinedDepth.height;
+        const starlessDepthCtx = starlessDepthMapRef.current.getContext('2d')!;
+        starlessDepthCtx.drawImage(starlessDepthMaps.combinedDepth, 0, 0);
       }
       
-      // Apply displacement to starless using the depth map
+      if (starsDepthMapRef.current) {
+        starsDepthMapRef.current.width = starsDepthMaps.combinedDepth.width;
+        starsDepthMapRef.current.height = starsDepthMaps.combinedDepth.height;
+        const starsDepthCtx = starsDepthMapRef.current.getContext('2d')!;
+        starsDepthCtx.drawImage(starsDepthMaps.combinedDepth, 0, 0);
+      }
+      
+      // Apply displacement to starless using starless depth map
       setProcessingStep(t('Displacing starless background...', '位移无星背景...'));
       const starlessCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
       const starlessCtx = starlessCanvas.getContext('2d')!;
@@ -400,13 +401,11 @@ const ParallelVideoGenerator: React.FC = () => {
       
       const displacedStarlessCanvas = await processor.applyOptimizedDisplacement(
         starlessCanvas,
-        depthMaps,
+        starlessDepthMaps,
         horizontalDisplace
       );
-      
-      console.log('Starless displacement complete - amount:', horizontalDisplace);
 
-      // Step 3: Displace stars using the SAME depth map (from starless), but with different amount
+      // Step 3: Process stars WITH depth-based displacement using STARS depth map
       setProcessingStep(t('Applying depth-based star displacement...', '应用基于深度的星点位移...'));
       
       // LEFT: Use original uploaded stars as-is (no processing)
@@ -416,20 +415,20 @@ const ParallelVideoGenerator: React.FC = () => {
       
       console.log('Left stars canvas created:', leftStarsCanvas.width, 'x', leftStarsCanvas.height);
       
-      // RIGHT: Apply displacement using the SAME depth map from starless, but amplified amount
+      // RIGHT: Apply DEPTH-BASED displacement to stars using STARS depth map
       const starsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
       const starsCtx = starsCanvas.getContext('2d')!;
       starsCtx.drawImage(starsElement, 0, 0);
       
       console.log('Stars canvas for displacement:', starsCanvas.width, 'x', starsCanvas.height);
       
-      // Apply displacement using SAME depth map but different amount
-      const starDisplacementAmount = horizontalDisplace * (starShiftAmount / 6);
-      console.log(`Star displacement: ${starDisplacementAmount}px using SAME depth map as starless (base: ${horizontalDisplace}px × ${starShiftAmount/6})`);
+      // Apply displacement to stars using STARS depth map (multiply by starShiftAmount factor)
+      const starDisplacementAmount = horizontalDisplace * (starShiftAmount / 6); // Scale relative to default
+      console.log(`Applying star displacement: ${starDisplacementAmount}px using stars depth map (base: ${horizontalDisplace}px, multiplier: ${starShiftAmount / 6})`);
       
       const displacedStarsCanvas = await processor.applyOptimizedDisplacement(
         starsCanvas,
-        depthMaps, // SAME depth map as starless!
+        starsDepthMaps,
         starDisplacementAmount
       );
       
@@ -439,7 +438,12 @@ const ParallelVideoGenerator: React.FC = () => {
       const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
       rightStarsCtx.drawImage(displacedStarsCanvas, 0, 0);
       
-      console.log('✓ Star displacement complete - using same depth map with amplified amount for depth separation');
+      // Verify the canvases have actual pixel data
+      const leftStarsCheck = leftStarsCtx.getImageData(leftStarsCanvas.width/2, leftStarsCanvas.height/2, 1, 1);
+      const rightStarsCheck = rightStarsCtx.getImageData(rightStarsCanvas.width/2, rightStarsCanvas.height/2, 1, 1);
+      console.log('Left stars pixel check:', leftStarsCheck.data[0], leftStarsCheck.data[1], leftStarsCheck.data[2]);
+      console.log('Right stars pixel check:', rightStarsCheck.data[0], rightStarsCheck.data[1], rightStarsCheck.data[2]);
+      console.log('Star displacement applied using stars depth map - stars should now show depth separation');
       
       // Step 4: Detect stars for 3D rendering
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
@@ -966,47 +970,35 @@ const ParallelVideoGenerator: React.FC = () => {
                   )}
                 </div>
                 
-                {/* Depth Maps - showing actual depth maps from starless image */}
+                {/* Depth Maps - 2 depth maps used for displacement */}
                 <div className="mt-6 space-y-2">
                   <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                     <Eye className="w-5 h-5 text-purple-400" />
-                    {t('Depth Maps (From Starless Image)', '深度图（来自无星图像）')}
+                    {t('Depth Maps Used for Displacement', '用于位移的深度图')}
                   </h3>
                   <p className="text-xs text-cosmic-400">
-                    {t(
-                      'Generated from starless nebula - this SAME depth map is used for BOTH starless and stars displacement (brighter = more displacement)',
-                      '从无星星云生成 - 这个相同的深度图用于无星和星点的位移（更亮 = 更多位移）'
-                    )}
+                    {t('Brighter areas = more displacement', '较亮区域 = 更多位移')}
                   </p>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-cosmic-200 text-xs">{t('Primary Depth (Luminance)', '主要深度（亮度）')}</Label>
+                      <Label className="text-cosmic-200 text-xs">{t('Starless Depth Map', '无星深度图')}</Label>
                       <div className="bg-black rounded-lg overflow-hidden border-2 border-purple-500 shadow-lg">
                         <canvas 
-                          ref={primaryDepthRef} 
+                          ref={starlessDepthMapRef} 
                           className="w-full h-auto"
                           style={{ imageRendering: 'pixelated' }}
                         />
                       </div>
-                      <p className="text-xs text-cosmic-400">
-                        {t('Based on nebula luminance', '基于星云亮度')}
-                      </p>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-cosmic-200 text-xs">{t('Combined Depth (Used for Displacement)', '综合深度（用于位移）')}</Label>
+                      <Label className="text-cosmic-200 text-xs">{t('Stars Depth Map', '星点深度图')}</Label>
                       <div className="bg-black rounded-lg overflow-hidden border-2 border-purple-500 shadow-lg">
                         <canvas 
-                          ref={combinedDepthRef} 
+                          ref={starsDepthMapRef} 
                           className="w-full h-auto"
                           style={{ imageRendering: 'pixelated' }}
                         />
                       </div>
-                      <p className="text-xs text-cosmic-400">
-                        {t(
-                          'Final depth map - used for both layers with different amounts',
-                          '最终深度图 - 以不同量用于两个图层'
-                        )}
-                      </p>
                     </div>
                   </div>
                 </div>
