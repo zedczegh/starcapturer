@@ -94,64 +94,62 @@ const ParallelVideoGenerator: React.FC = () => {
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
 
-  // Stitch left and right canvases together based on stereo spacing and border size
-  useEffect(() => {
+  // Function to stitch left and right canvases together
+  const stitchCanvases = useCallback(() => {
     if (!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current) return;
 
-    const stitchCanvases = () => {
-      const leftCanvas = leftCanvasRef.current!;
-      const rightCanvas = rightCanvasRef.current!;
-      const stitchedCanvas = stitchedCanvasRef.current!;
+    const leftCanvas = leftCanvasRef.current;
+    const rightCanvas = rightCanvasRef.current;
+    const stitchedCanvas = stitchedCanvasRef.current;
 
-      // Calculate dimensions
-      const viewWidth = leftCanvas.width;
-      const viewHeight = leftCanvas.height;
-      const totalWidth = viewWidth * 2 + stereoSpacing + borderSize * 2;
-      const totalHeight = viewHeight + borderSize * 2;
+    // Calculate dimensions
+    const viewWidth = leftCanvas.width;
+    const viewHeight = leftCanvas.height;
+    const totalWidth = viewWidth * 2 + stereoSpacing + borderSize * 2;
+    const totalHeight = viewHeight + borderSize * 2;
 
-      // Set stitched canvas size
-      if (stitchedCanvas.width !== totalWidth || stitchedCanvas.height !== totalHeight) {
-        stitchedCanvas.width = totalWidth;
-        stitchedCanvas.height = totalHeight;
-      }
+    // Set stitched canvas size
+    if (stitchedCanvas.width !== totalWidth || stitchedCanvas.height !== totalHeight) {
+      stitchedCanvas.width = totalWidth;
+      stitchedCanvas.height = totalHeight;
+    }
 
-      const ctx = stitchedCanvas.getContext('2d');
-      if (!ctx) return;
+    const ctx = stitchedCanvas.getContext('2d');
+    if (!ctx) return;
 
-      // Clear with black background
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, totalWidth, totalHeight);
+    // Clear with black background
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, totalWidth, totalHeight);
 
-      // Draw left view
-      ctx.drawImage(
-        leftCanvas,
-        borderSize,
-        borderSize,
-        viewWidth,
-        viewHeight
-      );
+    // Draw left view
+    ctx.drawImage(
+      leftCanvas,
+      borderSize,
+      borderSize,
+      viewWidth,
+      viewHeight
+    );
 
-      // Draw right view
-      ctx.drawImage(
-        rightCanvas,
-        borderSize + viewWidth + stereoSpacing,
-        borderSize,
-        viewWidth,
-        viewHeight
-      );
-    };
+    // Draw right view
+    ctx.drawImage(
+      rightCanvas,
+      borderSize + viewWidth + stereoSpacing,
+      borderSize,
+      viewWidth,
+      viewHeight
+    );
+  }, [stereoSpacing, borderSize]);
 
-    stitchCanvases();
+  // Stitch canvases together during normal animation
+  useEffect(() => {
+    if (!isAnimating || isGenerating) return;
 
-    // Re-stitch when animation updates
     const interval = setInterval(() => {
-      if (isAnimating) {
-        stitchCanvases();
-      }
+      stitchCanvases();
     }, 33); // ~30fps
 
     return () => clearInterval(interval);
-  }, [leftCanvasRef.current, rightCanvasRef.current, stereoSpacing, borderSize, isAnimating]);
+  }, [isAnimating, isGenerating, stitchCanvases]);
 
   // Unified image upload handler from StarFieldGenerator
   const handleImageUpload = useCallback(async (
@@ -525,9 +523,16 @@ const ParallelVideoGenerator: React.FC = () => {
         // Trigger a re-render to update both canvases
         setFrameRenderTrigger(prev => prev + 1);
         
-        // Wait for rendering to complete
+        // Wait for rendering to complete - triple RAF for stability
         await new Promise(resolve => requestAnimationFrame(resolve));
-        await new Promise(resolve => requestAnimationFrame(resolve)); // Double RAF for stability
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        
+        // CRITICAL: Stitch the canvases together AFTER both views have rendered
+        stitchCanvases();
+        
+        // Wait one more frame for stitching to complete
+        await new Promise(resolve => requestAnimationFrame(resolve));
         
         // Capture frame from stitched canvas
         renderCtx.fillStyle = '#000000';
@@ -546,7 +551,7 @@ const ParallelVideoGenerator: React.FC = () => {
         });
         
         if ((frameIndex + 1) % 30 === 0) {
-          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames`);
+          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames (${frameProgress.toFixed(1)}% animation)`);
         }
       }
       
@@ -1096,8 +1101,8 @@ const ParallelVideoGenerator: React.FC = () => {
                   {t('Preview', '预览')}
                 </h3>
 
-                {/* Hidden Left View - for rendering only */}
-                <div className="hidden">
+                {/* Hidden Left View - for rendering only (must be rendered, not display:none) */}
+                <div style={{ position: 'absolute', left: '-9999px', top: '0' }}>
                   {leftStars.length > 0 && (
                     <StarField3D
                       stars={leftStars}
@@ -1117,8 +1122,8 @@ const ParallelVideoGenerator: React.FC = () => {
                   )}
                 </div>
 
-                {/* Hidden Right View - for rendering only */}
-                <div className="hidden">
+                {/* Hidden Right View - for rendering only (must be rendered, not display:none) */}
+                <div style={{ position: 'absolute', left: '-9999px', top: '0' }}>
                   {rightStars.length > 0 && (
                     <StarField3D
                       stars={rightStars}
