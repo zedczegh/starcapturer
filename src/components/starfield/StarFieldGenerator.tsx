@@ -65,6 +65,7 @@ const StarFieldGenerator: React.FC = () => {
   const videoProgressRef = useRef<number>(0); // Direct ref for frame-by-frame control
   const [frameRenderTrigger, setFrameRenderTrigger] = useState(0); // Trigger to force frame render
   const [showFormatDialog, setShowFormatDialog] = useState(false);
+  const [showStereoFormatDialog, setShowStereoFormatDialog] = useState(false);
   const [videoProgress, setVideoProgress] = useState({ stage: '', percent: 0 });
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [mp4Progress, setMp4Progress] = useState(0);
@@ -536,8 +537,14 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const initiateDownload = useCallback(() => {
-    setShowFormatDialog(true);
-  }, []);
+    if (enableStereoscopic) {
+      // Show stereo format dialog with two options
+      setShowStereoFormatDialog(true);
+    } else {
+      // Normal flow - show regular format dialog
+      setShowFormatDialog(true);
+    }
+  }, [enableStereoscopic]);
 
   const stopRecording = useCallback(() => {
     if (recordingStopCallbackRef.current) {
@@ -545,7 +552,8 @@ const StarFieldGenerator: React.FC = () => {
     }
   }, []);
 
-  const downloadVideoWebM = useCallback(async () => {
+  // Download normal WebM video (with optional stereoscopic processing)
+  const downloadVideoWebM = useCallback(async (forceStereoscopic: boolean = false) => {
     if (currentStep !== 'ready') {
       return;
     }
@@ -682,7 +690,7 @@ const StarFieldGenerator: React.FC = () => {
       let finalWidth = recordWidth;
       let finalHeight = recordHeight;
       
-      if (enableStereoscopic && starsOnlyImage && starlessImage) {
+      if ((enableStereoscopic && forceStereoscopic) && starsOnlyImage && starlessImage) {
         setVideoProgress({ stage: 'Processing stereoscopic pairs...', percent: 40 });
         console.log('Stage 2: Processing frames for stereoscopic output...');
         
@@ -832,7 +840,7 @@ const StarFieldGenerator: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const filename = enableStereoscopic 
+      const filename = (enableStereoscopic && forceStereoscopic)
         ? `starfield-stereo-${finalWidth}x${finalHeight}-${duration}s-${Date.now()}.webm`
         : `starfield-${finalWidth}x${finalHeight}-${duration}s-${Date.now()}.webm`;
       a.download = filename;
@@ -1839,7 +1847,7 @@ const StarFieldGenerator: React.FC = () => {
               <Button
                 onClick={() => {
                   setShowFormatDialog(false);
-                  downloadVideoWebM();
+                  downloadVideoWebM(false);
                 }}
                 disabled={isGeneratingVideo}
                 className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
@@ -1847,13 +1855,54 @@ const StarFieldGenerator: React.FC = () => {
                 <Video className="h-4 w-4 mr-2" />
                 {t('WebM (Fast, Browser Native)', 'WebM（快速，浏览器原生）')}
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Stereoscopic Format Selection Dialog */}
+        <Dialog open={showStereoFormatDialog} onOpenChange={setShowStereoFormatDialog}>
+          <DialogContent className="bg-cosmic-900 border-cosmic-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">
+                {t('Choose Stereoscopic Video Mode', '选择立体视频模式')}
+              </DialogTitle>
+              <DialogDescription className="text-cosmic-300">
+                {t('Select whether to render normal or stereoscopic side-by-side video', '选择渲染普通视频还是并排立体视频')}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-4">
+              <Button
+                onClick={() => {
+                  setShowStereoFormatDialog(false);
+                  downloadVideoWebM(false);
+                }}
+                disabled={isGeneratingVideo}
+                className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
+              >
+                <Video className="h-4 w-4 mr-2" />
+                {t('Normal Rendered Video', '普通渲染视频')}
+              </Button>
               
+              <Button
+                onClick={() => {
+                  setShowStereoFormatDialog(false);
+                  downloadVideoWebM(true);
+                }}
+                disabled={isGeneratingVideo}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              >
+                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                {t('Stereoscopic Rendered Video (Side-by-Side)', '立体渲染视频（并排）')}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
 
         {/* Right Panel - 3D Preview and Stereoscopic Preview */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-6">
           {/* Main 3D Preview */}
           <Card className="bg-cosmic-900/50 border-cosmic-700/50 h-[600px]">
             <CardHeader>

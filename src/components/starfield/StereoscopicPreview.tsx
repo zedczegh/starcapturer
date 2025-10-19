@@ -61,23 +61,20 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
 
   // Process and render stereoscopic frame
   const renderStereoscopicFrame = useCallback(async () => {
-    if (!sourceCanvas || !canvasRef.current || !starsOnlyImage || !starlessImage || isProcessing) {
+    if (!sourceCanvas || !canvasRef.current || !starsOnlyImage || !starlessImage) {
       console.log('Stereo render skipped:', { 
         hasSourceCanvas: !!sourceCanvas, 
         hasCanvasRef: !!canvasRef.current,
         hasStarsOnly: !!starsOnlyImage,
-        hasStarless: !!starlessImage,
-        isProcessing 
+        hasStarless: !!starlessImage
       });
       return;
     }
 
-    // Throttle updates to 15fps for heavy processing
-    const now = performance.now();
-    if (now - lastUpdateTimeRef.current < 66) {
+    // Skip if already processing (but don't block indefinitely)
+    if (isProcessing) {
       return;
     }
-    lastUpdateTimeRef.current = now;
 
     setIsProcessing(true);
     
@@ -127,11 +124,21 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
   useEffect(() => {
     if (!isLocalAnimating) return;
 
-    const animate = () => {
-      const elapsed = performance.now() - animationStartTimeRef.current;
+    let lastFrameTime = performance.now();
+    const targetFPS = 15; // Lower FPS for heavy stereoscopic processing
+    const frameInterval = 1000 / targetFPS;
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - animationStartTimeRef.current;
       const progress = Math.min((elapsed / (duration * 1000)) * 100, 100);
       
       setLocalProgress(progress);
+      
+      // Trigger render at target FPS
+      if (currentTime - lastFrameTime >= frameInterval) {
+        renderStereoscopicFrame();
+        lastFrameTime = currentTime;
+      }
       
       if (progress >= 100) {
         setIsLocalAnimating(false);
@@ -141,24 +148,24 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
       }
     };
 
-    animate();
+    animationFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isLocalAnimating, duration]);
+  }, [isLocalAnimating, duration, renderStereoscopicFrame]);
 
-  // Update stereoscopic preview when main animation progresses OR local animation is playing
+  // Update stereoscopic preview when main animation progresses (when local is not playing)
   useEffect(() => {
-    // Use main animation progress when local animation is not playing
-    const currentProgress = isLocalAnimating ? localProgress : mainAnimationProgress;
+    if (isLocalAnimating || !sourceCanvas) return;
     
-    if (currentProgress > 0 && sourceCanvas) {
+    // Follow main animation when local is not playing
+    if (mainAnimationProgress > 0) {
       renderStereoscopicFrame();
     }
-  }, [mainAnimationProgress, localProgress, isLocalAnimating, sourceCanvas, renderStereoscopicFrame]);
+  }, [mainAnimationProgress, isLocalAnimating, sourceCanvas, renderStereoscopicFrame]);
 
   // Initial render when component mounts or settings change
   useEffect(() => {
