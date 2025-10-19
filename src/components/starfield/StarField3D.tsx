@@ -30,6 +30,7 @@ interface StarField3DProps {
   controlledProgress?: number; // For precise external control during video recording
   videoProgressRef?: React.MutableRefObject<number>; // Direct ref for video rendering
   frameRenderTrigger?: number; // Trigger value that changes to force frame render
+  externalProgress?: number; // External progress value to detect replay
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -44,7 +45,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
   onAnimationComplete,
   controlledProgress,
   videoProgressRef,
-  frameRenderTrigger
+  frameRenderTrigger,
+  externalProgress
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -52,6 +54,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const animationStartTimeRef = useRef<number>(0);
   const pausedTimeRef = useRef<number>(0);
   const lastProgressUpdateRef = useRef<number>(0);
+  const pauseStartTimeRef = useRef<number>(0);
+  const currentProgressRef = useRef<number>(0); // Track current progress for resume
   const offsetsRef = useRef({
     layer1: { x: 0, y: 0, scale: 1 }, // Largest/brightest stars (closest)
     layer2: { x: 0, y: 0, scale: 1 }, // Medium stars
@@ -478,17 +482,20 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Normal animation mode - calculate from elapsed time
       if (animationStartTimeRef.current === 0) {
         animationStartTimeRef.current = Date.now();
-        pausedTimeRef.current = 0;
+        // Calculate elapsed time based on current progress (for resume)
+        const alreadyElapsed = (currentProgressRef.current / 100) * duration * 1000;
+        pausedTimeRef.current = alreadyElapsed;
       }
       
       const now = Date.now();
       const elapsed = (now - animationStartTimeRef.current - pausedTimeRef.current) / 1000;
       progress = Math.min((elapsed / duration) * 100, 100);
+      currentProgressRef.current = progress; // Store for potential pause
     }
     
-    // Throttle progress updates to every 16ms (~60fps) to reduce overhead
+    // Throttle progress updates to every 32ms (~30fps) to reduce overhead and improve performance
     const now = Date.now();
-    if (onProgressUpdate && now - lastProgressUpdateRef.current > 16) {
+    if (onProgressUpdate && now - lastProgressUpdateRef.current > 32) {
       onProgressUpdate(progress);
       lastProgressUpdateRef.current = now;
     }
@@ -677,6 +684,22 @@ const StarField3D: React.FC<StarField3DProps> = ({
   }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete, controlledProgress, videoProgressRef]);
 
   // Trigger frame rendering when frameRenderTrigger changes (for video generation)
+  // Reset progress when external progress is set to 0 (replay triggered)
+  useEffect(() => {
+    if (externalProgress === 0 && currentProgressRef.current > 0) {
+      currentProgressRef.current = 0;
+      animationStartTimeRef.current = 0;
+      pausedTimeRef.current = 0;
+      offsetsRef.current = { 
+        layer1: { x: 0, y: 0, scale: 1 },
+        layer2: { x: 0, y: 0, scale: 1 },
+        layer3: { x: 0, y: 0, scale: 1 },
+        background: { x: 0, y: 0, scale: 1 }
+      };
+      lastRenderState.current = null;
+    }
+  }, [externalProgress]);
+
   useEffect(() => {
     if (frameRenderTrigger !== undefined && frameRenderTrigger > 0 && videoProgressRef && canvasRef.current) {
       // In video rendering mode, manually trigger animate for each frame
@@ -686,33 +709,44 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
   useEffect(() => {
     if (isAnimating && !videoProgressRef) {
-      // Always reset timing refs when animation starts
-      animationStartTimeRef.current = 0;
-      pausedTimeRef.current = 0;
+      // Only fully reset if we're starting from 0 (not resuming)
+      const isResume = currentProgressRef.current > 0 && currentProgressRef.current < 100;
+      
+      if (!isResume) {
+        // Fresh start - reset everything
+        animationStartTimeRef.current = 0;
+        pausedTimeRef.current = 0;
+        currentProgressRef.current = 0;
+        offsetsRef.current = { 
+          layer1: { x: 0, y: 0, scale: 1 },
+          layer2: { x: 0, y: 0, scale: 1 },
+          layer3: { x: 0, y: 0, scale: 1 },
+          background: { x: 0, y: 0, scale: 1 }
+        };
+        lastRenderState.current = null;
+        cachedDimensions.current = null;
+        
+        if (onProgressUpdate) {
+          onProgressUpdate(0);
+        }
+      } else {
+        // Resume - only reset start time, keep current progress
+        animationStartTimeRef.current = 0;
+      }
+      
       lastProgressUpdateRef.current = 0;
-      offsetsRef.current = { 
-        layer1: { x: 0, y: 0, scale: 1 },
-        layer2: { x: 0, y: 0, scale: 1 },
-        layer3: { x: 0, y: 0, scale: 1 },
-        background: { x: 0, y: 0, scale: 1 }
-      };
-      lastRenderState.current = null;
-      cachedDimensions.current = null;
       
       // Clear cached context so it can be recreated with current settings
       canvasCtxRef.current = null;
       
-      // Ensure progress starts at 0
-      if (onProgressUpdate) {
-        onProgressUpdate(0);
-      }
       // Start animation loop (only in normal playback mode, not video rendering)
       animationFrameRef.current = requestAnimationFrame(animate);
     } else {
-      // Stop animation loop when paused
+      // Paused - stop animation loop and record pause time
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = undefined;
+        pauseStartTimeRef.current = Date.now();
       }
     }
     
@@ -771,6 +805,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         width={imageDimensions.width}
         height={imageDimensions.height}
         className="w-full h-full object-contain bg-black"
+        style={{ willChange: isAnimating ? 'contents' : 'auto' }}
       />
       
       {/* Recording indicator */}

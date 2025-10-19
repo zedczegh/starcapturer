@@ -500,11 +500,14 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const handleReplay = useCallback(() => {
+    // Stop animation first
     setIsAnimating(false);
+    // Reset progress to 0 so the animation starts fresh
+    setAnimationProgress(0);
+    // Wait for state to update, then start animation
     setTimeout(() => {
-      setAnimationProgress(0);
       setIsAnimating(true);
-    }, 100);
+    }, 50);
   }, []);
 
   const initiateDownload = useCallback(() => {
@@ -1684,6 +1687,7 @@ const StarFieldGenerator: React.FC = () => {
                   controlledProgress={isGeneratingVideo ? videoProgressRef.current : undefined}
                   videoProgressRef={isGeneratingVideo ? videoProgressRef : undefined}
                   frameRenderTrigger={frameRenderTrigger}
+                  externalProgress={animationProgress}
                 />
                 
                 {/* Progress Bar and Controls */}
