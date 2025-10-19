@@ -1716,6 +1716,7 @@ const StarFieldGenerator: React.FC = () => {
                   videoProgressRef={isGeneratingVideo ? videoProgressRef : undefined}
                   frameRenderTrigger={frameRenderTrigger}
                   externalProgress={animationProgress}
+                  depthIntensity={depthIntensity}
                 />
                 
                 {/* Progress Bar and Controls */}

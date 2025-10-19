@@ -31,6 +31,7 @@ interface StarField3DProps {
   videoProgressRef?: React.MutableRefObject<number>; // Direct ref for video rendering
   frameRenderTrigger?: number; // Trigger value that changes to force frame render
   externalProgress?: number; // External progress value to detect replay
+  depthIntensity?: number; // 0-100 scale for parallax intensity
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -46,7 +47,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
   controlledProgress,
   videoProgressRef,
   frameRenderTrigger,
-  externalProgress
+  externalProgress,
+  depthIntensity = 50
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -540,6 +542,41 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // Amplification factor from settings (100-300%)
     const ampFactor = (settings.amplification || 150) / 100;
     
+    // Calculate parallax intensity multipliers based on depthIntensity (0-100)
+    // At 0%: minimal difference (all layers move almost the same)
+    // At 50%: moderate difference (default behavior)
+    // At 100%: dramatic difference (maximum parallax effect)
+    const intensityFactor = depthIntensity / 50; // 0-2 range
+    
+    // Define base multipliers for each layer (at 50% intensity)
+    const baseMultipliers = {
+      background: 0.15,
+      layer3: 0.3,
+      layer2: 0.6,
+      layer1: 1.0
+    };
+    
+    // Scale multipliers based on intensity
+    // At 0% intensity: all layers around 0.5-0.6 (minimal difference)
+    // At 50% intensity: use base multipliers
+    // At 100% intensity: maximize differences (0.1 to 2.0)
+    const getLayerMultiplier = (baseMultiplier: number) => {
+      if (intensityFactor < 1) {
+        // Below 50%: compress towards 0.5
+        return 0.5 + (baseMultiplier - 0.5) * intensityFactor;
+      } else {
+        // Above 50%: expand differences
+        return baseMultiplier * intensityFactor;
+      }
+    };
+    
+    const parallaxMultipliers = {
+      background: getLayerMultiplier(baseMultipliers.background),
+      layer3: getLayerMultiplier(baseMultipliers.layer3),
+      layer2: getLayerMultiplier(baseMultipliers.layer2),
+      layer1: getLayerMultiplier(baseMultipliers.layer1)
+    };
+    
     // Pre-calculate common values (cached per canvas size)
     if (!cachedDimensions.current || 
         cachedDimensions.current.canvasCenterX !== canvas.width * 0.5 ||
@@ -565,45 +602,45 @@ const StarField3D: React.FC<StarField3DProps> = ({
     if (stateChanged) {
       if (motionType === 'zoom_in') {
         // Dramatic 3D depth: large stars zoom MUCH faster than small stars
-        offsetsRef.current.background.scale = 1.0 + (progressRatio * 0.3 * ampFactor);
-        offsetsRef.current.layer3.scale = 1.0 + (progressRatio * 0.5 * ampFactor);
-        offsetsRef.current.layer2.scale = 1.0 + (progressRatio * 1.0 * ampFactor);
-        offsetsRef.current.layer1.scale = 1.0 + (progressRatio * 2.0 * ampFactor);
+        offsetsRef.current.background.scale = 1.0 + (progressRatio * parallaxMultipliers.background * ampFactor);
+        offsetsRef.current.layer3.scale = 1.0 + (progressRatio * parallaxMultipliers.layer3 * ampFactor);
+        offsetsRef.current.layer2.scale = 1.0 + (progressRatio * parallaxMultipliers.layer2 * ampFactor);
+        offsetsRef.current.layer1.scale = 1.0 + (progressRatio * parallaxMultipliers.layer1 * 2.0 * ampFactor);
       } else if (motionType === 'zoom_out') {
         // Dramatic zoom out with depth
-        const bgMax = 1.0 + (0.3 * ampFactor);
-        const smallMax = 1.0 + (0.5 * ampFactor);
-        const medMax = 1.0 + (1.0 * ampFactor);
-        const largeMax = 1.0 + (2.0 * ampFactor);
+        const bgMax = 1.0 + (parallaxMultipliers.background * ampFactor);
+        const smallMax = 1.0 + (parallaxMultipliers.layer3 * ampFactor);
+        const medMax = 1.0 + (parallaxMultipliers.layer2 * ampFactor);
+        const largeMax = 1.0 + (parallaxMultipliers.layer1 * 2.0 * ampFactor);
         
-        offsetsRef.current.background.scale = bgMax - (progressRatio * 0.3 * ampFactor);
-        offsetsRef.current.layer3.scale = smallMax - (progressRatio * 0.5 * ampFactor);
-        offsetsRef.current.layer2.scale = medMax - (progressRatio * 1.0 * ampFactor);
-        offsetsRef.current.layer1.scale = largeMax - (progressRatio * 2.0 * ampFactor);
+        offsetsRef.current.background.scale = bgMax - (progressRatio * parallaxMultipliers.background * ampFactor);
+        offsetsRef.current.layer3.scale = smallMax - (progressRatio * parallaxMultipliers.layer3 * ampFactor);
+        offsetsRef.current.layer2.scale = medMax - (progressRatio * parallaxMultipliers.layer2 * ampFactor);
+        offsetsRef.current.layer1.scale = largeMax - (progressRatio * parallaxMultipliers.layer1 * 2.0 * ampFactor);
       } else if (motionType === 'pan_left') {
         // Dramatic pan with strong 3D parallax: large stars pan MUCH faster
         const panAmount = progressRatio * speed * 250 * ampFactor;
-        offsetsRef.current.background.scale = 1.0 + (0.2 * ampFactor);
-        offsetsRef.current.layer3.scale = 1.0 + (0.2 * ampFactor);
-        offsetsRef.current.layer2.scale = 1.0 + (0.2 * ampFactor);
-        offsetsRef.current.layer1.scale = 1.0 + (0.2 * ampFactor);
+        offsetsRef.current.background.scale = 1.0 + (0.1 * ampFactor);
+        offsetsRef.current.layer3.scale = 1.0 + (0.1 * ampFactor);
+        offsetsRef.current.layer2.scale = 1.0 + (0.1 * ampFactor);
+        offsetsRef.current.layer1.scale = 1.0 + (0.1 * ampFactor);
         
-        offsetsRef.current.background.x = -panAmount * 0.3;
-        offsetsRef.current.layer3.x = -panAmount * 0.5;
-        offsetsRef.current.layer2.x = -panAmount * 1.0;
-        offsetsRef.current.layer1.x = -panAmount * 2.0;
+        offsetsRef.current.background.x = -panAmount * parallaxMultipliers.background;
+        offsetsRef.current.layer3.x = -panAmount * parallaxMultipliers.layer3;
+        offsetsRef.current.layer2.x = -panAmount * parallaxMultipliers.layer2;
+        offsetsRef.current.layer1.x = -panAmount * parallaxMultipliers.layer1 * 2.0;
       } else if (motionType === 'pan_right') {
         // Dramatic pan right with strong 3D parallax
         const panAmount = progressRatio * speed * 250 * ampFactor;
-        offsetsRef.current.background.scale = 1.0 + (0.2 * ampFactor);
-        offsetsRef.current.layer3.scale = 1.0 + (0.2 * ampFactor);
-        offsetsRef.current.layer2.scale = 1.0 + (0.2 * ampFactor);
-        offsetsRef.current.layer1.scale = 1.0 + (0.2 * ampFactor);
+        offsetsRef.current.background.scale = 1.0 + (0.1 * ampFactor);
+        offsetsRef.current.layer3.scale = 1.0 + (0.1 * ampFactor);
+        offsetsRef.current.layer2.scale = 1.0 + (0.1 * ampFactor);
+        offsetsRef.current.layer1.scale = 1.0 + (0.1 * ampFactor);
         
-        offsetsRef.current.background.x = panAmount * 0.3;
-        offsetsRef.current.layer3.x = panAmount * 0.5;
-        offsetsRef.current.layer2.x = panAmount * 1.0;
-        offsetsRef.current.layer1.x = panAmount * 2.0;
+        offsetsRef.current.background.x = panAmount * parallaxMultipliers.background;
+        offsetsRef.current.layer3.x = panAmount * parallaxMultipliers.layer3;
+        offsetsRef.current.layer2.x = panAmount * parallaxMultipliers.layer2;
+        offsetsRef.current.layer1.x = panAmount * parallaxMultipliers.layer1 * 2.0;
       }
       
       // Cache the state
@@ -684,7 +721,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     if (!videoProgressRef) {
       animationFrameRef.current = requestAnimationFrame(animate);
     }
-  }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete, controlledProgress, videoProgressRef]);
+  }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete, controlledProgress, videoProgressRef, depthIntensity]);
 
   // Trigger frame rendering when frameRenderTrigger changes (for video generation)
   // Reset progress when external progress is set to 0 (replay triggered)
