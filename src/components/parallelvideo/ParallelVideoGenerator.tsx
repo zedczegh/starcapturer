@@ -174,6 +174,49 @@ const ParallelVideoGenerator: React.FC = () => {
     return { starsOnly: starsCanvas, stars };
   }, [depthIntensity]);
 
+  // Helper to load image from file (handles TIFF)
+  const loadImageFromFile = useCallback(async (file: File): Promise<HTMLImageElement> => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Check if it's a TIFF file
+        const isTiff = file.type === 'image/tiff' || file.type === 'image/tif' || 
+                      file.name.toLowerCase().endsWith('.tif') || 
+                      file.name.toLowerCase().endsWith('.tiff');
+
+        if (isTiff) {
+          // Handle TIFF files using UTIF library
+          const UTIF = await import('utif');
+          const arrayBuffer = await file.arrayBuffer();
+          const ifds = UTIF.decode(arrayBuffer);
+          UTIF.decodeImage(arrayBuffer, ifds[0]);
+          const rgba = UTIF.toRGBA8(ifds[0]);
+          
+          // Create canvas and draw
+          const canvas = document.createElement('canvas');
+          canvas.width = ifds[0].width;
+          canvas.height = ifds[0].height;
+          const ctx = canvas.getContext('2d')!;
+          const imageData = new ImageData(new Uint8ClampedArray(rgba), ifds[0].width, ifds[0].height);
+          ctx.putImageData(imageData, 0, 0);
+          
+          // Convert to image
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error('Failed to create image from TIFF canvas'));
+          img.src = canvas.toDataURL();
+        } else {
+          // Handle standard image formats
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error('Failed to load image'));
+          img.src = URL.createObjectURL(file);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }, []);
+
   // Process images with Traditional Morph
   const processImages = useCallback(async () => {
     if (!starlessFile || !starsFile) {
@@ -183,10 +226,17 @@ const ParallelVideoGenerator: React.FC = () => {
 
     setIsProcessing(true);
     setIsReady(false);
-    setProcessingStep(t('Initializing...', '初始化...'));
+    setProgress(0);
+    setProcessingStep(t('Loading images...', '加载图片...'));
 
     try {
-      // Step 1: Create traditional processor (exactly like stereoscope processor)
+      // Step 1: Load original starless image first (with TIFF support)
+      setProcessingStep(t('Loading starless background...', '加载无星背景...'));
+      const starlessImg = await loadImageFromFile(starlessFile);
+      console.log('Starless image loaded:', starlessImg.width, 'x', starlessImg.height);
+
+      // Step 2: Create traditional processor (exactly like stereoscope processor)
+      setProcessingStep(t('Initializing processor...', '初始化处理器...'));
       const { TraditionalMorphProcessor } = await import('@/lib/traditionalMorphMode');
       const processor = new TraditionalMorphProcessor();
       
@@ -198,46 +248,36 @@ const ParallelVideoGenerator: React.FC = () => {
       const traditionalParams = {
         horizontalDisplace,
         starShiftAmount,
-        luminanceBlur: 1.5, // Fixed values not shown in UI
+        luminanceBlur: 1.5,
         contrastBoost: 1.2
       };
 
-      // Step 2: Create stereo pair with traditional morph
-      setProcessingStep(t('Creating stereoscopic pair with Traditional Morph...', '使用传统变形创建立体对...'));
+      // Step 3: Create stereo pair with traditional morph
+      setProcessingStep(t('Creating stereoscopic pair...', '创建立体对...'));
       const { leftCanvas, rightCanvas, depthMap } = await processor.createTraditionalStereoPair(
         inputs,
         traditionalParams,
-        (step, progress) => {
+        (step, progressValue) => {
           setProcessingStep(step);
-          if (progress) setProgress(progress);
+          if (progressValue) setProgress(progressValue);
         }
       );
 
       console.log('Stereo pair created - Left:', leftCanvas.width, 'x', leftCanvas.height);
 
-      // Step 3: Load original starless image
-      setProcessingStep(t('Loading starless background...', '加载无星背景...'));
-      const starlessImg = new Image();
-      await new Promise<void>((resolve, reject) => {
-        starlessImg.onload = () => resolve();
-        starlessImg.onerror = () => reject(new Error('Failed to load starless image'));
-        starlessImg.src = URL.createObjectURL(starlessFile);
-      });
-
-      console.log('Starless image loaded:', starlessImg.width, 'x', starlessImg.height);
-
       // Step 4: Extract stars from both views
-      setProcessingStep(t('Separating stars from left view...', '从左视图分离星点...'));
+      setProcessingStep(t('Detecting stars in left view...', '检测左视图星点...'));
       const leftResult = extractStarsFromComposite(leftCanvas, starlessImg, depthMap);
       
-      setProcessingStep(t('Separating stars from right view...', '从右视图分离星点...'));
+      setProcessingStep(t('Detecting stars in right view...', '检测右视图星点...'));
       const rightResult = extractStarsFromComposite(rightCanvas, starlessImg, depthMap);
 
-      console.log('Stars extracted - Left:', leftResult.stars.length, 'Right:', rightResult.stars.length);
+      console.log('Stars detected - Left:', leftResult.stars.length, 'Right:', rightResult.stars.length);
 
       // Step 5: Set all processed data
-      setLeftBackground(starlessImg.src);
-      setRightBackground(starlessImg.src);
+      const starlessDataUrl = starlessImg.src;
+      setLeftBackground(starlessDataUrl);
+      setRightBackground(starlessDataUrl);
       setLeftStarsOnly(leftResult.starsOnly.toDataURL());
       setRightStarsOnly(rightResult.starsOnly.toDataURL());
       setLeftStars(leftResult.stars);
@@ -247,22 +287,26 @@ const ParallelVideoGenerator: React.FC = () => {
       processor.dispose();
 
       setIsReady(true);
-      setProcessingStep('');
-      toast.success(t('Processing complete! Preview ready.', '处理完成！预览就绪。'));
+      setProgress(100);
+      setProcessingStep(t('Complete!', '完成！'));
+      toast.success(t('Processing complete! Starting preview...', '处理完成！启动预览...'));
 
-      // Auto-start animation after a short delay
+      // Auto-start animation
       setTimeout(() => {
         setIsAnimating(true);
-      }, 800);
+        setProcessingStep('');
+      }, 1000);
 
     } catch (error) {
       console.error('Processing error:', error);
-      toast.error(t('Failed to process images: ' + (error as Error).message, '图片处理失败：' + (error as Error).message));
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(t('Failed to process: ' + errorMsg, '处理失败：' + errorMsg));
       setIsReady(false);
+      setProgress(0);
     } finally {
       setIsProcessing(false);
     }
-  }, [starlessFile, starsFile, horizontalDisplace, starShiftAmount, t, extractStarsFromComposite]);
+  }, [starlessFile, starsFile, horizontalDisplace, starShiftAmount, t, extractStarsFromComposite, loadImageFromFile]);
 
   // Generate parallel videos
   const generateParallelVideo = useCallback(async () => {
