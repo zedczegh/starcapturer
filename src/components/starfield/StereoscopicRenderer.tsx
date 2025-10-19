@@ -226,11 +226,16 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
         : -normalizedProgress * spinRadians;
     }
 
-    // Function to draw a view with transformations at original size
+    // Function to draw a view with transformations constrained to frame
     const drawView = (view: HTMLCanvasElement, targetX: number) => {
       ctx.save();
       
-      // Translate to target position
+      // Set clipping region for this view
+      ctx.beginPath();
+      ctx.rect(targetX, 0, width, height);
+      ctx.clip();
+      
+      // Translate to center of this view's area
       ctx.translate(targetX + width / 2, height / 2);
       
       // Apply rotation
@@ -244,16 +249,16 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
       // Apply pan offset (scaled appropriately)
       ctx.translate(panX / scaleFactor, panY / scaleFactor);
       
-      // Draw image centered at original size
+      // Draw image centered
       ctx.drawImage(view, -width / 2, -height / 2, width, height);
       
       ctx.restore();
     };
 
-    // Draw left view with motion
+    // Draw left view with motion (constrained to left frame)
     drawView(leftView, 0);
 
-    // Draw right view with motion  
+    // Draw right view with motion (constrained to right frame)
     drawView(rightView, width + spacing);
 
   }, [leftView, rightView, stereoParams.stereoSpacing, animationSettings]);
