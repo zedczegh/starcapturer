@@ -688,22 +688,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer2.scale = 1.0 + (progressRatio * parallaxMultipliers.layer2 * ampFactor);
         offsetsRef.current.layer1.scale = 1.0 + (progressRatio * parallaxMultipliers.layer1 * ampFactor);
       } else if (motionType === 'zoom_out') {
-        // Scientific zoom out: reverse of zoom in, maintaining depth relationships
-        const bgMax = 1.0 + (parallaxMultipliers.background * ampFactor);
-        const layer6Max = 1.0 + (parallaxMultipliers.layer6 * ampFactor);
-        const layer5Max = 1.0 + (parallaxMultipliers.layer5 * ampFactor);
-        const layer4Max = 1.0 + (parallaxMultipliers.layer4 * ampFactor);
-        const layer3Max = 1.0 + (parallaxMultipliers.layer3 * ampFactor);
-        const layer2Max = 1.0 + (parallaxMultipliers.layer2 * ampFactor);
-        const layer1Max = 1.0 + (parallaxMultipliers.layer1 * ampFactor);
-        
-        offsetsRef.current.background.scale = bgMax - (progressRatio * parallaxMultipliers.background * ampFactor);
-        offsetsRef.current.layer6.scale = layer6Max - (progressRatio * parallaxMultipliers.layer6 * ampFactor);
-        offsetsRef.current.layer5.scale = layer5Max - (progressRatio * parallaxMultipliers.layer5 * ampFactor);
-        offsetsRef.current.layer4.scale = layer4Max - (progressRatio * parallaxMultipliers.layer4 * ampFactor);
-        offsetsRef.current.layer3.scale = layer3Max - (progressRatio * parallaxMultipliers.layer3 * ampFactor);
-        offsetsRef.current.layer2.scale = layer2Max - (progressRatio * parallaxMultipliers.layer2 * ampFactor);
-        offsetsRef.current.layer1.scale = layer1Max - (progressRatio * parallaxMultipliers.layer1 * ampFactor);
+        // Scientific zoom out: objects shrink as we move away, maintaining depth relationships
+        // Start at scale 1.0 and decrease proportionally to simulate moving backwards
+        offsetsRef.current.background.scale = 1.0 - (progressRatio * parallaxMultipliers.background * ampFactor);
+        offsetsRef.current.layer6.scale = 1.0 - (progressRatio * parallaxMultipliers.layer6 * ampFactor);
+        offsetsRef.current.layer5.scale = 1.0 - (progressRatio * parallaxMultipliers.layer5 * ampFactor);
+        offsetsRef.current.layer4.scale = 1.0 - (progressRatio * parallaxMultipliers.layer4 * ampFactor);
+        offsetsRef.current.layer3.scale = 1.0 - (progressRatio * parallaxMultipliers.layer3 * ampFactor);
+        offsetsRef.current.layer2.scale = 1.0 - (progressRatio * parallaxMultipliers.layer2 * ampFactor);
+        offsetsRef.current.layer1.scale = 1.0 - (progressRatio * parallaxMultipliers.layer1 * ampFactor);
       } else if (motionType === 'pan_left') {
         // Scientific pan with parallax: closer stars pan faster due to angular velocity
         const panAmount = progressRatio * speed * 250 * ampFactor;
