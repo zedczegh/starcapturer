@@ -401,7 +401,13 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const processImages = useCallback(async () => {
+    console.log('🔧 [Generator] Starting image processing');
+    
     if (!starsOnlyElement || !starlessElement) {
+      console.warn('⚠️ [Generator] Missing image elements', {
+        hasStarsOnly: !!starsOnlyElement,
+        hasStarless: !!starlessElement
+      });
       return;
     }
 
@@ -409,18 +415,23 @@ const StarFieldGenerator: React.FC = () => {
     setCurrentStep('processing');
     
     try {
+      console.log('⭐ [Generator] Extracting star positions...');
       // Extract star positions from stars only image
       const stars = extractStarPositions(starsOnlyElement);
       setDetectedStars(stars);
+      console.log(`✅ [Generator] Extracted ${stars.length} stars`);
       
       if (stars.length === 0) {
+        console.warn('⚠️ [Generator] No stars detected');
         setCurrentStep('upload');
         return;
       }
       
+      console.log('🗺️ [Generator] Generating depth map...');
       // Generate depth map from starless image (now async with chunked processing)
       const depthMap = await generateDepthMap(starlessElement);
       setDepthMapCanvas(depthMap);
+      console.log('✅ [Generator] Depth map generated');
       
       // Assign depth to stars based on depth map
       const depthCtx = depthMap.getContext('2d')!;
@@ -454,17 +465,19 @@ const StarFieldGenerator: React.FC = () => {
       });
       
       setProcessedStars(processedStarsData);
+      console.log(`✅ [Generator] Processed ${processedStarsData.length} stars with 3D coordinates`);
       setCurrentStep('ready');
       
       // Log memory stats
       const memStats = MemoryManager.getMemoryStats();
-      console.log('Memory after processing:', memStats);
+      console.log('📊 [Generator] Memory after processing:', memStats);
       
     } catch (error) {
-      console.error('Processing error:', error);
+      console.error('❌ [Generator] Processing error:', error);
       setCurrentStep('upload');
     } finally {
       setIsProcessing(false);
+      console.log('🏁 [Generator] Image processing complete');
       
       // Trigger cleanup
       MemoryManager.forceGarbageCollection();
@@ -472,38 +485,54 @@ const StarFieldGenerator: React.FC = () => {
   }, [starsOnlyElement, starlessElement, extractStarPositions, generateDepthMap, depthIntensity, t]);
 
   const handleCanvasReady = useCallback((canvas: HTMLCanvasElement) => {
-    console.log('Canvas ready callback triggered', canvas);
+    console.log('📢 [Generator] Canvas ready callback triggered', {
+      hasCanvas: !!canvas,
+      canvasSize: canvas ? `${canvas.width}x${canvas.height}` : 'N/A',
+      hasContext: canvas ? !!canvas.getContext('2d') : false
+    });
+    
     if (canvas && canvas.getContext('2d')) {
       canvasRef.current = canvas;
       setIsCanvasReady(true);
-      console.log('Canvas successfully set and ready');
+      console.log('✅ [Generator] Canvas successfully set and ready');
     } else {
-      console.error('Canvas is not properly initialized');
+      console.error('❌ [Generator] Canvas is not properly initialized');
     }
   }, []);
 
   const handleProgressUpdate = useCallback((progress: number) => {
     setAnimationProgress(progress);
     if (progress >= 100) {
+      console.log('🎬 [Generator] Animation reached 100%');
       setIsAnimating(false);
     }
   }, []);
 
   const handleAnimationComplete = useCallback(() => {
+    console.log('🏁 [Generator] Animation complete callback');
     setIsAnimating(false);
     setAnimationProgress(100);
     // Don't reset - keep at 100%
   }, []);
 
   const toggleAnimation = useCallback(() => {
+    console.log('🎮 [Generator] Toggle animation:', {
+      currentlyAnimating: isAnimating,
+      currentProgress: animationProgress
+    });
+    
     if (isAnimating) {
       // Just pause - don't change anything else
+      console.log('⏸️ [Generator] Pausing animation');
       setIsAnimating(false);
     } else {
       // Play/Resume
       if (animationProgress >= 99.9) {
         // Only restart if at the very end
+        console.log('🔄 [Generator] Restarting from beginning');
         setAnimationProgress(0);
+      } else {
+        console.log('▶️ [Generator] Resuming animation from', animationProgress.toFixed(1) + '%');
       }
       // Otherwise just resume from current position
       setIsAnimating(true);
@@ -511,11 +540,13 @@ const StarFieldGenerator: React.FC = () => {
   }, [isAnimating, animationProgress]);
 
   const handleReplay = useCallback(() => {
+    console.log('🔄 [Generator] Replay triggered');
     // Reset to beginning
     setAnimationProgress(0);
     setIsAnimating(false);
     // Small delay then start
     setTimeout(() => {
+      console.log('▶️ [Generator] Starting replay animation');
       setIsAnimating(true);
     }, 50);
   }, []);

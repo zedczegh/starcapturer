@@ -58,6 +58,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const pausedTimeRef = useRef<number>(0);
   const lastProgressUpdateRef = useRef<number>(0);
   const currentProgressRef = useRef<number>(0); // Track current progress for resume
+  const hasRenderedInitialFrame = useRef<boolean>(false); // Track if initial frame was rendered
   const offsetsRef = useRef({
     layer1: { x: 0, y: 0, scale: 1 }, // Largest/brightest stars (closest)
     layer2: { x: 0, y: 0, scale: 1 },
@@ -433,6 +434,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       Promise.all(
         refinedCanvases.map(canvas => createImageBitmap(canvas, bitmapOptions))
       ).then((bitmaps) => {
+        console.log('🌟 [StarField3D] Setting star layers state with bitmaps');
         setStarLayers({
           layer1: bitmaps[0],
           layer2: bitmaps[1],
@@ -443,7 +445,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
         });
         
         const totalTime = (performance.now() - startTime).toFixed(0);
-        console.log(`✓ 6 star layers ready with refined edges: ${layerCounts.map((c, i) => `L${i+1}:${c}`).join(', ')} (${totalTime}ms total)`);
+        console.log(`✅ [StarField3D] 6 star layers ready with refined edges: ${layerCounts.map((c, i) => `L${i+1}:${c}`).join(', ')} (${totalTime}ms total)`);
+      }).catch(error => {
+        console.error('❌ [StarField3D] Failed to create star layer bitmaps:', error);
       });
     };
     
@@ -464,12 +468,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
       };
       
       createImageBitmap(img, bitmapOptions).then(bitmap => {
+        console.log('🖼️ [StarField3D] Setting background image bitmap');
         setBackgroundImg(bitmap);
         // Set dimensions if not already set
         if (imageDimensions.width === 1920 && imageDimensions.height === 1080) {
           setImageDimensions({ width: img.width, height: img.height });
         }
-        console.log('✓ Background image loaded for rendering');
+        console.log('✅ [StarField3D] Background image loaded for rendering');
+      }).catch(error => {
+        console.error('❌ [StarField3D] Failed to create background bitmap:', error);
       });
     };
     img.src = backgroundImage;
@@ -477,7 +484,24 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
   // Animation loop - optimized with cached context and throttled updates
   const animate = useCallback(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current) {
+      console.warn('⚠️ [StarField3D] animate() called but canvas ref is null');
+      return;
+    }
+    
+    // Validate we have required assets before rendering
+    const hasLayers = starLayers.layer1 && starLayers.layer2 && starLayers.layer3 && 
+                      starLayers.layer4 && starLayers.layer5 && starLayers.layer6;
+    
+    if (!hasLayers) {
+      console.warn('⚠️ [StarField3D] animate() called but star layers not ready');
+      return;
+    }
+    
+    if (!backgroundImg) {
+      console.warn('⚠️ [StarField3D] animate() called but background image not ready');
+      return;
+    }
     
     // During video generation, we don't need isAnimating check
     const isVideoRendering = videoProgressRef !== undefined;
@@ -487,10 +511,16 @@ const StarField3D: React.FC<StarField3DProps> = ({
     
     // Cache canvas context for better performance
     if (!canvasCtxRef.current) {
+      console.log('🎨 [StarField3D] Creating cached canvas context');
       canvasCtxRef.current = canvas.getContext('2d', { 
         alpha: false,
         desynchronized: true // Hint to browser for better performance
       })!;
+      
+      if (!canvasCtxRef.current) {
+        console.error('❌ [StarField3D] Failed to get 2D context in animate()');
+        return;
+      }
     }
     
     const ctx = canvasCtxRef.current;
@@ -533,6 +563,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     
     // Stop animation when duration is reached
     if (progress >= 100) {
+      console.log('🎬 [StarField3D] Animation complete at 100%');
       if (onProgressUpdate) {
         onProgressUpdate(100);
       }
@@ -540,6 +571,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
         onAnimationComplete();
       }
       return; // Stop the animation loop
+    }
+    
+    // Log first frame render
+    if (!hasRenderedInitialFrame.current) {
+      console.log('🖼️ [StarField3D] Rendering initial frame at progress:', progress.toFixed(2) + '%');
+      hasRenderedInitialFrame.current = true;
     }
     
     // Clear canvas with fast fill
@@ -853,6 +890,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
   }, [frameRenderTrigger, videoProgressRef, animate]);
 
   useEffect(() => {
+    console.log('🎮 [StarField3D] Animation state changed:', {
+      isAnimating,
+      hasVideoProgressRef: !!videoProgressRef,
+      currentProgress: currentProgressRef.current
+    });
+    
     if (isAnimating && !videoProgressRef) {
       // Reset start time to trigger recalculation
       animationStartTimeRef.current = 0;
@@ -860,7 +903,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       // If at end, reset progress to 0
       if (currentProgressRef.current >= 99.9) {
+        console.log('🔄 [StarField3D] Resetting animation to beginning');
         currentProgressRef.current = 0;
+        hasRenderedInitialFrame.current = false;
         offsetsRef.current = { 
           layer1: { x: 0, y: 0, scale: 1 },
           layer2: { x: 0, y: 0, scale: 1 },
@@ -881,11 +926,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Clear cached context
       canvasCtxRef.current = null;
       
+      console.log('▶️ [StarField3D] Starting animation loop');
       // Start animation loop
       animationFrameRef.current = requestAnimationFrame(animate);
     } else {
       // Paused - stop animation loop
       if (animationFrameRef.current) {
+        console.log('⏸️ [StarField3D] Pausing animation loop');
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = undefined;
       }
@@ -919,20 +966,40 @@ const StarField3D: React.FC<StarField3DProps> = ({
     };
   }, [backgroundImg]);
 
-  // Notify parent when canvas and layers are ready
+  // Notify parent when canvas and layers are ready AND render initial frame
   useEffect(() => {
-    const hasLayers = starLayers.layer1 || starLayers.layer2 || starLayers.layer3 || 
-                     starLayers.layer4 || starLayers.layer5 || starLayers.layer6 || backgroundImg;
-    if (canvasRef.current && onCanvasReady && hasLayers) {
-      // Call after a short delay to ensure canvas is fully rendered
-      const timer = setTimeout(() => {
-        if (canvasRef.current) {
-          onCanvasReady(canvasRef.current);
-        }
-      }, 100);
-      return () => clearTimeout(timer);
+    const hasAllLayers = starLayers.layer1 && starLayers.layer2 && starLayers.layer3 && 
+                         starLayers.layer4 && starLayers.layer5 && starLayers.layer6;
+    const hasBackground = backgroundImg !== null;
+    const hasCanvas = canvasRef.current !== null;
+    
+    console.log('🔍 [StarField3D] Ready check:', {
+      hasAllLayers,
+      hasBackground,
+      hasCanvas,
+      hasRenderedInitial: hasRenderedInitialFrame.current
+    });
+    
+    if (hasCanvas && hasAllLayers && hasBackground) {
+      console.log('✅ [StarField3D] All assets ready - notifying parent and rendering initial frame');
+      
+      // Notify parent
+      if (onCanvasReady && canvasRef.current) {
+        onCanvasReady(canvasRef.current);
+      }
+      
+      // Render initial frame if not rendered yet and not animating
+      if (!hasRenderedInitialFrame.current && !isAnimating) {
+        console.log('🎬 [StarField3D] Rendering initial static frame');
+        // Reset progress to 0 for initial frame
+        currentProgressRef.current = 0;
+        // Render the first frame
+        setTimeout(() => {
+          animate();
+        }, 100);
+      }
     }
-  }, [onCanvasReady, starLayers, backgroundImg]);
+  }, [starLayers, backgroundImg, isAnimating, onCanvasReady, animate]);
 
   if (stars.length === 0) {
     return (
