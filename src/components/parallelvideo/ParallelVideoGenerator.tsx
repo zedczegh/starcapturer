@@ -293,70 +293,78 @@ const ParallelVideoGenerator: React.FC = () => {
 
       console.log('Stereo pair created - Left:', leftCanvas.width, 'x', leftCanvas.height);
 
-      // Step 3: Extract layers from composites - NO additional displacement needed!
-      // Traditional morph ALREADY applied all displacement to the composites
-      setProcessingStep(t('Extracting starless and stars layers...', '提取无星和星点图层...'));
+      // Step 3: Extract clean layers - StarField3D needs clean separated layers to apply motion
+      setProcessingStep(t('Extracting clean layers for animation...', '提取清晰图层用于动画...'));
       
       const canvasPool = CanvasPool.getInstance();
       
-      // Get composite image data
-      const leftCompositeData = leftCanvas.getContext('2d')!.getImageData(0, 0, leftCanvas.width, leftCanvas.height);
+      // For LEFT view: just use original starless + extract stars from left composite
+      const leftStarsCanvas = canvasPool.acquire(leftCanvas.width, leftCanvas.height);
+      const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
+      
+      // Draw left composite and use screen blend inverse to extract stars
+      leftStarsCtx.drawImage(starlessElement, 0, 0);
+      leftStarsCtx.globalCompositeOperation = 'difference';
+      leftStarsCtx.drawImage(leftCanvas, 0, 0);
+      leftStarsCtx.globalCompositeOperation = 'source-over';
+      
+      // For RIGHT view: Extract morphed starless from right composite
+      // Method: Right composite = morphed starless (screen blend) morphed stars
+      // To extract starless: subtract stars from composite using reverse screen blend math
+      const rightBgCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
+      const rightBgCtx = rightBgCanvas.getContext('2d')!;
+      
+      const rightStarsCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
+      const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
+      
+      // Get data
       const rightCompositeData = rightCanvas.getContext('2d')!.getImageData(0, 0, rightCanvas.width, rightCanvas.height);
       
-      // Get original image data for extraction
+      // Create temp canvas for starless data
       const tempCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
       const tempCtx = tempCanvas.getContext('2d')!;
       tempCtx.drawImage(starlessElement, 0, 0);
-      const originalStarlessData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+      const originalStarlessData = tempCtx.getImageData(0, 0, starlessElement.width, starlessElement.height);
       
-      tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-      tempCtx.drawImage(starsElement, 0, 0);
-      const originalStarsData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-      
-      // LEFT VIEW: Use original starless, extract stars from left composite
-      const leftStarsCanvas = canvasPool.acquire(leftCanvas.width, leftCanvas.height);
-      const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
-      const leftStarsData = leftStarsCtx.createImageData(leftCanvas.width, leftCanvas.height);
-      
-      for (let i = 0; i < leftCompositeData.data.length; i += 4) {
-        // Extract stars by subtracting original starless from composite
-        leftStarsData.data[i] = Math.max(0, leftCompositeData.data[i] - originalStarlessData.data[i]);
-        leftStarsData.data[i + 1] = Math.max(0, leftCompositeData.data[i + 1] - originalStarlessData.data[i + 1]);
-        leftStarsData.data[i + 2] = Math.max(0, leftCompositeData.data[i + 2] - originalStarlessData.data[i + 2]);
-        leftStarsData.data[i + 3] = 255;
-      }
-      leftStarsCtx.putImageData(leftStarsData, 0, 0);
-      
-      // RIGHT VIEW: Extract BOTH morphed starless and morphed stars from right composite
-      const rightStarsCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
-      const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
+      const rightBgData = rightBgCtx.createImageData(rightCanvas.width, rightCanvas.height);
       const rightStarsData = rightStarsCtx.createImageData(rightCanvas.width, rightCanvas.height);
       
-      const rightBgCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
-      const rightBgCtx = rightBgCanvas.getContext('2d')!;
-      const rightBgData = rightBgCtx.createImageData(rightCanvas.width, rightCanvas.height);
-      
-      // Extract morphed stars by subtracting original starless from right composite
-      // This gives us the repositioned/morphed stars
+      // Inverse screen blend extraction for clean separation
       for (let i = 0; i < rightCompositeData.data.length; i += 4) {
-        const starsR = Math.max(0, rightCompositeData.data[i] - originalStarlessData.data[i]);
-        const starsG = Math.max(0, rightCompositeData.data[i + 1] - originalStarlessData.data[i + 1]);
-        const starsB = Math.max(0, rightCompositeData.data[i + 2] - originalStarlessData.data[i + 2]);
+        const compositeR = rightCompositeData.data[i] / 255;
+        const compositeG = rightCompositeData.data[i + 1] / 255;
+        const compositeB = rightCompositeData.data[i + 2] / 255;
         
-        rightStarsData.data[i] = starsR;
-        rightStarsData.data[i + 1] = starsG;
-        rightStarsData.data[i + 2] = starsB;
+        const starlessR = originalStarlessData.data[i] / 255;
+        const starlessG = originalStarlessData.data[i + 1] / 255;
+        const starlessB = originalStarlessData.data[i + 2] / 255;
+        
+        // Reverse screen blend: if composite = 1 - (1 - bg) * (1 - stars)
+        // Then: stars = 1 - (1 - composite) / (1 - bg) [when bg < 1]
+        // Simplified: stars = (composite - bg) / (1 - bg) for approximation
+        
+        const starsR = starlessR < 0.99 ? Math.max(0, Math.min(1, (compositeR - starlessR) / (1 - starlessR))) : compositeR - starlessR;
+        const starsG = starlessG < 0.99 ? Math.max(0, Math.min(1, (compositeG - starlessG) / (1 - starlessG))) : compositeG - starlessG;
+        const starsB = starlessB < 0.99 ? Math.max(0, Math.min(1, (compositeB - starlessB) / (1 - starlessB))) : compositeB - starlessB;
+        
+        rightStarsData.data[i] = starsR * 255;
+        rightStarsData.data[i + 1] = starsG * 255;
+        rightStarsData.data[i + 2] = starsB * 255;
         rightStarsData.data[i + 3] = 255;
         
-        // Extract morphed starless by subtracting extracted stars from composite
-        rightBgData.data[i] = Math.max(0, rightCompositeData.data[i] - starsR);
-        rightBgData.data[i + 1] = Math.max(0, rightCompositeData.data[i + 1] - starsG);
-        rightBgData.data[i + 2] = Math.max(0, rightCompositeData.data[i + 2] - starsB);
+        // Background = composite - stars contribution (using screen blend reverse)
+        const bgR = Math.max(0, compositeR - (1 - (1 - starlessR) * (1 - starsR)) + starlessR);
+        const bgG = Math.max(0, compositeG - (1 - (1 - starlessG) * (1 - starsG)) + starlessG);
+        const bgB = Math.max(0, compositeB - (1 - (1 - starlessB) * (1 - starsB)) + starlessB);
+        
+        rightBgData.data[i] = bgR * 255;
+        rightBgData.data[i + 1] = bgG * 255;
+        rightBgData.data[i + 2] = bgB * 255;
         rightBgData.data[i + 3] = 255;
       }
       
-      rightStarsCtx.putImageData(rightStarsData, 0, 0);
       rightBgCtx.putImageData(rightBgData, 0, 0);
+      rightStarsCtx.putImageData(rightStarsData, 0, 0);
       
       // Step 4: Detect stars for 3D rendering using depth map from traditional morph
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
