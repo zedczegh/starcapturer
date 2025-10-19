@@ -67,6 +67,7 @@ const ParallelVideoGenerator: React.FC = () => {
   const leftCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rightCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const stitchedCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const depthMapCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Traditional Morph Parameters - matching stereoscope processor exactly
   const [horizontalDisplace, setHorizontalDisplace] = useState<number>(25);
@@ -358,6 +359,16 @@ const ParallelVideoGenerator: React.FC = () => {
       );
 
       console.log('Stereo pair created - Left:', leftCanvas.width, 'x', leftCanvas.height);
+      
+      // Store depth map for display
+      if (depthMapCanvasRef.current) {
+        depthMapCanvasRef.current.width = depthMap.width;
+        depthMapCanvasRef.current.height = depthMap.height;
+        const depthCtx = depthMapCanvasRef.current.getContext('2d');
+        if (depthCtx) {
+          depthCtx.drawImage(depthMap, 0, 0);
+        }
+      }
       
       // DEBUG: Save composites for inspection
       setLeftComposite(leftCanvas.toDataURL());
@@ -1143,10 +1154,33 @@ const ParallelVideoGenerator: React.FC = () => {
                   )}
                 </div>
 
+                {/* Depth Map Display */}
+                <div className="space-y-2">
+                  <Label className="text-cosmic-200 text-sm flex items-center gap-2">
+                    <Eye className="w-4 h-4" />
+                    {t('Depth Map (Used for Displacement)', '深度图（用于位移处理）')}
+                  </Label>
+                  <div className="bg-black rounded-lg overflow-hidden border-2 border-purple-500 shadow-lg">
+                    <div className="overflow-x-auto">
+                      <canvas 
+                        ref={depthMapCanvasRef} 
+                        className="max-w-full h-auto"
+                        style={{ imageRendering: 'pixelated', maxHeight: '300px' }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-cosmic-400">
+                    {t(
+                      'Generated from starless image - brighter areas are displaced more',
+                      '从无星图像生成 - 较亮区域位移更大'
+                    )}
+                  </p>
+                </div>
+
                 {/* Stitched View */}
                 <div className="space-y-2">
                   <Label className="text-cosmic-200 text-sm">
-                    {t('Stitched Parallel View', '拼接平行视图')}
+                    {t('Stitched Parallel View (With Displacement Applied)', '拼接平行视图（已应用位移）')}
                   </Label>
                   <div className="bg-black rounded-lg overflow-hidden border-2 border-cyan-500 shadow-2xl">
                     <div className="overflow-x-auto">
@@ -1157,6 +1191,12 @@ const ParallelVideoGenerator: React.FC = () => {
                       />
                     </div>
                   </div>
+                  <p className="text-xs text-cosmic-400">
+                    {t(
+                      'Stereoscopic pair with depth-based displacement - view cross-eyed for 3D effect',
+                      '基于深度位移的立体对 - 交叉眼查看3D效果'
+                    )}
+                  </p>
                 </div>
 
                 {/* Control Buttons */}
