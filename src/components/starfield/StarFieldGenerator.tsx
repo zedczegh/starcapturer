@@ -82,11 +82,11 @@ const StarFieldGenerator: React.FC = () => {
   // Stereoscopic 3D mode states
   const [stereoscopicMode, setStereoscopicMode] = useState(false);
   const [stereoParams, setStereoParams] = useState({
-    horizontalDisplace: 25,
-    starShiftAmount: 6,
-    luminanceBlur: 1.5,
-    contrastBoost: 1.2,
-    stereoSpacing: 300
+    horizontalDisplace: 25,      // Default from Traditional Morph
+    starShiftAmount: 6,           // Default from Traditional Morph
+    luminanceBlur: 1.5,           // Default from Traditional Morph
+    contrastBoost: 1.2,           // Default from Traditional Morph
+    stereoSpacing: 600            // Default from Traditional Morph
   });
   const [stereoAnimating, setStereoAnimating] = useState(false);
   const [stereoProgress, setStereoProgress] = useState(0);
