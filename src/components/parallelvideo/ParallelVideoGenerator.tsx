@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Video, Download, Play, Pause } from 'lucide-react';
+import { Upload, Video, Play, Pause, RotateCcw, Sparkles, Eye, Settings2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { TraditionalMorphService, TraditionalMorphParams } from '@/services/TraditionalMorphService';
 import { VideoGenerationService, MotionSettings } from '@/services/VideoGenerationService';
@@ -12,6 +12,7 @@ import { validateImageFile } from '@/utils/imageProcessingUtils';
 import StarField3D from '@/components/starfield/StarField3D';
 import { toast } from 'sonner';
 import { CanvasPool } from '@/lib/performance/CanvasPool';
+import { Separator } from '@/components/ui/separator';
 
 interface StarData {
   x: number;
@@ -52,12 +53,17 @@ const ParallelVideoGenerator: React.FC = () => {
   const leftCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rightCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Traditional Morph Parameters (matching Stereoscope Processor defaults)
-  const [morphParams] = useState<TraditionalMorphParams>(
-    TraditionalMorphService.DEFAULT_PARAMS
-  );
+  // Traditional Morph Parameters - now configurable!
+  const [morphParams, setMorphParams] = useState<TraditionalMorphParams>({
+    horizontalDisplace: 25,
+    starShiftAmount: 6,
+    luminanceBlur: 1.5,
+    contrastBoost: 1.2,
+    stereoSpacing: 600,
+    borderSize: 0 // No borders for video
+  });
 
-  // 3D Star Field Motion Settings (matching Star Field Generator defaults)
+  // 3D Star Field Motion Settings - complete settings
   const [motionSettings, setMotionSettings] = useState<MotionSettings>({
     motionType: 'zoom_in',
     speed: 1.5,
@@ -96,17 +102,17 @@ const ParallelVideoGenerator: React.FC = () => {
 
   // Extract stars from composite image
   const extractStarsFromComposite = useCallback((
-    compositeImage: HTMLImageElement,
+    compositeCanvas: HTMLCanvasElement,
     starlessImage: HTMLImageElement,
     depthMap: HTMLCanvasElement
   ): { starsOnly: HTMLCanvasElement; stars: StarData[] } => {
     const canvasPool = CanvasPool.getInstance();
-    const starsCanvas = canvasPool.acquire(compositeImage.width, compositeImage.height);
+    const starsCanvas = canvasPool.acquire(compositeCanvas.width, compositeCanvas.height);
     const ctx = starsCanvas.getContext('2d')!;
 
-    // Draw composite
-    ctx.drawImage(compositeImage, 0, 0);
-    const compositeData = ctx.getImageData(0, 0, starsCanvas.width, starsCanvas.height);
+    // Get composite data
+    const compositeCtx = compositeCanvas.getContext('2d')!;
+    const compositeData = compositeCtx.getImageData(0, 0, compositeCanvas.width, compositeCanvas.height);
 
     // Draw starless to temp canvas
     const tempCanvas = canvasPool.acquire(starlessImage.width, starlessImage.height);
@@ -115,7 +121,7 @@ const ParallelVideoGenerator: React.FC = () => {
     const starlessData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
 
     // Subtract starless from composite to get stars only
-    const starsData = ctx.createImageData(starsCanvas.width, starsCanvas.height);
+    const starsData = ctx.createImageData(compositeCanvas.width, compositeCanvas.height);
     for (let i = 0; i < compositeData.data.length; i += 4) {
       starsData.data[i] = Math.max(0, compositeData.data[i] - starlessData.data[i]);
       starsData.data[i + 1] = Math.max(0, compositeData.data[i + 1] - starlessData.data[i + 1]);
@@ -128,13 +134,13 @@ const ParallelVideoGenerator: React.FC = () => {
     // Detect star positions
     const stars: StarData[] = [];
     const threshold = 50;
-    const visited = new Uint8Array(starsCanvas.width * starsCanvas.height);
+    const visited = new Uint8Array(compositeCanvas.width * compositeCanvas.height);
     const depthCtx = depthMap.getContext('2d')!;
     const depthData = depthCtx.getImageData(0, 0, depthMap.width, depthMap.height);
 
-    for (let y = 1; y < starsCanvas.height - 1; y++) {
-      for (let x = 1; x < starsCanvas.width - 1; x++) {
-        const idx = y * starsCanvas.width + x;
+    for (let y = 1; y < compositeCanvas.height - 1; y++) {
+      for (let x = 1; x < compositeCanvas.width - 1; x++) {
+        const idx = y * compositeCanvas.width + x;
         if (visited[idx]) continue;
 
         const pixelIdx = idx * 4;
@@ -150,8 +156,8 @@ const ParallelVideoGenerator: React.FC = () => {
           const depth = depthData.data[depthIdx] / 255;
 
           // Calculate 3D coordinates
-          const centerX = starsCanvas.width / 2;
-          const centerY = starsCanvas.height / 2;
+          const centerX = compositeCanvas.width / 2;
+          const centerY = compositeCanvas.height / 2;
           const scale = 0.08;
 
           stars.push({
@@ -167,6 +173,7 @@ const ParallelVideoGenerator: React.FC = () => {
     }
 
     canvasPool.release(tempCanvas);
+    console.log(`Detected ${stars.length} stars in composite`);
     return { starsOnly: starsCanvas, stars };
   }, [depthIntensity]);
 
@@ -179,11 +186,11 @@ const ParallelVideoGenerator: React.FC = () => {
 
     setIsProcessing(true);
     setIsReady(false);
-    setProcessingStep(t('Processing with Traditional Morph...', '使用传统变形处理中...'));
+    setProcessingStep(t('Initializing...', '初始化...'));
 
     try {
       // Step 1: Create stereo pair with traditional morph
-      setProcessingStep(t('Creating stereoscopic pair...', '创建立体对...'));
+      setProcessingStep(t('Creating stereoscopic pair with Traditional Morph...', '使用传统变形创建立体对...'));
       const result = await TraditionalMorphService.createStereoPair(
         starlessFile,
         starsFile,
@@ -193,38 +200,29 @@ const ParallelVideoGenerator: React.FC = () => {
         }
       );
 
+      console.log('Stereo pair created:', result);
+
       // Step 2: Load original starless image
-      setProcessingStep(t('Separating layers...', '分离图层...'));
+      setProcessingStep(t('Loading starless background...', '加载无星背景...'));
       const starlessImg = new Image();
-      await new Promise((resolve, reject) => {
-        starlessImg.onload = resolve;
-        starlessImg.onerror = reject;
+      await new Promise<void>((resolve, reject) => {
+        starlessImg.onload = () => resolve();
+        starlessImg.onerror = () => reject(new Error('Failed to load starless image'));
         starlessImg.src = URL.createObjectURL(starlessFile);
       });
 
-      // Step 3: Load composite images
-      const leftImg = new Image();
-      const rightImg = new Image();
+      console.log('Starless image loaded:', starlessImg.width, 'x', starlessImg.height);
+
+      // Step 3: Extract stars from both views
+      setProcessingStep(t('Separating stars from left view...', '从左视图分离星点...'));
+      const leftResult = extractStarsFromComposite(result.leftComposite, starlessImg, result.depthMap);
       
-      await Promise.all([
-        new Promise((resolve, reject) => {
-          leftImg.onload = resolve;
-          leftImg.onerror = reject;
-          leftImg.src = result.leftComposite.toDataURL();
-        }),
-        new Promise((resolve, reject) => {
-          rightImg.onload = resolve;
-          rightImg.onerror = reject;
-          rightImg.src = result.rightComposite.toDataURL();
-        })
-      ]);
+      setProcessingStep(t('Separating stars from right view...', '从右视图分离星点...'));
+      const rightResult = extractStarsFromComposite(result.rightComposite, starlessImg, result.depthMap);
 
-      // Step 4: Extract stars from both views
-      setProcessingStep(t('Detecting stars...', '检测星点...'));
-      const leftResult = extractStarsFromComposite(leftImg, starlessImg, result.depthMap);
-      const rightResult = extractStarsFromComposite(rightImg, starlessImg, result.depthMap);
+      console.log('Stars extracted - Left:', leftResult.stars.length, 'Right:', rightResult.stars.length);
 
-      // Step 5: Set all processed data
+      // Step 4: Set all processed data
       setLeftBackground(starlessImg.src);
       setRightBackground(starlessImg.src);
       setLeftStarsOnly(leftResult.starsOnly.toDataURL());
@@ -234,16 +232,16 @@ const ParallelVideoGenerator: React.FC = () => {
 
       setIsReady(true);
       setProcessingStep('');
-      toast.success(t('Processing complete! Starting preview...', '处理完成！启动预览...'));
+      toast.success(t('Processing complete! Preview ready.', '处理完成！预览就绪。'));
 
       // Auto-start animation after a short delay
       setTimeout(() => {
         setIsAnimating(true);
-      }, 500);
+      }, 800);
 
     } catch (error) {
       console.error('Processing error:', error);
-      toast.error(t('Failed to process images', '图片处理失败'));
+      toast.error(t('Failed to process images: ' + (error as Error).message, '图片处理失败：' + (error as Error).message));
       setIsReady(false);
     } finally {
       setIsProcessing(false);
@@ -294,51 +292,70 @@ const ParallelVideoGenerator: React.FC = () => {
         }
       });
 
-      // Combine into side-by-side video
-      setVideoProgress({ stage: t('Combining videos...', '合并视频...'), percent: 90 });
-      
-      // For now, download both videos separately
-      // TODO: Implement side-by-side combination
-      VideoGenerationService.downloadVideo(leftBlob, 'left-view.webm');
-      VideoGenerationService.downloadVideo(rightBlob, 'right-view.webm');
+      // Download both videos
+      setVideoProgress({ stage: t('Downloading...', '下载中...'), percent: 95 });
+      VideoGenerationService.downloadVideo(leftBlob, `left-view-${Date.now()}.webm`);
+      VideoGenerationService.downloadVideo(rightBlob, `right-view-${Date.now()}.webm`);
 
-      toast.success(t('Videos generated successfully', '视频生成成功'));
+      toast.success(t('Videos generated successfully!', '视频生成成功！'));
       setVideoProgress({ stage: '', percent: 100 });
     } catch (error) {
       console.error('Video generation error:', error);
       toast.error(t('Failed to generate videos', '视频生成失败'));
     } finally {
       setIsGenerating(false);
+      setTimeout(() => {
+        setVideoProgress({ stage: '', percent: 0 });
+      }, 2000);
     }
   }, [leftCanvasRef, rightCanvasRef, motionSettings, t]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card className="bg-cosmic-900/50 border-cosmic-700">
-        <CardHeader>
-          <CardTitle className="text-3xl font-bold text-white">
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      {/* Hero Header */}
+      <div className="text-center mb-8 space-y-4">
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center border border-purple-500/30">
+            <Sparkles className="w-6 h-6 text-purple-400" />
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
             {t('3D Parallel Video Generator', '3D平行视频生成器')}
-          </CardTitle>
-          <CardDescription className="text-cosmic-300">
-            {t(
-              'Generate stereoscopic 3D videos from starless and stars-only images',
-              '从无星和仅星图像生成立体3D视频'
-            )}
-          </CardDescription>
-        </CardHeader>
+          </h1>
+        </div>
+        <p className="text-lg text-cosmic-300 max-w-3xl mx-auto">
+          {t(
+            'Generate stunning stereoscopic 3D videos from astronomy images using Traditional Morph processing',
+            '使用传统变形处理从天文图像生成令人惊叹的立体3D视频'
+          )}
+        </p>
+      </div>
 
-        <CardContent className="space-y-6">
-          {/* Step 1: Upload Images */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold text-white">
-              {t('Step 1: Upload Images', '步骤1：上传图片')}
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Starless Image Upload */}
+      <div className="grid grid-cols-1 gap-6">
+        {/* Step 1: Upload & Traditional Morph Settings */}
+        <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center border border-amber-500/30">
+                <Upload className="w-5 h-5 text-amber-400" />
+              </div>
               <div>
-                <Label className="text-cosmic-200">
-                  {t('Starless Image', '无星图像')}
+                <CardTitle className="text-2xl text-white">
+                  {t('Step 1: Upload Images & Configure Traditional Morph', '步骤1：上传图片并配置传统变形')}
+                </CardTitle>
+                <CardDescription className="text-cosmic-300">
+                  {t('Upload your starless and stars-only images, then adjust morph parameters', '上传无星和仅星图像，然后调整变形参数')}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            {/* Image Uploads */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-cosmic-200 flex items-center gap-2">
+                  <Eye className="w-4 h-4" />
+                  {t('Starless Image (Background)', '无星图像（背景）')}
                 </Label>
                 <input
                   ref={starlessInputRef}
@@ -349,17 +366,21 @@ const ParallelVideoGenerator: React.FC = () => {
                 />
                 <Button
                   onClick={() => starlessInputRef.current?.click()}
-                  className="w-full mt-2"
+                  className="w-full h-24 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 transition-all"
                   variant="outline"
                 >
-                  <Upload className="w-4 h-4 mr-2" />
-                  {starlessFile ? starlessFile.name : t('Upload Starless', '上传无星图像')}
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="w-6 h-6 text-cosmic-400" />
+                    <span className="text-sm text-cosmic-300">
+                      {starlessFile ? starlessFile.name : t('Click to upload', '点击上传')}
+                    </span>
+                  </div>
                 </Button>
               </div>
 
-              {/* Stars Only Image Upload */}
-              <div>
-                <Label className="text-cosmic-200">
+              <div className="space-y-2">
+                <Label className="text-cosmic-200 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
                   {t('Stars Only Image', '仅星图像')}
                 </Label>
                 <input
@@ -371,116 +392,304 @@ const ParallelVideoGenerator: React.FC = () => {
                 />
                 <Button
                   onClick={() => starsInputRef.current?.click()}
-                  className="w-full mt-2"
+                  className="w-full h-24 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 transition-all"
                   variant="outline"
                 >
-                  <Upload className="w-4 h-4 mr-2" />
-                  {starsFile ? starsFile.name : t('Upload Stars', '上传仅星图像')}
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="w-6 h-6 text-cosmic-400" />
+                    <span className="text-sm text-cosmic-300">
+                      {starsFile ? starsFile.name : t('Click to upload', '点击上传')}
+                    </span>
+                  </div>
                 </Button>
               </div>
             </div>
 
+            <Separator className="bg-cosmic-700/30" />
+
+            {/* Traditional Morph Parameters */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Settings2 className="w-5 h-5 text-purple-400" />
+                <h3 className="text-lg font-semibold text-white">
+                  {t('Traditional Morph Parameters', '传统变形参数')}
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Horizontal Displacement */}
+                <div className="space-y-2">
+                  <Label className="text-cosmic-200 flex items-center justify-between">
+                    <span>{t('Horizontal Displacement', '水平位移')}</span>
+                    <span className="text-amber-400 font-mono">{morphParams.horizontalDisplace}</span>
+                  </Label>
+                  <Slider
+                    value={[morphParams.horizontalDisplace]}
+                    onValueChange={([value]) => 
+                      setMorphParams({ ...morphParams, horizontalDisplace: value })
+                    }
+                    min={10}
+                    max={50}
+                    step={1}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-cosmic-400">
+                    {t('Controls nebula depth displacement (10-50 recommended)', '控制星云深度位移（推荐10-50）')}
+                  </p>
+                </div>
+
+                {/* Star Shift */}
+                <div className="space-y-2">
+                  <Label className="text-cosmic-200 flex items-center justify-between">
+                    <span>{t('Star Shift Amount', '星点位移量')}</span>
+                    <span className="text-amber-400 font-mono">{morphParams.starShiftAmount}px</span>
+                  </Label>
+                  <Slider
+                    value={[morphParams.starShiftAmount]}
+                    onValueChange={([value]) => 
+                      setMorphParams({ ...morphParams, starShiftAmount: value })
+                    }
+                    min={2}
+                    max={15}
+                    step={0.5}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-cosmic-400">
+                    {t('Distance to shift individual stars for 3D positioning', '单个星点的3D定位位移距离')}
+                  </p>
+                </div>
+
+                {/* Luminance Blur */}
+                <div className="space-y-2">
+                  <Label className="text-cosmic-200 flex items-center justify-between">
+                    <span>{t('Depth Map Blur', '深度图模糊')}</span>
+                    <span className="text-amber-400 font-mono">{morphParams.luminanceBlur.toFixed(1)}px</span>
+                  </Label>
+                  <Slider
+                    value={[morphParams.luminanceBlur]}
+                    onValueChange={([value]) => 
+                      setMorphParams({ ...morphParams, luminanceBlur: value })
+                    }
+                    min={0.5}
+                    max={3}
+                    step={0.1}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-cosmic-400">
+                    {t('Smoothing for depth map transitions', '深度图过渡平滑度')}
+                  </p>
+                </div>
+
+                {/* Contrast Boost */}
+                <div className="space-y-2">
+                  <Label className="text-cosmic-200 flex items-center justify-between">
+                    <span>{t('Contrast Boost', '对比度增强')}</span>
+                    <span className="text-amber-400 font-mono">{morphParams.contrastBoost.toFixed(2)}x</span>
+                  </Label>
+                  <Slider
+                    value={[morphParams.contrastBoost]}
+                    onValueChange={([value]) => 
+                      setMorphParams({ ...morphParams, contrastBoost: value })
+                    }
+                    min={1.0}
+                    max={1.5}
+                    step={0.05}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-cosmic-400">
+                    {t('Final contrast adjustment', '最终对比度调整')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Process Button */}
             <Button
               onClick={processImages}
               disabled={!starlessFile || !starsFile || isProcessing}
-              className="w-full"
+              className="w-full h-14 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold text-lg shadow-lg shadow-amber-500/20"
+              size="lg"
             >
-              {isProcessing ? processingStep : t('Process with Traditional Morph', '使用传统变形处理')}
+              {isProcessing ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>{processingStep || t('Processing...', '处理中...')}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5" />
+                  {t('Process with Traditional Morph', '使用传统变形处理')}
+                </div>
+              )}
             </Button>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Step 2: Configure Motion Settings */}
-          {isReady && (
-            <>
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-white">
-                  {t('Step 2: Configure Motion Settings', '步骤2：配置运动设置')}
-                </h3>
+        {/* Step 2: Motion Settings & Preview */}
+        {isReady && (
+          <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center border border-blue-500/30">
+                  <Settings2 className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl text-white">
+                    {t('Step 2: Configure 3D Motion Settings', '步骤2：配置3D运动设置')}
+                  </CardTitle>
+                  <CardDescription className="text-cosmic-300">
+                    {t('Adjust animation parameters for your 3D star field', '调整3D星场的动画参数')}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Motion Type */}
-                  <div>
-                    <Label className="text-cosmic-200">{t('Motion Type', '运动类型')}</Label>
-                    <Select
-                      value={motionSettings.motionType}
-                      onValueChange={(value: any) => 
-                        setMotionSettings({ ...motionSettings, motionType: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="zoom_in">{t('Zoom In', '拉近')}</SelectItem>
-                        <SelectItem value="zoom_out">{t('Zoom Out', '拉远')}</SelectItem>
-                        <SelectItem value="pan_left">{t('Pan Left', '向左平移')}</SelectItem>
-                        <SelectItem value="pan_right">{t('Pan Right', '向右平移')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <CardContent className="space-y-6">
+              {/* Motion Settings Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Motion Type */}
+                <div className="space-y-2">
+                  <Label className="text-cosmic-200">{t('Motion Type', '运动类型')}</Label>
+                  <Select
+                    value={motionSettings.motionType}
+                    onValueChange={(value: any) => 
+                      setMotionSettings({ ...motionSettings, motionType: value })
+                    }
+                  >
+                    <SelectTrigger className="bg-cosmic-800/50 border-cosmic-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="zoom_in">{t('Zoom In', '拉近')}</SelectItem>
+                      <SelectItem value="zoom_out">{t('Zoom Out', '拉远')}</SelectItem>
+                      <SelectItem value="pan_left">{t('Pan Left', '向左平移')}</SelectItem>
+                      <SelectItem value="pan_right">{t('Pan Right', '向右平移')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                  {/* Duration */}
-                  <div>
-                    <Label className="text-cosmic-200">
-                      {t('Duration', '时长')}: {motionSettings.duration}s
-                    </Label>
-                    <Slider
-                      value={[motionSettings.duration]}
-                      onValueChange={([value]) => 
-                        setMotionSettings({ ...motionSettings, duration: value })
-                      }
-                      min={5}
-                      max={30}
-                      step={1}
-                      className="mt-2"
-                    />
-                  </div>
+                {/* Duration */}
+                <div className="space-y-2">
+                  <Label className="text-cosmic-200 flex justify-between">
+                    <span>{t('Duration', '时长')}</span>
+                    <span className="text-blue-400 font-mono">{motionSettings.duration}s</span>
+                  </Label>
+                  <Slider
+                    value={[motionSettings.duration]}
+                    onValueChange={([value]) => 
+                      setMotionSettings({ ...motionSettings, duration: value })
+                    }
+                    min={5}
+                    max={30}
+                    step={1}
+                  />
+                </div>
 
-                  {/* Depth Intensity */}
-                  <div>
-                    <Label className="text-cosmic-200">
-                      {t('Depth Intensity', '深度强度')}: {depthIntensity}
-                    </Label>
-                    <Slider
-                      value={[depthIntensity]}
-                      onValueChange={([value]) => setDepthIntensity(value)}
-                      min={0}
-                      max={100}
-                      step={1}
-                      className="mt-2"
-                    />
-                  </div>
+                {/* Speed */}
+                <div className="space-y-2">
+                  <Label className="text-cosmic-200 flex justify-between">
+                    <span>{t('Speed', '速度')}</span>
+                    <span className="text-blue-400 font-mono">{motionSettings.speed.toFixed(1)}x</span>
+                  </Label>
+                  <Slider
+                    value={[motionSettings.speed]}
+                    onValueChange={([value]) => 
+                      setMotionSettings({ ...motionSettings, speed: value })
+                    }
+                    min={0.5}
+                    max={3}
+                    step={0.1}
+                  />
+                </div>
 
-                  {/* Amplification */}
-                  <div>
-                    <Label className="text-cosmic-200">
-                      {t('Amplification', '放大')}: {motionSettings.amplification}%
-                    </Label>
-                    <Slider
-                      value={[motionSettings.amplification]}
-                      onValueChange={([value]) => 
-                        setMotionSettings({ ...motionSettings, amplification: value })
-                      }
-                      min={100}
-                      max={300}
-                      step={10}
-                      className="mt-2"
-                    />
-                  </div>
+                {/* Amplification */}
+                <div className="space-y-2">
+                  <Label className="text-cosmic-200 flex justify-between">
+                    <span>{t('Amplification', '放大')}</span>
+                    <span className="text-blue-400 font-mono">{motionSettings.amplification}%</span>
+                  </Label>
+                  <Slider
+                    value={[motionSettings.amplification]}
+                    onValueChange={([value]) => 
+                      setMotionSettings({ ...motionSettings, amplification: value })
+                    }
+                    min={100}
+                    max={300}
+                    step={10}
+                  />
+                </div>
+
+                {/* Spin Amount */}
+                <div className="space-y-2">
+                  <Label className="text-cosmic-200 flex justify-between">
+                    <span>{t('Spin Amount', '旋转量')}</span>
+                    <span className="text-blue-400 font-mono">{motionSettings.spin}°</span>
+                  </Label>
+                  <Slider
+                    value={[motionSettings.spin]}
+                    onValueChange={([value]) => 
+                      setMotionSettings({ ...motionSettings, spin: value })
+                    }
+                    min={0}
+                    max={90}
+                    step={5}
+                  />
+                </div>
+
+                {/* Spin Direction */}
+                <div className="space-y-2">
+                  <Label className="text-cosmic-200">{t('Spin Direction', '旋转方向')}</Label>
+                  <Select
+                    value={motionSettings.spinDirection}
+                    onValueChange={(value: any) => 
+                      setMotionSettings({ ...motionSettings, spinDirection: value })
+                    }
+                  >
+                    <SelectTrigger className="bg-cosmic-800/50 border-cosmic-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="clockwise">{t('Clockwise', '顺时针')}</SelectItem>
+                      <SelectItem value="counterclockwise">{t('Counterclockwise', '逆时针')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Depth Intensity */}
+                <div className="space-y-2 md:col-span-3">
+                  <Label className="text-cosmic-200 flex justify-between">
+                    <span>{t('3D Depth Intensity', '3D深度强度')}</span>
+                    <span className="text-blue-400 font-mono">{depthIntensity}</span>
+                  </Label>
+                  <Slider
+                    value={[depthIntensity]}
+                    onValueChange={([value]) => setDepthIntensity(value)}
+                    min={0}
+                    max={100}
+                    step={5}
+                  />
+                  <p className="text-xs text-cosmic-400">
+                    {t('Controls the parallax effect intensity', '控制视差效果强度')}
+                  </p>
                 </div>
               </div>
 
-              {/* Step 3: Preview and Generate */}
+              <Separator className="bg-cosmic-700/30" />
+
+              {/* Preview Section */}
               <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-white">
-                  {t('Step 3: Preview & Generate', '步骤3：预览和生成')}
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-cyan-400" />
+                  {t('Preview', '预览')}
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Left View Preview */}
-                  <div>
-                    <Label className="text-cosmic-200">{t('Left View', '左视图')}</Label>
-                    <div className="mt-2 aspect-video bg-black rounded-lg overflow-hidden border border-cosmic-700">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Left View */}
+                  <div className="space-y-2">
+                    <Label className="text-cosmic-200 text-sm">
+                      {t('Left View', '左视图')} ({leftStars.length} {t('stars', '星点')})
+                    </Label>
+                    <div className="aspect-video bg-black rounded-lg overflow-hidden border-2 border-cosmic-700 shadow-2xl">
                       {leftStars.length > 0 ? (
                         <StarField3D
                           stars={leftStars}
@@ -492,21 +701,23 @@ const ParallelVideoGenerator: React.FC = () => {
                           depthIntensity={depthIntensity}
                           onCanvasReady={(canvas) => { 
                             leftCanvasRef.current = canvas;
-                            console.log('Left canvas ready:', canvas.width, 'x', canvas.height);
+                            console.log('Left canvas ready');
                           }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-cosmic-400">
-                          {t('Processing...', '处理中...')}
+                          {t('Waiting...', '等待中...')}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Right View Preview */}
-                  <div>
-                    <Label className="text-cosmic-200">{t('Right View', '右视图')}</Label>
-                    <div className="mt-2 aspect-video bg-black rounded-lg overflow-hidden border border-cosmic-700">
+                  {/* Right View */}
+                  <div className="space-y-2">
+                    <Label className="text-cosmic-200 text-sm">
+                      {t('Right View', '右视图')} ({rightStars.length} {t('stars', '星点')})
+                    </Label>
+                    <div className="aspect-video bg-black rounded-lg overflow-hidden border-2 border-cosmic-700 shadow-2xl">
                       {rightStars.length > 0 ? (
                         <StarField3D
                           stars={rightStars}
@@ -518,22 +729,23 @@ const ParallelVideoGenerator: React.FC = () => {
                           depthIntensity={depthIntensity}
                           onCanvasReady={(canvas) => { 
                             rightCanvasRef.current = canvas;
-                            console.log('Right canvas ready:', canvas.width, 'x', canvas.height);
+                            console.log('Right canvas ready');
                           }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-cosmic-400">
-                          {t('Processing...', '处理中...')}
+                          {t('Waiting...', '等待中...')}
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-4">
+                {/* Control Buttons */}
+                <div className="flex gap-3">
                   <Button
                     onClick={() => setIsAnimating(!isAnimating)}
-                    className="flex-1"
+                    className="flex-1 bg-cosmic-800 hover:bg-cosmic-700 border border-cosmic-600"
                     variant="outline"
                     disabled={!leftCanvasRef.current || !rightCanvasRef.current}
                   >
@@ -551,9 +763,21 @@ const ParallelVideoGenerator: React.FC = () => {
                   </Button>
 
                   <Button
+                    onClick={() => {
+                      setIsAnimating(false);
+                      setTimeout(() => setIsAnimating(true), 100);
+                    }}
+                    className="bg-cosmic-800 hover:bg-cosmic-700 border border-cosmic-600"
+                    variant="outline"
+                    disabled={!leftCanvasRef.current || !rightCanvasRef.current}
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </Button>
+
+                  <Button
                     onClick={generateParallelVideo}
                     disabled={isGenerating || !leftCanvasRef.current || !rightCanvasRef.current}
-                    className="flex-1"
+                    className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-blue-500/20"
                   >
                     <Video className="w-4 h-4 mr-2" />
                     {isGenerating 
@@ -565,14 +789,14 @@ const ParallelVideoGenerator: React.FC = () => {
 
                 {(!leftCanvasRef.current || !rightCanvasRef.current) && (
                   <p className="text-sm text-cosmic-400 text-center">
-                    {t('Waiting for canvas to initialize...', '等待画布初始化...')}
+                    {t('Initializing canvas...', '初始化画布中...')}
                   </p>
                 )}
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };
