@@ -2029,14 +2029,11 @@ const StarFieldGenerator: React.FC = () => {
               sourceCanvas={canvasRef.current}
               starsOnlyImage={starsOnlyImage}
               starlessImage={starlessImage}
-              isAnimating={isAnimating}
-              animationProgress={animationProgress}
+              mainAnimationProgress={animationProgress}
               duration={animationSettings.duration}
               traditionalParams={traditionalParams}
               stereoSpacing={stereoSpacing}
               borderSize={borderSize}
-              onToggleAnimation={toggleAnimation}
-              onReplay={handleReplay}
               language={language}
             />
           )}

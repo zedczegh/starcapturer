@@ -9,14 +9,11 @@ interface StereoscopicPreviewProps {
   sourceCanvas: HTMLCanvasElement | null;
   starsOnlyImage: string | null;
   starlessImage: string | null;
-  isAnimating: boolean;
-  animationProgress: number;
+  mainAnimationProgress: number; // Track main animation progress
   duration: number;
   traditionalParams: TraditionalMorphParams;
   stereoSpacing: number;
   borderSize: number;
-  onToggleAnimation: () => void;
-  onReplay: () => void;
   language: 'en' | 'zh';
 }
 
@@ -24,22 +21,36 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
   sourceCanvas,
   starsOnlyImage,
   starlessImage,
-  isAnimating,
-  animationProgress,
+  mainAnimationProgress,
   duration,
   traditionalParams,
   stereoSpacing,
   borderSize,
-  onToggleAnimation,
-  onReplay,
   language
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [localProgress, setLocalProgress] = useState(0);
+  const [isLocalAnimating, setIsLocalAnimating] = useState(false);
   const animationFrameRef = useRef<number>();
   const lastUpdateTimeRef = useRef<number>(0);
+  const animationStartTimeRef = useRef<number>(0);
   
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
+
+  // Independent animation controls
+  const toggleLocalAnimation = useCallback(() => {
+    setIsLocalAnimating(prev => !prev);
+    if (!isLocalAnimating) {
+      animationStartTimeRef.current = performance.now() - (localProgress / 100) * duration * 1000;
+    }
+  }, [isLocalAnimating, localProgress, duration]);
+
+  const replayLocal = useCallback(() => {
+    setLocalProgress(0);
+    setIsLocalAnimating(true);
+    animationStartTimeRef.current = performance.now();
+  }, []);
 
   // Format time in MM:SS format
   const formatTime = (seconds: number) => {
@@ -51,12 +62,19 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
   // Process and render stereoscopic frame
   const renderStereoscopicFrame = useCallback(async () => {
     if (!sourceCanvas || !canvasRef.current || !starsOnlyImage || !starlessImage || isProcessing) {
+      console.log('Stereo render skipped:', { 
+        hasSourceCanvas: !!sourceCanvas, 
+        hasCanvasRef: !!canvasRef.current,
+        hasStarsOnly: !!starsOnlyImage,
+        hasStarless: !!starlessImage,
+        isProcessing 
+      });
       return;
     }
 
-    // Throttle updates to 30fps max
+    // Throttle updates to 15fps for heavy processing
     const now = performance.now();
-    if (now - lastUpdateTimeRef.current < 33) {
+    if (now - lastUpdateTimeRef.current < 66) {
       return;
     }
     lastUpdateTimeRef.current = now;
@@ -64,6 +82,13 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
     setIsProcessing(true);
     
     try {
+      console.log('Processing stereoscopic frame...', {
+        sourceWidth: sourceCanvas.width,
+        sourceHeight: sourceCanvas.height,
+        stereoSpacing,
+        borderSize
+      });
+
       const stereoCanvas = await processFrameToStereoscopic(
         sourceCanvas,
         starsOnlyImage,
@@ -73,16 +98,23 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
         borderSize
       );
 
+      console.log('Stereo canvas created:', {
+        width: stereoCanvas.width,
+        height: stereoCanvas.height
+      });
+
       const ctx = canvasRef.current.getContext('2d');
-      if (ctx) {
+      if (ctx && canvasRef.current) {
         // Update canvas dimensions if needed
         if (canvasRef.current.width !== stereoCanvas.width || canvasRef.current.height !== stereoCanvas.height) {
           canvasRef.current.width = stereoCanvas.width;
           canvasRef.current.height = stereoCanvas.height;
+          console.log('Canvas resized to:', stereoCanvas.width, 'x', stereoCanvas.height);
         }
         
         ctx.clearRect(0, 0, stereoCanvas.width, stereoCanvas.height);
         ctx.drawImage(stereoCanvas, 0, 0);
+        console.log('Stereo frame drawn to preview canvas');
       }
     } catch (error) {
       console.error('Stereoscopic preview render error:', error);
@@ -91,30 +123,50 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
     }
   }, [sourceCanvas, starsOnlyImage, starlessImage, traditionalParams, stereoSpacing, borderSize, isProcessing]);
 
-  // Update stereoscopic preview when animation progresses
+  // Local animation loop with independent progress
   useEffect(() => {
-    if (!isAnimating || !sourceCanvas) return;
+    if (!isLocalAnimating) return;
 
-    const updateLoop = () => {
-      renderStereoscopicFrame();
-      animationFrameRef.current = requestAnimationFrame(updateLoop);
+    const animate = () => {
+      const elapsed = performance.now() - animationStartTimeRef.current;
+      const progress = Math.min((elapsed / (duration * 1000)) * 100, 100);
+      
+      setLocalProgress(progress);
+      
+      if (progress >= 100) {
+        setIsLocalAnimating(false);
+        setLocalProgress(100);
+      } else {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      }
     };
 
-    updateLoop();
+    animate();
 
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isAnimating, sourceCanvas, renderStereoscopicFrame]);
+  }, [isLocalAnimating, duration]);
 
-  // Initial render when settings change
+  // Update stereoscopic preview when main animation progresses OR local animation is playing
   useEffect(() => {
-    if (!isAnimating && sourceCanvas) {
+    // Use main animation progress when local animation is not playing
+    const currentProgress = isLocalAnimating ? localProgress : mainAnimationProgress;
+    
+    if (currentProgress > 0 && sourceCanvas) {
       renderStereoscopicFrame();
     }
-  }, [traditionalParams, stereoSpacing, borderSize, sourceCanvas, isAnimating, renderStereoscopicFrame]);
+  }, [mainAnimationProgress, localProgress, isLocalAnimating, sourceCanvas, renderStereoscopicFrame]);
+
+  // Initial render when component mounts or settings change
+  useEffect(() => {
+    if (sourceCanvas && starsOnlyImage && starlessImage) {
+      console.log('Initial stereoscopic render triggered');
+      renderStereoscopicFrame();
+    }
+  }, [sourceCanvas, starsOnlyImage, starlessImage, traditionalParams, stereoSpacing, borderSize, renderStereoscopicFrame]);
 
   return (
     <Card className="bg-cosmic-900/50 border-cosmic-700/50 h-[600px]">
@@ -144,15 +196,15 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
           
           {/* Progress Bar and Controls */}
           <div className="space-y-2 px-4 pb-3">
-            {/* Play/Pause and Replay Buttons */}
+            {/* Play/Pause and Replay Buttons - Independent controls */}
             <div className="flex items-center justify-center gap-2">
               <Button
-                onClick={onToggleAnimation}
+                onClick={toggleLocalAnimation}
                 variant="outline"
                 size="sm"
                 className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50"
               >
-                {isAnimating ? (
+                {isLocalAnimating ? (
                   <>
                     <Pause className="h-4 w-4 mr-2" />
                     {t('Pause', '暂停')}
@@ -166,8 +218,8 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
               </Button>
               
               <Button
-                onClick={onReplay}
-                disabled={isAnimating && animationProgress < 10}
+                onClick={replayLocal}
+                disabled={isLocalAnimating && localProgress < 10}
                 variant="outline"
                 size="sm"
                 className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50 disabled:opacity-50"
@@ -179,21 +231,21 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
             
             {/* Progress bar with moving slider dot - YouTube style */}
             <div className="relative w-full h-1 bg-cosmic-800/50 rounded-full overflow-visible">
-              {/* Played portion (white) */}
+              {/* Played portion (white) - uses local progress when playing locally, otherwise follows main */}
               <div 
-                className="absolute left-0 top-0 h-full bg-white/80 transition-all duration-100 rounded-full"
-                style={{ width: `${animationProgress}%` }}
+                className="absolute left-0 top-0 h-full bg-blue-500/80 transition-all duration-100 rounded-full"
+                style={{ width: `${isLocalAnimating ? localProgress : mainAnimationProgress}%` }}
               />
               {/* Moving dot at current position */}
               <div 
-                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg transition-all duration-100"
-                style={{ left: `calc(${animationProgress}% - 0.375rem)` }}
+                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full shadow-lg transition-all duration-100"
+                style={{ left: `calc(${isLocalAnimating ? localProgress : mainAnimationProgress}% - 0.375rem)` }}
               />
             </div>
             
             {/* Time display only */}
             <div className="flex items-center justify-between text-xs text-cosmic-300">
-              <span>{formatTime((animationProgress / 100) * duration)}</span>
+              <span>{formatTime(((isLocalAnimating ? localProgress : mainAnimationProgress) / 100) * duration)}</span>
               <span>{formatTime(duration)}</span>
             </div>
           </div>
