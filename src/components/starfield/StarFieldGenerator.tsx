@@ -95,6 +95,7 @@ const StarFieldGenerator: React.FC = () => {
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const stereoPreviewCanvasRef = useRef<HTMLCanvasElement | null>(null); // Separate ref for stereoscopic preview
   const ffmpegRef = useRef<FFmpeg | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -629,11 +630,11 @@ const StarFieldGenerator: React.FC = () => {
       
       renderCtx.imageSmoothingEnabled = false;
       
-      // STAGE 1: Pre-render all frames with PRECISE progress control
+      // STAGE 1: Pre-render all frames normally (without stereoscopic processing)
       setVideoProgress({ stage: 'Rendering frames...', percent: 0 });
-      console.log('Stage 1: Pre-rendering frames with precise control...');
+      console.log('Stage 1: Pre-rendering normal animation frames...');
       
-      const frames: ImageData[] = [];
+      const normalFrames: ImageData[] = [];
       
       // Enable controlled rendering mode - stop normal animation
       setIsAnimating(false);
@@ -653,12 +654,56 @@ const StarFieldGenerator: React.FC = () => {
         await new Promise(resolve => requestAnimationFrame(resolve));
         await new Promise(resolve => requestAnimationFrame(resolve)); // Double RAF for stability
         
-        // Apply stereoscopic processing if enabled
-        if (enableStereoscopic && starsOnlyImage && starlessImage) {
+        // Capture normal frame from source canvas
+        renderCtx.fillStyle = '#000000';
+        renderCtx.fillRect(0, 0, recordWidth, recordHeight);
+        renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
+        
+        // Store frame data
+        const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
+        normalFrames.push(frameData);
+        
+        // Update progress (0-40% for normal rendering)
+        const renderProgress = (frameIndex / totalFrames) * 40;
+        setVideoProgress({ 
+          stage: `Rendering frames... ${frameIndex + 1}/${totalFrames}`, 
+          percent: renderProgress 
+        });
+        
+        if ((frameIndex + 1) % 30 === 0) {
+          console.log(`Rendered ${frameIndex + 1}/${totalFrames} normal frames (${frameProgress.toFixed(1)}% animation)`);
+        }
+      }
+      
+      console.log(`✓ All ${normalFrames.length} normal frames rendered`);
+      
+      // STAGE 2: Apply stereoscopic processing to each frame if enabled
+      let finalFrames = normalFrames;
+      let finalWidth = recordWidth;
+      let finalHeight = recordHeight;
+      
+      if (enableStereoscopic && starsOnlyImage && starlessImage) {
+        setVideoProgress({ stage: 'Processing stereoscopic pairs...', percent: 40 });
+        console.log('Stage 2: Processing frames for stereoscopic output...');
+        
+        const stereoFrames: ImageData[] = [];
+        
+        // Calculate stereoscopic dimensions
+        finalWidth = (sourceWidth * 2) + stereoSpacing + (borderSize * 2);
+        finalHeight = sourceHeight + (borderSize * 2);
+        
+        // Create a temporary canvas for each normal frame
+        const tempCanvas = canvasPool.acquire(recordWidth, recordHeight);
+        const tempCtx = tempCanvas.getContext('2d')!;
+        
+        for (let i = 0; i < normalFrames.length; i++) {
+          // Put normal frame data onto temp canvas
+          tempCtx.putImageData(normalFrames[i], 0, 0);
+          
           try {
-            // Process the current frame through stereoscopic conversion
+            // Process through stereoscopic processor
             const stereoCanvas = await processFrameToStereoscopic(
-              sourceCanvas,
+              tempCanvas,
               starsOnlyImage,
               starlessImage,
               traditionalParams,
@@ -666,54 +711,49 @@ const StarFieldGenerator: React.FC = () => {
               borderSize
             );
             
-            // Draw the stereoscopic result to render canvas
-            renderCtx.fillStyle = '#000000';
-            renderCtx.fillRect(0, 0, recordWidth, recordHeight);
-            renderCtx.drawImage(stereoCanvas, 0, 0);
-          } catch (error) {
-            console.error('Stereoscopic processing error for frame', frameIndex, error);
-            // Fall back to non-stereoscopic
-            renderCtx.fillStyle = '#000000';
-            renderCtx.fillRect(0, 0, recordWidth, recordHeight);
+            // Extract stereo frame data
+            const stereoCtx = stereoCanvas.getContext('2d')!;
+            const stereoFrameData = stereoCtx.getImageData(0, 0, stereoCanvas.width, stereoCanvas.height);
+            stereoFrames.push(stereoFrameData);
             
-            // Center the source canvas
-            const xOffset = borderSize;
-            const yOffset = borderSize;
-            renderCtx.drawImage(sourceCanvas, xOffset, yOffset, sourceWidth, sourceHeight);
+            // Update progress (40-70% for stereoscopic processing)
+            const stereoProgress = 40 + ((i / normalFrames.length) * 30);
+            setVideoProgress({ 
+              stage: `Processing stereo... ${i + 1}/${normalFrames.length}`, 
+              percent: stereoProgress 
+            });
+            
+            if ((i + 1) % 10 === 0) {
+              console.log(`Processed ${i + 1}/${normalFrames.length} stereoscopic frames`);
+            }
+          } catch (error) {
+            console.error(`Error processing stereoscopic frame ${i}:`, error);
+            // Fall back to normal frame with borders
+            const fallbackCanvas = canvasPool.acquire(finalWidth, finalHeight);
+            const fallbackCtx = fallbackCanvas.getContext('2d')!;
+            fallbackCtx.fillStyle = '#000000';
+            fallbackCtx.fillRect(0, 0, finalWidth, finalHeight);
+            fallbackCtx.drawImage(tempCanvas, borderSize, borderSize);
+            const fallbackData = fallbackCtx.getImageData(0, 0, finalWidth, finalHeight);
+            stereoFrames.push(fallbackData);
+            canvasPool.release(fallbackCanvas);
           }
-        } else {
-          // Normal rendering without stereoscopic
-          renderCtx.fillStyle = '#000000';
-          renderCtx.fillRect(0, 0, recordWidth, recordHeight);
-          renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
         }
         
-        // Store frame data
-        const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
-        frames.push(frameData);
-        
-        // Update progress
-        const renderProgress = (frameIndex / totalFrames) * 50;
-        setVideoProgress({ 
-          stage: `Rendering frames... ${frameIndex + 1}/${totalFrames}`, 
-          percent: renderProgress 
-        });
-        
-        if ((frameIndex + 1) % 30 === 0) {
-          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames (${frameProgress.toFixed(1)}% animation)`);
-        }
+        canvasPool.release(tempCanvas);
+        finalFrames = stereoFrames;
+        console.log(`✓ All ${stereoFrames.length} stereoscopic frames processed`);
       }
       
       // Stop animation
       setIsAnimating(false);
-      console.log(`✓ All ${frames.length} frames rendered with precise timing`);
       
-      // STAGE 2: Encode frames to WebM video
-      setVideoProgress({ stage: 'Encoding video...', percent: 50 });
-      console.log('Stage 2: Encoding to WebM...');
+      // STAGE 3: Encode frames to WebM video
+      setVideoProgress({ stage: 'Encoding video...', percent: 70 });
+      console.log('Stage 3: Encoding to WebM...');
       
-      // Create a temporary canvas for MediaRecorder
-      const encodingCanvas = canvasPool.acquire(recordWidth, recordHeight);
+      // Create a temporary canvas for MediaRecorder with final dimensions
+      const encodingCanvas = canvasPool.acquire(finalWidth, finalHeight);
       const encodingCtx = encodingCanvas.getContext('2d')!;
       
       // Set up MediaRecorder
@@ -750,20 +790,20 @@ const StarFieldGenerator: React.FC = () => {
       
       const playbackPromise = new Promise<void>((resolve) => {
         const playFrame = () => {
-          if (currentFrame >= frames.length) {
+          if (currentFrame >= finalFrames.length) {
             mediaRecorder.stop();
             resolve();
             return;
           }
           
-          // Draw frame
-          encodingCtx.putImageData(frames[currentFrame], 0, 0);
+          // Draw frame with final dimensions
+          encodingCtx.putImageData(finalFrames[currentFrame], 0, 0);
           currentFrame++;
           
-          // Update encoding progress
-          const encodeProgress = 50 + ((currentFrame / frames.length) * 50);
+          // Update encoding progress (70-100%)
+          const encodeProgress = 70 + ((currentFrame / finalFrames.length) * 30);
           setVideoProgress({ 
-            stage: `Encoding... ${currentFrame}/${frames.length}`, 
+            stage: `Encoding... ${currentFrame}/${finalFrames.length}`, 
             percent: encodeProgress 
           });
           
@@ -792,7 +832,10 @@ const StarFieldGenerator: React.FC = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `starfield-${recordWidth}x${recordHeight}-${duration}s-${Date.now()}.webm`;
+      const filename = enableStereoscopic 
+        ? `starfield-stereo-${finalWidth}x${finalHeight}-${duration}s-${Date.now()}.webm`
+        : `starfield-${finalWidth}x${finalHeight}-${duration}s-${Date.now()}.webm`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1981,7 +2024,7 @@ const StarFieldGenerator: React.FC = () => {
           </Card>
 
           {/* Stereoscopic 3D Preview - Only show when stereoscopic is enabled */}
-          {enableStereoscopic && processedStars.length > 0 && canvasRef.current && (
+          {enableStereoscopic && processedStars.length > 0 && (
             <StereoscopicPreview
               sourceCanvas={canvasRef.current}
               starsOnlyImage={starsOnlyImage}
