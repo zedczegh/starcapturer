@@ -497,15 +497,15 @@ const StarFieldGenerator: React.FC = () => {
 
   const toggleAnimation = useCallback(() => {
     if (isAnimating) {
-      // Pausing - just stop animation
+      // Just pause - don't change anything else
       setIsAnimating(false);
     } else {
-      // Resuming or starting
-      if (animationProgress >= 100) {
-        // If at end, reset and start fresh
+      // Play/Resume
+      if (animationProgress >= 99.9) {
+        // Only restart if at the very end
         setAnimationProgress(0);
       }
-      // Start/resume animation
+      // Otherwise just resume from current position
       setIsAnimating(true);
     }
   }, [isAnimating, animationProgress]);
