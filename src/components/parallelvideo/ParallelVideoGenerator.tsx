@@ -320,35 +320,29 @@ const ParallelVideoGenerator: React.FC = () => {
         horizontalDisplace
       );
 
-      // Step 3: Use ORIGINAL uploaded stars images directly (traditional morph handles repositioning internally)
-      setProcessingStep(t('Using original stars images...', '使用原始星点图像...'));
+      // Step 3: Process stars separately - apply displacement to ORIGINAL stars upload
+      setProcessingStep(t('Displacing original stars image...', '位移原始星点图像...'));
       
-      // LEFT: Use original uploaded stars as-is
+      // LEFT: Use original uploaded stars as-is (no processing)
       const leftStarsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
       const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
       leftStarsCtx.drawImage(starsElement, 0, 0);
       
-      // RIGHT: Also use original uploaded stars (traditional morph already repositioned stars in composite)
-      // Extract the repositioned stars from right composite by subtracting starless
-      const rightStarsCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
+      // RIGHT: Apply displacement to the ORIGINAL uploaded stars (not extracted from composite)
+      const starsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
+      const starsCtx = starsCanvas.getContext('2d')!;
+      starsCtx.drawImage(starsElement, 0, 0);
+      
+      // Apply the SAME displacement to stars that we applied to starless
+      const displacedStarsCanvas = await processor.applyOptimizedDisplacement(
+        starsCanvas,
+        depthMaps,
+        horizontalDisplace
+      );
+      
+      const rightStarsCanvas = canvasPool.acquire(displacedStarsCanvas.width, displacedStarsCanvas.height);
       const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
-      
-      const tempCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
-      const tempCtx = tempCanvas.getContext('2d')!;
-      tempCtx.drawImage(starlessElement, 0, 0);
-      const originalStarlessData = tempCtx.getImageData(0, 0, starlessElement.width, starlessElement.height);
-      
-      const rightCompositeData = rightCanvas.getContext('2d')!.getImageData(0, 0, rightCanvas.width, rightCanvas.height);
-      const rightStarsData = rightStarsCtx.createImageData(rightCanvas.width, rightCanvas.height);
-      
-      // Extract repositioned stars from right composite
-      for (let i = 0; i < rightCompositeData.data.length; i += 4) {
-        rightStarsData.data[i] = Math.max(0, rightCompositeData.data[i] - originalStarlessData.data[i]);
-        rightStarsData.data[i + 1] = Math.max(0, rightCompositeData.data[i + 1] - originalStarlessData.data[i + 1]);
-        rightStarsData.data[i + 2] = Math.max(0, rightCompositeData.data[i + 2] - originalStarlessData.data[i + 2]);
-        rightStarsData.data[i + 3] = 255;
-      }
-      rightStarsCtx.putImageData(rightStarsData, 0, 0);
+      rightStarsCtx.drawImage(displacedStarsCanvas, 0, 0);
       
       // Step 4: Detect stars for 3D rendering
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
@@ -371,7 +365,8 @@ const ParallelVideoGenerator: React.FC = () => {
       // Cleanup
       canvasPool.release(starlessCanvas);
       canvasPool.release(displacedStarlessCanvas);
-      canvasPool.release(tempCanvas);
+      canvasPool.release(starsCanvas);
+      canvasPool.release(displacedStarsCanvas);
       canvasPool.release(leftStarsCanvas);
       canvasPool.release(rightStarsCanvas);
       processor.dispose();
