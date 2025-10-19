@@ -12,6 +12,7 @@ import { validateImageFile } from '@/utils/imageProcessingUtils';
 import StarField3D from '@/components/starfield/StarField3D';
 import { toast } from 'sonner';
 import { CanvasPool } from '@/lib/performance/CanvasPool';
+import { UploadProgress } from '@/components/ui/upload-progress';
 import { Separator } from '@/components/ui/separator';
 
 interface StarData {
@@ -26,9 +27,17 @@ interface StarData {
 const ParallelVideoGenerator: React.FC = () => {
   const { language } = useLanguage();
 
+  // Upload progress tracking
+  const [uploadProgress, setUploadProgress] = useState({
+    starless: { show: false, progress: 0, fileName: '' },
+    stars: { show: false, progress: 0, fileName: '' }
+  });
+
   // File inputs
   const [starlessFile, setStarlessFile] = useState<File | null>(null);
   const [starsFile, setStarsFile] = useState<File | null>(null);
+  const [starlessElement, setStarlessElement] = useState<HTMLImageElement | null>(null);
+  const [starsElement, setStarsElement] = useState<HTMLImageElement | null>(null);
   const starlessInputRef = useRef<HTMLInputElement>(null);
   const starsInputRef = useRef<HTMLInputElement>(null);
 
@@ -76,25 +85,88 @@ const ParallelVideoGenerator: React.FC = () => {
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
 
-  // Handle file uploads
-  const handleFileUpload = useCallback((
+  // Unified image upload handler from StarFieldGenerator
+  const handleImageUpload = useCallback(async (
     event: React.ChangeEvent<HTMLInputElement>,
-    type: 'starless' | 'stars'
+    setFile: (file: File) => void,
+    setElement: (el: HTMLImageElement) => void,
+    fileInputRef: React.RefObject<HTMLInputElement>,
+    uploadType: 'stars' | 'starless'
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const validation = validateImageFile(file);
     if (!validation.valid) {
-      toast.error(validation.error);
+      toast.error(validation.error || t('Invalid file format', '无效的文件格式'));
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
-    if (type === 'starless') {
-      setStarlessFile(file);
-    } else {
-      setStarsFile(file);
+    try {
+      // Show upload progress
+      setUploadProgress(prev => ({
+        ...prev,
+        [uploadType]: { show: true, progress: 0, fileName: file.name }
+      }));
+
+      // Simulate progress (since loadImageFromFile is quick)
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => ({
+          ...prev,
+          [uploadType]: { 
+            ...prev[uploadType], 
+            progress: Math.min(prev[uploadType].progress + 20, 90) 
+          }
+        }));
+      }, 100);
+
+      const { loadImageFromFile } = await import('@/utils/imageProcessingUtils');
+      const { dataUrl, element } = await loadImageFromFile(file, {
+        enableDownscale: false, // No downscaling for parallel video
+        maxResolution: 4096 * 4096
+      });
+      
+      clearInterval(progressInterval);
+      
+      // Complete progress
+      setUploadProgress(prev => ({
+        ...prev,
+        [uploadType]: { ...prev[uploadType], progress: 100 }
+      }));
+
+      setFile(file);
+      setElement(element);
+
+      // Hide progress after a short delay
+      setTimeout(() => {
+        setUploadProgress(prev => ({
+          ...prev,
+          [uploadType]: { show: false, progress: 0, fileName: '' }
+        }));
+      }, 1000);
+    } catch (error) {
+      console.error('Image load error:', error);
+      toast.error(t('Failed to load image', '加载图片失败'));
+      setUploadProgress(prev => ({
+        ...prev,
+        [uploadType]: { show: false, progress: 0, fileName: '' }
+      }));
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  }, [t]);
+
+  const handleStarlessUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    return handleImageUpload(event, setStarlessFile, setStarlessElement, starlessInputRef, 'starless');
+  }, [handleImageUpload]);
+
+  const handleStarsUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    return handleImageUpload(event, setStarsFile, setStarsElement, starsInputRef, 'stars');
+  }, [handleImageUpload]);
+
+  // Helper to load image from file (handles TIFF)
+  const loadImageFromFileElement = useCallback(async (element: HTMLImageElement): Promise<HTMLImageElement> => {
+    return element; // Already loaded by handleImageUpload
   }, []);
 
   // Extract stars from composite image
@@ -174,52 +246,9 @@ const ParallelVideoGenerator: React.FC = () => {
     return { starsOnly: starsCanvas, stars };
   }, [depthIntensity]);
 
-  // Helper to load image from file (handles TIFF)
-  const loadImageFromFile = useCallback(async (file: File): Promise<HTMLImageElement> => {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // Check if it's a TIFF file
-        const isTiff = file.type === 'image/tiff' || file.type === 'image/tif' || 
-                      file.name.toLowerCase().endsWith('.tif') || 
-                      file.name.toLowerCase().endsWith('.tiff');
-
-        if (isTiff) {
-          // Handle TIFF files using UTIF library
-          const UTIF = await import('utif');
-          const arrayBuffer = await file.arrayBuffer();
-          const ifds = UTIF.decode(arrayBuffer);
-          UTIF.decodeImage(arrayBuffer, ifds[0]);
-          const rgba = UTIF.toRGBA8(ifds[0]);
-          
-          // Create canvas and draw
-          const canvas = document.createElement('canvas');
-          canvas.width = ifds[0].width;
-          canvas.height = ifds[0].height;
-          const ctx = canvas.getContext('2d')!;
-          const imageData = new ImageData(new Uint8ClampedArray(rgba), ifds[0].width, ifds[0].height);
-          ctx.putImageData(imageData, 0, 0);
-          
-          // Convert to image
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(new Error('Failed to create image from TIFF canvas'));
-          img.src = canvas.toDataURL();
-        } else {
-          // Handle standard image formats
-          const img = new Image();
-          img.onload = () => resolve(img);
-          img.onerror = () => reject(new Error('Failed to load image'));
-          img.src = URL.createObjectURL(file);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }, []);
-
   // Process images with Traditional Morph
   const processImages = useCallback(async () => {
-    if (!starlessFile || !starsFile) {
+    if (!starlessFile || !starsFile || !starlessElement || !starsElement) {
       toast.error(t('Please upload both images', '请上传两张图片'));
       return;
     }
@@ -227,16 +256,16 @@ const ParallelVideoGenerator: React.FC = () => {
     setIsProcessing(true);
     setIsReady(false);
     setProgress(0);
-    setProcessingStep(t('Loading images...', '加载图片...'));
+    setProcessingStep(t('Initializing processor...', '初始化处理器...'));
 
     try {
-      // Step 1: Load original starless image first (with TIFF support)
-      setProcessingStep(t('Loading starless background...', '加载无星背景...'));
-      const starlessImg = await loadImageFromFile(starlessFile);
-      console.log('Starless image loaded:', starlessImg.width, 'x', starlessImg.height);
+      console.log('Starting processing with images:', {
+        starless: { width: starlessElement.width, height: starlessElement.height },
+        stars: { width: starsElement.width, height: starsElement.height }
+      });
 
-      // Step 2: Create traditional processor (exactly like stereoscope processor)
-      setProcessingStep(t('Initializing processor...', '初始化处理器...'));
+      // Step 1: Create traditional processor
+      setProcessingStep(t('Creating stereoscopic pair...', '创建立体对...'));
       const { TraditionalMorphProcessor } = await import('@/lib/traditionalMorphMode');
       const processor = new TraditionalMorphProcessor();
       
@@ -252,30 +281,29 @@ const ParallelVideoGenerator: React.FC = () => {
         contrastBoost: 1.2
       };
 
-      // Step 3: Create stereo pair with traditional morph
-      setProcessingStep(t('Creating stereoscopic pair...', '创建立体对...'));
+      // Step 2: Create stereo pair with traditional morph
       const { leftCanvas, rightCanvas, depthMap } = await processor.createTraditionalStereoPair(
         inputs,
         traditionalParams,
         (step, progressValue) => {
-          setProcessingStep(step);
+          setProcessingStep(t(step, step));
           if (progressValue) setProgress(progressValue);
         }
       );
 
       console.log('Stereo pair created - Left:', leftCanvas.width, 'x', leftCanvas.height);
 
-      // Step 4: Extract stars from both views
+      // Step 3: Extract stars from both views
       setProcessingStep(t('Detecting stars in left view...', '检测左视图星点...'));
-      const leftResult = extractStarsFromComposite(leftCanvas, starlessImg, depthMap);
+      const leftResult = extractStarsFromComposite(leftCanvas, starlessElement, depthMap);
       
       setProcessingStep(t('Detecting stars in right view...', '检测右视图星点...'));
-      const rightResult = extractStarsFromComposite(rightCanvas, starlessImg, depthMap);
+      const rightResult = extractStarsFromComposite(rightCanvas, starlessElement, depthMap);
 
       console.log('Stars detected - Left:', leftResult.stars.length, 'Right:', rightResult.stars.length);
 
-      // Step 5: Set all processed data
-      const starlessDataUrl = starlessImg.src;
+      // Step 4: Set all processed data
+      const starlessDataUrl = starlessElement.src;
       setLeftBackground(starlessDataUrl);
       setRightBackground(starlessDataUrl);
       setLeftStarsOnly(leftResult.starsOnly.toDataURL());
@@ -300,13 +328,13 @@ const ParallelVideoGenerator: React.FC = () => {
     } catch (error) {
       console.error('Processing error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(t('Failed to process: ' + errorMsg, '处理失败：' + errorMsg));
+      toast.error(t('Processing failed: ' + errorMsg, '处理失败：' + errorMsg));
       setIsReady(false);
       setProgress(0);
     } finally {
       setIsProcessing(false);
     }
-  }, [starlessFile, starsFile, horizontalDisplace, starShiftAmount, t, extractStarsFromComposite, loadImageFromFile]);
+  }, [starlessFile, starsFile, starlessElement, starsElement, horizontalDisplace, starShiftAmount, t, extractStarsFromComposite]);
 
   // Generate parallel videos
   const generateParallelVideo = useCallback(async () => {
@@ -421,19 +449,34 @@ const ParallelVideoGenerator: React.FC = () => {
                   ref={starlessInputRef}
                   type="file"
                   accept="image/*,.tif,.tiff"
-                  onChange={(e) => handleFileUpload(e, 'starless')}
+                  onChange={handleStarlessUpload}
                   className="hidden"
                 />
+                
+                {uploadProgress.starless.show && (
+                  <UploadProgress 
+                    show={true}
+                    progress={uploadProgress.starless.progress}
+                    fileName={uploadProgress.starless.fileName}
+                  />
+                )}
+                
                 <Button
                   onClick={() => starlessInputRef.current?.click()}
                   className="w-full h-24 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 transition-all"
                   variant="outline"
+                  disabled={uploadProgress.starless.show}
                 >
                   <div className="flex flex-col items-center gap-2">
                     <Upload className="w-6 h-6 text-cosmic-400" />
                     <span className="text-sm text-cosmic-300">
-                      {starlessFile ? starlessFile.name : t('Click to upload', '点击上传')}
+                      {starlessFile ? starlessFile.name : t('Click to upload starless', '点击上传无星图像')}
                     </span>
+                    {starlessElement && (
+                      <span className="text-xs text-cosmic-500">
+                        {starlessElement.width} × {starlessElement.height}
+                      </span>
+                    )}
                   </div>
                 </Button>
               </div>
@@ -447,19 +490,34 @@ const ParallelVideoGenerator: React.FC = () => {
                   ref={starsInputRef}
                   type="file"
                   accept="image/*,.tif,.tiff"
-                  onChange={(e) => handleFileUpload(e, 'stars')}
+                  onChange={handleStarsUpload}
                   className="hidden"
                 />
+                
+                {uploadProgress.stars.show && (
+                  <UploadProgress 
+                    show={true}
+                    progress={uploadProgress.stars.progress}
+                    fileName={uploadProgress.stars.fileName}
+                  />
+                )}
+                
                 <Button
                   onClick={() => starsInputRef.current?.click()}
                   className="w-full h-24 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 transition-all"
                   variant="outline"
+                  disabled={uploadProgress.stars.show}
                 >
                   <div className="flex flex-col items-center gap-2">
                     <Upload className="w-6 h-6 text-cosmic-400" />
                     <span className="text-sm text-cosmic-300">
-                      {starsFile ? starsFile.name : t('Click to upload', '点击上传')}
+                      {starsFile ? starsFile.name : t('Click to upload stars', '点击上传仅星图像')}
                     </span>
+                    {starsElement && (
+                      <span className="text-xs text-cosmic-500">
+                        {starsElement.width} × {starsElement.height}
+                      </span>
+                    )}
                   </div>
                 </Button>
               </div>
@@ -561,7 +619,7 @@ const ParallelVideoGenerator: React.FC = () => {
             {/* Process Button */}
             <Button
               onClick={processImages}
-              disabled={!starlessFile || !starsFile || isProcessing}
+              disabled={!starlessFile || !starsFile || !starlessElement || !starsElement || isProcessing}
               className="w-full h-14 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold text-lg shadow-lg shadow-amber-500/20"
               size="lg"
             >
@@ -569,6 +627,7 @@ const ParallelVideoGenerator: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
                   <span>{processingStep || t('Processing...', '处理中...')}</span>
+                  {progress > 0 && <span className="text-white/80">({progress}%)</span>}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
