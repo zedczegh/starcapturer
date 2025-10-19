@@ -1,16 +1,26 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Video, Download } from 'lucide-react';
+import { Upload, Video, Download, Play, Pause } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { TraditionalMorphService, TraditionalMorphParams } from '@/services/TraditionalMorphService';
 import { VideoGenerationService, MotionSettings } from '@/services/VideoGenerationService';
 import { validateImageFile } from '@/utils/imageProcessingUtils';
 import StarField3D from '@/components/starfield/StarField3D';
 import { toast } from 'sonner';
+import { CanvasPool } from '@/lib/performance/CanvasPool';
+
+interface StarData {
+  x: number;
+  y: number;
+  z: number;
+  brightness: number;
+  size: number;
+  color3d: string;
+}
 
 const ParallelVideoGenerator: React.FC = () => {
   const { language } = useLanguage();
@@ -21,15 +31,22 @@ const ParallelVideoGenerator: React.FC = () => {
   const starlessInputRef = useRef<HTMLInputElement>(null);
   const starsInputRef = useRef<HTMLInputElement>(null);
 
-  // Morphed images
-  const [leftComposite, setLeftComposite] = useState<string | null>(null);
-  const [rightComposite, setRightComposite] = useState<string | null>(null);
+  // Morphed images - separated into backgrounds and stars
+  const [leftBackground, setLeftBackground] = useState<string | null>(null);
+  const [rightBackground, setRightBackground] = useState<string | null>(null);
+  const [leftStarsOnly, setLeftStarsOnly] = useState<string | null>(null);
+  const [rightStarsOnly, setRightStarsOnly] = useState<string | null>(null);
+
+  // Detected stars for 3D rendering
+  const [leftStars, setLeftStars] = useState<StarData[]>([]);
+  const [rightStars, setRightStars] = useState<StarData[]>([]);
 
   // Processing state
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [videoProgress, setVideoProgress] = useState({ stage: '', percent: 0 });
+  const [isReady, setIsReady] = useState(false);
 
   // Canvas refs for video generation
   const leftCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -77,6 +94,82 @@ const ParallelVideoGenerator: React.FC = () => {
     }
   }, []);
 
+  // Extract stars from composite image
+  const extractStarsFromComposite = useCallback((
+    compositeImage: HTMLImageElement,
+    starlessImage: HTMLImageElement,
+    depthMap: HTMLCanvasElement
+  ): { starsOnly: HTMLCanvasElement; stars: StarData[] } => {
+    const canvasPool = CanvasPool.getInstance();
+    const starsCanvas = canvasPool.acquire(compositeImage.width, compositeImage.height);
+    const ctx = starsCanvas.getContext('2d')!;
+
+    // Draw composite
+    ctx.drawImage(compositeImage, 0, 0);
+    const compositeData = ctx.getImageData(0, 0, starsCanvas.width, starsCanvas.height);
+
+    // Draw starless to temp canvas
+    const tempCanvas = canvasPool.acquire(starlessImage.width, starlessImage.height);
+    const tempCtx = tempCanvas.getContext('2d')!;
+    tempCtx.drawImage(starlessImage, 0, 0);
+    const starlessData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+
+    // Subtract starless from composite to get stars only
+    const starsData = ctx.createImageData(starsCanvas.width, starsCanvas.height);
+    for (let i = 0; i < compositeData.data.length; i += 4) {
+      starsData.data[i] = Math.max(0, compositeData.data[i] - starlessData.data[i]);
+      starsData.data[i + 1] = Math.max(0, compositeData.data[i + 1] - starlessData.data[i + 1]);
+      starsData.data[i + 2] = Math.max(0, compositeData.data[i + 2] - starlessData.data[i + 2]);
+      starsData.data[i + 3] = 255;
+    }
+
+    ctx.putImageData(starsData, 0, 0);
+
+    // Detect star positions
+    const stars: StarData[] = [];
+    const threshold = 50;
+    const visited = new Uint8Array(starsCanvas.width * starsCanvas.height);
+    const depthCtx = depthMap.getContext('2d')!;
+    const depthData = depthCtx.getImageData(0, 0, depthMap.width, depthMap.height);
+
+    for (let y = 1; y < starsCanvas.height - 1; y++) {
+      for (let x = 1; x < starsCanvas.width - 1; x++) {
+        const idx = y * starsCanvas.width + x;
+        if (visited[idx]) continue;
+
+        const pixelIdx = idx * 4;
+        const luminance = 0.299 * starsData.data[pixelIdx] + 
+                         0.587 * starsData.data[pixelIdx + 1] + 
+                         0.114 * starsData.data[pixelIdx + 2];
+
+        if (luminance > threshold) {
+          visited[idx] = 1;
+          
+          // Get depth
+          const depthIdx = (Math.floor(y) * depthMap.width + Math.floor(x)) * 4;
+          const depth = depthData.data[depthIdx] / 255;
+
+          // Calculate 3D coordinates
+          const centerX = starsCanvas.width / 2;
+          const centerY = starsCanvas.height / 2;
+          const scale = 0.08;
+
+          stars.push({
+            x: (x - centerX) * scale,
+            y: -(y - centerY) * scale,
+            z: (depth - 0.5) * 200 * (0.2 + (depthIntensity / 100) * 1.8),
+            brightness: luminance / 255,
+            size: 3,
+            color3d: `rgb(${starsData.data[pixelIdx]}, ${starsData.data[pixelIdx + 1]}, ${starsData.data[pixelIdx + 2]})`
+          });
+        }
+      }
+    }
+
+    canvasPool.release(tempCanvas);
+    return { starsOnly: starsCanvas, stars };
+  }, [depthIntensity]);
+
   // Process images with Traditional Morph
   const processImages = useCallback(async () => {
     if (!starlessFile || !starsFile) {
@@ -85,9 +178,12 @@ const ParallelVideoGenerator: React.FC = () => {
     }
 
     setIsProcessing(true);
+    setIsReady(false);
     setProcessingStep(t('Processing with Traditional Morph...', '使用传统变形处理中...'));
 
     try {
+      // Step 1: Create stereo pair with traditional morph
+      setProcessingStep(t('Creating stereoscopic pair...', '创建立体对...'));
       const result = await TraditionalMorphService.createStereoPair(
         starlessFile,
         starsFile,
@@ -97,21 +193,62 @@ const ParallelVideoGenerator: React.FC = () => {
         }
       );
 
-      // Extract composite images
-      const { leftImage, rightImage } = await TraditionalMorphService.extractCompositeImages(result);
+      // Step 2: Load original starless image
+      setProcessingStep(t('Separating layers...', '分离图层...'));
+      const starlessImg = new Image();
+      await new Promise((resolve, reject) => {
+        starlessImg.onload = resolve;
+        starlessImg.onerror = reject;
+        starlessImg.src = URL.createObjectURL(starlessFile);
+      });
+
+      // Step 3: Load composite images
+      const leftImg = new Image();
+      const rightImg = new Image();
       
-      setLeftComposite(leftImage);
-      setRightComposite(rightImage);
-      
-      toast.success(t('Images processed successfully', '图片处理成功'));
+      await Promise.all([
+        new Promise((resolve, reject) => {
+          leftImg.onload = resolve;
+          leftImg.onerror = reject;
+          leftImg.src = result.leftComposite.toDataURL();
+        }),
+        new Promise((resolve, reject) => {
+          rightImg.onload = resolve;
+          rightImg.onerror = reject;
+          rightImg.src = result.rightComposite.toDataURL();
+        })
+      ]);
+
+      // Step 4: Extract stars from both views
+      setProcessingStep(t('Detecting stars...', '检测星点...'));
+      const leftResult = extractStarsFromComposite(leftImg, starlessImg, result.depthMap);
+      const rightResult = extractStarsFromComposite(rightImg, starlessImg, result.depthMap);
+
+      // Step 5: Set all processed data
+      setLeftBackground(starlessImg.src);
+      setRightBackground(starlessImg.src);
+      setLeftStarsOnly(leftResult.starsOnly.toDataURL());
+      setRightStarsOnly(rightResult.starsOnly.toDataURL());
+      setLeftStars(leftResult.stars);
+      setRightStars(rightResult.stars);
+
+      setIsReady(true);
       setProcessingStep('');
+      toast.success(t('Processing complete! Starting preview...', '处理完成！启动预览...'));
+
+      // Auto-start animation after a short delay
+      setTimeout(() => {
+        setIsAnimating(true);
+      }, 500);
+
     } catch (error) {
       console.error('Processing error:', error);
       toast.error(t('Failed to process images', '图片处理失败'));
+      setIsReady(false);
     } finally {
       setIsProcessing(false);
     }
-  }, [starlessFile, starsFile, morphParams, t]);
+  }, [starlessFile, starsFile, morphParams, t, extractStarsFromComposite]);
 
   // Generate parallel videos
   const generateParallelVideo = useCallback(async () => {
@@ -253,7 +390,7 @@ const ParallelVideoGenerator: React.FC = () => {
           </div>
 
           {/* Step 2: Configure Motion Settings */}
-          {leftComposite && rightComposite && (
+          {isReady && (
             <>
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold text-white">
@@ -343,34 +480,52 @@ const ParallelVideoGenerator: React.FC = () => {
                   {/* Left View Preview */}
                   <div>
                     <Label className="text-cosmic-200">{t('Left View', '左视图')}</Label>
-                    <div className="mt-2 aspect-video bg-black rounded-lg overflow-hidden">
-                      <StarField3D
-                        stars={[]} // TODO: Extract stars from left composite
-                        settings={motionSettings}
-                        isAnimating={isAnimating}
-                        isRecording={false}
-                        backgroundImage={leftComposite}
-                        starsOnlyImage={leftComposite}
-                        depthIntensity={depthIntensity}
-                        onCanvasReady={(canvas) => { leftCanvasRef.current = canvas; }}
-                      />
+                    <div className="mt-2 aspect-video bg-black rounded-lg overflow-hidden border border-cosmic-700">
+                      {leftStars.length > 0 ? (
+                        <StarField3D
+                          stars={leftStars}
+                          settings={motionSettings}
+                          isAnimating={isAnimating}
+                          isRecording={false}
+                          backgroundImage={leftBackground}
+                          starsOnlyImage={leftStarsOnly}
+                          depthIntensity={depthIntensity}
+                          onCanvasReady={(canvas) => { 
+                            leftCanvasRef.current = canvas;
+                            console.log('Left canvas ready:', canvas.width, 'x', canvas.height);
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-cosmic-400">
+                          {t('Processing...', '处理中...')}
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Right View Preview */}
                   <div>
                     <Label className="text-cosmic-200">{t('Right View', '右视图')}</Label>
-                    <div className="mt-2 aspect-video bg-black rounded-lg overflow-hidden">
-                      <StarField3D
-                        stars={[]} // TODO: Extract stars from right composite
-                        settings={motionSettings}
-                        isAnimating={isAnimating}
-                        isRecording={false}
-                        backgroundImage={rightComposite}
-                        starsOnlyImage={rightComposite}
-                        depthIntensity={depthIntensity}
-                        onCanvasReady={(canvas) => { rightCanvasRef.current = canvas; }}
-                      />
+                    <div className="mt-2 aspect-video bg-black rounded-lg overflow-hidden border border-cosmic-700">
+                      {rightStars.length > 0 ? (
+                        <StarField3D
+                          stars={rightStars}
+                          settings={motionSettings}
+                          isAnimating={isAnimating}
+                          isRecording={false}
+                          backgroundImage={rightBackground}
+                          starsOnlyImage={rightStarsOnly}
+                          depthIntensity={depthIntensity}
+                          onCanvasReady={(canvas) => { 
+                            rightCanvasRef.current = canvas;
+                            console.log('Right canvas ready:', canvas.width, 'x', canvas.height);
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-cosmic-400">
+                          {t('Processing...', '处理中...')}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -380,13 +535,24 @@ const ParallelVideoGenerator: React.FC = () => {
                     onClick={() => setIsAnimating(!isAnimating)}
                     className="flex-1"
                     variant="outline"
+                    disabled={!leftCanvasRef.current || !rightCanvasRef.current}
                   >
-                    {isAnimating ? t('Pause Preview', '暂停预览') : t('Play Preview', '播放预览')}
+                    {isAnimating ? (
+                      <>
+                        <Pause className="w-4 h-4 mr-2" />
+                        {t('Pause Preview', '暂停预览')}
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        {t('Play Preview', '播放预览')}
+                      </>
+                    )}
                   </Button>
 
                   <Button
                     onClick={generateParallelVideo}
-                    disabled={isGenerating}
+                    disabled={isGenerating || !leftCanvasRef.current || !rightCanvasRef.current}
                     className="flex-1"
                   >
                     <Video className="w-4 h-4 mr-2" />
@@ -396,6 +562,12 @@ const ParallelVideoGenerator: React.FC = () => {
                     }
                   </Button>
                 </div>
+
+                {(!leftCanvasRef.current || !rightCanvasRef.current) && (
+                  <p className="text-sm text-cosmic-400 text-center">
+                    {t('Waiting for canvas to initialize...', '等待画布初始化...')}
+                  </p>
+                )}
               </div>
             </>
           )}
