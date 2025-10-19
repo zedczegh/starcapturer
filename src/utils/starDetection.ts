@@ -2,6 +2,7 @@
  * Advanced star detection utilities for astronomy images
  * Implements sophisticated algorithms inspired by StarXTerminator
  */
+import { getCachedGaussianKernel, getCachedCircularKernel } from './starDetectionCache';
 
 export interface DetectedStar {
   x: number;
@@ -31,43 +32,22 @@ const DEFAULT_SETTINGS: StarDetectionSettings = {
 };
 
 /**
- * Gaussian blur kernel generation
+ * Gaussian blur kernel generation (now cached via starDetectionCache)
+ * @deprecated Use getCachedGaussianKernel instead
  */
 function generateGaussianKernel(sigma: number): { kernel: number[][], size: number } {
-  const size = Math.ceil(sigma * 6) | 1; // Ensure odd size
-  const kernel: number[][] = [];
-  const center = Math.floor(size / 2);
-  let sum = 0;
-
-  for (let y = 0; y < size; y++) {
-    kernel[y] = [];
-    for (let x = 0; x < size; x++) {
-      const distance = Math.sqrt((x - center) ** 2 + (y - center) ** 2);
-      const value = Math.exp(-(distance ** 2) / (2 * sigma ** 2));
-      kernel[y][x] = value;
-      sum += value;
-    }
-  }
-
-  // Normalize kernel
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      kernel[y][x] /= sum;
-    }
-  }
-
-  return { kernel, size };
+  return getCachedGaussianKernel(sigma);
 }
 
 /**
- * Apply Gaussian blur to reduce noise
+ * Apply Gaussian blur to reduce noise (optimized with cached kernels)
  */
 function applyGaussianBlur(
   imageData: ImageData, 
   sigma: number
 ): ImageData {
   const { data, width, height } = imageData;
-  const { kernel, size } = generateGaussianKernel(sigma);
+  const { kernel, size } = getCachedGaussianKernel(sigma);
   const blurred = new ImageData(width, height);
   const center = Math.floor(size / 2);
 
@@ -177,8 +157,8 @@ function detectStarsAtScale(
   const { data, width, height } = imageData;
   const stars: Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number }; confidence: number; type: 'point' | 'extended' | 'saturated' }> = [];
   
-  // Create morphological kernel
-  const kernel = createCircularKernel(scale);
+  // Create morphological kernel (cached for performance)
+  const kernel = getCachedCircularKernel(scale);
   
   // Apply top-hat transform to enhance point sources
   const topHat = morphologicalTopHat(imageData, kernel);
@@ -226,22 +206,11 @@ function detectStarsAtScale(
 }
 
 /**
- * Create circular morphological kernel
+ * Create circular morphological kernel (now cached via starDetectionCache)
+ * @deprecated Use getCachedCircularKernel instead
  */
 function createCircularKernel(radius: number): boolean[][] {
-  const size = radius * 2 + 1;
-  const kernel: boolean[][] = [];
-  const center = radius;
-  
-  for (let y = 0; y < size; y++) {
-    kernel[y] = [];
-    for (let x = 0; x < size; x++) {
-      const distance = Math.sqrt((x - center) ** 2 + (y - center) ** 2);
-      kernel[y][x] = distance <= radius;
-    }
-  }
-  
-  return kernel;
+  return getCachedCircularKernel(radius);
 }
 
 /**

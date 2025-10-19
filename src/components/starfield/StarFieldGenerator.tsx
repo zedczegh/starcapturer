@@ -11,12 +11,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import StarField3D from './StarField3D';
-import UTIF from 'utif';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { CanvasPool } from '@/lib/performance/CanvasPool';
 import { MemoryManager } from '@/lib/performance/MemoryManager';
 import { ChunkedProcessor } from '@/lib/performance/ChunkedProcessor';
+import { loadImageFromFile, validateImageFile } from '@/utils/imageProcessingUtils';
+import { captureFrames, encodeFramesToWebM, downloadBlob, calculateRecordingDimensions } from '@/utils/videoEncodingUtils';
 
 interface ProcessedStarData {
   x: number;
@@ -118,284 +119,44 @@ const StarFieldGenerator: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const decodeTiffToDataUrl = useCallback(async (arrayBuffer: ArrayBuffer, enableDownscale: boolean): Promise<string> => {
-    const canvasPool = CanvasPool.getInstance();
-    
+  // Unified image upload handler using new utilities
+  const handleImageUpload = useCallback(async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    setImage: (url: string) => void,
+    setElement: (el: HTMLImageElement) => void,
+    fileInputRef: React.RefObject<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      console.error(validation.error);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     try {
-      const ifds = UTIF.decode(arrayBuffer);
-      UTIF.decodeImage(arrayBuffer, ifds[0]);
-      const rgba = UTIF.toRGBA8(ifds[0]);
+      const { dataUrl, element } = await loadImageFromFile(file, {
+        enableDownscale: animationSettings.enableDownscale,
+        maxResolution: 4096 * 4096
+      });
       
-      const width = ifds[0].width;
-      const height = ifds[0].height;
-      
-      let targetWidth = width;
-      let targetHeight = height;
-      
-      // Only downscale if user has enabled it
-      if (enableDownscale) {
-        // Calculate optimal scale for large images
-        const isHighResolution = width * height > 4096 * 4096; // 16MP threshold
-        
-        if (isHighResolution) {
-          const scale = Math.sqrt(4096 * 4096 / (width * height));
-          targetWidth = Math.floor(width * scale);
-          targetHeight = Math.floor(height * scale);
-          console.log(`📐 User downscaling: ${width}x${height} → ${targetWidth}x${targetHeight} (${(scale * 100).toFixed(0)}%)`);
-        } else {
-          console.log(`✓ Image size ${width}x${height} within limits, no downscaling needed`);
-        }
-      }
-      
-      // Use canvas pool
-      const canvas = canvasPool.acquire(targetWidth, targetHeight);
-      const ctx = canvas.getContext('2d')!;
-      
-      try {
-        if (targetWidth !== width || targetHeight !== height) {
-          // Create temp canvas with original size for downscaling
-          const tempCanvas = canvasPool.acquire(width, height);
-          const tempCtx = tempCanvas.getContext('2d')!;
-          
-          const imageData = tempCtx.createImageData(width, height);
-          imageData.data.set(rgba);
-          tempCtx.putImageData(imageData, 0, 0);
-          
-          // Downscale with high quality
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(tempCanvas, 0, 0, targetWidth, targetHeight);
-          
-          canvasPool.release(tempCanvas);
-        } else {
-          const imageData = ctx.createImageData(targetWidth, targetHeight);
-          imageData.data.set(rgba);
-          ctx.putImageData(imageData, 0, 0);
-        }
-        
-        const dataUrl = canvas.toDataURL('image/png');
-        return dataUrl;
-      } finally {
-        canvasPool.release(canvas);
-      }
+      setImage(dataUrl);
+      setElement(element);
     } catch (error) {
-      console.error('TIFF decode error:', error);
-      throw new Error('Failed to decode TIFF file. The file may be too large or corrupted.');
+      console.error('Image load error:', error);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  }, []);
+  }, [animationSettings.enableDownscale]);
 
+  const handleStarsOnlyUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    return handleImageUpload(event, setStarsOnlyImage, setStarsOnlyElement, starsFileInputRef);
+  }, [handleImageUpload]);
 
-  const handleStarsOnlyUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file format
-    const validExtensions = ['.jpg', '.jpeg', '.png', '.fits', '.fit', '.tiff', '.tif', '.bmp', '.webp'];
-    const fileName = file.name.toLowerCase();
-    const isValidFormat = validExtensions.some(ext => fileName.endsWith(ext));
-    
-    if (!isValidFormat) {
-      if (starsFileInputRef.current) starsFileInputRef.current.value = '';
-      return;
-    }
-
-    // Validate file size (500MB)
-    const maxSize = 500 * 1024 * 1024;
-    if (file.size > maxSize) {
-      if (starsFileInputRef.current) starsFileInputRef.current.value = '';
-      return;
-    }
-
-    const isTiff = fileName.endsWith('.tiff') || fileName.endsWith('.tif');
-    
-    if (isTiff) {
-      // Handle TIFF files with UTIF decoder
-      const arrayBufferReader = new FileReader();
-      arrayBufferReader.onload = async (e) => {
-        try {
-          const arrayBuffer = e.target?.result as ArrayBuffer;
-          const dataUrl = await decodeTiffToDataUrl(arrayBuffer, animationSettings.enableDownscale);
-          setStarsOnlyImage(dataUrl);
-          
-          const img = new Image();
-          img.onload = () => {
-            setStarsOnlyElement(img);
-          };
-          img.onerror = () => {
-            setStarsOnlyImage(null);
-            if (starsFileInputRef.current) starsFileInputRef.current.value = '';
-          };
-          img.src = dataUrl;
-        } catch (error) {
-          if (starsFileInputRef.current) starsFileInputRef.current.value = '';
-        }
-      };
-      arrayBufferReader.readAsArrayBuffer(file);
-    } else {
-      // Handle standard image formats
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const result = e.target?.result as string;
-        
-        if (animationSettings.enableDownscale) {
-          // Apply downscaling if enabled
-          const img = new Image();
-          img.onload = async () => {
-            const isHighResolution = img.width * img.height > 4096 * 4096; // 16MP
-            
-            if (isHighResolution) {
-              const canvasPool = CanvasPool.getInstance();
-              const scale = Math.sqrt(4096 * 4096 / (img.width * img.height));
-              const targetWidth = Math.floor(img.width * scale);
-              const targetHeight = Math.floor(img.height * scale);
-              
-              console.log(`📐 User downscaling: ${img.width}x${img.height} → ${targetWidth}x${targetHeight}`);
-              
-              const canvas = canvasPool.acquire(targetWidth, targetHeight);
-              const ctx = canvas.getContext('2d')!;
-              ctx.imageSmoothingEnabled = true;
-              ctx.imageSmoothingQuality = 'high';
-              ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-              
-              const optimizedDataUrl = canvas.toDataURL('image/png', 0.95);
-              canvasPool.release(canvas);
-              
-              setStarsOnlyImage(optimizedDataUrl);
-              const optimizedImg = new Image();
-              optimizedImg.onload = () => setStarsOnlyElement(optimizedImg);
-              optimizedImg.src = optimizedDataUrl;
-            } else {
-              console.log(`✓ Image size ${img.width}x${img.height} within limits, no downscaling needed`);
-              setStarsOnlyImage(result);
-              setStarsOnlyElement(img);
-            }
-          };
-          img.onerror = () => {
-            setStarsOnlyImage(null);
-            if (starsFileInputRef.current) starsFileInputRef.current.value = '';
-          };
-          img.src = result;
-        } else {
-          // No downscaling, use original
-          setStarsOnlyImage(result);
-          const img = new Image();
-          img.onload = () => setStarsOnlyElement(img);
-          img.onerror = () => {
-            setStarsOnlyImage(null);
-            if (starsFileInputRef.current) starsFileInputRef.current.value = '';
-          };
-          img.src = result;
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  }, [decodeTiffToDataUrl, animationSettings.enableDownscale]);
-
-  const handleStarlessUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file format
-    const validExtensions = ['.jpg', '.jpeg', '.png', '.fits', '.fit', '.tiff', '.tif', '.bmp', '.webp'];
-    const fileName = file.name.toLowerCase();
-    const isValidFormat = validExtensions.some(ext => fileName.endsWith(ext));
-    
-    if (!isValidFormat) {
-      if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
-      return;
-    }
-
-    // Validate file size (500MB)
-    const maxSize = 500 * 1024 * 1024;
-    if (file.size > maxSize) {
-      if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
-      return;
-    }
-
-    const isTiff = fileName.endsWith('.tiff') || fileName.endsWith('.tif');
-    
-    if (isTiff) {
-      // Handle TIFF files with UTIF decoder
-      const arrayBufferReader = new FileReader();
-      arrayBufferReader.onload = async (e) => {
-        try {
-          const arrayBuffer = e.target?.result as ArrayBuffer;
-          const dataUrl = await decodeTiffToDataUrl(arrayBuffer, animationSettings.enableDownscale);
-          setStarlessImage(dataUrl);
-          
-          const img = new Image();
-          img.onload = () => {
-            setStarlessElement(img);
-          };
-          img.onerror = () => {
-            setStarlessImage(null);
-            if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
-          };
-          img.src = dataUrl;
-        } catch (error) {
-          if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
-        }
-      };
-      arrayBufferReader.readAsArrayBuffer(file);
-    } else {
-      // Handle standard image formats
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const result = e.target?.result as string;
-        
-        if (animationSettings.enableDownscale) {
-          // Apply downscaling if enabled
-          const img = new Image();
-          img.onload = async () => {
-            const isHighResolution = img.width * img.height > 4096 * 4096; // 16MP
-            
-            if (isHighResolution) {
-              const canvasPool = CanvasPool.getInstance();
-              const scale = Math.sqrt(4096 * 4096 / (img.width * img.height));
-              const targetWidth = Math.floor(img.width * scale);
-              const targetHeight = Math.floor(img.height * scale);
-              
-              console.log(`📐 User downscaling: ${img.width}x${img.height} → ${targetWidth}x${targetHeight}`);
-              
-              const canvas = canvasPool.acquire(targetWidth, targetHeight);
-              const ctx = canvas.getContext('2d')!;
-              ctx.imageSmoothingEnabled = true;
-              ctx.imageSmoothingQuality = 'high';
-              ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-              
-              const optimizedDataUrl = canvas.toDataURL('image/png', 0.95);
-              canvasPool.release(canvas);
-              
-              setStarlessImage(optimizedDataUrl);
-              const optimizedImg = new Image();
-              optimizedImg.onload = () => setStarlessElement(optimizedImg);
-              optimizedImg.src = optimizedDataUrl;
-            } else {
-              console.log(`✓ Image size ${img.width}x${img.height} within limits, no downscaling needed`);
-              setStarlessImage(result);
-              setStarlessElement(img);
-            }
-          };
-          img.onerror = () => {
-            setStarlessImage(null);
-            if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
-          };
-          img.src = result;
-        } else {
-          // No downscaling, use original
-          setStarlessImage(result);
-          const img = new Image();
-          img.onload = () => setStarlessElement(img);
-          img.onerror = () => {
-            setStarlessImage(null);
-            if (starlessFileInputRef.current) starlessFileInputRef.current.value = '';
-          };
-          img.src = result;
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  }, [decodeTiffToDataUrl, animationSettings.enableDownscale]);
+  const handleStarlessUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    return handleImageUpload(event, setStarlessImage, setStarlessElement, starlessFileInputRef);
+  }, [handleImageUpload]);
 
   // Generate depth map from starless image - optimized with chunked processing
   const generateDepthMap = useCallback(async (img: HTMLImageElement): Promise<HTMLCanvasElement> => {
