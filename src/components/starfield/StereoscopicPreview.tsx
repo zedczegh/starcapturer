@@ -119,7 +119,7 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
     if (!isLocalAnimating) return;
 
     let lastFrameTime = performance.now();
-    const targetFPS = 10; // Lower FPS for heavy stereoscopic processing
+    const targetFPS = 10;
     const frameInterval = 1000 / targetFPS;
 
     const animate = (currentTime: number) => {
@@ -128,8 +128,8 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
       
       setLocalProgress(progress);
       
-      // Trigger render at target FPS (non-blocking)
-      if (currentTime - lastFrameTime >= frameInterval && !isProcessing) {
+      // Always attempt to render, let renderStereoscopicFrame handle throttling
+      if (currentTime - lastFrameTime >= frameInterval) {
         renderStereoscopicFrame();
         lastFrameTime = currentTime;
       }
@@ -149,17 +149,10 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isLocalAnimating, duration, renderStereoscopicFrame, isProcessing]);
+  }, [isLocalAnimating, duration, renderStereoscopicFrame]);
 
-  // Update stereoscopic preview when main animation progresses (when local is not playing)
-  useEffect(() => {
-    if (isLocalAnimating || !sourceCanvas) return;
-    
-    // Follow main animation when local is not playing
-    if (mainAnimationProgress > 0) {
-      renderStereoscopicFrame();
-    }
-  }, [mainAnimationProgress, isLocalAnimating, sourceCanvas, renderStereoscopicFrame]);
+  // Removed: stereoscopic preview now has completely independent controls
+  // It no longer follows the main animation
 
   // Initial render and trigger when source canvas becomes available
   useEffect(() => {

@@ -490,8 +490,10 @@ const StarField3D: React.FC<StarField3DProps> = ({
     if (!canvasRef.current) return;
     
     // During video generation, we don't need isAnimating check
+    // Also skip check if we have layers and this is likely an initial render
     const isVideoRendering = videoProgressRef !== undefined;
-    if (!isVideoRendering && !isAnimating) return;
+    const hasLayersForInitialRender = (starLayers.layer1 || starLayers.layer2 || starLayers.layer3) && currentProgressRef.current === 0;
+    if (!isVideoRendering && !isAnimating && !hasLayersForInitialRender) return;
     
     const canvas = canvasRef.current;
     
@@ -914,7 +916,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const hasLayers = starLayers.layer1 || starLayers.layer2 || starLayers.layer3 || 
                      starLayers.layer4 || starLayers.layer5 || starLayers.layer6;
     
-    if (canvasRef.current && hasLayers && backgroundImg) {
+    if (canvasRef.current && hasLayers && backgroundImg && currentProgressRef.current === 0) {
       // Always render initial frame when layers are ready, regardless of animation state
       console.log('Rendering initial frame with layers ready');
       requestAnimationFrame(() => {
