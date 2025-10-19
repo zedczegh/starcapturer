@@ -39,6 +39,8 @@ interface StarField3DProps {
     stereoSpacing: number;
     borderSize: number;
     traditionalParams: TraditionalMorphParams;
+    starsOnlyImage?: string;
+    starlessImage?: string;
   };
 }
 

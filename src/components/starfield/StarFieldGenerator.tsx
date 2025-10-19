@@ -12,6 +12,7 @@ import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon } f
 import { useLanguage } from '@/contexts/LanguageContext';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import StarField3D from './StarField3D';
+import StereoscopicPreview from './StereoscopicPreview';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { CanvasPool } from '@/lib/performance/CanvasPool';
@@ -590,17 +591,26 @@ const StarFieldGenerator: React.FC = () => {
       
       console.log('Source canvas:', sourceWidth, 'x', sourceHeight);
       
-      // Cap resolution at 1920x1080
+      // Calculate dimensions based on stereoscopic mode
       let recordWidth = sourceWidth;
       let recordHeight = sourceHeight;
-      const maxWidth = 1920;
-      const maxHeight = 1080;
       
-      if (recordWidth > maxWidth || recordHeight > maxHeight) {
-        const scale = Math.min(maxWidth / recordWidth, maxHeight / recordHeight);
-        recordWidth = Math.round(recordWidth * scale);
-        recordHeight = Math.round(recordHeight * scale);
-        console.log(`Scaled to ${recordWidth}x${recordHeight}`);
+      if (enableStereoscopic) {
+        // For stereoscopic: double width + spacing + borders
+        recordWidth = (sourceWidth * 2) + stereoSpacing + (borderSize * 2);
+        recordHeight = sourceHeight + (borderSize * 2);
+        console.log(`Stereoscopic mode: ${recordWidth}x${recordHeight}`);
+      } else {
+        // Cap resolution at 1920x1080 for normal mode
+        const maxWidth = 1920;
+        const maxHeight = 1080;
+        
+        if (recordWidth > maxWidth || recordHeight > maxHeight) {
+          const scale = Math.min(maxWidth / recordWidth, maxHeight / recordHeight);
+          recordWidth = Math.round(recordWidth * scale);
+          recordHeight = Math.round(recordHeight * scale);
+          console.log(`Scaled to ${recordWidth}x${recordHeight}`);
+        }
       }
       
       const fps = 30;
@@ -643,34 +653,43 @@ const StarFieldGenerator: React.FC = () => {
         await new Promise(resolve => requestAnimationFrame(resolve));
         await new Promise(resolve => requestAnimationFrame(resolve)); // Double RAF for stability
         
-        // Capture frame from source canvas
-        let frameCanvas = renderCanvas;
-        const frameCtx = renderCtx;
-        
-        frameCtx.fillStyle = '#000000';
-        frameCtx.fillRect(0, 0, recordWidth, recordHeight);
-        frameCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
-        
         // Apply stereoscopic processing if enabled
         if (enableStereoscopic && starsOnlyImage && starlessImage) {
           try {
+            // Process the current frame through stereoscopic conversion
             const stereoCanvas = await processFrameToStereoscopic(
-              renderCanvas,
+              sourceCanvas,
               starsOnlyImage,
               starlessImage,
               traditionalParams,
               stereoSpacing,
               borderSize
             );
-            frameCanvas = stereoCanvas;
+            
+            // Draw the stereoscopic result to render canvas
+            renderCtx.fillStyle = '#000000';
+            renderCtx.fillRect(0, 0, recordWidth, recordHeight);
+            renderCtx.drawImage(stereoCanvas, 0, 0);
           } catch (error) {
             console.error('Stereoscopic processing error for frame', frameIndex, error);
-            // Continue with non-stereoscopic frame on error
+            // Fall back to non-stereoscopic
+            renderCtx.fillStyle = '#000000';
+            renderCtx.fillRect(0, 0, recordWidth, recordHeight);
+            
+            // Center the source canvas
+            const xOffset = borderSize;
+            const yOffset = borderSize;
+            renderCtx.drawImage(sourceCanvas, xOffset, yOffset, sourceWidth, sourceHeight);
           }
+        } else {
+          // Normal rendering without stereoscopic
+          renderCtx.fillStyle = '#000000';
+          renderCtx.fillRect(0, 0, recordWidth, recordHeight);
+          renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
         }
         
         // Store frame data
-        const frameData = frameCanvas.getContext('2d')!.getImageData(0, 0, frameCanvas.width, frameCanvas.height);
+        const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
         frames.push(frameData);
         
         // Update progress
@@ -1790,8 +1809,9 @@ const StarFieldGenerator: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Right Panel - 3D Preview */}
-        <div className="lg:col-span-2">
+        {/* Right Panel - 3D Preview and Stereoscopic Preview */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Main 3D Preview */}
           <Card className="bg-cosmic-900/50 border-cosmic-700/50 h-[600px]">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -1888,15 +1908,17 @@ const StarFieldGenerator: React.FC = () => {
                   frameRenderTrigger={frameRenderTrigger}
                   externalProgress={animationProgress}
                   depthIntensity={depthIntensity}
-                  stereoscopicSettings={{
-                    enabled: enableStereoscopic,
+                  stereoscopicSettings={enableStereoscopic ? {
+                    enabled: true,
                     stereoSpacing,
                     borderSize,
-                    traditionalParams
-                  }}
+                    traditionalParams,
+                    starsOnlyImage: starsOnlyImage || '',
+                    starlessImage: starlessImage || ''
+                  } : undefined}
                 />
                 
-                {/* Progress Bar and Controls */}
+                {/* Progress Bar and Controls - Main Preview */}
                 {processedStars.length > 0 && (
                   <div className="space-y-2 px-4 pb-3">
                     {/* Play/Pause and Replay Buttons */}
@@ -1957,6 +1979,24 @@ const StarFieldGenerator: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Stereoscopic 3D Preview - Only show when stereoscopic is enabled */}
+          {enableStereoscopic && processedStars.length > 0 && canvasRef.current && (
+            <StereoscopicPreview
+              sourceCanvas={canvasRef.current}
+              starsOnlyImage={starsOnlyImage}
+              starlessImage={starlessImage}
+              isAnimating={isAnimating}
+              animationProgress={animationProgress}
+              duration={animationSettings.duration}
+              traditionalParams={traditionalParams}
+              stereoSpacing={stereoSpacing}
+              borderSize={borderSize}
+              onToggleAnimation={toggleAnimation}
+              onReplay={handleReplay}
+              language={language}
+            />
+          )}
         </div>
       </div>
     </div>
