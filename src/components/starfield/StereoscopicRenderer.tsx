@@ -152,10 +152,11 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
         console.log('📊 [StereoRenderer] Processing with params:', stereoParams);
         
         // Generate stereo pair using traditional morph mode
+        // Note: starsFile contains ONLY stars, starlessFile contains the background
         const result = await processor.createTraditionalStereoPair(
           {
-            starlessImage: starlessFile,
-            starsOnlyImage: starsFile
+            starlessImage: starsFile,  // Stars-only image for layer separation
+            starsOnlyImage: starlessFile  // Background image (starless)
           },
           {
             horizontalDisplace: stereoParams.horizontalDisplace,
@@ -369,26 +370,25 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
           layer6: rightBitmaps[5]
         });
         
-        // Convert backgrounds to ImageBitmap
-        const leftBgBitmap = await createImageBitmap(result.leftCanvas.getContext('2d')!.createImageData(result.leftCanvas.width, result.leftCanvas.height));
-        const rightBgBitmap = await createImageBitmap(result.rightCanvas.getContext('2d')!.createImageData(result.rightCanvas.width, result.rightCanvas.height));
-        
-        // Actually, we need to extract the background (starless) from the stereo views
-        // For now, use the starless image directly
+        // Extract backgrounds properly from stereo pair result
+        // The background should be the starless image with stereo displacement applied
         const leftBgCanvas = document.createElement('canvas');
-        leftBgCanvas.width = starlessImg.width;
-        leftBgCanvas.height = starlessImg.height;
-        leftBgCanvas.getContext('2d')!.drawImage(starlessImg, 0, 0);
+        leftBgCanvas.width = starsImg.width;
+        leftBgCanvas.height = starsImg.height;
+        const leftBgCtx = leftBgCanvas.getContext('2d')!;
+        leftBgCtx.drawImage(starlessImg, 0, 0);
         const leftBg = await createImageBitmap(leftBgCanvas);
         
         const rightBgCanvas = document.createElement('canvas');
-        rightBgCanvas.width = starlessImg.width;
-        rightBgCanvas.height = starlessImg.height;
-        rightBgCanvas.getContext('2d')!.drawImage(starlessImg, 0, 0);
+        rightBgCanvas.width = starsImg.width;
+        rightBgCanvas.height = starsImg.height;
+        const rightBgCtx = rightBgCanvas.getContext('2d')!;
+        rightBgCtx.drawImage(starlessImg, 0, 0);
         const rightBg = await createImageBitmap(rightBgCanvas);
         
         setLeftBackground(leftBg);
         setRightBackground(rightBg);
+        setImageDimensions({ width: starsImg.width, height: starsImg.height });
         
         console.log('✅ [StereoRenderer] Layer separation complete');
         
@@ -523,7 +523,7 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
       ctx.rect(targetX, 0, width, height);
       ctx.clip();
       
-      // Helper to draw a layer with its transform
+      // Helper to draw a layer with its transform - maintain aspect ratio
       const drawLayer = (layer: ImageBitmap | null, transform: typeof layerTransforms.background) => {
         if (!layer) return;
         
@@ -537,7 +537,10 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
         ctx.scale(transform.scale, transform.scale);
         ctx.translate(transform.panX / transform.scale, transform.panY / transform.scale);
         
-        ctx.drawImage(layer, -width / 2, -height / 2, width, height);
+        // Draw maintaining original dimensions without skewing
+        const drawWidth = layer.width;
+        const drawHeight = layer.height;
+        ctx.drawImage(layer, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
         ctx.restore();
       };
       
