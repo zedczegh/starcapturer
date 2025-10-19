@@ -281,7 +281,7 @@ const ParallelVideoGenerator: React.FC = () => {
         contrastBoost: 1.2
       };
 
-      // Step 2: Create stereo pair with traditional morph
+      // Step 2: Apply traditional morph displacement ONLY to starless background
       const { leftCanvas, rightCanvas, depthMap } = await processor.createTraditionalStereoPair(
         inputs,
         traditionalParams,
@@ -293,23 +293,39 @@ const ParallelVideoGenerator: React.FC = () => {
 
       console.log('Stereo pair created - Left:', leftCanvas.width, 'x', leftCanvas.height);
 
-      // Step 3: Extract stars only - BOTH views use SAME original starless for animation
-      setProcessingStep(t('Extracting stars layers...', '提取星点图层...'));
+      // Step 2b: NOW apply displacement ONLY to starless background (not the composite)
+      setProcessingStep(t('Displacing starless background separately...', '单独位移无星背景...'));
       
       const canvasPool = CanvasPool.getInstance();
       
-      // Create temp canvas for starless data
+      // Create depth maps for starless
+      const depthMaps = processor.createAdvancedDepthMap(starlessElement, traditionalParams.luminanceBlur);
+      
+      // Apply displacement to starless ONLY
+      const starlessCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
+      const starlessCtx = starlessCanvas.getContext('2d')!;
+      starlessCtx.drawImage(starlessElement, 0, 0);
+      
+      const displacedStarlessCanvas = await processor.applyOptimizedDisplacement(
+        starlessCanvas,
+        depthMaps,
+        horizontalDisplace
+      );
+
+      // Step 3: Extract stars from composites (stars have repositioning but NO displacement)
+      setProcessingStep(t('Extracting stars without displacement...', '提取无位移星点...'));
+      
+      // LEFT: Extract stars from left composite
+      const leftStarsCanvas = canvasPool.acquire(leftCanvas.width, leftCanvas.height);
+      const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
+      const leftCompositeData = leftCanvas.getContext('2d')!.getImageData(0, 0, leftCanvas.width, leftCanvas.height);
+      
       const tempCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
       const tempCtx = tempCanvas.getContext('2d')!;
       tempCtx.drawImage(starlessElement, 0, 0);
       const originalStarlessData = tempCtx.getImageData(0, 0, starlessElement.width, starlessElement.height);
       
-      // LEFT: Extract stars from left composite by subtracting starless
-      const leftStarsCanvas = canvasPool.acquire(leftCanvas.width, leftCanvas.height);
-      const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
-      const leftCompositeData = leftCanvas.getContext('2d')!.getImageData(0, 0, leftCanvas.width, leftCanvas.height);
       const leftStarsData = leftStarsCtx.createImageData(leftCanvas.width, leftCanvas.height);
-      
       for (let i = 0; i < leftCompositeData.data.length; i += 4) {
         leftStarsData.data[i] = Math.max(0, leftCompositeData.data[i] - originalStarlessData.data[i]);
         leftStarsData.data[i + 1] = Math.max(0, leftCompositeData.data[i + 1] - originalStarlessData.data[i + 1]);
@@ -318,12 +334,12 @@ const ParallelVideoGenerator: React.FC = () => {
       }
       leftStarsCtx.putImageData(leftStarsData, 0, 0);
       
-      // RIGHT: Extract stars from right composite by subtracting starless
+      // RIGHT: Extract stars from right composite (repositioned but not displaced)
       const rightStarsCanvas = canvasPool.acquire(rightCanvas.width, rightCanvas.height);
       const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
       const rightCompositeData = rightCanvas.getContext('2d')!.getImageData(0, 0, rightCanvas.width, rightCanvas.height);
-      const rightStarsData = rightStarsCtx.createImageData(rightCanvas.width, rightCanvas.height);
       
+      const rightStarsData = rightStarsCtx.createImageData(rightCanvas.width, rightCanvas.height);
       for (let i = 0; i < rightCompositeData.data.length; i += 4) {
         rightStarsData.data[i] = Math.max(0, rightCompositeData.data[i] - originalStarlessData.data[i]);
         rightStarsData.data[i + 1] = Math.max(0, rightCompositeData.data[i + 1] - originalStarlessData.data[i + 1]);
@@ -332,25 +348,27 @@ const ParallelVideoGenerator: React.FC = () => {
       }
       rightStarsCtx.putImageData(rightStarsData, 0, 0);
       
-      // Step 4: Detect stars for 3D rendering using depth map from traditional morph
+      // Step 4: Detect stars for 3D rendering
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
       const leftResult = extractStarsFromComposite(leftCanvas, starlessElement, depthMap);
       const rightResult = extractStarsFromComposite(rightCanvas, starlessElement, depthMap);
 
       console.log('Stars detected - Left:', leftResult.stars.length, 'Right:', rightResult.stars.length);
 
-      // Step 5: Set data - BOTH use SAME starless, StarField3D will animate it
-      // LEFT: Original starless + left stars
+      // Step 5: Set separated layers
+      // LEFT: Original starless (no displacement) + left stars
       setLeftBackground(starlessElement.src);
       setLeftStarsOnly(leftStarsCanvas.toDataURL());
       setLeftStars(leftResult.stars);
       
-      // RIGHT: SAME original starless + right stars (stars are displaced, background is not)
-      setRightBackground(starlessElement.src);
+      // RIGHT: DISPLACED starless + right stars (stars repositioned, starless displaced)
+      setRightBackground(displacedStarlessCanvas.toDataURL());
       setRightStarsOnly(rightStarsCanvas.toDataURL());
       setRightStars(rightResult.stars);
       
       // Cleanup
+      canvasPool.release(starlessCanvas);
+      canvasPool.release(displacedStarlessCanvas);
       canvasPool.release(tempCanvas);
       canvasPool.release(leftStarsCanvas);
       canvasPool.release(rightStarsCanvas);
