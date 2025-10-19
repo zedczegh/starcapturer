@@ -66,6 +66,7 @@ const ParallelVideoGenerator: React.FC = () => {
   // Canvas refs for video generation
   const leftCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rightCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const stitchedCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Traditional Morph Parameters - matching stereoscope processor exactly
   const [horizontalDisplace, setHorizontalDisplace] = useState<number>(25);
@@ -88,6 +89,65 @@ const ParallelVideoGenerator: React.FC = () => {
   const [isAnimating, setIsAnimating] = useState(false);
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
+
+  // Stitch left and right canvases together based on stereo spacing and border size
+  useEffect(() => {
+    if (!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current) return;
+
+    const stitchCanvases = () => {
+      const leftCanvas = leftCanvasRef.current!;
+      const rightCanvas = rightCanvasRef.current!;
+      const stitchedCanvas = stitchedCanvasRef.current!;
+
+      // Calculate dimensions
+      const viewWidth = leftCanvas.width;
+      const viewHeight = leftCanvas.height;
+      const totalWidth = viewWidth * 2 + stereoSpacing + borderSize * 2;
+      const totalHeight = viewHeight + borderSize * 2;
+
+      // Set stitched canvas size
+      if (stitchedCanvas.width !== totalWidth || stitchedCanvas.height !== totalHeight) {
+        stitchedCanvas.width = totalWidth;
+        stitchedCanvas.height = totalHeight;
+      }
+
+      const ctx = stitchedCanvas.getContext('2d');
+      if (!ctx) return;
+
+      // Clear with black background
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, totalWidth, totalHeight);
+
+      // Draw left view
+      ctx.drawImage(
+        leftCanvas,
+        borderSize,
+        borderSize,
+        viewWidth,
+        viewHeight
+      );
+
+      // Draw right view
+      ctx.drawImage(
+        rightCanvas,
+        borderSize + viewWidth + stereoSpacing,
+        borderSize,
+        viewWidth,
+        viewHeight
+      );
+    };
+
+    stitchCanvases();
+
+    // Re-stitch when animation updates
+    const interval = setInterval(() => {
+      if (isAnimating) {
+        stitchCanvases();
+      }
+    }, 33); // ~30fps
+
+    return () => clearInterval(interval);
+  }, [leftCanvasRef.current, rightCanvasRef.current, stereoSpacing, borderSize, isAnimating]);
 
   // Unified image upload handler from StarFieldGenerator
   const handleImageUpload = useCallback(async (
@@ -921,7 +981,7 @@ const ParallelVideoGenerator: React.FC = () => {
                   {/* Left View */}
                   <div className="space-y-2">
                     <Label className="text-cosmic-200 text-sm">
-                      {t('Left View', '左视图')} ({leftStars.length} {t('stars', '星点')})
+                      {t('Left View', '左视图')}
                     </Label>
                     <div className="aspect-video bg-black rounded-lg overflow-hidden border-2 border-cosmic-700 shadow-2xl">
                       {leftStars.length > 0 ? (
@@ -949,7 +1009,7 @@ const ParallelVideoGenerator: React.FC = () => {
                   {/* Right View */}
                   <div className="space-y-2">
                     <Label className="text-cosmic-200 text-sm">
-                      {t('Right View', '右视图')} ({rightStars.length} {t('stars', '星点')})
+                      {t('Right View', '右视图')}
                     </Label>
                     <div className="aspect-video bg-black rounded-lg overflow-hidden border-2 border-cosmic-700 shadow-2xl">
                       {rightStars.length > 0 ? (
@@ -971,6 +1031,22 @@ const ParallelVideoGenerator: React.FC = () => {
                           {t('Waiting...', '等待中...')}
                         </div>
                       )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stitched View */}
+                <div className="space-y-2">
+                  <Label className="text-cosmic-200 text-sm">
+                    {t('Stitched Parallel View', '拼接平行视图')}
+                  </Label>
+                  <div className="bg-black rounded-lg overflow-hidden border-2 border-cyan-500 shadow-2xl">
+                    <div className="overflow-x-auto">
+                      <canvas 
+                        ref={stitchedCanvasRef} 
+                        className="max-w-full h-auto"
+                        style={{ imageRendering: 'pixelated' }}
+                      />
                     </div>
                   </div>
                 </div>
