@@ -67,7 +67,12 @@ const ParallelVideoGenerator: React.FC = () => {
   const leftCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rightCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const stitchedCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const depthMapCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  
+  // Depth map refs for debug display
+  const primaryDepthRef = useRef<HTMLCanvasElement | null>(null);
+  const structureDepthRef = useRef<HTMLCanvasElement | null>(null);
+  const edgeDepthRef = useRef<HTMLCanvasElement | null>(null);
+  const combinedDepthRef = useRef<HTMLCanvasElement | null>(null);
 
   // Traditional Morph Parameters - matching stereoscope processor exactly
   const [horizontalDisplace, setHorizontalDisplace] = useState<number>(25);
@@ -360,16 +365,6 @@ const ParallelVideoGenerator: React.FC = () => {
 
       console.log('Stereo pair created - Left:', leftCanvas.width, 'x', leftCanvas.height);
       
-      // Store depth map for display
-      if (depthMapCanvasRef.current) {
-        depthMapCanvasRef.current.width = depthMap.width;
-        depthMapCanvasRef.current.height = depthMap.height;
-        const depthCtx = depthMapCanvasRef.current.getContext('2d');
-        if (depthCtx) {
-          depthCtx.drawImage(depthMap, 0, 0);
-        }
-      }
-      
       // DEBUG: Save composites for inspection
       setLeftComposite(leftCanvas.toDataURL());
       setRightComposite(rightCanvas.toDataURL());
@@ -382,6 +377,28 @@ const ParallelVideoGenerator: React.FC = () => {
       // Create depth maps for starless
       const depthMaps = processor.createAdvancedDepthMap(starlessElement, traditionalParams.luminanceBlur);
       
+      // Store depth maps for debug display
+      if (primaryDepthRef.current && structureDepthRef.current && edgeDepthRef.current && combinedDepthRef.current) {
+        primaryDepthRef.current.width = depthMaps.primaryDepth.width;
+        primaryDepthRef.current.height = depthMaps.primaryDepth.height;
+        structureDepthRef.current.width = depthMaps.structureDepth.width;
+        structureDepthRef.current.height = depthMaps.structureDepth.height;
+        edgeDepthRef.current.width = depthMaps.edgeDepth.width;
+        edgeDepthRef.current.height = depthMaps.edgeDepth.height;
+        combinedDepthRef.current.width = depthMaps.combinedDepth.width;
+        combinedDepthRef.current.height = depthMaps.combinedDepth.height;
+        
+        const primaryCtx = primaryDepthRef.current.getContext('2d')!;
+        const structureCtx = structureDepthRef.current.getContext('2d')!;
+        const edgeCtx = edgeDepthRef.current.getContext('2d')!;
+        const combinedCtx = combinedDepthRef.current.getContext('2d')!;
+        
+        primaryCtx.drawImage(depthMaps.primaryDepth, 0, 0);
+        structureCtx.drawImage(depthMaps.structureDepth, 0, 0);
+        edgeCtx.drawImage(depthMaps.edgeDepth, 0, 0);
+        combinedCtx.drawImage(depthMaps.combinedDepth, 0, 0);
+      }
+      
       // Apply displacement to starless ONLY
       const starlessCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
       const starlessCtx = starlessCanvas.getContext('2d')!;
@@ -393,8 +410,8 @@ const ParallelVideoGenerator: React.FC = () => {
         horizontalDisplace
       );
 
-      // Step 3: Process stars separately - apply displacement to ORIGINAL stars upload
-      setProcessingStep(t('Displacing original stars image...', '位移原始星点图像...'));
+      // Step 3: Process stars WITH depth-based displacement
+      setProcessingStep(t('Applying depth-based star displacement...', '应用基于深度的星点位移...'));
       
       // LEFT: Use original uploaded stars as-is (no processing)
       const leftStarsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
@@ -403,18 +420,22 @@ const ParallelVideoGenerator: React.FC = () => {
       
       console.log('Left stars canvas created:', leftStarsCanvas.width, 'x', leftStarsCanvas.height);
       
-      // RIGHT: Apply displacement to the ORIGINAL uploaded stars (not extracted from composite)
+      // RIGHT: Apply DEPTH-BASED displacement to stars
+      // Stars need MORE displacement than background because they're further away
       const starsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
       const starsCtx = starsCanvas.getContext('2d')!;
       starsCtx.drawImage(starsElement, 0, 0);
       
       console.log('Stars canvas for displacement:', starsCanvas.width, 'x', starsCanvas.height);
       
-      // Apply the SAME displacement to stars that we applied to starless
+      // Apply AMPLIFIED displacement to stars (multiply by starShiftAmount factor)
+      const starDisplacementAmount = horizontalDisplace * (starShiftAmount / 6); // Scale relative to default
+      console.log(`Applying star displacement: ${starDisplacementAmount}px (base: ${horizontalDisplace}px, multiplier: ${starShiftAmount / 6})`);
+      
       const displacedStarsCanvas = await processor.applyOptimizedDisplacement(
         starsCanvas,
         depthMaps,
-        horizontalDisplace
+        starDisplacementAmount
       );
       
       console.log('Displaced stars canvas created:', displacedStarsCanvas.width, 'x', displacedStarsCanvas.height);
@@ -428,6 +449,7 @@ const ParallelVideoGenerator: React.FC = () => {
       const rightStarsCheck = rightStarsCtx.getImageData(rightStarsCanvas.width/2, rightStarsCanvas.height/2, 1, 1);
       console.log('Left stars pixel check:', leftStarsCheck.data[0], leftStarsCheck.data[1], leftStarsCheck.data[2]);
       console.log('Right stars pixel check:', rightStarsCheck.data[0], rightStarsCheck.data[1], rightStarsCheck.data[2]);
+      console.log('Star displacement applied - stars should now show depth separation');
       
       // Step 4: Detect stars for 3D rendering
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
@@ -1154,27 +1176,60 @@ const ParallelVideoGenerator: React.FC = () => {
                   )}
                 </div>
 
-                {/* Depth Map Display */}
+                {/* Depth Maps Display - showing the 4 depth maps used for displacement */}
                 <div className="space-y-2">
-                  <Label className="text-cosmic-200 text-sm flex items-center gap-2">
-                    <Eye className="w-4 h-4" />
-                    {t('Depth Map (Used for Displacement)', '深度图（用于位移处理）')}
-                  </Label>
-                  <div className="bg-black rounded-lg overflow-hidden border-2 border-purple-500 shadow-lg">
-                    <div className="overflow-x-auto">
-                      <canvas 
-                        ref={depthMapCanvasRef} 
-                        className="max-w-full h-auto"
-                        style={{ imageRendering: 'pixelated', maxHeight: '300px' }}
-                      />
-                    </div>
-                  </div>
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-purple-400" />
+                    {t('Depth Maps (Used for Displacement)', '深度图（用于位移处理）')}
+                  </h3>
                   <p className="text-xs text-cosmic-400">
                     {t(
-                      'Generated from starless image - brighter areas are displaced more',
-                      '从无星图像生成 - 较亮区域位移更大'
+                      'Four different depth maps calculated from the starless image - brighter = more displacement',
+                      '从无星图像计算的四种不同深度图 - 较亮 = 更多位移'
                     )}
                   </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-cosmic-200 text-xs">{t('Primary Depth', '主要深度')}</Label>
+                      <div className="bg-black rounded-lg overflow-hidden border-2 border-purple-500/50 shadow-lg">
+                        <canvas 
+                          ref={primaryDepthRef} 
+                          className="w-full h-auto"
+                          style={{ imageRendering: 'pixelated', maxHeight: '200px' }}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-cosmic-200 text-xs">{t('Structure Depth', '结构深度')}</Label>
+                      <div className="bg-black rounded-lg overflow-hidden border-2 border-purple-500/50 shadow-lg">
+                        <canvas 
+                          ref={structureDepthRef} 
+                          className="w-full h-auto"
+                          style={{ imageRendering: 'pixelated', maxHeight: '200px' }}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-cosmic-200 text-xs">{t('Edge Depth', '边缘深度')}</Label>
+                      <div className="bg-black rounded-lg overflow-hidden border-2 border-purple-500/50 shadow-lg">
+                        <canvas 
+                          ref={edgeDepthRef} 
+                          className="w-full h-auto"
+                          style={{ imageRendering: 'pixelated', maxHeight: '200px' }}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-cosmic-200 text-xs">{t('Combined Depth', '综合深度')}</Label>
+                      <div className="bg-black rounded-lg overflow-hidden border-2 border-purple-500 shadow-lg">
+                        <canvas 
+                          ref={combinedDepthRef} 
+                          className="w-full h-auto"
+                          style={{ imageRendering: 'pixelated', maxHeight: '200px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Stitched View */}
