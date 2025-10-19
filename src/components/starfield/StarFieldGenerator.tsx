@@ -8,7 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon } from 'lucide-react';
+import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon, Eye } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import StarField3D from './StarField3D';
@@ -77,6 +77,20 @@ const StarFieldGenerator: React.FC = () => {
   
   // 3D depth intensity control (0-100 scale)
   const [depthIntensity, setDepthIntensity] = useState<number>(50);
+  
+  // Stereoscopic 3D mode states
+  const [stereoscopicMode, setStereoscopicMode] = useState(false);
+  const [stereoParams, setStereoParams] = useState({
+    horizontalDisplace: 25,
+    starShiftAmount: 6,
+    luminanceBlur: 1.5,
+    contrastBoost: 1.2,
+    stereoSpacing: 300
+  });
+  const [stereoAnimating, setStereoAnimating] = useState(false);
+  const [stereoProgress, setStereoProgress] = useState(0);
+  const [stereoCanvasReady, setStereoCanvasReady] = useState(false);
+  const stereoCanvasRef = useRef<HTMLCanvasElement | null>(null);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
@@ -548,6 +562,37 @@ const StarFieldGenerator: React.FC = () => {
     setTimeout(() => {
       console.log('▶️ [Generator] Starting replay animation');
       setIsAnimating(true);
+    }, 50);
+  }, []);
+
+  // Stereoscopic animation handlers
+  const toggleStereoAnimation = useCallback(() => {
+    console.log('🎮 [Stereo] Toggle stereo animation:', {
+      currentlyAnimating: stereoAnimating,
+      currentProgress: stereoProgress
+    });
+    
+    if (stereoAnimating) {
+      console.log('⏸️ [Stereo] Pausing stereo animation');
+      setStereoAnimating(false);
+    } else {
+      if (stereoProgress >= 99.9) {
+        console.log('🔄 [Stereo] Restarting stereo from beginning');
+        setStereoProgress(0);
+      } else {
+        console.log('▶️ [Stereo] Resuming stereo animation from', stereoProgress.toFixed(1) + '%');
+      }
+      setStereoAnimating(true);
+    }
+  }, [stereoAnimating, stereoProgress]);
+
+  const handleStereoReplay = useCallback(() => {
+    console.log('🔄 [Stereo] Replay triggered');
+    setStereoProgress(0);
+    setStereoAnimating(false);
+    setTimeout(() => {
+      console.log('▶️ [Stereo] Starting stereo replay animation');
+      setStereoAnimating(true);
     }, 50);
   }, []);
 
@@ -1536,6 +1581,113 @@ const StarFieldGenerator: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Stereoscopic 3D Video Mode */}
+                <div className="space-y-4 pt-4 border-t border-cosmic-700/30">
+                  <div className="flex items-center justify-between gap-4 p-4 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 hover:border-blue-500/50 transition-colors">
+                    <div className="flex-1 space-y-1.5">
+                      <Label htmlFor="stereoscopicMode" className="text-cosmic-100 text-base font-medium cursor-pointer">
+                        {t('Stereoscopic 3D Video', '立体3D视频')}
+                      </Label>
+                      <p className="text-xs text-cosmic-400 leading-relaxed">
+                        {t('Generate frame-by-frame stereoscopic 3D animations using depth-based pixel displacement', '使用基于深度的像素位移生成逐帧立体3D动画')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        id="stereoscopicMode"
+                        checked={stereoscopicMode}
+                        onCheckedChange={setStereoscopicMode}
+                      />
+                      <span className={`text-sm font-medium ${stereoscopicMode ? 'text-blue-400' : 'text-cosmic-500'}`}>
+                        {stereoscopicMode ? t('Enabled', '已启用') : t('Disabled', '已禁用')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Stereoscopic Parameters */}
+                  {stereoscopicMode && (
+                    <div className="space-y-4 p-4 bg-cosmic-800/20 rounded-lg border border-blue-500/30">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-cosmic-200 text-sm">{t('Nebula Displacement', '星云位移')}</Label>
+                          <span className="text-cosmic-300 text-sm font-semibold">{stereoParams.horizontalDisplace}px</span>
+                        </div>
+                        <Slider
+                          value={[stereoParams.horizontalDisplace]}
+                          onValueChange={(value) => setStereoParams(prev => ({...prev, horizontalDisplace: value[0]}))}
+                          min={10}
+                          max={50}
+                          step={1}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-cosmic-200 text-sm">{t('Star Shift Amount', '星点位移量')}</Label>
+                          <span className="text-cosmic-300 text-sm font-semibold">{stereoParams.starShiftAmount}px</span>
+                        </div>
+                        <Slider
+                          value={[stereoParams.starShiftAmount]}
+                          onValueChange={(value) => setStereoParams(prev => ({...prev, starShiftAmount: value[0]}))}
+                          min={0}
+                          max={15}
+                          step={0.5}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-cosmic-200 text-sm">{t('Depth Map Blur', '深度图模糊')}</Label>
+                          <span className="text-cosmic-300 text-sm font-semibold">{stereoParams.luminanceBlur}px</span>
+                        </div>
+                        <Slider
+                          value={[stereoParams.luminanceBlur]}
+                          onValueChange={(value) => setStereoParams(prev => ({...prev, luminanceBlur: value[0]}))}
+                          min={0}
+                          max={5}
+                          step={0.5}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-cosmic-200 text-sm">{t('Contrast Boost', '对比度增强')}</Label>
+                          <span className="text-cosmic-300 text-sm font-semibold">{stereoParams.contrastBoost.toFixed(1)}x</span>
+                        </div>
+                        <Slider
+                          value={[stereoParams.contrastBoost * 10]}
+                          onValueChange={(value) => setStereoParams(prev => ({...prev, contrastBoost: value[0] / 10}))}
+                          min={10}
+                          max={20}
+                          step={1}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-cosmic-200 text-sm">{t('Stereo Spacing', '立体间距')}</Label>
+                          <span className="text-cosmic-300 text-sm font-semibold">{stereoParams.stereoSpacing}px</span>
+                        </div>
+                        <Slider
+                          value={[stereoParams.stereoSpacing]}
+                          onValueChange={(value) => setStereoParams(prev => ({...prev, stereoSpacing: value[0]}))}
+                          min={100}
+                          max={600}
+                          step={50}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-cosmic-400">
+                          {t('Spacing between left and right views in stereo pair', '立体对中左右视图之间的间距')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <Button
                   onClick={toggleAnimation}
                   className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
@@ -1634,18 +1786,46 @@ const StarFieldGenerator: React.FC = () => {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <Button
-                onClick={() => {
-                  setShowFormatDialog(false);
-                  downloadVideoWebM();
-                }}
-                disabled={isGeneratingVideo}
-                className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
-              >
-                <Video className="h-4 w-4 mr-2" />
-                {t('WebM (Fast, Browser Native)', 'WebM（快速，浏览器原生）')}
-              </Button>
-              
+              {stereoscopicMode ? (
+                <>
+                  <Button
+                    onClick={() => {
+                      setShowFormatDialog(false);
+                      downloadVideoWebM();
+                    }}
+                    disabled={isGeneratingVideo}
+                    className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
+                  >
+                    <Video className="h-4 w-4 mr-2" />
+                    {t('Normal Video (WebM)', '普通视频 (WebM)')}
+                  </Button>
+                  
+                  <Button
+                    onClick={() => {
+                      setShowFormatDialog(false);
+                      // TODO: Implement stereoscopic video generation
+                      console.log('Stereoscopic video download requested');
+                    }}
+                    disabled={isGeneratingVideo}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    {t('Stereoscopic 3D Video (WebM)', '立体3D视频 (WebM)')}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  onClick={() => {
+                    setShowFormatDialog(false);
+                    downloadVideoWebM();
+                  }}
+                  disabled={isGeneratingVideo}
+                  className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  {t('WebM (Fast, Browser Native)', 'WebM（快速，浏览器原生）')}
+                </Button>
+              )}
             </div>
           </DialogContent>
         </Dialog>
@@ -1813,6 +1993,93 @@ const StarFieldGenerator: React.FC = () => {
           </Card>
         </div>
       </div>
+      
+      {/* Stereoscopic 3D Preview Section - Completely Separate */}
+      {stereoscopicMode && currentStep === 'ready' && processedStars.length > 0 && (
+        <div className="mt-32 pb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-1">
+            <Card className="bg-cosmic-900/50 border-blue-500/50 h-[600px]">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Eye className="h-5 w-5" />
+                  {t('Stereoscopic 3D Preview', '立体3D预览')}
+                </CardTitle>
+                <CardDescription className="text-blue-300">
+                  {t('Independent stereoscopic animation with depth-based pixel displacement', '基于深度像素位移的独立立体动画')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-[500px] p-4">
+                <div className="w-full h-full bg-black rounded-lg flex items-center justify-center text-white">
+                  <div className="text-center space-y-4">
+                    <div className="text-6xl">👓</div>
+                    <div className="text-xl font-semibold">
+                      {t('Stereoscopic Preview Coming Soon', '立体预览即将推出')}
+                    </div>
+                    <div className="text-sm text-cosmic-400 max-w-md">
+                      {t('Frame-by-frame stereoscopic rendering with separate left/right views based on depth maps and star patterns', '基于深度图和星点模式的逐帧立体渲染，包含独立的左/右视图')}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Stereo Controls - Independent from main preview */}
+                {processedStars.length > 0 && (
+                  <div className="space-y-2 px-4 pb-3 mt-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        onClick={toggleStereoAnimation}
+                        disabled={false}
+                        variant="outline"
+                        size="sm"
+                        className="bg-blue-800/50 border-blue-700/50 hover:bg-blue-700/50"
+                      >
+                        {stereoAnimating ? (
+                          <>
+                            <Pause className="h-4 w-4 mr-2" />
+                            {t('Pause Stereo', '暂停立体')}
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 mr-2" />
+                            {t('Play Stereo', '播放立体')}
+                          </>
+                        )}
+                      </Button>
+                      
+                      <Button
+                        onClick={handleStereoReplay}
+                        disabled={stereoAnimating && stereoProgress < 10}
+                        variant="outline"
+                        size="sm"
+                        className="bg-blue-800/50 border-blue-700/50 hover:bg-blue-700/50"
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        {t('Replay Stereo', '重播立体')}
+                      </Button>
+                    </div>
+                    
+                    {/* Stereo Progress Bar */}
+                    <div className="relative w-full h-1 bg-blue-900/50 rounded-full overflow-visible">
+                      <div 
+                        className="absolute left-0 top-0 h-full bg-blue-400/80 transition-all duration-100 rounded-full"
+                        style={{ width: `${stereoProgress}%` }}
+                      />
+                      <div 
+                        className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-400 rounded-full shadow-lg transition-all duration-100"
+                        style={{ left: `calc(${stereoProgress}% - 0.375rem)` }}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs text-blue-300">
+                      <span>{formatTime((stereoProgress / 100) * animationSettings.duration)}</span>
+                      <span>{formatTime(animationSettings.duration)}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
