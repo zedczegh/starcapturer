@@ -496,15 +496,25 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const toggleAnimation = useCallback(() => {
-    setIsAnimating(prev => !prev);
-  }, []);
+    if (isAnimating) {
+      // Pausing - just stop animation
+      setIsAnimating(false);
+    } else {
+      // Resuming or starting
+      if (animationProgress >= 100) {
+        // If at end, reset and start fresh
+        setAnimationProgress(0);
+      }
+      // Start/resume animation
+      setIsAnimating(true);
+    }
+  }, [isAnimating, animationProgress]);
 
   const handleReplay = useCallback(() => {
-    // Stop animation first
-    setIsAnimating(false);
-    // Reset progress to 0 so the animation starts fresh
+    // Reset to beginning
     setAnimationProgress(0);
-    // Wait for state to update, then start animation
+    setIsAnimating(false);
+    // Small delay then start
     setTimeout(() => {
       setIsAnimating(true);
     }, 50);
@@ -1214,14 +1224,23 @@ const StarFieldGenerator: React.FC = () => {
                 <Label htmlFor="stars-upload" className="text-cosmic-200">
                   {t('Stars Only Image', '星点图')}
                 </Label>
-                <Input
-                  ref={starsFileInputRef}
-                  id="stars-upload"
-                  type="file"
-                  accept="image/*,.fits,.fit,.tiff,.tif"
-                  onChange={handleStarsOnlyUpload}
-                  className="bg-cosmic-800/50 border-cosmic-700/50 text-white cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-cosmic-700 file:text-white hover:file:bg-cosmic-600 file:cursor-pointer"
-                />
+                <div className="relative">
+                  <Input
+                    ref={starsFileInputRef}
+                    id="stars-upload"
+                    type="file"
+                    accept="image/*,.fits,.fit,.tiff,.tif"
+                    onChange={handleStarsOnlyUpload}
+                    className="sr-only"
+                  />
+                  <label 
+                    htmlFor="stars-upload"
+                    className="flex items-center justify-center w-full px-4 py-3 bg-cosmic-800/50 border border-cosmic-700/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-cosmic-700/50 transition-colors"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {starsOnlyImage ? t('Change File', '更换文件') : t('Choose File', '选择文件')}
+                  </label>
+                </div>
                 
                 {/* Upload Progress for Stars */}
                 <UploadProgress
@@ -1248,14 +1267,23 @@ const StarFieldGenerator: React.FC = () => {
                 <Label htmlFor="starless-upload" className="text-cosmic-200">
                   {t('Starless Image', '去星图')}
                 </Label>
-                <Input
-                  ref={starlessFileInputRef}
-                  id="starless-upload"
-                  type="file"
-                  accept="image/*,.fits,.fit,.tiff,.tif"
-                  onChange={handleStarlessUpload}
-                  className="bg-cosmic-800/50 border-cosmic-700/50 text-white cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-cosmic-700 file:text-white hover:file:bg-cosmic-600 file:cursor-pointer"
-                />
+                <div className="relative">
+                  <Input
+                    ref={starlessFileInputRef}
+                    id="starless-upload"
+                    type="file"
+                    accept="image/*,.fits,.fit,.tiff,.tif"
+                    onChange={handleStarlessUpload}
+                    className="sr-only"
+                  />
+                  <label 
+                    htmlFor="starless-upload"
+                    className="flex items-center justify-center w-full px-4 py-3 bg-cosmic-800/50 border border-cosmic-700/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-cosmic-700/50 transition-colors"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {starlessImage ? t('Change File', '更换文件') : t('Choose File', '选择文件')}
+                  </label>
+                </div>
                 
                 {/* Upload Progress for Starless */}
                 <UploadProgress
