@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { UploadProgress } from '@/components/ui/upload-progress';
 import StarField3D from './StarField3D';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
@@ -68,6 +69,12 @@ const StarFieldGenerator: React.FC = () => {
   const [isEncodingMP4, setIsEncodingMP4] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   
+  // Upload progress tracking
+  const [uploadProgress, setUploadProgress] = useState({
+    stars: { show: false, progress: 0, fileName: '' },
+    starless: { show: false, progress: 0, fileName: '' }
+  });
+  
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -124,7 +131,8 @@ const StarFieldGenerator: React.FC = () => {
     event: React.ChangeEvent<HTMLInputElement>,
     setImage: (url: string) => void,
     setElement: (el: HTMLImageElement) => void,
-    fileInputRef: React.RefObject<HTMLInputElement>
+    fileInputRef: React.RefObject<HTMLInputElement>,
+    uploadType: 'stars' | 'starless'
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -137,25 +145,62 @@ const StarFieldGenerator: React.FC = () => {
     }
 
     try {
+      // Show upload progress
+      setUploadProgress(prev => ({
+        ...prev,
+        [uploadType]: { show: true, progress: 0, fileName: file.name }
+      }));
+
+      // Simulate progress (since loadImageFromFile is quick)
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => ({
+          ...prev,
+          [uploadType]: { 
+            ...prev[uploadType], 
+            progress: Math.min(prev[uploadType].progress + 20, 90) 
+          }
+        }));
+      }, 100);
+
       const { dataUrl, element } = await loadImageFromFile(file, {
         enableDownscale: animationSettings.enableDownscale,
         maxResolution: 4096 * 4096
       });
       
+      clearInterval(progressInterval);
+      
+      // Complete progress
+      setUploadProgress(prev => ({
+        ...prev,
+        [uploadType]: { ...prev[uploadType], progress: 100 }
+      }));
+
       setImage(dataUrl);
       setElement(element);
+
+      // Hide progress after a short delay
+      setTimeout(() => {
+        setUploadProgress(prev => ({
+          ...prev,
+          [uploadType]: { show: false, progress: 0, fileName: '' }
+        }));
+      }, 1000);
     } catch (error) {
       console.error('Image load error:', error);
+      setUploadProgress(prev => ({
+        ...prev,
+        [uploadType]: { show: false, progress: 0, fileName: '' }
+      }));
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }, [animationSettings.enableDownscale]);
 
   const handleStarsOnlyUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    return handleImageUpload(event, setStarsOnlyImage, setStarsOnlyElement, starsFileInputRef);
+    return handleImageUpload(event, setStarsOnlyImage, setStarsOnlyElement, starsFileInputRef, 'stars');
   }, [handleImageUpload]);
 
   const handleStarlessUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    return handleImageUpload(event, setStarlessImage, setStarlessElement, starlessFileInputRef);
+    return handleImageUpload(event, setStarlessImage, setStarlessElement, starlessFileInputRef, 'starless');
   }, [handleImageUpload]);
 
   // Generate depth map from starless image - optimized with chunked processing
@@ -1118,7 +1163,7 @@ const StarFieldGenerator: React.FC = () => {
         <p className="text-cosmic-300 text-lg max-w-3xl mx-auto">
           {t(
             'Upload stars only and starless images to create stunning fly-through animations with preserved star positions',
-            '上传星体图像和无星图像，创建保留星体位置的令人惊叹的飞越动画'
+            '上传星点图和去星图，创建保留星体位置的令人惊叹的飞越动画'
           )}
         </p>
       </div>
@@ -1152,13 +1197,13 @@ const StarFieldGenerator: React.FC = () => {
                 {t('Upload Images', '上传图像')}
               </CardTitle>
               <CardDescription className="text-cosmic-400">
-                {t('Upload stars only and starless images separately', '分别上传星体图像和无星图像')}
+                {t('Upload stars only and starless images separately', '分别上传星点图和去星图')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="stars-upload" className="text-cosmic-200">
-                  {t('Stars Only Image', '星体图像')}
+                  {t('Stars Only Image', '星点图')}
                 </Label>
                 <Input
                   ref={starsFileInputRef}
@@ -1168,20 +1213,31 @@ const StarFieldGenerator: React.FC = () => {
                   onChange={handleStarsOnlyUpload}
                   className="bg-cosmic-800/50 border-cosmic-700/50 text-white file:bg-cosmic-700 file:text-white file:border-0"
                 />
-                {starsOnlyImage && (
-                  <div className="relative">
+                
+                {/* Upload Progress for Stars */}
+                <UploadProgress
+                  show={uploadProgress.stars.show}
+                  progress={uploadProgress.stars.progress}
+                  fileName={uploadProgress.stars.fileName}
+                />
+                
+                {starsOnlyImage && !uploadProgress.stars.show && (
+                  <div className="relative group">
                     <img
                       src={starsOnlyImage}
                       alt="Stars only"
-                      className="w-full h-24 object-cover rounded-lg border border-cosmic-700/50"
+                      className="w-full h-32 object-cover rounded-lg border-2 border-cosmic-700/50 transition-all group-hover:border-blue-500/50"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-cosmic-900/80 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                      <p className="text-xs text-white font-medium">{t('Stars detected', '已检测星点')}</p>
+                    </div>
                   </div>
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="starless-upload" className="text-cosmic-200">
-                  {t('Starless Image (Nebula)', '无星图像（星云）')}
+                  {t('Starless Image', '去星图')}
                 </Label>
                 <Input
                   ref={starlessFileInputRef}
@@ -1191,13 +1247,24 @@ const StarFieldGenerator: React.FC = () => {
                   onChange={handleStarlessUpload}
                   className="bg-cosmic-800/50 border-cosmic-700/50 text-white file:bg-cosmic-700 file:text-white file:border-0"
                 />
-                {starlessImage && (
-                  <div className="relative">
+                
+                {/* Upload Progress for Starless */}
+                <UploadProgress
+                  show={uploadProgress.starless.show}
+                  progress={uploadProgress.starless.progress}
+                  fileName={uploadProgress.starless.fileName}
+                />
+                
+                {starlessImage && !uploadProgress.starless.show && (
+                  <div className="relative group">
                     <img
                       src={starlessImage}
                       alt="Starless"
-                      className="w-full h-24 object-cover rounded-lg border border-cosmic-700/50"
+                      className="w-full h-32 object-cover rounded-lg border-2 border-cosmic-700/50 transition-all group-hover:border-purple-500/50"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-cosmic-900/80 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                      <p className="text-xs text-white font-medium">{t('Background ready', '背景已准备')}</p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1569,7 +1636,7 @@ const StarFieldGenerator: React.FC = () => {
                           <div className="pt-2">
                             <p className="text-sm text-cosmic-300 text-center leading-relaxed px-4">
                               {videoProgress.percent < 50 
-                                ? t('Rendering all frames smoothly without recording overhead...', '流畅渲染所有帧，无录制开销...')
+                                ? t('Rendering video frames...', '正在渲染视频帧...')
                                 : t('Encoding frames to video format...', '将帧编码为视频格式...')
                               }
                             </p>
