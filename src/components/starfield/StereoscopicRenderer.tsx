@@ -114,27 +114,29 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
     };
   }, []);
 
-  // Generate stereo views and separate into layers
+  // Generate stereo views and separate into layers using traditional morph methods
   useEffect(() => {
     if (!starlessImg || !starsImg || !processorRef.current || isGenerating) return;
 
     const generateStereoViewsWithLayers = async () => {
       setIsGenerating(true);
-      console.log('🗺️ [StereoRenderer] Generating stereo pair with layer separation');
+      console.log('🗺️ [StereoRenderer] Generating LEFT and RIGHT stereo views with proper separation');
 
       try {
         const processor = processorRef.current!;
+        const width = starsImg.width;
+        const height = starsImg.height;
         
         // Convert images to files for processor
         const starlessCanvas = document.createElement('canvas');
-        starlessCanvas.width = starlessImg.width;
-        starlessCanvas.height = starlessImg.height;
+        starlessCanvas.width = width;
+        starlessCanvas.height = height;
         const starlessCtx = starlessCanvas.getContext('2d')!;
         starlessCtx.drawImage(starlessImg, 0, 0);
         
         const starsCanvas = document.createElement('canvas');
-        starsCanvas.width = starsImg.width;
-        starsCanvas.height = starsImg.height;
+        starsCanvas.width = width;
+        starsCanvas.height = height;
         const starsCtx = starsCanvas.getContext('2d')!;
         starsCtx.drawImage(starsImg, 0, 0);
         
@@ -149,14 +151,13 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
         const starlessFile = new File([starlessBlob], 'starless.png', { type: 'image/png' });
         const starsFile = new File([starsBlob], 'stars.png', { type: 'image/png' });
         
-        console.log('📊 [StereoRenderer] Processing with params:', stereoParams);
+        console.log('📊 [StereoRenderer] Generating stereo pair with depth map');
         
-        // Generate stereo pair using traditional morph mode
-        // Note: starsFile contains ONLY stars, starlessFile contains the background
+        // Generate stereo pair using traditional morph mode to get depth information
         const result = await processor.createTraditionalStereoPair(
           {
-            starlessImage: starsFile,  // Stars-only image for layer separation
-            starsOnlyImage: starlessFile  // Background image (starless)
+            starlessImage: starlessFile,
+            starsOnlyImage: starsFile
           },
           {
             horizontalDisplace: stereoParams.horizontalDisplace,
@@ -169,16 +170,56 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
           }
         );
         
-        const leftCanvas = result.leftCanvas;
-        const rightCanvas = result.rightCanvas;
+        console.log('✅ [StereoRenderer] Stereo pair generated with depth map');
+        console.log('🔧 [StereoRenderer] Now creating separate stereo displacements for stars and background');
         
-        console.log('✅ [StereoRenderer] Stereo pair generated, now separating into layers');
+        // Use the generated depth map to create left/right versions of stars and starless
+        // For LEFT view: use originals (no displacement)
+        const leftStarsCanvas = document.createElement('canvas');
+        leftStarsCanvas.width = width;
+        leftStarsCanvas.height = height;
+        leftStarsCanvas.getContext('2d')!.drawImage(starsImg, 0, 0);
         
-        // Function to separate a stereo view canvas into star layers
-        const separateIntoLayers = async (canvas: HTMLCanvasElement, viewName: string) => {
-          const width = canvas.width;
-          const height = canvas.height;
-          const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: false })!;
+        const leftBgCanvas = document.createElement('canvas');
+        leftBgCanvas.width = width;
+        leftBgCanvas.height = height;
+        leftBgCanvas.getContext('2d')!.drawImage(starlessImg, 0, 0);
+        
+        // For RIGHT view: apply displacement based on depth map
+        const OptimizedDisplacementProcessor = (await import('@/lib/optimizedDisplacement')).OptimizedDisplacementProcessor;
+        
+        // Create depth maps object structure for displacement
+        const depthMaps = {
+          primaryDepth: result.depthMap,
+          structureDepth: result.depthMap, // Use same depth map for all
+          edgeDepth: result.depthMap,
+          combinedDepth: result.depthMap
+        };
+        
+        // Apply displacement to stars-only for right view
+        const rightStarsCanvas = await OptimizedDisplacementProcessor.applyOptimizedDisplacement(
+          leftStarsCanvas,
+          depthMaps,
+          stereoParams.horizontalDisplace,
+          (step, progress) => console.log(`[StereoRenderer] ${step} - ${progress?.toFixed(0)}%`)
+        );
+        
+        // Apply displacement to starless for right view
+        const rightBgCanvas = await OptimizedDisplacementProcessor.applyOptimizedDisplacement(
+          leftBgCanvas,
+          depthMaps,
+          stereoParams.horizontalDisplace,
+          (step, progress) => console.log(`[StereoRenderer] ${step} - ${progress?.toFixed(0)}%`)
+        );
+        
+        console.log('✅ [StereoRenderer] Generated left and right versions of stars and background');
+        console.log('🔄 [StereoRenderer] Separating stars into 6 depth layers for both views');
+        
+        // Function to separate a stars-only canvas into star layers (matching StarField3D logic)
+        const separateIntoLayers = async (starsCanvas: HTMLCanvasElement, viewName: string) => {
+          const width = starsCanvas.width;
+          const height = starsCanvas.height;
+          const ctx = starsCanvas.getContext('2d', { willReadFrequently: true, alpha: false })!;
           const sourceData = ctx.getImageData(0, 0, width, height);
           const data = sourceData.data;
           
@@ -346,10 +387,10 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
           );
         };
         
-        // Separate both left and right views into layers
+        // Separate both left and right stars-only images into layers
         const [leftBitmaps, rightBitmaps] = await Promise.all([
-          separateIntoLayers(leftCanvas, 'Left'),
-          separateIntoLayers(rightCanvas, 'Right')
+          separateIntoLayers(leftStarsCanvas, 'Left'),
+          separateIntoLayers(rightStarsCanvas, 'Right')
         ]);
         
         setLeftStarLayers({
@@ -370,27 +411,15 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
           layer6: rightBitmaps[5]
         });
         
-        // Extract backgrounds properly from stereo pair result
-        // The background should be the starless image with stereo displacement applied
-        const leftBgCanvas = document.createElement('canvas');
-        leftBgCanvas.width = starsImg.width;
-        leftBgCanvas.height = starsImg.height;
-        const leftBgCtx = leftBgCanvas.getContext('2d')!;
-        leftBgCtx.drawImage(starlessImg, 0, 0);
+        // Convert backgrounds to ImageBitmaps
         const leftBg = await createImageBitmap(leftBgCanvas);
-        
-        const rightBgCanvas = document.createElement('canvas');
-        rightBgCanvas.width = starsImg.width;
-        rightBgCanvas.height = starsImg.height;
-        const rightBgCtx = rightBgCanvas.getContext('2d')!;
-        rightBgCtx.drawImage(starlessImg, 0, 0);
         const rightBg = await createImageBitmap(rightBgCanvas);
         
         setLeftBackground(leftBg);
         setRightBackground(rightBg);
-        setImageDimensions({ width: starsImg.width, height: starsImg.height });
+        setImageDimensions({ width, height });
         
-        console.log('✅ [StereoRenderer] Layer separation complete');
+        console.log('✅ [StereoRenderer] Both views separated into 6 star layers + background');
         
       } catch (error) {
         console.error('❌ [StereoRenderer] Failed to generate stereo views:', error);
