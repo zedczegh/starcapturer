@@ -167,13 +167,28 @@ const StereoscopicPreview: React.FC<StereoscopicPreviewProps> = ({
     }
   }, [mainAnimationProgress, isLocalAnimating, sourceCanvas, renderStereoscopicFrame]);
 
-  // Initial render when component mounts or settings change
+  // Initial render and trigger when source canvas becomes available
   useEffect(() => {
-    if (sourceCanvas && starsOnlyImage && starlessImage) {
-      console.log('Initial stereoscopic render triggered');
+    if (sourceCanvas && starsOnlyImage && starlessImage && canvasRef.current) {
+      console.log('Triggering initial stereoscopic render with canvas:', {
+        canvasWidth: sourceCanvas.width,
+        canvasHeight: sourceCanvas.height
+      });
+      // Small delay to ensure everything is ready
+      const timer = setTimeout(() => {
+        renderStereoscopicFrame();
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [sourceCanvas, starsOnlyImage, starlessImage, renderStereoscopicFrame]);
+
+  // Re-render when stereoscopic settings change
+  useEffect(() => {
+    if (sourceCanvas && !isLocalAnimating) {
+      console.log('Stereoscopic settings changed, re-rendering...');
       renderStereoscopicFrame();
     }
-  }, [sourceCanvas, starsOnlyImage, starlessImage, traditionalParams, stereoSpacing, borderSize, renderStereoscopicFrame]);
+  }, [traditionalParams, stereoSpacing, borderSize, sourceCanvas, isLocalAnimating, renderStereoscopicFrame]);
 
   return (
     <Card className="bg-cosmic-900/50 border-cosmic-700/50 h-[600px]">

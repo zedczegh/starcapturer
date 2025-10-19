@@ -96,7 +96,8 @@ const StarFieldGenerator: React.FC = () => {
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const stereoPreviewCanvasRef = useRef<HTMLCanvasElement | null>(null); // Separate ref for stereoscopic preview
+  const stereoPreviewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [mainCanvas, setMainCanvas] = useState<HTMLCanvasElement | null>(null); // State to track canvas
   const ffmpegRef = useRef<FFmpeg | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -488,13 +489,20 @@ const StarFieldGenerator: React.FC = () => {
   }, [starsOnlyElement, starlessElement, extractStarPositions, generateDepthMap, depthIntensity, t]);
 
   const handleCanvasReady = useCallback((canvas: HTMLCanvasElement) => {
-    console.log('Canvas ready callback triggered', canvas);
+    console.log('🎯 Canvas ready callback triggered', {
+      hasCanvas: !!canvas,
+      canvasWidth: canvas?.width,
+      canvasHeight: canvas?.height,
+      hasContext: !!canvas?.getContext('2d')
+    });
     if (canvas && canvas.getContext('2d')) {
       canvasRef.current = canvas;
+      setMainCanvas(canvas); // Update state to trigger stereoscopic preview
       setIsCanvasReady(true);
-      console.log('Canvas successfully set and ready');
+      setCurrentStep('ready');
+      console.log('✅ Canvas successfully set and ready, dimensions:', canvas.width, 'x', canvas.height);
     } else {
-      console.error('Canvas is not properly initialized');
+      console.error('❌ Canvas is not properly initialized');
     }
   }, []);
 
@@ -2072,19 +2080,28 @@ const StarFieldGenerator: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Stereoscopic 3D Preview - Only show when stereoscopic is enabled */}
+          {/* Stereoscopic 3D Preview - Only show when stereoscopic is enabled and canvas is ready */}
           {enableStereoscopic && processedStars.length > 0 && (
-            <StereoscopicPreview
-              sourceCanvas={canvasRef.current}
-              starsOnlyImage={starsOnlyImage}
-              starlessImage={starlessImage}
-              mainAnimationProgress={animationProgress}
-              duration={animationSettings.duration}
-              traditionalParams={traditionalParams}
-              stereoSpacing={stereoSpacing}
-              borderSize={borderSize}
-              language={language}
-            />
+            <>
+              {!mainCanvas && (
+                <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                  <p className="text-yellow-500">Waiting for main canvas to initialize...</p>
+                </div>
+              )}
+              {mainCanvas && (
+                <StereoscopicPreview
+                  sourceCanvas={mainCanvas}
+                  starsOnlyImage={starsOnlyImage}
+                  starlessImage={starlessImage}
+                  mainAnimationProgress={animationProgress}
+                  duration={animationSettings.duration}
+                  traditionalParams={traditionalParams}
+                  stereoSpacing={stereoSpacing}
+                  borderSize={borderSize}
+                  language={language}
+                />
+              )}
+            </>
           )}
         </div>
       </div>
