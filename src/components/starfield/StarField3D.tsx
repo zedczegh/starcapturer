@@ -914,12 +914,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const hasLayers = starLayers.layer1 || starLayers.layer2 || starLayers.layer3 || 
                      starLayers.layer4 || starLayers.layer5 || starLayers.layer6;
     
-    if (canvasRef.current && hasLayers && !isAnimating && !videoProgressRef) {
-      // Render initial frame at progress 0
-      console.log('Rendering initial frame...');
-      animate();
+    if (canvasRef.current && hasLayers && backgroundImg) {
+      // Always render initial frame when layers are ready, regardless of animation state
+      console.log('Rendering initial frame with layers ready');
+      requestAnimationFrame(() => {
+        animate();
+      });
     }
-  }, [starLayers, backgroundImg, animate, isAnimating, videoProgressRef]);
+  }, [starLayers.layer1, starLayers.layer2, starLayers.layer3, starLayers.layer4, starLayers.layer5, starLayers.layer6, backgroundImg, animate]);
   
   // Cleanup ImageBitmaps when new layers are created or on unmount
   useEffect(() => {
