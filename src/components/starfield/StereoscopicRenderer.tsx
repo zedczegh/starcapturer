@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { TraditionalMorphProcessor } from '@/lib/traditionalMorphMode';
 
 interface StereoscopicRendererProps {
   starsOnlyImage: string | null;
@@ -42,9 +43,10 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
   
   const [starsImg, setStarsImg] = useState<HTMLImageElement | null>(null);
   const [starlessImg, setStarlessImg] = useState<HTMLImageElement | null>(null);
-  const [depthMap, setDepthMap] = useState<HTMLCanvasElement | null>(null);
   const [leftView, setLeftView] = useState<HTMLCanvasElement | null>(null);
   const [rightView, setRightView] = useState<HTMLCanvasElement | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const processorRef = useRef<TraditionalMorphProcessor | null>(null);
 
   // Load images
   useEffect(() => {
@@ -79,133 +81,92 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
     loadImages();
   }, [starsOnlyImage, starlessImage]);
 
-  // Generate depth map and stereo views
+  // Initialize processor
   useEffect(() => {
-    if (!starlessImg || !starsImg) return;
-
-    console.log('🗺️ [StereoRenderer] Generating depth map and stereo views with current settings');
-
-    const width = starlessImg.width;
-    const height = starlessImg.height;
-
-    // Create depth map from starless image
-    const depthCanvas = document.createElement('canvas');
-    depthCanvas.width = width;
-    depthCanvas.height = height;
-    const depthCtx = depthCanvas.getContext('2d')!;
-    
-    depthCtx.drawImage(starlessImg, 0, 0);
-    const imageData = depthCtx.getImageData(0, 0, width, height);
-    const data = imageData.data;
-    
-    // Convert to grayscale depth map with blue bias for nebula
-    for (let i = 0; i < data.length; i += 4) {
-      const luminance = 0.2 * data[i] + 0.5 * data[i + 1] + 0.8 * data[i + 2];
-      const enhancedLum = Math.pow(luminance / 255, 0.8) * 255;
-      data[i] = data[i + 1] = data[i + 2] = enhancedLum;
+    if (!processorRef.current) {
+      processorRef.current = new TraditionalMorphProcessor();
+      console.log('🔧 [StereoRenderer] TraditionalMorphProcessor initialized');
     }
     
-    depthCtx.putImageData(imageData, 0, 0);
-    
-    // Apply blur to depth map
-    if (stereoParams.luminanceBlur > 0) {
-      depthCtx.filter = `blur(${stereoParams.luminanceBlur}px)`;
-      depthCtx.drawImage(depthCanvas, 0, 0);
-      depthCtx.filter = 'none';
-    }
-
-    setDepthMap(depthCanvas);
-
-    // Generate LEFT view (reference)
-    const leftCanvas = document.createElement('canvas');
-    leftCanvas.width = width;
-    leftCanvas.height = height;
-    const leftCtx = leftCanvas.getContext('2d')!;
-    
-    // Draw starless background
-    leftCtx.drawImage(starlessImg, 0, 0);
-    // Add stars on top
-    leftCtx.globalCompositeOperation = 'screen';
-    leftCtx.drawImage(starsImg, 0, 0);
-    leftCtx.globalCompositeOperation = 'source-over';
-
-    setLeftView(leftCanvas);
-
-    // Generate RIGHT view with displacement
-    const rightCanvas = document.createElement('canvas');
-    rightCanvas.width = width;
-    rightCanvas.height = height;
-    const rightCtx = rightCanvas.getContext('2d')!;
-
-    // Apply depth-based displacement to starless background
-    const depthData = depthCtx.getImageData(0, 0, width, height);
-    leftCtx.clearRect(0, 0, width, height);
-    leftCtx.drawImage(starlessImg, 0, 0);
-    const starlessData = leftCtx.getImageData(0, 0, width, height);
-    
-    const displacedData = rightCtx.createImageData(width, height);
-    
-    // Initialize with black
-    for (let i = 0; i < displacedData.data.length; i += 4) {
-      displacedData.data[i] = 0;
-      displacedData.data[i + 1] = 0;
-      displacedData.data[i + 2] = 0;
-      displacedData.data[i + 3] = 255;
-    }
-
-    // Apply horizontal displacement based on depth
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const idx = (y * width + x) * 4;
-        const depth = depthData.data[idx] / 255;
-        const displacement = Math.round((depth - 0.5) * stereoParams.horizontalDisplace);
-        
-        const srcX = x - displacement;
-        
-        if (srcX >= 0 && srcX < width) {
-          const srcIdx = (y * width + srcX) * 4;
-          displacedData.data[idx] = starlessData.data[srcIdx];
-          displacedData.data[idx + 1] = starlessData.data[srcIdx + 1];
-          displacedData.data[idx + 2] = starlessData.data[srcIdx + 2];
-          displacedData.data[idx + 3] = 255;
-        }
+    return () => {
+      if (processorRef.current) {
+        processorRef.current.dispose();
+        processorRef.current = null;
       }
-    }
+    };
+  }, []);
 
-    rightCtx.putImageData(displacedData, 0, 0);
+  // Generate stereo views using TraditionalMorphProcessor
+  useEffect(() => {
+    if (!starlessImg || !starsImg || !processorRef.current || isGenerating) return;
 
-    // Add stars with forward shift to right view
-    rightCtx.globalCompositeOperation = 'screen';
-    
-    // Shift bright stars forward
-    if (stereoParams.starShiftAmount > 0) {
-      rightCtx.save();
-      rightCtx.translate(stereoParams.starShiftAmount, 0);
-      rightCtx.drawImage(starsImg, 0, 0);
-      rightCtx.restore();
-    } else {
-      rightCtx.drawImage(starsImg, 0, 0);
-    }
-    
-    rightCtx.globalCompositeOperation = 'source-over';
+    const generateStereoViews = async () => {
+      setIsGenerating(true);
+      console.log('🗺️ [StereoRenderer] Generating stereo pair using TraditionalMorphProcessor');
 
-    // Apply contrast boost to both views
-    if (stereoParams.contrastBoost !== 1.0) {
-      [leftCtx, rightCtx].forEach(ctx => {
-        const imgData = ctx.getImageData(0, 0, width, height);
-        const d = imgData.data;
-        for (let i = 0; i < d.length; i += 4) {
-          d[i] = Math.min(255, d[i] * stereoParams.contrastBoost);
-          d[i + 1] = Math.min(255, d[i + 1] * stereoParams.contrastBoost);
-          d[i + 2] = Math.min(255, d[i + 2] * stereoParams.contrastBoost);
-        }
-        ctx.putImageData(imgData, 0, 0);
-      });
-    }
+      try {
+        const processor = processorRef.current!;
+        
+        // Convert images to files for processor
+        const starlessCanvas = document.createElement('canvas');
+        starlessCanvas.width = starlessImg.width;
+        starlessCanvas.height = starlessImg.height;
+        const starlessCtx = starlessCanvas.getContext('2d')!;
+        starlessCtx.drawImage(starlessImg, 0, 0);
+        
+        const starsCanvas = document.createElement('canvas');
+        starsCanvas.width = starsImg.width;
+        starsCanvas.height = starsImg.height;
+        const starsCtx = starsCanvas.getContext('2d')!;
+        starsCtx.drawImage(starsImg, 0, 0);
+        
+        // Convert canvas to blob then to file
+        const starlessBlob = await new Promise<Blob>((resolve) => 
+          starlessCanvas.toBlob((blob) => resolve(blob!), 'image/png')
+        );
+        const starsBlob = await new Promise<Blob>((resolve) => 
+          starsCanvas.toBlob((blob) => resolve(blob!), 'image/png')
+        );
+        
+        const starlessFile = new File([starlessBlob], 'starless.png', { type: 'image/png' });
+        const starsFile = new File([starsBlob], 'stars.png', { type: 'image/png' });
+        
+        console.log('📊 [StereoRenderer] Processing with params:', stereoParams);
+        
+        // Generate stereo pair using traditional morph mode
+        const result = await processor.createTraditionalStereoPair(
+          {
+            starlessImage: starlessFile,
+            starsOnlyImage: starsFile
+          },
+          {
+            horizontalDisplace: stereoParams.horizontalDisplace,
+            starShiftAmount: stereoParams.starShiftAmount,
+            luminanceBlur: stereoParams.luminanceBlur,
+            contrastBoost: stereoParams.contrastBoost
+          },
+          (step, progress) => {
+            console.log(`[StereoRenderer] ${step} - ${progress?.toFixed(0)}%`);
+          }
+        );
+        
+        // Store the left and right views (without combining into stereo pair yet)
+        setLeftView(result.leftCanvas);
+        setRightView(result.rightCanvas);
+        
+        console.log('✅ [StereoRenderer] Stereo views generated successfully:', {
+          leftSize: `${result.leftCanvas.width}x${result.leftCanvas.height}`,
+          rightSize: `${result.rightCanvas.width}x${result.rightCanvas.height}`
+        });
+        
+      } catch (error) {
+        console.error('❌ [StereoRenderer] Failed to generate stereo views:', error);
+      } finally {
+        setIsGenerating(false);
+      }
+    };
 
-    setRightView(rightCanvas);
-
-    console.log('✅ [StereoRenderer] Stereo views generated successfully');
+    generateStereoViews();
   }, [starlessImg, starsImg, stereoParams]);
 
   // Render stereo pair to main canvas with motion settings applied
@@ -219,7 +180,7 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
     const height = leftView.height;
     const spacing = stereoParams.stereoSpacing;
 
-    // Set canvas size for stereo pair
+    // Set canvas size for stereo pair side-by-side
     canvas.width = width * 2 + spacing;
     canvas.height = height;
 
@@ -265,15 +226,12 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
         : -normalizedProgress * spinRadians;
     }
 
-    // Function to draw a view with transformations
+    // Function to draw a view with transformations at original size
     const drawView = (view: HTMLCanvasElement, targetX: number) => {
       ctx.save();
       
       // Translate to target position
-      ctx.translate(targetX, 0);
-      
-      // Move to center for transformations
-      ctx.translate(width / 2, height / 2);
+      ctx.translate(targetX + width / 2, height / 2);
       
       // Apply rotation
       if (rotation !== 0) {
@@ -283,10 +241,10 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
       // Apply scale
       ctx.scale(scaleFactor, scaleFactor);
       
-      // Apply pan offset
+      // Apply pan offset (scaled appropriately)
       ctx.translate(panX / scaleFactor, panY / scaleFactor);
       
-      // Draw image centered
+      // Draw image centered at original size
       ctx.drawImage(view, -width / 2, -height / 2, width, height);
       
       ctx.restore();
@@ -295,10 +253,8 @@ const StereoscopicRenderer: React.FC<StereoscopicRendererProps> = ({
     // Draw left view with motion
     drawView(leftView, 0);
 
-    // Draw right view with motion
+    // Draw right view with motion  
     drawView(rightView, width + spacing);
-
-    console.log(`🎬 [StereoRenderer] Frame rendered - Progress: ${progress.toFixed(1)}%, Scale: ${scaleFactor.toFixed(2)}, Pan: (${panX.toFixed(0)}, ${panY.toFixed(0)}), Rotation: ${(rotation * 180 / Math.PI).toFixed(1)}°`);
 
   }, [leftView, rightView, stereoParams.stereoSpacing, animationSettings]);
 
