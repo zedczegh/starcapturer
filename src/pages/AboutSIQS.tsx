@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ExternalLink, Globe, Star, Moon, CloudRain, Wind, Thermometer, Award, Check, MapPin, Shield } from "lucide-react";
+import { ExternalLink, Globe, Star, Moon, CloudRain, Wind, Thermometer, Award, Check, MapPin, Shield, Sparkles, Video, Music, Calculator, TrendingUp } from "lucide-react";
 import AboutSiqsDarkSkyResources from "@/components/about/AboutSiqsDarkSkyResources";
 
 const AboutSIQS = () => {
@@ -517,6 +517,9 @@ const AboutSIQS = () => {
               <TabsTrigger value="siqs" className="data-[state=active]:bg-primary/80 data-[state=active]:text-primary-foreground text-sm px-[30px] py-[2px]">
                 {t("What is SIQS?", "什么是SIQS？")}
               </TabsTrigger>
+              <TabsTrigger value="utilities" className="data-[state=active]:text-primary-foreground text-sm px-[30px] text-center bg-purple-950 hover:bg-purple-800 py-[2px]">
+                {t("Utilities", "实用工具")}
+              </TabsTrigger>
               <TabsTrigger value="darksky" className="data-[state=active]:text-primary-foreground text-sm px-[30px] text-center bg-gray-900 hover:bg-gray-800 py-[2px]">
                 {t("Dark Sky Knowledge", "暗夜知识")}
               </TabsTrigger>
@@ -659,6 +662,237 @@ const AboutSIQS = () => {
                         {t("Bad", "很差")}
                       </div>
                     </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="utilities" className="space-y-6 mt-4">
+            <Card className="bg-cosmic-800/40 border-cosmic-700/30 backdrop-blur-sm shadow-lg">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-2xl text-primary">
+                  {t("Astrophotography Utilities", "天文摄影实用工具")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <p className="text-base">
+                  {t("Our suite of specialized tools helps you process, analyze, and enhance your astrophotography images. Each utility is designed to solve specific challenges in astronomical imaging.", "我们的专业工具套件帮助您处理、分析和增强天文摄影图像。每个工具都旨在解决天文成像中的特定挑战。")}
+                </p>
+
+                {/* Stereoscope Processor */}
+                <div className="bg-gradient-to-br from-fuchsia-950/30 to-pink-950/30 border border-fuchsia-700/30 rounded-lg p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="bg-gradient-to-r from-fuchsia-600 to-pink-600 p-3 rounded-lg mr-4">
+                      <Star className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-fuchsia-200">
+                        {t("Stereoscope Processor", "立体镜处理器")}
+                      </h3>
+                      <p className="text-sm text-fuchsia-300/70">
+                        {t("Create 3D stereoscopic views", "创建3D立体视图")}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {t("Transform your 2D astrophotography images into stunning 3D stereoscopic pairs. This tool uses advanced depth mapping algorithms to create parallax-based stereoscopic images.", "将您的2D天文摄影图像转换为令人惊叹的3D立体图像对。此工具使用先进的深度映射算法创建基于视差的立体图像。")}
+                  </p>
+                  <div className="space-y-2 text-sm">
+                    <p className="font-medium text-fuchsia-200">{t("Features:", "功能：")}</p>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
+                      <li>{t("Fast mode: Single-image automatic depth map generation", "快速模式：单图像自动深度图生成")}</li>
+                      <li>{t("Traditional mode: Starless + stars layer processing", "传统模式：星空 + 星点图层处理")}</li>
+                      <li>{t("Adjustable stereo spacing and depth intensity", "可调整立体间距和深度强度")}</li>
+                      <li>{t("Support for TIFF, FITS, and standard image formats", "支持TIFF、FITS和标准图像格式")}</li>
+                    </ul>
+                    <p className="font-medium text-fuchsia-200 mt-3">{t("Instructions:", "使用说明：")}</p>
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-2">
+                      <li>{t("Upload your astrophotography image", "上传您的天文摄影图像")}</li>
+                      <li>{t("Choose processing mode (Fast or Traditional)", "选择处理模式（快速或传统）")}</li>
+                      <li>{t("Adjust depth parameters to enhance 3D effect", "调整深度参数以增强3D效果")}</li>
+                      <li>{t("Generate and download stereoscopic pair", "生成并下载立体图像对")}</li>
+                    </ol>
+                  </div>
+                </div>
+
+                {/* 3D Star Field Generator */}
+                <div className="bg-gradient-to-br from-cyan-950/30 to-blue-950/30 border border-cyan-700/30 rounded-lg p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="bg-gradient-to-r from-cyan-600 to-blue-600 p-3 rounded-lg mr-4">
+                      <Sparkles className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-cyan-200">
+                        {t("3D Star Field Generator", "3D星场生成器")}
+                      </h3>
+                      <p className="text-sm text-cyan-300/70">
+                        {t("Animated 3D star field videos", "动态3D星场视频")}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {t("Convert your astrophotography images into mesmerizing 3D animated videos with realistic star field motion. Perfect for creating dynamic presentations and social media content.", "将您的天文摄影图像转换为迷人的3D动画视频，具有逼真的星场运动。非常适合创建动态演示和社交媒体内容。")}
+                  </p>
+                  <div className="space-y-2 text-sm">
+                    <p className="font-medium text-cyan-200">{t("Features:", "功能：")}</p>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
+                      <li>{t("Multiple motion types: zoom, pan, spin", "多种运动类型：缩放、平移、旋转")}</li>
+                      <li>{t("Adjustable depth intensity (0-200%)", "可调深度强度（0-200%）")}</li>
+                      <li>{t("High-quality WebM and MP4 export", "高质量WebM和MP4导出")}</li>
+                      <li>{t("Real-time 3D preview with Three.js rendering", "使用Three.js渲染的实时3D预览")}</li>
+                    </ul>
+                    <p className="font-medium text-cyan-200 mt-3">{t("Instructions:", "使用说明：")}</p>
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-2">
+                      <li>{t("Upload stars-only and starless images separately", "分别上传纯星点和无星图像")}</li>
+                      <li>{t("Adjust depth intensity to control 3D effect strength", "调整深度强度以控制3D效果强度")}</li>
+                      <li>{t("Configure motion settings (type, speed, duration)", "配置运动设置（类型、速度、持续时间）")}</li>
+                      <li>{t("Generate and export your animated video", "生成并导出动画视频")}</li>
+                    </ol>
+                  </div>
+                </div>
+
+                {/* 3D Parallel Video Generator */}
+                <div className="bg-gradient-to-br from-amber-950/30 to-orange-950/30 border border-amber-700/30 rounded-lg p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="bg-gradient-to-r from-amber-600 to-orange-600 p-3 rounded-lg mr-4">
+                      <Video className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-amber-200">
+                        {t("3D Parallel Video Generator", "3D并联视频生成器")}
+                      </h3>
+                      <p className="text-sm text-amber-300/70">
+                        {t("Side-by-side stereoscopic videos", "并排立体视频")}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {t("Generate side-by-side stereoscopic 3D videos for VR headsets and 3D displays. Creates left and right eye views with proper parallax for immersive viewing experiences.", "为VR头戴设备和3D显示器生成并排立体3D视频。创建具有适当视差的左右眼视图，提供沉浸式观看体验。")}
+                  </p>
+                  <div className="space-y-2 text-sm">
+                    <p className="font-medium text-amber-200">{t("Features:", "功能：")}</p>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
+                      <li>{t("VR-compatible side-by-side stereo video output", "VR兼容的并排立体视频输出")}</li>
+                      <li>{t("Independent left/right eye depth processing", "独立的左/右眼深度处理")}</li>
+                      <li>{t("Customizable stereo separation and border size", "可定制的立体分离和边框大小")}</li>
+                      <li>{t("Full motion control with zoom, pan, and spin", "全运动控制，包括缩放、平移和旋转")}</li>
+                    </ul>
+                    <p className="font-medium text-amber-200 mt-3">{t("Instructions:", "使用说明：")}</p>
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-2">
+                      <li>{t("Upload starless and stars images", "上传无星和星点图像")}</li>
+                      <li>{t("Adjust horizontal displacement and star shift", "调整水平位移和星点偏移")}</li>
+                      <li>{t("Configure stereo spacing and motion settings", "配置立体间距和运动设置")}</li>
+                      <li>{t("Generate parallel stereo video for VR viewing", "生成用于VR观看的并联立体视频")}</li>
+                    </ol>
+                  </div>
+                </div>
+
+                {/* Sonification Processor */}
+                <div className="bg-gradient-to-br from-purple-950/30 to-violet-950/30 border border-purple-700/30 rounded-lg p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="bg-gradient-to-r from-purple-600 to-violet-600 p-3 rounded-lg mr-4">
+                      <Music className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-purple-200">
+                        {t("Sonification Processor", "音频化处理器")}
+                      </h3>
+                      <p className="text-sm text-purple-300/70">
+                        {t("Convert images to sound", "将图像转换为声音")}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {t("Transform astronomical images into audio by converting visual data into sound frequencies. Experience your astrophotography through a new sensory dimension.", "通过将视觉数据转换为声音频率，将天文图像转换为音频。通过新的感官维度体验您的天文摄影。")}
+                  </p>
+                  <div className="space-y-2 text-sm">
+                    <p className="font-medium text-purple-200">{t("Features:", "功能：")}</p>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
+                      <li>{t("Multi-type support: deep-sky, solar, planetary, lunar", "多类型支持：深空、太阳、行星、月球")}</li>
+                      <li>{t("Brightness, contrast, and color mapping to frequencies", "亮度、对比度和颜色映射到频率")}</li>
+                      <li>{t("Real-time audio waveform visualization", "实时音频波形可视化")}</li>
+                      <li>{t("MP3 export for sharing and preservation", "MP3导出以供分享和保存")}</li>
+                    </ul>
+                    <p className="font-medium text-purple-200 mt-3">{t("Instructions:", "使用说明：")}</p>
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-2">
+                      <li>{t("Select image type (deep-sky, solar, planetary, or lunar)", "选择图像类型（深空、太阳、行星或月球）")}</li>
+                      <li>{t("Upload your astronomical image", "上传您的天文图像")}</li>
+                      <li>{t("Process to analyze image and generate audio", "处理以分析图像并生成音频")}</li>
+                      <li>{t("Listen, visualize, and export as MP3", "收听、可视化并导出为MP3")}</li>
+                    </ol>
+                  </div>
+                </div>
+
+                {/* Sampling Calculator */}
+                <div className="bg-gradient-to-br from-emerald-950/30 to-green-950/30 border border-emerald-700/30 rounded-lg p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="bg-gradient-to-r from-emerald-600 to-green-600 p-3 rounded-lg mr-4">
+                      <Calculator className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-emerald-200">
+                        {t("Sampling Calculator", "采样计算器")}
+                      </h3>
+                      <p className="text-sm text-emerald-300/70">
+                        {t("Optimize your imaging setup", "优化您的成像设置")}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {t("Calculate optimal sampling rates for your telescope and camera combination. Ensures you're achieving proper Nyquist sampling for the best image quality based on your local seeing conditions.", "计算望远镜和相机组合的最佳采样率。确保您根据本地视宁度条件实现适当的奈奎斯特采样，以获得最佳图像质量。")}
+                  </p>
+                  <div className="space-y-2 text-sm">
+                    <p className="font-medium text-emerald-200">{t("Features:", "功能：")}</p>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
+                      <li>{t("Comprehensive CMOS sensor database", "全面的CMOS传感器数据库")}</li>
+                      <li>{t("Barlow/reducer support for effective focal length", "巴洛镜/减焦镜支持以计算有效焦距")}</li>
+                      <li>{t("Real-time sampling rate feedback", "实时采样率反馈")}</li>
+                      <li>{t("Field of view calculation", "视场计算")}</li>
+                    </ul>
+                    <p className="font-medium text-emerald-200 mt-3">{t("Instructions:", "使用说明：")}</p>
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-2">
+                      <li>{t("Enter your telescope focal length", "输入您的望远镜焦距")}</li>
+                      <li>{t("Select your camera sensor from the database", "从数据库中选择您的相机传感器")}</li>
+                      <li>{t("Input local seeing conditions (arcseconds)", "输入本地视宁度条件（角秒）")}</li>
+                      <li>{t("Review sampling recommendation and FOV", "查看采样建议和视场")}</li>
+                    </ol>
+                  </div>
+                </div>
+
+                {/* Astro Math Processor */}
+                <div className="bg-gradient-to-br from-orange-950/30 to-red-950/30 border border-orange-700/30 rounded-lg p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="bg-gradient-to-r from-orange-600 to-red-600 p-3 rounded-lg mr-4">
+                      <TrendingUp className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-orange-200">
+                        {t("Astro Math Processor", "天文数学处理器")}
+                      </h3>
+                      <p className="text-sm text-orange-300/70">
+                        {t("Mathematical image analysis", "数学图像分析")}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {t("Advanced mathematical analysis of astronomical images using Fourier transforms, wavelet analysis, and fractal dimension calculations. Reveals hidden patterns and structures in your data.", "使用傅里叶变换、小波分析和分形维数计算对天文图像进行高级数学分析。揭示数据中的隐藏模式和结构。")}
+                  </p>
+                  <div className="space-y-2 text-sm">
+                    <p className="font-medium text-orange-200">{t("Features:", "功能：")}</p>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
+                      <li>{t("Fourier analysis for frequency domain inspection", "傅里叶分析用于频域检查")}</li>
+                      <li>{t("Wavelet decomposition for multi-scale analysis", "小波分解用于多尺度分析")}</li>
+                      <li>{t("Fractal dimension measurement", "分形维数测量")}</li>
+                      <li>{t("Mathematical image reconstruction and enhancement", "数学图像重建和增强")}</li>
+                    </ul>
+                    <p className="font-medium text-orange-200 mt-3">{t("Instructions:", "使用说明：")}</p>
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground ml-2">
+                      <li>{t("Upload astronomical image (supports TIFF, PNG, JPG)", "上传天文图像（支持TIFF、PNG、JPG）")}</li>
+                      <li>{t("Process to perform mathematical analysis", "处理以执行数学分析")}</li>
+                      <li>{t("Review Fourier, wavelet, and fractal results", "查看傅里叶、小波和分形结果")}</li>
+                      <li>{t("Download enhanced and reconstructed images", "下载增强和重建的图像")}</li>
+                    </ol>
                   </div>
                 </div>
               </CardContent>
