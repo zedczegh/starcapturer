@@ -8,7 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon, Settings2 } from 'lucide-react';
+import { Upload, Video, Download, Sparkles, Eye, Settings2, Image as ImageIcon, Play, Pause, RotateCcw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import StarField3D from './StarField3D';
@@ -19,6 +19,7 @@ import { MemoryManager } from '@/lib/performance/MemoryManager';
 import { ChunkedProcessor } from '@/lib/performance/ChunkedProcessor';
 import { loadImageFromFile, validateImageFile } from '@/utils/imageProcessingUtils';
 import { captureFrames, encodeFramesToWebM, downloadBlob, calculateRecordingDimensions } from '@/utils/videoEncodingUtils';
+import VideoPlayerControls from '@/components/video/VideoPlayerControls';
 
 interface ProcessedStarData {
   x: number;
@@ -121,13 +122,6 @@ const StarFieldGenerator: React.FC = () => {
     }
   }, []);
   
-  
-  // Format time in MM:SS format
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   // Unified image upload handler using new utilities
   const handleImageUpload = useCallback(async (
@@ -1770,61 +1764,15 @@ const StarFieldGenerator: React.FC = () => {
                 
                 {/* Progress Bar and Controls */}
                 {processedStars.length > 0 && (
-                  <div className="space-y-2 px-4 pb-3">
-                    {/* Play/Pause and Replay Buttons */}
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        onClick={toggleAnimation}
-                        disabled={isGeneratingVideo}
-                        variant="outline"
-                        size="sm"
-                        className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50 disabled:opacity-50"
-                      >
-                        {isAnimating ? (
-                          <>
-                            <Pause className="h-4 w-4 mr-2" />
-                            {t('Pause', '暂停')}
-                          </>
-                        ) : (
-                          <>
-                            <Play className="h-4 w-4 mr-2" />
-                            {t('Play', '播放')}
-                          </>
-                        )}
-                      </Button>
-                      
-                      <Button
-                        onClick={handleReplay}
-                        disabled={isGeneratingVideo || (isAnimating && animationProgress < 10)}
-                        variant="outline"
-                        size="sm"
-                        className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50 disabled:opacity-50"
-                      >
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        {t('Replay', '重播')}
-                      </Button>
-                    </div>
-                    
-                    {/* Progress bar with moving slider dot - YouTube style */}
-                    <div className="relative w-full h-1 bg-cosmic-800/50 rounded-full overflow-visible">
-                      {/* Played portion (white) */}
-                      <div 
-                        className="absolute left-0 top-0 h-full bg-white/80 transition-all duration-100 rounded-full"
-                        style={{ width: `${animationProgress}%` }}
-                      />
-                      {/* Moving dot at current position */}
-                      <div 
-                        className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg transition-all duration-100"
-                        style={{ left: `calc(${animationProgress}% - 0.375rem)` }}
-                      />
-                    </div>
-                    
-                    {/* Time display only */}
-                    <div className="flex items-center justify-between text-xs text-cosmic-300">
-                      <span>{formatTime((animationProgress / 100) * animationSettings.duration)}</span>
-                      <span>{formatTime(animationSettings.duration)}</span>
-                    </div>
-                  </div>
+                  <VideoPlayerControls
+                    isPlaying={isAnimating}
+                    progress={animationProgress}
+                    duration={animationSettings.duration}
+                    onPlayPause={toggleAnimation}
+                    onReplay={handleReplay}
+                    disabled={isGeneratingVideo}
+                    className="px-4 pb-3"
+                  />
                 )}
               </div>
             </CardContent>

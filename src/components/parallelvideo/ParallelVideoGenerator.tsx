@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Video, Play, Pause, RotateCcw, Sparkles, Eye, Settings2 } from 'lucide-react';
+import { Upload, Video, Sparkles, Eye, Settings2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { TraditionalMorphService, TraditionalMorphParams } from '@/services/TraditionalMorphService';
 import { VideoGenerationService, MotionSettings } from '@/services/VideoGenerationService';
@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { CanvasPool } from '@/lib/performance/CanvasPool';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { Separator } from '@/components/ui/separator';
+import VideoPlayerControls from '@/components/video/VideoPlayerControls';
 
 interface StarData {
   x: number;
@@ -90,12 +91,31 @@ const ParallelVideoGenerator: React.FC = () => {
 
   const [depthIntensity, setDepthIntensity] = useState<number>(100);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [animationProgress, setAnimationProgress] = useState(0);
   
   // Video generation control refs
   const videoProgressRef = useRef<number>(0);
   const [frameRenderTrigger, setFrameRenderTrigger] = useState(0);
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
+
+  // Progress tracking handler
+  const handleProgressUpdate = useCallback((progress: number) => {
+    setAnimationProgress(progress);
+    if (progress >= 100) {
+      console.log('🎬 [Generator] Animation reached 100%');
+      setIsAnimating(false);
+    }
+  }, []);
+
+  // Replay handler
+  const handleReplay = useCallback(() => {
+    setIsAnimating(false);
+    setAnimationProgress(0);
+    setTimeout(() => {
+      setIsAnimating(true);
+    }, 100);
+  }, []);
 
   // Function to stitch left and right canvases together with optimized rendering
   const stitchCanvases = useCallback(() => {
@@ -1162,6 +1182,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       depthIntensity={depthIntensity}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
+                      onProgressUpdate={handleProgressUpdate}
                       onCanvasReady={(canvas) => { 
                         leftCanvasRef.current = canvas;
                         console.log('Left canvas ready');
@@ -1183,6 +1204,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       depthIntensity={depthIntensity}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
+                      onProgressUpdate={handleProgressUpdate}
                       onCanvasReady={(canvas) => { 
                         rightCanvasRef.current = canvas;
                         console.log('Right canvas ready');
@@ -1213,51 +1235,28 @@ const ParallelVideoGenerator: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Control Buttons */}
-                <div className="flex gap-3">
-                  <Button
-                    onClick={() => setIsAnimating(!isAnimating)}
-                    className="flex-1 bg-cosmic-800 hover:bg-cosmic-700 border border-cosmic-600"
-                    variant="outline"
-                    disabled={!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current}
-                  >
-                    {isAnimating ? (
-                      <>
-                        <Pause className="w-4 h-4 mr-2" />
-                        {t('Pause Preview', '暂停预览')}
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4 mr-2" />
-                        {t('Play Preview', '播放预览')}
-                      </>
-                    )}
-                  </Button>
+                {/* Video Player Controls */}
+                <VideoPlayerControls
+                  isPlaying={isAnimating}
+                  progress={animationProgress}
+                  duration={motionSettings.duration}
+                  onPlayPause={() => setIsAnimating(!isAnimating)}
+                  onReplay={handleReplay}
+                  disabled={!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current || isGenerating}
+                />
 
-                  <Button
-                    onClick={() => {
-                      setIsAnimating(false);
-                      setTimeout(() => setIsAnimating(true), 100);
-                    }}
-                    className="bg-cosmic-800 hover:bg-cosmic-700 border border-cosmic-600"
-                    variant="outline"
-                    disabled={!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current}
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </Button>
-
-                  <Button
-                    onClick={generateParallelVideo}
-                    disabled={isGenerating || !leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current}
-                    className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-blue-500/20"
-                  >
-                    <Video className="w-4 h-4 mr-2" />
-                    {isGenerating 
-                      ? `${videoProgress.stage} (${Math.round(videoProgress.percent)}%)` 
-                      : t('Generate Video', '生成视频')
-                    }
-                  </Button>
-                </div>
+                {/* Generate Video Button */}
+                <Button
+                  onClick={generateParallelVideo}
+                  disabled={isGenerating || !leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current}
+                  className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-blue-500/20"
+                >
+                  <Video className="w-4 h-4 mr-2" />
+                  {isGenerating 
+                    ? `${videoProgress.stage} (${Math.round(videoProgress.percent)}%)` 
+                    : t('Generate Video', '生成视频')
+                  }
+                </Button>
 
                 {(!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current) && (
                   <p className="text-sm text-cosmic-400 text-center">
