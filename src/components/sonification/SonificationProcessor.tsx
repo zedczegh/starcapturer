@@ -229,46 +229,33 @@ const SonificationProcessor: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="text-center">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <div className="p-3 bg-primary/10 rounded-full">
-            <Music className="h-8 w-8 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold text-primary">
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-full">
+          <Music className="h-6 w-6 text-purple-400" />
+          <span className="text-xl font-semibold text-white">
             {t('Astronomy Sonification', '天文声化处理')}
-          </h1>
+          </span>
         </div>
-        <p className="text-cosmic-400 max-w-2xl mx-auto">
+        <p className="text-cosmic-300 text-lg max-w-3xl mx-auto">
           {t('Transform your astronomy images into beautiful harmonic compositions. Upload your photos and let AI create unique soundscapes based on celestial data.', 
              '将您的天文图像转换为美妙的和声作品。上传您的照片，让AI根据天体数据创造独特的音景。')}
         </p>
       </div>
 
-      {/* Enhanced Progress Steps */}
+      {/* Workflow Steps */}
       <div className="flex justify-center">
-        <div className="flex items-center space-x-4">
-          <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-300 ${
-            step === 'select' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110' : 
-            ['upload', 'results'].includes(step) ? 'bg-primary/20 text-primary border-2 border-primary/30' : 'bg-cosmic-800 text-cosmic-400'
-          }`}>
-            {['upload', 'results'].includes(step) ? <CheckCircle className="h-5 w-5" /> : '1'}
+        <div className="flex items-center gap-4 bg-cosmic-900/50 border border-cosmic-700/50 rounded-lg p-4">
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${step === 'select' ? 'bg-purple-500/20 text-purple-300' : ['upload', 'results'].includes(step) ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
+            {step === 'select' ? <Music className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+            <span className="text-sm">{t('1. Select Type', '1. 选择类型')}</span>
           </div>
-          <div className={`w-20 h-1 rounded-full transition-all duration-500 ${
-            ['upload', 'results'].includes(step) ? 'bg-gradient-to-r from-primary to-primary/60' : 'bg-cosmic-800'
-          }`} />
-          <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-300 ${
-            step === 'upload' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110' : 
-            step === 'results' ? 'bg-primary/20 text-primary border-2 border-primary/30' : 'bg-cosmic-800 text-cosmic-400'
-          }`}>
-            {step === 'results' ? <CheckCircle className="h-5 w-5" /> : step === 'upload' ? <Upload className="h-5 w-5" /> : '2'}
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${step === 'upload' ? 'bg-purple-500/20 text-purple-300' : step === 'results' ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
+            {step === 'results' ? <CheckCircle className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+            <span className="text-sm">{t('2. Upload Image', '2. 上传图像')}</span>
           </div>
-          <div className={`w-20 h-1 rounded-full transition-all duration-500 ${
-            step === 'results' ? 'bg-gradient-to-r from-primary to-primary/60' : 'bg-cosmic-800'
-          }`} />
-          <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-medium transition-all duration-300 ${
-            step === 'results' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-110' : 'bg-cosmic-800 text-cosmic-400'
-          }`}>
-            {step === 'results' ? <Music className="h-5 w-5" /> : '3'}
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${step === 'results' ? 'bg-purple-500/20 text-purple-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
+            <Music className="h-4 w-4" />
+            <span className="text-sm">{t('3. Sonification', '3. 声化')}</span>
           </div>
         </div>
       </div>

@@ -186,14 +186,17 @@ const AstroMathProcessor: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="space-y-8">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 bg-clip-text text-transparent">
-            {t('Astro Math', '天文数学')}
-          </h1>
-          <p className="text-lg text-cosmic-300 max-w-3xl mx-auto">
+          <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-full">
+            <Sparkles className="h-6 w-6 text-amber-400" />
+            <span className="text-xl font-semibold text-white">
+              {t('Astro Math', '天文数学')}
+            </span>
+          </div>
+          <p className="text-cosmic-300 text-lg max-w-3xl mx-auto">
             {t(
               'Reverse-engineer mathematical equations from astrophotography. Discover the mathematical universe hidden in cosmic imagery.',
               '从天文摄影中逆向工程数学方程。发现隐藏在宇宙图像中的数学宇宙。'
@@ -210,6 +213,24 @@ const AstroMathProcessor: React.FC = () => {
             <span>{t('Fractal Dimension', '分形维度')}</span>
             <span>•</span>
             <span>{t('Celestial Mechanics', '天体力学')}</span>
+          </div>
+        </div>
+
+        {/* Workflow Steps */}
+        <div className="flex justify-center">
+          <div className="flex items-center gap-4 bg-cosmic-900/50 border border-cosmic-700/50 rounded-lg p-4">
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${!result ? 'bg-amber-500/20 text-amber-300' : 'bg-green-500/20 text-green-300'}`}>
+              <Upload className="h-4 w-4" />
+              <span className="text-sm">{t('1. Upload Image', '1. 上传图像')}</span>
+            </div>
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${result && !generatedImage ? 'bg-amber-500/20 text-amber-300' : result && generatedImage ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
+              <TrendingUp className="h-4 w-4" />
+              <span className="text-sm">{t('2. Analyze', '2. 分析')}</span>
+            </div>
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${generatedImage ? 'bg-amber-500/20 text-amber-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
+              <Sparkles className="h-4 w-4" />
+              <span className="text-sm">{t('3. Generate', '3. 生成')}</span>
+            </div>
           </div>
         </div>
 

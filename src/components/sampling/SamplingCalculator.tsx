@@ -133,26 +133,35 @@ const SamplingCalculator: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cosmic-900 via-cosmic-800 to-cosmic-900">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Header Section */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="p-3 rounded-full bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30">
-              <Calculator className="h-8 w-8 text-primary" />
-            </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-cosmic-200 bg-clip-text text-transparent">
-              {t('Sampling Calculator', '采样计算器')}
-            </h1>
-          </div>
-          <p className="text-cosmic-300 max-w-3xl mx-auto text-lg leading-relaxed">
-            {t(
-              'Calculate pixel scale and sampling rates for your astronomy camera and telescope combination. Optimize your setup for the best image quality.',
-              '计算您的天文相机和望远镜组合的像素比例和采样率。优化您的设置以获得最佳图像质量。'
-            )}
-          </p>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-full">
+          <Calculator className="h-6 w-6 text-green-400" />
+          <span className="text-xl font-semibold text-white">
+            {t('Sampling Calculator', '采样计算器')}
+          </span>
         </div>
+        <p className="text-cosmic-300 text-lg max-w-3xl mx-auto">
+          {t('Calculate optimal pixel scale and sampling rate for your telescope and camera setup', '计算您的望远镜和相机设置的最佳像素尺度和采样率')}
+        </p>
+      </div>
 
+      {/* Workflow Steps */}
+      <div className="flex justify-center">
+        <div className="flex items-center gap-4 bg-cosmic-900/50 border border-cosmic-700/50 rounded-lg p-4">
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${!result ? 'bg-green-500/20 text-green-300' : 'bg-green-500/20 text-green-300'}`}>
+            <Telescope className="h-4 w-4" />
+            <span className="text-sm">{t('1. Configure Setup', '1. 配置设置')}</span>
+          </div>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${result ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
+            <Target className="h-4 w-4" />
+            <span className="text-sm">{t('2. View Results', '2. 查看结果')}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 max-w-6xl">
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Input Parameters - Takes 2/3 width on large screens */}
           <div className="xl:col-span-2">
