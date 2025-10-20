@@ -1023,15 +1023,25 @@ export class TraditionalMorphProcessor {
     const rightCopyCtx = rightCanvasCopy.getContext('2d')!;
     rightCopyCtx.drawImage(rightCanvas, 0, 0);
     
-    // Process each star with layer-based displacement
+    // Get depth map image data for sampling at star positions
+    const depthMapData = depthMaps.combinedDepth.getContext('2d')!.getImageData(0, 0, width, height);
+    
+    // Process each star with layer-based AND depth-based displacement
     for (const star of starsToReposition) {
-      // Calculate forward shift based on layer
-      // Layer 0 (point): 0x base shift - stays at background
-      // Layer 1 (small): 0.3x base shift
-      // Layer 2 (medium): 0.6x base shift
-      // Layer 3 (large): 1.0x base shift
-      // Layer 4 (complex): 1.5x base shift
-      const layerDisplacement = AdvancedStarDetector.getLayerDisplacement(star.layer, params.starShiftAmount);
+      // Sample depth map at star's center position
+      const depthIdx = (star.centerY * width + star.centerX) * 4;
+      const depthValue = depthMapData.data[depthIdx] / 255; // 0.0 = far/dim, 1.0 = near/bright
+      
+      // Calculate forward shift based on BOTH layer (star size) AND depth map (nebula brightness)
+      // This creates proper depth where:
+      // - Large stars in bright nebula regions = maximum forward (closest)
+      // - Large stars in dim nebula regions = minimal/backward (further)
+      // - Small stars follow similar rules but with less displacement
+      const layerDisplacement = AdvancedStarDetector.getLayerDisplacement(
+        star.layer, 
+        params.starShiftAmount,
+        depthValue
+      );
       
       // Add brightness variation within layer for more natural depth
       const brightnessFactor = star.brightness;
@@ -1111,7 +1121,11 @@ export class TraditionalMorphProcessor {
         
         repositionedStars++;
         
-        console.log(`✨ Layer ${star.layer} ${star.pattern.toUpperCase()}: size=${star.size}px, shift=${forwardShift.toFixed(1)}px, from x=${originalShiftedX} to x=${finalX}`);
+        // Get depth value for logging
+        const depthIdx = (star.centerY * width + star.centerX) * 4;
+        const depthValue = depthMapData.data[depthIdx] / 255;
+        
+        console.log(`✨ Layer ${star.layer} ${star.pattern.toUpperCase()}: size=${star.size}px, depth=${depthValue.toFixed(2)}, shift=${forwardShift.toFixed(1)}px, from x=${originalShiftedX} to x=${finalX}`);
         
         // Clean up temporary canvases
         this.canvasPool.release(starMaskCanvas);

@@ -202,18 +202,36 @@ export class AdvancedStarDetector {
   }
 
   /**
-   * Calculate displacement amount for a star based on its layer
+   * Calculate displacement amount for a star based on its layer and depth map value
+   * @param layer Star layer (0-4) based on size
+   * @param baseShift Base displacement amount in pixels
+   * @param depthValue Depth map value at star position (0.0 = far/dim, 1.0 = near/bright)
    */
-  static getLayerDisplacement(layer: number, baseShift: number): number {
-    // Layer displacement multipliers
+  static getLayerDisplacement(
+    layer: number, 
+    baseShift: number, 
+    depthValue: number = 0.5
+  ): number {
+    // Layer displacement multipliers for star size (bigger = closer)
     const layerMultipliers = [
-      0.0,  // Layer 0 (point stars) - stay at background position
+      0.0,  // Layer 0 (point stars) - background
       0.3,  // Layer 1 (small stars) - slight forward
       0.6,  // Layer 2 (medium stars) - moderate forward
       1.0,  // Layer 3 (large stars) - full forward
       1.5   // Layer 4 (complex stars) - maximum forward
     ];
     
-    return baseShift * layerMultipliers[layer];
+    // Depth map modulation based on nebula luminance at star position:
+    // - High depth (bright nebula, 0.8-1.0) -> star appears closer -> more forward shift (1.0x-2.0x)
+    // - Medium depth (moderate nebula, 0.4-0.8) -> star at medium depth -> normal shift (0.0x-1.0x)
+    // - Low depth (dim nebula, 0.0-0.4) -> star appears further -> less or negative shift (-1.0x-0.0x)
+    // Map depth 0.0-1.0 to displacement multiplier -1.0 to 2.0
+    const depthMultiplier = (depthValue * 3.0) - 1.0;
+    
+    // Combine layer size with depth position
+    const layerShift = baseShift * layerMultipliers[layer];
+    const depthModulatedShift = layerShift * depthMultiplier;
+    
+    return depthModulatedShift;
   }
 }
