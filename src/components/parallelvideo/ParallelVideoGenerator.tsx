@@ -593,26 +593,26 @@ const ParallelVideoGenerator: React.FC = () => {
         
         mediaRecorder.start();
         
-        // Play back frames with precise timing using requestAnimationFrame
+        // Play back frames at precise intervals - MediaRecorder needs time to capture each frame
         let frameIdx = 0;
-        const frameDuration = 1000 / fps; // milliseconds per frame
-        let startTime: number | null = null;
-        let lastFrameTime = 0;
+        const frameDuration = 1000 / fps;
+        let lastTime = performance.now();
         
-        const playFrames = (timestamp: number) => {
-          if (startTime === null) {
-            startTime = timestamp;
-            lastFrameTime = timestamp;
+        const playFrames = () => {
+          if (frameIdx >= frames.length) {
+            mediaRecorder.stop();
+            return;
           }
           
-          const elapsed = timestamp - startTime;
-          const expectedFrame = Math.floor(elapsed / frameDuration);
+          const currentTime = performance.now();
+          const elapsed = currentTime - lastTime;
           
-          // Render all frames that should have been displayed by now
-          while (frameIdx <= expectedFrame && frameIdx < frames.length) {
+          // Only draw the next frame when enough time has passed
+          if (elapsed >= frameDuration - 1) { // -1ms tolerance for timing precision
             // Draw frame
             encodingCtx.putImageData(frames[frameIdx], 0, 0);
             frameIdx++;
+            lastTime = currentTime;
             
             // Update progress
             const encodeProgress = 50 + (frameIdx / frames.length) * 45;
@@ -621,17 +621,12 @@ const ParallelVideoGenerator: React.FC = () => {
               percent: encodeProgress
             });
             
-            // Small delay between frames for MediaRecorder to capture
-            lastFrameTime = timestamp;
+            if (frameIdx % 30 === 0) {
+              console.log(`Encoded ${frameIdx}/${frames.length} frames`);
+            }
           }
           
-          if (frameIdx >= frames.length) {
-            // All frames rendered, stop recording
-            mediaRecorder.stop();
-            return;
-          }
-          
-          // Continue to next frame
+          // Use requestAnimationFrame for smooth, consistent timing
           requestAnimationFrame(playFrames);
         };
         
