@@ -591,46 +591,43 @@ const ParallelVideoGenerator: React.FC = () => {
           reject(new Error('MediaRecorder error'));
         };
         
+        // Start recording
         mediaRecorder.start();
         
-        // Play back frames at precise intervals - MediaRecorder needs time to capture each frame
+        // Play back pre-rendered frames at exact framerate
         let frameIdx = 0;
-        const frameDuration = 1000 / fps;
-        let lastTime = performance.now();
+        const frameInterval = 1000 / fps;
         
-        const playFrames = () => {
+        const playNextFrame = () => {
           if (frameIdx >= frames.length) {
-            mediaRecorder.stop();
+            // All frames played, stop recording
+            setTimeout(() => {
+              mediaRecorder.stop();
+            }, frameInterval); // Wait one more frame interval before stopping
             return;
           }
           
-          const currentTime = performance.now();
-          const elapsed = currentTime - lastTime;
+          // Draw frame to encoding canvas
+          encodingCtx.putImageData(frames[frameIdx], 0, 0);
+          frameIdx++;
           
-          // Only draw the next frame when enough time has passed
-          if (elapsed >= frameDuration - 1) { // -1ms tolerance for timing precision
-            // Draw frame
-            encodingCtx.putImageData(frames[frameIdx], 0, 0);
-            frameIdx++;
-            lastTime = currentTime;
-            
-            // Update progress
-            const encodeProgress = 50 + (frameIdx / frames.length) * 45;
-            setVideoProgress({
-              stage: t(`Encoding video... ${frameIdx}/${frames.length}`, `编码视频... ${frameIdx}/${frames.length}`),
-              percent: encodeProgress
-            });
-            
-            if (frameIdx % 30 === 0) {
-              console.log(`Encoded ${frameIdx}/${frames.length} frames`);
-            }
+          // Update progress
+          const encodeProgress = 50 + (frameIdx / frames.length) * 45;
+          setVideoProgress({
+            stage: t(`Encoding video... ${frameIdx}/${frames.length}`, `编码视频... ${frameIdx}/${frames.length}`),
+            percent: encodeProgress
+          });
+          
+          if (frameIdx % 30 === 0) {
+            console.log(`Encoding frame ${frameIdx}/${frames.length} at ${fps}fps`);
           }
           
-          // Use requestAnimationFrame for smooth, consistent timing
-          requestAnimationFrame(playFrames);
+          // Schedule next frame at precise interval
+          setTimeout(playNextFrame, frameInterval);
         };
         
-        requestAnimationFrame(playFrames);
+        // Start playing frames
+        playNextFrame();
       });
       
       console.log('✓ Video encoded successfully');
