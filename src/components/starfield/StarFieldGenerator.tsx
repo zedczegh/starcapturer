@@ -96,6 +96,7 @@ const StarFieldGenerator: React.FC = () => {
     amplification: 150, // 100-300%
     spin: 0, // 0-90 degrees
     spinDirection: 'clockwise' as 'clockwise' | 'counterclockwise',
+    starFlightSpeed: 1.0, // 0.1-3.0 multiplier for star motion speed
     enableDownscale: false // User-controlled downscaling
   });
 
@@ -1493,6 +1494,27 @@ const StarFieldGenerator: React.FC = () => {
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
+                    <Label className="text-cosmic-200">{t('Star Flight Speed', '星体飞行速度')}</Label>
+                    <span className="text-cosmic-300 text-sm font-semibold">{animationSettings.starFlightSpeed.toFixed(1)}x</span>
+                  </div>
+                  <Slider
+                    value={[animationSettings.starFlightSpeed]}
+                    onValueChange={(value) => setAnimationSettings(prev => ({
+                      ...prev, 
+                      starFlightSpeed: value[0]
+                    }))}
+                    min={0.1}
+                    max={3.0}
+                    step={0.1}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-cosmic-400">
+                    {t('Controls how fast stars move through space (1.0x = normal, higher = faster)', '控制星体在空间中移动的速度（1.0倍 = 正常，越高越快）')}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
                     <Label className="text-cosmic-200">{t('Duration (seconds)', '持续时间（秒）')}</Label>
                     <span className="text-cosmic-300 text-sm">{animationSettings.duration}s</span>
                   </div>
@@ -1735,7 +1757,10 @@ const StarFieldGenerator: React.FC = () => {
                 
                 <StarField3D
                   stars={processedStars}
-                  settings={animationSettings}
+                  settings={{
+                    ...animationSettings,
+                    speed: animationSettings.starFlightSpeed // Use starFlightSpeed as the speed parameter
+                  }}
                   isAnimating={isAnimating}
                   isRecording={false}
                   backgroundImage={starlessImage}
