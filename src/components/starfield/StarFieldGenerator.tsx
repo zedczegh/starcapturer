@@ -1198,8 +1198,8 @@ const StarFieldGenerator: React.FC = () => {
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center space-y-4">
-        <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-full">
-          <Video className="h-6 w-6 text-blue-400" />
+        <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-full">
+          <Video className="h-6 w-6 text-cyan-400" />
           <span className="text-xl font-semibold text-white">
             {t('3D Star Field Generator', '3D星场生成器')}
           </span>
@@ -1215,15 +1215,15 @@ const StarFieldGenerator: React.FC = () => {
       {/* Workflow Steps */}
       <div className="flex justify-center">
         <div className="flex items-center gap-4 bg-cosmic-900/50 border border-cosmic-700/50 rounded-lg p-4">
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${currentStep === 'upload' ? 'bg-blue-500/20 text-blue-300' : (currentStep === 'processing' || currentStep === 'ready' || currentStep === 'generating') ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${currentStep === 'upload' ? 'bg-cyan-500/20 text-cyan-300' : (currentStep === 'processing' || currentStep === 'ready' || currentStep === 'generating') ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
             <Upload className="h-4 w-4" />
             <span className="text-sm">{t('1. Upload Images', '1. 上传图像')}</span>
           </div>
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${currentStep === 'processing' ? 'bg-blue-500/20 text-blue-300' : currentStep === 'ready' || currentStep === 'generating' ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${currentStep === 'processing' ? 'bg-cyan-500/20 text-cyan-300' : currentStep === 'ready' || currentStep === 'generating' ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
             <ImageIcon className="h-4 w-4" />
             <span className="text-sm">{t('2. Process & Map', '2. 处理与映射')}</span>
           </div>
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${currentStep === 'generating' ? 'bg-blue-500/20 text-blue-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${currentStep === 'generating' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
             <Video className="h-4 w-4" />
             <span className="text-sm">{t('3. Generate', '3. 生成')}</span>
           </div>

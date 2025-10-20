@@ -510,24 +510,29 @@ const StereoscopeProcessor: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-cosmic-200 bg-clip-text text-transparent mb-4">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-full">
+          <Layers className="h-6 w-6 text-purple-400" />
+          <span className="text-xl font-semibold text-white">
             {t('Stereoscope Processor', '立体镜处理器')}
-          </h1>
-          <p className="text-cosmic-300 text-lg">
-            {t('Convert 2D astronomy images into 3D stereo pairs for stereoscopic viewing', '将2D天文图像转换为3D立体对用于立体观看')}
-          </p>
+          </span>
         </div>
+        <p className="text-cosmic-300 text-lg max-w-3xl mx-auto">
+          {t('Convert 2D astronomy images into 3D stereo pairs for stereoscopic viewing', '将2D天文图像转换为3D立体对用于立体观看')}
+        </p>
+      </div>
 
-        <Tabs value={processingMode} onValueChange={(value) => setProcessingMode(value as 'fast' | 'traditional')} className="mb-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="fast" className="flex items-center gap-2">
+      {/* Processing Mode Tabs */}
+      <div className="flex justify-center">
+        <Tabs value={processingMode} onValueChange={(value) => setProcessingMode(value as 'fast' | 'traditional')} className="w-full max-w-2xl">
+          <TabsList className="grid w-full grid-cols-2 bg-cosmic-900/50 border border-cosmic-700/50">
+            <TabsTrigger value="fast" className="flex items-center gap-2 data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300">
               <Eye className="h-4 w-4" />
               {t('Fast Mode', '快速模式')}
             </TabsTrigger>
-            <TabsTrigger value="traditional" className="flex items-center gap-2">
+            <TabsTrigger value="traditional" className="flex items-center gap-2 data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300">
               <Layers className="h-4 w-4" />
               {t('Traditional Morph Mode', '传统变形模式')}
             </TabsTrigger>
@@ -882,10 +887,11 @@ const StereoscopeProcessor: React.FC = () => {
             </div>
           </TabsContent>
         </Tabs>
+      </div>
 
-        {/* Results Section */}
-        {(depthMapUrl || resultUrl) && (
-          <div className="mt-8 space-y-6">
+      {/* Results Section */}
+      {(depthMapUrl || resultUrl) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {depthMapUrl && (
               <Card className="cosmic-border bg-cosmic-900/50 backdrop-blur-sm">
                 <CardHeader>
@@ -929,7 +935,6 @@ const StereoscopeProcessor: React.FC = () => {
             )}
           </div>
         )}
-      </div>
     </div>
   );
 };

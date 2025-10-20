@@ -718,23 +718,39 @@ const ParallelVideoGenerator: React.FC = () => {
   }, [leftCanvasRef, rightCanvasRef, stitchedCanvasRef, motionSettings, stereoSpacing, borderSize, t]);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      {/* Hero Header */}
-      <div className="text-center mb-8 space-y-4">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center border border-purple-500/30">
-            <Sparkles className="w-6 h-6 text-purple-400" />
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-full">
+          <Sparkles className="h-6 w-6 text-amber-400" />
+          <span className="text-xl font-semibold text-white">
             {t('3D Parallel Video Generator', '3D平行视频生成器')}
-          </h1>
+          </span>
         </div>
-        <p className="text-lg text-cosmic-300 max-w-3xl mx-auto">
+        <p className="text-cosmic-300 text-lg max-w-3xl mx-auto">
           {t(
             'Generate stunning stereoscopic 3D videos from astronomy images using Traditional Morph processing',
             '使用传统变形处理从天文图像生成令人惊叹的立体3D视频'
           )}
         </p>
+      </div>
+
+      {/* Workflow Steps */}
+      <div className="flex justify-center">
+        <div className="flex items-center gap-4 bg-cosmic-900/50 border border-cosmic-700/50 rounded-lg p-4">
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${!isReady ? 'bg-amber-500/20 text-amber-300' : 'bg-green-500/20 text-green-300'}`}>
+            <Upload className="h-4 w-4" />
+            <span className="text-sm">{t('1. Upload & Process', '1. 上传与处理')}</span>
+          </div>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isReady && !isGenerating ? 'bg-amber-500/20 text-amber-300' : isGenerating ? 'bg-green-500/20 text-green-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
+            <Settings2 className="h-4 w-4" />
+            <span className="text-sm">{t('2. Configure Motion', '2. 配置运动')}</span>
+          </div>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isGenerating ? 'bg-amber-500/20 text-amber-300' : 'bg-cosmic-800/50 text-cosmic-400'}`}>
+            <Video className="h-4 w-4" />
+            <span className="text-sm">{t('3. Generate Video', '3. 生成视频')}</span>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
