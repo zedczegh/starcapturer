@@ -609,7 +609,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // Calculate parallax intensity multipliers based on depthIntensity (0-200)
     // Using scientific perspective projection: speed ∝ 1/distance
     // Depth values represent distance from viewer (higher = farther away)
-    const intensityFactor = depthIntensity / 100; // 0-2 range
+    const intensityFactor = depthIntensity / 50; // 0-4 range (100% = 2.0, 200% = 4.0)
     
     // Define realistic depth values for each layer based on astronomical distances
     // Using exponential scale to represent vast cosmic distances
