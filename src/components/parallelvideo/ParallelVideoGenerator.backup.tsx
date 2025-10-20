@@ -97,7 +97,7 @@ const ParallelVideoGenerator: React.FC = () => {
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
 
-  // Function to stitch left and right canvases together with optimized rendering
+  // Function to stitch left and right canvases together
   const stitchCanvases = useCallback(() => {
     if (!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current) return;
 
@@ -117,16 +117,8 @@ const ParallelVideoGenerator: React.FC = () => {
       stitchedCanvas.height = totalHeight;
     }
 
-    const ctx = stitchedCanvas.getContext('2d', {
-      alpha: false,
-      desynchronized: true, // Better performance
-      willReadFrequently: false
-    });
+    const ctx = stitchedCanvas.getContext('2d');
     if (!ctx) return;
-
-    // High-quality rendering
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
 
     // Clear with black background
     ctx.fillStyle = '#000000';
@@ -499,31 +491,23 @@ const ParallelVideoGenerator: React.FC = () => {
       const totalFrames = Math.ceil(duration * fps);
       
       console.log(`Rendering ${totalFrames} frames at ${fps}fps for stitched video`);
-      console.log(`Video quality: 50Mbps bitrate, VP9 codec`);
       
-      // Create offscreen canvas for high-performance rendering
+      // Create offscreen canvas for rendering
       const renderCanvas = canvasPool.acquire(recordWidth, recordHeight);
       const renderCtx = renderCanvas.getContext('2d', {
         alpha: false,
-        desynchronized: true, // Better performance
         willReadFrequently: false
       })!;
+      renderCtx.imageSmoothingEnabled = false;
       
-      // High-quality rendering settings
-      renderCtx.imageSmoothingEnabled = true;
-      renderCtx.imageSmoothingQuality = 'high';
-      
-      // STAGE 1: Pre-render all frames with optimized timing
+      // STAGE 1: Pre-render all frames
       setVideoProgress({ stage: t('Rendering frames...', '渲染帧...'), percent: 0 });
-      console.log('Stage 1: Pre-rendering frames with optimizations...');
+      console.log('Stage 1: Pre-rendering frames...');
       
       const frames: ImageData[] = [];
       
       // Stop normal animation
       setIsAnimating(false);
-      
-      // Batch size for progress updates
-      const batchSize = 5;
       
       // Render each frame
       for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
@@ -536,26 +520,27 @@ const ParallelVideoGenerator: React.FC = () => {
         // Trigger a re-render to update both canvases
         setFrameRenderTrigger(prev => prev + 1);
         
-        // Wait for rendering to complete - optimized RAF timing
+        // Wait for rendering to complete - triple RAF for stability
+        await new Promise(resolve => requestAnimationFrame(resolve));
         await new Promise(resolve => requestAnimationFrame(resolve));
         await new Promise(resolve => requestAnimationFrame(resolve));
         
         // CRITICAL: Stitch the canvases together AFTER both views have rendered
         stitchCanvases();
         
-        // Single RAF for stitching to complete
+        // Wait one more frame for stitching to complete
         await new Promise(resolve => requestAnimationFrame(resolve));
         
-        // Capture frame from stitched canvas with high-quality scaling
+        // Capture frame from stitched canvas with proper scaling
         renderCtx.fillStyle = '#000000';
         renderCtx.fillRect(0, 0, recordWidth, recordHeight);
         
-        // Draw with exact aspect ratio preservation and high quality
+        // Draw with exact aspect ratio preservation
         if (scale === 1) {
           // No scaling needed - draw directly
           renderCtx.drawImage(stitchedCanvas, 0, 0);
         } else {
-          // Scale uniformly maintaining aspect ratio with quality
+          // Scale uniformly maintaining aspect ratio
           renderCtx.drawImage(stitchedCanvas, 0, 0, totalWidth, totalHeight, 0, 0, recordWidth, recordHeight);
         }
         
@@ -563,14 +548,12 @@ const ParallelVideoGenerator: React.FC = () => {
         const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
         frames.push(frameData);
         
-        // Update progress in batches for better UI performance
-        if (frameIndex % batchSize === 0 || frameIndex === totalFrames - 1) {
-          const renderProgress = (frameIndex / totalFrames) * 50;
-          setVideoProgress({ 
-            stage: t(`Rendering frames... ${frameIndex + 1}/${totalFrames}`, `渲染帧... ${frameIndex + 1}/${totalFrames}`), 
-            percent: renderProgress 
-          });
-        }
+        // Update progress
+        const renderProgress = (frameIndex / totalFrames) * 50;
+        setVideoProgress({ 
+          stage: t(`Rendering frames... ${frameIndex + 1}/${totalFrames}`, `渲染帧... ${frameIndex + 1}/${totalFrames}`), 
+          percent: renderProgress 
+        });
         
         if ((frameIndex + 1) % 30 === 0) {
           console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames (${frameProgress.toFixed(1)}% animation)`);
@@ -579,45 +562,29 @@ const ParallelVideoGenerator: React.FC = () => {
       
       console.log(`✓ All ${frames.length} frames rendered`);
       
-      // STAGE 2: Encode frames to WebM video with high quality
+      // STAGE 2: Encode frames to WebM video
       setVideoProgress({ stage: t('Encoding video...', '编码视频...'), percent: 50 });
-      console.log('Stage 2: Encoding to high-quality WebM...');
+      console.log('Stage 2: Encoding to WebM...');
       
-      // Create a temporary canvas for MediaRecorder with optimized settings
+      // Create a temporary canvas for MediaRecorder
       const encodingCanvas = canvasPool.acquire(recordWidth, recordHeight);
-      const encodingCtx = encodingCanvas.getContext('2d', {
-        alpha: false,
-        desynchronized: true
-      })!;
+      const encodingCtx = encodingCanvas.getContext('2d')!;
       
-      // High-quality rendering for encoding
-      encodingCtx.imageSmoothingEnabled = true;
-      encodingCtx.imageSmoothingQuality = 'high';
-      
-      // Set up MediaRecorder with optimal codec
+      // Set up MediaRecorder
       const stream = encodingCanvas.captureStream(fps);
       
-      // Try codecs in order of quality
       let mimeType = 'video/webm;codecs=vp9';
-      let bitrate = 50000000; // 50Mbps for VP9
-      
       if (!MediaRecorder.isTypeSupported(mimeType)) {
-        console.log('VP9 not supported, falling back to VP8');
         mimeType = 'video/webm;codecs=vp8';
-        bitrate = 30000000; // 30Mbps for VP8
         if (!MediaRecorder.isTypeSupported(mimeType)) {
-          console.log('VP8 not supported, using default WebM');
           mimeType = 'video/webm';
-          bitrate = 20000000; // 20Mbps fallback
         }
       }
-      
-      console.log(`Using codec: ${mimeType} at ${bitrate / 1000000}Mbps`);
       
       const chunks: Blob[] = [];
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
-        videoBitsPerSecond: bitrate
+        videoBitsPerSecond: 8000000
       });
       
       mediaRecorder.ondataavailable = (e) => {
@@ -638,10 +605,9 @@ const ParallelVideoGenerator: React.FC = () => {
         
         mediaRecorder.start();
         
-        // Play back frames with precise timing
+        // Play back frames at correct fps
         let frameIdx = 0;
         const frameInterval = 1000 / fps;
-        let startTime = performance.now();
         
         const playFrames = () => {
           if (frameIdx >= frames.length) {
@@ -649,25 +615,18 @@ const ParallelVideoGenerator: React.FC = () => {
             return;
           }
           
-          // Draw frame with high quality
+          // Draw frame
           encodingCtx.putImageData(frames[frameIdx], 0, 0);
           frameIdx++;
           
-          // Update progress in batches
-          if (frameIdx % batchSize === 0 || frameIdx === frames.length) {
-            const encodeProgress = 50 + (frameIdx / frames.length) * 45;
-            setVideoProgress({
-              stage: t(`Encoding video... ${frameIdx}/${frames.length}`, `编码视频... ${frameIdx}/${frames.length}`),
-              percent: encodeProgress
-            });
-          }
+          // Update progress
+          const encodeProgress = 50 + (frameIdx / frames.length) * 45;
+          setVideoProgress({
+            stage: t(`Encoding video... ${frameIdx}/${frames.length}`, `编码视频... ${frameIdx}/${frames.length}`),
+            percent: encodeProgress
+          });
           
-          // Precise timing calculation
-          const expectedTime = startTime + (frameIdx * frameInterval);
-          const currentTime = performance.now();
-          const drift = expectedTime - currentTime;
-          
-          setTimeout(playFrames, Math.max(0, frameInterval + drift));
+          setTimeout(playFrames, frameInterval);
         };
         
         playFrames();
