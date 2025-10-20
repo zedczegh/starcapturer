@@ -8,6 +8,7 @@ import { TraditionalMorphProcessor } from '@/lib/traditionalMorphMode';
 export interface TraditionalMorphParams {
   horizontalDisplace: number;  // Default: 25
   starShiftAmount: number;      // Default: 6
+  starBackgroundShift: number;  // Default: 25 - Initial shift of all stars left/back
   luminanceBlur: number;        // Default: 1.5
   contrastBoost: number;        // Default: 1.2
   stereoSpacing: number;        // Default: 600
@@ -30,6 +31,7 @@ export class TraditionalMorphService {
   static readonly DEFAULT_PARAMS: TraditionalMorphParams = {
     horizontalDisplace: 25,
     starShiftAmount: 6,
+    starBackgroundShift: 25,  // Initial shift of all stars left/back (SHIFT+ARROW 2-3 times in PhotoShop)
     luminanceBlur: 1.5,
     contrastBoost: 1.2,
     stereoSpacing: 600,
@@ -70,6 +72,7 @@ export class TraditionalMorphService {
         {
           horizontalDisplace: finalParams.horizontalDisplace,
           starShiftAmount: finalParams.starShiftAmount,
+          starBackgroundShift: finalParams.starBackgroundShift,
           luminanceBlur: finalParams.luminanceBlur,
           contrastBoost: finalParams.contrastBoost
         },

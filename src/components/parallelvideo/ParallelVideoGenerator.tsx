@@ -347,6 +347,7 @@ const ParallelVideoGenerator: React.FC = () => {
       const traditionalParams = {
         horizontalDisplace,
         starShiftAmount,
+        starBackgroundShift: 25,  // Initial shift of all stars left/back (behind nebula)
         luminanceBlur: 1.5,
         contrastBoost: 1.2
       };

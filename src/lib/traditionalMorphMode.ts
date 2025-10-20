@@ -23,7 +23,8 @@ import { MemoryManager } from './performance/MemoryManager';
 
 export interface TraditionalMorphParams {
   horizontalDisplace: number; // 10-30 range for displacement filter
-  starShiftAmount: number; // pixels to shift individual stars
+  starShiftAmount: number; // pixels to shift individual bright stars forward (toward viewer)
+  starBackgroundShift: number; // pixels to shift ALL stars left initially (behind nebula, typically 20-30)
   luminanceBlur: number; // 1-2 pixels for luminance map smoothing
   contrastBoost: number; // final contrast adjustment
 }
@@ -971,8 +972,10 @@ export class TraditionalMorphProcessor {
     // Step 1: Draw starless nebula as base layer
     rightCtx.drawImage(starlessImg, 0, 0);
     
-    // Step 2: Add star layer with initial LEFT shift (2-3 pixels behind nebula)
-    const initialLeftShift = -3; // ALL stars start 2-3 pixels left (behind nebula)
+    // Step 2: Add star layer with initial LEFT shift (push ALL stars back behind nebula)
+    // Tutorial: "Hold down SHIFT and click the LEFT ARROW on your keyboard 2-3 times"
+    // In PhotoShop, SHIFT+ARROW typically moves 10px per press, so 2-3 presses = 20-30px
+    const initialLeftShift = -(params.starBackgroundShift || 25); // ALL stars start shifted left (behind nebula)
     
     // Create canvas for shifted star layer
     const shiftedStarsCanvas = this.canvasPool.acquire(width, height);
@@ -987,6 +990,8 @@ export class TraditionalMorphProcessor {
     
     onProgress?.('Moving star patterns seamlessly (PERFECT MATCHING)...', 75);
     // Step 3: PERFECT star pattern matching with seamless blending
+    // Tutorial: "Use SHIFT and the RIGHT ARROW key to nudge the star to the right. This brings it 'towards' the viewer in 3D."
+    // Different amounts of nudging create different distances for great depth effect
     
     let repositionedStars = 0;
     const brightStars = starPatterns.filter(star => star.brightness / 255 > 0.35).slice(0, 15);
@@ -999,7 +1004,9 @@ export class TraditionalMorphProcessor {
     // Process each star pattern individually with perfect blending
     for (const star of brightStars) {
       const brightnessFactor = star.brightness / 255;
-      let forwardShift = params.starShiftAmount * (1 + brightnessFactor);
+      // Forward shift brings stars "towards" viewer - vary amount for depth effect
+      // Brighter stars get more shift for more dramatic 3D effect
+      let forwardShift = params.starShiftAmount * (1 + brightnessFactor * 0.5);
       
       // More generous padding for complete star removal
       const padding = Math.max(3, Math.ceil(star.boundingBox.width * 0.15));
