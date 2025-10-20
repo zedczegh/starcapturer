@@ -68,9 +68,8 @@ const ParallelVideoGenerator: React.FC = () => {
   const rightCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const stitchedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   
-  // Depth map refs for debug display
+  // Depth map ref for debug display - only starless luminance map
   const starlessDepthMapRef = useRef<HTMLCanvasElement | null>(null);
-  const starsDepthMapRef = useRef<HTMLCanvasElement | null>(null);
 
   // Traditional Morph Parameters - matching stereoscope processor exactly
   const [horizontalDisplace, setHorizontalDisplace] = useState<number>(25);
@@ -334,143 +333,87 @@ const ParallelVideoGenerator: React.FC = () => {
         stars: { width: starsElement.width, height: starsElement.height }
       });
 
-      // Step 1: Create traditional processor
-      setProcessingStep(t('Creating stereoscopic pair...', '创建立体对...'));
-      const { TraditionalMorphProcessor } = await import('@/lib/traditionalMorphMode');
-      const processor = new TraditionalMorphProcessor();
+      // Step 1: Use Traditional Morph Service to create stereo pair
+      // This follows the exact same logic as Stereoscope Processor's Traditional Morph mode
+      setProcessingStep(t('Creating stereoscopic pair with depth-based positioning...', '创建基于深度的立体对...'));
       
-      const inputs = {
-        starlessImage: starlessFile,
-        starsOnlyImage: starsFile
-      };
-      
-      const traditionalParams = {
-        horizontalDisplace,
-        starShiftAmount,
-        luminanceBlur: 1.5,
-        contrastBoost: 1.2
-      };
-
-      // Step 2: Apply traditional morph displacement ONLY to starless background
-      const { leftCanvas, rightCanvas, depthMap } = await processor.createTraditionalStereoPair(
-        inputs,
-        traditionalParams,
-        (step, progressValue) => {
+      const result = await TraditionalMorphService.createStereoPair(
+        starlessFile!,
+        starsFile!,
+        {
+          horizontalDisplace: horizontalDisplace,
+          starShiftAmount: starShiftAmount,
+          stereoSpacing: 0, // We'll handle spacing separately for video generation
+          borderSize: 0
+        },
+        (step, progress) => {
           setProcessingStep(t(step, step));
-          if (progressValue) setProgress(progressValue);
+          if (progress) setProgress(progress);
         }
       );
-
-      console.log('Stereo pair created - Left:', leftCanvas.width, 'x', leftCanvas.height);
+      
+      console.log('Stereo pair created using Traditional Morph mode logic');
+      
+      // Extract the canvases for further processing
+      const leftStereoCanvas = result.leftComposite;
+      const rightStereoCanvas = result.rightComposite;
+      const depthMapCanvas = result.depthMap;
       
       // DEBUG: Save composites for inspection
-      setLeftComposite(leftCanvas.toDataURL());
-      setRightComposite(rightCanvas.toDataURL());
-
-      // Step 2b: Create depth maps and apply displacement separately for starless and stars
-      setProcessingStep(t('Creating depth maps...', '创建深度图...'));
+      setLeftComposite(leftStereoCanvas.toDataURL());
+      setRightComposite(rightStereoCanvas.toDataURL());
       
-      const canvasPool = CanvasPool.getInstance();
+      // Step 2: Create luminance depth map for display
+      setProcessingStep(t('Creating luminance depth map...', '创建亮度深度图...'));
+      const { TraditionalMorphProcessor } = await import('@/lib/traditionalMorphMode');
+      const processor = new TraditionalMorphProcessor();
+      const starlessDepthMaps = processor.createAdvancedDepthMap(starlessElement, 1.5);
       
-      // Create depth map for STARLESS image
-      const starlessDepthMaps = processor.createAdvancedDepthMap(starlessElement, traditionalParams.luminanceBlur);
-      
-      // Create depth map for STARS image
-      const starsDepthMaps = processor.createAdvancedDepthMap(starsElement, traditionalParams.luminanceBlur);
-      
-      // Store depth maps for debug display (combined depth maps)
+      // Store ONLY the starless luminance map (primary depth) for debug display
       if (starlessDepthMapRef.current) {
-        starlessDepthMapRef.current.width = starlessDepthMaps.combinedDepth.width;
-        starlessDepthMapRef.current.height = starlessDepthMaps.combinedDepth.height;
+        starlessDepthMapRef.current.width = starlessDepthMaps.primaryDepth.width;
+        starlessDepthMapRef.current.height = starlessDepthMaps.primaryDepth.height;
         const starlessDepthCtx = starlessDepthMapRef.current.getContext('2d')!;
-        starlessDepthCtx.drawImage(starlessDepthMaps.combinedDepth, 0, 0);
+        starlessDepthCtx.drawImage(starlessDepthMaps.primaryDepth, 0, 0);
       }
       
-      if (starsDepthMapRef.current) {
-        starsDepthMapRef.current.width = starsDepthMaps.combinedDepth.width;
-        starsDepthMapRef.current.height = starsDepthMaps.combinedDepth.height;
-        const starsDepthCtx = starsDepthMapRef.current.getContext('2d')!;
-        starsDepthCtx.drawImage(starsDepthMaps.combinedDepth, 0, 0);
-      }
+      processor.dispose();
       
-      // Apply displacement to starless using starless depth map
-      setProcessingStep(t('Displacing starless background...', '位移无星背景...'));
-      const starlessCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
-      const starlessCtx = starlessCanvas.getContext('2d')!;
-      starlessCtx.drawImage(starlessElement, 0, 0);
-      
-      const displacedStarlessCanvas = await processor.applyOptimizedDisplacement(
-        starlessCanvas,
-        starlessDepthMaps,
-        horizontalDisplace
-      );
-
-      // Step 3: Process stars WITH depth-based displacement using STARS depth map
-      setProcessingStep(t('Applying depth-based star displacement...', '应用基于深度的星点位移...'));
-      
-      // LEFT: Use original uploaded stars as-is (no processing)
-      const leftStarsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
-      const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
-      leftStarsCtx.drawImage(starsElement, 0, 0);
-      
-      console.log('Left stars canvas created:', leftStarsCanvas.width, 'x', leftStarsCanvas.height);
-      
-      // RIGHT: Apply DEPTH-BASED displacement to stars using STARS depth map
-      const starsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
-      const starsCtx = starsCanvas.getContext('2d')!;
-      starsCtx.drawImage(starsElement, 0, 0);
-      
-      console.log('Stars canvas for displacement:', starsCanvas.width, 'x', starsCanvas.height);
-      
-      // Apply displacement to stars using STARS depth map (multiply by starShiftAmount factor)
-      const starDisplacementAmount = horizontalDisplace * (starShiftAmount / 6); // Scale relative to default
-      console.log(`Applying star displacement: ${starDisplacementAmount}px using stars depth map (base: ${horizontalDisplace}px, multiplier: ${starShiftAmount / 6})`);
-      
-      const displacedStarsCanvas = await processor.applyOptimizedDisplacement(
-        starsCanvas,
-        starsDepthMaps,
-        starDisplacementAmount
-      );
-      
-      console.log('Displaced stars canvas created:', displacedStarsCanvas.width, 'x', displacedStarsCanvas.height);
-      
-      const rightStarsCanvas = canvasPool.acquire(displacedStarsCanvas.width, displacedStarsCanvas.height);
-      const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
-      rightStarsCtx.drawImage(displacedStarsCanvas, 0, 0);
-      
-      // Verify the canvases have actual pixel data
-      const leftStarsCheck = leftStarsCtx.getImageData(leftStarsCanvas.width/2, leftStarsCanvas.height/2, 1, 1);
-      const rightStarsCheck = rightStarsCtx.getImageData(rightStarsCanvas.width/2, rightStarsCanvas.height/2, 1, 1);
-      console.log('Left stars pixel check:', leftStarsCheck.data[0], leftStarsCheck.data[1], leftStarsCheck.data[2]);
-      console.log('Right stars pixel check:', rightStarsCheck.data[0], rightStarsCheck.data[1], rightStarsCheck.data[2]);
-      console.log('Star displacement applied using stars depth map - stars should now show depth separation');
-      
-      // Step 4: Detect stars for 3D rendering
+      // Step 3: Detect stars for 3D rendering
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
-      const leftResult = extractStarsFromComposite(leftCanvas, starlessElement, depthMap);
-      const rightResult = extractStarsFromComposite(rightCanvas, starlessElement, depthMap);
+      const leftResult = extractStarsFromComposite(leftStereoCanvas, starlessElement, depthMapCanvas);
+      const rightResult = extractStarsFromComposite(rightStereoCanvas, starlessElement, depthMapCanvas);
 
       console.log('Stars detected - Left:', leftResult.stars.length, 'Right:', rightResult.stars.length);
 
+      // Step 4: Create background canvases (without stars)
+      const canvasPool = CanvasPool.getInstance();
+      const leftBgCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
+      const leftBgCtx = leftBgCanvas.getContext('2d')!;
+      leftBgCtx.drawImage(starlessElement, 0, 0);
+      
+      const rightBgCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
+      const rightBgCtx = rightBgCanvas.getContext('2d')!;
+      rightBgCtx.drawImage(starlessElement, 0, 0);
+
       // Step 5: Set separated layers
       // LEFT: Original starless (no displacement) + left stars
-      setLeftBackground(starlessElement.src);
-      setLeftStarsOnly(leftStarsCanvas.toDataURL());
+      setLeftBackground(leftBgCanvas.toDataURL());
+      setLeftStarsOnly(leftResult.starsOnly.toDataURL());
       setLeftStars(leftResult.stars);
       
-      // RIGHT: DISPLACED starless + right stars (stars repositioned, starless displaced)
-      setRightBackground(displacedStarlessCanvas.toDataURL());
-      setRightStarsOnly(rightStarsCanvas.toDataURL());
+      // RIGHT: Starless background + right stars (depth-based positioning)
+      setRightBackground(rightBgCanvas.toDataURL());
+      setRightStarsOnly(rightResult.starsOnly.toDataURL());
       setRightStars(rightResult.stars);
       
+      // Store composites for video generation
+      leftCanvasRef.current = leftStereoCanvas;
+      rightCanvasRef.current = rightStereoCanvas;
+      
       // Cleanup
-      canvasPool.release(starlessCanvas);
-      canvasPool.release(displacedStarlessCanvas);
-      canvasPool.release(starsCanvas);
-      canvasPool.release(displacedStarsCanvas);
-      canvasPool.release(leftStarsCanvas);
-      canvasPool.release(rightStarsCanvas);
-      processor.dispose();
+      canvasPool.release(leftBgCanvas);
+      canvasPool.release(rightBgCanvas);
 
       setIsReady(true);
       setProgress(100);
@@ -970,31 +913,21 @@ const ParallelVideoGenerator: React.FC = () => {
                   )}
                 </div>
                 
-                {/* Depth Maps - 2 depth maps used for displacement */}
+                {/* Luminance Map - Used for displacement */}
                 <div className="mt-6 space-y-2">
                   <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                     <Eye className="w-5 h-5 text-purple-400" />
-                    {t('Depth Maps Used for Displacement', '用于位移的深度图')}
+                    {t('Luminance Map (Starless)', '亮度图（无星）')}
                   </h3>
                   <p className="text-xs text-cosmic-400">
-                    {t('Brighter areas = more displacement', '较亮区域 = 更多位移')}
+                    {t('Brighter areas = more displacement. Based on starless image only.', '较亮区域 = 更多位移。仅基于无星图像。')}
                   </p>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="max-w-lg mx-auto">
                     <div className="space-y-2">
-                      <Label className="text-cosmic-200 text-xs">{t('Starless Depth Map', '无星深度图')}</Label>
+                      <Label className="text-cosmic-200 text-xs">{t('Starless Luminance Depth Map', '无星亮度深度图')}</Label>
                       <div className="bg-black rounded-lg overflow-hidden border-2 border-purple-500 shadow-lg">
                         <canvas 
                           ref={starlessDepthMapRef} 
-                          className="w-full h-auto"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-cosmic-200 text-xs">{t('Stars Depth Map', '星点深度图')}</Label>
-                      <div className="bg-black rounded-lg overflow-hidden border-2 border-purple-500 shadow-lg">
-                        <canvas 
-                          ref={starsDepthMapRef} 
                           className="w-full h-auto"
                           style={{ imageRendering: 'pixelated' }}
                         />
