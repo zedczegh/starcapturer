@@ -8,7 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon } from 'lucide-react';
+import { Upload, Play, Pause, Download, RotateCcw, Video, Image as ImageIcon, Settings2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import StarField3D from './StarField3D';
@@ -1237,19 +1237,25 @@ const StarFieldGenerator: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Panel - Controls */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Image Upload */}
-          <Card className="bg-cosmic-900/50 border-cosmic-700/50">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                {t('Upload Images', '上传图像')}
-              </CardTitle>
-              <CardDescription className="text-cosmic-400">
-                {t('Upload stars only and starless images separately', '分别上传星点图和去星图')}
-              </CardDescription>
-            </CardHeader>
+          {/* Left Panel - Controls */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Image Upload */}
+            <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center border border-blue-500/30">
+                    <Upload className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-white">
+                      {t('Upload Images', '上传图像')}
+                    </CardTitle>
+                    <CardDescription className="text-cosmic-400">
+                      {t('Upload stars only and starless images separately', '分别上传星点图和去星图')}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="stars-upload" className="text-cosmic-200">
@@ -1266,10 +1272,10 @@ const StarFieldGenerator: React.FC = () => {
                   />
                   <label 
                     htmlFor="stars-upload"
-                    className="flex items-center justify-center w-full px-4 py-3 bg-cosmic-800/50 border border-cosmic-700/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-cosmic-700/50 transition-colors"
+                    className="flex flex-col items-center justify-center w-full h-20 px-4 py-3 bg-cosmic-800/50 border-2 border-dashed border-cosmic-600 hover:border-blue-500/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-cosmic-700/50 transition-all"
                   >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {starsOnlyImage ? t('Change File', '更换文件') : t('Choose File', '选择文件')}
+                    <Upload className="w-5 h-5 mb-2 text-cosmic-400" />
+                    <span className="text-cosmic-300">{starsOnlyImage ? t('Change File', '更换文件') : t('Choose File', '选择文件')}</span>
                   </label>
                 </div>
                 
@@ -1309,10 +1315,10 @@ const StarFieldGenerator: React.FC = () => {
                   />
                   <label 
                     htmlFor="starless-upload"
-                    className="flex items-center justify-center w-full px-4 py-3 bg-cosmic-800/50 border border-cosmic-700/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-cosmic-700/50 transition-colors"
+                    className="flex flex-col items-center justify-center w-full h-20 px-4 py-3 bg-cosmic-800/50 border-2 border-dashed border-cosmic-600 hover:border-blue-500/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-cosmic-700/50 transition-all"
                   >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {starlessImage ? t('Change File', '更换文件') : t('Choose File', '选择文件')}
+                    <Upload className="w-5 h-5 mb-2 text-cosmic-400" />
+                    <span className="text-cosmic-300">{starlessImage ? t('Change File', '更换文件') : t('Choose File', '选择文件')}</span>
                   </label>
                 </div>
                 
@@ -1349,15 +1355,21 @@ const StarFieldGenerator: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Detection Info */}
-          {detectedStars.length > 0 && (
-            <Card className="bg-cosmic-900/50 border-cosmic-700/50">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5" />
-                  {t('Processing Results', '处理结果')}
-                </CardTitle>
-              </CardHeader>
+            {/* Detection Info */}
+            {detectedStars.length > 0 && (
+              <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center border border-green-500/30">
+                      <ImageIcon className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-white">
+                        {t('Processing Results', '处理结果')}
+                      </CardTitle>
+                    </div>
+                  </div>
+                </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30">
                   <div className="text-white text-sm font-medium">{t('Detected Stars', '检测到的星体')}</div>
@@ -1371,15 +1383,21 @@ const StarFieldGenerator: React.FC = () => {
             </Card>
           )}
 
-          {/* Motion Controls */}
-          {currentStep === 'ready' && (
-            <Card className="bg-cosmic-900/50 border-cosmic-700/50">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Play className="h-5 w-5" />
-                  {t('Motion Settings', '动作设置')}
-                </CardTitle>
-              </CardHeader>
+            {/* Motion Controls */}
+            {currentStep === 'ready' && (
+              <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-cyan-500/30">
+                      <Play className="w-5 h-5 text-cyan-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-white">
+                        {t('Motion Settings', '动作设置')}
+                      </CardTitle>
+                    </div>
+                  </div>
+                </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   <Label className="text-cosmic-200">{t('Motion Type', '动作类型')}</Label>

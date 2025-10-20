@@ -27,12 +27,12 @@ const UtilitiesButton: React.FC = () => {
   };
 
   const utilityItems = [
-    { icon: Satellite, label: t('Space Station Tracker', '空间站追踪'), path: '/space-tracker' },
-    { icon: Music, label: t('Sonification', '声化处理器'), path: '/sonification' },
-    { icon: Calculator, label: t('Sampling Calculator', '采样计算器'), path: '/sampling-calculator' },
     { icon: Eye, label: t('Stereoscope Processor', '立体镜处理器'), path: '/stereoscope' },
     { icon: Video, label: t('3D Star Field Generator', '3D星场生成器'), path: '/star-field-generator' },
     { icon: Film, label: t('3D Parallel Video Generator', '3D平行视频生成器'), path: '/parallel-video-generator' },
+    { icon: Satellite, label: t('Space Station Tracker', '空间站追踪'), path: '/space-tracker' },
+    { icon: Music, label: t('Sonification', '声化处理器'), path: '/sonification' },
+    { icon: Calculator, label: t('Sampling Calculator', '采样计算器'), path: '/sampling-calculator' },
     { icon: Sigma, label: t('Astro Math', '天文数学'), path: '/astro-math' },
   ];
 

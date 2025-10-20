@@ -535,25 +535,36 @@ const StereoscopeProcessor: React.FC = () => {
           
           <TabsContent value="fast" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="cosmic-border bg-cosmic-900/50 backdrop-blur-sm">
+              <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle className="text-primary flex items-center gap-2">
-                    <Upload className="h-5 w-5" />
-                    {t('Single Image Input', '单图像输入')}
-                  </CardTitle>
-                  <CardDescription>
-                    {t('Upload a nebula or deep space image. Our AI will automatically detect stars and nebula structures.', '上传星云或深空图像。我们的AI将自动检测恒星和星云结构。')}
-                  </CardDescription>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center border border-blue-500/30">
+                      <Upload className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl text-white">
+                        {t('Single Image Input', '单图像输入')}
+                      </CardTitle>
+                      <CardDescription className="text-cosmic-300">
+                        {t('Upload a nebula or deep space image. Our AI will automatically detect stars and nebula structures.', '上传星云或深空图像。我们的AI将自动检测恒星和星云结构。')}
+                      </CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <Button
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full"
+                      className="w-full h-24 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-blue-500/50 transition-all"
                       variant="outline"
+                      disabled={processing}
                     >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {t('Select Image', '选择图像')}
+                      <div className="flex flex-col items-center gap-2">
+                        <Upload className="w-6 h-6 text-cosmic-400" />
+                        <span className="text-sm text-cosmic-300">
+                          {selectedImage ? selectedImage.name : t('Click to upload image', '点击上传图像')}
+                        </span>
+                      </div>
                     </Button>
                     
                     <input
@@ -578,14 +589,21 @@ const StereoscopeProcessor: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="cosmic-border bg-cosmic-900/50 backdrop-blur-sm">
+              <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle className="text-primary">
-                    {t('AI Auto-Intelligence Parameters', 'AI自动智能参数')}
-                  </CardTitle>
-                  <CardDescription>
-                    {t('Advanced parameters automatically optimized for your image.', '为您的图像自动优化的高级参数。')}
-                  </CardDescription>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center border border-purple-500/30">
+                      <Eye className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl text-white">
+                        {t('AI Auto-Intelligence Parameters', 'AI自动智能参数')}
+                      </CardTitle>
+                      <CardDescription className="text-cosmic-300">
+                        {t('Advanced parameters automatically optimized for your image.', '为您的图像自动优化的高级参数。')}
+                      </CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
@@ -649,27 +667,38 @@ const StereoscopeProcessor: React.FC = () => {
           
           <TabsContent value="traditional" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="cosmic-border bg-cosmic-900/50 backdrop-blur-sm">
+              <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle className="text-primary flex items-center gap-2">
-                    <Layers className="h-5 w-5" />
-                    {t('Starless & Stars Images', '无星和恒星图像')}
-                  </CardTitle>
-                  <CardDescription>
-                    {t('Upload separate starless nebula and stars-only images for professional-quality 3D processing.', '上传分离的无星星云和纯星图像进行专业品质3D处理。')}
-                  </CardDescription>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center border border-purple-500/30">
+                      <Layers className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl text-white">
+                        {t('Starless & Stars Images', '无星和恒星图像')}
+                      </CardTitle>
+                      <CardDescription className="text-cosmic-300">
+                        {t('Upload separate starless nebula and stars-only images for professional-quality 3D processing.', '上传分离的无星星云和纯星图像进行专业品质3D处理。')}
+                      </CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-sm font-medium">{t('Starless Nebula Image', '无星星云图像')}</Label>
+                      <Label className="text-sm font-medium text-cosmic-200">{t('Starless Nebula Image', '无星星云图像')}</Label>
                       <Button
                         onClick={() => starlessInputRef.current?.click()}
-                        className="w-full mt-2"
+                        className="w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 transition-all"
                         variant="outline"
+                        disabled={processing}
                       >
-                        <Upload className="h-4 w-4 mr-2" />
-                        {t('Select Starless Image', '选择无星图像')}
+                        <div className="flex flex-col items-center gap-2">
+                          <Upload className="w-5 h-5 text-cosmic-400" />
+                          <span className="text-sm text-cosmic-300">
+                            {starlessImage ? starlessImage.name : t('Click to upload starless', '点击上传无星图像')}
+                          </span>
+                        </div>
                       </Button>
                       
                       <input
@@ -692,14 +721,19 @@ const StereoscopeProcessor: React.FC = () => {
                     </div>
 
                     <div>
-                      <Label className="text-sm font-medium">{t('Stars-Only Image', '纯星图像')}</Label>
+                      <Label className="text-sm font-medium text-cosmic-200">{t('Stars-Only Image', '纯星图像')}</Label>
                       <Button
                         onClick={() => starsInputRef.current?.click()}
-                        className="w-full mt-2"
+                        className="w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 transition-all"
                         variant="outline"
+                        disabled={processing}
                       >
-                        <Upload className="h-4 w-4 mr-2" />
-                        {t('Select Stars Image', '选择星图像')}
+                        <div className="flex flex-col items-center gap-2">
+                          <Upload className="w-5 h-5 text-cosmic-400" />
+                          <span className="text-sm text-cosmic-300">
+                            {starsImage ? starsImage.name : t('Click to upload stars', '点击上传星点图像')}
+                          </span>
+                        </div>
                       </Button>
                       
                       <input
