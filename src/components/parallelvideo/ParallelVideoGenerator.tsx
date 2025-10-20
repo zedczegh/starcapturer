@@ -337,6 +337,13 @@ const ParallelVideoGenerator: React.FC = () => {
       // This follows the exact same logic as Stereoscope Processor's Traditional Morph mode
       setProcessingStep(t('Creating stereoscopic pair with depth-based positioning...', '创建基于深度的立体对...'));
       
+      // CRITICAL: We need the SEPARATED layers (background and stars), not the composites
+      // The Traditional Morph processor creates displaced backgrounds and repositioned stars
+      // If we try to extract stars from the composite by subtracting the original starless,
+      // we'll get artifacts because the right composite has been displaced
+      
+      console.log('⚠️ ISSUE IDENTIFIED: Need to get separated layers from Traditional Morph, not extract from composites');
+      
       const result = await TraditionalMorphService.createStereoPair(
         starlessFile!,
         starsFile!,
@@ -352,7 +359,8 @@ const ParallelVideoGenerator: React.FC = () => {
         }
       );
       
-      console.log('Stereo pair created using Traditional Morph mode logic');
+      console.log('Stereo pair created - these are COMPOSITES (starless + stars already blended)');
+      console.log('Right composite has DISPLACED nebula, so extracting stars by subtracting ORIGINAL starless will cause artifacts');
       
       // Extract the canvases for further processing
       const leftStereoCanvas = result.leftComposite;
@@ -379,15 +387,64 @@ const ParallelVideoGenerator: React.FC = () => {
       
       processor.dispose();
       
-      // Step 3: Detect stars for 3D rendering
-      setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
-      const leftResult = extractStarsFromComposite(leftStereoCanvas, starlessElement, depthMapCanvas);
-      const rightResult = extractStarsFromComposite(rightStereoCanvas, starlessElement, depthMapCanvas);
-
-      console.log('Stars detected - Left:', leftResult.stars.length, 'Right:', rightResult.stars.length);
-
-      // Step 4: Create background canvases (without stars)
+      // Step 3: For video generation, we need SEPARATED layers
+      // WORKAROUND: Use the original stars image directly for both left and right
+      // and rely on the composites for the actual stereo effect
+      setProcessingStep(t('Preparing layers for video...', '准备视频图层...'));
+      
       const canvasPool = CanvasPool.getInstance();
+      
+      // LEFT stars: use original stars image (no processing)
+      const leftStarsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
+      const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
+      leftStarsCtx.drawImage(starsElement, 0, 0);
+      console.log('✓ Left stars: using original stars image');
+      
+      // RIGHT stars: ALSO use original stars image (the displacement is already in the composite)
+      // The composite already has the correct star positions, we just need a visual layer
+      const rightStarsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
+      const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
+      rightStarsCtx.drawImage(starsElement, 0, 0);
+      console.log('✓ Right stars: using original stars image (displacement is in composite)');
+      
+      // Detect stars from the ORIGINAL stars image for 3D rendering
+      const stars: StarData[] = [];
+      const starsImageData = leftStarsCtx.getImageData(0, 0, leftStarsCanvas.width, leftStarsCanvas.height);
+      const depthCtx = depthMapCanvas.getContext('2d')!;
+      const depthData = depthCtx.getImageData(0, 0, depthMapCanvas.width, depthMapCanvas.height);
+      
+      const threshold = 50;
+      const centerX = leftStarsCanvas.width / 2;
+      const centerY = leftStarsCanvas.height / 2;
+      const scale = 0.08;
+      
+      for (let y = 1; y < leftStarsCanvas.height - 1; y += 2) { // Sample every 2 pixels for performance
+        for (let x = 1; x < leftStarsCanvas.width - 1; x += 2) {
+          const pixelIdx = (y * leftStarsCanvas.width + x) * 4;
+          const luminance = 0.299 * starsImageData.data[pixelIdx] + 
+                           0.587 * starsImageData.data[pixelIdx + 1] + 
+                           0.114 * starsImageData.data[pixelIdx + 2];
+          
+          if (luminance > threshold) {
+            const depthIdx = (Math.floor(y) * depthMapCanvas.width + Math.floor(x)) * 4;
+            const depth = depthData.data[depthIdx] / 255;
+            
+            stars.push({
+              x: (x - centerX) * scale,
+              y: -(y - centerY) * scale,
+              z: (depth - 0.5) * 200 * (0.2 + (depthIntensity / 100) * 1.8),
+              brightness: luminance / 255,
+              size: 3,
+              color3d: `rgb(${starsImageData.data[pixelIdx]}, ${starsImageData.data[pixelIdx + 1]}, ${starsImageData.data[pixelIdx + 2]})`
+            });
+          }
+        }
+      }
+      
+      console.log(`✓ Detected ${stars.length} stars for 3D rendering`);
+
+      // Step 4: Set up layers for display
+      // Use original starless as backgrounds for both (the displacement is only in the composites)
       const leftBgCanvas = canvasPool.acquire(starlessElement.width, starlessElement.height);
       const leftBgCtx = leftBgCanvas.getContext('2d')!;
       leftBgCtx.drawImage(starlessElement, 0, 0);
@@ -396,24 +453,27 @@ const ParallelVideoGenerator: React.FC = () => {
       const rightBgCtx = rightBgCanvas.getContext('2d')!;
       rightBgCtx.drawImage(starlessElement, 0, 0);
 
-      // Step 5: Set separated layers
-      // LEFT: Original starless (no displacement) + left stars
+      // Set layers - using same stars for both left and right
+      // The stereo effect comes from the composites which have the proper displacement
       setLeftBackground(leftBgCanvas.toDataURL());
-      setLeftStarsOnly(leftResult.starsOnly.toDataURL());
-      setLeftStars(leftResult.stars);
+      setLeftStarsOnly(leftStarsCanvas.toDataURL());
+      setLeftStars(stars); // Same stars for both eyes
       
-      // RIGHT: Starless background + right stars (depth-based positioning)
       setRightBackground(rightBgCanvas.toDataURL());
-      setRightStarsOnly(rightResult.starsOnly.toDataURL());
-      setRightStars(rightResult.stars);
+      setRightStarsOnly(rightStarsCanvas.toDataURL());
+      setRightStars(stars); // Same stars for both eyes
       
-      // Store composites for video generation
+      // Store composites for video generation (these have the proper stereo displacement)
       leftCanvasRef.current = leftStereoCanvas;
       rightCanvasRef.current = rightStereoCanvas;
+      
+      console.log('✓ All layers prepared. Composites have proper stereo effect.');
       
       // Cleanup
       canvasPool.release(leftBgCanvas);
       canvasPool.release(rightBgCanvas);
+      canvasPool.release(leftStarsCanvas);
+      canvasPool.release(rightStarsCanvas);
 
       setIsReady(true);
       setProgress(100);
