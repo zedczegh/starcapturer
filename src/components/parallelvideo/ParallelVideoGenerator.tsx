@@ -449,9 +449,9 @@ const ParallelVideoGenerator: React.FC = () => {
     }
   }, [starlessFile, starsFile, starlessElement, starsElement, horizontalDisplace, starShiftAmount, t, extractStarsFromComposite]);
 
-  // Generate stitched parallel video with frame-by-frame rendering
+  // Generate separate left and right videos, then stitch with FFmpeg
   const generateParallelVideo = useCallback(async () => {
-    if (!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current) {
+    if (!leftCanvasRef.current || !rightCanvasRef.current) {
       toast.error(t('Canvas not ready', '画布未就绪'));
       return;
     }
@@ -460,196 +460,165 @@ const ParallelVideoGenerator: React.FC = () => {
     const canvasPool = CanvasPool.getInstance();
     
     try {
-      const stitchedCanvas = stitchedCanvasRef.current;
-      // Use full original dimensions - no arbitrary limits
-      const recordWidth = stitchedCanvas.width;
-      const recordHeight = stitchedCanvas.height;
+      const leftCanvas = leftCanvasRef.current;
+      const rightCanvas = rightCanvasRef.current;
       
-      console.log(`Recording at full resolution: ${recordWidth}x${recordHeight}`);
+      const recordWidth = leftCanvas.width;
+      const recordHeight = leftCanvas.height;
+      
+      console.log(`Recording each eye at: ${recordWidth}x${recordHeight}`);
       
       const fps = 30;
       const duration = motionSettings.duration;
       const totalFrames = Math.ceil(duration * fps);
       
-      console.log(`Rendering ${totalFrames} frames at ${fps}fps for stitched video`);
+      console.log(`Rendering ${totalFrames} frames at ${fps}fps for both eyes`);
       
-      // Create offscreen canvas for rendering at full quality
-      const renderCanvas = canvasPool.acquire(recordWidth, recordHeight);
-      const renderCtx = renderCanvas.getContext('2d', {
-        alpha: false,
-        willReadFrequently: false,
-        desynchronized: false
-      })!;
-      // Disable image smoothing to preserve pixel-perfect quality
-      renderCtx.imageSmoothingEnabled = false;
-      renderCtx.imageSmoothingQuality = 'high';
-      
-      // STAGE 1: Pre-render all frames
-      setVideoProgress({ stage: t('Rendering frames...', '渲染帧...'), percent: 0 });
-      console.log('Stage 1: Pre-rendering frames...');
-      
-      const frames: ImageData[] = [];
+      // Helper function to encode a single eye video
+      const encodeEyeVideo = async (
+        sourceCanvas: HTMLCanvasElement,
+        label: string,
+        progressOffset: number,
+        progressRange: number
+      ): Promise<Blob> => {
+        const encodingCanvas = canvasPool.acquire(recordWidth, recordHeight);
+        const encodingCtx = encodingCanvas.getContext('2d', {
+          alpha: false,
+          willReadFrequently: false
+        })!;
+        encodingCtx.imageSmoothingEnabled = false;
+        
+        const stream = encodingCanvas.captureStream(fps);
+        
+        let mimeType = 'video/webm;codecs=vp9';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/webm;codecs=vp8';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm';
+          }
+        }
+        
+        const mediaRecorder = new MediaRecorder(stream, {
+          mimeType,
+          videoBitsPerSecond: 25000000
+        });
+        
+        const chunks: Blob[] = [];
+        
+        return new Promise<Blob>((resolve, reject) => {
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+              chunks.push(e.data);
+            }
+          };
+          
+          mediaRecorder.onstop = () => {
+            const blob = new Blob(chunks, { type: mimeType });
+            console.log(`✓ ${label} encoded: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+            canvasPool.release(encodingCanvas);
+            resolve(blob);
+          };
+          
+          mediaRecorder.onerror = () => {
+            canvasPool.release(encodingCanvas);
+            reject(new Error(`${label} encoding error`));
+          };
+          
+          mediaRecorder.start();
+          
+          let frameIdx = 0;
+          const frameInterval = 1000 / fps;
+          
+          const playNextFrame = () => {
+            if (frameIdx >= totalFrames) {
+              setTimeout(() => mediaRecorder.stop(), frameInterval);
+              return;
+            }
+            
+            // Calculate animation progress for this frame
+            const frameProgress = (frameIdx / (totalFrames - 1)) * 100;
+            videoProgressRef.current = frameProgress;
+            setFrameRenderTrigger(prev => prev + 1);
+            
+            // Wait for render, then capture
+            setTimeout(() => {
+              encodingCtx.drawImage(sourceCanvas, 0, 0);
+              frameIdx++;
+              
+              const encodeProgress = progressOffset + (frameIdx / totalFrames) * progressRange;
+              setVideoProgress({
+                stage: t(`${label}... ${frameIdx}/${totalFrames}`, `${label}... ${frameIdx}/${totalFrames}`),
+                percent: encodeProgress
+              });
+              
+              setTimeout(playNextFrame, frameInterval);
+            }, 16); // One frame delay for render
+          };
+          
+          playNextFrame();
+        });
+      };
       
       // Stop normal animation
       setIsAnimating(false);
       
-      // Render each frame
-      for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-        // Calculate exact progress for this frame (0-100)
-        const frameProgress = (frameIndex / (totalFrames - 1)) * 100;
-        
-        // Set progress directly in ref (bypasses React batching)
-        videoProgressRef.current = frameProgress;
-        
-        // Trigger a re-render to update both canvases
-        setFrameRenderTrigger(prev => prev + 1);
-        
-        // Wait for rendering to complete - triple RAF for stability
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        
-        // CRITICAL: Stitch the canvases together AFTER both views have rendered
-        stitchCanvases();
-        
-        // Wait one more frame for stitching to complete
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        
-        // Capture frame from stitched canvas
-        renderCtx.fillStyle = '#000000';
-        renderCtx.fillRect(0, 0, recordWidth, recordHeight);
-        renderCtx.drawImage(stitchedCanvas, 0, 0, recordWidth, recordHeight);
-        
-        // Store frame data
-        const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
-        frames.push(frameData);
-        
-        // Update progress
-        const renderProgress = (frameIndex / totalFrames) * 50;
-        setVideoProgress({ 
-          stage: t(`Rendering frames... ${frameIndex + 1}/${totalFrames}`, `渲染帧... ${frameIndex + 1}/${totalFrames}`), 
-          percent: renderProgress 
-        });
-        
-        if ((frameIndex + 1) % 30 === 0) {
-          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames (${frameProgress.toFixed(1)}% animation)`);
-        }
-      }
+      // STAGE 1: Encode left eye video
+      setVideoProgress({ stage: t('Encoding left eye...', '编码左眼...'), percent: 0 });
+      console.log('Stage 1: Encoding left eye video...');
+      const leftBlob = await encodeEyeVideo(leftCanvas, 'Left eye', 0, 40);
       
-      console.log(`✓ All ${frames.length} frames rendered`);
+      // Reset for right eye
+      videoProgressRef.current = 0;
       
-      // STAGE 2: Encode frames to WebM video
-      setVideoProgress({ stage: t('Encoding video...', '编码视频...'), percent: 50 });
-      console.log('Stage 2: Encoding to WebM...');
+      // STAGE 2: Encode right eye video
+      setVideoProgress({ stage: t('Encoding right eye...', '编码右眼...'), percent: 40 });
+      console.log('Stage 2: Encoding right eye video...');
+      const rightBlob = await encodeEyeVideo(rightCanvas, 'Right eye', 40, 40);
       
-      // Create a temporary canvas for MediaRecorder at full quality
-      const encodingCanvas = canvasPool.acquire(recordWidth, recordHeight);
-      const encodingCtx = encodingCanvas.getContext('2d', {
-        alpha: false,
-        desynchronized: true
-      })!;
-      encodingCtx.imageSmoothingEnabled = false;
+      console.log('✓ Both eye videos encoded');
       
-      // Set up MediaRecorder - use captureStream without fps parameter
-      const stream = encodingCanvas.captureStream();
+      // STAGE 3: Stitch videos with FFmpeg
+      setVideoProgress({ stage: t('Stitching videos...', '拼接视频...'), percent: 80 });
+      console.log('Stage 3: Stitching videos with FFmpeg...');
       
-      let mimeType = 'video/webm;codecs=vp9';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/webm;codecs=vp8';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'video/webm';
-        }
-      }
+      const ffmpeg = await VideoGenerationService.initializeFFmpeg();
       
-      const chunks: Blob[] = [];
-      // Calculate bitrate based on resolution to maintain quality
-      // Target: ~0.5 bits per pixel at 30fps
-      const bitsPerPixel = 0.5;
-      const targetBitrate = recordWidth * recordHeight * fps * bitsPerPixel;
-      const videoBitsPerSecond = Math.max(8000000, Math.min(targetBitrate, 50000000)); // 8-50 Mbps range
+      // Write videos to FFmpeg filesystem
+      await ffmpeg.writeFile('left.webm', new Uint8Array(await leftBlob.arrayBuffer()));
+      await ffmpeg.writeFile('right.webm', new Uint8Array(await rightBlob.arrayBuffer()));
       
-      console.log(`Using bitrate: ${(videoBitsPerSecond / 1000000).toFixed(1)} Mbps for ${recordWidth}x${recordHeight}`);
+      // Use FFmpeg to stitch videos side-by-side with spacing
+      const totalWidth = recordWidth * 2 + stereoSpacing + borderSize * 2;
+      const totalHeight = recordHeight + borderSize * 2;
       
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond
-      });
+      await ffmpeg.exec([
+        '-i', 'left.webm',
+        '-i', 'right.webm',
+        '-filter_complex',
+        `[0:v]pad=${totalWidth}:${totalHeight}:${borderSize}:${borderSize}:black[left];[1:v]pad=${totalWidth}:${totalHeight}:${borderSize + recordWidth + stereoSpacing}:${borderSize}:black[right];[left][right]overlay=0:0`,
+        '-c:v', 'libvpx-vp9',
+        '-crf', '20',
+        '-b:v', '0',
+        'output.webm'
+      ]);
       
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunks.push(e.data);
-        }
-      };
+      // Read output
+      const data = await ffmpeg.readFile('output.webm');
+      const finalBlob = new Blob([new Uint8Array(data as Uint8Array)], { type: 'video/webm' });
       
-      const videoBlob = await new Promise<Blob>((resolve, reject) => {
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(chunks, { type: mimeType });
-          resolve(blob);
-        };
-        
-        mediaRecorder.onerror = (e) => {
-          reject(new Error('MediaRecorder error'));
-        };
-        
-        // Start recording with timeslice to ensure data is captured
-        mediaRecorder.start(100); // Request data every 100ms
-        
-        // Play back pre-rendered frames using requestAnimationFrame for smooth timing
-        let frameIdx = 0;
-        const frameTime = 1000 / fps; // Time each frame should be displayed
-        let startTime = performance.now();
-        let nextFrameTime = startTime;
-        
-        const playNextFrame = () => {
-          if (frameIdx >= frames.length) {
-            // All frames played, wait a bit then stop recording
-            setTimeout(() => {
-              mediaRecorder.stop();
-            }, 200);
-            return;
-          }
-          
-          const now = performance.now();
-          
-          // Check if it's time to display the next frame
-          if (now >= nextFrameTime) {
-            // Draw frame to encoding canvas
-            encodingCtx.putImageData(frames[frameIdx], 0, 0);
-            frameIdx++;
-            nextFrameTime += frameTime;
-            
-            // Update progress
-            const encodeProgress = 50 + (frameIdx / frames.length) * 45;
-            setVideoProgress({
-              stage: t(`Encoding video... ${frameIdx}/${frames.length}`, `编码视频... ${frameIdx}/${frames.length}`),
-              percent: encodeProgress
-            });
-            
-            if (frameIdx % 30 === 0) {
-              console.log(`Encoding frame ${frameIdx}/${frames.length} at ${fps}fps (elapsed: ${((now - startTime) / 1000).toFixed(1)}s)`);
-            }
-          }
-          
-          // Continue with next animation frame
-          requestAnimationFrame(playNextFrame);
-        };
-        
-        // Start playing frames
-        requestAnimationFrame(playNextFrame);
-      });
+      // Clean up FFmpeg files
+      await ffmpeg.deleteFile('left.webm');
+      await ffmpeg.deleteFile('right.webm');
+      await ffmpeg.deleteFile('output.webm');
       
-      console.log('✓ Video encoded successfully');
+      console.log(`✓ Final video: ${(finalBlob.size / 1024 / 1024).toFixed(2)}MB`);
       
       // Download video
       setVideoProgress({ stage: t('Downloading...', '下载中...'), percent: 95 });
-      VideoGenerationService.downloadVideo(videoBlob, `parallel-3d-${Date.now()}.webm`);
+      VideoGenerationService.downloadVideo(finalBlob, `parallel-3d-${Date.now()}.webm`);
       
       toast.success(t('Video generated successfully!', '视频生成成功！'));
       setVideoProgress({ stage: '', percent: 100 });
-      
-      // Clean up
-      canvasPool.release(renderCanvas);
-      canvasPool.release(encodingCanvas);
       
     } catch (error) {
       console.error('Video generation error:', error);
@@ -660,7 +629,7 @@ const ParallelVideoGenerator: React.FC = () => {
         setVideoProgress({ stage: '', percent: 0 });
       }, 2000);
     }
-  }, [leftCanvasRef, rightCanvasRef, stitchedCanvasRef, motionSettings, stereoSpacing, borderSize, t]);
+  }, [leftCanvasRef, rightCanvasRef, motionSettings, stereoSpacing, borderSize, t, stitchCanvases]);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
