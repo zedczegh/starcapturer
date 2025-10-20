@@ -75,8 +75,8 @@ const StarFieldGenerator: React.FC = () => {
     starless: { show: false, progress: 0, fileName: '' }
   });
   
-  // 3D depth intensity control (0-100 scale)
-  const [depthIntensity, setDepthIntensity] = useState<number>(50);
+  // 3D depth intensity control (0-200 scale)
+  const [depthIntensity, setDepthIntensity] = useState<number>(100);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
@@ -1482,7 +1482,7 @@ const StarFieldGenerator: React.FC = () => {
                     value={[depthIntensity]}
                     onValueChange={(value) => setDepthIntensity(value[0])}
                     min={0}
-                    max={100}
+                    max={200}
                     step={5}
                     className="w-full"
                   />

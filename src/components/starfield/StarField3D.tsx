@@ -32,7 +32,7 @@ interface StarField3DProps {
   videoProgressRef?: React.MutableRefObject<number>; // Direct ref for video rendering
   frameRenderTrigger?: number; // Trigger value that changes to force frame render
   externalProgress?: number; // External progress value to detect replay
-  depthIntensity?: number; // 0-100 scale for parallax intensity
+  depthIntensity?: number; // 0-200 scale for parallax intensity
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -49,7 +49,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   videoProgressRef,
   frameRenderTrigger,
   externalProgress,
-  depthIntensity = 50
+  depthIntensity = 100
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -606,10 +606,10 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // This controls the overall scale change magnitude for all layers
     const ampFactor = (settings.amplification || 150) / 100;
     
-    // Calculate parallax intensity multipliers based on depthIntensity (0-100)
+    // Calculate parallax intensity multipliers based on depthIntensity (0-200)
     // Using scientific perspective projection: speed ∝ 1/distance
     // Depth values represent distance from viewer (higher = farther away)
-    const intensityFactor = depthIntensity / 50; // 0-2 range
+    const intensityFactor = depthIntensity / 100; // 0-2 range
     
     // Define realistic depth values for each layer based on astronomical distances
     // Using exponential scale to represent vast cosmic distances

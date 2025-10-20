@@ -88,7 +88,7 @@ const ParallelVideoGenerator: React.FC = () => {
     spinDirection: 'clockwise'
   });
 
-  const [depthIntensity, setDepthIntensity] = useState<number>(50);
+  const [depthIntensity, setDepthIntensity] = useState<number>(100);
   const [isAnimating, setIsAnimating] = useState(false);
   
   // Video generation control refs
@@ -1061,7 +1061,7 @@ const ParallelVideoGenerator: React.FC = () => {
                     value={[depthIntensity]}
                     onValueChange={([value]) => setDepthIntensity(value)}
                     min={0}
-                    max={100}
+                    max={200}
                     step={5}
                   />
                   <p className="text-xs text-cosmic-400">
