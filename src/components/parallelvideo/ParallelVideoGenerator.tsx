@@ -593,31 +593,49 @@ const ParallelVideoGenerator: React.FC = () => {
         
         mediaRecorder.start();
         
-        // Play back frames at correct fps
+        // Play back frames with precise timing using requestAnimationFrame
         let frameIdx = 0;
-        const frameInterval = 1000 / fps;
+        const frameDuration = 1000 / fps; // milliseconds per frame
+        let startTime: number | null = null;
+        let lastFrameTime = 0;
         
-        const playFrames = () => {
+        const playFrames = (timestamp: number) => {
+          if (startTime === null) {
+            startTime = timestamp;
+            lastFrameTime = timestamp;
+          }
+          
+          const elapsed = timestamp - startTime;
+          const expectedFrame = Math.floor(elapsed / frameDuration);
+          
+          // Render all frames that should have been displayed by now
+          while (frameIdx <= expectedFrame && frameIdx < frames.length) {
+            // Draw frame
+            encodingCtx.putImageData(frames[frameIdx], 0, 0);
+            frameIdx++;
+            
+            // Update progress
+            const encodeProgress = 50 + (frameIdx / frames.length) * 45;
+            setVideoProgress({
+              stage: t(`Encoding video... ${frameIdx}/${frames.length}`, `编码视频... ${frameIdx}/${frames.length}`),
+              percent: encodeProgress
+            });
+            
+            // Small delay between frames for MediaRecorder to capture
+            lastFrameTime = timestamp;
+          }
+          
           if (frameIdx >= frames.length) {
+            // All frames rendered, stop recording
             mediaRecorder.stop();
             return;
           }
           
-          // Draw frame
-          encodingCtx.putImageData(frames[frameIdx], 0, 0);
-          frameIdx++;
-          
-          // Update progress
-          const encodeProgress = 50 + (frameIdx / frames.length) * 45;
-          setVideoProgress({
-            stage: t(`Encoding video... ${frameIdx}/${frames.length}`, `编码视频... ${frameIdx}/${frames.length}`),
-            percent: encodeProgress
-          });
-          
-          setTimeout(playFrames, frameInterval);
+          // Continue to next frame
+          requestAnimationFrame(playFrames);
         };
         
-        playFrames();
+        requestAnimationFrame(playFrames);
       });
       
       console.log('✓ Video encoded successfully');
