@@ -455,15 +455,36 @@ const ParallelVideoGenerator: React.FC = () => {
     
     try {
       const stitchedCanvas = stitchedCanvasRef.current;
-      const recordWidth = Math.min(stitchedCanvas.width, 1920);
-      const recordHeight = Math.min(stitchedCanvas.height, 1080);
       
-      // Scale if needed
-      let scale = 1;
-      if (stitchedCanvas.width > 1920 || stitchedCanvas.height > 1080) {
-        scale = Math.min(1920 / stitchedCanvas.width, 1080 / stitchedCanvas.height);
-        console.log(`Scaling stitched canvas by ${scale.toFixed(2)}`);
+      // Use the EXACT dimensions from the stitched canvas to match preview
+      // Calculate dimensions the same way as stitchCanvases() does
+      const leftCanvas = leftCanvasRef.current;
+      const rightCanvas = rightCanvasRef.current;
+      
+      if (!leftCanvas || !rightCanvas) {
+        throw new Error('Canvas references not available');
       }
+      
+      const viewWidth = leftCanvas.width;
+      const viewHeight = leftCanvas.height;
+      const totalWidth = viewWidth * 2 + stereoSpacing + borderSize * 2;
+      const totalHeight = viewHeight + borderSize * 2;
+      
+      // Calculate scale to fit within reasonable video dimensions if needed
+      let scale = 1;
+      const maxWidth = 1920;
+      const maxHeight = 1080;
+      
+      if (totalWidth > maxWidth || totalHeight > maxHeight) {
+        scale = Math.min(maxWidth / totalWidth, maxHeight / totalHeight);
+        console.log(`Scaling video by ${scale.toFixed(3)} to fit within ${maxWidth}x${maxHeight}`);
+      }
+      
+      const recordWidth = Math.round(totalWidth * scale);
+      const recordHeight = Math.round(totalHeight * scale);
+      
+      console.log(`Recording dimensions: ${recordWidth}x${recordHeight} (scale: ${scale.toFixed(3)})`);
+      console.log(`Layout: viewWidth=${viewWidth}, spacing=${stereoSpacing}, border=${borderSize}`);
       
       const fps = 30;
       const duration = motionSettings.duration;
@@ -510,10 +531,18 @@ const ParallelVideoGenerator: React.FC = () => {
         // Wait one more frame for stitching to complete
         await new Promise(resolve => requestAnimationFrame(resolve));
         
-        // Capture frame from stitched canvas
+        // Capture frame from stitched canvas with proper scaling
         renderCtx.fillStyle = '#000000';
         renderCtx.fillRect(0, 0, recordWidth, recordHeight);
-        renderCtx.drawImage(stitchedCanvas, 0, 0, recordWidth, recordHeight);
+        
+        // Draw with exact aspect ratio preservation
+        if (scale === 1) {
+          // No scaling needed - draw directly
+          renderCtx.drawImage(stitchedCanvas, 0, 0);
+        } else {
+          // Scale uniformly maintaining aspect ratio
+          renderCtx.drawImage(stitchedCanvas, 0, 0, totalWidth, totalHeight, 0, 0, recordWidth, recordHeight);
+        }
         
         // Store frame data
         const frameData = renderCtx.getImageData(0, 0, recordWidth, recordHeight);
