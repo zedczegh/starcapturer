@@ -333,18 +333,18 @@ const ParallelVideoGenerator: React.FC = () => {
         stars: { width: starsElement.width, height: starsElement.height }
       });
 
-      // Step 1: Use Traditional Morph Service to create SEPARATED stereo layers
-      // This follows the same star repositioning logic as Traditional Morph mode
-      setProcessingStep(t('Creating separated stereo layers...', '创建分离的立体图层...'));
+      // Use Traditional Morph Service to create stereo pair
+      // This creates proper composites with stars repositioned exactly like in Stereoscope Processor
+      setProcessingStep(t('Creating stereoscopic pair...', '创建立体对...'));
       
-      const layers = await TraditionalMorphService.createSeparatedStereoPair(
+      const result = await TraditionalMorphService.createStereoPair(
         starlessFile!,
         starsFile!,
         {
           horizontalDisplace: horizontalDisplace,
           starShiftAmount: starShiftAmount,
-          luminanceBlur: 1.5,
-          contrastBoost: 1.2
+          stereoSpacing: 0,
+          borderSize: 0
         },
         (step, progress) => {
           setProcessingStep(t(step, step));
@@ -352,39 +352,16 @@ const ParallelVideoGenerator: React.FC = () => {
         }
       );
       
-      console.log('✓ Separated stereo layers created with proper star repositioning');
+      console.log('✓ Stereo composites created using Traditional Morph logic');
       
-      // Store the luminance map for debug display
-      if (starlessDepthMapRef.current) {
-        starlessDepthMapRef.current.width = layers.luminanceMap.width;
-        starlessDepthMapRef.current.height = layers.luminanceMap.height;
-        const ctx = starlessDepthMapRef.current.getContext('2d')!;
-        ctx.drawImage(layers.luminanceMap, 0, 0);
-      }
-      
-      // Step 2: Create composites for display
-      const leftComposite = document.createElement('canvas');
-      leftComposite.width = layers.leftBackground.width;
-      leftComposite.height = layers.leftBackground.height;
-      const leftCompCtx = leftComposite.getContext('2d')!;
-      leftCompCtx.drawImage(layers.leftBackground, 0, 0);
-      leftCompCtx.globalCompositeOperation = 'screen';
-      leftCompCtx.drawImage(layers.leftStars, 0, 0);
-      leftCompCtx.globalCompositeOperation = 'source-over';
-      
-      const rightComposite = document.createElement('canvas');
-      rightComposite.width = layers.rightBackground.width;
-      rightComposite.height = layers.rightBackground.height;
-      const rightCompCtx = rightComposite.getContext('2d')!;
-      rightCompCtx.drawImage(layers.rightBackground, 0, 0);
-      rightCompCtx.globalCompositeOperation = 'screen';
-      rightCompCtx.drawImage(layers.rightStars, 0, 0);
-      rightCompCtx.globalCompositeOperation = 'source-over';
+      // These are complete composites (starless + repositioned stars already blended)
+      const leftComposite = result.leftComposite;
+      const rightComposite = result.rightComposite;
       
       setLeftComposite(leftComposite.toDataURL());
       setRightComposite(rightComposite.toDataURL());
       
-      // Step 3: Detect stars for 3D rendering from the ORIGINAL stars image
+      // Step 2: Detect stars from ORIGINAL stars image for 3D rendering
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
       
       const canvasPool = CanvasPool.getInstance();
@@ -394,8 +371,8 @@ const ParallelVideoGenerator: React.FC = () => {
       
       const stars: StarData[] = [];
       const starsImageData = starsCtx.getImageData(0, 0, starsCanvas.width, starsCanvas.height);
-      const depthCtx = layers.depthMap.getContext('2d')!;
-      const depthData = depthCtx.getImageData(0, 0, layers.depthMap.width, layers.depthMap.height);
+      const depthCtx = result.depthMap.getContext('2d')!;
+      const depthData = depthCtx.getImageData(0, 0, result.depthMap.width, result.depthMap.height);
       
       const threshold = 50;
       const centerX = starsCanvas.width / 2;
@@ -410,7 +387,7 @@ const ParallelVideoGenerator: React.FC = () => {
                            0.114 * starsImageData.data[pixelIdx + 2];
           
           if (luminance > threshold) {
-            const depthIdx = (Math.floor(y) * layers.depthMap.width + Math.floor(x)) * 4;
+            const depthIdx = (Math.floor(y) * result.depthMap.width + Math.floor(x)) * 4;
             const depth = depthData.data[depthIdx] / 255;
             
             stars.push({
@@ -428,18 +405,21 @@ const ParallelVideoGenerator: React.FC = () => {
       console.log(`✓ Detected ${stars.length} stars for 3D rendering`);
       canvasPool.release(starsCanvas);
 
-      // Step 4: Set up all layers
-      setLeftBackground(layers.leftBackground.toDataURL());
-      setLeftStarsOnly(layers.leftStars.toDataURL());
+      // Step 3: Use composites directly - they have the proper star positioning
+      // For display purposes, show original starless and stars (actual stereo is in composites)
+      setLeftBackground(starlessElement.src);
+      setLeftStarsOnly(starsElement.src);
       setLeftStars(stars);
       
-      setRightBackground(layers.rightBackground.toDataURL());
-      setRightStarsOnly(layers.rightStars.toDataURL());
+      setRightBackground(starlessElement.src);
+      setRightStarsOnly(starsElement.src);
       setRightStars(stars);
       
-      // Store composites for video generation
+      // Store the COMPOSITES for video generation (these have proper stereo displacement)
       leftCanvasRef.current = leftComposite;
       rightCanvasRef.current = rightComposite;
+      
+      console.log('✓ Using Traditional Morph composites for video generation');
 
       setIsReady(true);
       setProgress(100);
@@ -939,28 +919,7 @@ const ParallelVideoGenerator: React.FC = () => {
                   )}
                 </div>
                 
-                {/* Luminance Map - Used for displacement */}
-                <div className="mt-6 space-y-2">
-                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Eye className="w-5 h-5 text-purple-400" />
-                    {t('Luminance Map (Starless)', '亮度图（无星）')}
-                  </h3>
-                  <p className="text-xs text-cosmic-400">
-                    {t('Brighter areas = more displacement. Based on starless image only.', '较亮区域 = 更多位移。仅基于无星图像。')}
-                  </p>
-                  <div className="max-w-lg mx-auto">
-                    <div className="space-y-2">
-                      <Label className="text-cosmic-200 text-xs">{t('Starless Luminance Depth Map', '无星亮度深度图')}</Label>
-                      <div className="bg-black rounded-lg overflow-hidden border-2 border-purple-500 shadow-lg">
-                        <canvas 
-                          ref={starlessDepthMapRef} 
-                          className="w-full h-auto"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                {/* Depth map display removed per user request */}
               </CardContent>
             </Card>
 
