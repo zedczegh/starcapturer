@@ -20,12 +20,10 @@ import { CanvasPool } from './performance/CanvasPool';
 import { ChunkedProcessor } from './performance/ChunkedProcessor';
 import { StarPatternCache } from './performance/StarPatternCache';
 import { MemoryManager } from './performance/MemoryManager';
-import { AdvancedStarDetector, type DetectedStar } from './advanced/AdvancedStarDetector';
 
 export interface TraditionalMorphParams {
   horizontalDisplace: number; // 10-30 range for displacement filter
-  starShiftAmount: number; // pixels to shift individual bright stars forward (toward viewer)
-  starBackgroundShift: number; // pixels to shift ALL stars left initially (behind nebula, typically 20-30)
+  starShiftAmount: number; // pixels to shift individual stars
   luminanceBlur: number; // 1-2 pixels for luminance map smoothing
   contrastBoost: number; // final contrast adjustment
 }
@@ -941,32 +939,16 @@ export class TraditionalMorphProcessor {
     onProgress?.('Creating advanced multi-layer depth analysis...', 20);
     const depthMaps = this.createAdvancedDepthMap(starlessImg, params.luminanceBlur);
     
-    onProgress?.('Advanced star detection with layer analysis...', 35);
-    // Use advanced star detection from StarFieldGenerator
-    const starsCanvas = this.canvasPool.acquire(starsImg.width, starsImg.height);
-    const starsCtx = starsCanvas.getContext('2d')!;
-    starsCtx.drawImage(starsImg, 0, 0);
-    const starsImageData = starsCtx.getImageData(0, 0, starsImg.width, starsImg.height);
+    onProgress?.('AI-powered star pattern analysis...', 35);
+    const starPatterns = this.detectStarPatterns(starsImg, profile);
+    console.log(`🤖 AI detected ${starPatterns.length} patterns: ${starPatterns.filter(s => s.pattern !== 'point').length} with diffraction spikes`);
     
-    const starPatterns = AdvancedStarDetector.detectStars(
-      starsImageData,
-      starsImg.width,
-      starsImg.height,
-      {
-        threshold: 100,
-        minStarSize: 3,
-        maxStarSize: 500,
-        minDistance: 3,
-        adaptiveThreshold: 0.3
-      }
-    );
-    this.canvasPool.release(starsCanvas);
-    
-    console.log(`🤖 Advanced detection: ${starPatterns.length} stars across ${5} layers`);
-    console.log('Layer distribution:', starPatterns.reduce((acc, s) => {
-      acc[`layer${s.layer}`] = (acc[`layer${s.layer}`] || 0) + 1;
+    // Enhanced pattern distribution logging
+    const patternCounts = starPatterns.reduce((acc, star) => {
+      acc[star.pattern] = (acc[star.pattern] || 0) + 1;
       return acc;
-    }, {} as Record<string, number>));
+    }, {} as Record<string, number>);
+    console.log('🔬 Scientific pattern analysis:', patternCounts, `| Profile: ${metadata.complexity}`);
     
     onProgress?.('Creating left view (original complete image)...', 50);
     // LEFT VIEW: Original complete image (starless + stars)
@@ -989,10 +971,8 @@ export class TraditionalMorphProcessor {
     // Step 1: Draw starless nebula as base layer
     rightCtx.drawImage(starlessImg, 0, 0);
     
-    // Step 2: Add star layer with initial LEFT shift (push ALL stars back behind nebula)
-    // Tutorial: "Hold down SHIFT and click the LEFT ARROW on your keyboard 2-3 times"
-    // In PhotoShop, SHIFT+ARROW typically moves 10px per press, so 2-3 presses = 20-30px
-    const initialLeftShift = -(params.starBackgroundShift || 25); // ALL stars start shifted left (behind nebula)
+    // Step 2: Add star layer with initial LEFT shift (2-3 pixels behind nebula)
+    const initialLeftShift = -3; // ALL stars start 2-3 pixels left (behind nebula)
     
     // Create canvas for shifted star layer
     const shiftedStarsCanvas = this.canvasPool.acquire(width, height);
@@ -1005,59 +985,29 @@ export class TraditionalMorphProcessor {
     rightCtx.globalCompositeOperation = 'screen';
     rightCtx.drawImage(shiftedStarsCanvas, 0, 0);
     
-    onProgress?.('Layer-based star repositioning for optimal depth...', 75);
-    // Step 3: Layer-based star repositioning
-    // Tutorial: "Use SHIFT and the RIGHT ARROW key to nudge the star to the right. This brings it 'towards' the viewer in 3D."
-    // Different amounts of nudging based on LAYERS create realistic depth effect
+    onProgress?.('Moving star patterns seamlessly (PERFECT MATCHING)...', 75);
+    // Step 3: PERFECT star pattern matching with seamless blending
     
     let repositionedStars = 0;
-    // Process stars from ALL layers for complete depth effect
-    // Sort by layer (larger stars first for proper rendering order)
-    const starsToReposition = starPatterns
-      .sort((a, b) => {
-        if (b.layer !== a.layer) return b.layer - a.layer; // Larger stars first
-        return b.brightness - a.brightness; // Then by brightness
-      })
-      .slice(0, 50); // Process up to 50 stars across all layers
-    
-    console.log(`Processing ${starsToReposition.length} stars across ALL layers for dramatic depth effect`);
+    const brightStars = starPatterns.filter(star => star.brightness / 255 > 0.35).slice(0, 15);
     
     // Create a copy of the current right canvas for reference
     const rightCanvasCopy = this.canvasPool.acquire(width, height);
     const rightCopyCtx = rightCanvasCopy.getContext('2d')!;
     rightCopyCtx.drawImage(rightCanvas, 0, 0);
     
-    // Get depth map image data for sampling at star positions
-    const depthMapData = depthMaps.combinedDepth.getContext('2d')!.getImageData(0, 0, width, height);
-    
-    // Process each star with layer-based AND depth-based displacement
-    for (const star of starsToReposition) {
-      // Sample depth map at star's center position
-      const depthIdx = (star.centerY * width + star.centerX) * 4;
-      const depthValue = depthMapData.data[depthIdx] / 255; // 0.0 = far/dim, 1.0 = near/bright
+    // Process each star pattern individually with perfect blending
+    for (const star of brightStars) {
+      const brightnessFactor = star.brightness / 255;
+      let forwardShift = params.starShiftAmount * (1 + brightnessFactor);
       
-      // Calculate forward shift based on BOTH layer (star size) AND depth map (nebula brightness)
-      // This creates proper depth where:
-      // - Large stars in bright nebula regions = maximum forward (closest)
-      // - Large stars in dim nebula regions = minimal/backward (further)
-      // - Small stars follow similar rules but with less displacement
-      const layerDisplacement = AdvancedStarDetector.getLayerDisplacement(
-        star.layer, 
-        params.starShiftAmount,
-        depthValue
-      );
-      
-      // Add brightness variation within layer for more natural depth
-      const brightnessFactor = star.brightness;
-      const forwardShift = layerDisplacement * (0.8 + brightnessFactor * 0.4);
-      
-      // More generous padding based on star size
-      const padding = Math.max(3, Math.ceil(star.width * 0.15));
+      // More generous padding for complete star removal
+      const padding = Math.max(3, Math.ceil(star.boundingBox.width * 0.15));
       const expandedBbox = {
         x: Math.max(0, star.boundingBox.x - padding),
         y: Math.max(0, star.boundingBox.y - padding),
-        width: Math.min(width - (star.boundingBox.x - padding), star.width + padding * 2),
-        height: Math.min(height - (star.boundingBox.y - padding), star.height + padding * 2)
+        width: Math.min(width - (star.boundingBox.x - padding), star.boundingBox.width + padding * 2),
+        height: Math.min(height - (star.boundingBox.y - padding), star.boundingBox.height + padding * 2)
       };
       
       // Calculate positions more precisely
@@ -1125,11 +1075,7 @@ export class TraditionalMorphProcessor {
         
         repositionedStars++;
         
-        // Get depth value for logging
-        const depthIdx = (star.centerY * width + star.centerX) * 4;
-        const depthValue = depthMapData.data[depthIdx] / 255;
-        
-        console.log(`✨ Layer ${star.layer} ${star.pattern.toUpperCase()}: size=${star.size}px, depth=${depthValue.toFixed(2)}, shift=${forwardShift.toFixed(1)}px, from x=${originalShiftedX} to x=${finalX}`);
+        console.log(`✨ ${star.pattern.toUpperCase()} pattern cleanly moved: ${expandedBbox.width}x${expandedBbox.height}, shift=${forwardShift.toFixed(1)}, from x=${originalShiftedX} to x=${finalX}`);
         
         // Clean up temporary canvases
         this.canvasPool.release(starMaskCanvas);
@@ -1138,7 +1084,7 @@ export class TraditionalMorphProcessor {
     }
     rightCtx.globalCompositeOperation = 'source-over';
     
-    console.log(`✅ Repositioned ${repositionedStars} stars across layers for optimal stereoscopic depth`);
+    console.log(`Repositioned ${repositionedStars} bright stars forward from background position`);
     
     // Clean up temporary canvases
     this.canvasPool.release(shiftedStarsCanvas);
