@@ -1237,8 +1237,8 @@ const StarFieldGenerator: React.FC = () => {
             <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center border border-blue-500/30">
-                    <Upload className="w-5 h-5 text-blue-400" />
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center border border-amber-500/30">
+                    <Upload className="w-5 h-5 text-amber-400" />
                   </div>
                   <div>
                     <CardTitle className="text-white">
@@ -1266,7 +1266,7 @@ const StarFieldGenerator: React.FC = () => {
                   />
                   <label 
                     htmlFor="stars-upload"
-                    className="flex flex-col items-center justify-center w-full h-20 px-4 py-3 bg-cosmic-800/50 border-2 border-dashed border-cosmic-600 hover:border-blue-500/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-cosmic-700/50 transition-all"
+                    className="flex flex-col items-center justify-center w-full h-20 px-4 py-3 bg-cosmic-800/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-cosmic-700/50 transition-all"
                   >
                     <Upload className="w-5 h-5 mb-2 text-cosmic-400" />
                     <span className="text-cosmic-300">{starsOnlyImage ? t('Change File', '更换文件') : t('Choose File', '选择文件')}</span>
@@ -1309,7 +1309,7 @@ const StarFieldGenerator: React.FC = () => {
                   />
                   <label 
                     htmlFor="starless-upload"
-                    className="flex flex-col items-center justify-center w-full h-20 px-4 py-3 bg-cosmic-800/50 border-2 border-dashed border-cosmic-600 hover:border-blue-500/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-cosmic-700/50 transition-all"
+                    className="flex flex-col items-center justify-center w-full h-20 px-4 py-3 bg-cosmic-800/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-cosmic-700/50 transition-all"
                   >
                     <Upload className="w-5 h-5 mb-2 text-cosmic-400" />
                     <span className="text-cosmic-300">{starlessImage ? t('Change File', '更换文件') : t('Choose File', '选择文件')}</span>
@@ -1341,7 +1341,7 @@ const StarFieldGenerator: React.FC = () => {
                 <Button
                   onClick={processImages}
                   disabled={isProcessing}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg shadow-amber-500/20"
                 >
                   {isProcessing ? t('Processing...', '处理中...') : t('Process & Generate Depth Map', '处理并生成深度图')}
                 </Button>
@@ -1354,8 +1354,8 @@ const StarFieldGenerator: React.FC = () => {
               <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center border border-green-500/30">
-                      <ImageIcon className="w-5 h-5 text-green-400" />
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center border border-purple-500/30">
+                      <ImageIcon className="w-5 h-5 text-purple-400" />
                     </div>
                     <div>
                       <CardTitle className="text-white">
@@ -1382,8 +1382,8 @@ const StarFieldGenerator: React.FC = () => {
               <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-cyan-500/30">
-                      <Play className="w-5 h-5 text-cyan-400" />
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center border border-amber-500/30">
+                      <Play className="w-5 h-5 text-amber-400" />
                     </div>
                     <div>
                       <CardTitle className="text-white">
@@ -1488,7 +1488,7 @@ const StarFieldGenerator: React.FC = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-cosmic-200">{t('3D Intensity', '3D强度')}</Label>
-                    <span className="text-cosmic-300 text-sm font-semibold">{depthIntensity}%</span>
+                    <span className="text-amber-400 font-mono text-sm font-semibold">{depthIntensity}%</span>
                   </div>
                   <Slider
                     value={[depthIntensity]}
@@ -1506,7 +1506,7 @@ const StarFieldGenerator: React.FC = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-cosmic-200">{t('Duration (seconds)', '持续时间（秒）')}</Label>
-                    <span className="text-cosmic-300 text-sm">{animationSettings.duration}s</span>
+                    <span className="text-amber-400 font-mono text-sm font-semibold">{animationSettings.duration}s</span>
                   </div>
                   <Slider
                     value={[animationSettings.duration]}
@@ -1550,7 +1550,7 @@ const StarFieldGenerator: React.FC = () => {
 
                 <Button
                   onClick={toggleAnimation}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg shadow-amber-500/20"
                 >
                   {isAnimating ? (
                     <>
@@ -1584,7 +1584,7 @@ const StarFieldGenerator: React.FC = () => {
                 <Button
                   onClick={initiateDownload}
                   disabled={isGeneratingVideo || processedStars.length === 0}
-                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50"
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-blue-500/20 disabled:opacity-50"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   {isGeneratingVideo 
@@ -1624,7 +1624,7 @@ const StarFieldGenerator: React.FC = () => {
                   </div>
                   <div className="w-full h-2 bg-cosmic-800 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-green-600 via-emerald-500 to-green-600 transition-all duration-300 animate-pulse"
+                      className="h-full bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 transition-all duration-300 animate-pulse"
                       style={{ width: `${mp4Progress}%` }}
                     />
                   </div>

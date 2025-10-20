@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { Upload, Eye, Download, Loader2, Layers } from 'lucide-react';
+import { Upload, Eye, Download, Loader2, Layers, Settings2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
@@ -592,8 +592,8 @@ const StereoscopeProcessor: React.FC = () => {
               <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center border border-purple-500/30">
-                      <Eye className="w-5 h-5 text-purple-400" />
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center border border-amber-500/30">
+                      <Eye className="w-5 h-5 text-amber-400" />
                     </div>
                     <div>
                       <CardTitle className="text-2xl text-white">
@@ -608,7 +608,10 @@ const StereoscopeProcessor: React.FC = () => {
                 <CardContent>
                   <div className="space-y-6">
                     <div>
-                      <Label>{t('Stereo Spacing', '立体间距')} ({stereoSpacing}px)</Label>
+                      <Label className="flex items-center justify-between">
+                        <span>{t('Stereo Spacing', '立体间距')}</span>
+                        <span className="text-amber-400 font-mono text-lg">({stereoSpacing}px)</span>
+                      </Label>
                       <Slider
                         value={[stereoSpacing]}
                         onValueChange={([value]) => setStereoSpacing(value)}
@@ -623,7 +626,10 @@ const StereoscopeProcessor: React.FC = () => {
                     </div>
 
                     <div>
-                      <Label>{t('Border Size', '边框大小')} ({borderSize}px)</Label>
+                      <Label className="flex items-center justify-between">
+                        <span>{t('Border Size', '边框大小')}</span>
+                        <span className="text-amber-400 font-mono text-lg">({borderSize}px)</span>
+                      </Label>
                       <Slider
                         value={[borderSize]}
                         onValueChange={([value]) => setBorderSize(value)}
@@ -650,7 +656,7 @@ const StereoscopeProcessor: React.FC = () => {
                     <Button
                       onClick={processImage}
                       disabled={!selectedImage || processing}
-                      className="w-full"
+                      className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg shadow-amber-500/20"
                     >
                       {processing ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -670,8 +676,8 @@ const StereoscopeProcessor: React.FC = () => {
               <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center border border-purple-500/30">
-                      <Layers className="w-5 h-5 text-purple-400" />
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center border border-amber-500/30">
+                      <Layers className="w-5 h-5 text-amber-400" />
                     </div>
                     <div>
                       <CardTitle className="text-2xl text-white">
@@ -689,7 +695,7 @@ const StereoscopeProcessor: React.FC = () => {
                       <Label className="text-sm font-medium text-cosmic-200">{t('Starless Nebula Image', '无星星云图像')}</Label>
                       <Button
                         onClick={() => starlessInputRef.current?.click()}
-                        className="w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 transition-all"
+                        className="w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 transition-all"
                         variant="outline"
                         disabled={processing}
                       >
@@ -724,7 +730,7 @@ const StereoscopeProcessor: React.FC = () => {
                       <Label className="text-sm font-medium text-cosmic-200">{t('Stars-Only Image', '纯星图像')}</Label>
                       <Button
                         onClick={() => starsInputRef.current?.click()}
-                        className="w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 transition-all"
+                        className="w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 transition-all"
                         variant="outline"
                         disabled={processing}
                       >
@@ -758,19 +764,29 @@ const StereoscopeProcessor: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="cosmic-border bg-cosmic-900/50 backdrop-blur-sm">
+              <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle className="text-primary">
-                    {t('Traditional Morph Parameters', '传统变形参数')}
-                  </CardTitle>
-                  <CardDescription>
-                    {t('Professional parameters for authentic 3D astrophotography.', '用于真实3D天体摄影的专业参数。')}
-                  </CardDescription>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center border border-purple-500/30">
+                      <Settings2 className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl text-white">
+                        {t('Traditional Morph Parameters', '传统变形参数')}
+                      </CardTitle>
+                      <CardDescription className="text-cosmic-300">
+                        {t('Professional parameters for authentic 3D astrophotography.', '用于真实3D天体摄影的专业参数。')}
+                      </CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
                     <div>
-                      <Label>{t('Horizontal Displacement', '水平位移')} ({traditionalParams.horizontalDisplace})</Label>
+                      <Label className="flex items-center justify-between">
+                        <span>{t('Horizontal Displacement', '水平位移')}</span>
+                        <span className="text-amber-400 font-mono text-lg">({traditionalParams.horizontalDisplace})</span>
+                      </Label>
                       <Slider
                         value={[traditionalParams.horizontalDisplace]}
                         onValueChange={([value]) => setTraditionalParams(prev => ({ ...prev, horizontalDisplace: value }))}
@@ -785,7 +801,10 @@ const StereoscopeProcessor: React.FC = () => {
                     </div>
 
                      <div>
-                       <Label>{t('Star Shift Amount', '恒星位移量')} ({traditionalParams.starShiftAmount}px)</Label>
+                       <Label className="flex items-center justify-between">
+                         <span>{t('Star Shift Amount', '恒星位移量')}</span>
+                         <span className="text-amber-400 font-mono text-lg">({traditionalParams.starShiftAmount}px)</span>
+                       </Label>
                        <Slider
                          value={[traditionalParams.starShiftAmount]}
                          onValueChange={([value]) => setTraditionalParams(prev => ({ ...prev, starShiftAmount: value }))}
@@ -800,7 +819,10 @@ const StereoscopeProcessor: React.FC = () => {
                      </div>
 
                      <div>
-                       <Label>{t('Stereo Spacing', '立体间距')} ({stereoSpacing}px)</Label>
+                       <Label className="flex items-center justify-between">
+                         <span>{t('Stereo Spacing', '立体间距')}</span>
+                         <span className="text-amber-400 font-mono text-lg">({stereoSpacing}px)</span>
+                       </Label>
                        <Slider
                          value={[stereoSpacing]}
                          onValueChange={([value]) => setStereoSpacing(value)}
@@ -815,7 +837,10 @@ const StereoscopeProcessor: React.FC = () => {
                      </div>
 
                     <div>
-                      <Label>{t('Border Size', '边框大小')} ({borderSize}px)</Label>
+                      <Label className="flex items-center justify-between">
+                        <span>{t('Border Size', '边框大小')}</span>
+                        <span className="text-amber-400 font-mono text-lg">({borderSize}px)</span>
+                      </Label>
                       <Slider
                         value={[borderSize]}
                         onValueChange={([value]) => setBorderSize(value)}
@@ -842,7 +867,7 @@ const StereoscopeProcessor: React.FC = () => {
                     <Button
                       onClick={processImage}
                       disabled={(!starlessImage && !starsImage) || processing}
-                      className="w-full"
+                      className="w-full h-14 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold text-lg shadow-lg shadow-amber-500/20"
                     >
                       {processing ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
