@@ -117,8 +117,14 @@ const ParallelVideoGenerator: React.FC = () => {
       stitchedCanvas.height = totalHeight;
     }
 
-    const ctx = stitchedCanvas.getContext('2d');
+    const ctx = stitchedCanvas.getContext('2d', {
+      alpha: false,
+      willReadFrequently: true
+    });
     if (!ctx) return;
+    
+    // Preserve pixel-perfect quality
+    ctx.imageSmoothingEnabled = false;
 
     // Clear with black background
     ctx.fillStyle = '#000000';
@@ -455,15 +461,11 @@ const ParallelVideoGenerator: React.FC = () => {
     
     try {
       const stitchedCanvas = stitchedCanvasRef.current;
-      const recordWidth = Math.min(stitchedCanvas.width, 1920);
-      const recordHeight = Math.min(stitchedCanvas.height, 1080);
+      // Use full original dimensions - no arbitrary limits
+      const recordWidth = stitchedCanvas.width;
+      const recordHeight = stitchedCanvas.height;
       
-      // Scale if needed
-      let scale = 1;
-      if (stitchedCanvas.width > 1920 || stitchedCanvas.height > 1080) {
-        scale = Math.min(1920 / stitchedCanvas.width, 1080 / stitchedCanvas.height);
-        console.log(`Scaling stitched canvas by ${scale.toFixed(2)}`);
-      }
+      console.log(`Recording at full resolution: ${recordWidth}x${recordHeight}`);
       
       const fps = 30;
       const duration = motionSettings.duration;
@@ -471,13 +473,16 @@ const ParallelVideoGenerator: React.FC = () => {
       
       console.log(`Rendering ${totalFrames} frames at ${fps}fps for stitched video`);
       
-      // Create offscreen canvas for rendering
+      // Create offscreen canvas for rendering at full quality
       const renderCanvas = canvasPool.acquire(recordWidth, recordHeight);
       const renderCtx = renderCanvas.getContext('2d', {
         alpha: false,
-        willReadFrequently: false
+        willReadFrequently: false,
+        desynchronized: false
       })!;
+      // Disable image smoothing to preserve pixel-perfect quality
       renderCtx.imageSmoothingEnabled = false;
+      renderCtx.imageSmoothingQuality = 'high';
       
       // STAGE 1: Pre-render all frames
       setVideoProgress({ stage: t('Rendering frames...', '渲染帧...'), percent: 0 });
@@ -537,9 +542,13 @@ const ParallelVideoGenerator: React.FC = () => {
       setVideoProgress({ stage: t('Encoding video...', '编码视频...'), percent: 50 });
       console.log('Stage 2: Encoding to WebM...');
       
-      // Create a temporary canvas for MediaRecorder
+      // Create a temporary canvas for MediaRecorder at full quality
       const encodingCanvas = canvasPool.acquire(recordWidth, recordHeight);
-      const encodingCtx = encodingCanvas.getContext('2d')!;
+      const encodingCtx = encodingCanvas.getContext('2d', {
+        alpha: false,
+        desynchronized: true
+      })!;
+      encodingCtx.imageSmoothingEnabled = false;
       
       // Set up MediaRecorder
       const stream = encodingCanvas.captureStream(fps);
@@ -553,9 +562,17 @@ const ParallelVideoGenerator: React.FC = () => {
       }
       
       const chunks: Blob[] = [];
+      // Calculate bitrate based on resolution to maintain quality
+      // Target: ~0.5 bits per pixel at 30fps
+      const bitsPerPixel = 0.5;
+      const targetBitrate = recordWidth * recordHeight * fps * bitsPerPixel;
+      const videoBitsPerSecond = Math.max(8000000, Math.min(targetBitrate, 50000000)); // 8-50 Mbps range
+      
+      console.log(`Using bitrate: ${(videoBitsPerSecond / 1000000).toFixed(1)} Mbps for ${recordWidth}x${recordHeight}`);
+      
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
-        videoBitsPerSecond: 8000000
+        videoBitsPerSecond
       });
       
       mediaRecorder.ondataavailable = (e) => {
