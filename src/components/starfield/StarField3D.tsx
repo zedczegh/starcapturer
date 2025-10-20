@@ -679,10 +679,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // Only recalculate offsets if state changed
     if (stateChanged) {
       if (motionType === 'zoom_in') {
-        // Zoom effect: amplification controls the overall scale range
-        // Parallax multipliers control relative depth differences between layers
-        // Background scales least, foreground stars scale most
-        offsetsRef.current.background.scale = 1.0 + (progressRatio * ampFactor * 0.3 * parallaxMultipliers.background);
+        // Zoom in: Background (starless) zooms directly by amplification factor
+        // Stars use parallax multipliers for depth effect
+        offsetsRef.current.background.scale = 1.0 + (progressRatio * ampFactor);
         offsetsRef.current.layer6.scale = 1.0 + (progressRatio * ampFactor * 0.4 * parallaxMultipliers.layer6);
         offsetsRef.current.layer5.scale = 1.0 + (progressRatio * ampFactor * 0.5 * parallaxMultipliers.layer5);
         offsetsRef.current.layer4.scale = 1.0 + (progressRatio * ampFactor * 0.6 * parallaxMultipliers.layer4);
@@ -690,8 +689,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer2.scale = 1.0 + (progressRatio * ampFactor * 0.85 * parallaxMultipliers.layer2);
         offsetsRef.current.layer1.scale = 1.0 + (progressRatio * ampFactor * 1.0 * parallaxMultipliers.layer1);
       } else if (motionType === 'zoom_out') {
-        // Zoom out: reverse of zoom in
-        const bgMax = 1.0 + (ampFactor * 0.3 * parallaxMultipliers.background);
+        // Zoom out: Background (starless) shrinks from amplified size back to normal
+        // Stars use parallax multipliers for depth effect
+        const bgMax = 1.0 + ampFactor;
         const layer6Max = 1.0 + (ampFactor * 0.4 * parallaxMultipliers.layer6);
         const layer5Max = 1.0 + (ampFactor * 0.5 * parallaxMultipliers.layer5);
         const layer4Max = 1.0 + (ampFactor * 0.6 * parallaxMultipliers.layer4);
@@ -699,7 +699,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         const layer2Max = 1.0 + (ampFactor * 0.85 * parallaxMultipliers.layer2);
         const layer1Max = 1.0 + (ampFactor * 1.0 * parallaxMultipliers.layer1);
         
-        offsetsRef.current.background.scale = bgMax - (progressRatio * ampFactor * 0.3 * parallaxMultipliers.background);
+        offsetsRef.current.background.scale = bgMax - (progressRatio * ampFactor);
         offsetsRef.current.layer6.scale = layer6Max - (progressRatio * ampFactor * 0.4 * parallaxMultipliers.layer6);
         offsetsRef.current.layer5.scale = layer5Max - (progressRatio * ampFactor * 0.5 * parallaxMultipliers.layer5);
         offsetsRef.current.layer4.scale = layer4Max - (progressRatio * ampFactor * 0.6 * parallaxMultipliers.layer4);
