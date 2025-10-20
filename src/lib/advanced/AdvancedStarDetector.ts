@@ -212,21 +212,20 @@ export class AdvancedStarDetector {
     baseShift: number, 
     depthValue: number = 0.5
   ): number {
-    // ENHANCED layer displacement with dramatic depth separation
-    // Smaller stars get NEGATIVE multipliers to push them far back behind nebula
-    // Larger stars get POSITIVE multipliers to bring them forward
+    // CORRECTED DIRECTION: For RIGHT image in stereo pairs
+    // We start with ALL stars shifted LEFT (behind nebula)
+    // Then we adjust based on size:
+    // - Small stars: shift FURTHER LEFT (more negative) = push further back
+    // - Large stars: shift RIGHT (positive) = bring forward toward viewer
     const layerMultipliers = [
-      -0.8,  // Layer 0 (point stars) - PUSH FAR BACK behind nebula
-      -0.4,  // Layer 1 (small stars) - PUSH BACK behind nebula
+      1.5,   // Layer 0 (point stars) - MAXIMUM forward (closest to viewer)
+      0.8,   // Layer 1 (small stars) - moderate forward
       0.3,   // Layer 2 (medium stars) - slight forward from background
-      0.8,   // Layer 3 (large stars) - moderate forward
-      1.5    // Layer 4 (complex stars) - maximum forward (closest to viewer)
+      -0.4,  // Layer 3 (large stars) - PUSH BACK behind nebula
+      -0.8   // Layer 4 (complex stars) - PUSH FAR BACK (furthest from viewer)
     ];
     
-    // Depth map modulation based on nebula luminance at star position:
-    // - High depth (bright nebula) -> star appears closer -> amplify effect
-    // - Low depth (dim nebula) -> star appears further -> reduce/reverse effect
-    // Map depth 0.0-1.0 to displacement multiplier 0.2 to 2.0 (always some effect)
+    // Depth map modulation: brighter nebula = stronger effect
     const depthMultiplier = 0.2 + (depthValue * 1.8);
     
     // Combine layer size with depth position
