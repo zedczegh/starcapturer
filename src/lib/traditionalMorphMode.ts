@@ -1011,12 +1011,16 @@ export class TraditionalMorphProcessor {
     // Different amounts of nudging based on LAYERS create realistic depth effect
     
     let repositionedStars = 0;
-    // Process stars from all layers, prioritize larger/closer stars
+    // Process stars from ALL layers for complete depth effect
+    // Sort by layer (larger stars first for proper rendering order)
     const starsToReposition = starPatterns
-      .filter(star => star.layer >= 2) // Only reposition medium, large, and complex stars
-      .slice(0, 25); // Process up to 25 stars for good depth
+      .sort((a, b) => {
+        if (b.layer !== a.layer) return b.layer - a.layer; // Larger stars first
+        return b.brightness - a.brightness; // Then by brightness
+      })
+      .slice(0, 50); // Process up to 50 stars across all layers
     
-    console.log(`Processing ${starsToReposition.length} stars across layers for depth effect`);
+    console.log(`Processing ${starsToReposition.length} stars across ALL layers for dramatic depth effect`);
     
     // Create a copy of the current right canvas for reference
     const rightCanvasCopy = this.canvasPool.acquire(width, height);
