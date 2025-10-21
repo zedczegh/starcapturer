@@ -17,6 +17,7 @@ import PhotoPointsFeature from "@/components/about/PhotoPointsFeature";
 import DarkSkyKnowledge from "@/components/about/DarkSkyKnowledge";
 import AboutFooter from "@/components/about/AboutFooter";
 import ResourcesSection from "@/components/about/ResourcesSection";
+import UtilitiesSection from "@/components/about/UtilitiesSection";
 
 const About = () => {
   const { t } = useLanguage();
@@ -106,13 +107,14 @@ const About = () => {
         <AboutHeader />
         
         <div className="space-y-6">
-          {/* Main sections in a more organized order */}
+          {/* Main sections ordered by significance */}
           <AboutIntro />
-          <AboutTeam />
           <SiqsSection />
           <PhotoPointsFeature />
           <LocationDiscoverySection />
+          <UtilitiesSection />
           <DarkSkyKnowledge />
+          <AboutTeam />
           <ResourcesSection />
           <AboutFooter />
         </div>

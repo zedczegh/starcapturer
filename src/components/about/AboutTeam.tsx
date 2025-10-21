@@ -5,7 +5,6 @@ import { Users, BookOpen, GraduationCap } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 
 const AboutTeam = () => {
   const { t } = useLanguage();
@@ -14,16 +13,6 @@ const AboutTeam = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
-
-  // SIQS color scale for demonstration
-  const siqsColorLevels = [
-    { score: "8-10", color: "bg-green-500", description: t("Excellent", "极佳"), colorName: t("Green", "绿色") },
-    { score: "6-7.9", color: "bg-blue-500", description: t("Good", "良好"), colorName: t("Blue", "蓝色") },
-    { score: "5-5.9", color: "bg-olive-500", description: t("Above Average", "较好"), colorName: t("Olive", "橄榄色") },
-    { score: "4-4.9", color: "bg-yellow-500", description: t("Average", "一般"), colorName: t("Yellow", "黄色") },
-    { score: "2-3.9", color: "bg-orange-500", description: t("Poor", "较差"), colorName: t("Orange", "橙色") },
-    { score: "0-1.9", color: "bg-red-500", description: t("Bad", "糟糕"), colorName: t("Red", "红色") }
-  ];
 
   return (
     <motion.div variants={itemVariants}>
@@ -43,18 +32,18 @@ const AboutTeam = () => {
                   ZC
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <h3 className="font-medium text-cosmic-100">Zed_Czegh</h3>
-                <p className="text-sm text-cosmic-300">
-                  {t("Professional fine art producer", "专业艺术制作人")}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center text-xs text-cosmic-400">
-              <GraduationCap className="h-3.5 w-3.5 mr-2" />
-              {t("Camberwell College of Arts MA, Amateur Astronomer, Tibetologist, Loving husband and father of 1", 
-                 "坎伯韦尔艺术学院硕士，业余天文学家，藏学家，慈爱的丈夫和1个孩子的父亲")}
-            </div>
+          <div>
+            <h3 className="font-medium text-cosmic-100">Zed_Czegh</h3>
+            <p className="text-sm text-cosmic-300">
+              {t("Professional fine art producer, amateur astronomer, Dark-Sky advocator", "专业艺术制作人，业余天文学家，暗夜倡导者")}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center text-xs text-cosmic-400">
+          <GraduationCap className="h-3.5 w-3.5 mr-2" />
+          {t("MPhil/PhD at Burren College of Arts, University of Galway", 
+             "爱尔兰戈尔韦大学布伦艺术学院哲学硕士/博士")}
+        </div>
           </div>
           
           {/* SIQS Information */}
@@ -68,44 +57,6 @@ const AboutTeam = () => {
               {t("The SIQS (Stellar Imaging Quality Score) is our proprietary rating system that evaluates locations based on their suitability for astrophotography and stargazing.", 
                  "SIQS（天文观测质量评分）是我们专有的评级系统，根据地点对天文摄影和观星的适宜性进行评估。")}
             </p>
-            
-            {/* New SIQS Color Scale Visual Guide */}
-            <div className="space-y-4 mb-6">
-              <h4 className="text-sm font-medium text-cosmic-200 flex items-center gap-1.5">
-                <span className="inline-block h-2.5 w-2.5 rounded-full bg-gradient-to-br from-green-400 to-blue-400"></span>
-                {t("SIQS Color Scale Guide", "SIQS颜色比例指南")}
-              </h4>
-              
-              <div className="bg-cosmic-800/40 p-4 rounded-lg border border-cosmic-700/30">
-                <p className="text-xs text-cosmic-300 mb-3">
-                  {t("Our SIQS system uses a color-coded scale from 0-10 to help you quickly visualize location quality:", 
-                     "我们的SIQS系统使用0-10的彩色编码比例尺，帮助您快速直观地了解位置质量：")}
-                </p>
-                
-                <div className="space-y-2.5">
-                  {siqsColorLevels.map((level, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <div className="w-1/6 shrink-0">
-                        <span className="text-xs font-medium text-cosmic-200">{level.score}</span>
-                      </div>
-                      <div className="w-2/6">
-                        <Progress value={100} className={`h-3 ${level.color}`} />
-                      </div>
-                      <div className="w-3/6">
-                        <span className="text-xs text-cosmic-300">
-                          {level.description} <span className="opacity-70">({level.colorName})</span>
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <p className="text-xs text-cosmic-400 mt-3 italic">
-                  {t("Higher scores (greener colors) indicate better conditions for astrophotography.", 
-                     "较高的分数（绿色系）表示更适合天文摄影的条件。")}
-                </p>
-              </div>
-            </div>
             
             <div className="space-y-2.5">
               <h4 className="text-sm font-medium text-cosmic-200">

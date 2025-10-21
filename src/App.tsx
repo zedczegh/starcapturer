@@ -16,7 +16,6 @@ const LazyCommunityAstroSpots = lazy(() => import('@/pages/CommunityAstroSpots')
 // Keep light components as regular imports
 import IndexPage from './pages/Index';
 import NotFound from './pages/NotFound';
-import AboutSIQS from './pages/AboutSIQS';
 import About from './pages/About';
 import UsefulLinks from './pages/UsefulLinks';
 import ShareLocation from './pages/ShareLocation';
@@ -89,8 +88,8 @@ function AppContent() {
           <LazyCommunityAstroSpots />
         </Suspense>
       } />
-      <Route path="/about-siqs" element={<AboutSIQS />} />
       <Route path="/about" element={<About />} />
+      <Route path="/about-siqs" element={<Navigate to="/about" replace />} />
       <Route path="/location/:id" element={
         <ErrorBoundary>
           <Suspense fallback={<LoadingFallback />}>
