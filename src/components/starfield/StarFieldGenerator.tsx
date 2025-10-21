@@ -1252,7 +1252,7 @@ const StarFieldGenerator: React.FC = () => {
               </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="stars-upload" className="text-cosmic-200">
+                <Label htmlFor="stars-upload" className="text-orange-400 font-semibold">
                   {t('Stars Only Image', '星点图')}
                 </Label>
                 <div className="relative">
@@ -1266,10 +1266,11 @@ const StarFieldGenerator: React.FC = () => {
                   />
                   <label 
                     htmlFor="stars-upload"
-                    className="flex flex-col items-center justify-center w-full h-20 px-4 py-3 bg-cosmic-800/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-cosmic-700/50 transition-all"
+                    className="group flex flex-col items-center justify-center w-full h-20 px-4 py-3 bg-cosmic-800/50 border-2 border-dashed border-cosmic-600 hover:border-orange-500/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-orange-500/10 transition-all"
                   >
-                    <Upload className="w-5 h-5 mb-2 text-cosmic-400" />
-                    <span className="text-cosmic-300">{starsOnlyImage ? t('Change File', '更换文件') : t('Choose File', '选择文件')}</span>
+                    <Upload className="w-5 h-5 mb-2 text-cosmic-400 group-hover:text-orange-400 transition-colors" />
+                    <span className="text-cosmic-300 group-hover:hidden">{t('Click to upload', '点击上传')}</span>
+                    <span className="text-orange-400 hidden group-hover:block">{t('Stars Only', '星点图')}</span>
                   </label>
                 </div>
                 
@@ -1285,7 +1286,7 @@ const StarFieldGenerator: React.FC = () => {
                     <img
                       src={starsOnlyImage}
                       alt="Stars only"
-                      className="w-full h-32 object-cover rounded-lg border-2 border-cosmic-700/50 transition-all group-hover:border-blue-500/50"
+                      className="w-full h-32 object-cover rounded-lg border-2 border-cosmic-700/50 transition-all group-hover:border-orange-500/50"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-cosmic-900/80 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
                       <p className="text-xs text-white font-medium">{t('Stars detected', '已检测星点')}</p>
@@ -1309,10 +1310,11 @@ const StarFieldGenerator: React.FC = () => {
                   />
                   <label 
                     htmlFor="starless-upload"
-                    className="flex flex-col items-center justify-center w-full h-20 px-4 py-3 bg-cosmic-800/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-cosmic-700/50 transition-all"
+                    className="group flex flex-col items-center justify-center w-full h-20 px-4 py-3 bg-cosmic-800/50 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-purple-500/10 transition-all"
                   >
-                    <Upload className="w-5 h-5 mb-2 text-cosmic-400" />
-                    <span className="text-cosmic-300">{starlessImage ? t('Change File', '更换文件') : t('Choose File', '选择文件')}</span>
+                    <Upload className="w-5 h-5 mb-2 text-cosmic-400 group-hover:text-purple-400 transition-colors" />
+                    <span className="text-cosmic-300 group-hover:hidden">{t('Click to upload', '点击上传')}</span>
+                    <span className="text-purple-400 hidden group-hover:block">{t('Starless', '去星图')}</span>
                   </label>
                 </div>
                 
@@ -1343,7 +1345,7 @@ const StarFieldGenerator: React.FC = () => {
                   disabled={isProcessing}
                   className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg shadow-amber-500/20"
                 >
-                  {isProcessing ? t('Processing...', '处理中...') : t('Process & Generate Depth Map', '处理并生成深度图')}
+                  {isProcessing ? t('Processing...', '处理中...') : t('Process & Generate', '处理并生成')}
                 </Button>
               )}
             </CardContent>

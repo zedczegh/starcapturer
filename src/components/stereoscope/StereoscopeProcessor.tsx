@@ -668,7 +668,7 @@ const StereoscopeProcessor: React.FC = () => {
                       ) : (
                         <Eye className="h-4 w-4 mr-2" />
                       )}
-                      {processing ? t('Processing...', '处理中...') : t('Generate Fast Stereo Pair', '生成快速立体对')}
+                      {processing ? t('Processing...', '处理中...') : t('Generate', '生成')}
                     </Button>
                   </div>
                 </CardContent>
@@ -697,52 +697,20 @@ const StereoscopeProcessor: React.FC = () => {
                 <CardContent>
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-sm font-medium text-cosmic-200">{t('Starless Nebula Image', '无星星云图像')}</Label>
-                      <Button
-                        onClick={() => starlessInputRef.current?.click()}
-                        className="w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 transition-all"
-                        variant="outline"
-                        disabled={processing}
-                      >
-                        <div className="flex flex-col items-center gap-2">
-                          <Upload className="w-5 h-5 text-cosmic-400" />
-                          <span className="text-sm text-cosmic-300">
-                            {starlessImage ? starlessImage.name : t('Click to upload starless', '点击上传无星图像')}
-                          </span>
-                        </div>
-                      </Button>
-                      
-                      <input
-                        ref={starlessInputRef}
-                        type="file"
-                        accept="image/*,.tiff,.tif,.cr2,.nef,.arw,.dng,.raw,.orf,.rw2,.pef"
-                        onChange={handleStarlessImageSelect}
-                        className="hidden"
-                      />
-
-                      {starlessPreview && (
-                        <div className="mt-2">
-                          <img
-                            src={starlessPreview}
-                            alt="Starless Preview"
-                            className="w-full h-32 object-cover rounded-lg border border-cosmic-700"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label className="text-sm font-medium text-cosmic-200">{t('Stars-Only Image', '纯星图像')}</Label>
+                      <Label className="text-sm font-medium text-orange-400">{t('Stars-Only Image', '纯星图像')}</Label>
                       <Button
                         onClick={() => starsInputRef.current?.click()}
-                        className="w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 transition-all"
+                        className="group w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-orange-500/10 border-2 border-dashed border-cosmic-600 hover:border-orange-500/50 transition-all"
                         variant="outline"
                         disabled={processing}
                       >
                         <div className="flex flex-col items-center gap-2">
-                          <Upload className="w-5 h-5 text-cosmic-400" />
-                          <span className="text-sm text-cosmic-300">
-                            {starsImage ? starsImage.name : t('Click to upload stars', '点击上传星点图像')}
+                          <Upload className="w-5 h-5 text-cosmic-400 group-hover:text-orange-400 transition-colors" />
+                          <span className="text-sm text-cosmic-300 group-hover:hidden">
+                            {t('Click to upload', '点击上传')}
+                          </span>
+                          <span className="text-sm text-orange-400 hidden group-hover:block">
+                            {t('Stars Only', '纯星图像')}
                           </span>
                         </div>
                       </Button>
@@ -760,7 +728,45 @@ const StereoscopeProcessor: React.FC = () => {
                           <img
                             src={starsPreview}
                             alt="Stars Preview"
-                            className="w-full h-32 object-cover rounded-lg border border-cosmic-700"
+                            className="w-full h-32 object-cover rounded-lg border border-cosmic-700 hover:border-orange-500/50 transition-all"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-cosmic-200">{t('Starless Image', '无星图像')}</Label>
+                      <Button
+                        onClick={() => starlessInputRef.current?.click()}
+                        className="group w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-purple-500/10 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 transition-all"
+                        variant="outline"
+                        disabled={processing}
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <Upload className="w-5 h-5 text-cosmic-400 group-hover:text-purple-400 transition-colors" />
+                          <span className="text-sm text-cosmic-300 group-hover:hidden">
+                            {t('Click to upload', '点击上传')}
+                          </span>
+                          <span className="text-sm text-purple-400 hidden group-hover:block">
+                            {t('Starless', '无星图像')}
+                          </span>
+                        </div>
+                      </Button>
+                      
+                      <input
+                        ref={starlessInputRef}
+                        type="file"
+                        accept="image/*,.tiff,.tif,.cr2,.nef,.arw,.dng,.raw,.orf,.rw2,.pef"
+                        onChange={handleStarlessImageSelect}
+                        className="hidden"
+                      />
+
+                      {starlessPreview && (
+                        <div className="mt-2">
+                          <img
+                            src={starlessPreview}
+                            alt="Starless Preview"
+                            className="w-full h-32 object-cover rounded-lg border border-cosmic-700 hover:border-purple-500/50 transition-all"
                           />
                         </div>
                       )}
@@ -879,7 +885,7 @@ const StereoscopeProcessor: React.FC = () => {
                       ) : (
                         <Layers className="h-4 w-4 mr-2" />
                       )}
-                      {processing ? t('Processing...', '处理中...') : t('Generate Traditional Stereo Pair', '生成传统立体对')}
+                      {processing ? t('Processing...', '处理中...') : t('Generate', '生成')}
                     </Button>
                   </div>
                 </CardContent>

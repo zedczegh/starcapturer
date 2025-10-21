@@ -776,6 +776,50 @@ const ParallelVideoGenerator: React.FC = () => {
             {/* Image Uploads */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label className="text-orange-400 font-semibold flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  {t('Stars Only Image', '仅星图像')}
+                </Label>
+                <input
+                  ref={starsInputRef}
+                  type="file"
+                  accept="image/*,.tif,.tiff"
+                  onChange={handleStarsUpload}
+                  className="hidden"
+                />
+                
+                {uploadProgress.stars.show && (
+                  <UploadProgress 
+                    show={true}
+                    progress={uploadProgress.stars.progress}
+                    fileName={uploadProgress.stars.fileName}
+                  />
+                )}
+                
+                <Button
+                  onClick={() => starsInputRef.current?.click()}
+                  className="group w-full h-24 bg-cosmic-800/50 hover:bg-orange-500/10 border-2 border-dashed border-cosmic-600 hover:border-orange-500/50 transition-all"
+                  variant="outline"
+                  disabled={uploadProgress.stars.show}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="w-6 h-6 text-cosmic-400 group-hover:text-orange-400 transition-colors" />
+                    <span className="text-sm text-cosmic-300 group-hover:hidden">
+                      {t('Click to upload', '点击上传')}
+                    </span>
+                    <span className="text-sm text-orange-400 hidden group-hover:block">
+                      {t('Stars Only', '仅星图像')}
+                    </span>
+                    {starsElement && (
+                      <span className="text-xs text-cosmic-500">
+                        {starsElement.width} × {starsElement.height}
+                      </span>
+                    )}
+                  </div>
+                </Button>
+              </div>
+
+              <div className="space-y-2">
                 <Label className="text-cosmic-200 flex items-center gap-2">
                   <Eye className="w-4 h-4" />
                   {t('Starless Image (Background)', '无星图像（背景）')}
@@ -798,59 +842,21 @@ const ParallelVideoGenerator: React.FC = () => {
                 
                 <Button
                   onClick={() => starlessInputRef.current?.click()}
-                  className="w-full h-24 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 transition-all"
+                  className="group w-full h-24 bg-cosmic-800/50 hover:bg-purple-500/10 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 transition-all"
                   variant="outline"
                   disabled={uploadProgress.starless.show}
                 >
                   <div className="flex flex-col items-center gap-2">
-                    <Upload className="w-6 h-6 text-cosmic-400" />
-                    <span className="text-sm text-cosmic-300">
-                      {starlessFile ? starlessFile.name : t('Click to upload starless', '点击上传无星图像')}
+                    <Upload className="w-6 h-6 text-cosmic-400 group-hover:text-purple-400 transition-colors" />
+                    <span className="text-sm text-cosmic-300 group-hover:hidden">
+                      {t('Click to upload', '点击上传')}
+                    </span>
+                    <span className="text-sm text-purple-400 hidden group-hover:block">
+                      {t('Starless', '无星图像')}
                     </span>
                     {starlessElement && (
                       <span className="text-xs text-cosmic-500">
                         {starlessElement.width} × {starlessElement.height}
-                      </span>
-                    )}
-                  </div>
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-cosmic-200 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  {t('Stars Only Image', '仅星图像')}
-                </Label>
-                <input
-                  ref={starsInputRef}
-                  type="file"
-                  accept="image/*,.tif,.tiff"
-                  onChange={handleStarsUpload}
-                  className="hidden"
-                />
-                
-                {uploadProgress.stars.show && (
-                  <UploadProgress 
-                    show={true}
-                    progress={uploadProgress.stars.progress}
-                    fileName={uploadProgress.stars.fileName}
-                  />
-                )}
-                
-                <Button
-                  onClick={() => starsInputRef.current?.click()}
-                  className="w-full h-24 bg-cosmic-800/50 hover:bg-cosmic-700/50 border-2 border-dashed border-cosmic-600 hover:border-amber-500/50 transition-all"
-                  variant="outline"
-                  disabled={uploadProgress.stars.show}
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload className="w-6 h-6 text-cosmic-400" />
-                    <span className="text-sm text-cosmic-300">
-                      {starsFile ? starsFile.name : t('Click to upload stars', '点击上传仅星图像')}
-                    </span>
-                    {starsElement && (
-                      <span className="text-xs text-cosmic-500">
-                        {starsElement.width} × {starsElement.height}
                       </span>
                     )}
                   </div>
