@@ -33,9 +33,6 @@ interface StarField3DProps {
   frameRenderTrigger?: number; // Trigger value that changes to force frame render
   externalProgress?: number; // External progress value to detect replay
   depthIntensity?: number; // 0-200 scale for parallax intensity
-  // Stereoscopic displacement parameters to respect depth from Traditional Morph
-  horizontalDisplace?: number; // Displacement amount from stereoscope processor (typically 25)
-  starShiftAmount?: number; // Star shift amount from stereoscope processor (typically 6)
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -52,9 +49,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   videoProgressRef,
   frameRenderTrigger,
   externalProgress,
-  depthIntensity = 100,
-  horizontalDisplace = 25,
-  starShiftAmount = 6
+  depthIntensity = 100
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -592,7 +587,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // This matches preview performance and prevents frame drops with 10k+ stars
     ctx.imageSmoothingEnabled = false;
     
-    // Calculate zoom/pan with ENHANCED parallax that respects stereoscopic displacement
+    // Calculate zoom/pan with DRAMATIC parallax differences for 3D depth
     const progressRatio = progress / 100;
     
     // Check if we can skip recalculation (performance optimization)
@@ -603,12 +598,6 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // Calculate rotation angle based on progress, spin setting, and direction
     const rotationMultiplier = spinDirection === 'counterclockwise' ? -1 : 1;
     const currentRotation = (spin * progressRatio * Math.PI * rotationMultiplier) / 180; // Convert to radians
-    
-    // IMPROVED: Calculate parallax multipliers based on stereoscopic displacement
-    // This ensures the 3D motion respects the depth calculated by the stereoscope processor
-    // Background moves according to horizontalDisplace, stars move opposite by starShiftAmount
-    const displacementRatio = horizontalDisplace > 0 ? starShiftAmount / horizontalDisplace : 0.24;
-    const baseParallaxScale = depthIntensity / 100;
     
     // Calculate scale needed to fill frame when rotated (optimized)
     const rotationScale = spin > 0 ? 1 + (Math.abs(Math.sin(currentRotation)) * 0.414) : 1;
@@ -622,25 +611,18 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // Depth values represent distance from viewer (higher = farther away)
     const intensityFactor = depthIntensity / 50; // 0-4 range (100% = 2.0, 200% = 4.0)
     
-    // IMPROVED: Define realistic depth values calibrated to stereoscopic displacement
-    // The displacement ratio from Traditional Morph defines the relative depth:
-    // - Background displacement: horizontalDisplace (typically 25px)
-    // - Star displacement: starShiftAmount (typically 6px) in opposite direction
-    // This creates a depth ratio that we use to calibrate our layers
-    
-    // Calculate depth scaling based on actual stereoscopic displacement
-    const stereoDepthScale = 1.0 / (displacementRatio + 0.01); // Avoid division by zero
-    
-    // Define realistic depth values for each layer based on stereoscopic calibration
-    // Using exponential scale calibrated to match traditional morph displacement
+    // Define realistic depth values for each layer based on astronomical distances
+    // Using exponential scale to represent vast cosmic distances
+    // Layer 1 (largest stars): closest at relative depth 1.0
+    // Background nebula: furthest at relative depth ~100
     const depthValues = {
-      layer1: 1.0 * (1.0 - displacementRatio * 0.7),      // Closest - bright stars (shifted forward)
-      layer2: 2.0 * (1.0 - displacementRatio * 0.5),      // 2x distance
-      layer3: 4.5 * (1.0 - displacementRatio * 0.3),      // ~4.5x distance
-      layer4: 10 * (1.0 - displacementRatio * 0.1),       // 10x distance
-      layer5: 25 * (1.0 + displacementRatio * 0.2),       // 25x distance - distant stars
-      layer6: 60 * (1.0 + displacementRatio * 0.4),       // 60x distance - very distant
-      background: 100 * stereoDepthScale                  // Furthest - respects horizontalDisplace
+      layer1: 1.0,      // Closest - foreground stars
+      layer2: 2.0,      // 2x distance
+      layer3: 4.5,      // ~4.5x distance
+      layer4: 10,       // 10x distance
+      layer5: 25,       // 25x distance
+      layer6: 60,       // 60x distance - distant stars
+      background: 100   // 100x distance - nebula background
     };
     
     // Calculate velocity multipliers using perspective projection: v = 1/depth

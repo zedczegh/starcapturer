@@ -1202,6 +1202,8 @@ const ParallelVideoGenerator: React.FC = () => {
                       backgroundImage={leftBackground}
                       starsOnlyImage={leftStarsOnly}
                       depthIntensity={depthIntensity}
+                      horizontalDisplace={horizontalDisplace}
+                      starShiftAmount={starShiftAmount}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
                       onProgressUpdate={handleProgressUpdate}
@@ -1224,6 +1226,8 @@ const ParallelVideoGenerator: React.FC = () => {
                       backgroundImage={rightBackground}
                       starsOnlyImage={rightStarsOnly}
                       depthIntensity={depthIntensity}
+                      horizontalDisplace={horizontalDisplace}
+                      starShiftAmount={starShiftAmount}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
                       onProgressUpdate={handleProgressUpdate}
