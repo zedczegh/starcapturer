@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Video, Sparkles, Eye, Settings2 } from 'lucide-react';
+import { Upload, Video, Sparkles, Eye, Settings2, Download } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { TraditionalMorphService, TraditionalMorphParams } from '@/services/TraditionalMorphService';
 import { VideoGenerationService, MotionSettings } from '@/services/VideoGenerationService';
@@ -51,6 +51,25 @@ const ParallelVideoGenerator: React.FC = () => {
   // Debug: Show intermediate composites
   const [leftComposite, setLeftComposite] = useState<string | null>(null);
   const [rightComposite, setRightComposite] = useState<string | null>(null);
+  const [luminanceMapUrl, setLuminanceMapUrl] = useState<string | null>(null);
+  const [depthMapUrl, setDepthMapUrl] = useState<string | null>(null);
+  
+  // Store canvases for TIFF download
+  const [processedCanvases, setProcessedCanvases] = useState<{
+    leftBackground: HTMLCanvasElement | null;
+    rightBackground: HTMLCanvasElement | null;
+    leftStars: HTMLCanvasElement | null;
+    rightStars: HTMLCanvasElement | null;
+    depthMap: HTMLCanvasElement | null;
+    luminanceMap: HTMLCanvasElement | null;
+  }>({
+    leftBackground: null,
+    rightBackground: null,
+    leftStars: null,
+    rightStars: null,
+    depthMap: null,
+    luminanceMap: null
+  });
 
   // Detected stars for 3D rendering
   const [leftStars, setLeftStars] = useState<StarData[]>([]);
@@ -361,16 +380,18 @@ const ParallelVideoGenerator: React.FC = () => {
         stars: { width: starsElement.width, height: starsElement.height }
       });
 
-      // Use Traditional Morph Service to create stereo pair
-      // This creates proper composites with stars repositioned exactly like in Stereoscope Processor
-      setProcessingStep(t('Creating stereoscopic pair...', '创建立体对...'));
+      // Use Traditional Morph Service to create SEPARATED stereo pair
+      // This creates proper stereo layers with stars repositioned exactly like in Stereoscope Processor
+      setProcessingStep(t('Creating stereoscopic pair with traditional morph...', '使用传统变形创建立体对...'));
       
-      const result = await TraditionalMorphService.createStereoPair(
+      const separatedResult = await TraditionalMorphService.createSeparatedStereoPair(
         starlessFile!,
         starsFile!,
         {
           horizontalDisplace: horizontalDisplace,
           starShiftAmount: starShiftAmount,
+          luminanceBlur: 1.5,
+          contrastBoost: 1.2,
           stereoSpacing: 0,
           borderSize: 0
         },
@@ -380,27 +401,48 @@ const ParallelVideoGenerator: React.FC = () => {
         }
       );
       
-      console.log('✓ Stereo composites created using Traditional Morph logic');
+      console.log('✓ Separated stereo layers created using Traditional Morph logic');
       
-      // These are complete composites (starless + repositioned stars already blended)
-      const leftComposite = result.leftComposite;
-      const rightComposite = result.rightComposite;
+      // Store processed canvases for TIFF download
+      setProcessedCanvases({
+        leftBackground: separatedResult.leftBackground,
+        rightBackground: separatedResult.rightBackground,
+        leftStars: separatedResult.leftStars,
+        rightStars: separatedResult.rightStars,
+        depthMap: separatedResult.depthMap,
+        luminanceMap: separatedResult.luminanceMap
+      });
       
-      setLeftComposite(leftComposite.toDataURL());
-      setRightComposite(rightComposite.toDataURL());
+      // Set debug URLs
+      setLuminanceMapUrl(separatedResult.luminanceMap.toDataURL());
+      setDepthMapUrl(separatedResult.depthMap.toDataURL());
+      
+      // Composite the layers for display and composites
+      const canvasPool = CanvasPool.getInstance();
+      const leftCompositeCanvas = canvasPool.acquire(separatedResult.leftBackground.width, separatedResult.leftBackground.height);
+      const leftCompositeCtx = leftCompositeCanvas.getContext('2d')!;
+      leftCompositeCtx.drawImage(separatedResult.leftBackground, 0, 0);
+      leftCompositeCtx.drawImage(separatedResult.leftStars, 0, 0);
+      
+      const rightCompositeCanvas = canvasPool.acquire(separatedResult.rightBackground.width, separatedResult.rightBackground.height);
+      const rightCompositeCtx = rightCompositeCanvas.getContext('2d')!;
+      rightCompositeCtx.drawImage(separatedResult.rightBackground, 0, 0);
+      rightCompositeCtx.drawImage(separatedResult.rightStars, 0, 0);
+      
+      setLeftComposite(leftCompositeCanvas.toDataURL());
+      setRightComposite(rightCompositeCanvas.toDataURL());
       
       // Step 2: Detect stars from ORIGINAL stars image for 3D rendering
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
       
-      const canvasPool = CanvasPool.getInstance();
       const starsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
       const starsCtx = starsCanvas.getContext('2d')!;
       starsCtx.drawImage(starsElement, 0, 0);
       
       const stars: StarData[] = [];
       const starsImageData = starsCtx.getImageData(0, 0, starsCanvas.width, starsCanvas.height);
-      const depthCtx = result.depthMap.getContext('2d')!;
-      const depthData = depthCtx.getImageData(0, 0, result.depthMap.width, result.depthMap.height);
+      const depthCtx = separatedResult.depthMap.getContext('2d')!;
+      const depthData = depthCtx.getImageData(0, 0, separatedResult.depthMap.width, separatedResult.depthMap.height);
       
       const threshold = 50;
       const centerX = starsCanvas.width / 2;
@@ -415,7 +457,7 @@ const ParallelVideoGenerator: React.FC = () => {
                            0.114 * starsImageData.data[pixelIdx + 2];
           
           if (luminance > threshold) {
-            const depthIdx = (Math.floor(y) * result.depthMap.width + Math.floor(x)) * 4;
+            const depthIdx = (Math.floor(y) * separatedResult.depthMap.width + Math.floor(x)) * 4;
             const depth = depthData.data[depthIdx] / 255;
             
             stars.push({
@@ -433,21 +475,24 @@ const ParallelVideoGenerator: React.FC = () => {
       console.log(`✓ Detected ${stars.length} stars for 3D rendering`);
       canvasPool.release(starsCanvas);
 
-      // Step 3: Use composites directly - they have the proper star positioning
-      // For display purposes, show original starless and stars (actual stereo is in composites)
-      setLeftBackground(starlessElement.src);
-      setLeftStarsOnly(starsElement.src);
+      // Step 3: Use separated layers for video generation
+      // The separated result contains properly displaced backgrounds and repositioned stars
+      setLeftBackground(separatedResult.leftBackground.toDataURL());
+      setLeftStarsOnly(separatedResult.leftStars.toDataURL());
       setLeftStars(stars);
       
-      setRightBackground(starlessElement.src);
-      setRightStarsOnly(starsElement.src);
+      setRightBackground(separatedResult.rightBackground.toDataURL());
+      setRightStarsOnly(separatedResult.rightStars.toDataURL());
       setRightStars(stars);
       
       // Store the COMPOSITES for video generation (these have proper stereo displacement)
-      leftCanvasRef.current = leftComposite;
-      rightCanvasRef.current = rightComposite;
+      leftCanvasRef.current = leftCompositeCanvas;
+      rightCanvasRef.current = rightCompositeCanvas;
       
-      console.log('✓ Using Traditional Morph composites for video generation');
+      canvasPool.release(leftCompositeCanvas);
+      canvasPool.release(rightCompositeCanvas);
+      
+      console.log('✓ Using Traditional Morph separated layers with proper displacement for video generation');
 
       setIsReady(true);
       setProgress(100);
@@ -716,6 +761,37 @@ const ParallelVideoGenerator: React.FC = () => {
       }, 2000);
     }
   }, [leftCanvasRef, rightCanvasRef, stitchedCanvasRef, motionSettings, stereoSpacing, borderSize, t]);
+
+  // TIFF download helper
+  const downloadCanvasAsTiff = useCallback((canvas: HTMLCanvasElement, filename: string) => {
+    try {
+      const ctx = canvas.getContext('2d')!;
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // Convert to PNG as base64 (browsers don't natively support TIFF encoding)
+      // For true TIFF, would need external library, but PNG is lossless
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = filename.replace('.tiff', '.png');
+      link.click();
+      
+      toast.success(t('Image downloaded as PNG (lossless)', '图像已下载为PNG（无损）'));
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error(t('Failed to download image', '下载图像失败'));
+    }
+  }, [t]);
+
+  const handleDownloadProcessedImage = useCallback((type: 'leftBackground' | 'rightBackground' | 'leftStars' | 'rightStars' | 'depthMap' | 'luminanceMap') => {
+    const canvas = processedCanvases[type];
+    if (!canvas) {
+      toast.error(t('Image not available', '图像不可用'));
+      return;
+    }
+    
+    const filename = `parallel-video-${type}-${Date.now()}.png`;
+    downloadCanvasAsTiff(canvas, filename);
+  }, [processedCanvases, downloadCanvasAsTiff, t]);
 
   return (
     <div className="space-y-8">
@@ -1031,7 +1107,119 @@ const ParallelVideoGenerator: React.FC = () => {
                   )}
                 </div>
                 
-                {/* Depth map display removed per user request */}
+                {/* Depth Maps Section */}
+                <Separator className="my-6 bg-cosmic-700/30" />
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-purple-400" />
+                    {t('Depth & Luminance Maps', '深度和亮度图')}
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {luminanceMapUrl && (
+                      <Card className="bg-cosmic-800/30 border-cosmic-700/50">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-base text-purple-300">
+                              {t('Luminance Map', '亮度图')}
+                            </CardTitle>
+                            <Button 
+                              onClick={() => handleDownloadProcessedImage('luminanceMap')} 
+                              variant="outline" 
+                              size="sm"
+                              className="h-8 text-xs"
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              {t('Download', '下载')}
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <img 
+                            src={luminanceMapUrl} 
+                            alt="Luminance Map" 
+                            className="w-full rounded border border-cosmic-600" 
+                          />
+                          <p className="text-xs text-cosmic-400 mt-2">
+                            {t('Used for depth-based displacement calculation', '用于基于深度的位移计算')}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                    
+                    {depthMapUrl && (
+                      <Card className="bg-cosmic-800/30 border-cosmic-700/50">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-base text-purple-300">
+                              {t('Combined Depth Map', '组合深度图')}
+                            </CardTitle>
+                            <Button 
+                              onClick={() => handleDownloadProcessedImage('depthMap')} 
+                              variant="outline" 
+                              size="sm"
+                              className="h-8 text-xs"
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              {t('Download', '下载')}
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <img 
+                            src={depthMapUrl} 
+                            alt="Depth Map" 
+                            className="w-full rounded border border-cosmic-600" 
+                          />
+                          <p className="text-xs text-cosmic-400 mt-2">
+                            {t('Combined depth information for 3D positioning', '用于3D定位的组合深度信息')}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                  
+                  {/* Quick Download All Button */}
+                  <div className="flex gap-2 flex-wrap">
+                    <Button 
+                      onClick={() => handleDownloadProcessedImage('leftBackground')} 
+                      variant="outline" 
+                      size="sm"
+                      disabled={!processedCanvases.leftBackground}
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      {t('Left BG', '左背景')}
+                    </Button>
+                    <Button 
+                      onClick={() => handleDownloadProcessedImage('rightBackground')} 
+                      variant="outline" 
+                      size="sm"
+                      disabled={!processedCanvases.rightBackground}
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      {t('Right BG', '右背景')}
+                    </Button>
+                    <Button 
+                      onClick={() => handleDownloadProcessedImage('leftStars')} 
+                      variant="outline" 
+                      size="sm"
+                      disabled={!processedCanvases.leftStars}
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      {t('Left Stars', '左星点')}
+                    </Button>
+                    <Button 
+                      onClick={() => handleDownloadProcessedImage('rightStars')} 
+                      variant="outline" 
+                      size="sm"
+                      disabled={!processedCanvases.rightStars}
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      {t('Right Stars', '右星点')}
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
