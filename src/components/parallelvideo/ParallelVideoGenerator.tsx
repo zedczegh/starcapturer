@@ -504,14 +504,16 @@ const ParallelVideoGenerator: React.FC = () => {
       canvasPool.release(starsCanvas);
 
       // Step 3: Use same stars for both eyes (3D effect comes from motion parallax)
+      console.log('Setting stars for left and right views...');
       setLeftStars(stars);
       setRightStars(stars);
       
-      // Store the COMPOSITES for video generation (these have proper stereo displacement)
-      leftCanvasRef.current = leftComposite;
-      rightCanvasRef.current = rightComposite;
-      
-      console.log('✓ Using Traditional Morph composites for video generation');
+      console.log('✓ Prepared separated layers for 3D rendering');
+      console.log(`Stars detected: ${stars.length}, waiting for StarField3D components to initialize...`);
+      console.log('Left background:', leftBackground ? 'SET' : 'NULL');
+      console.log('Right background:', rightBackground ? 'SET' : 'NULL');
+      console.log('Left stars only:', leftStarsOnly ? 'SET' : 'NULL');
+      console.log('Right stars only:', rightStarsOnly ? 'SET' : 'NULL');
 
       setIsReady(true);
       setProgress(100);
@@ -1366,7 +1368,7 @@ const ParallelVideoGenerator: React.FC = () => {
 
                 {/* Hidden Left View - for rendering only (must be rendered, not display:none) */}
                 <div style={{ position: 'absolute', left: '-9999px', top: '0' }}>
-                  {leftStars.length > 0 && (
+                  {leftStars.length > 0 && leftBackground && leftStarsOnly ? (
                     <StarField3D
                       stars={leftStars}
                       settings={motionSettings}
@@ -1382,15 +1384,17 @@ const ParallelVideoGenerator: React.FC = () => {
                       onProgressUpdate={handleProgressUpdate}
                       onCanvasReady={(canvas) => { 
                         leftCanvasRef.current = canvas;
-                        console.log('Left canvas ready');
+                        console.log('✅ Left canvas ready for stitching');
                       }}
                     />
+                  ) : (
+                    <div>Left view waiting: stars={leftStars.length}, bg={leftBackground ? 'yes' : 'no'}, starsOnly={leftStarsOnly ? 'yes' : 'no'}</div>
                   )}
                 </div>
 
                 {/* Hidden Right View - for rendering only (must be rendered, not display:none) */}
                 <div style={{ position: 'absolute', left: '-9999px', top: '0' }}>
-                  {rightStars.length > 0 && (
+                  {rightStars.length > 0 && rightBackground && rightStarsOnly ? (
                     <StarField3D
                       stars={rightStars}
                       settings={motionSettings}
@@ -1406,9 +1410,11 @@ const ParallelVideoGenerator: React.FC = () => {
                       onProgressUpdate={handleProgressUpdate}
                       onCanvasReady={(canvas) => { 
                         rightCanvasRef.current = canvas;
-                        console.log('Right canvas ready');
+                        console.log('✅ Right canvas ready for stitching');
                       }}
                     />
+                  ) : (
+                    <div>Right view waiting: stars={rightStars.length}, bg={rightBackground ? 'yes' : 'no'}, starsOnly={rightStarsOnly ? 'yes' : 'no'}</div>
                   )}
                 </div>
 
