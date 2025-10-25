@@ -161,7 +161,13 @@ export class TraditionalMorphService {
       rightStarsCtx.drawImage(starsImg, initialLeftShift, 0);
 
       // Reposition bright stars forward
-      const starPatterns = processor.detectStarPatterns(starsImg, null);
+      // Provide default profile to avoid null reference errors
+      const defaultProfile = {
+        spikeDetectionSensitivity: 0.8,
+        chunkSize: 128,
+        maxStarsToProcess: 10000
+      };
+      const starPatterns = processor.detectStarPatterns(starsImg, defaultProfile);
       const brightStars = starPatterns.filter(star => star.brightness / 255 > 0.35).slice(0, 15);
 
       for (const star of brightStars) {

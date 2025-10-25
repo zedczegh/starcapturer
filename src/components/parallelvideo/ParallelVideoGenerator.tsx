@@ -516,13 +516,10 @@ const ParallelVideoGenerator: React.FC = () => {
       setIsReady(true);
       setProgress(100);
       setProcessingStep(t('Complete!', '完成！'));
-      toast.success(t('Processing complete! Starting preview...', '处理完成！启动预览...'));
+      toast.success(t('Processing complete! Click play to preview.', '处理完成！点击播放预览。'));
 
-      // Auto-start animation
-      setTimeout(() => {
-        setIsAnimating(true);
-        setProcessingStep('');
-      }, 1000);
+      // Don't auto-start animation - let user control when to play
+      setProcessingStep('');
 
     } catch (error) {
       console.error('Processing error:', error);
