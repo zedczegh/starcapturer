@@ -12,6 +12,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 import { NobelPrizeStereoscopeEngine } from '@/lib/advanced/NobelPrizeStereoscopeEngine';
+import { AstrophysicsService, type AstrophysicsParams } from '@/services/AstrophysicsService';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 // @ts-ignore
 import * as UTIF from 'utif';
 
@@ -36,7 +39,7 @@ const StereoscopeProcessor: React.FC = () => {
   const { t } = useLanguage();
   
   // Mode selection
-  const [processingMode, setProcessingMode] = useState<'fast' | 'traditional'>('fast');
+  const [processingMode, setProcessingMode] = useState<'fast' | 'traditional' | 'astrophysics'>('fast');
   
   // Fast mode states
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -87,6 +90,15 @@ const StereoscopeProcessor: React.FC = () => {
     starShiftAmount: 6, // Increased for more dramatic star 3D effect
     luminanceBlur: 1.5,
     contrastBoost: 1.2
+  });
+
+  // Astrophysics mode states
+  const [astrophysicsObjectName, setAstrophysicsObjectName] = useState<string>('');
+  const [astrophysicsParams, setAstrophysicsParams] = useState<AstrophysicsParams>({
+    baseline: 1.0,
+    fovDeg: 1.0,
+    scaleFactor: 1000,
+    radius: 0.5,
   });
 
   const validateImageFile = (file: File): boolean => {
@@ -486,8 +498,10 @@ const StereoscopeProcessor: React.FC = () => {
   const processImage = async () => {
     if (processingMode === 'fast') {
       await processFastMode();
-    } else {
+    } else if (processingMode === 'traditional') {
       await processTraditionalMode();
+    } else {
+      await processAstrophysicsMode();
     }
   };
 
@@ -509,6 +523,143 @@ const StereoscopeProcessor: React.FC = () => {
     link.click();
   };
 
+  const processAstrophysicsMode = async () => {
+    if (!starlessImage || !starsImage) {
+      toast.error(t('Please upload both starless and stars images', '请上传无星和恒星图像'));
+      return;
+    }
+
+    if (!astrophysicsObjectName && !astrophysicsParams.ra && !astrophysicsParams.dec) {
+      toast.error(t('Please enter an object name or RA/Dec coordinates', '请输入对象名称或RA/Dec坐标'));
+      return;
+    }
+
+    setProcessing(true);
+    setProgress(0);
+
+    try {
+      setProgressText(t('Starting astrophysics mode...', '开始天体物理模式...'));
+      setProgress(5);
+
+      // Detect stars in the stars-only image first
+      const starsUrl = URL.createObjectURL(starsImage);
+      const starsImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = starsUrl;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = starsImg.width;
+      canvas.height = starsImg.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(starsImg, 0, 0);
+
+      URL.revokeObjectURL(starsUrl);
+
+      setProgressText(t('Detecting stars in image...', '检测图像中的恒星...'));
+      setProgress(15);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const starMask = detectStars(imageData.data, canvas.width, canvas.height, params.starThreshold);
+
+      // Convert star mask to detected stars array
+      const detectedStars: any[] = [];
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const idx = (y * canvas.width + x);
+          if (starMask[idx] > 128) {
+            // Find local maximum
+            let isMax = true;
+            let flux = 0;
+            for (let dy = -2; dy <= 2; dy++) {
+              for (let dx = -2; dx <= 2; dx++) {
+                const checkIdx = ((y + dy) * canvas.width + (x + dx));
+                if (checkIdx >= 0 && checkIdx < starMask.length) {
+                  const checkVal = starMask[checkIdx];
+                  if (checkVal > starMask[idx]) {
+                    isMax = false;
+                  }
+                  flux += checkVal;
+                }
+              }
+            }
+            if (isMax && flux > 0) {
+              detectedStars.push({ x, y, flux, radius: 2 });
+            }
+          }
+        }
+      }
+
+      setProgressText(t(`Detected ${detectedStars.length} stars`, `检测到 ${detectedStars.length} 颗恒星`));
+      setProgress(25);
+
+      // Create astrophysics stereo pair
+      const params_with_name = {
+        ...astrophysicsParams,
+        objectName: astrophysicsObjectName || undefined,
+      };
+
+      const { leftCanvas, rightCanvas, gaiaData } = await AstrophysicsService.createAstrophysicsStereoPair(
+        starlessImage,
+        starsImage,
+        detectedStars,
+        params_with_name,
+        (step, prog) => {
+          setProgressText(step);
+          if (prog) setProgress(Math.min(prog, 95));
+        }
+      );
+
+      setProgressText(t('Creating final stereo pair...', '创建最终立体对...'));
+      setProgress(96);
+
+      // Create final composite with spacing and borders
+      const finalCanvas = document.createElement('canvas');
+      const finalCtx = finalCanvas.getContext('2d')!;
+
+      if (borderSize > 0) {
+        const totalWidth = leftCanvas.width * 2 + stereoSpacing + (borderSize * 2);
+        const totalHeight = leftCanvas.height + (borderSize * 2);
+        
+        finalCanvas.width = totalWidth;
+        finalCanvas.height = totalHeight;
+
+        finalCtx.fillStyle = '#000000';
+        finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+        finalCtx.drawImage(leftCanvas, borderSize, borderSize);
+        finalCtx.drawImage(rightCanvas, borderSize + leftCanvas.width + stereoSpacing, borderSize);
+      } else {
+        finalCanvas.width = leftCanvas.width * 2 + stereoSpacing;
+        finalCanvas.height = leftCanvas.height;
+
+        finalCtx.fillStyle = '#000000';
+        finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+        finalCtx.drawImage(leftCanvas, 0, 0);
+        finalCtx.drawImage(rightCanvas, leftCanvas.width + stereoSpacing, 0);
+      }
+
+      setResultUrl(finalCanvas.toDataURL('image/png'));
+      setProgress(100);
+      setProgressText(t(`Astrophysics processing complete! Matched ${gaiaData.count} Gaia stars`, `天体物理处理完成！匹配了 ${gaiaData.count} 颗Gaia恒星`));
+
+      toast.success(t('Astrophysics stereo pair generated successfully', '天体物理立体对生成成功'));
+    } catch (error) {
+      console.error('Error in astrophysics mode:', error);
+      setProgressText(t('Error processing in astrophysics mode', '天体物理模式处理时出错'));
+      toast.error(error instanceof Error ? error.message : t('Failed to process', '处理失败'));
+    } finally {
+      setProcessing(false);
+      setTimeout(() => {
+        setProgress(0);
+        setProgressText('');
+      }, 3000);
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -526,8 +677,8 @@ const StereoscopeProcessor: React.FC = () => {
 
       {/* Processing Mode Tabs */}
       <div className="flex justify-center">
-        <Tabs value={processingMode} onValueChange={(value) => setProcessingMode(value as 'fast' | 'traditional')} className="w-full max-w-2xl">
-          <TabsList className="grid w-full grid-cols-2 bg-cosmic-900/50 border border-cosmic-700/50">
+        <Tabs value={processingMode} onValueChange={(value) => setProcessingMode(value as 'fast' | 'traditional' | 'astrophysics')} className="w-full max-w-4xl">
+          <TabsList className="grid w-full grid-cols-3 bg-cosmic-900/50 border border-cosmic-700/50">
             <TabsTrigger value="fast" className="flex items-center gap-2 data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300">
               <Eye className="h-4 w-4" />
               {t('Fast Mode', '快速模式')}
@@ -535,6 +686,10 @@ const StereoscopeProcessor: React.FC = () => {
             <TabsTrigger value="traditional" className="flex items-center gap-2 data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300">
               <Layers className="h-4 w-4" />
               {t('Traditional Morph Mode', '传统变形模式')}
+            </TabsTrigger>
+            <TabsTrigger value="astrophysics" className="flex items-center gap-2 data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-300">
+              <Settings2 className="h-4 w-4" />
+              {t('Astrophysics Mode', '天体物理模式')}
             </TabsTrigger>
           </TabsList>
           
@@ -886,6 +1041,230 @@ const StereoscopeProcessor: React.FC = () => {
                         <Layers className="h-4 w-4 mr-2" />
                       )}
                       {processing ? t('Processing...', '处理中...') : t('Generate', '生成')}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="astrophysics" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center border border-purple-500/30">
+                      <Layers className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl text-white">
+                        {t('Starless & Stars Images', '无星和恒星图像')}
+                      </CardTitle>
+                      <CardDescription className="text-cosmic-300">
+                        {t('Upload separate images for Gaia-based precise depth mapping.', '上传分离的图像进行基于Gaia的精确深度映射。')}
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium text-orange-400">{t('Stars-Only Image', '纯星图像')}</Label>
+                      <Button
+                        onClick={() => starsInputRef.current?.click()}
+                        className="group w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-orange-500/10 border-2 border-dashed border-cosmic-600 hover:border-orange-500/50 transition-all"
+                        variant="outline"
+                        disabled={processing}
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <Upload className="w-5 h-5 text-cosmic-400 group-hover:text-orange-400 transition-colors" />
+                          <span className="text-sm text-cosmic-300">
+                            {starsImage ? starsImage.name : t('Click to upload', '点击上传')}
+                          </span>
+                        </div>
+                      </Button>
+
+                      {starsPreview && (
+                        <div className="mt-2">
+                          <img
+                            src={starsPreview}
+                            alt="Stars Preview"
+                            className="w-full h-32 object-cover rounded-lg border border-cosmic-700 hover:border-orange-500/50 transition-all"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium text-cosmic-200">{t('Starless Image', '无星图像')}</Label>
+                      <Button
+                        onClick={() => starlessInputRef.current?.click()}
+                        className="group w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-purple-500/10 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 transition-all"
+                        variant="outline"
+                        disabled={processing}
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <Upload className="w-5 h-5 text-cosmic-400 group-hover:text-purple-400 transition-colors" />
+                          <span className="text-sm text-cosmic-300">
+                            {starlessImage ? starlessImage.name : t('Click to upload', '点击上传')}
+                          </span>
+                        </div>
+                      </Button>
+
+                      {starlessPreview && (
+                        <div className="mt-2">
+                          <img
+                            src={starlessPreview}
+                            alt="Starless Preview"
+                            className="w-full h-32 object-cover rounded-lg border border-cosmic-700 hover:border-purple-500/50 transition-all"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center border border-purple-500/30">
+                      <Settings2 className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl text-white">
+                        {t('Gaia Astrophysics Parameters', 'Gaia天体物理参数')}
+                      </CardTitle>
+                      <CardDescription className="text-cosmic-300">
+                        {t('Precise depth mapping using Gaia DR3 stellar parallax data.', '使用Gaia DR3恒星视差数据进行精确深度映射。')}
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div>
+                      <Label className="flex items-center justify-between mb-2">
+                        <span>{t('Object Name', '对象名称')}</span>
+                      </Label>
+                      <Input
+                        type="text"
+                        placeholder={t('e.g., M31, NGC 7000, Orion Nebula', '例如: M31, NGC 7000, 猎户座星云')}
+                        value={astrophysicsObjectName}
+                        onChange={(e) => setAstrophysicsObjectName(e.target.value)}
+                        className="bg-cosmic-800/50 border-cosmic-600"
+                        disabled={processing}
+                      />
+                      <p className="text-xs text-cosmic-400 mt-1">
+                        {t('Enter deep sky object name for automatic coordinate resolution', '输入深空对象名称以自动解析坐标')}
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label className="flex items-center justify-between">
+                        <span>{t('Field of View', '视场')}</span>
+                        <span className="text-purple-400 font-mono text-lg">({astrophysicsParams.fovDeg}°)</span>
+                      </Label>
+                      <Slider
+                        value={[astrophysicsParams.fovDeg || 1.0]}
+                        onValueChange={([value]) => setAstrophysicsParams({ ...astrophysicsParams, fovDeg: value })}
+                        min={0.1}
+                        max={5.0}
+                        step={0.1}
+                        className="mt-2"
+                      />
+                      <p className="text-xs text-cosmic-400 mt-1">
+                        {t('Field of view in degrees', '视场（度）')}
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label className="flex items-center justify-between">
+                        <span>{t('Stereo Baseline', '立体基线')}</span>
+                        <span className="text-purple-400 font-mono text-lg">({astrophysicsParams.baseline} AU)</span>
+                      </Label>
+                      <Slider
+                        value={[astrophysicsParams.baseline || 1.0]}
+                        onValueChange={([value]) => setAstrophysicsParams({ ...astrophysicsParams, baseline: value })}
+                        min={0.1}
+                        max={10.0}
+                        step={0.1}
+                        className="mt-2"
+                      />
+                      <p className="text-xs text-cosmic-400 mt-1">
+                        {t('Virtual camera separation in Astronomical Units', '虚拟相机间距（天文单位）')}
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label className="flex items-center justify-between">
+                        <span>{t('Depth Scale Factor', '深度缩放因子')}</span>
+                        <span className="text-purple-400 font-mono text-lg">({astrophysicsParams.scaleFactor}x)</span>
+                      </Label>
+                      <Slider
+                        value={[astrophysicsParams.scaleFactor || 1000]}
+                        onValueChange={([value]) => setAstrophysicsParams({ ...astrophysicsParams, scaleFactor: value })}
+                        min={100}
+                        max={5000}
+                        step={100}
+                        className="mt-2"
+                      />
+                      <p className="text-xs text-cosmic-400 mt-1">
+                        {t('Amplification of 3D effect for visual impact', '3D效果放大以获得视觉冲击')}
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label className="flex items-center justify-between">
+                        <span>{t('Stereo Spacing', '立体间距')}</span>
+                        <span className="text-purple-400 font-mono text-lg">({stereoSpacing}px)</span>
+                      </Label>
+                      <Slider
+                        value={[stereoSpacing]}
+                        onValueChange={([value]) => setStereoSpacing(value)}
+                        min={0}
+                        max={600}
+                        step={10}
+                        className="mt-2"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="flex items-center justify-between">
+                        <span>{t('Border Size', '边框大小')}</span>
+                        <span className="text-purple-400 font-mono text-lg">({borderSize}px)</span>
+                      </Label>
+                      <Slider
+                        value={[borderSize]}
+                        onValueChange={([value]) => setBorderSize(value)}
+                        min={0}
+                        max={600}
+                        step={25}
+                        className="mt-2"
+                      />
+                    </div>
+
+                    {processing && (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>{progressText}</span>
+                          <span>{progress}%</span>
+                        </div>
+                        <Progress value={progress} className="w-full" />
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={processImage}
+                      disabled={(!starlessImage || !starsImage) || processing}
+                      className="w-full h-14 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-semibold text-lg shadow-lg shadow-purple-500/20"
+                    >
+                      {processing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Settings2 className="h-4 w-4 mr-2" />
+                      )}
+                      {processing ? t('Processing...', '处理中...') : t('Generate with Gaia', '使用Gaia生成')}
                     </Button>
                   </div>
                 </CardContent>
