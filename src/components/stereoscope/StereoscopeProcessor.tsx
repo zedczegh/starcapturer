@@ -1083,6 +1083,14 @@ const StereoscopeProcessor: React.FC = () => {
                           </span>
                         </div>
                       </Button>
+                      
+                      <input
+                        ref={starsInputRef}
+                        type="file"
+                        accept="image/*,.tiff,.tif,.cr2,.nef,.arw,.dng,.raw,.orf,.rw2,.pef"
+                        onChange={handleStarsImageSelect}
+                        className="hidden"
+                      />
 
                       {starsPreview && (
                         <div className="mt-2">
@@ -1110,6 +1118,14 @@ const StereoscopeProcessor: React.FC = () => {
                           </span>
                         </div>
                       </Button>
+                      
+                      <input
+                        ref={starlessInputRef}
+                        type="file"
+                        accept="image/*,.tiff,.tif,.cr2,.nef,.arw,.dng,.raw,.orf,.rw2,.pef"
+                        onChange={handleStarlessImageSelect}
+                        className="hidden"
+                      />
 
                       {starlessPreview && (
                         <div className="mt-2">
