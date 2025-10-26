@@ -116,7 +116,7 @@ function AppContent() {
       <Route path="/my-wallet" element={<MyWallet />} />
       <Route path="/sonification" element={<SonificationProcessor />} />
       <Route path="/sampling-calculator" element={<SamplingCalculator />} />
-      <Route path="/stereoscope-processor" element={<StereoscopeProcessor />} />
+      <Route path="/stereoscope" element={<StereoscopeProcessor />} />
       <Route path="/star-field-generator" element={<StarFieldGenerator />} />
       <Route path="/astro-math" element={<AstroMath />} />
       <Route path="/parallel-video-generator" element={<ParallelVideoGenerator />} />
