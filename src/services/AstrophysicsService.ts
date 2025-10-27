@@ -51,6 +51,8 @@ export class AstrophysicsService {
    */
   static async queryGaiaStars(params: AstrophysicsParams): Promise<GaiaQueryResult> {
     try {
+      console.log('Querying Gaia with params:', params);
+      
       const { data, error } = await supabase.functions.invoke('query-gaia', {
         body: {
           objectName: params.objectName,
@@ -62,19 +64,33 @@ export class AstrophysicsService {
         },
       });
 
+      console.log('Gaia query response:', { data, error });
+
       if (error) {
         console.error('Gaia query error:', error);
-        throw new Error(`Failed to query Gaia: ${error.message}`);
+        throw new Error(`Failed to query Gaia database: ${error.message || 'Unknown error'}`);
       }
 
-      if (!data || !data.stars) {
-        throw new Error('No star data returned from Gaia');
+      if (!data) {
+        throw new Error('No response from Gaia database. Please check your connection.');
       }
 
+      if (data.error) {
+        throw new Error(`Gaia database error: ${data.error}`);
+      }
+
+      if (!data.stars || data.stars.length === 0) {
+        throw new Error('No stars found in Gaia database for this object/region. Try a different object or check coordinates.');
+      }
+
+      console.log(`Successfully retrieved ${data.stars.length} stars from Gaia`);
       return data as GaiaQueryResult;
     } catch (error) {
       console.error('Error querying Gaia:', error);
-      throw error;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to connect to Gaia database. Please try again.');
     }
   }
 
@@ -221,6 +237,10 @@ export class AstrophysicsService {
     onProgress?: (step: string, progress?: number) => void
   ): Promise<{ leftCanvas: HTMLCanvasElement; rightCanvas: HTMLCanvasElement; gaiaData: GaiaQueryResult }> {
     try {
+      if (!detectedStars || detectedStars.length === 0) {
+        throw new Error('No stars detected in image. Please upload an image with visible stars.');
+      }
+
       onProgress?.('Querying Gaia DR3 database...', 10);
       
       // Query Gaia for stars
@@ -238,7 +258,10 @@ export class AstrophysicsService {
       const img = await new Promise<HTMLImageElement>((resolve, reject) => {
         const image = new Image();
         image.onload = () => resolve(image);
-        image.onerror = reject;
+        image.onerror = (e) => {
+          console.error('Failed to load starless image:', e);
+          reject(new Error('Failed to load starless background image'));
+        };
         image.src = starlessUrl;
       });
 

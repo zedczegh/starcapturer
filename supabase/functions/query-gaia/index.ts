@@ -11,19 +11,23 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Query-gaia function called');
     const { objectName, ra, dec, radius = 0.5, maxMag = 19, minParallax = 0.1 } = await req.json();
+    console.log('Request params:', { objectName, ra, dec, radius, maxMag, minParallax });
 
     // If object name provided, resolve coordinates first
     let raCenter = ra;
     let decCenter = dec;
 
     if (objectName && !ra && !dec) {
+      console.log(`Resolving object name: ${objectName}`);
       // Query Simbad to resolve object name to coordinates
       const simbadUrl = `https://simbad.u-strasbg.fr/simbad/sim-id?output.format=votable&Ident=${encodeURIComponent(objectName)}`;
       const simbadResponse = await fetch(simbadUrl);
       
       if (!simbadResponse.ok) {
-        throw new Error("Failed to resolve object name");
+        console.error('Simbad query failed:', simbadResponse.status);
+        throw new Error(`Failed to resolve object name "${objectName}". Object not found in Simbad database.`);
       }
 
       const simbadText = await simbadResponse.text();
@@ -33,14 +37,18 @@ serve(async (req) => {
       if (raMatch) {
         raCenter = parseFloat(raMatch[1]);
         decCenter = parseFloat(raMatch[2]);
+        console.log(`Resolved "${objectName}" to RA=${raCenter}, Dec=${decCenter}`);
       } else {
-        throw new Error("Could not parse coordinates from Simbad");
+        console.error('Could not parse Simbad response');
+        throw new Error(`Could not find coordinates for "${objectName}". Please check the object name or provide RA/Dec directly.`);
       }
     }
 
     if (!raCenter || !decCenter) {
-      throw new Error("RA and Dec coordinates are required");
+      throw new Error("RA and Dec coordinates are required. Please enter an object name or coordinates.");
     }
+
+    console.log(`Querying Gaia DR3 for RA=${raCenter}, Dec=${decCenter}, radius=${radius}`);
 
     // Query Gaia DR3
     const query = `
@@ -74,11 +82,27 @@ serve(async (req) => {
 
     if (!gaiaResponse.ok) {
       const errorText = await gaiaResponse.text();
-      console.error("Gaia query failed:", errorText);
-      throw new Error("Gaia query failed");
+      console.error("Gaia query failed:", gaiaResponse.status, errorText);
+      throw new Error(`Gaia database query failed. Please try again later.`);
     }
 
     const gaiaData = await gaiaResponse.json();
+    
+    if (!gaiaData.data || gaiaData.data.length === 0) {
+      console.log('No stars found in Gaia query');
+      return new Response(
+        JSON.stringify({
+          stars: [],
+          center: { ra: raCenter, dec: decCenter },
+          count: 0,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    console.log(`Found ${gaiaData.data.length} stars in Gaia`);
 
     // Process results
     const stars = gaiaData.data.map((row: any[]) => {
@@ -108,6 +132,8 @@ serve(async (req) => {
       };
     });
 
+    console.log(`Successfully processed ${stars.length} stars`);
+
     return new Response(
       JSON.stringify({
         stars,
@@ -120,9 +146,10 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in query-gaia function:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage,
       }),
       {
         status: 500,

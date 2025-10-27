@@ -546,7 +546,10 @@ const StereoscopeProcessor: React.FC = () => {
       const starsImg = await new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
-        img.onerror = reject;
+        img.onerror = (e) => {
+          console.error('Failed to load stars image:', e);
+          reject(new Error('Failed to load stars image. Please check the file format.'));
+        };
         img.src = starsUrl;
       });
 
@@ -649,8 +652,11 @@ const StereoscopeProcessor: React.FC = () => {
       toast.success(t('Astrophysics stereo pair generated successfully', '天体物理立体对生成成功'));
     } catch (error) {
       console.error('Error in astrophysics mode:', error);
-      setProgressText(t('Error processing in astrophysics mode', '天体物理模式处理时出错'));
-      toast.error(error instanceof Error ? error.message : t('Failed to process', '处理失败'));
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === 'string' ? error : t('Failed to process. Please check console for details.', '处理失败。请检查控制台获取详细信息。'));
+      setProgressText(t('Error: ', '错误：') + errorMessage);
+      toast.error(errorMessage);
     } finally {
       setProcessing(false);
       setTimeout(() => {
