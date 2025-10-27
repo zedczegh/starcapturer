@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { DEEP_SKY_OBJECTS, searchDeepSkyObjects } from '@/data/deepSkyObjects';
 import { toast } from 'sonner';
 // @ts-ignore
 import * as UTIF from 'utif';
@@ -37,30 +38,6 @@ interface ProcessingParams {
   starParallaxPx: number;
   preserveStarShapes: boolean;
 }
-
-// Popular deep sky objects database
-const POPULAR_DSO = [
-  { value: "M31", label: "M31 - Andromeda Galaxy" },
-  { value: "M42", label: "M42 - Orion Nebula" },
-  { value: "M45", label: "M45 - Pleiades" },
-  { value: "M51", label: "M51 - Whirlpool Galaxy" },
-  { value: "M57", label: "M57 - Ring Nebula" },
-  { value: "M81", label: "M81 - Bode's Galaxy" },
-  { value: "M82", label: "M82 - Cigar Galaxy" },
-  { value: "M83", label: "M83 - Southern Pinwheel Galaxy" },
-  { value: "M101", label: "M101 - Pinwheel Galaxy" },
-  { value: "NGC 7000", label: "NGC 7000 - North America Nebula" },
-  { value: "NGC 7293", label: "NGC 7293 - Helix Nebula" },
-  { value: "NGC 6992", label: "NGC 6992 - Eastern Veil Nebula" },
-  { value: "NGC 6960", label: "NGC 6960 - Western Veil Nebula" },
-  { value: "NGC 281", label: "NGC 281 - Pacman Nebula" },
-  { value: "NGC 2237", label: "NGC 2237 - Rosette Nebula" },
-  { value: "IC 1396", label: "IC 1396 - Elephant's Trunk Nebula" },
-  { value: "IC 1805", label: "IC 1805 - Heart Nebula" },
-  { value: "IC 1848", label: "IC 1848 - Soul Nebula" },
-  { value: "NGC 869", label: "NGC 869 - Double Cluster (h Persei)" },
-  { value: "NGC 884", label: "NGC 884 - Double Cluster (χ Persei)" },
-];
 
 const StereoscopeProcessor: React.FC = () => {
   const { t } = useLanguage();
@@ -122,6 +99,7 @@ const StereoscopeProcessor: React.FC = () => {
   // Astrophysics mode states
   const [astrophysicsObjectName, setAstrophysicsObjectName] = useState<string>('');
   const [objectSearchOpen, setObjectSearchOpen] = useState(false);
+  const [objectSearchQuery, setObjectSearchQuery] = useState<string>('');
   const [astrophysicsParams, setAstrophysicsParams] = useState<AstrophysicsParams>({
     baseline: 1.0,
     fovDeg: 1.0,
@@ -1200,6 +1178,7 @@ const StereoscopeProcessor: React.FC = () => {
                     <div>
                       <Label className="flex items-center justify-between mb-2">
                         <span>{t('Deep Sky Object', '深空对象')}</span>
+                        <span className="text-xs text-cosmic-400">({DEEP_SKY_OBJECTS.length} objects)</span>
                       </Label>
                       <Popover open={objectSearchOpen} onOpenChange={setObjectSearchOpen}>
                         <PopoverTrigger asChild>
@@ -1210,40 +1189,65 @@ const StereoscopeProcessor: React.FC = () => {
                             className="w-full justify-between bg-cosmic-800/50 border-cosmic-600 hover:bg-cosmic-700/50 h-10"
                             disabled={processing}
                           >
-                            {astrophysicsObjectName || t('Select or type object name...', '选择或输入对象名称...')}
+                            {astrophysicsObjectName || t('Search 200+ objects...', '搜索200+对象...')}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[400px] p-0 bg-cosmic-900 border-cosmic-700 z-50">
+                        <PopoverContent className="w-[500px] p-0 bg-cosmic-900 border-cosmic-700 z-50">
                           <Command className="bg-cosmic-900">
                             <CommandInput 
-                              placeholder={t('Search objects...', '搜索对象...')} 
-                              className="bg-cosmic-800 text-white"
-                              value={astrophysicsObjectName}
-                              onValueChange={setAstrophysicsObjectName}
+                              placeholder={t('Type M31, NGC, IC, or object name...', '输入M31, NGC, IC或对象名称...')} 
+                              className="bg-cosmic-800 text-white border-cosmic-700"
+                              value={objectSearchQuery}
+                              onValueChange={setObjectSearchQuery}
                             />
-                            <CommandList className="bg-cosmic-900 max-h-[300px] overflow-y-auto">
+                            <CommandList className="bg-cosmic-900 max-h-[400px] overflow-y-auto">
                               <CommandEmpty className="py-6 text-center text-cosmic-400">
-                                {t('No object found. Type custom name to search Simbad.', '未找到对象。输入自定义名称以搜索Simbad。')}
+                                <div className="space-y-2">
+                                  <p className="font-semibold">{t('No object found in database', '数据库中未找到对象')}</p>
+                                  <p className="text-xs">{t('Type any object name to search Simbad directly', '输入任何对象名称以直接搜索Simbad')}</p>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setAstrophysicsObjectName(objectSearchQuery);
+                                      setObjectSearchOpen(false);
+                                    }}
+                                    className="mt-2 bg-purple-600 hover:bg-purple-700"
+                                  >
+                                    {t('Use', '使用')} "{objectSearchQuery}"
+                                  </Button>
+                                </div>
                               </CommandEmpty>
-                              <CommandGroup heading={t('Popular Deep Sky Objects', '热门深空对象')} className="text-cosmic-300">
-                                {POPULAR_DSO.map((object) => (
+                              <CommandGroup 
+                                heading={t(`${searchDeepSkyObjects(objectSearchQuery).length} Deep Sky Objects`, `${searchDeepSkyObjects(objectSearchQuery).length} 个深空对象`)} 
+                                className="text-cosmic-300"
+                              >
+                                {searchDeepSkyObjects(objectSearchQuery).map((object) => (
                                   <CommandItem
                                     key={object.value}
                                     value={object.value}
                                     onSelect={(currentValue) => {
                                       setAstrophysicsObjectName(currentValue);
                                       setObjectSearchOpen(false);
+                                      setObjectSearchQuery('');
                                     }}
-                                    className="hover:bg-cosmic-700/50 cursor-pointer text-white"
+                                    className="hover:bg-cosmic-700/50 cursor-pointer text-white flex justify-between items-center"
                                   >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        astrophysicsObjectName === object.value ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    {object.label}
+                                    <div className="flex items-center flex-1">
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          astrophysicsObjectName === object.value ? "opacity-100 text-purple-400" : "opacity-0"
+                                        )}
+                                      />
+                                      <div>
+                                        <div className="font-medium">{object.label}</div>
+                                        <div className="text-xs text-cosmic-400">{object.constellation}</div>
+                                      </div>
+                                    </div>
+                                    <span className="text-xs px-2 py-0.5 rounded bg-cosmic-700/50 text-cosmic-300">
+                                      {object.type}
+                                    </span>
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
@@ -1252,7 +1256,7 @@ const StereoscopeProcessor: React.FC = () => {
                         </PopoverContent>
                       </Popover>
                       <p className="text-xs text-cosmic-400 mt-1">
-                        {t('Select from list or type any object name for Simbad lookup', '从列表中选择或输入任何对象名称进行Simbad查询')}
+                        {t('Search from 200+ Messier, NGC, IC objects or type custom name', '从200+个Messier、NGC、IC对象中搜索或输入自定义名称')}
                       </p>
                     </div>
 

@@ -252,15 +252,43 @@ export class AstrophysicsService {
 
       onProgress?.(`Found ${gaiaData.count} stars in Gaia`, 30);
 
-      // Load starless background
+      // Load starless background - handle TIFF and other formats
       onProgress?.('Loading background image...', 40);
-      const starlessUrl = URL.createObjectURL(starlessImage);
+      
+      // Check if it's a TIFF file
+      const isTiff = starlessImage.type === 'image/tiff' || 
+                     starlessImage.type === 'image/tif' || 
+                     starlessImage.name.toLowerCase().match(/\.tiff?$/);
+      
+      let starlessUrl: string;
+      if (isTiff) {
+        // Convert TIFF to data URL first
+        const buffer = await starlessImage.arrayBuffer();
+        // @ts-ignore
+        const UTIF = (window as any).UTIF || await import('utif');
+        const ifds = UTIF.decode(buffer);
+        UTIF.decodeImage(buffer, ifds[0]);
+        const rgba = UTIF.toRGBA8(ifds[0]);
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = ifds[0].width;
+        canvas.height = ifds[0].height;
+        const ctx = canvas.getContext('2d')!;
+        
+        const imageData = new ImageData(new Uint8ClampedArray(rgba), ifds[0].width, ifds[0].height);
+        ctx.putImageData(imageData, 0, 0);
+        
+        starlessUrl = canvas.toDataURL();
+      } else {
+        starlessUrl = URL.createObjectURL(starlessImage);
+      }
+      
       const img = await new Promise<HTMLImageElement>((resolve, reject) => {
         const image = new Image();
         image.onload = () => resolve(image);
         image.onerror = (e) => {
           console.error('Failed to load starless image:', e);
-          reject(new Error('Failed to load starless background image'));
+          reject(new Error('Failed to load starless background image. Please check the file format.'));
         };
         image.src = starlessUrl;
       });
@@ -277,7 +305,10 @@ export class AstrophysicsService {
       leftCtx.drawImage(img, 0, 0);
       rightCtx.drawImage(img, 0, 0);
 
-      URL.revokeObjectURL(starlessUrl);
+      // Clean up URL only if not a data URL (TIFF conversions create data URLs)
+      if (!starlessUrl.startsWith('data:')) {
+        URL.revokeObjectURL(starlessUrl);
+      }
 
       onProgress?.('Matching stars to Gaia catalog...', 50);
 
