@@ -7,13 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { Upload, Eye, Download, Loader2, Layers, Settings2 } from 'lucide-react';
+import { Upload, Eye, Download, Loader2, Layers, Settings2, Check, ChevronsUpDown } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 import { NobelPrizeStereoscopeEngine } from '@/lib/advanced/NobelPrizeStereoscopeEngine';
 import { AstrophysicsService, type AstrophysicsParams } from '@/services/AstrophysicsService';
 import { Input } from '@/components/ui/input';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { toast } from 'sonner';
 // @ts-ignore
 import * as UTIF from 'utif';
@@ -34,6 +37,30 @@ interface ProcessingParams {
   starParallaxPx: number;
   preserveStarShapes: boolean;
 }
+
+// Popular deep sky objects database
+const POPULAR_DSO = [
+  { value: "M31", label: "M31 - Andromeda Galaxy" },
+  { value: "M42", label: "M42 - Orion Nebula" },
+  { value: "M45", label: "M45 - Pleiades" },
+  { value: "M51", label: "M51 - Whirlpool Galaxy" },
+  { value: "M57", label: "M57 - Ring Nebula" },
+  { value: "M81", label: "M81 - Bode's Galaxy" },
+  { value: "M82", label: "M82 - Cigar Galaxy" },
+  { value: "M83", label: "M83 - Southern Pinwheel Galaxy" },
+  { value: "M101", label: "M101 - Pinwheel Galaxy" },
+  { value: "NGC 7000", label: "NGC 7000 - North America Nebula" },
+  { value: "NGC 7293", label: "NGC 7293 - Helix Nebula" },
+  { value: "NGC 6992", label: "NGC 6992 - Eastern Veil Nebula" },
+  { value: "NGC 6960", label: "NGC 6960 - Western Veil Nebula" },
+  { value: "NGC 281", label: "NGC 281 - Pacman Nebula" },
+  { value: "NGC 2237", label: "NGC 2237 - Rosette Nebula" },
+  { value: "IC 1396", label: "IC 1396 - Elephant's Trunk Nebula" },
+  { value: "IC 1805", label: "IC 1805 - Heart Nebula" },
+  { value: "IC 1848", label: "IC 1848 - Soul Nebula" },
+  { value: "NGC 869", label: "NGC 869 - Double Cluster (h Persei)" },
+  { value: "NGC 884", label: "NGC 884 - Double Cluster (χ Persei)" },
+];
 
 const StereoscopeProcessor: React.FC = () => {
   const { t } = useLanguage();
@@ -94,6 +121,7 @@ const StereoscopeProcessor: React.FC = () => {
 
   // Astrophysics mode states
   const [astrophysicsObjectName, setAstrophysicsObjectName] = useState<string>('');
+  const [objectSearchOpen, setObjectSearchOpen] = useState(false);
   const [astrophysicsParams, setAstrophysicsParams] = useState<AstrophysicsParams>({
     baseline: 1.0,
     fovDeg: 1.0,
@@ -542,7 +570,8 @@ const StereoscopeProcessor: React.FC = () => {
       setProgress(5);
 
       // Detect stars in the stars-only image first
-      const starsUrl = URL.createObjectURL(starsImage);
+      // Handle TIFF and other formats properly
+      const starsUrl = await createPreviewUrl(starsImage);
       const starsImg = await new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
@@ -559,7 +588,10 @@ const StereoscopeProcessor: React.FC = () => {
       const ctx = canvas.getContext('2d')!;
       ctx.drawImage(starsImg, 0, 0);
 
-      URL.revokeObjectURL(starsUrl);
+      // Clean up URL if it's not a TIFF conversion (those are data URLs)
+      if (!isTiffFile(starsImage)) {
+        URL.revokeObjectURL(starsUrl);
+      }
 
       setProgressText(t('Detecting stars in image...', '检测图像中的恒星...'));
       setProgress(15);
@@ -1167,18 +1199,60 @@ const StereoscopeProcessor: React.FC = () => {
                   <div className="space-y-6">
                     <div>
                       <Label className="flex items-center justify-between mb-2">
-                        <span>{t('Object Name', '对象名称')}</span>
+                        <span>{t('Deep Sky Object', '深空对象')}</span>
                       </Label>
-                      <Input
-                        type="text"
-                        placeholder={t('e.g., M31, NGC 7000, Orion Nebula', '例如: M31, NGC 7000, 猎户座星云')}
-                        value={astrophysicsObjectName}
-                        onChange={(e) => setAstrophysicsObjectName(e.target.value)}
-                        className="bg-cosmic-800/50 border-cosmic-600"
-                        disabled={processing}
-                      />
+                      <Popover open={objectSearchOpen} onOpenChange={setObjectSearchOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={objectSearchOpen}
+                            className="w-full justify-between bg-cosmic-800/50 border-cosmic-600 hover:bg-cosmic-700/50 h-10"
+                            disabled={processing}
+                          >
+                            {astrophysicsObjectName || t('Select or type object name...', '选择或输入对象名称...')}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0 bg-cosmic-900 border-cosmic-700 z-50">
+                          <Command className="bg-cosmic-900">
+                            <CommandInput 
+                              placeholder={t('Search objects...', '搜索对象...')} 
+                              className="bg-cosmic-800 text-white"
+                              value={astrophysicsObjectName}
+                              onValueChange={setAstrophysicsObjectName}
+                            />
+                            <CommandList className="bg-cosmic-900 max-h-[300px] overflow-y-auto">
+                              <CommandEmpty className="py-6 text-center text-cosmic-400">
+                                {t('No object found. Type custom name to search Simbad.', '未找到对象。输入自定义名称以搜索Simbad。')}
+                              </CommandEmpty>
+                              <CommandGroup heading={t('Popular Deep Sky Objects', '热门深空对象')} className="text-cosmic-300">
+                                {POPULAR_DSO.map((object) => (
+                                  <CommandItem
+                                    key={object.value}
+                                    value={object.value}
+                                    onSelect={(currentValue) => {
+                                      setAstrophysicsObjectName(currentValue);
+                                      setObjectSearchOpen(false);
+                                    }}
+                                    className="hover:bg-cosmic-700/50 cursor-pointer text-white"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        astrophysicsObjectName === object.value ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {object.label}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <p className="text-xs text-cosmic-400 mt-1">
-                        {t('Enter deep sky object name for automatic coordinate resolution', '输入深空对象名称以自动解析坐标')}
+                        {t('Select from list or type any object name for Simbad lookup', '从列表中选择或输入任何对象名称进行Simbad查询')}
                       </p>
                     </div>
 
