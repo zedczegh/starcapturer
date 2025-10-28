@@ -898,33 +898,31 @@ function renderStarWithPSF(ctx: CanvasRenderingContext2D, star: DetectedStar) {
   ctx.fillStyle = midGradient;
   ctx.fillRect(x - midHaloSize, y - midHaloSize, midHaloSize * 2, midHaloSize * 2);
   
-  // Layer 1: Core brightness with PRESERVED bright center for realistic appearance
-  const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, coreSize);
+  // Layer 1: Core brightness - draw solid core first, then add gradient halo
+  // This ensures stars have solid bright centers without hollow artifacts
   
-  // Enhanced core preservation - maintain full brightness longer
+  // First, draw a solid bright core circle
+  ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${brightness})`;
+  ctx.beginPath();
+  ctx.arc(x, y, Math.max(0.5, coreSize * 0.15), 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Then add the gradient halo around it
+  const coreGradient = ctx.createRadialGradient(x, y, coreSize * 0.15, x, y, coreSize);
+  
   if (type === 'saturated') {
-    // Saturated stars: Keep center extremely bright
     coreGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness})`);
-    coreGradient.addColorStop(0.25, `rgba(${r}, ${g}, ${b}, ${brightness})`); // Hold full brightness
-    coreGradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${brightness * 0.98})`);
-    coreGradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${brightness * 0.92})`);
-    coreGradient.addColorStop(0.8, `rgba(${r}, ${g}, ${b}, ${brightness * 0.75})`);
+    coreGradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${brightness * 0.95})`);
+    coreGradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${brightness * 0.8})`);
     coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.45})`);
   } else if (type === 'extended') {
-    // Extended stars: Maintain bright core but with more gradual falloff
     coreGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness})`);
-    coreGradient.addColorStop(0.15, `rgba(${r}, ${g}, ${b}, ${brightness})`); // Hold full brightness
-    coreGradient.addColorStop(0.35, `rgba(${r}, ${g}, ${b}, ${brightness * 0.95})`);
-    coreGradient.addColorStop(0.55, `rgba(${r}, ${g}, ${b}, ${brightness * 0.85})`);
-    coreGradient.addColorStop(0.75, `rgba(${r}, ${g}, ${b}, ${brightness * 0.65})`);
+    coreGradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${brightness * 0.9})`);
+    coreGradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${brightness * 0.7})`);
     coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.4})`);
   } else {
-    // Point stars: Smallest but still preserve core
     coreGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness})`);
-    coreGradient.addColorStop(0.1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.98})`);
-    coreGradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${brightness * 0.9})`);
-    coreGradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${brightness * 0.75})`);
-    coreGradient.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${brightness * 0.5})`);
+    coreGradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${brightness * 0.85})`);
     coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.35})`);
   }
   
