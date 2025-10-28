@@ -127,14 +127,33 @@ export class OptimizedDisplacementProcessor {
         const structureDepth = structureDepthData.data[globalIdx] / 255;
         const edgeDepth = edgeDepthData.data[globalIdx] / 255;
         
+        // CRITICAL: Detect bright star cores to preserve them (prevent overexposure artifacts)
+        const r = originalData.data[globalIdx];
+        const g = originalData.data[globalIdx + 1];
+        const b = originalData.data[globalIdx + 2];
+        const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+        
+        // Bright core protection: Reduce displacement for very bright pixels
+        let coreProtection = 1.0;
+        if (luminance > 220) {
+          // Extremely bright cores (>220): almost no displacement
+          coreProtection = 0.1;
+        } else if (luminance > 180) {
+          // Very bright pixels (180-220): minimal displacement
+          coreProtection = 0.3;
+        } else if (luminance > 140) {
+          // Bright pixels (140-180): reduced displacement
+          coreProtection = 0.6;
+        }
+        
         // Calculate adaptive displacement
         const structureInfluence = Math.min(1, structureDepth * 1.5);
         const edgeInfluence = Math.min(1, (1 - edgeDepth) * 1.2);
         
-        // Combined displacement with optimized calculation
-        const baseDisplacement = (primaryDepth - 0.5) * horizontalAmount;
-        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.25 * structureInfluence;
-        const edgeAdjustment = (edgeDepth - 0.5) * horizontalAmount * 0.15 * edgeInfluence;
+        // Combined displacement with optimized calculation and core protection
+        const baseDisplacement = (primaryDepth - 0.5) * horizontalAmount * coreProtection;
+        const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.25 * structureInfluence * coreProtection;
+        const edgeAdjustment = (edgeDepth - 0.5) * horizontalAmount * 0.15 * edgeInfluence * coreProtection;
         
         const totalDisplacement = Math.round(baseDisplacement + structureAdjustment + edgeAdjustment);
         
