@@ -1302,7 +1302,7 @@ const ParallelVideoGenerator: React.FC = () => {
                             PNG
                           </Button>
                         </div>
-                        <Label className="text-cosmic-400 text-xs">Depth Map</Label>
+                        <Label className="text-cosmic-400 text-xs">Starless Depth Map</Label>
                       </div>
                     )}
                   </div>
@@ -1340,7 +1340,7 @@ const ParallelVideoGenerator: React.FC = () => {
                             PNG
                           </Button>
                         </div>
-                        <Label className="text-cosmic-400 text-xs">Depth Map</Label>
+                        <Label className="text-cosmic-400 text-xs">Stars Only Depth Map</Label>
                       </div>
                     )}
                   </div>
