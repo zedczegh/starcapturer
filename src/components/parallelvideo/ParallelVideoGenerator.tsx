@@ -69,6 +69,9 @@ const ParallelVideoGenerator: React.FC = () => {
   const leftCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rightCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const stitchedCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const stitchedCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const lastFrameTimeRef = useRef<number>(0);
+  const frameSkipThreshold = 1000 / 60; // Target 60fps
   
   // Two depth maps: starless and stars
   const [starlessDepthMapUrl, setStarlessDepthMapUrl] = useState<string | null>(null);
@@ -162,6 +165,14 @@ const ParallelVideoGenerator: React.FC = () => {
 
   // Function to stitch left and right canvases together with optimized rendering
   const stitchCanvases = useCallback(() => {
+    const currentTime = performance.now();
+    
+    // Frame pacing - ensure we don't render faster than 60fps
+    if (currentTime - lastFrameTimeRef.current < frameSkipThreshold) {
+      return;
+    }
+    lastFrameTimeRef.current = currentTime;
+    
     if (!leftCanvasRef.current || !rightCanvasRef.current) return;
     
     // Find or ensure stitched canvas ref is set
@@ -184,28 +195,36 @@ const ParallelVideoGenerator: React.FC = () => {
     const totalWidth = viewWidth * 2 + stereoSpacing + borderSize * 2;
     const totalHeight = viewHeight + borderSize * 2;
 
-    // Set stitched canvas size
+    // Set stitched canvas size only if needed
+    let needsResize = false;
     if (stitchedCanvas.width !== totalWidth || stitchedCanvas.height !== totalHeight) {
       stitchedCanvas.width = totalWidth;
       stitchedCanvas.height = totalHeight;
+      needsResize = true;
     }
 
-    const ctx = stitchedCanvas.getContext('2d', {
-      alpha: false,
-      desynchronized: true, // Better performance for animations
-      willReadFrequently: false
-    });
+    // Cache context with optimized settings
+    if (!stitchedCtxRef.current || needsResize) {
+      stitchedCtxRef.current = stitchedCanvas.getContext('2d', {
+        alpha: false,
+        desynchronized: true, // Allow desynchronized rendering for better performance
+        willReadFrequently: false
+      });
+      
+      if (stitchedCtxRef.current) {
+        // Optimize for performance over quality during animation
+        stitchedCtxRef.current.imageSmoothingEnabled = false;
+      }
+    }
+    
+    const ctx = stitchedCtxRef.current;
     if (!ctx) return;
 
-    // Optimized rendering settings for smooth animation
-    ctx.imageSmoothingEnabled = false; // Disable for better performance
-    ctx.imageSmoothingQuality = 'low';
-
-    // Clear with black background
+    // Batch drawing operations for better performance
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, totalWidth, totalHeight);
 
-    // Draw left view
+    // Draw both views in one batch
     ctx.drawImage(
       leftCanvas,
       borderSize,
@@ -214,7 +233,6 @@ const ParallelVideoGenerator: React.FC = () => {
       viewHeight
     );
 
-    // Draw right view
     ctx.drawImage(
       rightCanvas,
       borderSize + viewWidth + stereoSpacing,
@@ -222,7 +240,7 @@ const ParallelVideoGenerator: React.FC = () => {
       viewWidth,
       viewHeight
     );
-  }, [stereoSpacing, borderSize]);
+  }, [stereoSpacing, borderSize, frameSkipThreshold]);
 
   // Ensure stitched canvas is rendered and perform initial stitch
   useEffect(() => {
