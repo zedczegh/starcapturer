@@ -460,6 +460,10 @@ const StarFieldGenerator: React.FC = () => {
       
       setProcessedStars(processedStarsData);
       console.log(`✅ [Generator] Processed ${processedStarsData.length} stars with 3D coordinates`);
+      
+      // Wait before loading preview to separate the steps
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       setCurrentStep('ready');
       
       // Log memory stats
@@ -1362,13 +1366,29 @@ const StarFieldGenerator: React.FC = () => {
               </div>
               
               {starsOnlyElement && starlessElement && (
-                <Button
-                  onClick={processImages}
-                  disabled={isProcessing}
-                  className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg shadow-amber-500/20"
-                >
-                  {isProcessing ? t('Processing...', '处理中...') : t('Process & Generate', '处理并生成')}
-                </Button>
+                <>
+                  <Button
+                    onClick={processImages}
+                    disabled={isProcessing}
+                    className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold shadow-lg shadow-amber-500/20"
+                  >
+                    {isProcessing ? t('Processing...', '处理中...') : t('Process & Generate', '处理并生成')}
+                  </Button>
+                  
+                  {isProcessing && (
+                    <div className="space-y-2 mt-4">
+                      <div className="w-full h-2 bg-cosmic-800/60 rounded-full overflow-hidden border border-cosmic-700/30">
+                        <div
+                          className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300 animate-pulse"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <p className="text-xs text-cosmic-300 text-center">
+                        {t('Processing images and generating 3D data...', '正在处理图像并生成3D数据...')}
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

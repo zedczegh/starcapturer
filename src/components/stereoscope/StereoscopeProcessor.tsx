@@ -517,6 +517,26 @@ const StereoscopeProcessor: React.FC = () => {
       setResultUrl(resultCanvas.toDataURL('image/png'));
       setProgress(100);
       setProgressText(t('Processing complete!', '处理完成！'));
+      
+      // Wait before loading preview to separate the steps
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      setProgressText(t('Loading preview...', '加载预览...'));
+      setProgress(0); // Reset progress for preview loading
+      
+      // Simulate preview loading progress
+      for (let i = 0; i <= 100; i += 20) {
+        setProgress(i);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      setProgress(100);
+      setProgressText(t('Preview ready!', '预览就绪！'));
+
+      // Clear message after a moment
+      setTimeout(() => {
+        setProgressText('');
+      }, 1000);
     } catch (error) {
       console.error('Error processing images:', error);
       setProgressText(t('Error processing images', '处理图像时出错'));
@@ -760,11 +780,16 @@ const StereoscopeProcessor: React.FC = () => {
 
               {processing && (
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
+                  <div className="w-full h-2 bg-cosmic-800/60 rounded-full overflow-hidden border border-cosmic-700/30">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-cosmic-300">
                     <span>{progressText}</span>
                     <span>{progress}%</span>
                   </div>
-                  <Progress value={progress} className="w-full" />
                 </div>
               )}
 
