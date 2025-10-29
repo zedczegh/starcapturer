@@ -63,6 +63,7 @@ const ParallelVideoGenerator: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [videoProgress, setVideoProgress] = useState({ stage: '', percent: 0 });
   const [isReady, setIsReady] = useState(false);
+  const [canvasInitProgress, setCanvasInitProgress] = useState(0);
 
   // Canvas refs for video generation
   const leftCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -226,6 +227,19 @@ const ParallelVideoGenerator: React.FC = () => {
   // Ensure stitched canvas is rendered and perform initial stitch
   useEffect(() => {
     if (isReady && leftCanvasRef.current && rightCanvasRef.current) {
+      setCanvasInitProgress(0);
+      
+      // Simulate progress during initialization
+      const progressInterval = setInterval(() => {
+        setCanvasInitProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + 10;
+        });
+      }, 100);
+      
       // Perform initial stitch immediately
       const performStitch = () => {
         if (leftCanvasRef.current && rightCanvasRef.current) {
@@ -234,12 +248,16 @@ const ParallelVideoGenerator: React.FC = () => {
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               stitchCanvases();
+              setCanvasInitProgress(100);
+              clearInterval(progressInterval);
             });
           });
         }
       };
       
       performStitch();
+      
+      return () => clearInterval(progressInterval);
     }
   }, [isReady, stitchCanvases]);
 
@@ -670,7 +688,6 @@ const ParallelVideoGenerator: React.FC = () => {
       setIsReady(true);
       setProgress(100);
       setProcessingStep(t('Complete!', '完成！'));
-      toast.success(t('Processing complete! Click play to preview.', '处理完成！点击播放预览。'));
 
       // Don't auto-start animation - let user control when to play
       setProcessingStep('');
@@ -1600,9 +1617,17 @@ const ParallelVideoGenerator: React.FC = () => {
                 </Button>
 
                 {(!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current) && (
-                  <p className="text-sm text-cosmic-400 text-center">
-                    {t('Initializing canvas...', '初始化画布中...')}
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-cosmic-400 text-center">
+                      {t('Initializing canvas...', '初始化画布中...')} {canvasInitProgress}%
+                    </p>
+                    <div className="w-full h-2 bg-cosmic-800/60 rounded-full overflow-hidden border border-cosmic-700/30">
+                      <div
+                        className="h-full bg-blue-500 transition-all duration-300"
+                        style={{ width: `${canvasInitProgress}%` }}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
             </CardContent>
