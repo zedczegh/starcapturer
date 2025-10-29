@@ -1268,7 +1268,7 @@ const ParallelVideoGenerator: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {/* Left Stars Only with depth map below */}
                   <div className="space-y-2">
                     <Label className="text-cosmic-200 text-xs">Left Stars Only</Label>
@@ -1379,7 +1379,24 @@ const ParallelVideoGenerator: React.FC = () => {
                   {leftComposite && (
                     <div className="space-y-2">
                       <Label className="text-cosmic-200 text-xs">Left Composite</Label>
-                      <img src={leftComposite} alt="Left Composite" className="w-full rounded border border-cosmic-600" />
+                      <div className="relative group">
+                        <img src={leftComposite} alt="Left Composite" className="w-full rounded border border-cosmic-600" />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            // Download left composite
+                            const link = document.createElement('a');
+                            link.href = leftComposite;
+                            link.download = `left_composite_${Date.now()}.png`;
+                            link.click();
+                          }}
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          PNG
+                        </Button>
+                      </div>
                     </div>
                   )}
 
@@ -1387,7 +1404,24 @@ const ParallelVideoGenerator: React.FC = () => {
                   {rightComposite && (
                     <div className="space-y-2">
                       <Label className="text-cosmic-200 text-xs">Right Composite</Label>
-                      <img src={rightComposite} alt="Right Composite" className="w-full rounded border border-cosmic-600" />
+                      <div className="relative group">
+                        <img src={rightComposite} alt="Right Composite" className="w-full rounded border border-cosmic-600" />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            // Download right composite
+                            const link = document.createElement('a');
+                            link.href = rightComposite;
+                            link.download = `right_composite_${Date.now()}.png`;
+                            link.click();
+                          }}
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          PNG
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
