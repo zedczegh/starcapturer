@@ -226,38 +226,39 @@ const ParallelVideoGenerator: React.FC = () => {
 
   // Ensure stitched canvas is rendered and perform initial stitch
   useEffect(() => {
-    if (isReady && leftCanvasRef.current && rightCanvasRef.current) {
-      setCanvasInitProgress(0);
+    if (isReady) {
+      console.log('🎬 Canvas initialization started');
+      setCanvasInitProgress(10);
       
-      // Simulate progress during initialization
-      const progressInterval = setInterval(() => {
-        setCanvasInitProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + 10;
-        });
-      }, 100);
+      let checkCount = 0;
+      const maxChecks = 50; // 5 seconds maximum
       
-      // Perform initial stitch immediately
-      const performStitch = () => {
+      const checkCanvasReady = setInterval(() => {
+        checkCount++;
+        const progress = Math.min(10 + (checkCount * 2), 90);
+        setCanvasInitProgress(progress);
+        
+        // Check if both canvases are ready
         if (leftCanvasRef.current && rightCanvasRef.current) {
           console.log('✅ Performing initial canvas stitch');
+          clearInterval(checkCanvasReady);
+          
           // Give the DOM a moment to fully render the canvas element
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               stitchCanvases();
               setCanvasInitProgress(100);
-              clearInterval(progressInterval);
+              console.log('✅ Canvas initialization complete at 100%');
             });
           });
+        } else if (checkCount >= maxChecks) {
+          console.warn('⚠️ Canvas initialization timeout');
+          clearInterval(checkCanvasReady);
+          setCanvasInitProgress(100); // Complete anyway to unblock UI
         }
-      };
+      }, 100);
       
-      performStitch();
-      
-      return () => clearInterval(progressInterval);
+      return () => clearInterval(checkCanvasReady);
     }
   }, [isReady, stitchCanvases]);
 
@@ -1193,6 +1194,18 @@ const ParallelVideoGenerator: React.FC = () => {
                 </div>
               )}
             </Button>
+            
+            {/* Processing Progress Bar */}
+            {isProcessing && (
+              <div className="space-y-2">
+                <div className="w-full h-2 bg-cosmic-800/60 rounded-full overflow-hidden border border-cosmic-700/30">
+                  <div
+                    className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -1616,7 +1629,7 @@ const ParallelVideoGenerator: React.FC = () => {
                   }
                 </Button>
 
-                {(!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current) && (
+                {(canvasInitProgress < 100) && (
                   <div className="space-y-2">
                     <p className="text-sm text-cosmic-400 text-center">
                       {t('Initializing canvas...', '初始化画布中...')} {canvasInitProgress}%
