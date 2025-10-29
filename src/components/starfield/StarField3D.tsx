@@ -140,9 +140,90 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const sourceData = tempCtx.getImageData(0, 0, img.width, img.height);
       const data = sourceData.data;
       
-      // Pre-calculate luminance for all pixels using Uint8Array for faster access
+      // === PRE-PROCESS STARS-ONLY IMAGE TO REMOVE ROUGH EDGES ===
+      console.log('Pre-processing stars-only image to remove rough edges...');
+      
       const width = img.width;
       const height = img.height;
+      
+      // Create a copy for processing
+      const processedData = new Uint8ClampedArray(data);
+      
+      // First pass: Detect and smooth rough edge pixels while preserving bright cores
+      for (let y = 2; y < height - 2; y++) {
+        for (let x = 2; x < width - 2; x++) {
+          const idx = (y * width + x) * 4;
+          
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          
+          // Preserve bright star cores (don't smooth them)
+          if (lum > 180) continue;
+          
+          // For dim/medium pixels, check if they're rough edges
+          if (lum > 15 && lum < 180) {
+            // Calculate local variance to detect rough edges
+            let variance = 0;
+            let neighborLums: number[] = [];
+            
+            for (let dy = -2; dy <= 2; dy++) {
+              for (let dx = -2; dx <= 2; dx++) {
+                const nIdx = ((y + dy) * width + (x + dx)) * 4;
+                const nLum = 0.299 * data[nIdx] + 0.587 * data[nIdx + 1] + 0.114 * data[nIdx + 2];
+                neighborLums.push(nLum);
+              }
+            }
+            
+            const mean = neighborLums.reduce((a, b) => a + b, 0) / neighborLums.length;
+            variance = neighborLums.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / neighborLums.length;
+            
+            // High variance = rough edge, apply bilateral filtering
+            if (variance > 500) {
+              let sumR = 0, sumG = 0, sumB = 0, totalWeight = 0;
+              
+              for (let dy = -2; dy <= 2; dy++) {
+                for (let dx = -2; dx <= 2; dx++) {
+                  const nIdx = ((y + dy) * width + (x + dx)) * 4;
+                  const nR = data[nIdx];
+                  const nG = data[nIdx + 1];
+                  const nB = data[nIdx + 2];
+                  const nLum = 0.299 * nR + 0.587 * nG + 0.114 * nB;
+                  
+                  // Spatial weight (Gaussian based on distance)
+                  const spatialDist = Math.sqrt(dx * dx + dy * dy);
+                  const spatialWeight = Math.exp(-(spatialDist * spatialDist) / 4);
+                  
+                  // Range weight (preserve similar colors)
+                  const lumDiff = Math.abs(nLum - lum);
+                  const rangeWeight = Math.exp(-(lumDiff * lumDiff) / 2000);
+                  
+                  const weight = spatialWeight * rangeWeight;
+                  
+                  sumR += nR * weight;
+                  sumG += nG * weight;
+                  sumB += nB * weight;
+                  totalWeight += weight;
+                }
+              }
+              
+              processedData[idx] = Math.round(sumR / totalWeight);
+              processedData[idx + 1] = Math.round(sumG / totalWeight);
+              processedData[idx + 2] = Math.round(sumB / totalWeight);
+            }
+          }
+        }
+      }
+      
+      // Apply processed data back
+      data.set(processedData);
+      tempCtx.putImageData(sourceData, 0, 0);
+      
+      console.log('Pre-processing complete - edges smoothed');
+      // === END PRE-PROCESSING ===
+      
+      // Pre-calculate luminance for all pixels using Uint8Array for faster access
       const pixelCount = width * height;
       const luminanceCache = new Float32Array(pixelCount);
       
@@ -413,92 +494,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Put the separated data onto the canvases
       contexts.forEach((ctx, i) => ctx.putImageData(imageDatas[i], 0, 0));
       
-      console.log('Applying proper Gaussian feathering to eliminate artifacts...');
+      console.log('Star layers separated - preprocessing already smoothed edges');
       
-      // Apply proper gradient-preserving feathering to eliminate black rings and rough edges
-      canvases.forEach((canvas, layerIdx) => {
-        const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-        const imgData = ctx.getImageData(0, 0, width, height);
-        const data = imgData.data;
-        
-        // First pass: Remove black ring artifacts by softening harsh transitions
-        for (let y = 1; y < height - 1; y++) {
-          for (let x = 1; x < width - 1; x++) {
-            const idx = (y * width + x) * 4;
-            const lum = luminanceCache[y * width + x];
-            const alpha = data[idx + 3];
-            
-            // Detect dark rings around bright cores (low luminance but visible alpha)
-            if (alpha > 50 && lum < 30) {
-              // Check if surrounded by brighter pixels
-              let brighterNeighbors = 0;
-              for (let dy = -1; dy <= 1; dy++) {
-                for (let dx = -1; dx <= 1; dx++) {
-                  if (dx === 0 && dy === 0) continue;
-                  const nIdx = (y + dy) * width + (x + dx);
-                  if (luminanceCache[nIdx] > lum * 2) brighterNeighbors++;
-                }
-              }
-              
-              // If surrounded by brighter pixels, this is likely a dark artifact ring
-              if (brighterNeighbors >= 4) {
-                // Fade out this pixel aggressively
-                data[idx + 3] = Math.floor(alpha * 0.3);
-              }
-            }
-          }
-        }
-        
-        // Second pass: Apply distance-based Gaussian feathering for smooth edges
-        const tempData = new Uint8ClampedArray(data);
-        const featherRadius = 4; // Larger radius for smoother falloff
-        
-        for (let y = featherRadius; y < height - featherRadius; y++) {
-          for (let x = featherRadius; x < width - featherRadius; x++) {
-            const idx = (y * width + x) * 4;
-            const alpha = tempData[idx + 3];
-            
-            // Only process edge pixels
-            if (alpha > 0 && alpha < 240) {
-              let sumR = 0, sumG = 0, sumB = 0, sumA = 0;
-              let totalWeight = 0;
-              
-              // Apply Gaussian kernel
-              for (let dy = -featherRadius; dy <= featherRadius; dy++) {
-                for (let dx = -featherRadius; dx <= featherRadius; dx++) {
-                  const nx = x + dx;
-                  const ny = y + dy;
-                  
-                  const nIdx = (ny * width + nx) * 4;
-                  const dist = Math.sqrt(dx * dx + dy * dy);
-                  
-                  // Gaussian weight
-                  const sigma = featherRadius / 2.5;
-                  const weight = Math.exp(-(dist * dist) / (2 * sigma * sigma));
-                  
-                  sumR += tempData[nIdx] * weight;
-                  sumG += tempData[nIdx + 1] * weight;
-                  sumB += tempData[nIdx + 2] * weight;
-                  sumA += tempData[nIdx + 3] * weight;
-                  totalWeight += weight;
-                }
-              }
-              
-              // Apply smoothed values
-              data[idx] = Math.round(sumR / totalWeight);
-              data[idx + 1] = Math.round(sumG / totalWeight);
-              data[idx + 2] = Math.round(sumB / totalWeight);
-              data[idx + 3] = Math.round(sumA / totalWeight);
-            }
-          }
-        }
-        
-        ctx.putImageData(imgData, 0, 0);
-      });
-      
-      console.log('Star extraction complete with smooth gradients');
-      
-      // Skip edge refinement - Gaussian feathering already produced smooth results
+      // Skip edge refinement - preprocessing already handled smoothing
       // Convert canvases directly to ImageBitmaps for faster GPU-accelerated rendering
       const bitmapOptions: ImageBitmapOptions = {
         premultiplyAlpha: 'premultiply',
