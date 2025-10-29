@@ -6,9 +6,9 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, Video, Sparkles, Eye, Settings2, Download } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { TraditionalMorphService, TraditionalMorphParams } from '@/services/TraditionalMorphService';
 import { VideoGenerationService, MotionSettings } from '@/services/VideoGenerationService';
 import { validateImageFile } from '@/utils/imageProcessingUtils';
+import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
 import StarField3D from '@/components/starfield/StarField3D';
 import { toast } from 'sonner';
 import { CanvasPool } from '@/lib/performance/CanvasPool';
@@ -69,9 +69,9 @@ const ParallelVideoGenerator: React.FC = () => {
   const rightCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const stitchedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   
-  // Depth and luminance maps for debug display
-  const [depthMapUrl, setDepthMapUrl] = useState<string | null>(null);
-  const [luminanceMapUrl, setLuminanceMapUrl] = useState<string | null>(null);
+  // Two depth maps: starless and stars
+  const [starlessDepthMapUrl, setStarlessDepthMapUrl] = useState<string | null>(null);
+  const [starsDepthMapUrl, setStarsDepthMapUrl] = useState<string | null>(null);
   
   // Store canvases for download
   const [processedCanvases, setProcessedCanvases] = useState<{
@@ -79,8 +79,8 @@ const ParallelVideoGenerator: React.FC = () => {
     leftStars?: HTMLCanvasElement;
     rightBackground?: HTMLCanvasElement;
     rightStars?: HTMLCanvasElement;
-    depthMap?: HTMLCanvasElement;
-    luminanceMap?: HTMLCanvasElement;
+    starlessDepthMap?: HTMLCanvasElement;
+    starsDepthMap?: HTMLCanvasElement;
   }>({});
 
   // Traditional Morph Parameters - matching stereoscope processor exactly
@@ -383,7 +383,53 @@ const ParallelVideoGenerator: React.FC = () => {
     return { starsOnly: starsCanvas, stars };
   }, [depthIntensity]);
 
-  // Process images with Traditional Morph - Following Star Field Generator algorithm exactly
+  // Helper to create stereo views from Fast Mode displacement logic
+  const createStereoViews = useCallback((
+    canvas: HTMLCanvasElement,
+    ctx: CanvasRenderingContext2D,
+    depthMap: ImageData,
+    width: number,
+    height: number,
+    maxShift: number,
+    starMask: Uint8ClampedArray
+  ): { left: ImageData; right: ImageData } => {
+    const originalData = ctx.getImageData(0, 0, width, height);
+    const leftData = new ImageData(width, height);
+    const rightData = new ImageData(width, height);
+
+    // Simple inverse mapping - pull pixels from source
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const destIdx = (y * width + x) * 4;
+        const depthValue = depthMap.data[destIdx] / 255.0;
+        const shift = depthValue * maxShift;
+        
+        // LEFT VIEW: Pull from right
+        const leftSourceX = Math.round(x + shift);
+        if (leftSourceX >= 0 && leftSourceX < width) {
+          const leftSrcIdx = (y * width + leftSourceX) * 4;
+          leftData.data[destIdx] = originalData.data[leftSrcIdx];
+          leftData.data[destIdx + 1] = originalData.data[leftSrcIdx + 1];
+          leftData.data[destIdx + 2] = originalData.data[leftSrcIdx + 2];
+          leftData.data[destIdx + 3] = 255;
+        }
+        
+        // RIGHT VIEW: Pull from left
+        const rightSourceX = Math.round(x - shift);
+        if (rightSourceX >= 0 && rightSourceX < width) {
+          const rightSrcIdx = (y * width + rightSourceX) * 4;
+          rightData.data[destIdx] = originalData.data[rightSrcIdx];
+          rightData.data[destIdx + 1] = originalData.data[rightSrcIdx + 1];
+          rightData.data[destIdx + 2] = originalData.data[rightSrcIdx + 2];
+          rightData.data[destIdx + 3] = 255;
+        }
+      }
+    }
+
+    return { left: leftData, right: rightData };
+  }, []);
+
+  // Process images with unified algorithm - matching Stereoscope Processor
   const processImages = useCallback(async () => {
     if (!starlessFile || !starsFile || !starlessElement || !starsElement) {
       toast.error(t('Please upload both images', '请上传两张图片'));
@@ -396,120 +442,194 @@ const ParallelVideoGenerator: React.FC = () => {
     setProcessingStep(t('Initializing processor...', '初始化处理器...'));
 
     try {
-      console.log('Starting processing with images:', {
+      console.log('Starting unified processing with images:', {
         starless: { width: starlessElement.width, height: starlessElement.height },
         stars: { width: starsElement.width, height: starsElement.height }
       });
 
-      // Use Traditional Morph Service with SEPARATED layers (like Step 1 in Stereoscope Processor)
-      // This gives us proper displacement AND separate luminance/depth maps
-      setProcessingStep(t('Creating stereoscopic pair with separation...', '创建分离的立体对...'));
-      
-      const separatedResult = await TraditionalMorphService.createSeparatedStereoPair(
-        starlessFile!,
-        starsFile!,
-        {
-          horizontalDisplace: horizontalDisplace,
-          starShiftAmount: starShiftAmount,
-          stereoSpacing: 0,
-          borderSize: 0
-        },
-        (step, progress) => {
-          setProcessingStep(t(step, step));
-          if (progress) setProgress(progress);
-        }
+      const width = Math.max(starlessElement.width, starsElement.width);
+      const height = Math.max(starlessElement.height, starsElement.height);
+
+      // Create canvases
+      const starlessCanvas = document.createElement('canvas');
+      const starlessCtx = starlessCanvas.getContext('2d')!;
+      starlessCanvas.width = width;
+      starlessCanvas.height = height;
+      starlessCtx.drawImage(starlessElement, 0, 0, width, height);
+
+      const starsCanvas = document.createElement('canvas');
+      const starsCtx = starsCanvas.getContext('2d')!;
+      starsCanvas.width = width;
+      starsCanvas.height = height;
+      starsCtx.drawImage(starsElement, 0, 0, width, height);
+
+      // STEP 1: Generate depth map from starless (Fast Mode approach)
+      setProcessingStep(t('Generating starless depth map...', '生成无星深度图...'));
+      setProgress(20);
+
+      const starlessImageData = starlessCtx.getImageData(0, 0, width, height);
+      const simpleParams: SimpleDepthParams = {
+        depth: horizontalDisplace,
+        edgeWeight: 0.3,
+        brightnessWeight: 0.7
+      };
+
+      const starlessDepthMap = generateSimpleDepthMap(starlessImageData, simpleParams);
+
+      // Save starless depth map
+      const starlessDepthCanvas = document.createElement('canvas');
+      const starlessDepthCtx = starlessDepthCanvas.getContext('2d')!;
+      starlessDepthCanvas.width = width;
+      starlessDepthCanvas.height = height;
+      starlessDepthCtx.putImageData(starlessDepthMap, 0, 0);
+      setStarlessDepthMapUrl(starlessDepthCanvas.toDataURL('image/png'));
+
+      // STEP 2: Generate depth map for stars (using same Fast Mode approach)
+      setProcessingStep(t('Generating stars depth map...', '生成恒星深度图...'));
+      setProgress(30);
+
+      const starsImageData = starsCtx.getImageData(0, 0, width, height);
+      const starsDepthMap = generateSimpleDepthMap(starsImageData, simpleParams);
+
+      // Save stars depth map
+      const starsDepthCanvas = document.createElement('canvas');
+      const starsDepthCtx = starsDepthCanvas.getContext('2d')!;
+      starsDepthCanvas.width = width;
+      starsDepthCanvas.height = height;
+      starsDepthCtx.putImageData(starsDepthMap, 0, 0);
+      setStarsDepthMapUrl(starsDepthCanvas.toDataURL('image/png'));
+
+      // STEP 3: Process starless with its own depth map (Fast Mode displacement)
+      setProcessingStep(t('Processing starless displacement...', '处理无星位移...'));
+      setProgress(50);
+
+      const starMask = detectStars(starlessImageData.data, width, height, 200);
+      const { left: starlessLeft, right: starlessRight } = createStereoViews(
+        starlessCanvas,
+        starlessCtx,
+        starlessDepthMap,
+        width,
+        height,
+        horizontalDisplace,
+        starMask
       );
-      
-      console.log('✓ Separated stereo layers created using Traditional Morph logic');
-      
-      // Create composites by combining backgrounds and stars
-      const leftComposite = document.createElement('canvas');
-      leftComposite.width = separatedResult.leftBackground.width;
-      leftComposite.height = separatedResult.leftBackground.height;
-      const leftCtx = leftComposite.getContext('2d')!;
-      leftCtx.drawImage(separatedResult.leftBackground, 0, 0);
-      leftCtx.drawImage(separatedResult.leftStars, 0, 0);
-      
-      const rightComposite = document.createElement('canvas');
-      rightComposite.width = separatedResult.rightBackground.width;
-      rightComposite.height = separatedResult.rightBackground.height;
-      const rightCtx = rightComposite.getContext('2d')!;
-      rightCtx.drawImage(separatedResult.rightBackground, 0, 0);
-      rightCtx.drawImage(separatedResult.rightStars, 0, 0);
-      
+
+      // STEP 4: Process stars with starless depth map (Traditional Mode displacement)
+      setProcessingStep(t('Processing stars displacement...', '处理恒星位移...'));
+      setProgress(65);
+
+      const { left: starsLeft, right: starsRight } = createStereoViews(
+        starsCanvas,
+        starsCtx,
+        starlessDepthMap, // Use starless depth map for stars
+        width,
+        height,
+        horizontalDisplace,
+        new Uint8ClampedArray(width * height)
+      );
+
+      // STEP 5: Composite starless + stars for each eye
+      setProcessingStep(t('Compositing layers...', '合成图层...'));
+      setProgress(80);
+
+      const compositeLeft = new ImageData(width, height);
+      const compositeRight = new ImageData(width, height);
+
+      for (let i = 0; i < starlessLeft.data.length; i += 4) {
+        compositeLeft.data[i] = Math.min(255, starlessLeft.data[i] + starsLeft.data[i]);
+        compositeLeft.data[i + 1] = Math.min(255, starlessLeft.data[i + 1] + starsLeft.data[i + 1]);
+        compositeLeft.data[i + 2] = Math.min(255, starlessLeft.data[i + 2] + starsLeft.data[i + 2]);
+        compositeLeft.data[i + 3] = 255;
+
+        compositeRight.data[i] = Math.min(255, starlessRight.data[i] + starsRight.data[i]);
+        compositeRight.data[i + 1] = Math.min(255, starlessRight.data[i + 1] + starsRight.data[i + 1]);
+        compositeRight.data[i + 2] = Math.min(255, starlessRight.data[i + 2] + starsRight.data[i + 2]);
+        compositeRight.data[i + 3] = 255;
+      }
+
+      // Create canvas versions for storage
+      const leftBgCanvas = document.createElement('canvas');
+      leftBgCanvas.width = width;
+      leftBgCanvas.height = height;
+      const leftBgCtx = leftBgCanvas.getContext('2d')!;
+      leftBgCtx.putImageData(starlessLeft, 0, 0);
+
+      const leftStarsCanvas = document.createElement('canvas');
+      leftStarsCanvas.width = width;
+      leftStarsCanvas.height = height;
+      const leftStarsCtx = leftStarsCanvas.getContext('2d')!;
+      leftStarsCtx.putImageData(starsLeft, 0, 0);
+
+      const rightBgCanvas = document.createElement('canvas');
+      rightBgCanvas.width = width;
+      rightBgCanvas.height = height;
+      const rightBgCtx = rightBgCanvas.getContext('2d')!;
+      rightBgCtx.putImageData(starlessRight, 0, 0);
+
+      const rightStarsCanvas = document.createElement('canvas');
+      rightStarsCanvas.width = width;
+      rightStarsCanvas.height = height;
+      const rightStarsCtx = rightStarsCanvas.getContext('2d')!;
+      rightStarsCtx.putImageData(starsRight, 0, 0);
+
+      const leftCompositeCanvas = document.createElement('canvas');
+      leftCompositeCanvas.width = width;
+      leftCompositeCanvas.height = height;
+      const leftCompCtx = leftCompositeCanvas.getContext('2d')!;
+      leftCompCtx.putImageData(compositeLeft, 0, 0);
+
+      const rightCompositeCanvas = document.createElement('canvas');
+      rightCompositeCanvas.width = width;
+      rightCompositeCanvas.height = height;
+      const rightCompCtx = rightCompositeCanvas.getContext('2d')!;
+      rightCompCtx.putImageData(compositeRight, 0, 0);
+
       // Store composites and separated layers for display
-      setLeftComposite(leftComposite.toDataURL());
-      setRightComposite(rightComposite.toDataURL());
-      setLeftBackground(separatedResult.leftBackground.toDataURL());
-      setRightBackground(separatedResult.rightBackground.toDataURL());
-      setLeftStarsOnly(separatedResult.leftStars.toDataURL());
-      setRightStarsOnly(separatedResult.rightStars.toDataURL());
-      
-      // Store depth and luminance maps
-      setDepthMapUrl(separatedResult.depthMap.toDataURL());
-      setLuminanceMapUrl(separatedResult.luminanceMap.toDataURL());
-      
+      setLeftComposite(leftCompositeCanvas.toDataURL());
+      setRightComposite(rightCompositeCanvas.toDataURL());
+      setLeftBackground(leftBgCanvas.toDataURL());
+      setRightBackground(rightBgCanvas.toDataURL());
+      setLeftStarsOnly(leftStarsCanvas.toDataURL());
+      setRightStarsOnly(rightStarsCanvas.toDataURL());
+
       // Store canvases for download
       setProcessedCanvases({
-        leftBackground: separatedResult.leftBackground,
-        leftStars: separatedResult.leftStars,
-        rightBackground: separatedResult.rightBackground,
-        rightStars: separatedResult.rightStars,
-        depthMap: separatedResult.depthMap,
-        luminanceMap: separatedResult.luminanceMap
+        leftBackground: leftBgCanvas,
+        leftStars: leftStarsCanvas,
+        rightBackground: rightBgCanvas,
+        rightStars: rightStarsCanvas,
+        starlessDepthMap: starlessDepthCanvas,
+        starsDepthMap: starsDepthCanvas
       });
       
-      // Step 2: Detect stars from ORIGINAL stars image for 3D rendering
+      
+      // Step 2: Detect stars from composited images for 3D rendering
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
-      
-      const canvasPool = CanvasPool.getInstance();
-      const starsCanvas = canvasPool.acquire(starsElement.width, starsElement.height);
-      const starsCtx = starsCanvas.getContext('2d')!;
-      starsCtx.drawImage(starsElement, 0, 0);
-      
-      const stars: StarData[] = [];
-      const starsImageData = starsCtx.getImageData(0, 0, starsCanvas.width, starsCanvas.height);
-      const depthCtx = separatedResult.depthMap.getContext('2d')!;
-      const depthData = depthCtx.getImageData(0, 0, separatedResult.depthMap.width, separatedResult.depthMap.height);
-      
-      const threshold = 50;
-      const centerX = starsCanvas.width / 2;
-      const centerY = starsCanvas.height / 2;
-      const scale = 0.08;
-      
-      for (let y = 1; y < starsCanvas.height - 1; y += 2) {
-        for (let x = 1; x < starsCanvas.width - 1; x += 2) {
-          const pixelIdx = (y * starsCanvas.width + x) * 4;
-          const luminance = 0.299 * starsImageData.data[pixelIdx] + 
-                           0.587 * starsImageData.data[pixelIdx + 1] + 
-                           0.114 * starsImageData.data[pixelIdx + 2];
-          
-          if (luminance > threshold) {
-            const depthIdx = (Math.floor(y) * separatedResult.depthMap.width + Math.floor(x)) * 4;
-            const depth = depthData.data[depthIdx] / 255;
-            
-            stars.push({
-              x: (x - centerX) * scale,
-              y: -(y - centerY) * scale,
-              z: (depth - 0.5) * 200 * (0.2 + (depthIntensity / 100) * 1.8),
-              brightness: luminance / 255,
-              size: 3,
-              color3d: `rgb(${starsImageData.data[pixelIdx]}, ${starsImageData.data[pixelIdx + 1]}, ${starsImageData.data[pixelIdx + 2]})`
-            });
-          }
-        }
-      }
-      
-      console.log(`✓ Detected ${stars.length} stars for 3D rendering`);
-      canvasPool.release(starsCanvas);
+      setProgress(90);
 
-      // Step 3: Use same stars for both eyes (3D effect comes from motion parallax)
-      console.log('Setting stars for left and right views...');
-      setLeftStars(stars);
-      setRightStars(stars);
+      const canvasPool = CanvasPool.getInstance();
+      
+      // Extract stars from left composite
+      const leftExtractCanvas = canvasPool.acquire(width, height);
+      const leftExtractCtx = leftExtractCanvas.getContext('2d')!;
+      leftExtractCtx.putImageData(compositeLeft, 0, 0);
+      
+      const leftStarData = extractStarsFromComposite(leftExtractCanvas, starlessElement, starlessDepthCanvas);
+      setLeftStars(leftStarData.stars);
+      canvasPool.release(leftExtractCanvas);
+      
+      // Extract stars from right composite
+      const rightExtractCanvas = canvasPool.acquire(width, height);
+      const rightExtractCtx = rightExtractCanvas.getContext('2d')!;
+      rightExtractCtx.putImageData(compositeRight, 0, 0);
+      
+      const rightStarData = extractStarsFromComposite(rightExtractCanvas, starlessElement, starlessDepthCanvas);
+      setRightStars(rightStarData.stars);
+      canvasPool.release(rightExtractCanvas);
+
+      console.log(`✓ Detected ${leftStarData.stars.length} left stars and ${rightStarData.stars.length} right stars for 3D rendering`);
       
       console.log('✓ Prepared separated layers for 3D rendering');
-      console.log(`Stars detected: ${stars.length}, waiting for StarField3D components to initialize...`);
       console.log('Left background:', leftBackground ? 'SET' : 'NULL');
       console.log('Right background:', rightBackground ? 'SET' : 'NULL');
       console.log('Left stars only:', leftStarsOnly ? 'SET' : 'NULL');
@@ -1094,42 +1214,42 @@ const ParallelVideoGenerator: React.FC = () => {
                   )}
                 </div>
                 
-                {/* Luminance and Depth Maps Section */}
+                {/* Depth Maps Section */}
                 <div className="mt-6 space-y-4">
                   <h3 className="text-lg font-semibold text-white">Depth Analysis Maps</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {luminanceMapUrl && (
+                    {starlessDepthMapUrl && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-xs">Luminance Map (Primary Depth)</Label>
+                          <Label className="text-cosmic-200 text-xs">Starless Depth Map</Label>
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDownloadProcessedImage('luminanceMap')}
+                            onClick={() => handleDownloadProcessedImage('starlessDepthMap')}
                             className="h-7 text-xs"
                           >
                             <Download className="w-3 h-3 mr-1" />
                             PNG
                           </Button>
                         </div>
-                        <img src={luminanceMapUrl} alt="Luminance Map" className="w-full rounded border border-cosmic-600" />
+                        <img src={starlessDepthMapUrl} alt="Starless Depth Map" className="w-full rounded border border-cosmic-600" />
                       </div>
                     )}
-                    {depthMapUrl && (
+                    {starsDepthMapUrl && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-xs">Combined Depth Map</Label>
+                          <Label className="text-cosmic-200 text-xs">Stars Depth Map</Label>
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDownloadProcessedImage('depthMap')}
+                            onClick={() => handleDownloadProcessedImage('starsDepthMap')}
                             className="h-7 text-xs"
                           >
                             <Download className="w-3 h-3 mr-1" />
                             PNG
                           </Button>
                         </div>
-                        <img src={depthMapUrl} alt="Depth Map" className="w-full rounded border border-cosmic-600" />
+                        <img src={starsDepthMapUrl} alt="Stars Depth Map" className="w-full rounded border border-cosmic-600" />
                       </div>
                     )}
                   </div>
@@ -1181,22 +1301,22 @@ const ParallelVideoGenerator: React.FC = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleDownloadProcessedImage('depthMap')}
-                        disabled={!processedCanvases.depthMap}
+                        onClick={() => handleDownloadProcessedImage('starlessDepthMap')}
+                        disabled={!processedCanvases.starlessDepthMap}
                         className="text-xs"
                       >
                         <Download className="w-3 h-3 mr-1" />
-                        Depth Map
+                        Starless Depth
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleDownloadProcessedImage('luminanceMap')}
-                        disabled={!processedCanvases.luminanceMap}
+                        onClick={() => handleDownloadProcessedImage('starsDepthMap')}
+                        disabled={!processedCanvases.starsDepthMap}
                         className="text-xs"
                       >
                         <Download className="w-3 h-3 mr-1" />
-                        Luminance
+                        Stars Depth
                       </Button>
                     </div>
                     <p className="text-xs text-cosmic-400">
