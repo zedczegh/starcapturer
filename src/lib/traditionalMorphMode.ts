@@ -270,9 +270,10 @@ export class TraditionalMorphProcessor {
     
     const primaryData = new ImageData(width, height);
     for (let i = 0; i < data.length; i += 4) {
-      // Enhanced luminance with blue bias for nebula depth perception
-      const luminance = 0.2 * data[i] + 0.5 * data[i + 1] + 0.8 * data[i + 2];
-      const enhancedLum = Math.pow(luminance / 255, 0.8) * 255; // Gamma correction for depth
+      // Standard luminance calculation (ITU-R BT.709)
+      const luminance = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+      // Gentle gamma correction for depth perception without over-brightening
+      const enhancedLum = Math.pow(luminance / 255, 0.9) * 255;
       primaryData.data[i] = primaryData.data[i + 1] = primaryData.data[i + 2] = enhancedLum;
       primaryData.data[i + 3] = 255;
     }
@@ -323,8 +324,8 @@ export class TraditionalMorphProcessor {
         // Local contrast analysis for structure detection
         const localContrast = this.calculateLocalContrast(data, x, y, width, height, 3);
         
-        // Combine gradient and contrast for structure depth
-        const structureDepth = Math.min(255, gradientMagnitude * 0.5 + localContrast * 0.8);
+        // Combine gradient and contrast for structure depth - reduced weights to prevent over-amplification
+        const structureDepth = Math.min(255, gradientMagnitude * 0.3 + localContrast * 0.5);
         
         structureData.data[idx] = structureData.data[idx + 1] = structureData.data[idx + 2] = structureDepth;
         structureData.data[idx + 3] = 255;
@@ -361,8 +362,8 @@ export class TraditionalMorphProcessor {
         const sobelY = this.applySobelY(data, x, y, width);
         const edgeStrength = Math.sqrt(sobelX * sobelX + sobelY * sobelY);
         
-        // Edge-based depth: stronger edges = more forward
-        const edgeDepth = Math.min(255, edgeStrength * 2);
+        // Edge-based depth: reduced multiplier to prevent edge over-emphasis
+        const edgeDepth = Math.min(255, edgeStrength * 1.2);
         
         edgeData.data[idx] = edgeData.data[idx + 1] = edgeData.data[idx + 2] = 255 - edgeDepth; // Invert for depth
         edgeData.data[idx + 3] = 255;
@@ -395,15 +396,15 @@ export class TraditionalMorphProcessor {
       const structureVal = structureData.data[i] / 255;
       const edgeVal = edgeData.data[i] / 255;
       
-      // Intelligent fusion with adaptive weights
-      const structureWeight = Math.min(1, structureVal * 2); // More weight for high-structure areas
-      const edgeWeight = Math.min(1, (1 - edgeVal) * 1.5); // More weight for edge areas
+      // Simplified fusion focusing on primary luminance to match Fast Mode's approach
+      const structureWeight = Math.min(1, structureVal * 1.2);
+      const edgeWeight = Math.min(1, (1 - edgeVal) * 1.0);
       
-      // Combine with adaptive weighting
+      // More weight on primary depth, less on structure/edge to prevent artifacts
       const fusedVal = (
-        primaryVal * 0.5 +
-        structureVal * structureWeight * 0.3 +
-        edgeVal * edgeWeight * 0.2
+        primaryVal * 0.7 +
+        structureVal * structureWeight * 0.15 +
+        edgeVal * edgeWeight * 0.15
       ) * 255;
       
       fusedData.data[i] = fusedData.data[i + 1] = fusedData.data[i + 2] = Math.min(255, fusedVal);
