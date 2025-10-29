@@ -936,8 +936,8 @@ const ParallelVideoGenerator: React.FC = () => {
         </div>
         <p className="text-cosmic-300 text-lg max-w-3xl mx-auto">
           {t(
-            'Generate stunning stereoscopic 3D videos from astronomy images using Traditional Morph processing',
-            '使用传统变形处理从天文图像生成令人惊叹的立体3D视频'
+            'Generate stunning stereoscopic 3D videos from astronomy images using Fast Mode depth generation',
+            '使用快速模式深度生成从天文图像生成令人惊叹的立体3D视频'
           )}
         </p>
       </div>
@@ -961,7 +961,7 @@ const ParallelVideoGenerator: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        {/* Step 1: Upload & Traditional Morph Settings */}
+        {/* Step 1: Upload & Fast Mode Settings */}
         <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -970,10 +970,10 @@ const ParallelVideoGenerator: React.FC = () => {
               </div>
               <div>
                 <CardTitle className="text-2xl text-white">
-                  {t('Step 1: Upload Images & Configure Traditional Morph', '步骤1：上传图片并配置传统变形')}
+                  {t('Step 1: Upload Images & Configure Fast Mode', '步骤1：上传图片并配置快速模式')}
                 </CardTitle>
                 <CardDescription className="text-cosmic-300">
-                  {t('Upload your starless and stars-only images, then adjust morph parameters', '上传无星和仅星图像，然后调整变形参数')}
+                  {t('Upload your starless and stars-only images, then adjust depth generation parameters', '上传无星和仅星图像，然后调整深度生成参数')}
                 </CardDescription>
               </div>
             </div>
@@ -1073,15 +1073,15 @@ const ParallelVideoGenerator: React.FC = () => {
 
             <Separator className="bg-cosmic-700/30" />
 
-            {/* Traditional Morph Parameters - Exactly matching stereoscope processor */}
+            {/* Fast Mode Parameters - Matching unified processing algorithm */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
                 <Settings2 className="w-5 h-5 text-purple-400" />
                 <h3 className="text-lg font-semibold text-white">
-                  {t('Traditional Morph Parameters', '传统变形参数')}
+                  {t('Fast Mode Depth Parameters', '快速模式深度参数')}
                 </h3>
                 <p className="text-sm text-cosmic-400">
-                  {t('Professional parameters for authentic 3D astrophotography', '专业参数用于真实的3D天文摄影')}
+                  {t('Luminance-based depth generation for consistent 3D parallax', '基于亮度的深度生成，获得一致的3D视差')}
                 </p>
               </div>
 
@@ -1180,7 +1180,7 @@ const ParallelVideoGenerator: React.FC = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5" />
-                  {t('Process with Traditional Morph', '使用传统变形处理')}
+                  {t('Process with Fast Mode', '使用快速模式处理')}
                 </div>
               )}
             </Button>
@@ -1195,7 +1195,7 @@ const ParallelVideoGenerator: React.FC = () => {
               <CardHeader>
                 <CardTitle className="text-xl text-white">Debug: Processed Images</CardTitle>
                 <CardDescription className="text-cosmic-300">
-                  {t('Intermediate results from Traditional Morph', '传统变形的中间结果')}
+                  {t('Intermediate results from Fast Mode depth generation', '快速模式深度生成的中间结果')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
