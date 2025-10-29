@@ -214,19 +214,26 @@ const ParallelVideoGenerator: React.FC = () => {
   // Ensure stitched canvas is rendered and perform initial stitch
   useEffect(() => {
     if (isReady && leftCanvasRef.current && rightCanvasRef.current) {
-      // Wait a moment for the stitched canvas element to mount in the DOM
-      const checkAndStitch = () => {
-        if (stitchedCanvasRef.current) {
-          console.log('✅ Stitched canvas ready');
-          stitchCanvases();
-        } else {
-          // Retry if canvas hasn't mounted yet
-          setTimeout(checkAndStitch, 50);
+      // Wait for the stitched canvas element to mount in the DOM
+      const waitForStitchedCanvas = setInterval(() => {
+        const stitchedCanvasElement = document.querySelector('canvas[style*="pixelated"]') as HTMLCanvasElement;
+        if (stitchedCanvasElement && !stitchedCanvasRef.current) {
+          stitchedCanvasRef.current = stitchedCanvasElement;
+          console.log('✅ Stitched canvas ref set from DOM');
+          clearInterval(waitForStitchedCanvas);
+          // Perform initial stitch
+          setTimeout(() => {
+            stitchCanvases();
+          }, 100);
         }
-      };
-      checkAndStitch();
+      }, 50);
+
+      // Clear interval after 5 seconds to prevent memory leak
+      setTimeout(() => clearInterval(waitForStitchedCanvas), 5000);
+
+      return () => clearInterval(waitForStitchedCanvas);
     }
-  }, [isReady, leftCanvasRef.current, rightCanvasRef.current, stitchCanvases]);
+  }, [isReady, stitchCanvases]);
 
   // Stitch canvases together during normal animation
   useEffect(() => {
