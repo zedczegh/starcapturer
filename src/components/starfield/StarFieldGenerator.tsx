@@ -79,6 +79,9 @@ const StarFieldGenerator: React.FC = () => {
   // 3D depth intensity control (0-200 scale)
   const [depthIntensity, setDepthIntensity] = useState<number>(100);
   
+  // Anchor point for motion direction (default to center)
+  const [anchorPoint, setAnchorPoint] = useState<{ x: number; y: number } | null>(null);
+  
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1804,6 +1807,8 @@ const StarFieldGenerator: React.FC = () => {
                   frameRenderTrigger={frameRenderTrigger}
                   externalProgress={animationProgress}
                   depthIntensity={depthIntensity}
+                  anchorPoint={anchorPoint}
+                  onAnchorPointChange={setAnchorPoint}
                 />
                 
                 {/* Progress Bar and Controls */}

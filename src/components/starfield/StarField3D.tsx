@@ -36,6 +36,9 @@ interface StarField3DProps {
   // Stereoscopic displacement parameters to respect depth from Traditional Morph
   horizontalDisplace?: number; // Displacement amount from stereoscope processor (typically 25)
   starShiftAmount?: number; // Star shift amount from stereoscope processor (typically 6)
+  // Anchor point for motion direction
+  anchorPoint?: { x: number; y: number } | null;
+  onAnchorPointChange?: (point: { x: number; y: number } | null) => void;
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -54,7 +57,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
   externalProgress,
   depthIntensity = 100,
   horizontalDisplace = 25,
-  starShiftAmount = 6
+  starShiftAmount = 6,
+  anchorPoint = null,
+  onAnchorPointChange
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -100,6 +105,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   
   const [backgroundImg, setBackgroundImg] = useState<ImageBitmap | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
+  const [internalAnchorPoint, setInternalAnchorPoint] = useState<{ x: number; y: number } | null>(anchorPoint);
   
   // Cache for rendered frames to avoid redundant calculations
   const lastRenderState = useRef<{
@@ -709,6 +715,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
     img.src = backgroundImage;
   }, [backgroundImage, imageDimensions]);
 
+  // Sync anchor point with prop
+  useEffect(() => {
+    if (anchorPoint !== internalAnchorPoint) {
+      setInternalAnchorPoint(anchorPoint);
+    }
+  }, [anchorPoint]);
+
   // Animation loop - optimized with cached context and throttled updates
   const animate = useCallback(() => {
     if (!canvasRef.current) {
@@ -942,40 +955,143 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const canvasCenterX = cachedDimensions.current.canvasCenterX;
     const canvasCenterY = cachedDimensions.current.canvasCenterY;
     
+    // Calculate anchor point (use provided or default to center)
+    const effectiveAnchor = internalAnchorPoint || { 
+      x: canvas.width * 0.5, 
+      y: canvas.height * 0.5 
+    };
+    
+    // Normalize anchor point to 0-1 range
+    const anchorNormX = effectiveAnchor.x / canvas.width;
+    const anchorNormY = effectiveAnchor.y / canvas.height;
+    
     // Only recalculate offsets if state changed
     if (stateChanged) {
       if (motionType === 'zoom_in') {
-        // Zoom in: Background (starless) zooms directly by amplification factor
-        // Stars use parallax multipliers for depth effect
-        offsetsRef.current.background.scale = 1.0 + (progressRatio * ampFactor);
-        offsetsRef.current.layer6.scale = 1.0 + (progressRatio * ampFactor * 0.4 * parallaxMultipliers.layer6);
-        offsetsRef.current.layer5.scale = 1.0 + (progressRatio * ampFactor * 0.5 * parallaxMultipliers.layer5);
-        offsetsRef.current.layer4.scale = 1.0 + (progressRatio * ampFactor * 0.6 * parallaxMultipliers.layer4);
-        offsetsRef.current.layer3.scale = 1.0 + (progressRatio * ampFactor * 0.7 * parallaxMultipliers.layer3);
-        offsetsRef.current.layer2.scale = 1.0 + (progressRatio * ampFactor * 0.85 * parallaxMultipliers.layer2);
-        offsetsRef.current.layer1.scale = 1.0 + (progressRatio * ampFactor * 1.0 * parallaxMultipliers.layer1);
-      } else if (motionType === 'zoom_out') {
-        // Zoom out: Background (starless) shrinks from amplified size back to normal
-        // Stars use parallax multipliers for depth effect
-        const bgMax = 1.0 + ampFactor;
-        const layer6Max = 1.0 + (ampFactor * 0.4 * parallaxMultipliers.layer6);
-        const layer5Max = 1.0 + (ampFactor * 0.5 * parallaxMultipliers.layer5);
-        const layer4Max = 1.0 + (ampFactor * 0.6 * parallaxMultipliers.layer4);
-        const layer3Max = 1.0 + (ampFactor * 0.7 * parallaxMultipliers.layer3);
-        const layer2Max = 1.0 + (ampFactor * 0.85 * parallaxMultipliers.layer2);
-        const layer1Max = 1.0 + (ampFactor * 1.0 * parallaxMultipliers.layer1);
+        // Zoom in with anchor point-based motion
+        // Calculate distance from each layer's position to anchor point
+        const calculateAnchorBasedScale = (baseParallax: number, layerKey: string) => {
+          // Distance from center affects speed - closer to anchor = faster
+          const centerDist = Math.sqrt(
+            Math.pow(anchorNormX - 0.5, 2) + Math.pow(anchorNormY - 0.5, 2)
+          );
+          const speedMultiplier = 1.0 + (1.0 - centerDist) * 0.5; // 1.0 to 1.5x speed based on anchor distance
+          return 1.0 + (progressRatio * ampFactor * baseParallax * parallaxMultipliers[layerKey] * speedMultiplier);
+        };
         
-        offsetsRef.current.background.scale = bgMax - (progressRatio * ampFactor);
-        offsetsRef.current.layer6.scale = layer6Max - (progressRatio * ampFactor * 0.4 * parallaxMultipliers.layer6);
-        offsetsRef.current.layer5.scale = layer5Max - (progressRatio * ampFactor * 0.5 * parallaxMultipliers.layer5);
-        offsetsRef.current.layer4.scale = layer4Max - (progressRatio * ampFactor * 0.6 * parallaxMultipliers.layer4);
-        offsetsRef.current.layer3.scale = layer3Max - (progressRatio * ampFactor * 0.7 * parallaxMultipliers.layer3);
-        offsetsRef.current.layer2.scale = layer2Max - (progressRatio * ampFactor * 0.85 * parallaxMultipliers.layer2);
-        offsetsRef.current.layer1.scale = layer1Max - (progressRatio * ampFactor * 1.0 * parallaxMultipliers.layer1);
+        offsetsRef.current.background.scale = calculateAnchorBasedScale(1.0, 'background');
+        offsetsRef.current.layer12.scale = calculateAnchorBasedScale(0.35, 'layer12');
+        offsetsRef.current.layer11.scale = calculateAnchorBasedScale(0.37, 'layer11');
+        offsetsRef.current.layer10.scale = calculateAnchorBasedScale(0.39, 'layer10');
+        offsetsRef.current.layer9.scale = calculateAnchorBasedScale(0.41, 'layer9');
+        offsetsRef.current.layer8.scale = calculateAnchorBasedScale(0.43, 'layer8');
+        offsetsRef.current.layer7.scale = calculateAnchorBasedScale(0.45, 'layer7');
+        offsetsRef.current.layer6.scale = calculateAnchorBasedScale(0.5, 'layer6');
+        offsetsRef.current.layer5.scale = calculateAnchorBasedScale(0.6, 'layer5');
+        offsetsRef.current.layer4.scale = calculateAnchorBasedScale(0.7, 'layer4');
+        offsetsRef.current.layer3.scale = calculateAnchorBasedScale(0.8, 'layer3');
+        offsetsRef.current.layer2.scale = calculateAnchorBasedScale(0.9, 'layer2');
+        offsetsRef.current.layer1.scale = calculateAnchorBasedScale(1.0, 'layer1');
+        
+        // Apply offset towards anchor point
+        const offsetStrength = progressRatio * 100 * ampFactor;
+        const offsetX = (anchorNormX - 0.5) * offsetStrength;
+        const offsetY = (anchorNormY - 0.5) * offsetStrength;
+        
+        offsetsRef.current.background.x = offsetX * parallaxMultipliers.background;
+        offsetsRef.current.background.y = offsetY * parallaxMultipliers.background;
+        offsetsRef.current.layer12.x = offsetX * parallaxMultipliers.layer12;
+        offsetsRef.current.layer12.y = offsetY * parallaxMultipliers.layer12;
+        offsetsRef.current.layer11.x = offsetX * parallaxMultipliers.layer11;
+        offsetsRef.current.layer11.y = offsetY * parallaxMultipliers.layer11;
+        offsetsRef.current.layer10.x = offsetX * parallaxMultipliers.layer10;
+        offsetsRef.current.layer10.y = offsetY * parallaxMultipliers.layer10;
+        offsetsRef.current.layer9.x = offsetX * parallaxMultipliers.layer9;
+        offsetsRef.current.layer9.y = offsetY * parallaxMultipliers.layer9;
+        offsetsRef.current.layer8.x = offsetX * parallaxMultipliers.layer8;
+        offsetsRef.current.layer8.y = offsetY * parallaxMultipliers.layer8;
+        offsetsRef.current.layer7.x = offsetX * parallaxMultipliers.layer7;
+        offsetsRef.current.layer7.y = offsetY * parallaxMultipliers.layer7;
+        offsetsRef.current.layer6.x = offsetX * parallaxMultipliers.layer6;
+        offsetsRef.current.layer6.y = offsetY * parallaxMultipliers.layer6;
+        offsetsRef.current.layer5.x = offsetX * parallaxMultipliers.layer5;
+        offsetsRef.current.layer5.y = offsetY * parallaxMultipliers.layer5;
+        offsetsRef.current.layer4.x = offsetX * parallaxMultipliers.layer4;
+        offsetsRef.current.layer4.y = offsetY * parallaxMultipliers.layer4;
+        offsetsRef.current.layer3.x = offsetX * parallaxMultipliers.layer3;
+        offsetsRef.current.layer3.y = offsetY * parallaxMultipliers.layer3;
+        offsetsRef.current.layer2.x = offsetX * parallaxMultipliers.layer2;
+        offsetsRef.current.layer2.y = offsetY * parallaxMultipliers.layer2;
+        offsetsRef.current.layer1.x = offsetX * parallaxMultipliers.layer1;
+        offsetsRef.current.layer1.y = offsetY * parallaxMultipliers.layer1;
+      } else if (motionType === 'zoom_out') {
+        // Zoom out with anchor point-based motion
+        const calculateAnchorBasedScaleOut = (baseParallax: number, layerKey: string) => {
+          const centerDist = Math.sqrt(
+            Math.pow(anchorNormX - 0.5, 2) + Math.pow(anchorNormY - 0.5, 2)
+          );
+          const speedMultiplier = 1.0 + (1.0 - centerDist) * 0.5;
+          const maxScale = 1.0 + (ampFactor * baseParallax * parallaxMultipliers[layerKey] * speedMultiplier);
+          return maxScale - (progressRatio * ampFactor * baseParallax * parallaxMultipliers[layerKey] * speedMultiplier);
+        };
+        
+        offsetsRef.current.background.scale = calculateAnchorBasedScaleOut(1.0, 'background');
+        offsetsRef.current.layer12.scale = calculateAnchorBasedScaleOut(0.35, 'layer12');
+        offsetsRef.current.layer11.scale = calculateAnchorBasedScaleOut(0.37, 'layer11');
+        offsetsRef.current.layer10.scale = calculateAnchorBasedScaleOut(0.39, 'layer10');
+        offsetsRef.current.layer9.scale = calculateAnchorBasedScaleOut(0.41, 'layer9');
+        offsetsRef.current.layer8.scale = calculateAnchorBasedScaleOut(0.43, 'layer8');
+        offsetsRef.current.layer7.scale = calculateAnchorBasedScaleOut(0.45, 'layer7');
+        offsetsRef.current.layer6.scale = calculateAnchorBasedScaleOut(0.5, 'layer6');
+        offsetsRef.current.layer5.scale = calculateAnchorBasedScaleOut(0.6, 'layer5');
+        offsetsRef.current.layer4.scale = calculateAnchorBasedScaleOut(0.7, 'layer4');
+        offsetsRef.current.layer3.scale = calculateAnchorBasedScaleOut(0.8, 'layer3');
+        offsetsRef.current.layer2.scale = calculateAnchorBasedScaleOut(0.9, 'layer2');
+        offsetsRef.current.layer1.scale = calculateAnchorBasedScaleOut(1.0, 'layer1');
+        
+        // Apply offset away from anchor point (inverse of zoom in)
+        const offsetStrength = (1 - progressRatio) * 100 * ampFactor;
+        const offsetX = (anchorNormX - 0.5) * offsetStrength;
+        const offsetY = (anchorNormY - 0.5) * offsetStrength;
+        
+        offsetsRef.current.background.x = offsetX * parallaxMultipliers.background;
+        offsetsRef.current.background.y = offsetY * parallaxMultipliers.background;
+        offsetsRef.current.layer12.x = offsetX * parallaxMultipliers.layer12;
+        offsetsRef.current.layer12.y = offsetY * parallaxMultipliers.layer12;
+        offsetsRef.current.layer11.x = offsetX * parallaxMultipliers.layer11;
+        offsetsRef.current.layer11.y = offsetY * parallaxMultipliers.layer11;
+        offsetsRef.current.layer10.x = offsetX * parallaxMultipliers.layer10;
+        offsetsRef.current.layer10.y = offsetY * parallaxMultipliers.layer10;
+        offsetsRef.current.layer9.x = offsetX * parallaxMultipliers.layer9;
+        offsetsRef.current.layer9.y = offsetY * parallaxMultipliers.layer9;
+        offsetsRef.current.layer8.x = offsetX * parallaxMultipliers.layer8;
+        offsetsRef.current.layer8.y = offsetY * parallaxMultipliers.layer8;
+        offsetsRef.current.layer7.x = offsetX * parallaxMultipliers.layer7;
+        offsetsRef.current.layer7.y = offsetY * parallaxMultipliers.layer7;
+        offsetsRef.current.layer6.x = offsetX * parallaxMultipliers.layer6;
+        offsetsRef.current.layer6.y = offsetY * parallaxMultipliers.layer6;
+        offsetsRef.current.layer5.x = offsetX * parallaxMultipliers.layer5;
+        offsetsRef.current.layer5.y = offsetY * parallaxMultipliers.layer5;
+        offsetsRef.current.layer4.x = offsetX * parallaxMultipliers.layer4;
+        offsetsRef.current.layer4.y = offsetY * parallaxMultipliers.layer4;
+        offsetsRef.current.layer3.x = offsetX * parallaxMultipliers.layer3;
+        offsetsRef.current.layer3.y = offsetY * parallaxMultipliers.layer3;
+        offsetsRef.current.layer2.x = offsetX * parallaxMultipliers.layer2;
+        offsetsRef.current.layer2.y = offsetY * parallaxMultipliers.layer2;
+        offsetsRef.current.layer1.x = offsetX * parallaxMultipliers.layer1;
+        offsetsRef.current.layer1.y = offsetY * parallaxMultipliers.layer1;
       } else if (motionType === 'pan_left') {
-        // Pan with amplification affecting overall scale and pan distance
+        // Pan left with anchor point affecting direction and speed
         const panAmount = progressRatio * speed * 250 * ampFactor;
+        const anchorOffsetY = (anchorNormY - 0.5) * 100 * progressRatio;
+        
         offsetsRef.current.background.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.background);
+        offsetsRef.current.layer12.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer12);
+        offsetsRef.current.layer11.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer11);
+        offsetsRef.current.layer10.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer10);
+        offsetsRef.current.layer9.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer9);
+        offsetsRef.current.layer8.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer8);
+        offsetsRef.current.layer7.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer7);
         offsetsRef.current.layer6.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer6);
         offsetsRef.current.layer5.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer5);
         offsetsRef.current.layer4.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer4);
@@ -984,16 +1100,43 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer1.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer1);
         
         offsetsRef.current.background.x = -panAmount * parallaxMultipliers.background;
+        offsetsRef.current.background.y = anchorOffsetY * parallaxMultipliers.background;
+        offsetsRef.current.layer12.x = -panAmount * parallaxMultipliers.layer12;
+        offsetsRef.current.layer12.y = anchorOffsetY * parallaxMultipliers.layer12;
+        offsetsRef.current.layer11.x = -panAmount * parallaxMultipliers.layer11;
+        offsetsRef.current.layer11.y = anchorOffsetY * parallaxMultipliers.layer11;
+        offsetsRef.current.layer10.x = -panAmount * parallaxMultipliers.layer10;
+        offsetsRef.current.layer10.y = anchorOffsetY * parallaxMultipliers.layer10;
+        offsetsRef.current.layer9.x = -panAmount * parallaxMultipliers.layer9;
+        offsetsRef.current.layer9.y = anchorOffsetY * parallaxMultipliers.layer9;
+        offsetsRef.current.layer8.x = -panAmount * parallaxMultipliers.layer8;
+        offsetsRef.current.layer8.y = anchorOffsetY * parallaxMultipliers.layer8;
+        offsetsRef.current.layer7.x = -panAmount * parallaxMultipliers.layer7;
+        offsetsRef.current.layer7.y = anchorOffsetY * parallaxMultipliers.layer7;
         offsetsRef.current.layer6.x = -panAmount * parallaxMultipliers.layer6;
+        offsetsRef.current.layer6.y = anchorOffsetY * parallaxMultipliers.layer6;
         offsetsRef.current.layer5.x = -panAmount * parallaxMultipliers.layer5;
+        offsetsRef.current.layer5.y = anchorOffsetY * parallaxMultipliers.layer5;
         offsetsRef.current.layer4.x = -panAmount * parallaxMultipliers.layer4;
+        offsetsRef.current.layer4.y = anchorOffsetY * parallaxMultipliers.layer4;
         offsetsRef.current.layer3.x = -panAmount * parallaxMultipliers.layer3;
+        offsetsRef.current.layer3.y = anchorOffsetY * parallaxMultipliers.layer3;
         offsetsRef.current.layer2.x = -panAmount * parallaxMultipliers.layer2;
+        offsetsRef.current.layer2.y = anchorOffsetY * parallaxMultipliers.layer2;
         offsetsRef.current.layer1.x = -panAmount * parallaxMultipliers.layer1;
+        offsetsRef.current.layer1.y = anchorOffsetY * parallaxMultipliers.layer1;
       } else if (motionType === 'pan_right') {
-        // Pan right with amplification affecting overall scale and pan distance
+        // Pan right with anchor point affecting direction and speed
         const panAmount = progressRatio * speed * 250 * ampFactor;
+        const anchorOffsetY = (anchorNormY - 0.5) * 100 * progressRatio;
+        
         offsetsRef.current.background.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.background);
+        offsetsRef.current.layer12.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer12);
+        offsetsRef.current.layer11.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer11);
+        offsetsRef.current.layer10.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer10);
+        offsetsRef.current.layer9.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer9);
+        offsetsRef.current.layer8.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer8);
+        offsetsRef.current.layer7.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer7);
         offsetsRef.current.layer6.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer6);
         offsetsRef.current.layer5.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer5);
         offsetsRef.current.layer4.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer4);
@@ -1002,12 +1145,31 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer1.scale = 1.0 + (0.1 * ampFactor * parallaxMultipliers.layer1);
         
         offsetsRef.current.background.x = panAmount * parallaxMultipliers.background;
+        offsetsRef.current.background.y = anchorOffsetY * parallaxMultipliers.background;
+        offsetsRef.current.layer12.x = panAmount * parallaxMultipliers.layer12;
+        offsetsRef.current.layer12.y = anchorOffsetY * parallaxMultipliers.layer12;
+        offsetsRef.current.layer11.x = panAmount * parallaxMultipliers.layer11;
+        offsetsRef.current.layer11.y = anchorOffsetY * parallaxMultipliers.layer11;
+        offsetsRef.current.layer10.x = panAmount * parallaxMultipliers.layer10;
+        offsetsRef.current.layer10.y = anchorOffsetY * parallaxMultipliers.layer10;
+        offsetsRef.current.layer9.x = panAmount * parallaxMultipliers.layer9;
+        offsetsRef.current.layer9.y = anchorOffsetY * parallaxMultipliers.layer9;
+        offsetsRef.current.layer8.x = panAmount * parallaxMultipliers.layer8;
+        offsetsRef.current.layer8.y = anchorOffsetY * parallaxMultipliers.layer8;
+        offsetsRef.current.layer7.x = panAmount * parallaxMultipliers.layer7;
+        offsetsRef.current.layer7.y = anchorOffsetY * parallaxMultipliers.layer7;
         offsetsRef.current.layer6.x = panAmount * parallaxMultipliers.layer6;
+        offsetsRef.current.layer6.y = anchorOffsetY * parallaxMultipliers.layer6;
         offsetsRef.current.layer5.x = panAmount * parallaxMultipliers.layer5;
+        offsetsRef.current.layer5.y = anchorOffsetY * parallaxMultipliers.layer5;
         offsetsRef.current.layer4.x = panAmount * parallaxMultipliers.layer4;
+        offsetsRef.current.layer4.y = anchorOffsetY * parallaxMultipliers.layer4;
         offsetsRef.current.layer3.x = panAmount * parallaxMultipliers.layer3;
+        offsetsRef.current.layer3.y = anchorOffsetY * parallaxMultipliers.layer3;
         offsetsRef.current.layer2.x = panAmount * parallaxMultipliers.layer2;
+        offsetsRef.current.layer2.y = anchorOffsetY * parallaxMultipliers.layer2;
         offsetsRef.current.layer1.x = panAmount * parallaxMultipliers.layer1;
+        offsetsRef.current.layer1.y = anchorOffsetY * parallaxMultipliers.layer1;
       }
       
       // Cache the state
@@ -1376,15 +1538,58 @@ const StarField3D: React.FC<StarField3DProps> = ({
     );
   }
 
+  // Handle canvas click to set anchor point
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isAnimating || isRecording) return; // Don't allow changes during animation/recording
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    const newAnchor = { x, y };
+    setInternalAnchorPoint(newAnchor);
+    
+    if (onAnchorPointChange) {
+      onAnchorPointChange(newAnchor);
+    }
+    
+    console.log('🎯 Anchor point set:', newAnchor);
+  }, [isAnimating, isRecording, onAnchorPointChange]);
+
   return (
     <div className="w-full h-full relative bg-black rounded-b-lg overflow-hidden">
       <canvas
         ref={canvasRef}
         width={imageDimensions.width}
         height={imageDimensions.height}
-        className="w-full h-full object-contain bg-black"
+        className="w-full h-full object-contain bg-black cursor-crosshair"
         style={{ willChange: isAnimating ? 'contents' : 'auto' }}
+        onClick={handleCanvasClick}
       />
+      
+      {/* Anchor point indicator */}
+      {internalAnchorPoint && !isAnimating && !isRecording && (
+        <div 
+          className="absolute pointer-events-none"
+          style={{
+            left: `${(internalAnchorPoint.x / imageDimensions.width) * 100}%`,
+            top: `${(internalAnchorPoint.y / imageDimensions.height) * 100}%`,
+            transform: 'translate(-50%, -50%)'
+          }}
+        >
+          <div className="relative">
+            <div className="w-8 h-8 border-2 border-primary rounded-full animate-pulse" />
+            <div className="absolute inset-0 w-8 h-8 border-2 border-primary/50 rounded-full animate-ping" />
+            <div className="absolute top-1/2 left-1/2 w-1 h-1 bg-primary rounded-full transform -translate-x-1/2 -translate-y-1/2" />
+          </div>
+        </div>
+      )}
       
       {/* Recording indicator */}
       {isRecording && (
