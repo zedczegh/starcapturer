@@ -1528,16 +1528,6 @@ const StarField3D: React.FC<StarField3DProps> = ({
     }
   }, [starLayers, backgroundImg, isAnimating, onCanvasReady, animate]);
 
-  if (stars.length === 0) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-cosmic-950 rounded-b-lg">
-        <p className="text-cosmic-400">
-          Upload both images and process to generate 3D star field
-        </p>
-      </div>
-    );
-  }
-
   // Handle canvas click to set anchor point
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (isAnimating || isRecording) return; // Don't allow changes during animation/recording
@@ -1561,6 +1551,16 @@ const StarField3D: React.FC<StarField3DProps> = ({
     
     console.log('🎯 Anchor point set:', newAnchor);
   }, [isAnimating, isRecording, onAnchorPointChange]);
+
+  if (stars.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-cosmic-950 rounded-b-lg">
+        <p className="text-cosmic-400">
+          Upload both images and process to generate 3D star field
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full relative bg-black rounded-b-lg overflow-hidden">
