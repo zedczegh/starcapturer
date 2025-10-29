@@ -65,12 +65,18 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const currentProgressRef = useRef<number>(0); // Track current progress for resume
   const hasRenderedInitialFrame = useRef<boolean>(false); // Track if initial frame was rendered
   const offsetsRef = useRef({
-    layer1: { x: 0, y: 0, scale: 1 }, // Largest/brightest stars (closest)
+    layer1: { x: 0, y: 0, scale: 1 },   // Largest/brightest stars (closest)
     layer2: { x: 0, y: 0, scale: 1 },
     layer3: { x: 0, y: 0, scale: 1 },
     layer4: { x: 0, y: 0, scale: 1 },
     layer5: { x: 0, y: 0, scale: 1 },
-    layer6: { x: 0, y: 0, scale: 1 }, // Smallest stars (farthest)
+    layer6: { x: 0, y: 0, scale: 1 },
+    layer7: { x: 0, y: 0, scale: 1 },
+    layer8: { x: 0, y: 0, scale: 1 },
+    layer9: { x: 0, y: 0, scale: 1 },
+    layer10: { x: 0, y: 0, scale: 1 },
+    layer11: { x: 0, y: 0, scale: 1 },
+    layer12: { x: 0, y: 0, scale: 1 },  // Smallest stars (farthest)
     background: { x: 0, y: 0, scale: 1 } // Nebula background
   });
   
@@ -81,7 +87,16 @@ const StarField3D: React.FC<StarField3DProps> = ({
     layer4: ImageBitmap | null;
     layer5: ImageBitmap | null;
     layer6: ImageBitmap | null;
-  }>({ layer1: null, layer2: null, layer3: null, layer4: null, layer5: null, layer6: null });
+    layer7: ImageBitmap | null;
+    layer8: ImageBitmap | null;
+    layer9: ImageBitmap | null;
+    layer10: ImageBitmap | null;
+    layer11: ImageBitmap | null;
+    layer12: ImageBitmap | null;
+  }>({ 
+    layer1: null, layer2: null, layer3: null, layer4: null, layer5: null, layer6: null,
+    layer7: null, layer8: null, layer9: null, layer10: null, layer11: null, layer12: null
+  });
   
   const [backgroundImg, setBackgroundImg] = useState<ImageBitmap | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
@@ -102,6 +117,18 @@ const StarField3D: React.FC<StarField3DProps> = ({
     canvasCenterY: number;
     bgScaledWidth: number;
     bgScaledHeight: number;
+    layer12ScaledWidth: number;
+    layer12ScaledHeight: number;
+    layer11ScaledWidth: number;
+    layer11ScaledHeight: number;
+    layer10ScaledWidth: number;
+    layer10ScaledHeight: number;
+    layer9ScaledWidth: number;
+    layer9ScaledHeight: number;
+    layer8ScaledWidth: number;
+    layer8ScaledHeight: number;
+    layer7ScaledWidth: number;
+    layer7ScaledHeight: number;
     layer6ScaledWidth: number;
     layer6ScaledHeight: number;
     layer5ScaledWidth: number;
@@ -460,20 +487,27 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       console.log(`Detected ${starRegions.length} complete stars in ${(performance.now() - startTime).toFixed(0)}ms`);
       
-      // Sort stars by size to determine layer distribution across 6 layers
+      // Sort stars by size to determine layer distribution across 12 layers
       starRegions.sort((a, b) => b.size - a.size);
       
-      // Distribute stars into 6 layers for smoother parallax depth
-      const layer1Threshold = starRegions[Math.floor(starRegions.length * 0.167)]?.size || 25; // Top 16.7% - largest
-      const layer2Threshold = starRegions[Math.floor(starRegions.length * 0.333)]?.size || 18;
-      const layer3Threshold = starRegions[Math.floor(starRegions.length * 0.500)]?.size || 12;
-      const layer4Threshold = starRegions[Math.floor(starRegions.length * 0.667)]?.size || 8;
-      const layer5Threshold = starRegions[Math.floor(starRegions.length * 0.833)]?.size || 5; // Bottom 16.7% - smallest
+      // Distribute stars into 12 layers for enhanced parallax depth
+      const layer1Threshold = starRegions[Math.floor(starRegions.length * 0.083)]?.size || 30;  // Top 8.3%
+      const layer2Threshold = starRegions[Math.floor(starRegions.length * 0.167)]?.size || 25;
+      const layer3Threshold = starRegions[Math.floor(starRegions.length * 0.250)]?.size || 20;
+      const layer4Threshold = starRegions[Math.floor(starRegions.length * 0.333)]?.size || 16;
+      const layer5Threshold = starRegions[Math.floor(starRegions.length * 0.417)]?.size || 13;
+      const layer6Threshold = starRegions[Math.floor(starRegions.length * 0.500)]?.size || 11;
+      const layer7Threshold = starRegions[Math.floor(starRegions.length * 0.583)]?.size || 9;
+      const layer8Threshold = starRegions[Math.floor(starRegions.length * 0.667)]?.size || 7;
+      const layer9Threshold = starRegions[Math.floor(starRegions.length * 0.750)]?.size || 6;
+      const layer10Threshold = starRegions[Math.floor(starRegions.length * 0.833)]?.size || 5;
+      const layer11Threshold = starRegions[Math.floor(starRegions.length * 0.917)]?.size || 4;
+      // layer12 = remaining smallest stars
       
-      console.log(`6-layer size thresholds: L1=${layer1Threshold}, L2=${layer2Threshold}, L3=${layer3Threshold}, L4=${layer4Threshold}, L5=${layer5Threshold}`);
+      console.log(`12-layer size thresholds: L1=${layer1Threshold}, L2=${layer2Threshold}, L3=${layer3Threshold}, L4=${layer4Threshold}, L5=${layer5Threshold}, L6=${layer6Threshold}, L7=${layer7Threshold}, L8=${layer8Threshold}, L9=${layer9Threshold}, L10=${layer10Threshold}, L11=${layer11Threshold}`);
       
-      // Create six separate canvases for depth layers
-      const canvases = Array(6).fill(null).map(() => {
+      // Create twelve separate canvases for depth layers
+      const canvases = Array(12).fill(null).map(() => {
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -489,7 +523,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       // Use Uint32Array views for faster pixel copying
       const data32Views = imageDatas.map(imgData => new Uint32Array(imgData.data.buffer));
-      const layerCounts = [0, 0, 0, 0, 0, 0];
+      const layerCounts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
       
       // Batch size for processing - process stars in batches to reduce overhead
       const BATCH_SIZE = 1024;
@@ -503,19 +537,31 @@ const StarField3D: React.FC<StarField3DProps> = ({
           const star = starRegions[starIdx];
           let layerIndex: number;
           
-          // Distribute stars into 6 layers based on size
+          // Distribute stars into 12 layers based on size
           if (star.size >= layer1Threshold) {
-            layerIndex = 0; // Layer 1 - largest/brightest
+            layerIndex = 0;
           } else if (star.size >= layer2Threshold) {
-            layerIndex = 1; // Layer 2
+            layerIndex = 1;
           } else if (star.size >= layer3Threshold) {
-            layerIndex = 2; // Layer 3
+            layerIndex = 2;
           } else if (star.size >= layer4Threshold) {
-            layerIndex = 3; // Layer 4
+            layerIndex = 3;
           } else if (star.size >= layer5Threshold) {
-            layerIndex = 4; // Layer 5
+            layerIndex = 4;
+          } else if (star.size >= layer6Threshold) {
+            layerIndex = 5;
+          } else if (star.size >= layer7Threshold) {
+            layerIndex = 6;
+          } else if (star.size >= layer8Threshold) {
+            layerIndex = 7;
+          } else if (star.size >= layer9Threshold) {
+            layerIndex = 8;
+          } else if (star.size >= layer10Threshold) {
+            layerIndex = 9;
+          } else if (star.size >= layer11Threshold) {
+            layerIndex = 10;
           } else {
-            layerIndex = 5; // Layer 6 - smallest/dimmest
+            layerIndex = 11; // Layer 12 - smallest/dimmest
           }
           
           const targetData32 = data32Views[layerIndex];
@@ -559,11 +605,17 @@ const StarField3D: React.FC<StarField3DProps> = ({
           layer3: bitmaps[2],
           layer4: bitmaps[3],
           layer5: bitmaps[4],
-          layer6: bitmaps[5]
+          layer6: bitmaps[5],
+          layer7: bitmaps[6],
+          layer8: bitmaps[7],
+          layer9: bitmaps[8],
+          layer10: bitmaps[9],
+          layer11: bitmaps[10],
+          layer12: bitmaps[11]
         });
         
         const totalTime = (performance.now() - startTime).toFixed(0);
-        console.log(`✅ [StarField3D] 6 star layers ready with refined edges: ${layerCounts.map((c, i) => `L${i+1}:${c}`).join(', ')} (${totalTime}ms total)`);
+        console.log(`✅ [StarField3D] 12 star layers ready with refined edges: ${layerCounts.map((c, i) => `L${i+1}:${c}`).join(', ')} (${totalTime}ms total)`);
       }).catch(error => {
         console.error('❌ [StarField3D] Failed to create star layer bitmaps:', error);
       });
@@ -609,7 +661,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
     
     // Validate we have required assets before rendering
     const hasLayers = starLayers.layer1 && starLayers.layer2 && starLayers.layer3 && 
-                      starLayers.layer4 && starLayers.layer5 && starLayers.layer6;
+                      starLayers.layer4 && starLayers.layer5 && starLayers.layer6 &&
+                      starLayers.layer7 && starLayers.layer8 && starLayers.layer9 &&
+                      starLayers.layer10 && starLayers.layer11 && starLayers.layer12;
     
     if (!hasLayers) {
       console.warn('⚠️ [StarField3D] animate() called but star layers not ready');
@@ -745,15 +799,21 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const stereoDepthScale = 1.0 / (displacementRatio + 0.01); // Avoid division by zero
     
     // Define realistic depth values for each layer based on stereoscopic calibration
-    // Using exponential scale calibrated to match traditional morph displacement
+    // Using exponential scale calibrated to match traditional morph displacement with 12 layers
     const depthValues = {
-      layer1: 1.0 * (1.0 - displacementRatio * 0.7),      // Closest - bright stars (shifted forward)
-      layer2: 2.0 * (1.0 - displacementRatio * 0.5),      // 2x distance
-      layer3: 4.5 * (1.0 - displacementRatio * 0.3),      // ~4.5x distance
-      layer4: 10 * (1.0 - displacementRatio * 0.1),       // 10x distance
-      layer5: 25 * (1.0 + displacementRatio * 0.2),       // 25x distance - distant stars
-      layer6: 60 * (1.0 + displacementRatio * 0.4),       // 60x distance - very distant
-      background: 100 * stereoDepthScale                  // Furthest - respects horizontalDisplace
+      layer1: 1.0 * (1.0 - displacementRatio * 0.7),      // Closest - brightest stars
+      layer2: 1.8 * (1.0 - displacementRatio * 0.6),
+      layer3: 3.0 * (1.0 - displacementRatio * 0.5),
+      layer4: 5.0 * (1.0 - displacementRatio * 0.4),
+      layer5: 8.0 * (1.0 - displacementRatio * 0.3),
+      layer6: 13.0 * (1.0 - displacementRatio * 0.2),
+      layer7: 20.0 * (1.0 - displacementRatio * 0.1),
+      layer8: 30.0 * (1.0 + displacementRatio * 0.0),
+      layer9: 45.0 * (1.0 + displacementRatio * 0.1),
+      layer10: 60.0 * (1.0 + displacementRatio * 0.2),
+      layer11: 80.0 * (1.0 + displacementRatio * 0.3),
+      layer12: 100.0 * (1.0 + displacementRatio * 0.4),    // Farthest - dimmest stars
+      background: 120 * stereoDepthScale                    // Background - furthest
     };
     
     // Calculate velocity multipliers using perspective projection: v = 1/depth
@@ -771,13 +831,19 @@ const StarField3D: React.FC<StarField3DProps> = ({
     };
     
     const parallaxMultipliers = {
-      layer1: calculateMultiplier(depthValues.layer1),        // 1.000 (reference)
-      layer2: calculateMultiplier(depthValues.layer2),        // 0.500 
-      layer3: calculateMultiplier(depthValues.layer3),        // 0.222
-      layer4: calculateMultiplier(depthValues.layer4),        // 0.100
-      layer5: calculateMultiplier(depthValues.layer5),        // 0.040
-      layer6: calculateMultiplier(depthValues.layer6),        // 0.017
-      background: calculateMultiplier(depthValues.background) // 0.010
+      layer1: calculateMultiplier(depthValues.layer1),
+      layer2: calculateMultiplier(depthValues.layer2),
+      layer3: calculateMultiplier(depthValues.layer3),
+      layer4: calculateMultiplier(depthValues.layer4),
+      layer5: calculateMultiplier(depthValues.layer5),
+      layer6: calculateMultiplier(depthValues.layer6),
+      layer7: calculateMultiplier(depthValues.layer7),
+      layer8: calculateMultiplier(depthValues.layer8),
+      layer9: calculateMultiplier(depthValues.layer9),
+      layer10: calculateMultiplier(depthValues.layer10),
+      layer11: calculateMultiplier(depthValues.layer11),
+      layer12: calculateMultiplier(depthValues.layer12),
+      background: calculateMultiplier(depthValues.background)
     };
     
     // Pre-calculate common values (cached per canvas size)
@@ -789,6 +855,18 @@ const StarField3D: React.FC<StarField3DProps> = ({
         canvasCenterY: canvas.height * 0.5,
         bgScaledWidth: backgroundImg?.width || 0,
         bgScaledHeight: backgroundImg?.height || 0,
+        layer12ScaledWidth: starLayers.layer12?.width || 0,
+        layer12ScaledHeight: starLayers.layer12?.height || 0,
+        layer11ScaledWidth: starLayers.layer11?.width || 0,
+        layer11ScaledHeight: starLayers.layer11?.height || 0,
+        layer10ScaledWidth: starLayers.layer10?.width || 0,
+        layer10ScaledHeight: starLayers.layer10?.height || 0,
+        layer9ScaledWidth: starLayers.layer9?.width || 0,
+        layer9ScaledHeight: starLayers.layer9?.height || 0,
+        layer8ScaledWidth: starLayers.layer8?.width || 0,
+        layer8ScaledHeight: starLayers.layer8?.height || 0,
+        layer7ScaledWidth: starLayers.layer7?.width || 0,
+        layer7ScaledHeight: starLayers.layer7?.height || 0,
         layer6ScaledWidth: starLayers.layer6?.width || 0,
         layer6ScaledHeight: starLayers.layer6?.height || 0,
         layer5ScaledWidth: starLayers.layer5?.width || 0,
@@ -909,16 +987,90 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
     }
     
-    // Draw six star layers with 3D parallax (back to front) and intelligent blending
-    // Layers 6-4 use screen blend, layers 3-1 use screen + lighter blend for glow with background
+    // Draw twelve star layers with 3D parallax (back to front) and intelligent blending
+    // Layers 12-7 use screen blend, layers 6-1 use screen + lighter blend for enhanced glow
     const hasAnyLayers = starLayers.layer1 || starLayers.layer2 || starLayers.layer3 || 
-                        starLayers.layer4 || starLayers.layer5 || starLayers.layer6;
+                        starLayers.layer4 || starLayers.layer5 || starLayers.layer6 ||
+                        starLayers.layer7 || starLayers.layer8 || starLayers.layer9 ||
+                        starLayers.layer10 || starLayers.layer11 || starLayers.layer12;
     
     if (hasAnyLayers) {
-      // Layer 6: Smallest/dimmest stars (farthest, slowest movement)
+      // Layer 12: Smallest/dimmest stars (farthest, slowest movement)
+      if (starLayers.layer12) {
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.85;
+        const scale = offsetsRef.current.layer12.scale;
+        const scaledWidth = cachedDimensions.current.layer12ScaledWidth * scale;
+        const scaledHeight = cachedDimensions.current.layer12ScaledHeight * scale;
+        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer12.x;
+        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer12.y;
+        ctx.drawImage(starLayers.layer12, drawX, drawY, scaledWidth, scaledHeight);
+      }
+      
+      // Layer 11
+      if (starLayers.layer11) {
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.87;
+        const scale = offsetsRef.current.layer11.scale;
+        const scaledWidth = cachedDimensions.current.layer11ScaledWidth * scale;
+        const scaledHeight = cachedDimensions.current.layer11ScaledHeight * scale;
+        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer11.x;
+        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer11.y;
+        ctx.drawImage(starLayers.layer11, drawX, drawY, scaledWidth, scaledHeight);
+      }
+      
+      // Layer 10
+      if (starLayers.layer10) {
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.89;
+        const scale = offsetsRef.current.layer10.scale;
+        const scaledWidth = cachedDimensions.current.layer10ScaledWidth * scale;
+        const scaledHeight = cachedDimensions.current.layer10ScaledHeight * scale;
+        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer10.x;
+        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer10.y;
+        ctx.drawImage(starLayers.layer10, drawX, drawY, scaledWidth, scaledHeight);
+      }
+      
+      // Layer 9
+      if (starLayers.layer9) {
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.91;
+        const scale = offsetsRef.current.layer9.scale;
+        const scaledWidth = cachedDimensions.current.layer9ScaledWidth * scale;
+        const scaledHeight = cachedDimensions.current.layer9ScaledHeight * scale;
+        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer9.x;
+        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer9.y;
+        ctx.drawImage(starLayers.layer9, drawX, drawY, scaledWidth, scaledHeight);
+      }
+      
+      // Layer 8
+      if (starLayers.layer8) {
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.93;
+        const scale = offsetsRef.current.layer8.scale;
+        const scaledWidth = cachedDimensions.current.layer8ScaledWidth * scale;
+        const scaledHeight = cachedDimensions.current.layer8ScaledHeight * scale;
+        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer8.x;
+        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer8.y;
+        ctx.drawImage(starLayers.layer8, drawX, drawY, scaledWidth, scaledHeight);
+      }
+      
+      // Layer 7
+      if (starLayers.layer7) {
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.95;
+        const scale = offsetsRef.current.layer7.scale;
+        const scaledWidth = cachedDimensions.current.layer7ScaledWidth * scale;
+        const scaledHeight = cachedDimensions.current.layer7ScaledHeight * scale;
+        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer7.x;
+        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer7.y;
+        ctx.drawImage(starLayers.layer7, drawX, drawY, scaledWidth, scaledHeight);
+      }
+      
+      // Layer 6
       if (starLayers.layer6) {
         ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.9;
+        ctx.globalAlpha = 0.97;
         const scale = offsetsRef.current.layer6.scale;
         const scaledWidth = cachedDimensions.current.layer6ScaledWidth * scale;
         const scaledHeight = cachedDimensions.current.layer6ScaledHeight * scale;
@@ -1011,6 +1163,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
         layer4: { x: 0, y: 0, scale: 1 },
         layer5: { x: 0, y: 0, scale: 1 },
         layer6: { x: 0, y: 0, scale: 1 },
+        layer7: { x: 0, y: 0, scale: 1 },
+        layer8: { x: 0, y: 0, scale: 1 },
+        layer9: { x: 0, y: 0, scale: 1 },
+        layer10: { x: 0, y: 0, scale: 1 },
+        layer11: { x: 0, y: 0, scale: 1 },
+        layer12: { x: 0, y: 0, scale: 1 },
         background: { x: 0, y: 0, scale: 1 }
       };
       lastRenderState.current = null;
@@ -1048,6 +1206,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
           layer4: { x: 0, y: 0, scale: 1 },
           layer5: { x: 0, y: 0, scale: 1 },
           layer6: { x: 0, y: 0, scale: 1 },
+          layer7: { x: 0, y: 0, scale: 1 },
+          layer8: { x: 0, y: 0, scale: 1 },
+          layer9: { x: 0, y: 0, scale: 1 },
+          layer10: { x: 0, y: 0, scale: 1 },
+          layer11: { x: 0, y: 0, scale: 1 },
+          layer12: { x: 0, y: 0, scale: 1 },
           background: { x: 0, y: 0, scale: 1 }
         };
         lastRenderState.current = null;
@@ -1091,8 +1255,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
       if (starLayers.layer4) starLayers.layer4.close();
       if (starLayers.layer5) starLayers.layer5.close();
       if (starLayers.layer6) starLayers.layer6.close();
+      if (starLayers.layer7) starLayers.layer7.close();
+      if (starLayers.layer8) starLayers.layer8.close();
+      if (starLayers.layer9) starLayers.layer9.close();
+      if (starLayers.layer10) starLayers.layer10.close();
+      if (starLayers.layer11) starLayers.layer11.close();
+      if (starLayers.layer12) starLayers.layer12.close();
     };
-  }, [starLayers.layer1, starLayers.layer2, starLayers.layer3, starLayers.layer4, starLayers.layer5, starLayers.layer6]);
+  }, [starLayers.layer1, starLayers.layer2, starLayers.layer3, starLayers.layer4, starLayers.layer5, starLayers.layer6,
+      starLayers.layer7, starLayers.layer8, starLayers.layer9, starLayers.layer10, starLayers.layer11, starLayers.layer12]);
   
   // Cleanup background image when changed or on unmount
   useEffect(() => {
@@ -1104,7 +1275,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
   // Notify parent when canvas and layers are ready AND render initial frame
   useEffect(() => {
     const hasAllLayers = starLayers.layer1 && starLayers.layer2 && starLayers.layer3 && 
-                         starLayers.layer4 && starLayers.layer5 && starLayers.layer6;
+                         starLayers.layer4 && starLayers.layer5 && starLayers.layer6 &&
+                         starLayers.layer7 && starLayers.layer8 && starLayers.layer9 &&
+                         starLayers.layer10 && starLayers.layer11 && starLayers.layer12;
     const hasBackground = backgroundImg !== null;
     const hasCanvas = canvasRef.current !== null;
     
