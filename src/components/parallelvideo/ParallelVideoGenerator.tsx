@@ -713,12 +713,32 @@ const ParallelVideoGenerator: React.FC = () => {
       console.log('Left stars only:', leftStarsOnly ? 'SET' : 'NULL');
       console.log('Right stars only:', rightStarsOnly ? 'SET' : 'NULL');
 
+      // Processing complete - show progress at 100%
+      setProgress(100);
+      setProcessingStep(t('Processing complete!', '处理完成！'));
+      
+      console.log('Processing complete, preparing preview...');
+      
+      // Wait before loading preview to separate the steps
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      setProcessingStep(t('Loading preview...', '加载预览...'));
+      setProgress(0); // Reset progress for preview loading
+      
+      // Simulate preview loading progress
+      for (let i = 0; i <= 100; i += 20) {
+        setProgress(i);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
       setIsReady(true);
       setProgress(100);
-      setProcessingStep(t('Complete!', '完成！'));
+      setProcessingStep(t('Preview ready!', '预览就绪！'));
 
-      // Don't auto-start animation - let user control when to play
-      setProcessingStep('');
+      // Clear message after a moment
+      setTimeout(() => {
+        setProcessingStep('');
+      }, 1000);
 
     } catch (error) {
       console.error('Processing error:', error);
@@ -1248,157 +1268,128 @@ const ParallelVideoGenerator: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {/* Left Stars Only with depth map below */}
+                  <div className="space-y-2">
+                    <Label className="text-cosmic-200 text-xs">Left Stars Only</Label>
+                    {leftStarsOnly && (
+                      <div className="relative group">
+                        <img src={leftStarsOnly} alt="Left Stars" className="w-full rounded border border-cosmic-600" />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleDownloadProcessedImage('leftStars')}
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          PNG
+                        </Button>
+                      </div>
+                    )}
+                    {starlessDepthMapUrl && (
+                      <div className="relative group">
+                        <Label className="text-cosmic-400 text-xs">Depth Map</Label>
+                        <img src={starlessDepthMapUrl} alt="Depth Map" className="w-full rounded border border-cosmic-600/50 mt-1" />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleDownloadProcessedImage('starlessDepthMap')}
+                          className="absolute top-6 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          PNG
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right Stars Only with depth map below */}
+                  <div className="space-y-2">
+                    <Label className="text-cosmic-200 text-xs">Right Stars Only</Label>
+                    {rightStarsOnly && (
+                      <div className="relative group">
+                        <img src={rightStarsOnly} alt="Right Stars" className="w-full rounded border border-cosmic-600" />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleDownloadProcessedImage('rightStars')}
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          PNG
+                        </Button>
+                      </div>
+                    )}
+                    {starsDepthMapUrl && (
+                      <div className="relative group">
+                        <Label className="text-cosmic-400 text-xs">Depth Map</Label>
+                        <img src={starsDepthMapUrl} alt="Depth Map" className="w-full rounded border border-cosmic-600/50 mt-1" />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleDownloadProcessedImage('starsDepthMap')}
+                          className="absolute top-6 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          PNG
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Left Background */}
+                  {leftBackground && (
+                    <div className="space-y-2">
+                      <Label className="text-cosmic-200 text-xs">Left Background</Label>
+                      <div className="relative group">
+                        <img src={leftBackground} alt="Left Background" className="w-full rounded border border-cosmic-600" />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleDownloadProcessedImage('leftBackground')}
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          PNG
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Right Background */}
+                  {rightBackground && (
+                    <div className="space-y-2">
+                      <Label className="text-cosmic-200 text-xs">Right Background (Displaced)</Label>
+                      <div className="relative group">
+                        <img src={rightBackground} alt="Right Background" className="w-full rounded border border-cosmic-600" />
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleDownloadProcessedImage('rightBackground')}
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          PNG
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Left Composite */}
                   {leftComposite && (
                     <div className="space-y-2">
                       <Label className="text-cosmic-200 text-xs">Left Composite</Label>
                       <img src={leftComposite} alt="Left Composite" className="w-full rounded border border-cosmic-600" />
                     </div>
                   )}
+
+                  {/* Right Composite */}
                   {rightComposite && (
                     <div className="space-y-2">
                       <Label className="text-cosmic-200 text-xs">Right Composite</Label>
                       <img src={rightComposite} alt="Right Composite" className="w-full rounded border border-cosmic-600" />
                     </div>
                   )}
-                  {leftStarsOnly && (
-                    <div className="space-y-2">
-                      <Label className="text-cosmic-200 text-xs">Left Stars Only</Label>
-                      <img src={leftStarsOnly} alt="Left Stars" className="w-full rounded border border-cosmic-600" />
-                    </div>
-                  )}
-                  {rightStarsOnly && (
-                    <div className="space-y-2">
-                      <Label className="text-cosmic-200 text-xs">Right Stars Only</Label>
-                      <img src={rightStarsOnly} alt="Right Stars" className="w-full rounded border border-cosmic-600" />
-                    </div>
-                  )}
-                  {leftBackground && (
-                    <div className="space-y-2">
-                      <Label className="text-cosmic-200 text-xs">Left Background</Label>
-                      <img src={leftBackground} alt="Left Background" className="w-full rounded border border-cosmic-600" />
-                    </div>
-                  )}
-                  {rightBackground && (
-                    <div className="space-y-2">
-                      <Label className="text-cosmic-200 text-xs">Right Background (Displaced)</Label>
-                      <img src={rightBackground} alt="Right Background" className="w-full rounded border border-cosmic-600" />
-                    </div>
-                  )}
-                </div>
-                
-                {/* Depth Maps Section */}
-                <div className="mt-6 space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Depth Analysis Maps</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {starlessDepthMapUrl && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-xs">Starless Depth Map</Label>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDownloadProcessedImage('starlessDepthMap')}
-                            className="h-7 text-xs"
-                          >
-                            <Download className="w-3 h-3 mr-1" />
-                            PNG
-                          </Button>
-                        </div>
-                        <img src={starlessDepthMapUrl} alt="Starless Depth Map" className="w-full rounded border border-cosmic-600" />
-                      </div>
-                    )}
-                    {starsDepthMapUrl && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-cosmic-200 text-xs">Stars Depth Map</Label>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDownloadProcessedImage('starsDepthMap')}
-                            className="h-7 text-xs"
-                          >
-                            <Download className="w-3 h-3 mr-1" />
-                            PNG
-                          </Button>
-                        </div>
-                        <img src={starsDepthMapUrl} alt="Stars Depth Map" className="w-full rounded border border-cosmic-600" />
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Quick Download All Section */}
-                  <div className="space-y-2">
-                    <Label className="text-cosmic-200 text-sm">Download Processed Layers (High-Quality PNG)</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownloadProcessedImage('leftBackground')}
-                        disabled={!processedCanvases.leftBackground}
-                        className="text-xs"
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Left BG
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownloadProcessedImage('leftStars')}
-                        disabled={!processedCanvases.leftStars}
-                        className="text-xs"
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Left Stars
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownloadProcessedImage('rightBackground')}
-                        disabled={!processedCanvases.rightBackground}
-                        className="text-xs"
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Right BG
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownloadProcessedImage('rightStars')}
-                        disabled={!processedCanvases.rightStars}
-                        className="text-xs"
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Right Stars
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownloadProcessedImage('starlessDepthMap')}
-                        disabled={!processedCanvases.starlessDepthMap}
-                        className="text-xs"
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Starless Depth
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDownloadProcessedImage('starsDepthMap')}
-                        disabled={!processedCanvases.starsDepthMap}
-                        className="text-xs"
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Stars Depth
-                      </Button>
-                    </div>
-                    <p className="text-xs text-cosmic-400">
-                      {t(
-                        'Note: Downloaded as PNG for browser compatibility. Maximum quality preserved.',
-                        '注意：为浏览器兼容性下载为PNG格式。保留最高质量。'
-                      )}
-                    </p>
-                  </div>
                 </div>
               </CardContent>
             </Card>
