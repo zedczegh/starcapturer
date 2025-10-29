@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { Upload, Eye, Download, Loader2, Layers, Settings2 } from 'lucide-react';
+import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles } from 'lucide-react';
+import { UploadProgress } from '@/components/ui/upload-progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
@@ -40,6 +41,14 @@ const StereoscopeProcessor: React.FC = () => {
   const [starsImage, setStarsImage] = useState<File | null>(null);
   const [starlessPreview, setStarlessPreview] = useState<string | null>(null);
   const [starsPreview, setStarsPreview] = useState<string | null>(null);
+  const [starlessElement, setStarlessElement] = useState<HTMLImageElement | null>(null);
+  const [starsElement, setStarsElement] = useState<HTMLImageElement | null>(null);
+  
+  // Upload progress tracking
+  const [uploadProgress, setUploadProgress] = useState({
+    starless: { show: false, progress: 0, fileName: '' },
+    stars: { show: false, progress: 0, fileName: '' }
+  });
   
   // Result states
   const [processing, setProcessing] = useState(false);
@@ -135,41 +144,141 @@ const StereoscopeProcessor: React.FC = () => {
 
   const handleStarlessImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (validateImageFile(file)) {
-        setStarlessImage(file);
-        try {
-          const url = await createPreviewUrl(file);
-          setStarlessPreview(url);
-          setResultUrl(null);
-          setStarlessDepthMapUrl(null);
-          setStarsDepthMapUrl(null);
-        } catch (error) {
-          console.error('Error processing TIFF file:', error);
-        }
-      } else {
-        console.error('Invalid starless image file format');
-      }
+    if (!file) return;
+
+    if (!validateImageFile(file)) {
+      console.error('Invalid starless image file format');
+      if (starlessInputRef.current) starlessInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      // Show upload progress
+      setUploadProgress(prev => ({
+        ...prev,
+        starless: { show: true, progress: 0, fileName: file.name }
+      }));
+
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => ({
+          ...prev,
+          starless: { 
+            ...prev.starless, 
+            progress: Math.min(prev.starless.progress + 20, 90) 
+          }
+        }));
+      }, 100);
+
+      const url = await createPreviewUrl(file);
+      
+      // Create image element
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = url;
+      });
+
+      clearInterval(progressInterval);
+      
+      // Complete progress
+      setUploadProgress(prev => ({
+        ...prev,
+        starless: { ...prev.starless, progress: 100 }
+      }));
+
+      setStarlessImage(file);
+      setStarlessPreview(url);
+      setStarlessElement(img);
+      setResultUrl(null);
+      setStarlessDepthMapUrl(null);
+      setStarsDepthMapUrl(null);
+
+      // Hide progress after a short delay
+      setTimeout(() => {
+        setUploadProgress(prev => ({
+          ...prev,
+          starless: { show: false, progress: 0, fileName: '' }
+        }));
+      }, 1000);
+    } catch (error) {
+      console.error('Error processing TIFF file:', error);
+      setUploadProgress(prev => ({
+        ...prev,
+        starless: { show: false, progress: 0, fileName: '' }
+      }));
+      if (starlessInputRef.current) starlessInputRef.current.value = '';
     }
   };
 
   const handleStarsImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (validateImageFile(file)) {
-        setStarsImage(file);
-        try {
-          const url = await createPreviewUrl(file);
-          setStarsPreview(url);
-          setResultUrl(null);
-          setStarlessDepthMapUrl(null);
-          setStarsDepthMapUrl(null);
-        } catch (error) {
-          console.error('Error processing TIFF file:', error);
-        }
-      } else {
-        console.error('Invalid stars-only image file format');
-      }
+    if (!file) return;
+
+    if (!validateImageFile(file)) {
+      console.error('Invalid stars-only image file format');
+      if (starsInputRef.current) starsInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      // Show upload progress
+      setUploadProgress(prev => ({
+        ...prev,
+        stars: { show: true, progress: 0, fileName: file.name }
+      }));
+
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => ({
+          ...prev,
+          stars: { 
+            ...prev.stars, 
+            progress: Math.min(prev.stars.progress + 20, 90) 
+          }
+        }));
+      }, 100);
+
+      const url = await createPreviewUrl(file);
+      
+      // Create image element
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = url;
+      });
+
+      clearInterval(progressInterval);
+      
+      // Complete progress
+      setUploadProgress(prev => ({
+        ...prev,
+        stars: { ...prev.stars, progress: 100 }
+      }));
+
+      setStarsImage(file);
+      setStarsPreview(url);
+      setStarsElement(img);
+      setResultUrl(null);
+      setStarlessDepthMapUrl(null);
+      setStarsDepthMapUrl(null);
+
+      // Hide progress after a short delay
+      setTimeout(() => {
+        setUploadProgress(prev => ({
+          ...prev,
+          stars: { show: false, progress: 0, fileName: '' }
+        }));
+      }, 1000);
+    } catch (error) {
+      console.error('Error processing TIFF file:', error);
+      setUploadProgress(prev => ({
+        ...prev,
+        stars: { show: false, progress: 0, fileName: '' }
+      }));
+      if (starsInputRef.current) starsInputRef.current.value = '';
     }
   };
 
@@ -482,57 +591,11 @@ const StereoscopeProcessor: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium text-purple-400">{t('Starless Image', '无星图像')}</Label>
-                <Button
-                  onClick={() => starlessInputRef.current?.click()}
-                  className="group w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-purple-500/10 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 transition-all"
-                  variant="outline"
-                  disabled={processing}
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload className="w-5 h-5 text-cosmic-400 group-hover:text-purple-400 transition-colors" />
-                    <span className="text-sm text-cosmic-300">
-                      {starlessImage ? starlessImage.name : t('Click to upload starless', '点击上传无星图像')}
-                    </span>
-                  </div>
-                </Button>
-                
-                <input
-                  ref={starlessInputRef}
-                  type="file"
-                  accept="image/*,.tiff,.tif,.cr2,.nef,.arw,.dng,.raw,.orf,.rw2,.pef"
-                  onChange={handleStarlessImageSelect}
-                  className="hidden"
-                />
-
-                {starlessPreview && (
-                  <div className="mt-2">
-                    <img
-                      src={starlessPreview}
-                      alt="Starless Preview"
-                      className="w-full h-40 object-cover rounded-lg border border-cosmic-700 hover:border-purple-500/50 transition-all"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium text-orange-400">{t('Stars-Only Image', '纯星图像')}</Label>
-                <Button
-                  onClick={() => starsInputRef.current?.click()}
-                  className="group w-full h-20 mt-2 bg-cosmic-800/50 hover:bg-orange-500/10 border-2 border-dashed border-cosmic-600 hover:border-orange-500/50 transition-all"
-                  variant="outline"
-                  disabled={processing}
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload className="w-5 h-5 text-cosmic-400 group-hover:text-orange-400 transition-colors" />
-                    <span className="text-sm text-cosmic-300">
-                      {starsImage ? starsImage.name : t('Click to upload stars', '点击上传纯星图像')}
-                    </span>
-                  </div>
-                </Button>
-                
+              <div className="space-y-2">
+                <Label className="text-cosmic-200 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  {t('Stars Only Image', '星点图像')}
+                </Label>
                 <input
                   ref={starsInputRef}
                   type="file"
@@ -540,14 +603,100 @@ const StereoscopeProcessor: React.FC = () => {
                   onChange={handleStarsImageSelect}
                   className="hidden"
                 />
-
-                {starsPreview && (
-                  <div className="mt-2">
+                
+                {uploadProgress.stars.show && (
+                  <UploadProgress 
+                    show={true}
+                    progress={uploadProgress.stars.progress}
+                    fileName={uploadProgress.stars.fileName}
+                  />
+                )}
+                
+                {!starsElement ? (
+                  <Button
+                    onClick={() => starsInputRef.current?.click()}
+                    className="group w-full h-24 bg-cosmic-800/50 hover:bg-orange-500/10 border-2 border-dashed border-cosmic-600 hover:border-orange-500/50 transition-all"
+                    variant="outline"
+                    disabled={uploadProgress.stars.show || processing}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="w-6 h-6 text-cosmic-400 group-hover:text-orange-400 transition-colors" />
+                      <span className="text-sm text-cosmic-300 group-hover:hidden">
+                        {t('Click to upload', '点击上传')}
+                      </span>
+                      <span className="text-sm text-orange-400 hidden group-hover:block">
+                        {t('Stars Only', '星点图像')}
+                      </span>
+                    </div>
+                  </Button>
+                ) : (
+                  <div className="relative group cursor-pointer" onClick={() => starsInputRef.current?.click()}>
                     <img
-                      src={starsPreview}
+                      src={starsPreview!}
                       alt="Stars Preview"
-                      className="w-full h-40 object-cover rounded-lg border border-cosmic-700 hover:border-orange-500/50 transition-all"
+                      className="w-full h-40 object-cover rounded-lg border-2 border-orange-500/50 hover:border-orange-500 transition-all"
                     />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-orange-400" />
+                    </div>
+                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
+                      {starsElement.width} × {starsElement.height}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-cosmic-200 flex items-center gap-2">
+                  <Eye className="w-4 h-4" />
+                  {t('Starless Image (Background)', '无星图像（背景）')}
+                </Label>
+                <input
+                  ref={starlessInputRef}
+                  type="file"
+                  accept="image/*,.tiff,.tif,.cr2,.nef,.arw,.dng,.raw,.orf,.rw2,.pef"
+                  onChange={handleStarlessImageSelect}
+                  className="hidden"
+                />
+                
+                {uploadProgress.starless.show && (
+                  <UploadProgress 
+                    show={true}
+                    progress={uploadProgress.starless.progress}
+                    fileName={uploadProgress.starless.fileName}
+                  />
+                )}
+                
+                {!starlessElement ? (
+                  <Button
+                    onClick={() => starlessInputRef.current?.click()}
+                    className="group w-full h-24 bg-cosmic-800/50 hover:bg-purple-500/10 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 transition-all"
+                    variant="outline"
+                    disabled={uploadProgress.starless.show || processing}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="w-6 h-6 text-cosmic-400 group-hover:text-purple-400 transition-colors" />
+                      <span className="text-sm text-cosmic-300 group-hover:hidden">
+                        {t('Click to upload', '点击上传')}
+                      </span>
+                      <span className="text-sm text-purple-400 hidden group-hover:block">
+                        {t('Starless', '无星图像')}
+                      </span>
+                    </div>
+                  </Button>
+                ) : (
+                  <div className="relative group cursor-pointer" onClick={() => starlessInputRef.current?.click()}>
+                    <img
+                      src={starlessPreview!}
+                      alt="Starless Preview"
+                      className="w-full h-40 object-cover rounded-lg border-2 border-purple-500/50 hover:border-purple-500 transition-all"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-purple-400" />
+                    </div>
+                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
+                      {starlessElement.width} × {starlessElement.height}
+                    </span>
                   </div>
                 )}
               </div>

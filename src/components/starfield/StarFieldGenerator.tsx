@@ -1252,89 +1252,111 @@ const StarFieldGenerator: React.FC = () => {
               </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="stars-upload" className="text-orange-400 font-semibold">
+                <Label className="text-cosmic-200 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
                   {t('Stars Only Image', '星点图')}
                 </Label>
-                <div className="relative">
-                  <Input
-                    ref={starsFileInputRef}
-                    id="stars-upload"
-                    type="file"
-                    accept="image/*,.fits,.fit,.tiff,.tif"
-                    onChange={handleStarsOnlyUpload}
-                    className="sr-only"
-                  />
-                  <label 
-                    htmlFor="stars-upload"
-                    className="group flex flex-col items-center justify-center w-full h-20 px-4 py-3 bg-cosmic-800/50 border-2 border-dashed border-cosmic-600 hover:border-orange-500/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-orange-500/10 transition-all"
-                  >
-                    <Upload className="w-5 h-5 mb-2 text-cosmic-400 group-hover:text-orange-400 transition-colors" />
-                    <span className="text-cosmic-300 group-hover:hidden">{t('Click to upload', '点击上传')}</span>
-                    <span className="text-orange-400 hidden group-hover:block">{t('Stars Only', '星点图')}</span>
-                  </label>
-                </div>
-                
-                {/* Upload Progress for Stars */}
-                <UploadProgress
-                  show={uploadProgress.stars.show}
-                  progress={uploadProgress.stars.progress}
-                  fileName={uploadProgress.stars.fileName}
+                <input
+                  ref={starsFileInputRef}
+                  type="file"
+                  accept="image/*,.fits,.fit,.tiff,.tif"
+                  onChange={handleStarsOnlyUpload}
+                  className="hidden"
                 />
                 
-                {starsOnlyImage && !uploadProgress.stars.show && (
-                  <div className="relative group">
-                    <img
-                      src={starsOnlyImage}
-                      alt="Stars only"
-                      className="w-full h-32 object-cover rounded-lg border-2 border-cosmic-700/50 transition-all group-hover:border-orange-500/50"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-cosmic-900/80 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                      <p className="text-xs text-white font-medium">{t('Stars detected', '已检测星点')}</p>
+                {uploadProgress.stars.show && (
+                  <UploadProgress 
+                    show={true}
+                    progress={uploadProgress.stars.progress}
+                    fileName={uploadProgress.stars.fileName}
+                  />
+                )}
+                
+                {!starsOnlyElement ? (
+                  <Button
+                    onClick={() => starsFileInputRef.current?.click()}
+                    className="group w-full h-24 bg-cosmic-800/50 hover:bg-orange-500/10 border-2 border-dashed border-cosmic-600 hover:border-orange-500/50 transition-all"
+                    variant="outline"
+                    disabled={uploadProgress.stars.show || isProcessing}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="w-6 h-6 text-cosmic-400 group-hover:text-orange-400 transition-colors" />
+                      <span className="text-sm text-cosmic-300 group-hover:hidden">
+                        {t('Click to upload', '点击上传')}
+                      </span>
+                      <span className="text-sm text-orange-400 hidden group-hover:block">
+                        {t('Stars Only', '星点图')}
+                      </span>
                     </div>
+                  </Button>
+                ) : (
+                  <div className="relative group cursor-pointer" onClick={() => starsFileInputRef.current?.click()}>
+                    <img
+                      src={starsOnlyImage!}
+                      alt="Stars Preview"
+                      className="w-full h-40 object-cover rounded-lg border-2 border-orange-500/50 hover:border-orange-500 transition-all"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-orange-400" />
+                    </div>
+                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
+                      {starsOnlyElement.width} × {starsOnlyElement.height}
+                    </span>
                   </div>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="starless-upload" className="text-cosmic-200">
-                  {t('Starless Image', '去星图')}
+                <Label className="text-cosmic-200 flex items-center gap-2">
+                  <Eye className="w-4 h-4" />
+                  {t('Starless Image (Background)', '无星图像（背景）')}
                 </Label>
-                <div className="relative">
-                  <Input
-                    ref={starlessFileInputRef}
-                    id="starless-upload"
-                    type="file"
-                    accept="image/*,.fits,.fit,.tiff,.tif"
-                    onChange={handleStarlessUpload}
-                    className="sr-only"
-                  />
-                  <label 
-                    htmlFor="starless-upload"
-                    className="group flex flex-col items-center justify-center w-full h-20 px-4 py-3 bg-cosmic-800/50 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 rounded-md text-white text-sm font-semibold cursor-pointer hover:bg-purple-500/10 transition-all"
-                  >
-                    <Upload className="w-5 h-5 mb-2 text-cosmic-400 group-hover:text-purple-400 transition-colors" />
-                    <span className="text-cosmic-300 group-hover:hidden">{t('Click to upload', '点击上传')}</span>
-                    <span className="text-purple-400 hidden group-hover:block">{t('Starless', '去星图')}</span>
-                  </label>
-                </div>
-                
-                {/* Upload Progress for Starless */}
-                <UploadProgress
-                  show={uploadProgress.starless.show}
-                  progress={uploadProgress.starless.progress}
-                  fileName={uploadProgress.starless.fileName}
+                <input
+                  ref={starlessFileInputRef}
+                  type="file"
+                  accept="image/*,.fits,.fit,.tiff,.tif"
+                  onChange={handleStarlessUpload}
+                  className="hidden"
                 />
                 
-                {starlessImage && !uploadProgress.starless.show && (
-                  <div className="relative group">
-                    <img
-                      src={starlessImage}
-                      alt="Starless"
-                      className="w-full h-32 object-cover rounded-lg border-2 border-cosmic-700/50 transition-all group-hover:border-purple-500/50"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-cosmic-900/80 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                      <p className="text-xs text-white font-medium">{t('Background ready', '背景已准备')}</p>
+                {uploadProgress.starless.show && (
+                  <UploadProgress 
+                    show={true}
+                    progress={uploadProgress.starless.progress}
+                    fileName={uploadProgress.starless.fileName}
+                  />
+                )}
+                
+                {!starlessElement ? (
+                  <Button
+                    onClick={() => starlessFileInputRef.current?.click()}
+                    className="group w-full h-24 bg-cosmic-800/50 hover:bg-purple-500/10 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 transition-all"
+                    variant="outline"
+                    disabled={uploadProgress.starless.show || isProcessing}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="w-6 h-6 text-cosmic-400 group-hover:text-purple-400 transition-colors" />
+                      <span className="text-sm text-cosmic-300 group-hover:hidden">
+                        {t('Click to upload', '点击上传')}
+                      </span>
+                      <span className="text-sm text-purple-400 hidden group-hover:block">
+                        {t('Starless', '无星图像')}
+                      </span>
                     </div>
+                  </Button>
+                ) : (
+                  <div className="relative group cursor-pointer" onClick={() => starlessFileInputRef.current?.click()}>
+                    <img
+                      src={starlessImage!}
+                      alt="Starless Preview"
+                      className="w-full h-40 object-cover rounded-lg border-2 border-purple-500/50 hover:border-purple-500 transition-all"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-purple-400" />
+                    </div>
+                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
+                      {starlessElement.width} × {starlessElement.height}
+                    </span>
                   </div>
                 )}
               </div>
