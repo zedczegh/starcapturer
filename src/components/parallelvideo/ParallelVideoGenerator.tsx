@@ -1268,7 +1268,7 @@ const ParallelVideoGenerator: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Left Stars Only with depth map below */}
                   <div className="space-y-2">
                     <Label className="text-cosmic-200 text-xs">Left Stars Only</Label>
