@@ -157,7 +157,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         luminanceCache[i] = 0.299 * r + 0.587 * g + 0.114 * b;
       }
       
-      // Detect complete star regions (core + glow + spikes together)
+      // Detect complete star regions with improved edge handling
       const visited = new Uint8Array(pixelCount);
       const starRegions: {
         pixels: Uint32Array;
@@ -168,8 +168,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
         size: number;
       }[] = [];
       
-      const threshold = 30;
-      const lowThreshold = threshold * 0.5;
+      // Higher threshold to avoid picking up noise and rough edges
+      const threshold = 50; // Increased from 30 to avoid dim edge pixels
+      const lowThreshold = 25; // Increased from 15 to get cleaner edges
       
       // Reusable queue with pre-allocated capacity to avoid array resizing
       const maxQueueSize = 5000;
@@ -412,15 +413,78 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Put the separated data onto the canvases
       contexts.forEach((ctx, i) => ctx.putImageData(imageDatas[i], 0, 0));
       
+      console.log('Applying advanced feathering to create smooth star edges...');
+      
+      // Apply intelligent feathering to each canvas to smooth edges naturally
+      canvases.forEach((canvas, layerIdx) => {
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+        const imgData = ctx.getImageData(0, 0, width, height);
+        const data = imgData.data;
+        
+        // Create alpha mask for smoothing
+        const alphaMap = new Uint8Array(width * height);
+        for (let i = 0; i < width * height; i++) {
+          alphaMap[i] = data[i * 4 + 3];
+        }
+        
+        // Apply multi-pass smoothing to alpha channel to eliminate rough edges
+        for (let pass = 0; pass < 2; pass++) {
+          const tempAlpha = new Uint8Array(alphaMap);
+          
+          for (let y = 2; y < height - 2; y++) {
+            for (let x = 2; x < width - 2; x++) {
+              const idx = y * width + x;
+              const alpha = tempAlpha[idx];
+              
+              if (alpha === 0) continue; // Skip transparent pixels
+              
+              // For edge pixels (not fully opaque), apply strong smoothing
+              if (alpha < 255) {
+                let sum = 0;
+                let count = 0;
+                const radius = 2;
+                
+                // Weighted average with larger neighborhood
+                for (let dy = -radius; dy <= radius; dy++) {
+                  for (let dx = -radius; dx <= radius; dx++) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+                    
+                    const nIdx = ny * width + nx;
+                    const nAlpha = tempAlpha[nIdx];
+                    
+                    // Weight by distance
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const weight = Math.exp(-dist * dist / 2);
+                    
+                    sum += nAlpha * weight;
+                    count += weight;
+                  }
+                }
+                
+                alphaMap[idx] = Math.round(sum / count);
+              }
+            }
+          }
+        }
+        
+        // Apply smoothed alpha back to image data
+        for (let i = 0; i < width * height; i++) {
+          data[i * 4 + 3] = alphaMap[i];
+        }
+        
+        ctx.putImageData(imgData, 0, 0);
+      });
+      
       console.log('Applying intelligent edge refinement to smooth star edges...');
       
       // Apply edge refinement to each layer with appropriate settings
       const refinedCanvases = canvases.map((canvas, i) => {
-        // More aggressive smoothing to eliminate rough edges and cracks
-        // Larger stars get more smoothing, smaller stars get moderate smoothing
-        const smoothingRadius = Math.max(3, 6 - Math.floor(i / 2)); // Increased from max 3 to 6
-        const edgeThreshold = 75 - i * 5; // Increased from 45 to 75 for better edge detection
-        const coreThreshold = 230 - i * 10; // Adjusted to better preserve bright cores
+        // Moderate smoothing since feathering already cleaned edges
+        const smoothingRadius = Math.max(2, 4 - Math.floor(i / 2)); // Reduced from 6
+        const edgeThreshold = 60 - i * 5; // Slightly reduced from 75
+        const coreThreshold = 235 - i * 10; // Preserve very bright cores
         
         return refineStarEdges(canvas, {
           smoothingRadius,

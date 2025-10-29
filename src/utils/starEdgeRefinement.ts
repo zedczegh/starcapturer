@@ -34,7 +34,7 @@ export const refineStarEdges = (
   // Create output data
   const outputData = new Uint8ClampedArray(data);
 
-  // Detect edges that need smoothing - be more aggressive to eliminate cracks
+  // Detect edges that need smoothing - focus on truly rough edges only
   const needsSmoothing = new Uint8Array(width * height);
   
   for (let y = 1; y < height - 1; y++) {
@@ -49,39 +49,36 @@ export const refineStarEdges = (
       const luminance = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
       
       // Skip very bright star cores if preserveCore is enabled
-      if (preserveCore && luminance > coreThreshold && alpha === 255) continue;
+      if (preserveCore && luminance > coreThreshold && alpha > 250) continue;
       
-      // Smooth ALL semi-transparent pixels (edges) to eliminate cracks
-      if (alpha < 255) {
-        needsSmoothing[y * width + x] = 1;
-        continue;
-      }
-      
-      // Also check for rough edges by analyzing alpha gradient
-      let maxAlphaDiff = 0;
-      
-      // Check 8-connected neighbors
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          if (dx === 0 && dy === 0) continue;
-          
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
-          
-          const nIdx = (ny * width + nx) * 4;
-          const nAlpha = data[nIdx + 3];
-          const alphaDiff = Math.abs(alpha - nAlpha);
-          
-          if (alphaDiff > maxAlphaDiff) {
-            maxAlphaDiff = alphaDiff;
+      // Only smooth semi-transparent edge pixels (less aggressive since feathering already done)
+      if (alpha > 0 && alpha < 240) {
+        // Check for rough edges by analyzing alpha gradient
+        let maxAlphaDiff = 0;
+        
+        // Check 8-connected neighbors
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+            
+            const nIdx = (ny * width + nx) * 4;
+            const nAlpha = data[nIdx + 3];
+            const alphaDiff = Math.abs(alpha - nAlpha);
+            
+            if (alphaDiff > maxAlphaDiff) {
+              maxAlphaDiff = alphaDiff;
+            }
           }
         }
-      }
-      
-      // Mark pixels with rough edges (lower threshold to catch more)
-      if (maxAlphaDiff > edgeThreshold / 2) {
-        needsSmoothing[y * width + x] = 1;
+        
+        // Only mark if there's a significant gradient (truly rough edge)
+        if (maxAlphaDiff > edgeThreshold) {
+          needsSmoothing[y * width + x] = 1;
+        }
       }
     }
   }
@@ -201,14 +198,14 @@ const refineAlphaChannel = (
       // Skip fully transparent pixels
       if (alpha === 0) continue;
       
-      // For edge pixels (0 < alpha < 255), apply aggressive gradient smoothing
-      if (alpha > 0 && alpha < 255) {
+      // For edge pixels, apply gentle gradient smoothing as final polish
+      if (alpha > 0 && alpha < 250) {
         let sum = 0;
         let count = 0;
         
-        // Larger neighborhood average for better smoothing
-        for (let dy = -radius; dy <= radius; dy++) {
-          for (let dx = -radius; dx <= radius; dx++) {
+        // Small neighborhood average for gentle final smoothing
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
             const ny = y + dy;
             const nx = x + dx;
             if (ny < 0 || ny >= height || nx < 0 || nx >= width) continue;
@@ -218,9 +215,9 @@ const refineAlphaChannel = (
           }
         }
         
-        // Blend original with smoothed value - more aggressive blending
+        // Blend original with smoothed value - gentle blend for final polish
         const smoothed = sum / count;
-        const blendFactor = 0.8; // More smoothing to eliminate cracks
+        const blendFactor = 0.4; // Gentle blending since feathering already done
         const refined = alpha * (1 - blendFactor) + smoothed * blendFactor;
         
         data[(y * width + x) * 4 + 3] = Math.round(refined);
