@@ -192,14 +192,14 @@ const ParallelVideoGenerator: React.FC = () => {
 
     const ctx = stitchedCanvas.getContext('2d', {
       alpha: false,
-      desynchronized: true, // Better performance
+      desynchronized: true, // Better performance for animations
       willReadFrequently: false
     });
     if (!ctx) return;
 
-    // High-quality rendering
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    // Optimized rendering settings for smooth animation
+    ctx.imageSmoothingEnabled = false; // Disable for better performance
+    ctx.imageSmoothingQuality = 'low';
 
     // Clear with black background
     ctx.fillStyle = '#000000';
@@ -262,15 +262,24 @@ const ParallelVideoGenerator: React.FC = () => {
     }
   }, [isReady, stitchCanvases]);
 
-  // Stitch canvases together during normal animation
+  // Stitch canvases together during normal animation using requestAnimationFrame for smooth 60fps
   useEffect(() => {
     if (!isAnimating || isGenerating) return;
 
-    const interval = setInterval(() => {
+    let animationFrameId: number;
+    
+    const animate = () => {
       stitchCanvases();
-    }, 33); // ~30fps
+      animationFrameId = requestAnimationFrame(animate);
+    };
+    
+    animationFrameId = requestAnimationFrame(animate);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [isAnimating, isGenerating, stitchCanvases]);
 
   // Unified image upload handler from StarFieldGenerator
