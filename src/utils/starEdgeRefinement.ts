@@ -34,7 +34,7 @@ export const refineStarEdges = (
   // Create output data
   const outputData = new Uint8ClampedArray(data);
 
-  // Detect edges that need smoothing
+  // Detect edges that need smoothing - be more aggressive to eliminate cracks
   const needsSmoothing = new Uint8Array(width * height);
   
   for (let y = 1; y < height - 1; y++) {
@@ -42,16 +42,22 @@ export const refineStarEdges = (
       const idx = (y * width + x) * 4;
       const alpha = data[idx + 3];
       
-      // Skip fully transparent or fully opaque pixels
-      if (alpha === 0 || alpha === 255) continue;
+      // Skip fully transparent pixels
+      if (alpha === 0) continue;
       
       // Get luminance for core detection
       const luminance = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
       
-      // Skip bright star cores if preserveCore is enabled
-      if (preserveCore && luminance > coreThreshold) continue;
+      // Skip very bright star cores if preserveCore is enabled
+      if (preserveCore && luminance > coreThreshold && alpha === 255) continue;
       
-      // Check for rough edges by analyzing alpha gradient
+      // Smooth ALL semi-transparent pixels (edges) to eliminate cracks
+      if (alpha < 255) {
+        needsSmoothing[y * width + x] = 1;
+        continue;
+      }
+      
+      // Also check for rough edges by analyzing alpha gradient
       let maxAlphaDiff = 0;
       
       // Check 8-connected neighbors
@@ -73,8 +79,8 @@ export const refineStarEdges = (
         }
       }
       
-      // Mark pixels with rough edges
-      if (maxAlphaDiff > edgeThreshold) {
+      // Mark pixels with rough edges (lower threshold to catch more)
+      if (maxAlphaDiff > edgeThreshold / 2) {
         needsSmoothing[y * width + x] = 1;
       }
     }
@@ -195,23 +201,26 @@ const refineAlphaChannel = (
       // Skip fully transparent pixels
       if (alpha === 0) continue;
       
-      // For edge pixels (0 < alpha < 255), apply subtle gradient smoothing
+      // For edge pixels (0 < alpha < 255), apply aggressive gradient smoothing
       if (alpha > 0 && alpha < 255) {
         let sum = 0;
         let count = 0;
         
-        // Small neighborhood average
-        for (let dy = -1; dy <= 1; dy++) {
-          for (let dx = -1; dx <= 1; dx++) {
-            const nIdx = (y + dy) * width + (x + dx);
+        // Larger neighborhood average for better smoothing
+        for (let dy = -radius; dy <= radius; dy++) {
+          for (let dx = -radius; dx <= radius; dx++) {
+            const ny = y + dy;
+            const nx = x + dx;
+            if (ny < 0 || ny >= height || nx < 0 || nx >= width) continue;
+            const nIdx = ny * width + nx;
             sum += tempAlpha[nIdx];
             count++;
           }
         }
         
-        // Blend original with smoothed value
+        // Blend original with smoothed value - more aggressive blending
         const smoothed = sum / count;
-        const blendFactor = 0.6; // Keep some original edge character
+        const blendFactor = 0.8; // More smoothing to eliminate cracks
         const refined = alpha * (1 - blendFactor) + smoothed * blendFactor;
         
         data[(y * width + x) * 4 + 3] = Math.round(refined);
