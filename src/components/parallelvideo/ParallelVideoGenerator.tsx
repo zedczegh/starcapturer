@@ -1271,146 +1271,162 @@ const ParallelVideoGenerator: React.FC = () => {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Left Stars Only with depth map below */}
                   <div className="space-y-2">
-                    <Label className="text-cosmic-200 text-xs">Left Stars Only</Label>
                     {leftStarsOnly && (
-                      <div className="relative group">
-                        <img src={leftStarsOnly} alt="Left Stars" className="w-full rounded border border-cosmic-600" />
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleDownloadProcessedImage('leftStars')}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          PNG
-                        </Button>
+                      <div className="space-y-1">
+                        <div className="relative group">
+                          <img src={leftStarsOnly} alt="Left Stars" className="w-full rounded border border-cosmic-600" />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleDownloadProcessedImage('leftStars')}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            PNG
+                          </Button>
+                        </div>
+                        <Label className="text-cosmic-200 text-xs">Left Stars Only</Label>
                       </div>
                     )}
                     {starlessDepthMapUrl && (
-                      <div className="relative group mt-1">
+                      <div className="space-y-1 mt-2">
+                        <div className="relative group">
+                          <img src={starlessDepthMapUrl} alt="Depth Map" className="w-full rounded border border-cosmic-600/50" />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleDownloadProcessedImage('starlessDepthMap')}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            PNG
+                          </Button>
+                        </div>
                         <Label className="text-cosmic-400 text-xs">Depth Map</Label>
-                        <img src={starlessDepthMapUrl} alt="Depth Map" className="w-full rounded border border-cosmic-600/50 mt-1" />
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleDownloadProcessedImage('starlessDepthMap')}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          PNG
-                        </Button>
                       </div>
                     )}
                   </div>
 
                   {/* Right Stars Only with depth map below */}
                   <div className="space-y-2">
-                    <Label className="text-cosmic-200 text-xs">Right Stars Only</Label>
                     {rightStarsOnly && (
-                      <div className="relative group">
-                        <img src={rightStarsOnly} alt="Right Stars" className="w-full rounded border border-cosmic-600" />
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleDownloadProcessedImage('rightStars')}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          PNG
-                        </Button>
+                      <div className="space-y-1">
+                        <div className="relative group">
+                          <img src={rightStarsOnly} alt="Right Stars" className="w-full rounded border border-cosmic-600" />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleDownloadProcessedImage('rightStars')}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            PNG
+                          </Button>
+                        </div>
+                        <Label className="text-cosmic-200 text-xs">Right Stars Only</Label>
                       </div>
                     )}
                     {starsDepthMapUrl && (
-                      <div className="relative group mt-1">
+                      <div className="space-y-1 mt-2">
+                        <div className="relative group">
+                          <img src={starsDepthMapUrl} alt="Depth Map" className="w-full rounded border border-cosmic-600/50" />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleDownloadProcessedImage('starsDepthMap')}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            PNG
+                          </Button>
+                        </div>
                         <Label className="text-cosmic-400 text-xs">Depth Map</Label>
-                        <img src={starsDepthMapUrl} alt="Depth Map" className="w-full rounded border border-cosmic-600/50 mt-1" />
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleDownloadProcessedImage('starsDepthMap')}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          PNG
-                        </Button>
                       </div>
                     )}
                   </div>
 
                   {/* Left Background with Left Composite below */}
                   <div className="space-y-2">
-                    <Label className="text-cosmic-200 text-xs">Left Background</Label>
                     {leftBackground && (
-                      <div className="relative group">
-                        <img src={leftBackground} alt="Left Background" className="w-full rounded border border-cosmic-600" />
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleDownloadProcessedImage('leftBackground')}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          PNG
-                        </Button>
+                      <div className="space-y-1">
+                        <div className="relative group">
+                          <img src={leftBackground} alt="Left Background" className="w-full rounded border border-cosmic-600" />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleDownloadProcessedImage('leftBackground')}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            PNG
+                          </Button>
+                        </div>
+                        <Label className="text-cosmic-200 text-xs">Left Background</Label>
                       </div>
                     )}
                     {leftComposite && (
-                      <div className="relative group mt-1">
+                      <div className="space-y-1 mt-2">
+                        <div className="relative group">
+                          <img src={leftComposite} alt="Left Composite" className="w-full rounded border border-cosmic-600/50" />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = leftComposite;
+                              link.download = `left_composite_${Date.now()}.png`;
+                              link.click();
+                            }}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            PNG
+                          </Button>
+                        </div>
                         <Label className="text-cosmic-400 text-xs">Left Composite</Label>
-                        <img src={leftComposite} alt="Left Composite" className="w-full rounded border border-cosmic-600/50 mt-1" />
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = leftComposite;
-                            link.download = `left_composite_${Date.now()}.png`;
-                            link.click();
-                          }}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          PNG
-                        </Button>
                       </div>
                     )}
                   </div>
 
                   {/* Right Background with Right Composite below */}
                   <div className="space-y-2">
-                    <Label className="text-cosmic-200 text-xs">Right Background (Displaced)</Label>
                     {rightBackground && (
-                      <div className="relative group">
-                        <img src={rightBackground} alt="Right Background" className="w-full rounded border border-cosmic-600" />
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleDownloadProcessedImage('rightBackground')}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          PNG
-                        </Button>
+                      <div className="space-y-1">
+                        <div className="relative group">
+                          <img src={rightBackground} alt="Right Background" className="w-full rounded border border-cosmic-600" />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleDownloadProcessedImage('rightBackground')}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            PNG
+                          </Button>
+                        </div>
+                        <Label className="text-cosmic-200 text-xs">Right Background (Displaced)</Label>
                       </div>
                     )}
                     {rightComposite && (
-                      <div className="relative group mt-1">
+                      <div className="space-y-1 mt-2">
+                        <div className="relative group">
+                          <img src={rightComposite} alt="Right Composite" className="w-full rounded border border-cosmic-600/50" />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = rightComposite;
+                              link.download = `right_composite_${Date.now()}.png`;
+                              link.click();
+                            }}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            PNG
+                          </Button>
+                        </div>
                         <Label className="text-cosmic-400 text-xs">Right Composite</Label>
-                        <img src={rightComposite} alt="Right Composite" className="w-full rounded border border-cosmic-600/50 mt-1" />
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = rightComposite;
-                            link.download = `right_composite_${Date.now()}.png`;
-                            link.click();
-                          }}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          PNG
-                        </Button>
                       </div>
                     )}
                   </div>
