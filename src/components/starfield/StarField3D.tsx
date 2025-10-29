@@ -487,6 +487,63 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       console.log(`Detected ${starRegions.length} complete stars in ${(performance.now() - startTime).toFixed(0)}ms`);
       
+      // === AUTO-SHRINK ALGORITHM: Reduce oversized stars to prevent artifacts ===
+      const MAX_STAR_SIZE = 40; // Maximum allowed star size
+      const TARGET_SIZE_RATIO = 0.6; // Shrink to 60% of original size
+      let shrunkCount = 0;
+      
+      for (let i = 0; i < starRegions.length; i++) {
+        const star = starRegions[i];
+        
+        if (star.size > MAX_STAR_SIZE) {
+          shrunkCount++;
+          
+          // Calculate shrink factor
+          const shrinkFactor = (MAX_STAR_SIZE * TARGET_SIZE_RATIO) / star.size;
+          
+          // Create a new shrunk star by resampling pixels
+          const newPixels: number[] = [];
+          const pixelSet = new Set<number>();
+          
+          for (let j = 0; j < star.pixelCount; j++) {
+            const pixelIdx = star.pixels[j];
+            const px = pixelIdx % width;
+            const py = Math.floor(pixelIdx / width);
+            
+            // Calculate position relative to star center
+            const dx = px - star.centerX;
+            const dy = py - star.centerY;
+            
+            // Scale the position
+            const newDx = dx * shrinkFactor;
+            const newDy = dy * shrinkFactor;
+            
+            // Calculate new pixel position
+            const newPx = Math.round(star.centerX + newDx);
+            const newPy = Math.round(star.centerY + newDy);
+            
+            // Check bounds
+            if (newPx >= 0 && newPx < width && newPy >= 0 && newPy < height) {
+              const newIdx = newPy * width + newPx;
+              if (!pixelSet.has(newIdx)) {
+                pixelSet.add(newIdx);
+                newPixels.push(newIdx);
+              }
+            }
+          }
+          
+          // Update star with shrunk data
+          star.pixels = new Uint32Array(newPixels);
+          star.pixelCount = newPixels.length;
+          star.size = star.size * shrinkFactor;
+        }
+      }
+      
+      if (shrunkCount > 0) {
+        console.log(`🔹 Auto-shrunk ${shrunkCount} oversized stars to prevent artifacts`);
+      }
+      // === END AUTO-SHRINK ===
+      
       // Sort stars by size to determine layer distribution across 12 layers
       starRegions.sort((a, b) => b.size - a.size);
       
