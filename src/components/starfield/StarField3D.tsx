@@ -157,7 +157,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         luminanceCache[i] = 0.299 * r + 0.587 * g + 0.114 * b;
       }
       
-      // Detect complete star regions with improved edge handling
+      // Detect star cores first, then extract with proper gradient preservation
       const visited = new Uint8Array(pixelCount);
       const starRegions: {
         pixels: Uint32Array;
@@ -168,12 +168,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
         size: number;
       }[] = [];
       
-      // Higher threshold to avoid picking up noise and rough edges
-      const threshold = 50; // Increased from 30 to avoid dim edge pixels
-      const lowThreshold = 25; // Increased from 15 to get cleaner edges
+      // Use high threshold to find only bright star cores
+      const coreThreshold = 80; // Only detect bright cores
+      const expansionThreshold = 10; // Include dim surrounding pixels for smooth falloff
       
-      // Reusable queue with pre-allocated capacity to avoid array resizing
-      const maxQueueSize = 5000;
+      // Reusable queue with pre-allocated capacity
+      const maxQueueSize = 8000; // Larger to capture full star halos
       const queueX = new Uint16Array(maxQueueSize);
       const queueY = new Uint16Array(maxQueueSize);
       const pixelBuffer = new Uint32Array(maxQueueSize);
@@ -185,8 +185,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
           
           const luminance = luminanceCache[idx];
           
-          if (luminance > threshold) {
-            // Found a star pixel - grow the complete star region using optimized flood fill
+          if (luminance > coreThreshold) {
+            // Found a bright star core - expand to capture full gradient halo
             let queueStart = 0;
             let queueEnd = 0;
             let pixelCount = 0;
@@ -230,7 +230,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Top-left
               if (nx1 >= 0 && ny1 >= 0) {
                 const nIdx = ny1 * width + nx1;
-                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx1;
                   queueY[queueEnd] = ny1;
@@ -240,7 +240,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Top
               if (ny1 >= 0) {
                 const nIdx = ny1 * width + nx2;
-                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx2;
                   queueY[queueEnd] = ny1;
@@ -250,7 +250,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Top-right
               if (nx3 < width && ny1 >= 0) {
                 const nIdx = ny1 * width + nx3;
-                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx3;
                   queueY[queueEnd] = ny1;
@@ -260,7 +260,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Left
               if (nx1 >= 0) {
                 const nIdx = ny2 * width + nx1;
-                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx1;
                   queueY[queueEnd] = ny2;
@@ -270,7 +270,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Right
               if (nx3 < width) {
                 const nIdx = ny2 * width + nx3;
-                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx3;
                   queueY[queueEnd] = ny2;
@@ -280,7 +280,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Bottom-left
               if (nx1 >= 0 && ny3 < height) {
                 const nIdx = ny3 * width + nx1;
-                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx1;
                   queueY[queueEnd] = ny3;
@@ -290,7 +290,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Bottom
               if (ny3 < height) {
                 const nIdx = ny3 * width + nx2;
-                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx2;
                   queueY[queueEnd] = ny3;
@@ -300,7 +300,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Bottom-right
               if (nx3 < width && ny3 < height) {
                 const nIdx = ny3 * width + nx3;
-                if (!visited[nIdx] && luminanceCache[nIdx] > lowThreshold) {
+                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx3;
                   queueY[queueEnd] = ny3;
@@ -413,88 +413,93 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Put the separated data onto the canvases
       contexts.forEach((ctx, i) => ctx.putImageData(imageDatas[i], 0, 0));
       
-      console.log('Applying advanced feathering to create smooth star edges...');
+      console.log('Applying proper Gaussian feathering to eliminate artifacts...');
       
-      // Apply intelligent feathering to each canvas to smooth edges naturally
+      // Apply proper gradient-preserving feathering to eliminate black rings and rough edges
       canvases.forEach((canvas, layerIdx) => {
         const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
         const imgData = ctx.getImageData(0, 0, width, height);
         const data = imgData.data;
         
-        // Create alpha mask for smoothing
-        const alphaMap = new Uint8Array(width * height);
-        for (let i = 0; i < width * height; i++) {
-          alphaMap[i] = data[i * 4 + 3];
-        }
-        
-        // Apply multi-pass smoothing to alpha channel to eliminate rough edges
-        for (let pass = 0; pass < 2; pass++) {
-          const tempAlpha = new Uint8Array(alphaMap);
-          
-          for (let y = 2; y < height - 2; y++) {
-            for (let x = 2; x < width - 2; x++) {
-              const idx = y * width + x;
-              const alpha = tempAlpha[idx];
-              
-              if (alpha === 0) continue; // Skip transparent pixels
-              
-              // For edge pixels (not fully opaque), apply strong smoothing
-              if (alpha < 255) {
-                let sum = 0;
-                let count = 0;
-                const radius = 2;
-                
-                // Weighted average with larger neighborhood
-                for (let dy = -radius; dy <= radius; dy++) {
-                  for (let dx = -radius; dx <= radius; dx++) {
-                    const nx = x + dx;
-                    const ny = y + dy;
-                    if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
-                    
-                    const nIdx = ny * width + nx;
-                    const nAlpha = tempAlpha[nIdx];
-                    
-                    // Weight by distance
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    const weight = Math.exp(-dist * dist / 2);
-                    
-                    sum += nAlpha * weight;
-                    count += weight;
-                  }
+        // First pass: Remove black ring artifacts by softening harsh transitions
+        for (let y = 1; y < height - 1; y++) {
+          for (let x = 1; x < width - 1; x++) {
+            const idx = (y * width + x) * 4;
+            const lum = luminanceCache[y * width + x];
+            const alpha = data[idx + 3];
+            
+            // Detect dark rings around bright cores (low luminance but visible alpha)
+            if (alpha > 50 && lum < 30) {
+              // Check if surrounded by brighter pixels
+              let brighterNeighbors = 0;
+              for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                  if (dx === 0 && dy === 0) continue;
+                  const nIdx = (y + dy) * width + (x + dx);
+                  if (luminanceCache[nIdx] > lum * 2) brighterNeighbors++;
                 }
-                
-                alphaMap[idx] = Math.round(sum / count);
+              }
+              
+              // If surrounded by brighter pixels, this is likely a dark artifact ring
+              if (brighterNeighbors >= 4) {
+                // Fade out this pixel aggressively
+                data[idx + 3] = Math.floor(alpha * 0.3);
               }
             }
           }
         }
         
-        // Apply smoothed alpha back to image data
-        for (let i = 0; i < width * height; i++) {
-          data[i * 4 + 3] = alphaMap[i];
+        // Second pass: Apply distance-based Gaussian feathering for smooth edges
+        const tempData = new Uint8ClampedArray(data);
+        const featherRadius = 4; // Larger radius for smoother falloff
+        
+        for (let y = featherRadius; y < height - featherRadius; y++) {
+          for (let x = featherRadius; x < width - featherRadius; x++) {
+            const idx = (y * width + x) * 4;
+            const alpha = tempData[idx + 3];
+            
+            // Only process edge pixels
+            if (alpha > 0 && alpha < 240) {
+              let sumR = 0, sumG = 0, sumB = 0, sumA = 0;
+              let totalWeight = 0;
+              
+              // Apply Gaussian kernel
+              for (let dy = -featherRadius; dy <= featherRadius; dy++) {
+                for (let dx = -featherRadius; dx <= featherRadius; dx++) {
+                  const nx = x + dx;
+                  const ny = y + dy;
+                  
+                  const nIdx = (ny * width + nx) * 4;
+                  const dist = Math.sqrt(dx * dx + dy * dy);
+                  
+                  // Gaussian weight
+                  const sigma = featherRadius / 2.5;
+                  const weight = Math.exp(-(dist * dist) / (2 * sigma * sigma));
+                  
+                  sumR += tempData[nIdx] * weight;
+                  sumG += tempData[nIdx + 1] * weight;
+                  sumB += tempData[nIdx + 2] * weight;
+                  sumA += tempData[nIdx + 3] * weight;
+                  totalWeight += weight;
+                }
+              }
+              
+              // Apply smoothed values
+              data[idx] = Math.round(sumR / totalWeight);
+              data[idx + 1] = Math.round(sumG / totalWeight);
+              data[idx + 2] = Math.round(sumB / totalWeight);
+              data[idx + 3] = Math.round(sumA / totalWeight);
+            }
+          }
         }
         
         ctx.putImageData(imgData, 0, 0);
       });
       
-      console.log('Applying intelligent edge refinement to smooth star edges...');
+      console.log('Star extraction complete with smooth gradients');
       
-      // Apply edge refinement to each layer with appropriate settings
-      const refinedCanvases = canvases.map((canvas, i) => {
-        // Moderate smoothing since feathering already cleaned edges
-        const smoothingRadius = Math.max(2, 4 - Math.floor(i / 2)); // Reduced from 6
-        const edgeThreshold = 60 - i * 5; // Slightly reduced from 75
-        const coreThreshold = 235 - i * 10; // Preserve very bright cores
-        
-        return refineStarEdges(canvas, {
-          smoothingRadius,
-          edgeThreshold,
-          preserveCore: true,
-          coreThreshold
-        });
-      });
-      
-      // Convert refined canvases to ImageBitmaps for faster GPU-accelerated rendering
+      // Skip edge refinement - Gaussian feathering already produced smooth results
+      // Convert canvases directly to ImageBitmaps for faster GPU-accelerated rendering
       const bitmapOptions: ImageBitmapOptions = {
         premultiplyAlpha: 'premultiply',
         colorSpaceConversion: 'none',
@@ -502,7 +507,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       };
       
       Promise.all(
-        refinedCanvases.map(canvas => createImageBitmap(canvas, bitmapOptions))
+        canvases.map(canvas => createImageBitmap(canvas, bitmapOptions))
       ).then((bitmaps) => {
         console.log('🌟 [StarField3D] Setting star layers state with bitmaps');
         setStarLayers({
