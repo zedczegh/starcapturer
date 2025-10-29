@@ -83,11 +83,13 @@ const ParallelVideoGenerator: React.FC = () => {
     starsDepthMap?: HTMLCanvasElement;
   }>({});
 
-  // Traditional Morph Parameters - matching stereoscope processor exactly
-  const [horizontalDisplace, setHorizontalDisplace] = useState<number>(25);
-  const [starShiftAmount, setStarShiftAmount] = useState<number>(6);
+  // Processing Parameters - matching stereoscope processor exactly
   const [stereoSpacing, setStereoSpacing] = useState<number>(600);
   const [borderSize, setBorderSize] = useState<number>(300);
+  
+  // Internal processing parameters (not exposed in UI)
+  const horizontalDisplace = 25; // Fixed depth displacement
+  const starShiftAmount = 6; // Fixed star shift amount
 
   // 3D Star Field Motion Settings - complete settings
   const [motionSettings, setMotionSettings] = useState<MotionSettings>({
@@ -159,7 +161,17 @@ const ParallelVideoGenerator: React.FC = () => {
 
   // Function to stitch left and right canvases together with optimized rendering
   const stitchCanvases = useCallback(() => {
-    if (!leftCanvasRef.current || !rightCanvasRef.current || !stitchedCanvasRef.current) return;
+    if (!leftCanvasRef.current || !rightCanvasRef.current) return;
+    
+    // Find or ensure stitched canvas ref is set
+    if (!stitchedCanvasRef.current) {
+      const stitchedCanvasElement = document.querySelector('canvas[style*="pixelated"]') as HTMLCanvasElement;
+      if (stitchedCanvasElement) {
+        stitchedCanvasRef.current = stitchedCanvasElement;
+      } else {
+        return; // Canvas not ready yet
+      }
+    }
 
     const leftCanvas = leftCanvasRef.current;
     const rightCanvas = rightCanvasRef.current;
@@ -214,24 +226,20 @@ const ParallelVideoGenerator: React.FC = () => {
   // Ensure stitched canvas is rendered and perform initial stitch
   useEffect(() => {
     if (isReady && leftCanvasRef.current && rightCanvasRef.current) {
-      // Wait for the stitched canvas element to mount in the DOM
-      const waitForStitchedCanvas = setInterval(() => {
-        const stitchedCanvasElement = document.querySelector('canvas[style*="pixelated"]') as HTMLCanvasElement;
-        if (stitchedCanvasElement && !stitchedCanvasRef.current) {
-          stitchedCanvasRef.current = stitchedCanvasElement;
-          console.log('✅ Stitched canvas ref set from DOM');
-          clearInterval(waitForStitchedCanvas);
-          // Perform initial stitch
-          setTimeout(() => {
-            stitchCanvases();
-          }, 100);
+      // Perform initial stitch immediately
+      const performStitch = () => {
+        if (leftCanvasRef.current && rightCanvasRef.current) {
+          console.log('✅ Performing initial canvas stitch');
+          // Give the DOM a moment to fully render the canvas element
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              stitchCanvases();
+            });
+          });
         }
-      }, 50);
-
-      // Clear interval after 5 seconds to prevent memory leak
-      setTimeout(() => clearInterval(waitForStitchedCanvas), 5000);
-
-      return () => clearInterval(waitForStitchedCanvas);
+      };
+      
+      performStitch();
     }
   }, [isReady, stitchCanvases]);
 
@@ -970,10 +978,10 @@ const ParallelVideoGenerator: React.FC = () => {
               </div>
               <div>
                 <CardTitle className="text-2xl text-white">
-                  {t('Step 1: Upload Images & Configure Traditional Morph', '步骤1：上传图片并配置传统变形')}
+                  {t('Step 1: Upload Images', '步骤1：上传图片')}
                 </CardTitle>
                 <CardDescription className="text-cosmic-300">
-                  {t('Upload your starless and stars-only images, then adjust morph parameters', '上传无星和仅星图像，然后调整变形参数')}
+                  {t('Upload your starless and stars-only images', '上传无星和仅星图像')}
                 </CardDescription>
               </div>
             </div>
@@ -1003,27 +1011,38 @@ const ParallelVideoGenerator: React.FC = () => {
                   />
                 )}
                 
-                <Button
-                  onClick={() => starsInputRef.current?.click()}
-                  className="group w-full h-24 bg-cosmic-800/50 hover:bg-orange-500/10 border-2 border-dashed border-cosmic-600 hover:border-orange-500/50 transition-all"
-                  variant="outline"
-                  disabled={uploadProgress.stars.show}
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload className="w-6 h-6 text-cosmic-400 group-hover:text-orange-400 transition-colors" />
-                    <span className="text-sm text-cosmic-300 group-hover:hidden">
-                      {t('Click to upload', '点击上传')}
-                    </span>
-                    <span className="text-sm text-orange-400 hidden group-hover:block">
-                      {t('Stars Only', '仅星图像')}
-                    </span>
-                    {starsElement && (
-                      <span className="text-xs text-cosmic-500">
-                        {starsElement.width} × {starsElement.height}
+                {!starsElement ? (
+                  <Button
+                    onClick={() => starsInputRef.current?.click()}
+                    className="group w-full h-24 bg-cosmic-800/50 hover:bg-orange-500/10 border-2 border-dashed border-cosmic-600 hover:border-orange-500/50 transition-all"
+                    variant="outline"
+                    disabled={uploadProgress.stars.show}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="w-6 h-6 text-cosmic-400 group-hover:text-orange-400 transition-colors" />
+                      <span className="text-sm text-cosmic-300 group-hover:hidden">
+                        {t('Click to upload', '点击上传')}
                       </span>
-                    )}
+                      <span className="text-sm text-orange-400 hidden group-hover:block">
+                        {t('Stars Only', '仅星图像')}
+                      </span>
+                    </div>
+                  </Button>
+                ) : (
+                  <div className="relative group cursor-pointer" onClick={() => starsInputRef.current?.click()}>
+                    <img
+                      src={starsElement.src}
+                      alt="Stars Preview"
+                      className="w-full h-40 object-cover rounded-lg border-2 border-orange-500/50 hover:border-orange-500 transition-all"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-orange-400" />
+                    </div>
+                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
+                      {starsElement.width} × {starsElement.height}
+                    </span>
                   </div>
-                </Button>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -1047,88 +1066,61 @@ const ParallelVideoGenerator: React.FC = () => {
                   />
                 )}
                 
-                <Button
-                  onClick={() => starlessInputRef.current?.click()}
-                  className="group w-full h-24 bg-cosmic-800/50 hover:bg-purple-500/10 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 transition-all"
-                  variant="outline"
-                  disabled={uploadProgress.starless.show}
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload className="w-6 h-6 text-cosmic-400 group-hover:text-purple-400 transition-colors" />
-                    <span className="text-sm text-cosmic-300 group-hover:hidden">
-                      {t('Click to upload', '点击上传')}
-                    </span>
-                    <span className="text-sm text-purple-400 hidden group-hover:block">
-                      {t('Starless', '无星图像')}
-                    </span>
-                    {starlessElement && (
-                      <span className="text-xs text-cosmic-500">
-                        {starlessElement.width} × {starlessElement.height}
+                {!starlessElement ? (
+                  <Button
+                    onClick={() => starlessInputRef.current?.click()}
+                    className="group w-full h-24 bg-cosmic-800/50 hover:bg-purple-500/10 border-2 border-dashed border-cosmic-600 hover:border-purple-500/50 transition-all"
+                    variant="outline"
+                    disabled={uploadProgress.starless.show}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="w-6 h-6 text-cosmic-400 group-hover:text-purple-400 transition-colors" />
+                      <span className="text-sm text-cosmic-300 group-hover:hidden">
+                        {t('Click to upload', '点击上传')}
                       </span>
-                    )}
+                      <span className="text-sm text-purple-400 hidden group-hover:block">
+                        {t('Starless', '无星图像')}
+                      </span>
+                    </div>
+                  </Button>
+                ) : (
+                  <div className="relative group cursor-pointer" onClick={() => starlessInputRef.current?.click()}>
+                    <img
+                      src={starlessElement.src}
+                      alt="Starless Preview"
+                      className="w-full h-40 object-cover rounded-lg border-2 border-purple-500/50 hover:border-purple-500 transition-all"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-purple-400" />
+                    </div>
+                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
+                      {starlessElement.width} × {starlessElement.height}
+                    </span>
                   </div>
-                </Button>
+                )}
               </div>
             </div>
 
             <Separator className="bg-cosmic-700/30" />
 
-            {/* Traditional Morph Parameters - Exactly matching stereoscope processor */}
+            {/* Processing Parameters - Exactly matching stereoscope processor */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
-                <Settings2 className="w-5 h-5 text-purple-400" />
+                <Settings2 className="w-5 h-5 text-blue-400" />
                 <h3 className="text-lg font-semibold text-white">
-                  {t('Traditional Morph Parameters', '传统变形参数')}
+                  {t('Processing Parameters', '处理参数')}
                 </h3>
                 <p className="text-sm text-cosmic-400">
-                  {t('Professional parameters for authentic 3D astrophotography', '专业参数用于真实的3D天文摄影')}
+                  {t('Configure stereo spacing and borders', '配置立体间距和边框')}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Horizontal Displacement */}
-                <div className="space-y-2">
-                  <Label className="text-cosmic-200 flex items-center justify-between">
-                    <span>{t('Horizontal Displacement', '水平位移')}</span>
-                    <span className="text-amber-400 font-mono text-lg">({horizontalDisplace})</span>
-                  </Label>
-                  <Slider
-                    value={[horizontalDisplace]}
-                    onValueChange={([value]) => setHorizontalDisplace(value)}
-                    min={10}
-                    max={30}
-                    step={1}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-cosmic-400">
-                    {t('Controls nebula depth displacement effect (10-30 recommended)', '控制星云深度位移效果（推荐10-30）')}
-                  </p>
-                </div>
-
-                {/* Star Shift Amount */}
-                <div className="space-y-2">
-                  <Label className="text-cosmic-200 flex items-center justify-between">
-                    <span>{t('Star Shift Amount', '星点位移量')}</span>
-                    <span className="text-amber-400 font-mono text-lg">({starShiftAmount}px)</span>
-                  </Label>
-                  <Slider
-                    value={[starShiftAmount]}
-                    onValueChange={([value]) => setStarShiftAmount(value)}
-                    min={2}
-                    max={15}
-                    step={0.5}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-cosmic-400">
-                    {t('Distance to shift individual stars for 3D positioning', '单个星点的3D定位位移距离')}
-                  </p>
-                </div>
-
                 {/* Stereo Spacing */}
                 <div className="space-y-2">
                   <Label className="text-cosmic-200 flex items-center justify-between">
                     <span>{t('Stereo Spacing', '立体间距')}</span>
-                    <span className="text-amber-400 font-mono text-lg">({stereoSpacing}px)</span>
+                    <span className="text-blue-400 font-mono text-lg">({stereoSpacing}px)</span>
                   </Label>
                   <Slider
                     value={[stereoSpacing]}
@@ -1147,7 +1139,7 @@ const ParallelVideoGenerator: React.FC = () => {
                 <div className="space-y-2">
                   <Label className="text-cosmic-200 flex items-center justify-between">
                     <span>{t('Border Size', '边框大小')}</span>
-                    <span className="text-amber-400 font-mono text-lg">({borderSize}px)</span>
+                    <span className="text-blue-400 font-mono text-lg">({borderSize}px)</span>
                   </Label>
                   <Slider
                     value={[borderSize]}
@@ -1180,7 +1172,7 @@ const ParallelVideoGenerator: React.FC = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5" />
-                  {t('Process with Traditional Morph', '使用传统变形处理')}
+                  {t('Process Images', '处理图像')}
                 </div>
               )}
             </Button>
@@ -1195,7 +1187,7 @@ const ParallelVideoGenerator: React.FC = () => {
               <CardHeader>
                 <CardTitle className="text-xl text-white">Debug: Processed Images</CardTitle>
                 <CardDescription className="text-cosmic-300">
-                  {t('Intermediate results from Traditional Morph', '传统变形的中间结果')}
+                  {t('Intermediate results from processing', '处理的中间结果')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
