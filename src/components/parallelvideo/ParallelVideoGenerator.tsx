@@ -1287,14 +1287,14 @@ const ParallelVideoGenerator: React.FC = () => {
                       </div>
                     )}
                     {starlessDepthMapUrl && (
-                      <div className="relative group">
+                      <div className="relative group mt-1">
                         <Label className="text-cosmic-400 text-xs">Depth Map</Label>
                         <img src={starlessDepthMapUrl} alt="Depth Map" className="w-full rounded border border-cosmic-600/50 mt-1" />
                         <Button
                           size="sm"
                           variant="secondary"
                           onClick={() => handleDownloadProcessedImage('starlessDepthMap')}
-                          className="absolute top-6 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
                         >
                           <Download className="w-3 h-3 mr-1" />
                           PNG
@@ -1321,14 +1321,14 @@ const ParallelVideoGenerator: React.FC = () => {
                       </div>
                     )}
                     {starsDepthMapUrl && (
-                      <div className="relative group">
+                      <div className="relative group mt-1">
                         <Label className="text-cosmic-400 text-xs">Depth Map</Label>
                         <img src={starsDepthMapUrl} alt="Depth Map" className="w-full rounded border border-cosmic-600/50 mt-1" />
                         <Button
                           size="sm"
                           variant="secondary"
                           onClick={() => handleDownloadProcessedImage('starsDepthMap')}
-                          className="absolute top-6 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
                         >
                           <Download className="w-3 h-3 mr-1" />
                           PNG
@@ -1355,7 +1355,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       </div>
                     )}
                     {leftComposite && (
-                      <div className="relative group">
+                      <div className="relative group mt-1">
                         <Label className="text-cosmic-400 text-xs">Left Composite</Label>
                         <img src={leftComposite} alt="Left Composite" className="w-full rounded border border-cosmic-600/50 mt-1" />
                         <Button
@@ -1367,7 +1367,7 @@ const ParallelVideoGenerator: React.FC = () => {
                             link.download = `left_composite_${Date.now()}.png`;
                             link.click();
                           }}
-                          className="absolute top-6 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
                         >
                           <Download className="w-3 h-3 mr-1" />
                           PNG
@@ -1394,7 +1394,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       </div>
                     )}
                     {rightComposite && (
-                      <div className="relative group">
+                      <div className="relative group mt-1">
                         <Label className="text-cosmic-400 text-xs">Right Composite</Label>
                         <img src={rightComposite} alt="Right Composite" className="w-full rounded border border-cosmic-600/50 mt-1" />
                         <Button
@@ -1406,7 +1406,7 @@ const ParallelVideoGenerator: React.FC = () => {
                             link.download = `right_composite_${Date.now()}.png`;
                             link.click();
                           }}
-                          className="absolute top-6 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 text-xs"
                         >
                           <Download className="w-3 h-3 mr-1" />
                           PNG
