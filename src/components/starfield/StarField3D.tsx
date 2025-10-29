@@ -968,15 +968,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // Only recalculate offsets if state changed
     if (stateChanged) {
       if (motionType === 'zoom_in') {
-        // Zoom in with anchor point-based motion
-        // Calculate distance from each layer's position to anchor point
+        // Zoom in with anchor point - create "flying towards anchor point" effect
+        // Elements converge towards the anchor point with parallax-based speed differences
+        
         const calculateAnchorBasedScale = (baseParallax: number, layerKey: string) => {
-          // Distance from center affects speed - closer to anchor = faster
-          const centerDist = Math.sqrt(
-            Math.pow(anchorNormX - 0.5, 2) + Math.pow(anchorNormY - 0.5, 2)
-          );
-          const speedMultiplier = 1.0 + (1.0 - centerDist) * 0.5; // 1.0 to 1.5x speed based on anchor distance
-          return 1.0 + (progressRatio * ampFactor * baseParallax * parallaxMultipliers[layerKey] * speedMultiplier);
+          return 1.0 + (progressRatio * ampFactor * baseParallax * parallaxMultipliers[layerKey]);
         };
         
         offsetsRef.current.background.scale = calculateAnchorBasedScale(1.0, 'background');
@@ -993,37 +989,75 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer2.scale = calculateAnchorBasedScale(0.9, 'layer2');
         offsetsRef.current.layer1.scale = calculateAnchorBasedScale(1.0, 'layer1');
         
-        // Apply offset towards anchor point
-        const offsetStrength = progressRatio * 100 * ampFactor;
-        const offsetX = (anchorNormX - 0.5) * offsetStrength;
-        const offsetY = (anchorNormY - 0.5) * offsetStrength;
+        // Calculate convergence towards anchor point
+        // Layers move TOWARDS anchor (negative offset means moving towards it)
+        // Farther layers (higher parallax multiplier) move faster towards anchor
+        const convergenceStrength = progressRatio * 300 * ampFactor;
         
-        offsetsRef.current.background.x = offsetX * parallaxMultipliers.background;
-        offsetsRef.current.background.y = offsetY * parallaxMultipliers.background;
-        offsetsRef.current.layer12.x = offsetX * parallaxMultipliers.layer12;
-        offsetsRef.current.layer12.y = offsetY * parallaxMultipliers.layer12;
-        offsetsRef.current.layer11.x = offsetX * parallaxMultipliers.layer11;
-        offsetsRef.current.layer11.y = offsetY * parallaxMultipliers.layer11;
-        offsetsRef.current.layer10.x = offsetX * parallaxMultipliers.layer10;
-        offsetsRef.current.layer10.y = offsetY * parallaxMultipliers.layer10;
-        offsetsRef.current.layer9.x = offsetX * parallaxMultipliers.layer9;
-        offsetsRef.current.layer9.y = offsetY * parallaxMultipliers.layer9;
-        offsetsRef.current.layer8.x = offsetX * parallaxMultipliers.layer8;
-        offsetsRef.current.layer8.y = offsetY * parallaxMultipliers.layer8;
-        offsetsRef.current.layer7.x = offsetX * parallaxMultipliers.layer7;
-        offsetsRef.current.layer7.y = offsetY * parallaxMultipliers.layer7;
-        offsetsRef.current.layer6.x = offsetX * parallaxMultipliers.layer6;
-        offsetsRef.current.layer6.y = offsetY * parallaxMultipliers.layer6;
-        offsetsRef.current.layer5.x = offsetX * parallaxMultipliers.layer5;
-        offsetsRef.current.layer5.y = offsetY * parallaxMultipliers.layer5;
-        offsetsRef.current.layer4.x = offsetX * parallaxMultipliers.layer4;
-        offsetsRef.current.layer4.y = offsetY * parallaxMultipliers.layer4;
-        offsetsRef.current.layer3.x = offsetX * parallaxMultipliers.layer3;
-        offsetsRef.current.layer3.y = offsetY * parallaxMultipliers.layer3;
-        offsetsRef.current.layer2.x = offsetX * parallaxMultipliers.layer2;
-        offsetsRef.current.layer2.y = offsetY * parallaxMultipliers.layer2;
-        offsetsRef.current.layer1.x = offsetX * parallaxMultipliers.layer1;
-        offsetsRef.current.layer1.y = offsetY * parallaxMultipliers.layer1;
+        // Direction vector from center to anchor (where we're flying towards)
+        const dirToAnchorX = anchorNormX - 0.5;
+        const dirToAnchorY = anchorNormY - 0.5;
+        
+        // Each layer moves towards anchor, with closer layers (layer1) moving more, farther layers less
+        // This creates the illusion of flying past things as we approach the anchor point
+        const applyConvergence = (layerMultiplier: number) => {
+          return {
+            x: dirToAnchorX * convergenceStrength * layerMultiplier,
+            y: dirToAnchorY * convergenceStrength * layerMultiplier
+          };
+        };
+        
+        const bg = applyConvergence(parallaxMultipliers.background * 0.3);
+        offsetsRef.current.background.x = bg.x;
+        offsetsRef.current.background.y = bg.y;
+        
+        const l12 = applyConvergence(parallaxMultipliers.layer12 * 0.4);
+        offsetsRef.current.layer12.x = l12.x;
+        offsetsRef.current.layer12.y = l12.y;
+        
+        const l11 = applyConvergence(parallaxMultipliers.layer11 * 0.45);
+        offsetsRef.current.layer11.x = l11.x;
+        offsetsRef.current.layer11.y = l11.y;
+        
+        const l10 = applyConvergence(parallaxMultipliers.layer10 * 0.5);
+        offsetsRef.current.layer10.x = l10.x;
+        offsetsRef.current.layer10.y = l10.y;
+        
+        const l9 = applyConvergence(parallaxMultipliers.layer9 * 0.55);
+        offsetsRef.current.layer9.x = l9.x;
+        offsetsRef.current.layer9.y = l9.y;
+        
+        const l8 = applyConvergence(parallaxMultipliers.layer8 * 0.6);
+        offsetsRef.current.layer8.x = l8.x;
+        offsetsRef.current.layer8.y = l8.y;
+        
+        const l7 = applyConvergence(parallaxMultipliers.layer7 * 0.65);
+        offsetsRef.current.layer7.x = l7.x;
+        offsetsRef.current.layer7.y = l7.y;
+        
+        const l6 = applyConvergence(parallaxMultipliers.layer6 * 0.7);
+        offsetsRef.current.layer6.x = l6.x;
+        offsetsRef.current.layer6.y = l6.y;
+        
+        const l5 = applyConvergence(parallaxMultipliers.layer5 * 0.8);
+        offsetsRef.current.layer5.x = l5.x;
+        offsetsRef.current.layer5.y = l5.y;
+        
+        const l4 = applyConvergence(parallaxMultipliers.layer4 * 0.9);
+        offsetsRef.current.layer4.x = l4.x;
+        offsetsRef.current.layer4.y = l4.y;
+        
+        const l3 = applyConvergence(parallaxMultipliers.layer3 * 1.0);
+        offsetsRef.current.layer3.x = l3.x;
+        offsetsRef.current.layer3.y = l3.y;
+        
+        const l2 = applyConvergence(parallaxMultipliers.layer2 * 1.1);
+        offsetsRef.current.layer2.x = l2.x;
+        offsetsRef.current.layer2.y = l2.y;
+        
+        const l1 = applyConvergence(parallaxMultipliers.layer1 * 1.2);
+        offsetsRef.current.layer1.x = l1.x;
+        offsetsRef.current.layer1.y = l1.y;
       } else if (motionType === 'zoom_out') {
         // Zoom out with anchor point-based motion
         const calculateAnchorBasedScaleOut = (baseParallax: number, layerKey: string) => {
