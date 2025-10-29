@@ -127,10 +127,11 @@ export class OptimizedDisplacementProcessor {
         const structureDepth = structureDepthData.data[globalIdx] / 255;
         const edgeDepth = edgeDepthData.data[globalIdx] / 255;
         
-        // Calculate base displacement
+        // Calculate adaptive displacement
         const structureInfluence = Math.min(1, structureDepth * 1.5);
         const edgeInfluence = Math.min(1, (1 - edgeDepth) * 1.2);
         
+        // Combined displacement with optimized calculation
         const baseDisplacement = (primaryDepth - 0.5) * horizontalAmount;
         const structureAdjustment = (structureDepth - 0.5) * horizontalAmount * 0.25 * structureInfluence;
         const edgeAdjustment = (edgeDepth - 0.5) * horizontalAmount * 0.15 * edgeInfluence;
@@ -141,46 +142,13 @@ export class OptimizedDisplacementProcessor {
         const srcX = x - totalDisplacement;
         
         if (srcX >= 0 && srcX < width) {
+          // Direct pixel copy without interpolation for better performance and no artifacts
           const clampedSrcX = Math.max(0, Math.min(width - 1, Math.round(srcX)));
           const srcIdx = (globalY * width + clampedSrcX) * 4;
           
-          // CRITICAL: Check BOTH target and source luminance to prevent overexposure
-          // Target luminance (where we're writing to)
-          const targetR = originalData.data[globalIdx];
-          const targetG = originalData.data[globalIdx + 1];
-          const targetB = originalData.data[globalIdx + 2];
-          const targetLuminance = 0.299 * targetR + 0.587 * targetG + 0.114 * targetB;
-          
-          // Source luminance (where we're pulling from)
-          const sourceR = originalData.data[srcIdx];
-          const sourceG = originalData.data[srcIdx + 1];
-          const sourceB = originalData.data[srcIdx + 2];
-          const sourceLuminance = 0.299 * sourceR + 0.587 * sourceG + 0.114 * sourceB;
-          
-          // Use the MAXIMUM luminance of source and target for protection
-          const maxLuminance = Math.max(targetLuminance, sourceLuminance);
-          
-          // Determine blend factor based on brightness
-          let blendFactor = 1.0; // 1.0 = full displaced pixel, 0.0 = original pixel
-          
-          if (maxLuminance > 200) {
-            // Extremely bright areas: use almost entirely original pixel
-            blendFactor = 0.05;
-          } else if (maxLuminance > 170) {
-            // Very bright: minimal displacement
-            blendFactor = 0.2;
-          } else if (maxLuminance > 140) {
-            // Bright: reduced displacement
-            blendFactor = 0.5;
-          } else if (maxLuminance > 110) {
-            // Moderately bright: some protection
-            blendFactor = 0.75;
-          }
-          
-          // Blend between original and displaced pixels
-          chunkData.data[chunkIdx] = Math.round(targetR * (1 - blendFactor) + sourceR * blendFactor);
-          chunkData.data[chunkIdx + 1] = Math.round(targetG * (1 - blendFactor) + sourceG * blendFactor);
-          chunkData.data[chunkIdx + 2] = Math.round(targetB * (1 - blendFactor) + sourceB * blendFactor);
+          chunkData.data[chunkIdx] = originalData.data[srcIdx];
+          chunkData.data[chunkIdx + 1] = originalData.data[srcIdx + 1];
+          chunkData.data[chunkIdx + 2] = originalData.data[srcIdx + 2];
           chunkData.data[chunkIdx + 3] = 255;
         } else {
           // Black fill for out-of-bounds pixels

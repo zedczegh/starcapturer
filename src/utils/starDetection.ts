@@ -898,33 +898,14 @@ function renderStarWithPSF(ctx: CanvasRenderingContext2D, star: DetectedStar) {
   ctx.fillStyle = midGradient;
   ctx.fillRect(x - midHaloSize, y - midHaloSize, midHaloSize * 2, midHaloSize * 2);
   
-  // Layer 1: Core brightness - draw solid core first, then add gradient halo
-  // This ensures stars have solid bright centers without hollow artifacts
-  
-  // First, draw a solid bright core circle
-  ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${brightness})`;
-  ctx.beginPath();
-  ctx.arc(x, y, Math.max(0.5, coreSize * 0.15), 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Then add the gradient halo around it
-  const coreGradient = ctx.createRadialGradient(x, y, coreSize * 0.15, x, y, coreSize);
-  
-  if (type === 'saturated') {
-    coreGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness})`);
-    coreGradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${brightness * 0.95})`);
-    coreGradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${brightness * 0.8})`);
-    coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.45})`);
-  } else if (type === 'extended') {
-    coreGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness})`);
-    coreGradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${brightness * 0.9})`);
-    coreGradient.addColorStop(0.7, `rgba(${r}, ${g}, ${b}, ${brightness * 0.7})`);
-    coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.4})`);
-  } else {
-    coreGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness})`);
-    coreGradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${brightness * 0.85})`);
-    coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.35})`);
-  }
+  // Layer 1: Core brightness with ultra-smooth transition
+  const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, coreSize);
+  coreGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness})`);
+  coreGradient.addColorStop(0.2, `rgba(${r}, ${g}, ${b}, ${brightness * 0.95})`);
+  coreGradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${brightness * 0.85})`);
+  coreGradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, ${brightness * 0.7})`);
+  coreGradient.addColorStop(0.8, `rgba(${r}, ${g}, ${b}, ${brightness * 0.5})`);
+  coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.3})`);
   
   ctx.fillStyle = coreGradient;
   ctx.fillRect(x - coreSize, y - coreSize, coreSize * 2, coreSize * 2);
