@@ -969,93 +969,90 @@ const StarField3D: React.FC<StarField3DProps> = ({
     if (stateChanged) {
       if (motionType === 'zoom_in') {
         // Zoom in with anchor point - create "flying towards anchor point" effect
-        // Elements converge towards the anchor point with parallax-based speed differences
+        // Elements expand AWAY from the anchor point (which acts as the vanishing point)
         
-        const calculateAnchorBasedScale = (baseParallax: number, layerKey: string) => {
-          return 1.0 + (progressRatio * ampFactor * baseParallax * parallaxMultipliers[layerKey]);
-        };
+        // Proper scaling for all layers
+        offsetsRef.current.background.scale = 1.0 + (progressRatio * ampFactor * 1.0);
+        offsetsRef.current.layer12.scale = 1.0 + (progressRatio * ampFactor * 0.35 * parallaxMultipliers.layer12);
+        offsetsRef.current.layer11.scale = 1.0 + (progressRatio * ampFactor * 0.37 * parallaxMultipliers.layer11);
+        offsetsRef.current.layer10.scale = 1.0 + (progressRatio * ampFactor * 0.39 * parallaxMultipliers.layer10);
+        offsetsRef.current.layer9.scale = 1.0 + (progressRatio * ampFactor * 0.41 * parallaxMultipliers.layer9);
+        offsetsRef.current.layer8.scale = 1.0 + (progressRatio * ampFactor * 0.43 * parallaxMultipliers.layer8);
+        offsetsRef.current.layer7.scale = 1.0 + (progressRatio * ampFactor * 0.45 * parallaxMultipliers.layer7);
+        offsetsRef.current.layer6.scale = 1.0 + (progressRatio * ampFactor * 0.5 * parallaxMultipliers.layer6);
+        offsetsRef.current.layer5.scale = 1.0 + (progressRatio * ampFactor * 0.6 * parallaxMultipliers.layer5);
+        offsetsRef.current.layer4.scale = 1.0 + (progressRatio * ampFactor * 0.7 * parallaxMultipliers.layer4);
+        offsetsRef.current.layer3.scale = 1.0 + (progressRatio * ampFactor * 0.8 * parallaxMultipliers.layer3);
+        offsetsRef.current.layer2.scale = 1.0 + (progressRatio * ampFactor * 0.9 * parallaxMultipliers.layer2);
+        offsetsRef.current.layer1.scale = 1.0 + (progressRatio * ampFactor * 1.0 * parallaxMultipliers.layer1);
         
-        offsetsRef.current.background.scale = calculateAnchorBasedScale(1.0, 'background');
-        offsetsRef.current.layer12.scale = calculateAnchorBasedScale(0.35, 'layer12');
-        offsetsRef.current.layer11.scale = calculateAnchorBasedScale(0.37, 'layer11');
-        offsetsRef.current.layer10.scale = calculateAnchorBasedScale(0.39, 'layer10');
-        offsetsRef.current.layer9.scale = calculateAnchorBasedScale(0.41, 'layer9');
-        offsetsRef.current.layer8.scale = calculateAnchorBasedScale(0.43, 'layer8');
-        offsetsRef.current.layer7.scale = calculateAnchorBasedScale(0.45, 'layer7');
-        offsetsRef.current.layer6.scale = calculateAnchorBasedScale(0.5, 'layer6');
-        offsetsRef.current.layer5.scale = calculateAnchorBasedScale(0.6, 'layer5');
-        offsetsRef.current.layer4.scale = calculateAnchorBasedScale(0.7, 'layer4');
-        offsetsRef.current.layer3.scale = calculateAnchorBasedScale(0.8, 'layer3');
-        offsetsRef.current.layer2.scale = calculateAnchorBasedScale(0.9, 'layer2');
-        offsetsRef.current.layer1.scale = calculateAnchorBasedScale(1.0, 'layer1');
+        // Flying towards anchor: elements expand AWAY from the anchor point
+        // The anchor is the vanishing point we're approaching
+        // Elements farther from anchor move away faster (parallax effect)
+        const expansionStrength = progressRatio * 200 * ampFactor;
         
-        // Calculate convergence towards anchor point
-        // Layers move TOWARDS anchor (negative offset means moving towards it)
-        // Farther layers (higher parallax multiplier) move faster towards anchor
-        const convergenceStrength = progressRatio * 300 * ampFactor;
+        // Direction vector from anchor to center (elements expand away from anchor)
+        const dirAwayFromAnchorX = 0.5 - anchorNormX;
+        const dirAwayFromAnchorY = 0.5 - anchorNormY;
         
-        // Direction vector from center to anchor (where we're flying towards)
-        const dirToAnchorX = anchorNormX - 0.5;
-        const dirToAnchorY = anchorNormY - 0.5;
-        
-        // Each layer moves towards anchor, with closer layers (layer1) moving more, farther layers less
-        // This creates the illusion of flying past things as we approach the anchor point
-        const applyConvergence = (layerMultiplier: number) => {
+        // Apply expansion away from anchor point
+        // Closer layers (higher parallax) move more, creating depth
+        const applyExpansion = (layerDepthFactor: number) => {
           return {
-            x: dirToAnchorX * convergenceStrength * layerMultiplier,
-            y: dirToAnchorY * convergenceStrength * layerMultiplier
+            x: dirAwayFromAnchorX * expansionStrength * layerDepthFactor,
+            y: dirAwayFromAnchorY * expansionStrength * layerDepthFactor
           };
         };
         
-        const bg = applyConvergence(parallaxMultipliers.background * 0.3);
+        const bg = applyExpansion(parallaxMultipliers.background * 0.3);
         offsetsRef.current.background.x = bg.x;
         offsetsRef.current.background.y = bg.y;
         
-        const l12 = applyConvergence(parallaxMultipliers.layer12 * 0.4);
+        const l12 = applyExpansion(parallaxMultipliers.layer12 * 0.4);
         offsetsRef.current.layer12.x = l12.x;
         offsetsRef.current.layer12.y = l12.y;
         
-        const l11 = applyConvergence(parallaxMultipliers.layer11 * 0.45);
+        const l11 = applyExpansion(parallaxMultipliers.layer11 * 0.45);
         offsetsRef.current.layer11.x = l11.x;
         offsetsRef.current.layer11.y = l11.y;
         
-        const l10 = applyConvergence(parallaxMultipliers.layer10 * 0.5);
+        const l10 = applyExpansion(parallaxMultipliers.layer10 * 0.5);
         offsetsRef.current.layer10.x = l10.x;
         offsetsRef.current.layer10.y = l10.y;
         
-        const l9 = applyConvergence(parallaxMultipliers.layer9 * 0.55);
+        const l9 = applyExpansion(parallaxMultipliers.layer9 * 0.55);
         offsetsRef.current.layer9.x = l9.x;
         offsetsRef.current.layer9.y = l9.y;
         
-        const l8 = applyConvergence(parallaxMultipliers.layer8 * 0.6);
+        const l8 = applyExpansion(parallaxMultipliers.layer8 * 0.6);
         offsetsRef.current.layer8.x = l8.x;
         offsetsRef.current.layer8.y = l8.y;
         
-        const l7 = applyConvergence(parallaxMultipliers.layer7 * 0.65);
+        const l7 = applyExpansion(parallaxMultipliers.layer7 * 0.65);
         offsetsRef.current.layer7.x = l7.x;
         offsetsRef.current.layer7.y = l7.y;
         
-        const l6 = applyConvergence(parallaxMultipliers.layer6 * 0.7);
+        const l6 = applyExpansion(parallaxMultipliers.layer6 * 0.7);
         offsetsRef.current.layer6.x = l6.x;
         offsetsRef.current.layer6.y = l6.y;
         
-        const l5 = applyConvergence(parallaxMultipliers.layer5 * 0.8);
+        const l5 = applyExpansion(parallaxMultipliers.layer5 * 0.8);
         offsetsRef.current.layer5.x = l5.x;
         offsetsRef.current.layer5.y = l5.y;
         
-        const l4 = applyConvergence(parallaxMultipliers.layer4 * 0.9);
+        const l4 = applyExpansion(parallaxMultipliers.layer4 * 0.9);
         offsetsRef.current.layer4.x = l4.x;
         offsetsRef.current.layer4.y = l4.y;
         
-        const l3 = applyConvergence(parallaxMultipliers.layer3 * 1.0);
+        const l3 = applyExpansion(parallaxMultipliers.layer3 * 1.0);
         offsetsRef.current.layer3.x = l3.x;
         offsetsRef.current.layer3.y = l3.y;
         
-        const l2 = applyConvergence(parallaxMultipliers.layer2 * 1.1);
+        const l2 = applyExpansion(parallaxMultipliers.layer2 * 1.1);
         offsetsRef.current.layer2.x = l2.x;
         offsetsRef.current.layer2.y = l2.y;
         
-        const l1 = applyConvergence(parallaxMultipliers.layer1 * 1.2);
+        const l1 = applyExpansion(parallaxMultipliers.layer1 * 1.2);
         offsetsRef.current.layer1.x = l1.x;
         offsetsRef.current.layer1.y = l1.y;
       } else if (motionType === 'zoom_out') {
