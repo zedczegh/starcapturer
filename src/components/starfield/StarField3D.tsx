@@ -416,10 +416,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       // Apply edge refinement to each layer with appropriate settings
       const refinedCanvases = canvases.map((canvas, i) => {
-        // Larger stars get more smoothing, smaller stars get less
-        const smoothingRadius = Math.max(1, 3 - Math.floor(i / 2));
-        const edgeThreshold = 45 - i * 5;
-        const coreThreshold = 220 - i * 15;
+        // More aggressive smoothing to eliminate rough edges and cracks
+        // Larger stars get more smoothing, smaller stars get moderate smoothing
+        const smoothingRadius = Math.max(3, 6 - Math.floor(i / 2)); // Increased from max 3 to 6
+        const edgeThreshold = 75 - i * 5; // Increased from 45 to 75 for better edge detection
+        const coreThreshold = 230 - i * 10; // Adjusted to better preserve bright cores
         
         return refineStarEdges(canvas, {
           smoothingRadius,
